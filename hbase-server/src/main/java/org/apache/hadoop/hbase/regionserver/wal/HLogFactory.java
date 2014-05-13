@@ -47,13 +47,14 @@ public class HLogFactory {
     
     public static HLog createHLog(final FileSystem fs, final Path root, final String logName,
         final String oldLogName, final Configuration conf) throws IOException {
-      return new FSHLog(fs, root, logName, oldLogName, conf);
+      return new FSHLog(fs, root, logName, oldLogName, conf, null, true, null, false);
 }
     
     public static HLog createHLog(final FileSystem fs, final Path root, final String logName,
         final Configuration conf, final List<WALActionsListener> listeners,
         final String prefix) throws IOException {
-      return new FSHLog(fs, root, logName, conf, listeners, prefix);
+      return new FSHLog(fs, root, logName, HConstants.HREGION_OLDLOGDIR_NAME, conf, listeners,
+        true, prefix, false);
     }
 
     public static HLog createMetaHLog(final FileSystem fs, final Path root, final String logName,

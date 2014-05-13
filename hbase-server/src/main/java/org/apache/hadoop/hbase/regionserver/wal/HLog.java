@@ -49,6 +49,7 @@ import com.google.common.annotations.VisibleForTesting;
 // TODO: Rename interface to WAL
 public interface HLog {
   Log LOG = LogFactory.getLog(HLog.class);
+  public static final long NO_SEQUENCE_ID = -1;
 
   /** File Extension used while splitting an HLog into regions (HBASE-2312) */
   // TODO: this seems like an implementation detail that does not belong here.
@@ -288,6 +289,9 @@ public interface HLog {
    * @param htd
    * @param sequenceId
    * @throws IOException
+   * @deprecated For tests only and even then, should use
+   * {@link #appendNoSync(HTableDescriptor, HRegionInfo, HLogKey, WALEdit, AtomicLong, boolean)}
+   * and {@link #sync()} instead.
    */
   @VisibleForTesting
   public void append(HRegionInfo info, TableName tableName, WALEdit edits,
@@ -311,8 +315,9 @@ public interface HLog {
 
   /**
    * Append a set of edits to the WAL. WAL edits are keyed by (encoded) regionName, rowname, and
-   * log-sequence-id. The WAL is not flushed/sync'd after this transaction completes.
-   * Call {@link #sync()} to flush/sync all outstanding edits/appends.
+   * log-sequence-id. The WAL is not flushed/sync'd after this transaction completes BUT on return
+   * this edit must have its region edit/sequence id assigned else it messes up our unification
+   * of mvcc and sequenceid.
    * @param info
    * @param tableName
    * @param edits
@@ -332,10 +337,38 @@ public interface HLog {
    * able to sync an explicit edit only (the current default implementation syncs up to the time
    * of the sync call syncing whatever is behind the sync).
    * @throws IOException
+   * @deprecated Use
+   * {@link #appendNoSync(HRegionInfo, HLogKey, WALEdit, HTableDescriptor, AtomicLong, boolean)}
+   * instead because you can get back the region edit/sequenceid; it is set into the passed in
+   * <code>key</code>.
    */
   long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
       List<UUID> clusterIds, final long now, HTableDescriptor htd, AtomicLong sequenceId,
       boolean isInMemstore, long nonceGroup, long nonce) throws IOException;
+
+  /**
+   * Append a set of edits to the WAL. The WAL is not flushed/sync'd after this transaction
+   * completes BUT on return this edit must have its region edit/sequence id assigned
+   * else it messes up our unification of mvcc and sequenceid.  On return <code>key</code> will
+   * have the region edit/sequence id filled in.
+   * @param info
+   * @param key Modified by this call; we add to it this edits region edit/sequence id.
+   * @param edits Edits to append. MAY CONTAIN NO EDITS for case where we want to get an edit
+   * sequence id that is after all currently appended edits.
+   * @param htd
+   * @param sequenceId A reference to the atomic long the <code>info</code> region is using as
+   * source of its incrementing edits sequence id.  Inside in this call we will increment it and
+   * attach the sequence to the edit we apply the WAL.
+   * @param inMemstore Always true except for case where we are writing a compaction completion
+   * record into the WAL; in this case the entry is just so we can finish an unfinished compaction
+   * -- it is not an edit for memstore.
+   * @return Returns a 'transaction id' and <code>key</code> will have the region edit/sequence id
+   * in it.
+   * @throws IOException
+   */
+  long appendNoSync(HTableDescriptor htd, HRegionInfo info, HLogKey key, WALEdit edits,
+      AtomicLong sequenceId, boolean inMemstore)
+  throws IOException;
 
   // TODO: Do we need all these versions of sync?
   void hsync() throws IOException;

@@ -87,9 +87,11 @@ public interface WALActionsListener {
    * @param htd
    * @param logKey
    * @param logEdit
+   * TODO: Retire this in favor of {@link #visitLogEntryBeforeWrite(HRegionInfo, HLogKey, WALEdit)}
+   * It only exists to get scope when replicating.  Scope should be in the HLogKey and not need
+   * us passing in a <code>htd</code>.
    */
   void visitLogEntryBeforeWrite(
     HTableDescriptor htd, HLogKey logKey, WALEdit logEdit
   );
-
 }

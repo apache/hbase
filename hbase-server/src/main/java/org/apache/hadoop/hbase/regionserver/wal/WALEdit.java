@@ -80,12 +80,13 @@ public class WALEdit implements Writable, HeapSize {
   // TODO: Get rid of this; see HBASE-8457
   public static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");
   static final byte [] METAROW = Bytes.toBytes("METAROW");
-  static final byte[] COMPLETE_CACHE_FLUSH = Bytes.toBytes("HBASE::CACHEFLUSH");
   static final byte[] COMPACTION = Bytes.toBytes("HBASE::COMPACTION");
   private final int VERSION_2 = -1;
   private final boolean isReplay;
 
   private final ArrayList<KeyValue> kvs = new ArrayList<KeyValue>(1);
+
+  public static final WALEdit EMPTY_WALEDIT = new WALEdit();
 
   // Only here for legacy writable deserialization
   @Deprecated

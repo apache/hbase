@@ -79,14 +79,6 @@ class RingBufferTruck {
   }
 
   /**
-   * return {@code true} when this truck is carrying a {@link Span},
-   * {@code false} otherwise.
-   */
-  boolean hasSpanPayload() {
-    return this.span != null;
-  }
-
-  /**
    * Unload the truck of its {@link FSWALEntry} payload. The internal refernce is released.
    */
   FSWALEntry unloadFSWALEntryPayload() {
@@ -105,7 +97,7 @@ class RingBufferTruck {
   }
 
   /**
-   * Unload the truck of its {@link Span} payload. The internal refernce is released.
+   * Unload the truck of its {@link Span} payload. The internal reference is released.
    */
   Span unloadSpanPayload() {
     Span ret = this.span;

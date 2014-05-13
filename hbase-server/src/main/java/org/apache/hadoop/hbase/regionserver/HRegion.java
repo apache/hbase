@@ -36,7 +36,6 @@ import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ConcurrentHashMap;
@@ -209,12 +208,23 @@ public class HRegion implements HeapSize { // , Writable{
    */
   final AtomicBoolean closing = new AtomicBoolean(false);
 
-  protected volatile long completeSequenceId = -1L;
+  /**
+   * The sequence id of the last flush on this region.  Used doing some rough calculations on
+   * whether time to flush or not.
+   */
+  protected volatile long lastFlushSeqId = -1L;
 
   /**
-   * Region level sequence Id. It is used for appending WALEdits in HLog. Its default value is -1,
-   * as a marker that the region hasn't opened yet. Once it is opened, it is set to
-   * {@link #openSeqNum}.
+   * Region scoped edit sequence Id. Edits to this region are GUARANTEED to appear in the WAL/HLog
+   * file in this sequence id's order; i.e. edit #2 will be in the WAL after edit #1.
+   * Its default value is {@link HLog.NO_SEQUENCE_ID}. This default is used as a marker to indicate
+   * that the region hasn't opened yet. Once it is opened, it is set to the derived
+   * {@link #openSeqNum}, the largest sequence id of all hfiles opened under this Region.
+   * 
+   * <p>Control of this sequence is handed off to the WAL/HLog implementation.  It is responsible
+   * for tagging edits with the correct sequence id since it is responsible for getting the
+   * edits into the WAL files. It controls updating the sequence id value.  DO NOT UPDATE IT
+   * OUTSIDE OF THE WAL.  The value you get will not be what you think it is.
    */
   private final AtomicLong sequenceId = new AtomicLong(-1L);
 
@@ -391,7 +401,7 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * Objects from this class are created when flushing to describe all the different states that
    * that method ends up in. The Result enum describes those states. The sequence id should only
-   * be specified if the flush was successful, and the failure message should only be speficied
+   * be specified if the flush was successful, and the failure message should only be specified
    * if it didn't flush.
    */
   public static class FlushResult {
@@ -742,7 +752,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.closing.set(false);
     this.closed.set(false);
 
-    this.completeSequenceId = nextSeqid;
+    this.lastFlushSeqId = nextSeqid;
     if (coprocessorHost != null) {
       status.setStatus("Running coprocessor post-open hooks");
       coprocessorHost.postOpen();
@@ -1603,7 +1613,8 @@ public class HRegion implements HeapSize { // , Writable{
    * Should the memstore be flushed now
    */
   boolean shouldFlush() {
-    if(this.completeSequenceId + this.flushPerChanges < this.sequenceId.get()) {
+    // This is a rough measure.
+    if (this.lastFlushSeqId + this.flushPerChanges < this.sequenceId.get()) {
       return true;
     }
     if (flushCheckInterval <= 0) { //disabled
@@ -1626,34 +1637,16 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * Flush the memstore.
-   *
-   * Flushing the memstore is a little tricky. We have a lot of updates in the
-   * memstore, all of which have also been written to the log. We need to
-   * write those updates in the memstore out to disk, while being able to
-   * process reads/writes as much as possible during the flush operation. Also,
-   * the log has to state clearly the point in time at which the memstore was
-   * flushed. (That way, during recovery, we know when we can rely on the
-   * on-disk flushed structures and when we have to recover the memstore from
-   * the log.)
-   *
-   * <p>So, we have a three-step process:
-   *
-   * <ul><li>A. Flush the memstore to the on-disk stores, noting the current
-   * sequence ID for the log.<li>
-   *
-   * <li>B. Write a FLUSHCACHE-COMPLETE message to the log, using the sequence
-   * ID that was current at the time of memstore-flush.</li>
-   *
-   * <li>C. Get rid of the memstore structures that are now redundant, as
-   * they've been flushed to the on-disk HStores.</li>
-   * </ul>
-   * <p>This method is protected, but can be accessed via several public
-   * routes.
-   *
-   * <p> This method may block for some time.
+   * Flush the memstore. Flushing the memstore is a little tricky. We have a lot of updates in the
+   * memstore, all of which have also been written to the log. We need to write those updates in the
+   * memstore out to disk, while being able to process reads/writes as much as possible during the
+   * flush operation.
+   * <p>This method may block for some time.  Every time you call it, we up the regions
+   * sequence id even if we don't flush; i.e. the returned region id will be at least one larger
+   * than the last edit applied to this region. The returned id does not refer to an actual edit.
+   * The returned id can be used for say installing a bulk loaded file just ahead of the last hfile
+   * that was the result of this flush, etc.
    * @param status
-   *
    * @return object describing the flush's state
    *
    * @throws IOException general io exceptions
@@ -1667,10 +1660,9 @@ public class HRegion implements HeapSize { // , Writable{
 
   /**
    * @param wal Null if we're NOT to go via hlog/wal.
-   * @param myseqid The seqid to use if <code>wal</code> is null writing out
-   * flush file.
+   * @param myseqid The seqid to use if <code>wal</code> is null writing out flush file.
    * @param status
-   * @return true if the region needs compacting
+   * @return object describing the flush's state
    * @throws IOException
    * @see #internalFlushcache(MonitoredTask)
    */
@@ -1682,50 +1674,67 @@ public class HRegion implements HeapSize { // , Writable{
       throw new IOException("Aborting flush because server is abortted...");
     }
     final long startTime = EnvironmentEdgeManager.currentTimeMillis();
-    // Clear flush flag.
-    // If nothing to flush, return and avoid logging start/stop flush.
+    // If nothing to flush, return, but we need to safely update the region sequence id
     if (this.memstoreSize.get() <= 0) {
-      return new FlushResult(FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY, "Nothing to flush");
+      // Take an update lock because am about to change the sequence id and we want the sequence id
+      // to be at the border of the empty memstore.
+      this.updatesLock.writeLock().lock();
+      try {
+        if (this.memstoreSize.get() <= 0) {
+          // Presume that if there are still no edits in the memstore, then there are no edits for
+          // this region out in the WAL/HLog subsystem so no need to do any trickery clearing out
+          // edits in the WAL system. Up the sequence number so the resulting flush id is for
+          // sure just beyond the last appended region edit (useful as a marker when bulk loading,
+          // etc.)
+          // wal can be null replaying edits.
+          return wal != null?
+            new FlushResult(FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY,
+              getNextSequenceId(wal, startTime), "Nothing to flush"):
+            new FlushResult(FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY, "Nothing to flush");
+        }
+      } finally {
+        this.updatesLock.writeLock().unlock();
+      }
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("Started memstore flush for " + this +
         ", current region memstore size " +
-        StringUtils.humanReadableInt(this.memstoreSize.get()) +
+        StringUtils.byteDesc(this.memstoreSize.get()) +
         ((wal != null)? "": "; wal is null, using passed sequenceid=" + myseqid));
     }
 
-    // Stop updates while we snapshot the memstore of all stores. We only have
-    // to do this for a moment.  Its quick.  The subsequent sequence id that
-    // goes into the HLog after we've flushed all these snapshots also goes
-    // into the info file that sits beside the flushed files.
-    // We also set the memstore size to zero here before we allow updates
-    // again so its value will represent the size of the updates received
-    // during the flush
+    // Stop updates while we snapshot the memstore of all of these regions' stores. We only have
+    // to do this for a moment.  It is quick. We also set the memstore size to zero here before we
+    // allow updates again so its value will represent the size of the updates received
+    // during flush
     MultiVersionConsistencyControl.WriteEntry w = null;
 
-    // We have to take a write lock during snapshot, or else a write could
-    // end up in both snapshot and memstore (makes it difficult to do atomic
-    // rows then)
+    // We have to take an update lock during snapshot, or else a write could end up in both snapshot
+    // and memstore (makes it difficult to do atomic rows then)
     status.setStatus("Obtaining lock to block concurrent updates");
     // block waiting for the lock for internal flush
     this.updatesLock.writeLock().lock();
     long totalFlushableSize = 0;
-    status.setStatus("Preparing to flush by snapshotting stores");
+    status.setStatus("Preparing to flush by snapshotting stores in " +
+      getRegionInfo().getEncodedName());
     List<StoreFlushContext> storeFlushCtxs = new ArrayList<StoreFlushContext>(stores.size());
     long flushSeqId = -1L;
     try {
       // Record the mvcc for all transactions in progress.
       w = mvcc.beginMemstoreInsert();
       mvcc.advanceMemstore(w);
-      // check if it is not closing.
       if (wal != null) {
         if (!wal.startCacheFlush(this.getRegionInfo().getEncodedNameAsBytes())) {
+          // This should never happen.
           String msg = "Flush will not be started for ["
               + this.getRegionInfo().getEncodedName() + "] - because the WAL is closing.";
           status.setStatus(msg);
           return new FlushResult(FlushResult.Result.CANNOT_FLUSH, msg);
         }
-        flushSeqId = this.sequenceId.incrementAndGet();
+        // Get a sequence id that we can use to denote the flush.  It will be one beyond the last
+        // edit that made it into the hfile (the below does not add an edit, it just asks the
+        // WAL system to return next sequence edit).
+        flushSeqId = getNextSequenceId(wal, startTime);
       } else {
         // use the provided sequence Id as WAL is not being used for this flush.
         flushSeqId = myseqid;
@@ -1736,7 +1745,7 @@ public class HRegion implements HeapSize { // , Writable{
         storeFlushCtxs.add(s.createFlushContext(flushSeqId));
       }
 
-      // prepare flush (take a snapshot)
+      // Prepare flush (take a snapshot)
       for (StoreFlushContext flush : storeFlushCtxs) {
         flush.prepare();
       }
@@ -1750,9 +1759,7 @@ public class HRegion implements HeapSize { // , Writable{
 
     // sync unflushed WAL changes when deferred log sync is enabled
     // see HBASE-8208 for details
-    if (wal != null && !shouldSyncLog()) {
-      wal.sync();
-    }
+    if (wal != null && !shouldSyncLog()) wal.sync();
 
     // wait for all in-progress transactions to commit to HLog before
     // we can start the flush. This prevents
@@ -1817,8 +1824,8 @@ public class HRegion implements HeapSize { // , Writable{
     // Record latest flush time
     this.lastFlushTime = EnvironmentEdgeManager.currentTimeMillis();
 
-    // Update the last flushed sequence id for region
-    completeSequenceId = flushSeqId;
+    // Update the last flushed sequence id for region. TODO: This is dup'd inside the WAL/FSHlog.
+    this.lastFlushSeqId = flushSeqId;
 
     // C. Finally notify anyone waiting on memstore to clear:
     // e.g. checkResources().
@@ -1829,9 +1836,9 @@ public class HRegion implements HeapSize { // , Writable{
     long time = EnvironmentEdgeManager.currentTimeMillis() - startTime;
     long memstoresize = this.memstoreSize.get();
     String msg = "Finished memstore flush of ~" +
-      StringUtils.humanReadableInt(totalFlushableSize) + "/" + totalFlushableSize +
+      StringUtils.byteDesc(totalFlushableSize) + "/" + totalFlushableSize +
       ", currentsize=" +
-      StringUtils.humanReadableInt(memstoresize) + "/" + memstoresize +
+      StringUtils.byteDesc(memstoresize) + "/" + memstoresize +
       " for region " + this + " in " + time + "ms, sequenceid=" + flushSeqId +
       ", compaction requested=" + compactionRequested +
       ((wal == null)? "; wal=null": "");
@@ -1841,6 +1848,22 @@ public class HRegion implements HeapSize { // , Writable{
 
     return new FlushResult(compactionRequested ? FlushResult.Result.FLUSHED_COMPACTION_NEEDED :
         FlushResult.Result.FLUSHED_NO_COMPACTION_NEEDED, flushSeqId);
+  }
+
+  /**
+   * Method to safely get the next sequence number.
+   * @param wal
+   * @param now
+   * @return Next sequence number unassociated with any actual edit.
+   * @throws IOException
+   */
+  private long getNextSequenceId(final HLog wal, final long now) throws IOException {
+    HLogKey key = new HLogKey(getRegionInfo().getEncodedNameAsBytes(), getRegionInfo().getTable());
+    // Call append but with an empty WALEdit.  The returned seqeunce id will not be associated
+    // with any edit and we can be sure it went in after all outstanding appends.
+    wal.appendNoSync(getTableDesc(), getRegionInfo(), key,
+      WALEdit.EMPTY_WALEDIT, this.sequenceId, false);
+    return key.getLogSeqNum();
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -2516,9 +2539,11 @@ public class HRegion implements HeapSize { // , Writable{
               throw new IOException("Multiple nonces per batch and not in replay");
             }
             // txid should always increase, so having the one from the last call is ok.
-            txid = this.log.appendNoSync(this.getRegionInfo(), htableDescriptor.getTableName(),
-                  walEdit, m.getClusterIds(), now, htableDescriptor, this.sequenceId, true,
-                  currentNonceGroup, currentNonce);
+            HLogKey key = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
+              this.htableDescriptor.getTableName(), now, m.getClusterIds(), currentNonceGroup,
+              currentNonce);
+            txid = this.log.appendNoSync(this.htableDescriptor,  this.getRegionInfo(),  key,
+              walEdit, getSequenceId(), true);
             hasWalAppends = true;
             walEdit = new WALEdit(isInReplay);
           }
@@ -2541,9 +2566,11 @@ public class HRegion implements HeapSize { // , Writable{
       // -------------------------
       Mutation mutation = batchOp.getMutation(firstIndex);
       if (walEdit.size() > 0) {
-        txid = this.log.appendNoSync(this.getRegionInfo(), this.htableDescriptor.getTableName(),
-              walEdit, mutation.getClusterIds(), now, this.htableDescriptor, this.sequenceId,
-              true, currentNonceGroup, currentNonce);
+        HLogKey key = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
+            this.htableDescriptor.getTableName(), now, mutation.getClusterIds(),
+            currentNonceGroup, currentNonce);
+        txid = this.log.appendNoSync(this.htableDescriptor, this.getRegionInfo(), key, walEdit,
+          getSequenceId(), true);
         hasWalAppends = true;
       }
 
@@ -3597,13 +3624,15 @@ public class HRegion implements HeapSize { // , Writable{
       long seqId = -1;
       // We need to assign a sequential ID that's in between two memstores in order to preserve
       // the guarantee that all the edits lower than the highest sequential ID from all the
-      // HFiles are flushed on disk. See HBASE-10958.
+      // HFiles are flushed on disk. See HBASE-10958.  The sequence id returned when we flush is
+      // guaranteed to be one beyond the file made when we flushed (or if nothing to flush, it is
+      // a sequence id that we can be sure is beyond the last hfile written).
       if (assignSeqId) {
         FlushResult fs = this.flushcache();
         if (fs.isFlushSucceeded()) {
           seqId = fs.flushSequenceId;
         } else if (fs.result == FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY) {
-          seqId = this.sequenceId.incrementAndGet();
+          seqId = fs.flushSequenceId;
         } else {
           throw new IOException("Could not bulk load with an assigned sequential ID because the " +
               "flush didn't run. Reason for not flushing: " + fs.failureReason);
@@ -4890,9 +4919,11 @@ public class HRegion implements HeapSize { // , Writable{
           long txid = 0;
           // 7. Append no sync
           if (!walEdit.isEmpty()) {
-            txid = this.log.appendNoSync(this.getRegionInfo(),
-              this.htableDescriptor.getTableName(), walEdit, processor.getClusterIds(), now,
-              this.htableDescriptor, this.sequenceId, true, nonceGroup, nonce);
+            HLogKey key = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
+              this.htableDescriptor.getTableName(), now, processor.getClusterIds(), nonceGroup,
+              nonce);
+            txid = this.log.appendNoSync(this.htableDescriptor, this.getRegionInfo(),
+              key, walEdit, getSequenceId(), true);
           }
           // 8. Release region lock
           if (locked) {
@@ -5133,10 +5164,10 @@ public class HRegion implements HeapSize { // , Writable{
             // Using default cluster id, as this can only happen in the orginating
             // cluster. A slave cluster receives the final value (not the delta)
             // as a Put.
-            txid = this.log.appendNoSync(this.getRegionInfo(),
-              this.htableDescriptor.getTableName(), walEdits, new ArrayList<UUID>(),
-              EnvironmentEdgeManager.currentTimeMillis(), this.htableDescriptor, this.sequenceId,
-              true, nonceGroup, nonce);
+            HLogKey key = new HLogKey(getRegionInfo().getEncodedNameAsBytes(),
+              this.htableDescriptor.getTableName(), nonceGroup, nonce);
+            txid = this.log.appendNoSync(this.htableDescriptor, getRegionInfo(), key, walEdits,
+              this.sequenceId, true);
           } else {
             recordMutationWithoutWal(append.getFamilyCellMap());
           }
@@ -5326,10 +5357,10 @@ public class HRegion implements HeapSize { // , Writable{
               // Using default cluster id, as this can only happen in the orginating
               // cluster. A slave cluster receives the final value (not the delta)
               // as a Put.
-              txid = this.log.appendNoSync(this.getRegionInfo(),
-                  this.htableDescriptor.getTableName(), walEdits, new ArrayList<UUID>(),
-                  EnvironmentEdgeManager.currentTimeMillis(), this.htableDescriptor, this.sequenceId,
-                  true, nonceGroup, nonce);
+              HLogKey key = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
+                this.htableDescriptor.getTableName(), nonceGroup, nonce);
+              txid = this.log.appendNoSync(this.htableDescriptor, this.getRegionInfo(),
+                  key, walEdits, getSequenceId(), true);
             } else {
               recordMutationWithoutWal(increment.getFamilyCellMap());
             }
@@ -6002,8 +6033,10 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   /**
-   * @return sequenceId.
+   * Do not change this sequence id. See {@link #sequenceId} comment.
+   * @return sequenceId 
    */
+  @VisibleForTesting
   public AtomicLong getSequenceId() {
     return this.sequenceId;
   }

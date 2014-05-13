@@ -87,19 +87,16 @@ import com.lmax.disruptor.dsl.ProducerType;
 /**
  * Implementation of {@link HLog} to go against {@link FileSystem}; i.e. keep WALs in HDFS.
  * Only one HLog/WAL is ever being written at a time.  When a WAL hits a configured maximum size,
- * it is rolled.  This is done internal to the implementation, so external
- * callers do not have to be concerned with log rolling.
+ * it is rolled.  This is done internal to the implementation.
  *
- * <p>As data is flushed from the MemStore to other (better) on-disk structures (files sorted by
+ * <p>As data is flushed from the MemStore to other on-disk structures (files sorted by
  * key, hfiles), a WAL becomes obsolete. We can let go of all the log edits/entries for a given
- * HRegion-id up to the most-recent CACHEFLUSH message from that HRegion.  A bunch of work in the
- * below is done keeping account of these region sequence ids -- what is flushed out to hfiles,
- * and what is yet in WAL and in memory only.
+ * HRegion-sequence id.  A bunch of work in the below is done keeping account of these region
+ * sequence ids -- what is flushed out to hfiles, and what is yet in WAL and in memory only.
  *
  * <p>It is only practical to delete entire files. Thus, we delete an entire on-disk file
  * <code>F</code> when all of the edits in <code>F</code> have a log-sequence-id that's older
- * (smaller) than the most-recent CACHEFLUSH message for every HRegion that has an edit in
- * <code>F</code>.
+ * (smaller) than the most-recent flush.
  *
  * <p>To read an HLog, call {@link HLogFactory#createReader(org.apache.hadoop.fs.FileSystem,
  * org.apache.hadoop.fs.Path, org.apache.hadoop.conf.Configuration)}.
@@ -113,24 +110,29 @@ class FSHLog implements HLog, Syncable {
   // here appending and syncing on a single WAL.  The Disruptor is configured to handle multiple
   // producers but it has one consumer only (the producers in HBase are IPC Handlers calling append
   // and then sync).  The single consumer/writer pulls the appends and syncs off the ring buffer.
-  // The appends are added to the WAL immediately without pause or batching (there may be a slight
-  // benefit batching appends but it complicates the implementation -- the gain is not worth
-  // the added complication).  When a producer calls sync, it is given back a future. The producer
-  // 'blocks' on the future so it does not return until the sync completes.  The future is passed
-  // over the ring buffer from the producer to the consumer thread where it does its best to batch
-  // up the producer syncs so one WAL sync actually spans multiple producer sync invocations.  How
-  // well the batching works depends on the write rate; i.e. we tend to batch more in times of
+  // When a handler calls sync, it is given back a future. The producer 'blocks' on the future so
+  // it does not return until the sync completes.  The future is passed over the ring buffer from
+  // the producer/handler to the consumer thread where it does its best to batch up the producer
+  // syncs so one WAL sync actually spans multiple producer sync invocations.  How well the
+  // batching works depends on the write rate; i.e. we tend to batch more in times of
   // high writes/syncs.
   //
-  // <p>The consumer thread pass the syncs off to muliple syncing threads in a round robin fashion
+  // Calls to append now also wait until the append has been done on the consumer side of the
+  // disruptor.  We used to not wait but it makes the implemenation easier to grok if we have
+  // the region edit/sequence id after the append returns.
+  // 
+  // TODO: Handlers need to coordinate appending AND syncing.  Can we have the threads contend
+  // once only?  Probably hard given syncs take way longer than an append.
+  //
+  // The consumer threads pass the syncs off to multiple syncing threads in a round robin fashion
   // to ensure we keep up back-to-back FS sync calls (FS sync calls are the long poll writing the
   // WAL).  The consumer thread passes the futures to the sync threads for it to complete
   // the futures when done.
   //
-  // <p>The 'sequence' in the below is the sequence of the append/sync on the ringbuffer.  It
+  // The 'sequence' in the below is the sequence of the append/sync on the ringbuffer.  It
   // acts as a sort-of transaction id.  It is always incrementing.
   //
-  // <p>The RingBufferEventHandler class hosts the ring buffer consuming code.  The threads that
+  // The RingBufferEventHandler class hosts the ring buffer consuming code.  The threads that
   // do the actual FS sync are implementations of SyncRunner.  SafePointZigZagLatch is a
   // synchronization class used to halt the consumer at a safe point --  just after all outstanding
   // syncs and appends have completed -- so the log roller can swap the WAL out under it.
@@ -138,14 +140,17 @@ class FSHLog implements HLog, Syncable {
   static final Log LOG = LogFactory.getLog(FSHLog.class);
 
   /**
-   * Disruptor is a fancy ring buffer.  This disruptor/ring buffer is used to take edits and sync
-   * calls from the Handlers and passes them to the append and sync executors with minimal
-   * contention.
+   * The nexus at which all incoming handlers meet.  Does appends and sync with an ordering.
+   * Appends and syncs are each put on the ring which means handlers need to
+   * smash up against the ring twice (can we make it once only? ... maybe not since time to append
+   * is so different from time to sync and sometimes we don't want to sync or we want to async
+   * the sync).  The ring is where we make sure of our ordering and it is also where we do
+   * batching up of handler sync calls.
    */
   private final Disruptor<RingBufferTruck> disruptor;
 
   /**
-   * An executorservice that runs the AppendEventHandler append executor.
+   * An executorservice that runs the disrutpor AppendEventHandler append executor.
    */
   private final ExecutorService appendExecutor;
 
@@ -159,6 +164,9 @@ class FSHLog implements HLog, Syncable {
 
   /**
    * Map of {@link SyncFuture}s keyed by Handler objects.  Used so we reuse SyncFutures.
+   * TODO: Reus FSWALEntry's rather than create them anew each time as we do SyncFutures here.
+   * TODO: Add a FSWalEntry and SyncFuture as thread locals on handlers rather than have them
+   * get them from this Map?
    */
   private final Map<Thread, SyncFuture> syncFuturesByHandler;
 
@@ -170,14 +178,14 @@ class FSHLog implements HLog, Syncable {
 
   /**
    * The highest known outstanding unsync'd WALEdit sequence number where sequence number is the
-   * ring buffer sequence.
+   * ring buffer sequence.  Maintained by the ring buffer consumer.
    */
   private volatile long highestUnsyncedSequence = -1;
 
   /**
    * Updated to the ring buffer sequence of the last successful sync call.  This can be less than
    * {@link #highestUnsyncedSequence} for case where we have an append where a sync has not yet
-   * come in for it.
+   * come in for it.  Maintained by the syncing threads.
    */
   private final AtomicLong highestSyncedSequence = new AtomicLong(0);
 
@@ -192,15 +200,20 @@ class FSHLog implements HLog, Syncable {
 
   // Minimum tolerable replicas, if the actual value is lower than it, rollWriter will be triggered
   private final int minTolerableReplication;
+
   // DFSOutputStream.getNumCurrentReplicas method instance gotten via reflection.
   private final Method getNumCurrentReplicas;
+
   private final static Object [] NO_ARGS = new Object []{};
+
   // If live datanode count is lower than the default replicas value,
   // RollWriter will be triggered in each sync(So the RollWriter will be
   // triggered one by one in a short time). Using it as a workaround to slow
   // down the roll frequency triggered by checkLowReplication().
   private final AtomicInteger consecutiveLogRolls = new AtomicInteger(0);
+
   private final int lowReplicationRollLimit;
+
   // If consecutiveLogRolls is larger than lowReplicationRollLimit,
   // then disable the rolling in checkLowReplication().
   // Enable it if the replications recover.
@@ -273,18 +286,17 @@ class FSHLog implements HLog, Syncable {
   /**
    * This lock ties all operations on oldestFlushingRegionSequenceIds and
    * oldestFlushedRegionSequenceIds Maps with the exception of append's putIfAbsent call into
-   * oldestUnflushedSeqNums. We use these Maps to find out the low bound seqNum, or to find regions
-   * with old seqNums to force flush; we are interested in old stuff not the new additions
-   * (TODO: IS THIS SAFE?  CHECK!).
+   * oldestUnflushedSeqNums. We use these Maps to find out the low bound regions sequence id, or
+   * to find regions  with old sequence ids to force flush; we are interested in old stuff not the
+   * new additions (TODO: IS THIS SAFE?  CHECK!).
    */
   private final Object regionSequenceIdLock = new Object();
 
   /**
    * Map of encoded region names to their OLDEST -- i.e. their first, the longest-lived --
-   * sequence id in memstore. Note that this sequenceid is the region sequence id.  This is not
+   * sequence id in memstore. Note that this sequence id is the region sequence id.  This is not
    * related to the id we use above for {@link #highestSyncedSequence} and
-   * {@link #highestUnsyncedSequence} which is the sequence from the disruptor ring buffer, an
-   * internal detail.
+   * {@link #highestUnsyncedSequence} which is the sequence from the disruptor ring buffer.
    */
   private final ConcurrentSkipListMap<byte [], Long> oldestUnflushedRegionSequenceIds =
     new ConcurrentSkipListMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
@@ -327,14 +339,14 @@ class FSHLog implements HLog, Syncable {
   };
 
   /**
-   * Map of wal log file to the latest sequence nums of all regions it has entries of.
+   * Map of wal log file to the latest sequence ids of all regions it has entries of.
    * The map is sorted by the log file creation timestamp (contained in the log file name).
    */
   private NavigableMap<Path, Map<byte[], Long>> byWalRegionSequenceIds =
     new ConcurrentSkipListMap<Path, Map<byte[], Long>>(LOG_NAME_COMPARATOR);
 
   /**
-   * Exception handler to pass the disruptor ringbuffer.  Same as native implemenation only it
+   * Exception handler to pass the disruptor ringbuffer.  Same as native implementation only it
    * logs using our logger instead of java native logger.
    */
   static class RingBufferExceptionHandler implements ExceptionHandler {
@@ -373,48 +385,6 @@ class FSHLog implements HLog, Syncable {
   }
 
   /**
-   * Constructor.
-   *
-   * @param fs filesystem handle
-   * @param root path for stored and archived hlogs
-   * @param logDir dir where hlogs are stored
-   * @param oldLogDir dir where hlogs are archived
-   * @param conf configuration to use
-   * @throws IOException
-   */
-  public FSHLog(final FileSystem fs, final Path root, final String logDir, final String oldLogDir,
-      final Configuration conf)
-  throws IOException {
-    this(fs, root, logDir, oldLogDir, conf, null, true, null, false);
-  }
-
-  /**
-   * Create an edit log at the given <code>dir</code> location.
-   *
-   * You should never have to load an existing log. If there is a log at
-   * startup, it should have already been processed and deleted by the time the
-   * HLog object is started up.
-   *
-   * @param fs filesystem handle
-   * @param root path for stored and archived hlogs
-   * @param logDir dir where hlogs are stored
-   * @param conf configuration to use
-   * @param listeners Listeners on WAL events. Listeners passed here will
-   * be registered before we do anything else; e.g. the
-   * Constructor {@link #rollWriter()}.
-   * @param prefix should always be hostname and port in distributed env and
-   *        it will be URL encoded before being used.
-   *        If prefix is null, "hlog" will be used
-   * @throws IOException
-   */
-  public FSHLog(final FileSystem fs, final Path root, final String logDir,
-      final Configuration conf, final List<WALActionsListener> listeners,
-      final String prefix) throws IOException {
-    this(fs, root, logDir, HConstants.HREGION_OLDLOGDIR_NAME, conf, listeners, true, prefix,
-      false);
-  }
-
-  /**
    * Create an edit log at the given <code>dir</code> location.
    *
    * You should never have to load an existing log. If there is a log at
@@ -448,7 +418,7 @@ class FSHLog implements HLog, Syncable {
     this.forMeta = forMeta;
     this.conf = conf;
 
-    // Register listeners.
+    // Register listeners.  TODO: Should this exist anymore?  We have CPs?
     if (listeners != null) {
       for (WALActionsListener i: listeners) {
         registerWALActionsListener(i);
@@ -456,7 +426,7 @@ class FSHLog implements HLog, Syncable {
     }
 
     // Get size to roll log at. Roll at 95% of HDFS block size so we avoid crossing HDFS blocks
-    // (it costs x'ing bocks)
+    // (it costs a little x'ing bocks)
     long blocksize = this.conf.getLong("hbase.regionserver.hlog.blocksize",
       FSUtils.getDefaultBlockSize(this.fs, this.fullPathLogDir));
     this.logrollsize =
@@ -496,7 +466,8 @@ class FSHLog implements HLog, Syncable {
     // rollWriter sets this.hdfs_out if it can.
     rollWriter();
 
-    // handle the reflection necessary to call getNumCurrentReplicas()
+    // handle the reflection necessary to call getNumCurrentReplicas(). TODO: Replace with
+    // HdfsDataOutputStream#getCurrentBlockReplication() and go without reflection.
     this.getNumCurrentReplicas = getGetNumCurrentReplicas(this.hdfs_out);
 
     this.coprocessorHost = new WALCoprocessorHost(this, conf);
@@ -537,6 +508,8 @@ class FSHLog implements HLog, Syncable {
    * @return Method or null.
    */
   private static Method getGetNumCurrentReplicas(final FSDataOutputStream os) {
+    // TODO: Remove all this and use the now publically available
+    // HdfsDataOutputStream#getCurrentBlockReplication()
     Method m = null;
     if (os != null) {
       Class<? extends OutputStream> wrappedStreamClass = os.getWrappedStream().getClass();
@@ -909,7 +882,7 @@ class FSHLog implements HLog, Syncable {
         long oldFileLen = this.fs.getFileStatus(oldPath).getLen();
         this.totalLogSize.addAndGet(oldFileLen);
         LOG.info("Rolled WAL " + FSUtils.getPath(oldPath) + " with entries=" + oldNumEntries +
-          ", filesize=" + StringUtils.humanReadableInt(oldFileLen) + "; new WAL " +
+          ", filesize=" + StringUtils.byteDesc(oldFileLen) + "; new WAL " +
           FSUtils.getPath(newPath));
       } else {
         LOG.info("New WAL " + FSUtils.getPath(newPath));
@@ -1091,96 +1064,83 @@ class FSHLog implements HLog, Syncable {
     }
   }
 
-  /**
-   * @param now
-   * @param encodedRegionName Encoded name of the region as returned by
-   * <code>HRegionInfo#getEncodedNameAsBytes()</code>.
-   * @param tableName
-   * @param clusterIds that have consumed the change
-   * @return New log key.
-   */
-  protected HLogKey makeKey(byte[] encodedRegionName, TableName tableName, long seqnum,
-      long now, List<UUID> clusterIds, long nonceGroup, long nonce) {
-    return new HLogKey(encodedRegionName, tableName, seqnum, now, clusterIds, nonceGroup, nonce);
-  }
-
   @Override
   @VisibleForTesting
   public void append(HRegionInfo info, TableName tableName, WALEdit edits,
     final long now, HTableDescriptor htd, AtomicLong sequenceId)
   throws IOException {
-    append(info, tableName, edits, new ArrayList<UUID>(), now, htd, true, true, sequenceId,
-        HConstants.NO_NONCE, HConstants.NO_NONCE);
+    HLogKey logKey = new HLogKey(info.getEncodedNameAsBytes(), tableName, now);
+    append(htd, info, logKey, edits, sequenceId, true, true);
   }
 
   @Override
-  public long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
+  public long appendNoSync(final HRegionInfo info, TableName tableName, WALEdit edits,
       List<UUID> clusterIds, final long now, HTableDescriptor htd, AtomicLong sequenceId,
-      boolean isInMemstore, long nonceGroup, long nonce) throws IOException {
-    return append(info, tableName, edits, clusterIds, now, htd, false, isInMemstore, sequenceId,
-      nonceGroup, nonce);
+      boolean inMemstore, long nonceGroup, long nonce) throws IOException {
+    HLogKey logKey =
+      new HLogKey(info.getEncodedNameAsBytes(), tableName, now, clusterIds, nonceGroup, nonce);
+    return append(htd, info, logKey, edits, sequenceId, false, inMemstore);
+  }
+
+  @Override
+  public long appendNoSync(final HTableDescriptor htd, final HRegionInfo info, final HLogKey key,
+      final WALEdit edits, final AtomicLong sequenceId, final boolean inMemstore)
+  throws IOException {
+    return append(htd, info, key, edits, sequenceId, false, inMemstore);
   }
 
   /**
    * Append a set of edits to the log. Log edits are keyed by (encoded) regionName, rowname, and
    * log-sequence-id.
-   *
-   * Later, if we sort by these keys, we obtain all the relevant edits for a given key-range of the
-   * HRegion (TODO). Any edits that do not have a matching COMPLETE_CACHEFLUSH message can be
-   * discarded.
-   *
-   * <p>Logs cannot be restarted once closed, or once the HLog process dies. Each time the HLog
-   * starts, it must create a new log. This means that other systems should process the log
-   * appropriately upon each startup (and prior to initializing HLog).
-   *
-   * Synchronized prevents appends during the completion of a cache flush or for the duration of a
-   * log roll.
-   *
-   * @param info
-   * @param tableName
+   * @param key
    * @param edits
-   * @param clusterIds that have consumed the change (for replication)
-   * @param now
-   * @param htd
-   * @param doSync shall we sync after we call the append?
+   * @param htd This comes in here just so it is available on a pre append for replications.  Get
+   * rid of it.  It is kinda crazy this comes in here when we have tablename and regioninfo.
+   * Replication gets its scope from the HTD.
+   * @param hri region info
+   * @param sync shall we sync after we call the append?
    * @param inMemstore
-   * @param sequenceId of the region.
-   * @param nonceGroup
-   * @param nonce
+   * @param sequenceId The region sequence id reference.
    * @return txid of this transaction or if nothing to do, the last txid
    * @throws IOException
    */
-  private long append(HRegionInfo info, TableName tableName, WALEdit edits, List<UUID> clusterIds,
-      final long now, HTableDescriptor htd, boolean doSync, boolean inMemstore, 
-      AtomicLong sequenceId, long nonceGroup, long nonce)
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH_EXCEPTION",
+      justification="Will never be null")
+  private long append(HTableDescriptor htd, final HRegionInfo hri, final HLogKey key,
+      WALEdit edits, AtomicLong sequenceId, boolean sync, boolean inMemstore)
   throws IOException {
-    if (!this.enabled || edits.isEmpty()) return this.highestUnsyncedSequence;
+    if (!this.enabled) return this.highestUnsyncedSequence;
     if (this.closed) throw new IOException("Cannot append; log is closed");
+    // Make a trace scope for the append.  It is closed on other side of the ring buffer by the
+    // single consuming thread.  Don't have to worry about it.
     TraceScope scope = Trace.startSpan("FSHLog.append");
-    // Make a key but do not set the WALEdit by region sequence id now -- set it to -1 for now --
-    // and then later just before we write it out to the DFS stream, then set the sequence id;
-    // late-binding.
-    HLogKey logKey =
-      makeKey(info.getEncodedNameAsBytes(), tableName, -1, now, clusterIds, nonceGroup, nonce);
     // This is crazy how much it takes to make an edit.  Do we need all this stuff!!!!????  We need
-    // all the stuff to make a key and then below to append the edit, we need to carry htd, info,
+    // all this to make a key and then below to append the edit, we need to carry htd, info,
     // etc. all over the ring buffer.
+    FSWALEntry entry = null;
     long sequence = this.disruptor.getRingBuffer().next();
     try {
       RingBufferTruck truck = this.disruptor.getRingBuffer().get(sequence);
-      FSWALEntry entry =
-        new FSWALEntry(sequence, logKey, edits, sequenceId, inMemstore, htd, info);
+      // Construction of FSWALEntry sets a latch.  The latch is thrown just after we stamp the
+      // edit with its edit/sequence id.  The below entry.getRegionSequenceId will wait on the
+      // latch to be thrown.  TODO: reuse FSWALEntry as we do SyncFuture rather create per append.
+      entry = new FSWALEntry(sequence, key, edits, sequenceId, inMemstore, htd, hri);
       truck.loadPayload(entry, scope.detach());
     } finally {
       this.disruptor.getRingBuffer().publish(sequence);
+      // Now wait until the region edit/sequence id is available.  The 'entry' has an internal
+      // latch that is thrown when the region edit/sequence id is set.  Calling
+      // entry.getRegionSequenceId will cause us block until the latch is thrown.  The return is
+      // the region edit/sequence id, not the ring buffer txid.
+      try {
+        entry.getRegionSequenceId();
+      } catch (InterruptedException e) {
+        throw convertInterruptedExceptionToIOException(e);
+      }
     }
     // doSync is set in tests.  Usually we arrive in here via appendNoSync w/ the sync called after
     // all edits on a handler have been added.
-    //
-    // When we sync, we will sync to the current point, the txid of the last edit added.
-    // Since we are single writer, the next txid should be the just next one in sequence;
-    // do not explicitly specify it. Sequence id/txid is an implementation internal detail.
-    if (doSync) sync();
+    if (sync) sync(sequence);
     return sequence;
   }
 
@@ -1436,13 +1396,18 @@ class FSHLog implements HLog, Syncable {
       syncFuture.get();
       return syncFuture.getSpan();
     } catch (InterruptedException ie) {
-      Thread.currentThread().interrupt();
-      IOException ioe = new InterruptedIOException();
-      ioe.initCause(ie);
-      throw ioe;
+      LOG.warn("Interrupted", ie);
+      throw convertInterruptedExceptionToIOException(ie);
     } catch (ExecutionException e) {
       throw ensureIOException(e.getCause());
     }
+  }
+
+  private IOException convertInterruptedExceptionToIOException(final InterruptedException ie) {
+    Thread.currentThread().interrupt();
+    IOException ioe = new InterruptedIOException();
+    ioe.initCause(ie);
+    return ioe;
   }
 
   private SyncFuture getSyncFuture(final long sequence, Span span) {
@@ -1879,7 +1844,7 @@ class FSHLog implements HLog, Syncable {
         attainSafePoint(sequence);
         this.syncFuturesCount = 0;
       } catch (Throwable t) {
-        LOG.error("UNEXPECTED!!!", t);
+        LOG.error("UNEXPECTED!!! syncFutures.length=" + this.syncFutures.length, t);
       }
     }
 
@@ -1918,18 +1883,17 @@ class FSHLog implements HLog, Syncable {
      * @throws Exception
      */
     void append(final FSWALEntry entry) throws Exception {
-      // TODO: WORK ON MAKING THIS APPEND FASTER. OING WAY TOO MUCH WORK WITH CPs, PBing, etc.
+      // TODO: WORK ON MAKING THIS APPEND FASTER. DOING WAY TOO MUCH WORK WITH CPs, PBing, etc.
+      atHeadOfRingBufferEventHandlerAppend();
 
       long start = EnvironmentEdgeManager.currentTimeMillis();
       byte [] encodedRegionName = entry.getKey().getEncodedRegionName();
+      long regionSequenceId = HLog.NO_SEQUENCE_ID;
       try {
         // We are about to append this edit; update the region-scoped sequence number.  Do it
         // here inside this single appending/writing thread.  Events are ordered on the ringbuffer
         // so region sequenceids will also be in order.
-        long regionSequenceId = entry.getRegionSequenceIdReference().incrementAndGet();
-        // Set the region-scoped sequence number back up into the key ("late-binding" --
-        // setting before append).
-        entry.getKey().setLogSeqNum(regionSequenceId);
+        regionSequenceId = entry.stampRegionSequenceId();
         // Coprocessor hook.
         if (!coprocessorHost.preWALWrite(entry.getHRegionInfo(), entry.getKey(),
             entry.getEdit())) {
@@ -1945,13 +1909,18 @@ class FSHLog implements HLog, Syncable {
               entry.getEdit());
           }
         }
-        writer.append(entry);
-        assert highestUnsyncedSequence < entry.getSequence();
-        highestUnsyncedSequence = entry.getSequence();
-        Long lRegionSequenceId = Long.valueOf(regionSequenceId);
-        highestRegionSequenceIds.put(encodedRegionName, lRegionSequenceId);
-        if (entry.isInMemstore()) {
-          oldestUnflushedRegionSequenceIds.putIfAbsent(encodedRegionName, lRegionSequenceId);
+        // If empty, there is nothing to append.  Maybe empty when we are looking for a region
+        // sequence id only, a region edit/sequence id that is not associated with an actual edit.
+        // It has to go through all the rigmarole to be sure we have the right ordering.
+        if (!entry.getEdit().isEmpty()) {
+          writer.append(entry);
+          assert highestUnsyncedSequence < entry.getSequence();
+          highestUnsyncedSequence = entry.getSequence();
+          Long lRegionSequenceId = Long.valueOf(regionSequenceId);
+          highestRegionSequenceIds.put(encodedRegionName, lRegionSequenceId);
+          if (entry.isInMemstore()) {
+            oldestUnflushedRegionSequenceIds.putIfAbsent(encodedRegionName, lRegionSequenceId);
+          }
         }
         coprocessorHost.postWALWrite(entry.getHRegionInfo(), entry.getKey(), entry.getEdit());
         // Update metrics.
@@ -1973,6 +1942,14 @@ class FSHLog implements HLog, Syncable {
     public void onShutdown() {
       for (SyncRunner syncRunner: this.syncRunners) syncRunner.interrupt();
     }
+  }
+
+  /**
+   * Exposed for testing only.  Use to tricks like halt the ring buffer appending.
+   */
+  @VisibleForTesting
+  void atHeadOfRingBufferEventHandlerAppend() {
+    // Noop
   }
 
   private static IOException ensureIOException(final Throwable t) {

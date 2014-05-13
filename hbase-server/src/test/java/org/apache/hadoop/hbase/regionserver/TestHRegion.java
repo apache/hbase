@@ -34,9 +34,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -4184,8 +4182,8 @@ public class TestHRegion {
 
     //verify append called or not
     verify(log, expectAppend ? times(1) : never())
-      .appendNoSync((HRegionInfo)any(), eq(tableName), (WALEdit)any(), (List<UUID>)any(),
-        anyLong(), (HTableDescriptor)any(), (AtomicLong)any(), anyBoolean(), anyLong(), anyLong());
+      .appendNoSync((HTableDescriptor)any(), (HRegionInfo)any(), (HLogKey)any(),
+          (WALEdit)any(), (AtomicLong)any(), Mockito.anyBoolean());
 
     // verify sync called or not
     if (expectSync || expectSyncFromLogSyncer) {

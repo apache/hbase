@@ -969,16 +969,19 @@ public class TestWALReplay {
     }
   }
 
-  private void addRegionEdits (final byte [] rowName, final byte [] family,
+  static List<Put> addRegionEdits (final byte [] rowName, final byte [] family,
       final int count, EnvironmentEdge ee, final HRegion r,
       final String qualifierPrefix)
   throws IOException {
+    List<Put> puts = new ArrayList<Put>();
     for (int j = 0; j < count; j++) {
       byte[] qualifier = Bytes.toBytes(qualifierPrefix + Integer.toString(j));
       Put p = new Put(rowName);
       p.add(family, qualifier, ee.currentTimeMillis(), rowName);
       r.put(p);
+      puts.add(p);
     }
+    return puts;
   }
 
   /*
@@ -1031,6 +1034,4 @@ public class TestWALReplay {
     htd.addFamily(c);
     return htd;
   }
-
 }
-

@@ -24,6 +24,7 @@ import java.security.Key;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -235,7 +236,7 @@ public final class Encryption {
     Bytes.random(salt);
     StringBuilder sb = new StringBuilder();
     for (byte[] b: args) {
-      sb.append(b);
+      sb.append(Arrays.toString(b));
     }
     PBEKeySpec spec = new PBEKeySpec(sb.toString().toCharArray(), salt, 10000, 128);
     try {

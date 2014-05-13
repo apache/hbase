@@ -18,17 +18,26 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.BindException;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -38,14 +47,31 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdge;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -135,6 +161,86 @@ public class TestHLog  {
   private static String getName() {
     // TODO Auto-generated method stub
     return "TestHLog";
+  }
+
+  /**
+   * Test flush for sure has a sequence id that is beyond the last edit appended.  We do this
+   * by slowing appends in the background ring buffer thread while in foreground we call
+   * flush.  The addition of the sync over HRegion in flush should fix an issue where flush was
+   * returning before all of its appends had made it out to the WAL (HBASE-11109).
+   * @throws IOException 
+   * @see HBASE-11109
+   */
+  @Test
+  public void testFlushSequenceIdIsGreaterThanAllEditsInHFile() throws IOException {
+    String testName = "testFlushSequenceIdIsGreaterThanAllEditsInHFile";
+    final TableName tableName = TableName.valueOf(testName);
+    final HRegionInfo hri = new HRegionInfo(tableName);
+    final byte[] rowName = tableName.getName();
+    final HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(new HColumnDescriptor("f"));
+    HRegion r = HRegion.createHRegion(hri, TEST_UTIL.getDefaultRootDirPath(),
+      TEST_UTIL.getConfiguration(), htd);
+    HRegion.closeHRegion(r);
+    final int countPerFamily = 10;
+    final MutableBoolean goslow = new MutableBoolean(false);
+    // Bypass factory so I can subclass and doctor a method.
+    FSHLog wal = new FSHLog(FileSystem.get(conf), TEST_UTIL.getDefaultRootDirPath(),
+        testName, conf) {
+      @Override
+      void atHeadOfRingBufferEventHandlerAppend() {
+        if (goslow.isTrue()) {
+          Threads.sleep(100);
+          LOG.debug("Sleeping before appending 100ms");
+        }
+        super.atHeadOfRingBufferEventHandlerAppend();
+      }
+    };
+    HRegion region = HRegion.openHRegion(TEST_UTIL.getConfiguration(),
+      TEST_UTIL.getTestFileSystem(), TEST_UTIL.getDefaultRootDirPath(), hri, htd, wal);
+    EnvironmentEdge ee = EnvironmentEdgeManager.getDelegate();
+    try {
+      List<Put> puts = null;
+      for (HColumnDescriptor hcd: htd.getFamilies()) {
+        puts =
+          TestWALReplay.addRegionEdits(rowName, hcd.getName(), countPerFamily, ee, region, "x");
+      }
+
+      // Now assert edits made it in.
+      final Get g = new Get(rowName);
+      Result result = region.get(g);
+      assertEquals(countPerFamily * htd.getFamilies().size(), result.size());
+
+      // Construct a WALEdit and add it a few times to the WAL.
+      WALEdit edits = new WALEdit();
+      for (Put p: puts) {
+        CellScanner cs = p.cellScanner();
+        while (cs.advance()) {
+          edits.add(KeyValueUtil.ensureKeyValue(cs.current()));
+        }
+      }
+      // Add any old cluster id.
+      List<UUID> clusterIds = new ArrayList<UUID>();
+      clusterIds.add(UUID.randomUUID());
+      // Now make appends run slow.
+      goslow.setValue(true);
+      for (int i = 0; i < countPerFamily; i++) {
+        wal.appendNoSync(region.getRegionInfo(), tableName, edits,
+          clusterIds, System.currentTimeMillis(), htd, region.getSequenceId(), true, -1, -1);
+      }
+      region.flushcache();
+      // FlushResult.flushSequenceId is not visible here so go get the current sequence id.
+      long currentSequenceId = region.getSequenceId().get();
+      // Now release the appends
+      goslow.setValue(false);
+      synchronized (goslow) {
+        goslow.notifyAll();
+      }
+      assertTrue(currentSequenceId >= region.getSequenceId().get());
+    } finally {
+      region.close(true);
+      wal.close();
+    }
   }
 
   /**

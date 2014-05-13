@@ -20,10 +20,8 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.NavigableSet;
 import java.util.TreeSet;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,13 +33,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 import com.google.protobuf.TextFormat;
@@ -263,13 +260,10 @@ public class HLogUtil {
    */
   public static void writeCompactionMarker(HLog log, HTableDescriptor htd, HRegionInfo info,
       final CompactionDescriptor c, AtomicLong sequenceId) throws IOException {
-    WALEdit e = WALEdit.createCompaction(c);
-    long now = EnvironmentEdgeManager.currentTimeMillis();
     TableName tn = TableName.valueOf(c.getTableName().toByteArray());
-    log.appendNoSync(info, tn, e, new ArrayList<UUID>(), now, htd, sequenceId, false,
-      HConstants.NO_NONCE, HConstants.NO_NONCE);
+    HLogKey key = new HLogKey(info.getEncodedNameAsBytes(), tn);
+    log.appendNoSync(htd, info, key, WALEdit.createCompaction(c), sequenceId, false);
     log.sync();
-
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended compaction marker " + TextFormat.shortDebugString(c));
     }

@@ -23,6 +23,7 @@ import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -31,7 +32,6 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -43,11 +43,13 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.HBaseZeroCopyByteString;
 
 /**
  * A Key for an entry in the change log.
@@ -122,6 +124,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
 
   private long nonceGroup = HConstants.NO_NONCE;
   private long nonce = HConstants.NO_NONCE;
+  static final List<UUID> EMPTY_UUIDS = Collections.unmodifiableList(new ArrayList<UUID>());
 
   private CompressionContext compressionContext;
 
@@ -139,10 +142,20 @@ public class HLogKey implements WritableComparable<HLogKey> {
         HConstants.NO_NONCE, HConstants.NO_NONCE);
   }
 
+  public HLogKey(final byte[] encodedRegionName, final TableName tablename) {
+    this(encodedRegionName, tablename, System.currentTimeMillis());
+  }
+
+  public HLogKey(final byte[] encodedRegionName, final TableName tablename, final long now) {
+    init(encodedRegionName, tablename, HLog.NO_SEQUENCE_ID, now,
+        EMPTY_UUIDS, HConstants.NO_NONCE, HConstants.NO_NONCE);
+  }
+
   /**
    * Create the log key for writing to somewhere.
    * We maintain the tablename mainly for debugging purposes.
    * A regionName is always a sub-table object.
+   * <p>Used by log splitting and snapshots.
    *
    * @param encodedRegionName Encoded name of the region as returned by
    * <code>HRegionInfo#getEncodedNameAsBytes()</code>.
@@ -154,6 +167,41 @@ public class HLogKey implements WritableComparable<HLogKey> {
   public HLogKey(final byte [] encodedRegionName, final TableName tablename,
       long logSeqNum, final long now, List<UUID> clusterIds, long nonceGroup, long nonce) {
     init(encodedRegionName, tablename, logSeqNum, now, clusterIds, nonceGroup, nonce);
+  }
+
+  /**
+   * Create the log key for writing to somewhere.
+   * We maintain the tablename mainly for debugging purposes.
+   * A regionName is always a sub-table object.
+   *
+   * @param encodedRegionName Encoded name of the region as returned by
+   * <code>HRegionInfo#getEncodedNameAsBytes()</code>.
+   * @param tablename
+   * @param now Time at which this edit was written.
+   * @param clusterIds the clusters that have consumed the change(used in Replication)
+   * @param nonceGroup
+   * @param nonce
+   */
+  public HLogKey(final byte [] encodedRegionName, final TableName tablename,
+      final long now, List<UUID> clusterIds, long nonceGroup, long nonce) {
+    init(encodedRegionName, tablename, HLog.NO_SEQUENCE_ID, now, clusterIds, nonceGroup, nonce);
+  }
+
+  /**
+   * Create the log key for writing to somewhere.
+   * We maintain the tablename mainly for debugging purposes.
+   * A regionName is always a sub-table object.
+   *
+   * @param encodedRegionName Encoded name of the region as returned by
+   * <code>HRegionInfo#getEncodedNameAsBytes()</code>.
+   * @param tablename
+   * @param nonceGroup
+   * @param nonce
+   */
+  public HLogKey(final byte [] encodedRegionName, final TableName tablename, long nonceGroup,
+      long nonce) {
+    init(encodedRegionName, tablename, HLog.NO_SEQUENCE_ID,
+        EnvironmentEdgeManager.currentTimeMillis(), EMPTY_UUIDS, nonceGroup, nonce);
   }
 
   protected void init(final byte [] encodedRegionName, final TableName tablename,

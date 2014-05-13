@@ -48,6 +48,9 @@ import org.htrace.Span;
  */
 @InterfaceAudience.Private
 class SyncFuture {
+  // Implementation notes: I tried using a cyclicbarrier in here for handler and sync threads
+  // to coordinate on but it did not give any obvious advantage and some issues with order in which
+  // events happen.
   private static final long NOT_DONE = 0;
 
   /**

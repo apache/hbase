@@ -1241,7 +1241,7 @@ public class HRegionServer extends HasThread implements
       .setWriteRequestsCount((int) r.writeRequestsCount.get())
       .setTotalCompactingKVs(totalCompactingKVs)
       .setCurrentCompactedKVs(currentCompactedKVs)
-      .setCompleteSequenceId(r.completeSequenceId);
+      .setCompleteSequenceId(r.lastFlushSeqId);
 
     return regionLoad.build();
   }
