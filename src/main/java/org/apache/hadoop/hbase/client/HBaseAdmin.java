@@ -600,6 +600,15 @@ public class HBaseAdmin {
 
   /**
    * @param tableName name of table to check
+   * @return true if table is on-line
+   * @throws IOException if a remote or network exception occurs
+   */
+  public boolean isTableEnabled(StringBytes tableName) throws IOException {
+    return isTableEnabled(tableName.getBytes());
+  }
+
+  /**
+   * @param tableName name of table to check
    * @return true if table is off-line
    * @throws IOException if a remote or network exception occurs
    */

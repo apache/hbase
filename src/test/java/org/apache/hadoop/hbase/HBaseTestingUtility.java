@@ -760,10 +760,27 @@ public class HBaseTestingUtility {
     return new HTable(getConfiguration(), tableName);
   }
 
+  /**
+   * Returns an instance of HTable of specified table.
+   */
+  public HTable getHTable(StringBytes tableName) throws IOException {
+    return new HTable(getConfiguration(), tableName);
+  }
+
+  /**
+   * Deletes a table.
+   */
   public void deleteTable(byte[] tableName) throws IOException {
     HBaseAdmin hba = new HBaseAdmin(getConfiguration());
     hba.disableTable(tableName);
     hba.deleteTable(tableName);
+  }
+
+  /**
+   * Deletes a table.
+   */
+  public void deleteTable(StringBytes tableName) throws IOException {
+    deleteTable(tableName.getBytes());
   }
 
   /**

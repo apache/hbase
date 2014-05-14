@@ -19,20 +19,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import junit.framework.Assert;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.client.HTableMultiplexer.HTableMultiplexerStatus;
-import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,17 +27,39 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import junit.framework.Assert;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.client.HTableMultiplexer.HTableMultiplexerStatus;
+import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.StringBytes;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 @Category(MediumTests.class)
 public class TestHTableMultiplexer {
   final Log LOG = LogFactory.getLog(getClass());
-  private final static HBaseTestingUtility TEST_UTIL =
+  private static final HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();
-  private static byte[] FAMILY = Bytes.toBytes("testFamily");
-  private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
-  private static byte[] VALUE1 = Bytes.toBytes("testValue1");
-  private static byte[] VALUE2 = Bytes.toBytes("testValue2");
-  private static int SLAVES = 3;
-  private static int PER_REGIONSERVER_QUEUE_SIZE = 100000;
+  private static final int SLAVES = 3;
+  private static final StringBytes TABLE = new StringBytes(
+      "TestHTableMultiplexer");
+  private static final byte[] FAMILY = Bytes.toBytes("testFamily");
+
+  private static final byte[] QUALIFIER = Bytes.toBytes("testQualifier");
+  private static final byte[] VALUE1 = Bytes.toBytes("testValue1");
+  private static final byte[] VALUE2 = Bytes.toBytes("testValue2");
+  private static final int PER_REGIONSERVER_QUEUE_SIZE = 100000;
+  private static final int NUM_REGIONS = 10;
 
   /**
    * @throws java.lang.Exception
@@ -69,20 +77,30 @@ public class TestHTableMultiplexer {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  @Before
+  public void setUp() throws Exception {
+    if (TEST_UTIL.getHBaseAdmin().tableExists(TABLE.getBytes())) {
+      TEST_UTIL.deleteTable(TABLE);
+    }
+    TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY }, 3,
+        Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    TEST_UTIL.deleteTable(TABLE);
+  }
+
   @Test(timeout = 300000)
   public void testHTableMultiplexer() throws Exception {
-    byte[] TABLE = Bytes.toBytes("testHTableMultiplexer");
-    final int NUM_REGIONS = 10;
-    final int VERSION = 3;
     List<Put> failedPuts = null;
     boolean success = false;
-    
+
     HTableMultiplexer multiplexer = new HTableMultiplexer(
         TEST_UTIL.getConfiguration(), PER_REGIONSERVER_QUEUE_SIZE);
     HTableMultiplexerStatus status = multiplexer.getHTableMultiplexerStatus();
 
-    HTable ht = TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY }, VERSION,
-        Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
+    HTable ht = TEST_UTIL.getHTable(TABLE);
     byte[][] startRows = ht.getStartKeys();
     byte[][] endRows = ht.getEndKeys();
 
@@ -90,15 +108,15 @@ public class TestHTableMultiplexer {
     for (int i = 0; i < NUM_REGIONS; i++) {
       Put put = new Put(startRows[i]);
       put.add(FAMILY, QUALIFIER, VALUE1);
-      success = multiplexer.put(TABLE, put, HBaseRPCOptions.DEFAULT);
+      success = multiplexer.put(TABLE.getBytes(), put, HBaseRPCOptions.DEFAULT);
       Assert.assertTrue(success);
 
       // ensure the buffer has been flushed
       verifyAllBufferedPutsHasFlushed(status);
 
       // verify that the Get returns the correct result
-      Get get = new Get(startRows[i]);
-      get.addColumn(FAMILY, QUALIFIER);
+      Get get =
+          new Get.Builder(startRows[i]).addColumn(FAMILY, QUALIFIER).create();
       Result r = ht.get(get);
       Assert.assertEquals(0,
           Bytes.compareTo(VALUE1, r.getValue(FAMILY, QUALIFIER)));
@@ -111,7 +129,8 @@ public class TestHTableMultiplexer {
       put.add(FAMILY, QUALIFIER, VALUE2);
       multiput.add(put);
     }
-    failedPuts = multiplexer.put(TABLE, multiput, HBaseRPCOptions.DEFAULT);
+    failedPuts =
+        multiplexer.put(TABLE.getBytes(), multiput, HBaseRPCOptions.DEFAULT);
     Assert.assertTrue(failedPuts == null);
 
     // ensure the buffer has been flushed
@@ -119,8 +138,8 @@ public class TestHTableMultiplexer {
 
     // verify that the Get returns the correct result
     for (int i = 0; i < NUM_REGIONS; i++) {
-      Get get = new Get(endRows[i]);
-      get.addColumn(FAMILY, QUALIFIER);
+      Get get =
+          new Get.Builder(endRows[i]).addColumn(FAMILY, QUALIFIER).create();
       Result r = ht.get(get);
       Assert.assertEquals(0,
           Bytes.compareTo(VALUE2, r.getValue(FAMILY, QUALIFIER)));
@@ -153,7 +172,6 @@ public class TestHTableMultiplexer {
    */
   @Test(timeout = 150000)
   public void testCounters() throws Exception {
-    byte[] TABLE = Bytes.toBytes("testCounters");
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setLong("hbase.htablemultiplexer.flush.frequency.ms", 100);
 
@@ -161,8 +179,6 @@ public class TestHTableMultiplexer {
       new HTableMultiplexer(TEST_UTIL.getConfiguration(),
         100);
     HTableMultiplexerStatus status = multiplexer.getHTableMultiplexerStatus();
-
-    HTable ht = TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY });
 
     int numPuts = 100;
     boolean bufferWasNonEmptyAtSomePoint = false;
@@ -173,7 +189,7 @@ public class TestHTableMultiplexer {
       Put put = new Put(row);
       put.add(FAMILY, qualifier, value);
 
-      multiplexer.put(TABLE, put, HBaseRPCOptions.DEFAULT);
+      multiplexer.put(TABLE.getBytes(), put, HBaseRPCOptions.DEFAULT);
       status.recalculateCounters();
       if (status.getTotalBufferedCounter() > 0) {
         bufferWasNonEmptyAtSomePoint = true;
@@ -196,6 +212,8 @@ public class TestHTableMultiplexer {
     Assert.assertEquals(0, status.getTotalBufferedCounter());
     Assert.assertEquals(numPuts, status.getTotalSucccededPutCounter());
 
+    HTable ht = TEST_UTIL.getHTable(TABLE);
+
     // Check if all the puts went through correctly.
     for (int i = 1; i <= numPuts; i++) {
       byte[] row = Bytes.toBytes("Row" + i);
@@ -203,8 +221,7 @@ public class TestHTableMultiplexer {
       byte[] value = Bytes.toBytes("Value" + i);
 
       // verify that the Get returns the correct result
-      Get get = new Get(row);
-      get.addColumn(FAMILY, qualifier);
+      Get get = new Get.Builder(row).addColumn(FAMILY, qualifier).create();
       Result r = ht.get(get);
       Assert.assertEquals(0,
         Bytes.compareTo(value, r.getValue(FAMILY, qualifier)));
@@ -214,17 +231,13 @@ public class TestHTableMultiplexer {
    * This test is to verify that different instances of byte-array with same
    * content as the table names will result in the same HTable instance.
    */
-  @Test
+  @Test(timeout = 120000)
   public void testCachedOfHTable() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-    conf.setLong("hbase.htablemultiplexer.flush.frequency.ms", 100);
     HTableMultiplexer multiplexer =
         new HTableMultiplexer(TEST_UTIL.getConfiguration(), 100);
 
     HTableMultiplexerStatus status = multiplexer.getHTableMultiplexerStatus();
     Assert.assertEquals("storedHTableCount", 0, status.getStoredHTableCount());
-
-    byte[] TABLE = Bytes.toBytes("testCounters");
 
     byte[] row = Bytes.toBytes("Row" + 1);
     byte[] qualifier = Bytes.toBytes("Qualifier" + 1);
@@ -232,10 +245,10 @@ public class TestHTableMultiplexer {
     Put put = new Put(row);
     put.add(FAMILY, qualifier, value);
     // first put
-    multiplexer.put(TABLE, put, HBaseRPCOptions.DEFAULT);
+    multiplexer.put(TABLE.getBytes(), put, HBaseRPCOptions.DEFAULT);
     Assert.assertEquals("storedHTableCount", 1, status.getStoredHTableCount());
     // second put
-    byte[] TABLE1 = Arrays.copyOf(TABLE, TABLE.length);
+    byte[] TABLE1 = Arrays.copyOf(TABLE.getBytes(), TABLE.getBytes().length);
     multiplexer.put(TABLE1, put, HBaseRPCOptions.DEFAULT);
     Assert.assertEquals("storedHTableCount", 1, status.getStoredHTableCount());
   }
@@ -247,12 +260,11 @@ public class TestHTableMultiplexer {
    *
    * @throws Exception
    */
-  @Test
+  @Test(timeout = 300000)
   public void testMultipleThreads() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setLong("hbase.htablemultiplexer.flush.frequency.ms", 10);
-    byte[] TABLE = Bytes.toBytes("testMultipleThreads");
-    HTable ht = TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY });
+    HTable ht = TEST_UTIL.getHTable(TABLE);
     HTableMultiplexer multiplexer = new HTableMultiplexer(
         TEST_UTIL.getConfiguration(), 1000);
     ExecutorService executor = Executors.newFixedThreadPool(10);
@@ -261,7 +273,7 @@ public class TestHTableMultiplexer {
     for (int i = 0; i < 10; i++) {
       byte[] suffix = Bytes.toBytes(i);
       byte[] row = Bytes.add(rowPrefix, suffix);
-      Runnable runnable = new Client(multiplexer, TABLE, row);
+      Runnable runnable = new Client(multiplexer, TABLE.getBytes(), row);
       Future<?> future = executor.submit(runnable);
       futures.add(future);
     }
