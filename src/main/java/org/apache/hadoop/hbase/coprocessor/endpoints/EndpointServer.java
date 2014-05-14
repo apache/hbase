@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.coprocessor.endpoints;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -27,6 +28,7 @@ import org.apache.hadoop.hbase.coprocessor.endpoints.EndpointManager.EndpointInf
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
 import org.apache.hadoop.hbase.regionserver.HRegionIf;
 import org.apache.hadoop.hbase.regionserver.HRegionServerIf;
+import org.apache.hadoop.hbase.util.ExceptionUtils;
 
 /**
  * An endpoint server.
@@ -80,6 +82,12 @@ public class EndpointServer implements IEndpointServer {
       // Invoke the specified method with parameters, the return value is
       // encoded and returned.
       return ent.invoke(ep, methodName, params);
+    } catch (InvocationTargetException e) {
+      Throwable target = e.getTargetException();
+      if (target instanceof Exception) {
+        throw new ThriftHBaseException((Exception) target);
+      }
+      throw ExceptionUtils.toRuntimeException(target);
     } catch (Exception e) {
       throw new ThriftHBaseException(e);
     }

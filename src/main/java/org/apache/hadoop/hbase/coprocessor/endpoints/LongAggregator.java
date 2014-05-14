@@ -50,9 +50,13 @@ public class LongAggregator implements ILongAggregator {
   }
 
   private HRegionIf region;
+  private byte[] startRow;
+  private byte[] stopRow;
   @Override
   public void setContext(IEndpointContext context) throws IOException {
     this.region = context.getRegion();
+    this.startRow = context.getStartRow();
+    this.stopRow = context.getStopRow();
   }
 
   private interface IUpdater {
@@ -78,6 +82,8 @@ public class LongAggregator implements ILongAggregator {
         builder.addFamily(family);
       }
     }
+    builder.setStartRow(startRow);
+    builder.setStopRow(stopRow);
 
     try (InternalScanner scanner = this.region.getScanner(builder.create())) {
 

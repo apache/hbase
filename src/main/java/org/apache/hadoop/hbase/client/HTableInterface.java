@@ -19,20 +19,20 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.HTableDescriptor;
-
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HTableDescriptor;
 
 /**
  * Used to communicate with a single HBase table.
  *
  * @since 0.21.0
  */
-public interface HTableInterface {
+public interface HTableInterface extends AutoCloseable {
 
   /**
    * Gets the name of this table.
@@ -304,6 +304,7 @@ public interface HTableInterface {
    *
    * @throws IOException if a remote or network exception occurs.
    */
+  @Override
   void close() throws IOException;
 
   /**

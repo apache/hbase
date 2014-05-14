@@ -29,6 +29,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.coprocessor.endpoints.EndpointLoader;
+import org.apache.hadoop.hbase.coprocessor.endpoints.LongAggregator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -63,6 +65,9 @@ public class TestHBCpp {
 
     TEST_UTIL.getConfiguration().set(HBaseTestingUtility.FS_TYPE_KEY,
         HBaseTestingUtility.FS_TYPE_LFS);
+
+    TEST_UTIL.getConfiguration().setStrings(EndpointLoader.FACTORY_CLASSES_KEY,
+        LongAggregator.Factory.class.getName());
 
     TEST_UTIL.startMiniCluster();
     // create the table as SimpleClient assumes.

@@ -28,13 +28,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableMap;
 
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.ServerCallable;
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ExceptionUtils;
 
 /**
@@ -97,10 +97,14 @@ public class HTableEndpointClient implements IEndpointClient {
 
     try {
       for (final HRegionInfo region : regions.keySet()) {
-        // TODO compute startRow and stopRow
-        T ep =
-            getEndpointProxy(clazz, region, HConstants.EMPTY_BYTE_ARRAY,
-                HConstants.EMPTY_BYTE_ARRAY);
+        if (!Bytes.rangesOverlapped(startRow, stopRow, region.getStartKey(),
+            region.getEndKey())) {
+          // no overlap, skipped.
+          continue;
+        }
+
+        T ep = getEndpointProxy(clazz, region, Bytes.nonNull(startRow),
+            Bytes.nonNull(stopRow));
         results.put(region, caller.call(ep));
       }
     } catch (UndeclaredThrowableException e) {

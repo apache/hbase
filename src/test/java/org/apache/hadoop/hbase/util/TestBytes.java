@@ -343,4 +343,12 @@ public class TestBytes extends TestCase {
       }
     }
   }
+
+  public void testNonNull() throws Exception {
+    Assert.assertArrayEquals("nonNull(null)", new byte[0], Bytes.nonNull(null));
+    Assert.assertArrayEquals("nonNull([])", new byte[0],
+        Bytes.nonNull(new byte[0]));
+    Assert.assertArrayEquals("nonNull([1])", new byte[] { 1 },
+        Bytes.nonNull(new byte[] { 1 }));
+  }
 }

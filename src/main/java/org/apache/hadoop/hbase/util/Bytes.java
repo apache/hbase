@@ -1963,4 +1963,78 @@ public class Bytes {
     }
     return len;
   }
+
+  /**
+   * Converts a null byte[] into empty byte array, no change for other things.
+   */
+  public static byte[] nonNull(byte[] bytes) {
+    if (bytes == null) {
+      return HConstants.EMPTY_BYTE_ARRAY;
+    }
+
+    return bytes;
+  }
+
+  /**
+   * Returns whether the range defined by the start and end rows is empty.
+   *
+   * @param start the start bound, inclusive. null or zero-length array means
+   *          no bound.
+   * @param end the end bound, exclusive. null or zero-length array means
+   *          no bound.
+   */
+  public static boolean rangeNotEmpty(byte[] start, byte[] end) {
+    if (start == null || start.length == 0) {
+      return true;
+    }
+
+    if (end == null || end.length == 0) {
+      return true;
+    }
+
+    return compareTo(start, end) < 0;
+  }
+
+  /**
+   * Returns whether two ranges defined by start/end rows contain non-empty
+   * overlap.
+   */
+  public static boolean rangesOverlapped(byte[] start1, byte[] end1,
+      byte[] start2, byte[] end2) {
+    Pair<byte[], byte[]> startEnd = rangeIntersect(start1, end1, start2, end2);
+
+    return rangeNotEmpty(startEnd.getFirst(), startEnd.getSecond());
+  }
+
+  /**
+   * Returns the intersect of two regions.
+   *
+   * @return Pair of start and end keys in order.
+   */
+  public static Pair<byte[], byte[]> rangeIntersect(byte[] start1,
+      byte[] end1, byte[] start2, byte[] end2) {
+    byte[] start = null;
+    if (start1 == null || start1.length == 0) {
+      start = start2;
+    } else if (start2 == null || start2.length == 0) {
+      start = start1;
+    } else if (compareTo(start1, start2) > 0) {
+      start = start1;
+    } else {
+      start = start2;
+    }
+
+    byte[] end = null;
+    if (end1 == null || end1.length == 0) {
+      end = end2;
+    } else if (end2 == null || end2.length == 0) {
+      end = end1;
+    } else if (compareTo(end1, end2) < 0) {
+      end = end1;
+    } else {
+      end = end2;
+    }
+
+    return new Pair<>(start, end);
+  }
 }
