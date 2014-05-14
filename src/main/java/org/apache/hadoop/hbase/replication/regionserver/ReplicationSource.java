@@ -426,6 +426,11 @@ public class ReplicationSource extends Thread
               this.peerClusterZnode, this.repLogReader.getPosition(), queueRecovered, currentWALisBeingWrittenTo);
           this.lastLoggedPosition = this.repLogReader.getPosition();
         }
+        if (!gotIOE) {
+          // if there was nothing to ship and it's not an error
+          // set "ageOfLastShippedOp" to <now> to indicate that we're current
+          this.metrics.setAgeOfLastShippedOp(System.currentTimeMillis());
+        }
         if (sleepForRetries("Nothing to replicate", sleepMultiplier)) {
           sleepMultiplier++;
         }
@@ -740,7 +745,7 @@ public class ReplicationSource extends Thread
       }
       try {
         HRegionInterface rrs = getRS();
-        LOG.debug("Replicating " + entries.size());
+        LOG.debug("Replicating " + entries.size() + ", " + this.currentSize + " bytes");
         // can't avoid the copy here, the replicateLogEntries RPC require an HLog.Entry[]
         rrs.replicateLogEntries(entries.toArray(new HLog.Entry[entries.size()]));
         if (this.lastLoggedPosition != this.repLogReader.getPosition()) {
@@ -750,10 +755,9 @@ public class ReplicationSource extends Thread
         }
         this.totalReplicatedEdits += entries.size();
         this.metrics.shippedBatchesRate.inc(1);
-        this.metrics.shippedOpsRate.inc(
-            this.currentNbOperations);
-        this.metrics.setAgeOfLastShippedOp(
-            entries.get(entries.size()-1).getKey().getWriteTime());
+        this.metrics.shippedKBRate.inc(this.currentSize/1024);
+        this.metrics.shippedOpsRate.inc(this.currentNbOperations);
+        this.metrics.setAgeOfLastShippedOp(entries.get(entries.size()-1).getKey().getWriteTime());
         LOG.debug("Replicated in total: " + this.totalReplicatedEdits);
         break;
 

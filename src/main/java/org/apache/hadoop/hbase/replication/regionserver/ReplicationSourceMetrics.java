@@ -44,6 +44,10 @@ public class ReplicationSourceMetrics implements Updater {
   public final MetricsRate shippedOpsRate =
       new MetricsRate("shippedOpsRate", registry);
 
+  /** Rate of shipped bytes (in KB) by the source */
+  public final MetricsRate shippedKBRate =
+      new MetricsRate("shippedBytesRate", registry);
+
   /** Rate of shipped batches by the source */
   public final MetricsRate shippedBatchesRate =
       new MetricsRate("shippedBatchesRate", registry);
@@ -115,6 +119,7 @@ public class ReplicationSourceMetrics implements Updater {
       refreshAgeOfLastShippedOp();
       this.shippedOpsRate.pushMetric(this.metricsRecord);
       this.shippedBatchesRate.pushMetric(this.metricsRecord);
+      this.shippedKBRate.pushMetric(this.metricsRecord);
       this.logEditsReadRate.pushMetric(this.metricsRecord);
       this.logEditsFilteredRate.pushMetric(this.metricsRecord);
       this.ageOfLastShippedOp.pushMetric(this.metricsRecord);
