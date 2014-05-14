@@ -57,6 +57,7 @@ public class ScannerCallable extends ServerCallable<Result[]> {
       Scan scan, HBaseRPCOptions options) {
     super(connection, tableName, scan.getStartRow(), options);
     this.scan = scan;
+    setCaching(scan.getCaching());
   }
 
   /**
