@@ -129,7 +129,7 @@ public class RollingRestart {
     HRegionInterface destinationServer = getDestinationServer(region);
 
     if (destinationServer == null) {
-      LOG.debug("No preferred server found for " + region.getRegionNameAsString() +
+      LOG.error("No preferred server found for " + region.getRegionNameAsString() +
           ". Skipping...");
       return false;
     }
@@ -294,8 +294,20 @@ public class RollingRestart {
     List<HServerAddress> serversForRegion = plan.getAssignment(region);
 
     if (serversForRegion == null) {
-      return null;
+      LOG.warn("Cannot locate the favored nodes for " +
+        region.getRegionNameAsString() + ", hashcode " + region.hashCode() +
+      ", number of entries in the plan " + plan.getAssignmentMap().size() +
+      ", trying a serial scan of the assignment map to locate the region");
+
+      serversForRegion = plan.getAssignmentForRegion(region.getRegionNameAsString());
+
+      if (serversForRegion == null) {
+        LOG.error("Unable to find the favored nodes for " +
+          region.getRegionNameAsString() + " in the assignment plan.");
+        return null;
+      }
     }
+
     // Get the preferred region server from the Assignment Plan
     for (HServerAddress server : serversForRegion) {
       if (!server.equals(serverAddr)) {
@@ -310,6 +322,8 @@ public class RollingRestart {
       }
     }
 
+    LOG.error("No favored nodes alive for " +
+      region.getRegionNameAsString());
     // if none found we should return a random server. For now return null
     return null;
   }

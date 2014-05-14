@@ -129,7 +129,7 @@ public class AssignmentPlan implements Writable{
     LOG.info("Update the assignment plan for region " +
         region.getRegionNameAsString() + " to favored nodes " +
         RegionPlacement.getFavoredNodes(servers) 
-        + " at time stamp " + ts);
+        + " at time stamp " + ts + " hashcode " + region.hashCode());
   }
   
   /**
@@ -152,6 +152,10 @@ public class AssignmentPlan implements Writable{
    * @param region
    */
   public synchronized void removeAssignment(HRegionInfo region) {
+    LOG.info("Remove the assignment plan for region " +
+      region.getRegionNameAsString() + " to favored nodes "
+      + " at time stamp " + System.currentTimeMillis() + " hashcode " +
+      region.hashCode());
     this.assignmentMap.remove(region);
     this.assignmentUpdateTS.remove(region);
   }
@@ -170,6 +174,27 @@ public class AssignmentPlan implements Writable{
    */
   public synchronized List<HServerAddress> getAssignment(HRegionInfo region) {
     return assignmentMap.get(region);
+  }
+
+  /**
+   * Scans the current assignment map serially to check if there is a region
+   * present with the same name.
+   *
+   * This is a relatively expensive operation. It should be used only when
+   * getAssignment() is not working.
+   * @param regionName name of the region
+   * @return List of favored nodes if found, else null
+   */
+  public synchronized List<HServerAddress> getAssignmentForRegion(String regionName) {
+    List<HServerAddress> serversForRegion = null;
+    for (HRegionInfo info : assignmentMap.keySet()) {
+      if (info.getRegionNameAsString().equals(regionName)) {
+        LOG.info("Found entry for " + regionName);
+        serversForRegion = getAssignment(info);
+        break;
+      }
+    }
+    return serversForRegion;
   }
   
   /**
