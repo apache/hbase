@@ -375,6 +375,15 @@ public class HTableClientScanner implements ResultScanner {
      */
     private Result[] scanRegionServer() throws IOException,
         InterruptedException {
+      // XXX The following checking is only for backward compatibility, remove
+      // this when all servers are after Bellatrix version.
+      if (!Bytes.rangeNotEmpty(startKey, scan.getStopRow())) {
+        // We go across stopRow, stop scanning
+        startKey = null;
+        this.numRegionsScanned.addAndGet(1);
+        return null;
+      }
+
       if (callable == null) {
         // Open a scanner
         callable = getScannerCallable(startKey);

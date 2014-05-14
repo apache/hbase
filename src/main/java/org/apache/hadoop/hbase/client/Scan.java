@@ -139,7 +139,7 @@ public class Scan extends Operation implements Writable {
    * @param startRow row to start scanner at or after
    */
   public Scan(byte [] startRow) {
-    this.startRow = startRow;
+    this.startRow = Bytes.nonNull(startRow);
   }
 
   /**
@@ -148,8 +148,8 @@ public class Scan extends Operation implements Writable {
    * @param stopRow row to stop scanner before (exclusive)
    */
   public Scan(byte [] startRow, byte [] stopRow) {
-    this.startRow = startRow;
-    this.stopRow = stopRow;
+    this(startRow);
+    this.stopRow = Bytes.nonNull(stopRow);
   }
 
   /**
@@ -159,8 +159,7 @@ public class Scan extends Operation implements Writable {
    * @throws IOException When copying the values fails.
    */
   public Scan(Scan scan) throws IOException {
-    startRow = scan.getStartRow();
-    stopRow  = scan.getStopRow();
+    this(scan.getStartRow(), scan.getStopRow());
     maxVersions = scan.getMaxVersions();
     batch = scan.getBatch();
     storeLimit = scan.getMaxResultsPerColumnFamily();
@@ -222,8 +221,8 @@ public class Scan extends Operation implements Writable {
               @ThriftField(15) final int currentPartialResponseSize,
               @ThriftField(16) final TFilter tFilter,
               @ThriftField(17) final boolean preloadBlocks) throws IOException {
-    this.startRow = startRow;
-    this.stopRow = stopRow;
+    this.startRow = Bytes.nonNull(startRow);
+    this.stopRow = Bytes.nonNull(stopRow);
     this.maxVersions = maxVersions;
     this.batch = batch;
     this.storeLimit = storeLimit;
@@ -348,7 +347,7 @@ public class Scan extends Operation implements Writable {
    * @return this
    */
   public Scan setStartRow(byte [] startRow) {
-    this.startRow = startRow;
+    this.startRow = Bytes.nonNull(startRow);
     return this;
   }
 
@@ -358,7 +357,7 @@ public class Scan extends Operation implements Writable {
    * @return this
    */
   public Scan setStopRow(byte [] stopRow) {
-    this.stopRow = stopRow;
+    this.stopRow = Bytes.nonNull(stopRow);
     return this;
   }
 
@@ -574,7 +573,7 @@ public class Scan extends Operation implements Writable {
   }
 
   /**
-   * @return the startrow
+   * @return the startRow, never null.
    */
   @ThriftField(1)
   public byte [] getStartRow() {
@@ -582,7 +581,7 @@ public class Scan extends Operation implements Writable {
   }
 
   /**
-   * @return the stoprow
+   * @return the stopRow, never null.
    */
   @ThriftField(2)
   public byte [] getStopRow() {
@@ -1283,7 +1282,7 @@ public class Scan extends Operation implements Writable {
      * @return
      */
     public Builder setStopRow(byte[] stopRow) {
-      this.stopRow = stopRow;
+      this.stopRow = Bytes.nonNull(stopRow);
       return this;
     }
 
