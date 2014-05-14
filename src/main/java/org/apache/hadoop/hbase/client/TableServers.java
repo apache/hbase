@@ -1065,7 +1065,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
         LOG.debug("IOException locateRegionInMeta attempt " + tries
           + " of " + params.getNumRetries()
           + " failed; retrying after sleep of "
-          + params.getPauseTime(tries) + " because: " + e.getMessage());
+          + params.getPauseTime(tries) + " because: " + e.getMessage(), e);
       } else {
         throw e;
       }

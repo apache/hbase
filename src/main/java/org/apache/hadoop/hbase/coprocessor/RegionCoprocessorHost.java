@@ -73,14 +73,16 @@ public class RegionCoprocessorHost extends
 
   /**
    * Used mainly when we dynamically reload the configuration
+   * @throws IOException
    */
-  public void reloadCoprocessors(Configuration newConf) {
+  public void reloadCoprocessors(Configuration newConf) throws IOException {
+    coprocessors.clear();
     // reload system default cp's from configuration.
     reloadSysCoprocessorsOnConfigChange(newConf, REGION_COPROCESSOR_CONF_KEY);
     // reload system default cp's for user tables from configuration.
-    //TODO: check whether this checks for ROOT too
     if (!region.getRegionInfo().getTableDesc().isMetaRegion()
         && !region.getRegionInfo().getTableDesc().isRootRegion()) {
+      reloadCoprocessorsFromHdfs(newConf);
       reloadSysCoprocessorsOnConfigChange(newConf, USER_REGION_COPROCESSOR_CONF_KEY);
     }
   }

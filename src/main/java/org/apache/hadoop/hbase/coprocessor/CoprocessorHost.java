@@ -19,9 +19,11 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
@@ -39,6 +41,7 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.ipc.ThriftClientInterface;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.util.coprocessor.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.coprocessor.SortedCopyOnWriteSet;
@@ -64,7 +67,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     "hbase.coprocessor.wal.classes";
   public static final String ABORT_ON_ERROR_KEY = "hbase.coprocessor.abortonerror";
   public static final boolean DEFAULT_ABORT_ON_ERROR = true;
-
+  public static final String USER_REGION_COPROCESSOR_FROM_HDFS_KEY = "hbase.coprocessor.jars.and.classes";
 
   private static final Log LOG = LogFactory.getLog(CoprocessorHost.class);
   protected ThriftClientInterface tcInter;
@@ -125,9 +128,11 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     List<E> configured = new ArrayList<E>();
     for (String className : defaultCPClasses) {
       className = className.trim();
-      if (findCoprocessor(className) != null) {
-        continue;
-      }
+      // TODO: check if we want to reenable this behavior later!
+      // if (findCoprocessor(className) != null) {
+      // System.out.println("coprocessor found with name: " + className);
+      // continue;
+      // }
       ClassLoader cl = this.getClass().getClassLoader();
       Thread.currentThread().setContextClassLoader(cl);
       try {
@@ -143,14 +148,88 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   }
 
   /**
-   * Generally used when we do online configuration change for the loaded coprocessors
+   * Generally used when we do online configuration change for the loaded
+   * coprocessors
+   *
    * @param conf
    * @param confKey
    */
-  protected void reloadSysCoprocessorsOnConfigChange(Configuration conf, String confKey) {
-    //remove whatever is loaded already
-    coprocessors.clear();
+  protected void reloadSysCoprocessorsOnConfigChange(Configuration conf,
+      String confKey) {
+    // remove whatever is loaded already
     loadSystemCoprocessors(conf, confKey);
+  }
+
+  /**
+   * read coprocessors that should be loaded from configuration
+   *
+   * @param conf
+   */
+  private List<Pair<String, String>> readCoprocessorsFromConf(Configuration conf) {
+    List<Pair<String, String>> jarClass = new ArrayList<>();
+    Collection<String> jarsAndImpls = conf
+        .getStringCollection(USER_REGION_COPROCESSOR_FROM_HDFS_KEY);
+    String jar = null;
+    for (Iterator<String> iterator = jarsAndImpls.iterator(); iterator
+        .hasNext();) {
+      String string = (String) iterator.next();
+      if (string.endsWith(".jar")) {
+        if (checkIfCorrectPath(string)) {
+          jar = string;
+        } else {
+          LOG.error("jar " + string
+              + " is not placed on the correct path or path is incorrect!");
+          return null;
+        }
+      } else {
+        jarClass.add(new Pair<>(jar, string));
+      }
+    }
+    return jarClass;
+  }
+
+  /**
+   * Checks if the specified path for the coprocessor jar is in expected format
+   * TODO: make this more advanced - currently is very hardoced and dummy
+   *
+   * @param path
+   *          - Absolute and complete path where the coprocessor jar resides
+   *          Expected path is everything in this format:
+   *          coprocessors/project/version(integer)/jarfile
+   * @return
+   */
+  public static boolean checkIfCorrectPath(String path) {
+    String[] firstSplit = path.split(":");
+    String[] parts = firstSplit[2].split("/");
+    // port is included here
+    if (parts.length != 5) {
+      return false;
+    }
+    if (!parts[1].equals("coprocessors")) {
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Used to load coprocessors whose jar is specified via hdfs path. All
+   * existing coprocessors will be unloaded (if they appear again in the new
+   * configuration then they will be re-added).
+   *
+   * @param config
+   * @throws IOException
+   */
+  protected void reloadCoprocessorsFromHdfs(Configuration config)
+      throws IOException {
+    List<Pair<String, String>> fromConf = this.readCoprocessorsFromConf(config);
+    List<E> newCoprocessors = new ArrayList<>();
+    for (Pair<String, String> pair : fromConf) {
+      System.out.println(pair.getFirst() + " " + pair.getSecond());
+      E coproc = load(new Path(pair.getFirst()), pair.getSecond(),
+          Coprocessor.PRIORITY_USER, config);
+      newCoprocessors.add(coproc);
+    }
+    this.coprocessors.addAll(newCoprocessors);
   }
 
   /**

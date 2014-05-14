@@ -550,13 +550,21 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
     this.coprocessorHost = new RegionCoprocessorHost(this,
         this.conf);
     // initialize dynamic parameters with current configuration
-    this.loadDynamicConf(conf);
+    try {
+      this.loadDynamicConf(conf);
+    } catch (IOException e) {
+      LOG.error("Was unable to load coprocessors from configuration", e);
+    }
   }
 
   @Override
   public void notifyOnChange(Configuration conf) {
     LOG.info("Online configuration changed!");
-    this.loadDynamicConf(conf);
+    try {
+      this.loadDynamicConf(conf);
+    } catch (IOException e) {
+      LOG.error("Was unable to load coprocessors from configuration", e);
+    }
   }
 
   private static void logIfChange(String varName, long orgV, long newV) {
@@ -566,8 +574,9 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
   }
   /**
    * Load online configurable parameters from a specified Configuration
+   * @throws IOException
    */
-  private void loadDynamicConf(Configuration conf) {
+  private void loadDynamicConf(Configuration conf) throws IOException {
     long newColumnfamilyMemstoreFlushSize = conf.getLong(
         HConstants.HREGION_MEMSTORE_COLUMNFAMILY_FLUSH_SIZE,
         HTableDescriptor.DEFAULT_MEMSTORE_COLUMNFAMILY_FLUSH_SIZE);
