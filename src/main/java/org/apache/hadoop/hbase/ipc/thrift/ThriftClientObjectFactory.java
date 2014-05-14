@@ -93,14 +93,16 @@ public class ThriftClientObjectFactory extends
     ThriftClient<? extends ThriftClientInterface> newClient = new ThriftClient<>(
       clientManager, clazz, thriftClientConfig,
         clazz.getName());
-
+    long rpcTimeout = conf.getLong(HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
     if (useHeaderProtocol) {
-      return newClient.open(new HeaderClientConnector(address)).get();
+      return newClient.open(new HeaderClientConnector(address))
+          .get(rpcTimeout, TimeUnit.MILLISECONDS);
     } else {
       return newClient.open(
           new FramedClientConnector(address, TDuplexProtocolFactory
               .fromSingleFactory(new TFacebookCompactProtocol.Factory())))
-          .get();
+              .get(rpcTimeout, TimeUnit.MILLISECONDS);
     }
   }
 
