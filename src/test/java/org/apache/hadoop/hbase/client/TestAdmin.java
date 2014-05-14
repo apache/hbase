@@ -695,5 +695,17 @@ public class TestAdmin {
 
   }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void testSplitKeysDoesNotHaveEmptyString() {
+    // This test will check if the split keys provided during createTable,
+    // does not have an empty string. Otherwise, there will be multiple regions
+    // with start key as "".
+    byte[][] splitKeys = {
+      HConstants.EMPTY_BYTE_ARRAY,
+      Bytes.toBytes("mmm")
+    };
+    admin.checkSplitKeys(splitKeys);
+  }
+
 }
 

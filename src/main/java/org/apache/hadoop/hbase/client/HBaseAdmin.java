@@ -333,6 +333,11 @@ public class HBaseAdmin {
       // Verify there are no duplicate split keys
       byte[] lastKey = null;
       for (byte[] splitKey : splitKeys) {
+        if (Bytes.equals(splitKey, HConstants.EMPTY_BYTE_ARRAY)) {
+          throw new IllegalArgumentException(
+            "Split keys cannot be empty"
+          );
+        }
         if (lastKey != null && Bytes.equals(splitKey, lastKey)) {
           throw new IllegalArgumentException(
               "All split keys must be unique, found duplicate");
