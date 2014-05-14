@@ -33,29 +33,29 @@ import org.apache.hadoop.util.StringUtils;
  */
 @InterfaceAudience.Private
 public class FileIOEngine implements IOEngine {
-  static final Log LOG = LogFactory.getLog(FileIOEngine.class);
-
-  private FileChannel fileChannel = null;
+  private static final Log LOG = LogFactory.getLog(FileIOEngine.class);
+  private final RandomAccessFile raf;
+  private final FileChannel fileChannel;
 
   public FileIOEngine(String filePath, long fileSize) throws IOException {
-    RandomAccessFile raf = null;
     try {
       raf = new RandomAccessFile(filePath, "rw");
-      raf.setLength(fileSize);
-      fileChannel = raf.getChannel();
-      LOG.info("Allocating " + StringUtils.byteDesc(fileSize)
-          + ", on the path:" + filePath);
     } catch (java.io.FileNotFoundException fex) {
       LOG.error("Can't create bucket cache file " + filePath, fex);
       throw fex;
+    }
+
+    try {
+      raf.setLength(fileSize);
     } catch (IOException ioex) {
       LOG.error("Can't extend bucket cache file; insufficient space for "
           + StringUtils.byteDesc(fileSize), ioex);
-      if (raf != null) raf.close();
+      raf.close();
       throw ioex;
-    } finally {
-      if (raf != null) raf.close();
     }
+
+    fileChannel = raf.getChannel();
+    LOG.info("Allocating " + StringUtils.byteDesc(fileSize) + ", on the path:" + filePath);
   }
 
   /**
@@ -106,6 +106,11 @@ public class FileIOEngine implements IOEngine {
   public void shutdown() {
     try {
       fileChannel.close();
+    } catch (IOException ex) {
+      LOG.error("Can't shutdown cleanly", ex);
+    }
+    try {
+      raf.close();
     } catch (IOException ex) {
       LOG.error("Can't shutdown cleanly", ex);
     }
