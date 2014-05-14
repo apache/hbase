@@ -273,6 +273,7 @@ public class HBaseAdmin {
 
   private void checkTableOnline(final HTableDescriptor desc, byte[][] splitKeys)
       throws IOException, RegionOfflineException, InterruptedIOException {
+    long startTime = System.currentTimeMillis();
     int numRegs = splitKeys == null ? 1 : splitKeys.length + 1;
     int prevRegCount = 0;
     for (int tries = 0; tries < numRetries; ++tries) {
@@ -302,12 +303,16 @@ public class HBaseAdmin {
       };
       MetaScanner.metaScan(conf, visitor, new StringBytes(desc.getName()));
       if (actualRegCount.get() == numRegs) {
+        LOG.debug("Table " + desc.getNameAsString() + " is created after "
+            + "waiting for " + (System.currentTimeMillis() - startTime) + "ms");
         return;
       }
 
       if (tries == numRetries - 1) {
         throw new RegionOfflineException("Only " + actualRegCount.get()
-            + " of " + numRegs + " regions are online; retries exhausted.");
+            + " of " + numRegs + " regions are online; retries exhausted "
+            + "after waiting for " + (System.currentTimeMillis() - startTime)
+            + "ms.");
       }
       try { // Sleep
         Thread.sleep(getPauseTime(tries));
