@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -103,8 +104,10 @@ public abstract class HBaseServer {
   // 4 : RPC options object in RPC protocol with compression,
   //     profiling, and tagging
   public static final byte VERSION_RPCOPTIONS = 4;
+  // 5 : Fix RPC compression bug - add data length in packet
+  public static final byte VERSION_RPC_COMPRESSION_DATA_LENGTH = 5;
 
-  public static final byte CURRENT_VERSION = VERSION_RPCOPTIONS;
+  public static final byte CURRENT_VERSION = VERSION_RPC_COMPRESSION_DATA_LENGTH;
 
   private SizeBasedThrottlerInterface callQueueThrottler;
 
@@ -1364,6 +1367,9 @@ public abstract class HBaseServer {
           DataOutputStream out = rawOS;
           Compressor compressor = null;
 
+          // Compression buffer output stream
+          ByteArrayOutputStream baos = null;
+
           // 1. write call id uncompressed
           out.writeInt(call.id);
 
@@ -1376,9 +1382,16 @@ public abstract class HBaseServer {
 
             // 4. create a compressed output stream if compression was enabled
             if (call.getRPCCompression() != Compression.Algorithm.NONE) {
+              OutputStream uncompressedOS;
+              if (call.getVersion() >= VERSION_RPC_COMPRESSION_DATA_LENGTH) {
+                baos = new ByteArrayOutputStream(1600);
+                uncompressedOS = baos;
+              } else {
+                uncompressedOS = rawOS;
+              }
               compressor = call.getRPCCompression().getCompressor();
               OutputStream compressedOutputStream =
-                call.getRPCCompression().createCompressionStream(rawOS, compressor, 0);
+                call.getRPCCompression().createCompressionStream(uncompressedOS, compressor, 0);
               out = new DataOutputStream(compressedOutputStream);
             }
           }
@@ -1401,6 +1414,16 @@ public abstract class HBaseServer {
           }
 
           out.flush();
+          if (baos != null) {
+            // We need to write compressed data length
+            byte[] data = baos.toByteArray();
+            rawOS.writeInt(data.length);
+            rawOS.write(data);
+            rawOS.flush();
+            baos.close();
+            baos = null;
+            data = null;
+          }
           buf.flush();
           call.setResponse(buf.getByteBuffer());
           responder.doRespond(call);

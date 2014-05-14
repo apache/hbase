@@ -51,6 +51,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import javax.net.SocketFactory;
 
+import org.apache.commons.io.input.BoundedInputStream;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -623,10 +624,17 @@ public class HBaseClient {
             Compression.getCompressionAlgorithmByName(compressionAlgoName);
           
           // 4. setup the correct decompressor (if any)
-          if (rpcCompression != Compression.Algorithm.NONE) { 
+          if (rpcCompression != Compression.Algorithm.NONE) {
+            InputStream uncompressedIn;
+            if (call.getVersion() >= HBaseServer.VERSION_RPC_COMPRESSION_DATA_LENGTH) {
+              int size = in.readInt();
+              uncompressedIn = new BoundedInputStream(in, size);
+            } else {
+              uncompressedIn = in;
+            }
             decompressor = rpcCompression.getDecompressor();
             InputStream is = rpcCompression.createDecompressionStream(
-                  in, decompressor, 0);
+                  uncompressedIn, decompressor, 0);
             localIn = new DataInputStream(is);
           }
         }
