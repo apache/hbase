@@ -29,20 +29,22 @@ import java.io.IOException;
 public interface ResultScanner extends Closeable, Iterable<Result> {
 
   /**
-   * Grab the next row's worth of values. The scanner will return a Result.
+   * Grabs the next row's worth of values. The scanner will return a Result.
    * The caller may call this method even if the scanner is closed.
    *
    * @return Result object if there is another row, null if the scanner is
    *         exhausted.
-   * @throws IOException
-   *           e
    */
   public Result next() throws IOException;
 
   /**
-   * @param nbRows number of rows to return
+   * Returns up to nbRows of the results. The implementation should return at
+   * least one result unless the scanner is exhausted or closed.
+   *
+   * If no results are available, a null or empty array is returned.
+   *
+   * @param nbRows the maximum number of rows to return
    * @return Between zero and <param>nbRows</param> Results
-   * @throws IOException e
    */
   public Result[] next(int nbRows) throws IOException;
 
