@@ -44,10 +44,12 @@ import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.DataInputBuffer;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test HBase Writables serializations
  */
+@Category(SmallTests.class)
 public class TestSerialization extends HBaseTestCase {
 
   @Override

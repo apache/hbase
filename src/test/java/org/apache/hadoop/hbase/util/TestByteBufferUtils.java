@@ -34,10 +34,13 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.io.WritableUtils;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestByteBufferUtils {
 
   private byte[] array;

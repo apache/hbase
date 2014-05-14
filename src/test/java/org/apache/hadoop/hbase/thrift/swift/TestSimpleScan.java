@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableAsync;
 import org.apache.hadoop.hbase.client.Put;
@@ -39,7 +40,9 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(MediumTests.class)
 public class TestSimpleScan {
   private final Log LOG = LogFactory.getLog(TestSimpleScan.class);
   private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

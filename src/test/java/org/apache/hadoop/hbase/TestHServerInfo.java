@@ -51,7 +51,9 @@ import org.junit.Test;
 
 import com.facebook.swift.codec.ThriftCodec;
 import com.facebook.swift.codec.ThriftCodecManager;
+import org.junit.experimental.categories.Category;
 
+@Category(MediumTests.class)
 public class TestHServerInfo {
 
   @Test

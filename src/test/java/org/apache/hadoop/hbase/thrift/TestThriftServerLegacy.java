@@ -46,18 +46,21 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
 /**
  * Unit testing for ThriftServerRunner.HBaseHandler, a part of the org.apache.hadoop.hbase.thrift
  * package. Most of this stuff exists in {@link TestThriftServer} but there might be differences in
  * details, so leaving this around for better test coverage.
  */
+@Category(MediumTests.class)
 public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
   /**
@@ -178,7 +181,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
     TRowResult rowResult2 = handler.getRow(tableAname, rowBname, null).get(0);
     assertBufferEquals(rowBname, rowResult2.row);
     assertBufferEquals(valueCname, rowResult2.columns.get(columnAname).value);
-	  assertBufferEquals(valueDname, rowResult2.columns.get(columnBname).value);
+    assertBufferEquals(valueDname, rowResult2.columns.get(columnBname).value);
 
     // Apply some deletes
     handler.deleteAll(tableAname, rowAname, columnBname, null);
@@ -234,9 +237,9 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
     // Assert that the timestamp-related methods retrieve the correct data
     assertEquals(2, handler.getVerTs(tableAname, rowAname, columnBname, time2,
-      MAXVERSIONS, null).size());
+        MAXVERSIONS, null).size());
     assertEquals(1, handler.getVerTs(tableAname, rowAname, columnBname, time1,
-      MAXVERSIONS, null).size());
+        MAXVERSIONS, null).size());
 
     TRowResult rowResult1 = handler.getRowTs(tableAname, rowAname, time1, null).get(0);
     TRowResult rowResult2 = handler.getRowTs(tableAname, rowAname, time2, null).get(0);
@@ -355,7 +358,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
   /**
    * Tests some of the getRows*() calls.
-   * 
+   *
    * @throws Exception
    */
   public void doTestTableMultiGet() throws Exception {
@@ -397,7 +400,7 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
 
   /**
    * Test some of the checkAndMutate calls
-   * 
+   *
    * @throws Exception
    */
   public void doTestTableCheckAndMutate() throws Exception {
@@ -458,9 +461,8 @@ public class TestThriftServerLegacy extends HBaseClusterTestCase {
   }
 
   /**
-   * 
    * @return a List of Mutations for a row, with columnA having valueC and
-   *         columnB having valueD
+   * columnB having valueD
    */
   private List<Mutation> getMutations2() {
     List<Mutation> mutations = new ArrayList<Mutation>();

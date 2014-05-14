@@ -49,7 +49,9 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.UnstableTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
@@ -60,17 +62,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.apache.hadoop.hbase.util.TagRunner;
-import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.experimental.categories.Category;
 
-@RunWith(TagRunner.class)
+
+@Category(LargeTests.class)
 public class TestDistributedLogSplitting {
   private static final Log LOG = LogFactory.getLog(TestDistributedLogSplitting.class);
   static {
@@ -122,7 +123,7 @@ public class TestDistributedLogSplitting {
   }
 
   // Marked as unstable and recorded in #4053598
-  @TestTag({ "unstable" })
+  @Category(UnstableTests.class)
   @Test
   public void testThreeRSAbort() throws Exception {
     LOG.info("testThreeRSAbort");

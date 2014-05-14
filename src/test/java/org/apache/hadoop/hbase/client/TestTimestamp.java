@@ -23,13 +23,16 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TimestampTestBase;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests user specifiable time stamps putting, getting and scanning.  Also
  * tests same in presence of deletes.  Test cores are written so can be
  * run against an HRegion and against an HTable: i.e. both local and remote.
  */
+@Category(MediumTests.class)
 public class TestTimestamp extends HBaseClusterTestCase {
   public static String COLUMN_NAME = "colfamily1";
 

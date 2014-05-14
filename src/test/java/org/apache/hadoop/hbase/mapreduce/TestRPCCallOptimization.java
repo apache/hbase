@@ -20,6 +20,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -30,11 +31,13 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests various scan start and stop row scenarios. This is set in a scan and tested in a MapReduce
  * job to see if that is handed over and done properly too.
  */
+@Category(MediumTests.class)
 public class TestRPCCallOptimization {
 
   static final Log LOG = LogFactory.getLog(TestTableInputFormatScan.class);

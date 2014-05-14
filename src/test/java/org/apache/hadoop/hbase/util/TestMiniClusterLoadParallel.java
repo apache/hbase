@@ -16,8 +16,10 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -27,6 +29,7 @@ import static org.junit.Assert.assertEquals;
  * A write/read/verify load test on a mini HBase cluster. Tests reading
  * and writing at the same time.
  */
+@Category(MediumTests.class)
 @RunWith(Parameterized.class)
 public class TestMiniClusterLoadParallel
     extends TestMiniClusterLoadSequential {

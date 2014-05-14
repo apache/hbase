@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -42,8 +43,10 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.ToolRunner;
+import org.junit.experimental.categories.Category;
 
 /** Test stand alone merge tool that can merge arbitrary regions */
+@Category(MediumTests.class)
 public class TestMergeTool extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestMergeTool.class);
 //  static final byte [] COLUMN_NAME = Bytes.toBytes("contents:");

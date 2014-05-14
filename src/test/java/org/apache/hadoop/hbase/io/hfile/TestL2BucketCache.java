@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -49,6 +50,7 @@ import static org.junit.Assert.*;
 /**
  * Tests L2 bucket cache for correctness
  */
+@Category(MediumTests.class)
 @RunWith(Parameterized.class)
 public class TestL2BucketCache {
 

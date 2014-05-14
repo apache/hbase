@@ -21,12 +21,15 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test of simple partitioner.
  */
+@Category(SmallTests.class)
 public class TestSimpleTotalOrderPartitioner extends HBaseTestCase {
   public void testSplit() throws Exception {
     String start = "a";

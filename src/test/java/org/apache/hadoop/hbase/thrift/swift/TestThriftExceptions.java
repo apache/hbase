@@ -23,6 +23,7 @@ import junit.framework.TestCase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.ipc.thrift.HBaseThriftRPC;
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -38,6 +40,7 @@ import java.net.InetSocketAddress;
 /**
  * This is a test class to verify if the Thrift Exceptions work as expected.
  */
+@Category(MediumTests.class)
 public class TestThriftExceptions extends TestCase {
   /**
    * Test if the ThriftHBaseException can be serialized and deserialized

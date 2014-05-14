@@ -28,11 +28,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * This class defines testcases for HBCpp client. It spawns an executable binary
@@ -49,6 +51,7 @@ import org.junit.Test;
  * family of "f1" is created. Then the address(and port) of zookeeper is passed
  * to the binary using --hbase flag.
  */
+@Category(MediumTests.class)
 public class TestHBCpp {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

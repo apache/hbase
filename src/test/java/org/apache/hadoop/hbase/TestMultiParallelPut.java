@@ -28,10 +28,12 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Category(MediumTests.class)
 public class TestMultiParallelPut extends MultiRegionTable {
   final Log LOG = LogFactory.getLog(getClass());
   private static final byte[] VALUE = Bytes.toBytes("value");

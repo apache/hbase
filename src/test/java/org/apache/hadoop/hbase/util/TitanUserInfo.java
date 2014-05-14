@@ -9,17 +9,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.loadtest.RegionSplitter;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.junit.experimental.categories.Category;
 
 /**
  * Given a Titan userid, figure out where the user is located on a cluster. This
  * is useful for taking userids, which appserver people use, and translating
  * them to regions & current RS for diagnosis.
  */
+@Category(SmallTests.class)
 public class TitanUserInfo {
   public static void main(String[] args) throws IOException {
     if (args.length < 1) {

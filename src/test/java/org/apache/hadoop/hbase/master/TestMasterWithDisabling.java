@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -33,6 +34,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
 
@@ -41,6 +44,7 @@ import java.io.IOException;
 /**
  * Disabling is tricky. This class tests how the Master behaves during those
  */
+@Category(MediumTests.class)
 public class TestMasterWithDisabling {
 
   private static final Log LOG = LogFactory.getLog(TestMasterWithDisabling.class);

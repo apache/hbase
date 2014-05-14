@@ -42,10 +42,12 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests changing data block encoding settings of a column family.
  */
+@Category(LargeTests.class)
 public class TestChangingEncoding {
 
   private static final Log LOG = LogFactory.getLog(TestChangingEncoding.class);

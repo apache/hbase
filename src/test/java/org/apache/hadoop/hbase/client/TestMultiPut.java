@@ -21,10 +21,12 @@ package org.apache.hadoop.hbase.client;
 
 import com.facebook.swift.codec.ThriftCodec;
 import com.facebook.swift.codec.ThriftCodecManager;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.transport.TMemoryBuffer;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +35,7 @@ import java.util.TreeMap;
 
 import static junit.framework.Assert.assertEquals;
 
+@Category(SmallTests.class)
 public class TestMultiPut {
   /**
    * Test the serialization and deserialization of the MultiPut object using

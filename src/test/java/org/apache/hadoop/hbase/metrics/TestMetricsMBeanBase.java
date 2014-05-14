@@ -19,14 +19,13 @@
  */
 package org.apache.hadoop.hbase.metrics;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.metrics.MetricsContext;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
@@ -35,7 +34,9 @@ import org.apache.hadoop.metrics.util.MetricsRegistry;
 import org.apache.hadoop.metrics.util.MetricsTimeVaryingRate;
 
 import junit.framework.TestCase;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestMetricsMBeanBase extends TestCase {
 
   private class TestStatistics extends MetricsMBeanBase {

@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.RegionMovementTestHelper;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -27,6 +29,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.File;
 import java.io.IOException;
@@ -42,6 +45,7 @@ import static org.junit.Assert.fail;
  *
  * Test requires write access to file system and takes more than a minute to run.
  */
+@Category(MediumTests.class)
 public class TestDrainRegionServer {
 
   private final static RegionMovementTestHelper TEST_UTIL = new RegionMovementTestHelper();

@@ -27,10 +27,12 @@ import java.util.TreeSet;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
-
+@Category(SmallTests.class)
 public class TestExplicitColumnTracker extends HBaseTestCase {
   private boolean PRINT = false;
 

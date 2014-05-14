@@ -24,8 +24,11 @@ import java.util.ArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.throttles.SizeBasedThrottler;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import static org.junit.Assert.*;
 
 /**
@@ -33,6 +36,7 @@ import static org.junit.Assert.*;
  * It tests some race conditions that can happen
  * occasionally, but not every time.
  */
+@Category(SmallTests.class)
 public class TestSizeBasedThrottler {
 
   private static final int REPEATS = 100;

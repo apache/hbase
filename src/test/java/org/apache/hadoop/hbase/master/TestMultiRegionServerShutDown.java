@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.master.ProcessServerShutdown.LogSplitResult;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -36,10 +37,12 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test issues when RegionServer is shut down
  */
+@Category(MediumTests.class)
 public class TestMultiRegionServerShutDown {
   private static final Log LOG = LogFactory
       .getLog(TestMultiRegionServerShutDown.class);

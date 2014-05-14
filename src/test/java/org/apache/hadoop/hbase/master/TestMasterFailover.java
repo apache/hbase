@@ -24,9 +24,12 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(MediumTests.class)
 public class TestMasterFailover extends MultiMasterTest {
 
   /**

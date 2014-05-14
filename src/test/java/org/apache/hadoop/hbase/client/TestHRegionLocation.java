@@ -25,12 +25,15 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * This tests the serialization and deserialization of HRegionLocation.
  */
+@Category(SmallTests.class)
 public class TestHRegionLocation {
   @Test
   public void testSwiftSerDe() throws Exception {

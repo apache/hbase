@@ -23,14 +23,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.CompoundConfiguration;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 
 import junit.framework.TestCase;
+import org.junit.experimental.categories.Category;
 
-
+@Category(SmallTests.class)
 public class TestCompoundConfiguration extends TestCase {
   private Configuration baseConf;
 

@@ -27,12 +27,15 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test versions.
  * Does shutdown in middle of test to prove versions work across restart.
  */
+@Category(MediumTests.class)
 public class TestGetRowVersions extends HBaseClusterTestCase {
   private static final Log LOG = LogFactory.getLog(TestGetRowVersions.class);
 

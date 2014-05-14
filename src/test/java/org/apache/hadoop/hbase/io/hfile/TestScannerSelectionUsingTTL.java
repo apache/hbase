@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BlockMetricTyp
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -50,6 +52,7 @@ import org.junit.runners.Parameterized.Parameters;
  * Test the optimization that does not scan files where all timestamps are
  * expired.
  */
+@Category(MediumTests.class)
 @RunWith(Parameterized.class)
 public class TestScannerSelectionUsingTTL {
 

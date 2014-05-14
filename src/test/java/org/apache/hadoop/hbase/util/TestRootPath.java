@@ -28,10 +28,13 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.SmallTests;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test requirement that root directory must be a URI
  */
+@Category(SmallTests.class)
 public class TestRootPath extends TestCase {
   private static final Log LOG = LogFactory.getLog(TestRootPath.class);
 

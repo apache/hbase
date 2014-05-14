@@ -33,8 +33,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import static org.junit.Assert.*;
-import org.junit.Test;
 
+import org.apache.hadoop.hbase.SmallTests;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
+@Category(SmallTests.class)
 public class TestIdLock {
 
   private static final Log LOG = LogFactory.getLog(TestIdLock.class);

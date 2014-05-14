@@ -29,9 +29,11 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 
@@ -40,6 +42,7 @@ import java.io.IOException;
  * happening. We should add tests for important configurations which will be
  * changed online.
  */
+@Category(MediumTests.class)
 public class TestRegionServerOnlineConfigChange extends TestCase {
   static final Log LOG =
           LogFactory.getLog(TestRegionServerOnlineConfigChange.class.getName());

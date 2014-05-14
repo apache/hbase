@@ -30,6 +30,7 @@ import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -41,7 +42,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
+import org.junit.experimental.categories.Category;
 
+@Category(MediumTests.class)
 public class TestHLogFiltering {
 
   private static final int NUM_MASTERS = 1;

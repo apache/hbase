@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -48,14 +49,12 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.InjectionEvent;
 import org.apache.hadoop.hbase.util.InjectionHandler;
-import org.apache.hadoop.hbase.util.TagRunner;
-import org.apache.hadoop.hbase.util.TestTag;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.experimental.categories.Category;
 
-@RunWith(TagRunner.class)
+@Category(MediumTests.class)
 public class TestClientLocalScanner {
   private final static Log LOG = LogFactory.getLog(TestClientLocalScanner.class);
   private final static HBaseTestingUtility TEST_UTIL =
@@ -269,7 +268,7 @@ public class TestClientLocalScanner {
 
   //Marked as unstable and recored in t3864238
   @Test(timeout=180000)
-  @TestTag({ "unstable" })
+  @Category(org.apache.hadoop.hbase.UnstableTests.class)
   public void testLocalScannerWithoutHardlinks() throws IOException {
     byte [] tableName = Bytes.toBytes("testLocalScannerWithoutHardlinks");
     HTable t = TEST_UTIL.createTable(tableName, FAMILY);

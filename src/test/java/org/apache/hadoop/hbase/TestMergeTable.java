@@ -19,11 +19,14 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.junit.experimental.categories.Category;
+
 import java.io.IOException;
 
 /**
  * Tests merging a normal table's regions
  */
+@Category(MediumTests.class)
 public class TestMergeTable extends AbstractMergeTestBase {
 
   /**

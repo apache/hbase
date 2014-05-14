@@ -39,7 +39,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.UnstableTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -55,20 +57,18 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.TagRunner;
-import org.apache.hadoop.hbase.util.TestTag;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 /**
  * Test replay of edits out of a WAL split.
  */
-@RunWith(TagRunner.class)
+@Category(MediumTests.class)
 public class TestWALReplay {
   public static final Log LOG = LogFactory.getLog(TestWALReplay.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -232,7 +232,7 @@ public class TestWALReplay {
    * @throws IllegalArgumentException
    * @throws SecurityException
    */
-  @TestTag({ "unstable" })
+  @Category(UnstableTests.class)
   @Test
   public void testReplayEditsWrittenViaHRegion()
   throws IOException, SecurityException, IllegalArgumentException,

@@ -29,10 +29,12 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
 /**
  * Regression test for HBASE-613
  */
+@Category(MediumTests.class)
 public class TestScanMultipleVersions extends HBaseClusterTestCase {
   private final byte[] TABLE_NAME = Bytes.toBytes("TestScanMultipleVersions");
   private final HRegionInfo[] INFOS = new HRegionInfo[2];

@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -57,6 +58,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.util.Progressable;
+import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.common.base.Joiner;
@@ -64,6 +66,7 @@ import com.google.common.base.Joiner;
 /**
  * Test class for the Store
  */
+@Category(SmallTests.class)
 public class TestStore extends TestCase {
   public static final Log LOG = LogFactory.getLog(TestStore.class);
 

@@ -33,8 +33,10 @@ import java.util.Random;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.Parameterized;
@@ -43,6 +45,7 @@ import org.junit.runners.Parameterized;
  * Test all of the data block encoding algorithms for correctness.
  * Most of the class generate data which will test different branches in code.
  */
+@Category(MediumTests.class)
 @RunWith(Parameterized.class)
 public class TestDataBlockEncoders {
   static int NUMBER_OF_KV = 10000;

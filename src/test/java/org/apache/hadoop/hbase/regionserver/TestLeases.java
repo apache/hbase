@@ -14,9 +14,12 @@ import org.apache.hadoop.hbase.LeaseException;
 import org.apache.hadoop.hbase.LeaseListener;
 import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestLeases {
   private static final Log LOG = LogFactory.getLog(TestLeases.class);
   private static final int NUM_CALLS = 100;

@@ -20,11 +20,14 @@ package org.apache.hadoop.hbase;
 
 import junit.framework.TestCase;
 
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test comparing HBase objects.
  */
+@Category(SmallTests.class)
 public class TestCompare extends TestCase {
 
   /**

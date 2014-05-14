@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -39,11 +40,14 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.junit.experimental.categories.Category;
 
 /**
  * {@link TestGet} is a medley of tests of get all done up as a single test.
  * This class
+ *
  */
+@Category(MediumTests.class)
 public class TestGetClosestAtOrBefore extends HBaseTestCase {
   private static final Log LOG = LogFactory.getLog(TestGetClosestAtOrBefore.class);
   private MiniDFSCluster miniHdfs;

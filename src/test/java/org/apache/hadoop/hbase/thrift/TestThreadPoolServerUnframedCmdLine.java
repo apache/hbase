@@ -18,11 +18,14 @@ package org.apache.hadoop.hbase.thrift;
 
 import java.util.Collection;
 
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.ImplType;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+@Category(MediumTests.class)
 @RunWith(Parameterized.class)
 public class TestThreadPoolServerUnframedCmdLine extends ThriftServerCmdLineTestBase {
 

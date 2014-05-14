@@ -29,6 +29,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.ImplType;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.util.Threads;
@@ -44,12 +45,14 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.base.Joiner;
+import org.junit.experimental.categories.Category;
 
 /**
  * Start the HBase Thrift server on a random port through the command-line
  * interface and talk to it from client side. This itself is not a JUnit test,
  * but a base class for subclasses testing individual thrift server types.
  */
+@Category(MediumTests.class)
 public class ThriftServerCmdLineTestBase {
 
   public static final Log LOG =

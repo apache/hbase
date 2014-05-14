@@ -33,20 +33,18 @@ import org.apache.hadoop.hbase.util.InjectionEvent;
 import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.StringBytes;
-import org.apache.hadoop.hbase.util.TagRunner;
-import org.apache.hadoop.hbase.util.TestTag;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test whether region rebalancing works. (HBASE-71)
  * Test HBASE-3663 whether region rebalancing works after a new server booted
  * especially when no server has more regions than the ceils of avg load
  */
-@RunWith(TagRunner.class)
+@Category(MediumTests.class)
 public class TestRegionRebalancing {
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   final Log LOG = LogFactory.getLog(this.getClass().getName());
@@ -100,7 +98,7 @@ public class TestRegionRebalancing {
    * The load balance algorithm should handle this case properly.
    */
   // Marked as unstable and recorded in #4219255
-  @TestTag({ "unstable" })
+  @Category(UnstableTests.class)
   @Test(timeout = 300000)
   public void testRebalancing() throws IOException {
     for (int i = 3; i < 16; i++) {

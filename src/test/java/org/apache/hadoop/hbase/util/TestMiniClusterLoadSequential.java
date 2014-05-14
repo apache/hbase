@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -46,6 +47,7 @@ import org.junit.runners.Parameterized.Parameters;
  * A write/read/verify load test on a mini HBase cluster. Tests reading
  * and then writing.
  */
+@Category(MediumTests.class)
 @RunWith(Parameterized.class)
 public class TestMiniClusterLoadSequential {
 

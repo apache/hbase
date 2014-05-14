@@ -35,8 +35,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestDrainableQueue implements ParamCallable<Integer>{
 
   private static final Log LOG = LogFactory.getLog(TestDrainableQueue.class);

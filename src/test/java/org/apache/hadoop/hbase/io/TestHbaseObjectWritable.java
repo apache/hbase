@@ -32,11 +32,14 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparator;
 import org.junit.Assert;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestHbaseObjectWritable extends TestCase {
 
   @Override

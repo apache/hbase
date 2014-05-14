@@ -43,12 +43,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.UnstableTests;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
-import org.apache.hadoop.hbase.util.TagRunner;
-import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -62,10 +62,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.experimental.categories.Category;
 
 /** JUnit test case for HLog */
-@RunWith(TagRunner.class)
+@Category(MediumTests.class)
 public class TestHLog  {
   private static final Log LOG = LogFactory.getLog(TestHLog.class);
   {
@@ -188,7 +188,7 @@ public class TestHLog  {
    * @throws Exception
    */
   // Marked as unstable and recorded in 3297526
-  @TestTag({ "unstable" })
+  @Category(UnstableTests.class)
   @Test
   public void testSync() throws Exception {
     byte [] bytes = Bytes.toBytes(getName());

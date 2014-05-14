@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueContext;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
@@ -39,10 +40,12 @@ import org.apache.hadoop.hbase.util.StringBytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test caching on Compaction
  */
+@Category(MediumTests.class)
 public class TestCachingOnCompaction {
   static final Log LOG = LogFactory.getLog(TestCachingOnCompaction.class.getName());
   private int compactionThreshold;

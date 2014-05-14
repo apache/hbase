@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.UnstableTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -38,8 +40,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.TagRunner;
-import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -48,12 +48,12 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.log4j.Level;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test log deletion as logs are rolled.
  */
-@RunWith(TagRunner.class)
+@Category(MediumTests.class)
 public class TestLogRolling extends HBaseClusterTestCase {
   private static final Log LOG = LogFactory.getLog(TestLogRolling.class);
   private HRegionServer server;
@@ -169,7 +169,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
    * @throws Exception
    */
   // Marked as unstable and recored in #3896573
-  @TestTag({ "unstable" })
+  @Category(UnstableTests.class)
   @Test
   public void testLogRolling() throws Exception {
     this.tableName = getName();
@@ -218,7 +218,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
    * @throws Exception
    */
   // Marked as unstable and recored in #3344583
-  @TestTag({ "unstable" })
+  @Category(org.apache.hadoop.hbase.UnstableTests.class)
   @Test
   public void testLogRollOnDatanodeDeath() throws Exception {
     assertTrue("This test requires HLog file replication.",

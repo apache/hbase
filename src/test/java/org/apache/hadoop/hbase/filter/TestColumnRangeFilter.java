@@ -18,6 +18,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -31,6 +32,7 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.experimental.categories.Category;
 
 class StringRange {
   private String start = null;
@@ -101,6 +103,7 @@ class StringRange {
   }
 }
 
+@Category(MediumTests.class)
 public class TestColumnRangeFilter {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

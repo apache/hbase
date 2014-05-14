@@ -22,11 +22,15 @@ package org.apache.hadoop.hbase.io.hfile.histogram;
 
 import java.util.Random;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import static org.apache.hadoop.hbase.io.hfile.histogram.UniformSplitHFileHistogram.*;
 import static org.junit.Assert.*;
 
+@Category(SmallTests.class)
 public class TestConversionUtils {
 
   @Test

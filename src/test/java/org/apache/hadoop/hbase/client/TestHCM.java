@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
@@ -47,10 +48,12 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.StringBytes;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * This class is for testing HCM features
  */
+@Category(MediumTests.class)
 public class TestHCM {
   private static final Log LOG = LogFactory.getLog(TestHCM.class);
 

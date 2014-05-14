@@ -28,6 +28,7 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BlockMetricType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -47,6 +49,7 @@ import org.junit.runners.Parameterized.Parameters;
  * long as we have a block cache, even though block caching might be disabled
  * for the column family.
  */
+@Category(MediumTests.class)
 @RunWith(Parameterized.class)
 public class TestForceCacheImportantBlocks {
 

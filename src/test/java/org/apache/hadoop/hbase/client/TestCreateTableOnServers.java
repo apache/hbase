@@ -35,11 +35,13 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Create table only on a set of regionservers instead of whole cluster
@@ -48,6 +50,7 @@ import org.junit.Test;
  * https://issues.apache.org/jira/browse/HBASE-10425
  * https://issues.apache.org/jira/browse/HBASE-10865
  */
+@Category(MediumTests.class)
 public class TestCreateTableOnServers {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

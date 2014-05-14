@@ -28,8 +28,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -38,19 +36,28 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.kvaggregator.DefaultKeyValueAggregator;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HasThread;
+import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.junit.experimental.categories.Category;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /** memstore test case */
-public class TestMemStore extends TestCase {
+@Category(MediumTests.class)
+public class TestMemStore {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private MemStore memstore;
   private static final int ROW_COUNT = 10;
@@ -61,16 +68,16 @@ public class TestMemStore extends TestCase {
   private static final String CONTENTSTR = "contentstr";
   private MultiVersionConsistencyControl mvcc;
 
-  @Override
+  @Before
   public void setUp() throws Exception {
-    super.setUp();
     this.mvcc = new MultiVersionConsistencyControl();
     this.memstore = new MemStore();
     SchemaMetrics.configureGlobally(HBaseConfiguration.create());
   }
 
+  @Test
   public void testPutSameKey() {
-    byte [] bytes = Bytes.toBytes(getName());
+    byte [] bytes = Bytes.toBytes("testPutSameKey");
     KeyValue kv = new KeyValue(bytes, bytes, bytes, bytes);
     this.memstore.add(kv);
     byte [] other = Bytes.toBytes("somethingelse");
@@ -84,7 +91,7 @@ public class TestMemStore extends TestCase {
 
   @Test
   public void testUpdateColumnValueSizeChange() {
-    byte[] bytes = Bytes.toBytes(getName());
+    byte[] bytes = Bytes.toBytes("testUpdateColumnValueSizeChange");
     KeyValue kv = new KeyValue(bytes, bytes, bytes, 0, Type.Put,
         Bytes.toBytes((long) 0));
     long size = this.memstore.size.get();
@@ -99,6 +106,7 @@ public class TestMemStore extends TestCase {
    * Test memstore snapshot happening while scanning.
    * @throws IOException
    */
+  @Test
   public void testScanAcrossSnapshot() throws IOException {
     int rowCount = addRows(this.memstore);
     List<KeyValueScanner> memstorescanners = this.memstore.getScanners();
@@ -454,6 +462,8 @@ public class TestMemStore extends TestCase {
     }
   }
 
+
+  @Test
   public void testReadOwnWritesUnderConcurrency() throws Throwable {
 
     int NUM_THREADS = 8;
@@ -479,6 +489,7 @@ public class TestMemStore extends TestCase {
    * Test memstore snapshots
    * @throws IOException
    */
+  @Test
   public void testSnapshotting() throws IOException {
     final int snapshotCount = 5;
     // Add some rows, run a snapshot. Do it a few times.
@@ -490,6 +501,7 @@ public class TestMemStore extends TestCase {
     }
   }
 
+  @Test
   public void testMultipleVersionsSimple() throws Exception {
     MemStore m = new MemStore(HBaseConfiguration.create() , KeyValue.COMPARATOR);
     byte [] row = Bytes.toBytes("testRow");
@@ -510,6 +522,7 @@ public class TestMemStore extends TestCase {
         m.kvset.size(), m.kvset.size() == 3);
   }
 
+  @Test
   public void testBinary() throws IOException {
     MemStore mc = new MemStore(HBaseConfiguration.create(), KeyValue.ROOT_COMPARATOR);
     final int start = 43;
@@ -549,6 +562,8 @@ public class TestMemStore extends TestCase {
   /** Test getNextRow from memstore
    * @throws InterruptedException
    */
+
+  @Test
   public void testGetNextRow() throws Exception {
     MultiVersionConsistencyControl.resetThreadReadPoint();
     addRows(this.memstore);
@@ -593,6 +608,7 @@ public class TestMemStore extends TestCase {
     }
   }
 
+  @Test
   public void testGet_memstoreAndSnapShot() throws IOException {
     byte [] row = Bytes.toBytes("testrow");
     byte [] fam = Bytes.toBytes("testfamily");
@@ -620,6 +636,7 @@ public class TestMemStore extends TestCase {
   //////////////////////////////////////////////////////////////////////////////
   // Delete tests
   //////////////////////////////////////////////////////////////////////////////
+  @Test
   public void testGetWithDelete() throws IOException {
     byte [] row = Bytes.toBytes("testrow");
     byte [] fam = Bytes.toBytes("testfamily");
@@ -690,7 +707,7 @@ public class TestMemStore extends TestCase {
     }
   }
 
-
+  @Test
   public void testGetWithDeleteFamily() throws IOException {
     byte [] row = Bytes.toBytes("testrow");
     byte [] fam = Bytes.toBytes("testfamily");
@@ -730,6 +747,7 @@ public class TestMemStore extends TestCase {
     }
   }
 
+  @Test
   public void testKeepDeleteInmemstore() {
     byte [] row = Bytes.toBytes("testrow");
     byte [] fam = Bytes.toBytes("testfamily");
@@ -743,6 +761,7 @@ public class TestMemStore extends TestCase {
     assertEquals(delete, memstore.kvset.first());
   }
 
+  @Test
   public void testRetainsDeleteVersion() throws IOException {
     // add a put to memstore
     memstore.add(KeyValueTestUtil.create("row1", "fam", "a", 100, "dont-care"));
@@ -755,6 +774,8 @@ public class TestMemStore extends TestCase {
     assertEquals(2, memstore.kvset.size());
     assertEquals(delete, memstore.kvset.first());
   }
+
+  @Test
   public void testRetainsDeleteColumn() throws IOException {
     // add a put to memstore
     memstore.add(KeyValueTestUtil.create("row1", "fam", "a", 100, "dont-care"));
@@ -767,6 +788,8 @@ public class TestMemStore extends TestCase {
     assertEquals(2, memstore.kvset.size());
     assertEquals(delete, memstore.kvset.first());
   }
+
+  @Test
   public void testRetainsDeleteFamily() throws IOException {
     // add a put to memstore
     memstore.add(KeyValueTestUtil.create("row1", "fam", "a", 100, "dont-care"));
@@ -787,6 +810,7 @@ public class TestMemStore extends TestCase {
   /**
    * Test to ensure correctness when using Memstore with multiple timestamps
    */
+  @Test
   public void testMultipleTimestamps() throws IOException {
     long[] timestamps = new long[] {20,10,5,1};
     Scan scan = new Scan();
@@ -829,6 +853,7 @@ public class TestMemStore extends TestCase {
    * This causes OOME pretty quickly if we use MSLAB for upsert
    * since each 2M chunk is held onto by a single reference.
    */
+  @Test
   public void testUpsertMSLAB() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean(HConstants.USE_MSLAB_KEY, true);

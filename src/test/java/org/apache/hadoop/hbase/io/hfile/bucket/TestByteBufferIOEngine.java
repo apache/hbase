@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -32,6 +34,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Test for {@link ByteBufferIOEngine}
  */
+@Category(SmallTests.class)
 @RunWith(Parameterized.class)
 public class TestByteBufferIOEngine {
 

@@ -24,14 +24,13 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.util.DuplicateZKNotificationInjectionHandler;
 import org.apache.hadoop.hbase.util.InjectionEvent;
 import org.apache.hadoop.hbase.util.InjectionHandler;
-import org.apache.hadoop.hbase.util.TagRunner;
 import org.junit.Assert;
-import org.junit.runner.RunWith;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test whether region opening works in spite of duplicate opened notifications.
  */
-@RunWith(TagRunner.class)
+@Category(UnstableTests.class)
 public class TestDuplicateNotifications extends TestRegionRebalancing {
   DuplicateZKNotificationInjectionHandler duplicator =
       new DuplicateZKNotificationInjectionHandler();

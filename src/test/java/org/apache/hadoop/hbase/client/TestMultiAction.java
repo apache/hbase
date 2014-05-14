@@ -25,9 +25,12 @@ import java.util.TreeMap;
 
 import junit.framework.Assert;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestMultiAction {
   /**
    * Test if the MultiResponse is correctly serialized and deserialized

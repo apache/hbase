@@ -19,7 +19,9 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -30,6 +32,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+@Category(SmallTests.class)
 public class TestEnvironmentEdgeManager {
 
   @Test

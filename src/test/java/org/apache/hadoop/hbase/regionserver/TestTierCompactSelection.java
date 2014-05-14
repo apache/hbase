@@ -27,7 +27,10 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
+import org.junit.experimental.categories.Category;
 
+@Category(MediumTests.class)
 public class TestTierCompactSelection extends TestDefaultCompactSelection {
   private final static Log LOG = LogFactory.getLog(TestTierCompactSelection.class);
 

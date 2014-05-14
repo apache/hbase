@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.protocol.TCompactProtocol;
@@ -35,7 +36,9 @@ import org.junit.Test;
 
 import com.facebook.swift.codec.ThriftCodec;
 import com.facebook.swift.codec.ThriftCodecManager;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestGet {
 
   /**

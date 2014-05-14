@@ -24,15 +24,18 @@ import java.io.ByteArrayOutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Testcase for ThriftResultSerializer and ThriftResultSerializer2
  */
+@Category(SmallTests.class)
 public class TestThriftResultSerializer {
 
   private static KeyValue[] constuctKvList(int n) {

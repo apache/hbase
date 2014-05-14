@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HMsg;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.client.Get;
@@ -55,11 +56,13 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test transitions of state across the master.  Sets up the cluster once and
  * then runs a couple of tests.
  */
+@Category(MediumTests.class)
 public class TestMasterTransitions {
   private static final Log LOG = LogFactory.getLog(TestMasterTransitions.class);
   private static final String TABLENAME = "master_transitions";

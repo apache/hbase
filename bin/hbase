@@ -72,7 +72,6 @@ if [ $# = 0 ]; then
   echo "  master           run an HBase HMaster node"
   echo "  regionserver     run an HBase HRegionServer node"
   echo "  zookeeper        run a Zookeeper server"
-  echo "  rest             run an HBase REST server"
   echo "  thrift           run an HBase Thrift server"
   echo "  migrate          upgrade an hbase.rootdir"
   echo "  hbck             run the hbase 'fsck' tool"
@@ -253,11 +252,6 @@ elif [ "$COMMAND" = "thrift" ] ; then
   CLASS='org.apache.hadoop.hbase.thrift.ThriftServer'
   if [ "$1" != "stop" ] ; then
     HBASE_OPTS="$HBASE_OPTS $HBASE_THRIFT_OPTS"
-  fi
-elif [ "$COMMAND" = "rest" ] ; then
-  CLASS='org.apache.hadoop.hbase.rest.Main'
-  if [ "$1" != "stop" ] ; then
-    HBASE_OPTS="$HBASE_OPTS $HBASE_REST_OPTS"
   fi
 elif [ "$COMMAND" = "migrate" ] ; then
   CLASS='org.apache.hadoop.hbase.util.Migrate'

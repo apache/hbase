@@ -1,18 +1,18 @@
 package org.apache.hadoop.hbase.master;
 
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.util.TagRunner;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.util.Collection;
 
-@RunWith(TagRunner.class)
+@Category(MediumTests.class)
 public class TestRegionPlacementDestructive extends RegionPlacementTestBase {
 
   // Need more RS's as twp of the them will be killed.

@@ -23,12 +23,15 @@ import static org.junit.Assert.*;
 
 import java.util.Arrays;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.MunkresAssignment;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests for {@link MunkresAssignment} which solves the assignment problem.
  */
+@Category(SmallTests.class)
 public class TestMunkresAssignment {
 
   /**

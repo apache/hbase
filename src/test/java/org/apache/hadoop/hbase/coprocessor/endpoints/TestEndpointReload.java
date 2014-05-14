@@ -27,6 +27,7 @@ import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.coprocessor.endpoints.IEndpointClient.Caller;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -35,10 +36,12 @@ import org.apache.hadoop.hbase.util.StringBytes;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test of reloading endpoints with online configuration change.
  */
+@Category(MediumTests.class)
 public class TestEndpointReload {
   private static final HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();

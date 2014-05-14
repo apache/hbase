@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -35,10 +36,12 @@ import org.apache.hadoop.hbase.StoppableImpl;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.conf.Configuration;
+import org.junit.experimental.categories.Category;
 
 import java.net.URLEncoder;
 import java.util.Calendar;
 
+@Category(MediumTests.class)
 public class TestOldLogsCleaner {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

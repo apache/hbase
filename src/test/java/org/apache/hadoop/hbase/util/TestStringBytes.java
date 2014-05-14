@@ -21,11 +21,14 @@ package org.apache.hadoop.hbase.util;
 
 import junit.framework.Assert;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Testcase for StringBytes
  */
+@Category(SmallTests.class)
 public class TestStringBytes {
   @Test
   public void testBasic() throws Exception {

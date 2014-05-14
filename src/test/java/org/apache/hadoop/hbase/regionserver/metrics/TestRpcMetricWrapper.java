@@ -19,8 +19,10 @@
 package org.apache.hadoop.hbase.regionserver.metrics;
 
 import junit.framework.TestCase;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.util.MetricsRegistry;
+import org.junit.experimental.categories.Category;
 
 import java.util.HashMap;
 
@@ -94,6 +96,7 @@ class DummyMetricsRecord implements MetricsRecord {
   }
 }
 
+@Category(SmallTests.class)
 public class TestRpcMetricWrapper extends TestCase {
   private MetricsRegistry registry = new MetricsRegistry();
 

@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.ThriftHRegionInterface;
@@ -48,7 +49,9 @@ import org.junit.Test;
 
 import com.facebook.swift.codec.ThriftCodec;
 import com.facebook.swift.codec.ThriftCodecManager;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestHRegionInfo {
   @Test
   public void testCreateHRegionInfoName() throws Exception {

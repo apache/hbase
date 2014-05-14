@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTableAsync;
 import org.apache.hadoop.hbase.client.Put;
@@ -43,10 +44,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test failure handling in HTableAsync. We can also use it in
  */
+@Category(MediumTests.class)
 public class TestServerSideException {
   private static final Log LOG = LogFactory.getLog(TestServerSideException.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

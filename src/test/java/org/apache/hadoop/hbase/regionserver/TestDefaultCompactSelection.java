@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.NoOpDataBlockEncoder;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -45,7 +46,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.collect.Lists;
+import org.junit.experimental.categories.Category;
 
+@Category(MediumTests.class)
 public class TestDefaultCompactSelection extends TestCase {
   private final static Log LOG = LogFactory.getLog(TestDefaultCompactSelection.class);
   final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

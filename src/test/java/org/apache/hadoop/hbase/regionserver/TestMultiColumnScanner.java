@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics.BlockMetricTyp
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -63,6 +65,7 @@ import org.junit.runners.Parameterized.Parameters;
 /**
  * Tests optimized scanning of multiple columns.
  */
+@Category(MediumTests.class)
 @RunWith(Parameterized.class)
 public class TestMultiColumnScanner {
 

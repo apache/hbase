@@ -5,13 +5,16 @@ import static org.junit.Assert.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.ipc.thrift.ThriftClientObjectFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
 import com.facebook.swift.service.ThriftClientConfig;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestSocksProxy {
   @Test
   public void test() {

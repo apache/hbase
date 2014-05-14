@@ -38,6 +38,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.UnstableTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -53,15 +55,14 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.apache.hadoop.hbase.util.TagRunner;
-import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.experimental.categories.Category;
 
-@RunWith(TagRunner.class)
+
+@Category(MediumTests.class)
 public class TestRegionStateOnMasterFailure extends MultiMasterTest {
 
   private static final Log LOG =
@@ -190,7 +191,7 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
   }
 
   // Marked as unstable and recorded in #3920920
-  @TestTag({ "unstable" })
+  @Category(org.apache.hadoop.hbase.UnstableTests.class)
   @Test(timeout=TEST_TIMEOUT_MS)
   public void testKillRSWithUserRegion() throws IOException,
       InterruptedException, KeeperException {
@@ -211,7 +212,7 @@ public class TestRegionStateOnMasterFailure extends MultiMasterTest {
   }
 
   // Marked as unstable and recorded in #4212779
-  @TestTag({ "unstable" })
+  @Category(UnstableTests.class)
   @Test(timeout=TEST_TIMEOUT_MS)
   public void testKillRootMetaRS() throws Exception {
     closeRegionAndKillMaster(HConstants.META_TABLE_NAME, new KillRootAndMetaRS(),

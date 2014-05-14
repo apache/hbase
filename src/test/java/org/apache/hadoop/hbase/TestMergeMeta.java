@@ -19,9 +19,12 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.junit.experimental.categories.Category;
+
 import java.io.IOException;
 
 /** Tests region merging */
+@Category(MediumTests.class)
 public class TestMergeMeta extends AbstractMergeTestBase {
 
   /** constructor

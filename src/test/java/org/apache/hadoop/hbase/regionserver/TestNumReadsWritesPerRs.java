@@ -9,6 +9,7 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.regionserver.metrics.SchemaMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -17,10 +18,10 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-//uncomment these lines if you want to run the unit test more times
-//import org.junit.runner.RunWith;
+import org.junit.experimental.categories.Category;
 
-//@RunWith(UnitTestRunner.class)
+
+@Category(MediumTests.class)
 public class TestNumReadsWritesPerRs {
   private String[] FAMILIES = new String[] { "cf1", "cf2", "anotherCF" };
   private static final int MAX_VERSIONS = 1;

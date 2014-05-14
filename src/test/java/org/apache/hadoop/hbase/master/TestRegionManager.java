@@ -25,9 +25,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
+@Category(MediumTests.class)
 public class TestRegionManager extends HBaseClusterTestCase {
    public void testGetFirstMetaRegionForRegionAfterMetaSplit()
    throws Exception {

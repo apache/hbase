@@ -21,17 +21,21 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
-public class TestMasterOnlineConfigChange extends
-    TestCase {
+import static org.junit.Assert.assertEquals;
+
+@Category(MediumTests.class)
+public class TestMasterOnlineConfigChange {
 
   static final Log LOG =
           LogFactory.getLog(TestMasterOnlineConfigChange.class.getName());
@@ -40,7 +44,7 @@ public class TestMasterOnlineConfigChange extends
   HMaster master;
 
 
-  @Override
+  @Before
   public void setUp() throws Exception {
     conf = hbaseTestingUtility.getConfiguration();
     hbaseTestingUtility.startMiniCluster(1,1);
@@ -52,6 +56,7 @@ public class TestMasterOnlineConfigChange extends
    * Check if the server side profiling config parameter changes online
    * @throws IOException
    */
+  @Test
   public void testServerManagerResendMessagesChange() throws IOException {
     ServerManager serverMgr = master.getServerManager();
     boolean origSetting =

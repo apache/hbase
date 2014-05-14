@@ -26,21 +26,20 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.TagRunner;
-import org.apache.hadoop.hbase.util.TestTag;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.experimental.categories.Category;
 
-@RunWith(TagRunner.class)
+@Category(MediumTests.class)
 public class TestServerConfigFromClient {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static int SLAVES = 3;
+  private static final int SLAVES = 3;
 
   /**
    * @throws java.lang.Exception
@@ -77,7 +76,7 @@ public class TestServerConfigFromClient {
   }
 
   // Marked as unstable and recorded in #3922005
-  @TestTag({ "unstable" })
+  @Category(org.apache.hadoop.hbase.UnstableTests.class)
   @Test
   public void testReadConfig() throws IOException {
     final byte [] CONTENTS_FAMILY = Bytes.toBytes("contents");

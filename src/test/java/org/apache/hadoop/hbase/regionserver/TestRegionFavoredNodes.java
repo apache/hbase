@@ -7,6 +7,7 @@ import java.net.URI;
 import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -16,10 +17,12 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests the ability to specify favored nodes for a region.
  */
+@Category(MediumTests.class)
 public class TestRegionFavoredNodes {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

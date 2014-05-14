@@ -20,11 +20,14 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import junit.framework.TestCase;
+import org.apache.hadoop.hbase.SmallTests;
+import org.junit.experimental.categories.Category;
 
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
+@Category(SmallTests.class)
 public class TestReadWriteConsistencyControl extends TestCase {
   static class Writer implements Runnable {
     final AtomicBoolean finished;

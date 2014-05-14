@@ -28,8 +28,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -45,12 +47,15 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 
+@Category(SmallTests.class)
 @RunWith(Parameterized.class)
 public class TestFixedFileTrailer {
 
   private static final Log LOG = LogFactory.getLog(TestFixedFileTrailer.class);
 
-  /** The number of used fields by version. Indexed by version minus one. */
+  /**
+   * The number of used fields by version. Indexed by version minus one.
+   */
   private static final int[] NUM_FIELDS_BY_VERSION = new int[] { 8, 13 };
 
   private HBaseTestingUtility util = new HBaseTestingUtility();
@@ -71,7 +76,7 @@ public class TestFixedFileTrailer {
   public static Collection<Object[]> getParameters() {
     List<Object[]> versionsToTest = new ArrayList<Object[]>();
     for (int v = HFile.MIN_FORMAT_VERSION; v <= HFile.MAX_FORMAT_VERSION; ++v)
-      versionsToTest.add(new Integer[] { v } );
+      versionsToTest.add(new Integer[] { v });
     return versionsToTest;
   }
 
@@ -132,7 +137,7 @@ public class TestFixedFileTrailer {
 
     {
       for (byte invalidVersion : new byte[] { HFile.MIN_FORMAT_VERSION - 1,
-          HFile.MAX_FORMAT_VERSION + 1}) {
+          HFile.MAX_FORMAT_VERSION + 1 }) {
         bytes[bytes.length - 1] = invalidVersion;
         writeTrailer(trailerPath, null, bytes);
         try {
@@ -144,8 +149,9 @@ public class TestFixedFileTrailer {
           String cleanMsg = msg.replaceAll(
               "^(java(\\.[a-zA-Z]+)+:\\s+)?|\\s+\\(.*\\)\\s*$", "");
           assertEquals("Actual exception message is \"" + msg + "\".\n" +
-          		"Cleaned-up message", // will be followed by " expected: ..."
-              "Invalid HFile version: " + invalidVersion, cleanMsg);
+                  "Cleaned-up message", // will be followed by " expected: ..."
+              "Invalid HFile version: " + invalidVersion, cleanMsg
+          );
           LOG.info("Got an expected exception: " + msg);
         }
       }
@@ -161,8 +167,9 @@ public class TestFixedFileTrailer {
 
     String trailerStr = t.toString();
     assertEquals("Invalid number of fields in the string representation "
-        + "of the trailer: " + trailerStr, NUM_FIELDS_BY_VERSION[version - 1],
-        trailerStr.split(", ").length);
+            + "of the trailer: " + trailerStr, NUM_FIELDS_BY_VERSION[version - 1],
+        trailerStr.split(", ").length
+    );
     assertEquals(trailerStr, t4.toString());
   }
 
@@ -194,8 +201,9 @@ public class TestFixedFileTrailer {
     assertEquals(expected.getDataIndexCount(), loaded.getDataIndexCount());
 
     assertEquals(Math.min(expected.getEntryCount(),
-        version == 1 ? Integer.MAX_VALUE : Long.MAX_VALUE),
-        loaded.getEntryCount());
+            version == 1 ? Integer.MAX_VALUE : Long.MAX_VALUE),
+        loaded.getEntryCount()
+    );
 
     if (version == 1) {
       assertEquals(expected.getFileInfoOffset(), loaded.getFileInfoOffset());

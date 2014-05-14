@@ -25,14 +25,17 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import junit.framework.TestCase;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test for the ColumnPaginationFilter, used mainly to test the successful serialization of the filter.
  * More test functionality can be found within {@link org.apache.hadoop.hbase.filter.TestFilter#testColumnPaginationFilter()}
  */
+@Category(SmallTests.class)
 public class TestColumnPaginationFilter extends TestCase
 {
     private static final byte[] ROW = Bytes.toBytes("row_1_test");

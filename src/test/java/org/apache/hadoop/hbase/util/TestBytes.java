@@ -31,8 +31,11 @@ import java.util.Random;
 
 import junit.framework.TestCase;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Assert;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestBytes extends TestCase {
   public void testNullHashCode() {
     byte [] b = null;

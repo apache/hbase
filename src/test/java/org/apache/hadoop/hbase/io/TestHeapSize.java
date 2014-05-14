@@ -22,11 +22,13 @@ package org.apache.hadoop.hbase.io;
 
 import junit.framework.TestCase;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -35,6 +37,7 @@ import java.nio.ByteBuffer;
  * Testing the sizing that HeapSize offers and compares to the size given by
  * ClassSize.
  */
+@Category(SmallTests.class)
 public class TestHeapSize extends TestCase {
   /**
    * Testing the classes that implements HeapSize and are a part of 0.20.

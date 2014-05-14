@@ -26,13 +26,16 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.StringBytes;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Testcase for MetaCache class.
  */
+@Category(SmallTests.class)
 public class TestMetaCache {
 
   @Test

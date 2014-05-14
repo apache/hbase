@@ -27,6 +27,7 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -39,12 +40,14 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Check whether we correctly receive profiling data with the header protocol
  * enabled
  *
  */
+@Category(MediumTests.class)
 public class TestHeaderSendReceive {
   private static HBaseTestingUtility TEST_UTIL;
   private static final int SLAVES = 1;

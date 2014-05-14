@@ -31,12 +31,14 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test whether region rebalancing works. (HBASE-71)
  * Test HBASE-3663 whether region rebalancing works after a new server booted
  * especially when no server has more regions than the ceils of avg load
  */
+@Category(MediumTests.class)
 public class TestGlobalMemStoreSize extends HBaseClusterTestCase {
   final Log LOG = LogFactory.getLog(this.getClass().getName());
 

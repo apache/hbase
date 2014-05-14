@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -51,11 +52,13 @@ import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test cases that ensure that file system level errors are bubbled up
  * appropriately to clients, rather than swallowed.
  */
+@Category(MediumTests.class)
 public class TestFSErrorsExposed {
   private static final Log LOG = LogFactory.getLog(TestFSErrorsExposed.class);
 

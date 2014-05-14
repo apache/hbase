@@ -39,6 +39,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.UnstableTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -50,12 +52,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InjectionEvent;
 import org.apache.hadoop.hbase.util.InjectionHandler;
-import org.apache.hadoop.hbase.util.TagRunner;
-import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests that the master splits the logs of dead regionservers on startup and
@@ -63,7 +63,7 @@ import org.junit.runner.RunWith;
  * regionserver to create a need to split logs, and quickly killing a master to
  * cause master failover.
  */
-@RunWith(TagRunner.class)
+@Category(MediumTests.class)
 public class TestLogSplitOnMasterFailover extends MultiMasterTest {
 
   private static final Log LOG =
@@ -248,7 +248,7 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
   }
 
   // Marked as unstable and recored in 3376780
-  @TestTag({ "unstable" })
+  @Category(org.apache.hadoop.hbase.UnstableTests.class)
   @Test(timeout = 300000)
   public void testWithDistributedLogSplitting() throws Exception {
     ZooKeeperWrapper.setNamespaceForTesting();
@@ -257,7 +257,7 @@ public class TestLogSplitOnMasterFailover extends MultiMasterTest {
   }
 
   // Marked as unstable and recored in 3376780
-  @TestTag({ "unstable" })
+  @Category(UnstableTests.class)
   @Test(timeout = 300000)
   public void testWithDistributedLogSplittingAndErrors() throws Exception {
     // add a split log worker to handle InjectionEvent.SPLITLOGWORKER_SPLIT_LOG_START.

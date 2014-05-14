@@ -19,7 +19,9 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static junit.framework.Assert.assertEquals;
 
@@ -27,6 +29,7 @@ import static junit.framework.Assert.assertEquals;
  * Tests that the incrementing environment edge increments time instead of using
  * the default.
  */
+@Category(SmallTests.class)
 public class TestIncrementingEnvironmentEdge {
 
   @Test

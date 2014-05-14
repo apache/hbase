@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -32,6 +33,7 @@ import java.util.Set;
 import static org.junit.Assert.*;
 import static org.junit.matchers.JUnitMatchers.containsString;
 
+@Category(SmallTests.class)
 public class TestHTableDescriptor {
   @Test
   public void testGetNameAsString() throws Exception {

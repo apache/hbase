@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -44,6 +45,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -64,6 +66,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Testing {@link HLog} splitting code.
  */
+@Category(MediumTests.class)
 public class TestHLogSplit {
   private static final Log LOG = LogFactory.getLog(TestHLogSplit.class);
 

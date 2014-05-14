@@ -3,6 +3,7 @@ package org.apache.hadoop.hbase.regionserver;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.util.InjectionEventCore;
 import org.apache.hadoop.util.InjectionEventI;
 import org.apache.hadoop.util.InjectionHandler;
@@ -16,7 +17,9 @@ import org.junit.AfterClass;
 import static org.junit.Assert.*;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(MediumTests.class)
 public class TestSyncFileRangeThrottling {
   private static final Log LOG = LogFactory
       .getLog(TestSyncFileRangeThrottling.class);

@@ -168,7 +168,7 @@
         <jdk>/usr/local/jdk-7u6-64</jdk>
       </properties>
     </profile>
-     <profile>
+    <profile>
          <id>usingJDK7</id>
          <activation>
              <jdk>1.7</jdk>
@@ -178,7 +178,6 @@
                 <plugin>
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
-                    <!-- <version>0.6.4-SNAPSHOT</version> -->
                     <version>${jacoco.version}</version>
                     <executions>
                         <execution>
@@ -207,19 +206,6 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <configuration>
-                        <forkMode>always</forkMode>
-                        <includes>
-                            <include>**/Test*.java</include>
-                        </includes>
-                        <excludes>
-                            <exclude>**/mapred/*.java</exclude>
-                            <exclude>**/replication/*.java</exclude>
-                            <exclude>**/rest/*.java</exclude>
-                            <exclude>**/rest/*/*.java</exclude>
-                            <exclude>**/*$*</exclude>
-                        </excludes>
-                        <argLine>${surefire.argLine}</argLine>
-                        <parallel>classes</parallel>
                         <systemPropertyVariables>
                             <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
                         </systemPropertyVariables>
@@ -228,7 +214,7 @@
              </plugins>
          </build>
      </profile>
-     <profile>
+    <profile>
          <id>usingJDK8</id>
          <activation>
              <jdk>1.8</jdk>
@@ -238,25 +224,30 @@
                  <plugin>
                      <groupId>org.apache.maven.plugins</groupId>
                      <artifactId>maven-surefire-plugin</artifactId>
-                     <configuration>
-                         <forkMode>always</forkMode>
-                         <includes>
-                             <include>**/Test*.java</include>
-                         </includes>
-                         <excludes>
-                             <exclude>**/mapred/*.java</exclude>
-                             <exclude>**/replication/*.java</exclude>
-                             <exclude>**/rest/*.java</exclude>
-                             <exclude>**/rest/*/*.java</exclude>
-                             <exclude>**/*$*</exclude>
-                         </excludes>
-                         <argLine>${surefire.argLine}</argLine>
-                         <parallel>classes</parallel>
-                     </configuration>
                  </plugin>
              </plugins>
          </build>
      </profile>
+     <profile>
+         <id>unstableTests</id>
+         <activation>
+             <activeByDefault>false</activeByDefault>
+         </activation>
+         <properties>
+             <surefire.skipFirstPart>true</surefire.skipFirstPart>
+             <surefire.excludedGroups></surefire.excludedGroups>
+             <surefire.secondPartGroups>org.apache.hadoop.hbase.UnstableTests</surefire.secondPartGroups>
+         </properties>
+     </profile>
+      <profile>
+          <id>allStableTests</id>
+          <activation>
+              <activeByDefault>false</activeByDefault>
+          </activation>
+          <properties>
+              <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests,org.apache.hadoop.hbase.LargeTests</surefire.secondPartGroups>
+          </properties>
+      </profile>
   </profiles>
   
   <repositories>
@@ -371,23 +362,60 @@
           <artifactId>maven-source-plugin</artifactId>
           <version>2.1.1</version>
         </plugin>
-        <plugin>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>${surefire.version}</version>
-          <dependencies>
-            <dependency>
-              <groupId>org.apache.maven.surefire</groupId>
-              <artifactId>surefire-junit47</artifactId>
+          <plugin>
+              <artifactId>maven-surefire-plugin</artifactId>
               <version>${surefire.version}</version>
-            </dependency>
-          </dependencies>
-          <configuration>
-            <forkedProcessTimeoutInSeconds>900</forkedProcessTimeoutInSeconds>
-            <argLine>${surefire.argLine}</argLine>
-            <redirectTestOutputToFile>true</redirectTestOutputToFile>
-            <parallel>classes</parallel>
-          </configuration>
-        </plugin>
+              <dependencies>
+                  <!-- by default surefire selects dynamically the connector to the unit tests
+                    tool. We want to use always the same as the different connectors can have different
+                    bugs and behaviour. -->
+                  <dependency>
+                      <groupId>org.apache.maven.surefire</groupId>
+                      <artifactId>${surefire.provider}</artifactId>
+                      <version>${surefire.version}</version>
+                  </dependency>
+              </dependencies>
+              <!-- Generic testing configuration for all packages -->
+              <configuration>
+                  <failIfNoTests>false</failIfNoTests>
+                  <skip>${surefire.skipFirstPart}</skip>
+                  <!-- surefire hack, if not we're
+                    using method parallelization class ! -->
+                  <testFailureIgnore>${surefire.testFailureIgnore}</testFailureIgnore>
+                  <forkedProcessTimeoutInSeconds>${surefire.timeout}</forkedProcessTimeoutInSeconds>
+                  <argLine>${surefire.argLine}</argLine>
+                  <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                  <groups>${surefire.firstPartGroups}</groups>
+                  <excludedGroups>${surefire.excludedGroups}</excludedGroups>
+                  <forkMode>always</forkMode>
+                  <forkCount>2</forkCount>
+                  <threadCount>2</threadCount>
+                  <parallel>classes</parallel>
+              </configuration>
+              <executions>
+                  <execution>
+                      <id>secondPartTestsExecution</id>
+                      <phase>test</phase>
+                      <goals>
+                          <goal>test</goal>
+                      </goals>
+                      <configuration>
+                          <forkMode>always</forkMode>
+                          <forkCount>1</forkCount>
+                          <threadCount>1</threadCount>
+                          <parallel>classes</parallel>
+                          <skip>${surefire.skipSecondPart}</skip>
+                          <testFailureIgnore>${surefire.testFailureIgnore}</testFailureIgnore>
+                          <forkMode>always</forkMode>
+                          <groups>${surefire.secondPartGroups}</groups>
+                      </configuration>
+                  </execution>
+              </executions>
+          </plugin>
+          <plugin>
+              <artifactId>maven-surefire-report-plugin</artifactId>
+              <version>${surefire.version}</version>
+          </plugin>
         <plugin>
           <artifactId>maven-javadoc-plugin</artifactId>
           <version>2.6.1</version>
@@ -411,7 +439,6 @@
         </plugin>
       </plugins>
     </pluginManagement>
-
     <resources>
       <resource>
         <directory>src/main/resources/</directory>
@@ -604,20 +631,18 @@
     <compileSource>1.7</compileSource>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <hbase.version>0.21.0-SNAPSHOT</hbase.version>
-    <hadoop.version>0.20</hadoop.version>
+    <hadoop.version>4.41819</hadoop.version>
     <swift.version>0.12.0</swift.version>
-
     <commons-cli.version>1.2</commons-cli.version>
     <commons-io.version>2.1</commons-io.version>
     <commons-logging.version>1.1.1</commons-logging.version>
     <jetty.version>6.1.24</jetty.version>
     <jetty.jspapi.version>6.1.14</jetty.jspapi.version>
     <netty.version>3.7.0.Final</netty.version>
-    <junit.version>4.8.1</junit.version>
+    <junit.version>4.11</junit.version>
     <mockito-all.version>1.9.5</mockito-all.version>
     <log4j.version>1.2.17</log4j.version>
     <zookeeper.version>3.4.3</zookeeper.version>
-
     <commons-httpclient.version>3.1</commons-httpclient.version>
     <commons-lang.version>2.5</commons-lang.version>
     <commons-math.version>2.1</commons-math.version>
@@ -628,59 +653,33 @@
     <jsr311.version>1.1.1</jsr311.version>
     <protobuf.version>2.3.0</protobuf.version>
     <slf4j.version>1.7.5</slf4j.version>
-    <stax-api>1.0.1</stax-api>
     <thrift.version>0.9.1</thrift.version>
     <guava.version>16.0.1</guava.version>
-    <jackson.version>1.8.3</jackson.version>
+    <jackson.version>1.9.5</jackson.version>
+    <commons-pool.version>1.6</commons-pool.version>
     <hbase.skip-jacoco>false</hbase.skip-jacoco>
+    <jacoco.version>0.6.2.201302030002</jacoco.version>
 
     <surefire.version>2.15</surefire.version>
-    <jacoco.version>0.6.2.201302030002</jacoco.version>
-    <surefire.argLine>-enableassertions -Xmx2g -Djava.security.egd=file:/dev/./urandom
-      -Djava.awt.headless=true -Djava.library.path=${basedir}/lib/native/Linux-amd64-64/
+    <surefire.provider>surefire-junit47</surefire.provider>
+    <surefire.argLine>-enableassertions -Xmx4g -Djava.security.egd=file:/dev/./urandom
+        -Djava.awt.headless=true -Djava.library.path=${basedir}/lib/native/Linux-amd64-64/
     </surefire.argLine>
-
+    <surefire.skipFirstPart>false</surefire.skipFirstPart>
+    <surefire.skipSecondPart>false</surefire.skipSecondPart>
+    <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
+    <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
+    <surefire.testFailureIgnore>true</surefire.testFailureIgnore>
+    <test.output.tofile>true</test.output.tofile>
+    <surefire.timeout>900</surefire.timeout>
+    <surefire.excludedGroups>org.apache.hadoop.hbase.UnstableTests</surefire.excludedGroups>
   </properties>
 
   <dependencyManagement>
     <dependencies>
-      <dependency>
-        <groupId>commons-cli</groupId>
-        <artifactId>commons-cli</artifactId>
-        <version>${commons-cli.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>commons-logging</groupId>
-        <artifactId>commons-logging</artifactId>
-        <version>${commons-logging.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>log4j</groupId>
-        <artifactId>log4j</artifactId>
-        <version>${log4j.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>javax.jms</groupId>
-            <artifactId>jms</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>javax.mail</groupId>
-            <artifactId>mail</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.sun.jmx</groupId>
-    <swift.version>0.12.0</swift.version>
-            <artifactId>jmxri</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>com.sun.jdmk</groupId>
-            <artifactId>jmxtools</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
 
       <dependency>
-        <groupId>org.apache.hadoop</groupId>
+        <groupId>com.facebook.hadoop</groupId>
         <artifactId>hadoop-core</artifactId>
         <version>${hadoop.version}</version>
         <exclusions>
@@ -690,18 +689,6 @@
                 <artifactId>netty</artifactId>
             </exclusion>
         </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>hbase</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>${project.groupId}</groupId>
-        <artifactId>hbase</artifactId>
-        <version>${project.version}</version>
-        <classifier>tests</classifier>
-        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
@@ -716,35 +703,169 @@
         </exclusions>
       </dependency>
 
+      <!-- Info server dependencies -->
       <dependency>
         <groupId>org.mortbay.jetty</groupId>
         <artifactId>servlet-api-2.5</artifactId>
         <version>${jetty.jspapi.version}</version>
       </dependency>
+      <dependency>
+        <groupId>org.mortbay.jetty</groupId>
+        <artifactId>jsp-2.1</artifactId>
+        <version>${jetty.jspapi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mortbay.jetty</groupId>
+        <artifactId>jsp-api-2.1</artifactId>
+        <version>${jetty.jspapi.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mortbay.jetty</groupId>
+        <artifactId>jetty</artifactId>
+         <version>${jetty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mortbay.jetty</groupId>
+        <artifactId>jetty-util</artifactId>
+        <version>${jetty.version}</version>
+      </dependency>
 
+      <!-- Common Deps -->
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>${guava.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-cli</groupId>
+        <artifactId>commons-cli</artifactId>
+        <version>${commons-cli.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-pool</groupId>
+        <artifactId>commons-pool</artifactId>
+        <version>${commons-pool.version}</version>
+      </dependency>
+
+      <!-- Swift/Nifty dependencies -->
       <dependency>
         <groupId>com.facebook.swift</groupId>
         <artifactId>swift-root</artifactId>
         <version>${swift.version}</version>
       </dependency>
+      <dependency>
+         <groupId>com.facebook.swift</groupId>
+         <artifactId>swift-codec</artifactId>
+         <version>${swift.version}</version>
+      </dependency>
+      <dependency>
+         <groupId>com.facebook.swift</groupId>
+         <artifactId>swift-service</artifactId>
+         <version>${swift.version}</version>
+      </dependency>
+      <dependency>
+         <groupId>com.facebook.swift</groupId>
+         <artifactId>swift-annotations</artifactId>
+         <version>${swift.version}</version>
+      </dependency>
+       <dependency>
+         <groupId>com.facebook.nifty</groupId>
+         <artifactId>nifty-header-protocol</artifactId>
+         <version>${swift.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty</artifactId>
+        <version>${netty.version}</version>
+      </dependency>
+        <!--
+        This is highly dubious!
+
+        We need SLF4J >= 1.5.6 and Thrift depends on that version.
+        hadoop-core on the other hand depends on SLF4J 1.4.3 (even though it is optional)
+        and Mavens dependency resolution mechanism choses the 'nearest' dependency in case
+        of a conflict of dependencies on the same level. The nearest is always the one
+        that was defined first in the pom:
+        http://maven.apache.org/guides/introduction/introduction-to-dependency-mechanism.html
+
+        That's why we've added an explicit dependency to SFL4J-API even though we don't need it.
+        Make sure to check the version of SLF4J Hadoop and Thrift depend on when you upgrade
+        one of them.
+        -->
+      <dependency>
+        <groupId>org.apache.thrift</groupId>
+        <artifactId>libthrift</artifactId>
+        <version>${thrift.version}</version>
+        <exclusions>
+            <exclusion>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
+            </exclusion>
+        </exclusions>
+      </dependency>
+
+      <!-- Shell deps -->
+      <dependency>
+        <groupId>org.jruby</groupId>
+        <artifactId>jruby-complete</artifactId>
+        <version>${jruby.version}</version>
+      </dependency>
+
+      <!-- Logging dependencies -->
+      <dependency>
+        <groupId>commons-logging</groupId>
+        <artifactId>commons-logging</artifactId>
+        <version>${commons-logging.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>log4j</groupId>
+        <artifactId>log4j</artifactId>
+        <version>${log4j.version}</version>
+        <exclusions>
+            <exclusion>
+                <groupId>javax.jms</groupId>
+                <artifactId>jms</artifactId>
+            </exclusion>
+            <exclusion>
+                <groupId>javax.mail</groupId>
+                <artifactId>mail</artifactId>
+            </exclusion>
+            <exclusion>
+                <groupId>com.sun.jmx</groupId>
+                <artifactId>jmxri</artifactId>
+            </exclusion>
+            <exclusion>
+                <groupId>com.sun.jdmk</groupId>
+                <artifactId>jmxtools</artifactId>
+            </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-log4j12</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>${slf4j.version}</version>
+      </dependency>
+
       <!-- Test dependencies -->
       <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-test</artifactId>
+        <groupId>com.facebook.hadoop</groupId>
+        <artifactId>hadoop-core-test</artifactId>
         <version>${hadoop.version}</version>
-        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>
         <version>${junit.version}</version>
-        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-all</artifactId>
         <version>${mockito-all.version}</version>
-        <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>commons-codec</groupId>
@@ -752,24 +873,21 @@
         <version>1.6</version>
       </dependency>
       <dependency>
-        <groupId>asm</groupId>
-        <artifactId>asm</artifactId>
-        <version>3.2</version>
-      </dependency>
-      <dependency>
       	<groupId>javax.validation</groupId>
       	<artifactId>validation-api</artifactId>
       	<version>1.1.0.Final</version>
       </dependency>
-      <dependency>
-      	<groupId>com.facebook.swift</groupId>
-      	<artifactId>swift-annotations</artifactId>
-      	<version>0.12.0</version>
-      </dependency>
+
+
       <dependency>
       	<groupId>org.codehaus.jackson</groupId>
-      	<artifactId>jackson-mapper-asl</artifactId>
-      	<version>1.9.5</version>
+      	<artifactId>jackson-core-asl</artifactId>
+      	<version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.jackson</groupId>
+        <artifactId>jackson-mapper-asl</artifactId>
+        <version>${jackson.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -778,6 +896,7 @@
       <groupId>com.facebook.titan.prometheus</groupId>
       <artifactId>compactionhook</artifactId>
       <version>2014-02-26T19.17.36-bac5a85</version>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>commons-cli</groupId>
@@ -805,81 +924,42 @@
     <dependency>
       <groupId>commons-pool</groupId>
       <artifactId>commons-pool</artifactId>
-      <version>1.6</version>
     </dependency>
     <dependency>
       <groupId>log4j</groupId>
       <artifactId>log4j</artifactId>
     </dependency>
-
-    <!--
-      This is highly dubious!
-
-      We need SLF4J >= 1.5.6 and Thrift depends on that version.
-      hadoop-core on the other hand depends on SLF4J 1.4.3 (even though it is optional)
-      and Mavens dependency resolution mechanism choses the 'nearest' dependency in case
-      of a conflict of dependencies on the same level. The nearest is always the one
-      that was defined first in the pom:
-      http://maven.apache.org/guides/introduction/introduction-to-dependency-mechanism.html
-
-      That's why we've added an explicit dependency to SFL4J-API even though we don't need it.
-      Make sure to check the version of SLF4J Hadoop and Thrift depend on when you upgrade
-      one of them.
-    -->
     <dependency>
       <groupId>org.apache.thrift</groupId>
       <artifactId>libthrift</artifactId>
-      <version>${thrift.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.slf4j</groupId>
-          <artifactId>slf4j-simple</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
-      <version>${slf4j.version}</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
-      <version>${slf4j.version}</version>
       <scope>runtime</scope>
     </dependency>
 
     <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>${guava.version}</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
+      <groupId>com.facebook.hadoop</groupId>
       <artifactId>hadoop-core</artifactId>
     </dependency>
 
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>org.jboss.netty</groupId>
-          <artifactId>netty</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
 
     <dependency>
       <groupId>org.mortbay.jetty</groupId>
       <artifactId>jetty</artifactId>
-      <version>${jetty.version}</version>
     </dependency>
     <dependency>
       <groupId>org.mortbay.jetty</groupId>
       <artifactId>jetty-util</artifactId>
-      <version>${jetty.version}</version>
     </dependency>
     <dependency>
       <groupId>org.mortbay.jetty</groupId>
@@ -888,189 +968,75 @@
     <dependency>
       <groupId>org.mortbay.jetty</groupId>
       <artifactId>jsp-2.1</artifactId>
-      <version>${jetty.jspapi.version}</version>
     </dependency>
     <dependency>
       <groupId>org.mortbay.jetty</groupId>
       <artifactId>jsp-api-2.1</artifactId>
-      <version>${jetty.jspapi.version}</version>
     </dependency>
     <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty</artifactId>
-        <version>${netty.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>tomcat</groupId>
-      <artifactId>jasper-runtime</artifactId>
-      <version>${jasper.version}</version>
-    </dependency>
-    <dependency>
-      <!--If this is not in the runtime lib, we get odd
-      "2009-02-27 11:38:39.504::WARN:  failed jsp
-       java.lang.NoSuchFieldError: IS_SECURITY_ENABLED"
-       exceptions out of jetty deploying webapps.
-       St.Ack Thu May 20 01:04:41 PDT 2010
-      -->
-      <groupId>tomcat</groupId>
-      <artifactId>jasper-compiler</artifactId>
-      <version>${jasper.version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.jruby</groupId>
       <artifactId>jruby-complete</artifactId>
-      <version>${jruby.version}</version>
-    </dependency>
-
-    <!-- REST dependencies -->
-    <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-      <version>${protobuf.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-core</artifactId>
-      <version>${jersey.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-json</artifactId>
-      <version>${jersey.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-server</artifactId>
-      <version>${jersey.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>asm</groupId>
-          <artifactId>asm</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>javax.xml.bind</groupId>
-      <artifactId>jaxb-api</artifactId>
-      <version>${jaxb-api.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>jsr311-api</artifactId>
-      <version>${jsr311.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>stax</groupId>
-      <artifactId>stax-api</artifactId>
-      <version>1.0.1</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
-      <version>1.6.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-      <version>${slf4j.version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-core-asl</artifactId>
-      <version>${jackson.version}</version>
     </dependency>
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-mapper-asl</artifactId>
-      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>com.facebook.swift</groupId>
+        <artifactId>swift-codec</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>com.facebook.swift</groupId>
+        <artifactId>swift-service</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>com.facebook.nifty</groupId>
+        <artifactId>nifty-header-protocol</artifactId>
     </dependency>
 
-    <!-- Test dependencies -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
+
+
+      <!-- Test dependencies -->
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-math</artifactId>
-      <version>${commons-math.version}</version>
-      <scope>test</scope>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-all</artifactId>
+        <scope>test</scope>
     </dependency>
-     <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-test</artifactId>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-math</artifactId>
+        <version>${commons-math.version}</version>
+        <scope>test</scope>
     </dependency>
-     <dependency>
-       <groupId>com.google.guava</groupId>
-       <artifactId>guava</artifactId>
-       <version>${guava.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>com.facebook.swift</groupId>
-      <artifactId>swift-codec</artifactId>
-      <version>0.12.0</version>
-    </dependency>
-    <dependency>
-      <groupId>com.facebook.swift</groupId>
-      <artifactId>swift-service</artifactId>
-      <version>${swift.version}</version>
-    </dependency>
-    <dependency>
-       <groupId>com.facebook.nifty</groupId>
-       <artifactId>nifty-header-protocol</artifactId>
-       <version>${swift.version}</version>
+      <dependency>
+         <groupId>com.facebook.hadoop</groupId>
+         <artifactId>hadoop-core-test</artifactId>
+         <scope>test</scope>
      </dependency>
   </dependencies>
 
-  <!--
-  To publish, use the following settings.xml file ( placed in ~/.m2/settings.xml )
-
- <settings>
-  <servers>
-    <server>
-      <id>apache.releases.https</id>
-      <username>hbase_committer</username>
-      <password>********</password>
-    </server>
-
-    <server>
-      <id>apache.snapshots.https</id>
-      <username>hbase_committer</username>
-      <password>********</password>
-    </server>
-
-  </servers>
- </settings>
-
-  $ mvn deploy
-(or)
-  $ mvn -s /my/path/settings.xml deploy
-
-  -->
   <distributionManagement>
-    <repository>
-      <id>apache.releases.https</id>
-      <name>Apache Release Distribution Repository</name>
-      <url>https://repository.apache.org/service/local/staging/deploy/maven2</url>
-    </repository>
-    <snapshotRepository>
-      <id>apache.snapshots.https</id>
-      <name>Apache Development Snapshot Repository</name>
-      <url>https://repository.apache.org/content/repositories/snapshots</url>
-    </snapshotRepository>
-    <!-- Private Site Repository -->
-    <site>
-      <id>HBase Site</id>
-      <url>scp://people.apache.org/home/psmith/public_html/hbase/sandbox/hbase/</url>
-    </site>
   </distributionManagement>
+
   <!-- See http://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->
   <reporting>
     <plugins>
@@ -1127,11 +1093,6 @@
             </reports>
           </reportSet>
         </reportSets>
-        <!--
-          This is probably not needed, given the smallness of the HBase source code, but left here in case
-          <minmemory>128m</minmemory>
-          <maxmemory>1024m</maxmemory>
-        -->
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

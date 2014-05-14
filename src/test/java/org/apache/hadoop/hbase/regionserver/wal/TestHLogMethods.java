@@ -28,11 +28,14 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MediumTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Simple testing of a few HLog methods.
  */
+@Category(MediumTests.class)
 public class TestHLogMethods {
   private final HBaseTestingUtility util = new HBaseTestingUtility();
 

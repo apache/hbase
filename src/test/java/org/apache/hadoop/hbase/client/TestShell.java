@@ -27,17 +27,19 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.MediumTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import org.jruby.embed.ScriptingContainer;
 import org.jruby.embed.PathType;
+import org.junit.experimental.categories.Category;
 
 /**
  *
- * @author scoundrel
  */
+@Category(MediumTests.class)
 public class TestShell {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

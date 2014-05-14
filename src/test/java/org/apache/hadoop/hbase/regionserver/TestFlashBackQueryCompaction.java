@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -40,7 +41,9 @@ import org.apache.hadoop.hbase.util.InjectionHandler;
 
 import static org.junit.Assert.*;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(MediumTests.class)
 public class TestFlashBackQueryCompaction extends FlashBackQueryTestUtil {
 
   private static final HashSet<KeyValue> goodKvs = new HashSet<KeyValue>();

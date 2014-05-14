@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -38,6 +39,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Tests master cleanup of rows in meta table where there is no HRegionInfo
  */
+@Category(MediumTests.class)
 public class TestEmptyMetaInfo  {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static int SLAVES = 3;

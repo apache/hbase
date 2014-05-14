@@ -25,10 +25,13 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 
 import junit.framework.TestCase;
+import org.apache.hadoop.hbase.SmallTests;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests for the page filter
  */
+@Category(SmallTests.class)
 public class TestPageFilter extends TestCase {
   static final int ROW_LIMIT = 3;
 

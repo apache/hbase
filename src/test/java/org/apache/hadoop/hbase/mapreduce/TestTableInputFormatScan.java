@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -45,12 +46,14 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests various scan start and stop row scenarios. This is set in a scan and
  * tested in a MapReduce job to see if that is handed over and done properly
  * too.
  */
+@Category(LargeTests.class)
 public class TestTableInputFormatScan {
 
   static final Log LOG = LogFactory.getLog(TestTableInputFormatScan.class);

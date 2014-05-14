@@ -25,14 +25,17 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import junit.framework.TestCase;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests the value filter
  */
+@Category(SmallTests.class)
 public class TestSingleColumnValueFilter extends TestCase {
   private static final byte[] ROW = Bytes.toBytes("test");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");

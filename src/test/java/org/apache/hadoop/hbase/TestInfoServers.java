@@ -26,11 +26,13 @@ import java.net.URL;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.HTable;
+import org.junit.experimental.categories.Category;
 
 /**
  * Testing, info servers are disabled.  This test enables then and checks that
  * they serve pages.
  */
+@Category(MediumTests.class)
 public class TestInfoServers extends HBaseClusterTestCase {
   static final Log LOG = LogFactory.getLog(TestInfoServers.class);
 

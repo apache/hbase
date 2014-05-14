@@ -4,11 +4,14 @@ import static org.junit.Assert.*;
 
 import java.util.Random;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.histogram.HiveBasedNumericHistogram.Coord;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestHiveBasedNumericHistogram {
   private HiveBasedNumericHistogram hist;
   double min = 0;

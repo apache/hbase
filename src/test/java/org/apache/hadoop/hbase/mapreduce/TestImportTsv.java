@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.ParsedLine;
@@ -31,9 +32,11 @@ import org.junit.Test;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
+import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.*;
 
+@Category(SmallTests.class)
 public class TestImportTsv {
   @Test
   public void testTsvParser() throws BadTsvLineException {

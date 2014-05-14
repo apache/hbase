@@ -21,17 +21,20 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.Assert.*;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.StopStatus;
 import org.apache.hadoop.hbase.master.RegionServerOperationQueue.ProcessingResultCode;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test the queue used to manage RegionServerOperations.
  * Currently RegionServerOperationQueue is untestable because each
  * RegionServerOperation has a {@link HMaster} reference.  TOOD: Fix.
  */
+@Category(SmallTests.class)
 public class TestRegionServerOperationQueue {
   private RegionServerOperationQueue queue;
   private Configuration conf;

@@ -13,6 +13,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -24,7 +25,9 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(MediumTests.class)
 public class TestRPCCompression {
   final Log LOG = LogFactory.getLog(getClass());
   private static HBaseTestingUtility TEST_UTIL;
@@ -64,30 +67,30 @@ public class TestRPCCompression {
   public void tearDown() throws Exception {
     // Nothing to do.
   }
-  
+
   @Test
   public void testCompressedRPC() throws Exception {
     byte[] TABLE = Bytes.toBytes("testRPCCompression");
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
-    byte [] QUALIFIER = Bytes.toBytes("testQualifier");
-    byte [] VALUE = Bytes.toBytes("testValue");
+    byte[] QUALIFIER = Bytes.toBytes("testQualifier");
+    byte[] VALUE = Bytes.toBytes("testValue");
 
     // create a table
     TEST_UTIL.createTable(TABLE, FAMILIES);
     LOG.debug("Created table " + new String(TABLE));
-    
+
     // open the table with compressed RPC
     Configuration conf = HBaseConfiguration.create();
     String zkPortStr = TEST_UTIL.getConfiguration().get(
         "hbase.zookeeper.property.clientPort");
-    conf.setInt("hbase.zookeeper.property.clientPort", 
+    conf.setInt("hbase.zookeeper.property.clientPort",
         Integer.parseInt(zkPortStr));
-    conf.set(HConstants.HBASE_RPC_COMPRESSION_KEY, 
+    conf.set(HConstants.HBASE_RPC_COMPRESSION_KEY,
         Compression.Algorithm.GZ.getName());
     HTable table = new HTable(conf, TABLE);
 
     // put some values
-    byte [][] ROWS = { Bytes.toBytes("a"), Bytes.toBytes("b") };
+    byte[][] ROWS = { Bytes.toBytes("a"), Bytes.toBytes("b") };
     for (int i = 0; i < ROWS.length; i++) {
       Put put = new Put(ROWS[i]);
       put.add(FAMILIES[0], QUALIFIER, VALUE);
@@ -104,9 +107,9 @@ public class TestRPCCompression {
       Get get = new Get(ROWS[i]);
       get.addColumn(FAMILIES[0], QUALIFIER);
       Result result = table.get(get);
-      
-      assertEquals(new String(VALUE), 
-    		  new String(result.getValue(FAMILIES[0], QUALIFIER)));
+
+      assertEquals(new String(VALUE),
+          new String(result.getValue(FAMILIES[0], QUALIFIER)));
     }
     LOG.debug("Read and verified from table " + new String(TABLE));
   }

@@ -42,31 +42,32 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test case that uses multiple threads to read and write multifamily rows
  * into a table, verifying that reads never see partially-complete writes.
- *
  * This can run as a junit test, or with a main() function which runs against
  * a real cluster (eg for testing with failures, region movement, etc)
  */
+@Category(MediumTests.class)
 public class TestAcidGuarantees {
   protected static final Log LOG = LogFactory.getLog(TestAcidGuarantees.class);
-  public static final byte [] TABLE_NAME = Bytes.toBytes("TestAcidGuarantees");
-  public static final byte [] FAMILY_A = Bytes.toBytes("A");
-  public static final byte [] FAMILY_B = Bytes.toBytes("B");
-  public static final byte [] FAMILY_C = Bytes.toBytes("C");
-  public static final byte [] QUALIFIER_NAME = Bytes.toBytes("data");
+  public static final byte[] TABLE_NAME = Bytes.toBytes("TestAcidGuarantees");
+  public static final byte[] FAMILY_A = Bytes.toBytes("A");
+  public static final byte[] FAMILY_B = Bytes.toBytes("B");
+  public static final byte[] FAMILY_C = Bytes.toBytes("C");
+  public static final byte[] QUALIFIER_NAME = Bytes.toBytes("data");
 
   public static final byte[][] FAMILIES = new byte[][] {
-    FAMILY_A, FAMILY_B, FAMILY_C };
+      FAMILY_A, FAMILY_B, FAMILY_C };
 
   private HBaseTestingUtility util;
 
   public static int NUM_COLS_TO_CHECK = 50;
 
   private void createTableIfMissing()
-    throws IOException {
+      throws IOException {
     try {
       util.createTable(TABLE_NAME, FAMILIES);
     } catch (TableExistsException tee) {
@@ -76,9 +77,10 @@ public class TestAcidGuarantees {
   public TestAcidGuarantees() {
     // Set small flush size for minicluster so we exercise reseeking scanners
     Configuration conf = HBaseConfiguration.create();
-    conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(128*1024));
+    conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(128 * 1024));
     util = new HBaseTestingUtility(conf);
   }
+
   /**
    * Thread that does random full-row writes into a table.
    */
@@ -91,13 +93,13 @@ public class TestAcidGuarantees {
     AtomicLong numWritten = new AtomicLong();
 
     public RowMutationsWriter(TestContext ctx, byte targetRows[][],
-                           byte targetFamilies[][]) throws IOException {
+        byte targetFamilies[][]) throws IOException {
       super(ctx);
       this.targetRows = targetRows;
       this.targetFamilies = targetFamilies;
       table = new HTable(ctx.getConf(), TABLE_NAME);
     }
-    
+
     public void doAnAction() throws Exception {
       // Pick a random row to write into
       byte[] targetRow = targetRows[rand.nextInt(targetRows.length)];
@@ -111,23 +113,21 @@ public class TestAcidGuarantees {
        * always 100.
        */
       for (byte[] family : targetFamilies) {
-	    long value = rand.nextInt();
+        long value = rand.nextInt();
         for (int i = 0; i < NUM_COLS_TO_CHECK; i++) {
           byte qualifier[] = Bytes.toBytes("col" + i);
           if ((i + writeNumber) % NUM_COLS_TO_CHECK == 0) {
-		      Put p = new Put(targetRow);
-	          p.add(family, qualifier, writeNumber, Bytes.toBytes(value));
-	          mutation.add(p);
-          }
-          else if ((i + writeNumber) % NUM_COLS_TO_CHECK == 1) {
-		      Put p = new Put(targetRow);
-	          p.add(family, qualifier, writeNumber, Bytes.toBytes(100 - value));
-	          mutation.add(p);
-          }
-          else {
-		      Delete d = new Delete(targetRow);
-	          d.deleteColumns(family, qualifier, writeNumber);
-	          mutation.add(d);
+            Put p = new Put(targetRow);
+            p.add(family, qualifier, writeNumber, Bytes.toBytes(value));
+            mutation.add(p);
+          } else if ((i + writeNumber) % NUM_COLS_TO_CHECK == 1) {
+            Put p = new Put(targetRow);
+            p.add(family, qualifier, writeNumber, Bytes.toBytes(100 - value));
+            mutation.add(p);
+          } else {
+            Delete d = new Delete(targetRow);
+            d.deleteColumns(family, qualifier, writeNumber);
+            mutation.add(d);
           }
         }
       }
@@ -149,7 +149,7 @@ public class TestAcidGuarantees {
     boolean gotResults = false;
 
     public RowMutationsGetReader(TestContext ctx, byte targetRow[],
-                           byte targetFamilies[][]) throws IOException {
+        byte targetFamilies[][]) throws IOException {
       super(ctx);
       this.targetRow = targetRow;
       this.targetFamilies = targetFamilies;
@@ -163,30 +163,30 @@ public class TestAcidGuarantees {
         // Trying to verify but we didn't find the row - the writing
         // thread probably just hasn't started writing yet, so we can
         // ignore this action -- only if we have never received values
-    	// before this.
-    	  
-    	if (gotResults)
-    		gotFailure(res);
-    	
+        // before this.
+
+        if (gotResults)
+          gotFailure(res);
+
         return;
       }
-      
+
       gotResults = true;
 
       for (byte[] family : targetFamilies) {
-    	long sum = 0;
+        long sum = 0;
         int countNonNull = 0;
         for (int i = 0; i < NUM_COLS_TO_CHECK; i++) {
           byte qualifier[] = Bytes.toBytes("col" + i);
           byte thisValue[] = res.getValue(family, qualifier);
           if (thisValue != null) {
-        	  countNonNull++;
-        	  sum += Bytes.toLong(thisValue);
+            countNonNull++;
+            sum += Bytes.toLong(thisValue);
           }
           numVerified++;
         }
         if (sum != 100 || countNonNull != 2)
-            gotFailure(res);
+          gotFailure(res);
       }
       numRead.getAndIncrement();
     }
@@ -194,11 +194,11 @@ public class TestAcidGuarantees {
     private void gotFailure(Result res) {
       StringBuilder msg = new StringBuilder();
       msg.append("Failed after ").append(numVerified).append("!");
-      msg.append("Expecting 2 KV each for " + targetFamilies.length 
-    		  + " families. Summing up to 100.");
+      msg.append("Expecting 2 KV each for " + targetFamilies.length
+          + " families. Summing up to 100.");
       msg.append("Got:\n");
       if (res.list() == null)
-    	  msg.append("None");
+        msg.append("None");
       else {
         for (KeyValue kv : res.list()) {
           msg.append(kv.toString());
@@ -223,12 +223,13 @@ public class TestAcidGuarantees {
     AtomicLong numWritten = new AtomicLong();
 
     public AtomicityWriter(TestContext ctx, byte targetRows[][],
-                           byte targetFamilies[][]) throws IOException {
+        byte targetFamilies[][]) throws IOException {
       super(ctx);
       this.targetRows = targetRows;
       this.targetFamilies = targetFamilies;
       table = new HTable(ctx.getConf(), TABLE_NAME);
     }
+
     public void doAnAction() throws Exception {
       // Pick a random row to write into
       byte[] targetRow = targetRows[rand.nextInt(targetRows.length)];
@@ -258,7 +259,7 @@ public class TestAcidGuarantees {
     AtomicLong numRead = new AtomicLong();
 
     public AtomicGetReader(TestContext ctx, byte targetRow[],
-                           byte targetFamilies[][]) throws IOException {
+        byte targetFamilies[][]) throws IOException {
       super(ctx);
       this.targetRow = targetRow;
       this.targetFamilies = targetFamilies;
@@ -316,7 +317,7 @@ public class TestAcidGuarantees {
     AtomicLong numRowsScanned = new AtomicLong();
 
     public AtomicScanReader(TestContext ctx,
-                           byte targetFamilies[][]) throws IOException {
+        byte targetFamilies[][]) throws IOException {
       super(ctx);
       this.targetFamilies = targetFamilies;
       table = new HTable(ctx.getConf(), TABLE_NAME);
@@ -361,7 +362,6 @@ public class TestAcidGuarantees {
       throw new RuntimeException(msg.toString());
     }
   }
-
 
   public void runTestAtomicity(long millisToRun,
       int numWriters,
@@ -424,16 +424,15 @@ public class TestAcidGuarantees {
     }
   }
 
-  
   @Test
   public void testMutations() throws Exception {
     util.startMiniCluster(1);
     try {
-	  long millisToRun = 5000;
+      long millisToRun = 5000;
       int numWriters = 5;
       int numGetters = 5;
       int numUniqueRows = 1;
-      
+
       createTableIfMissing();
       TestContext ctx = new TestContext(util.getConfiguration());
 
@@ -449,7 +448,7 @@ public class TestAcidGuarantees {
         writers.add(writer);
         ctx.addThread(writer);
       }
-    
+
       // Add a flusher
       ctx.addThread(new RepeatingTestThread(ctx) {
         public void doAnAction() throws Exception {
@@ -481,6 +480,7 @@ public class TestAcidGuarantees {
       util.shutdownMiniCluster();
     }
   }
+
   @Test
   public void testGetAtomicity() throws Exception {
     util.startMiniCluster(1);
@@ -517,7 +517,7 @@ public class TestAcidGuarantees {
     Configuration c = HBaseConfiguration.create();
     TestAcidGuarantees test = new TestAcidGuarantees();
     test.setConf(c);
-    test.runTestAtomicity(5*60*1000, 5, 2, 2, 3);
+    test.runTestAtomicity(5 * 60 * 1000, 5, 2, 2, 3);
   }
 
   private void setConf(Configuration c) {

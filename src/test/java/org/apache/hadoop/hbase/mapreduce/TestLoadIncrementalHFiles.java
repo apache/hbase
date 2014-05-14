@@ -33,6 +33,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -49,6 +51,7 @@ import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.WritableUtils;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.mortbay.log.Log;
 
 /**
@@ -56,6 +59,7 @@ import org.mortbay.log.Log;
  * functionality. These tests run faster than the full MR cluster
  * tests in TestHFileOutputFormat
  */
+@Category(LargeTests.class)
 public class TestLoadIncrementalHFiles {
 
   private static final byte[] TABLE = Bytes.toBytes("mytable");

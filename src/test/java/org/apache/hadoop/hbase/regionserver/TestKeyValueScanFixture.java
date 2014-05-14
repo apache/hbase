@@ -25,8 +25,11 @@ import java.io.IOException;
 import junit.framework.TestCase;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestKeyValueScanFixture extends TestCase {
 
 

@@ -33,22 +33,22 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.UnstableTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.TagRunner;
-import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.data.Stat;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.experimental.categories.Category;
 
 
-@RunWith(TagRunner.class)
+@Category(MediumTests.class)
 public class TestHRegionCloseRetry {
   final Log LOG = LogFactory.getLog(getClass());
   private static final Configuration conf = HBaseConfiguration.create();
@@ -70,7 +70,7 @@ public class TestHRegionCloseRetry {
   }
 
   @Test(timeout = 300000)
-  @TestTag({ "unstable" })
+  @Category(UnstableTests.class)
   public void testCloseHRegionRetry() throws Exception {
 
     // Build some data.

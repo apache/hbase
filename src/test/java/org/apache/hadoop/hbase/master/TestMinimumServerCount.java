@@ -24,11 +24,14 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.HBaseClusterTestCase;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.junit.experimental.categories.Category;
 
+@Category(MediumTests.class)
 public class TestMinimumServerCount extends HBaseClusterTestCase {
 
   static final String TABLE_NAME = "TestTable";

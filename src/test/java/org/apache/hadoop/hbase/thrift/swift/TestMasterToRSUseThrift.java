@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * A simple test which just brings up the MiniHBase cluster where the master ->
@@ -42,6 +44,7 @@ import org.junit.Test;
  * through thrift. This test just does a simple put and get.
  *
  */
+@Category(MediumTests.class)
 public class TestMasterToRSUseThrift {
   private final Configuration conf = HBaseConfiguration.create();
   private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);

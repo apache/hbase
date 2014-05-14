@@ -48,8 +48,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
+import org.apache.hadoop.hbase.UnstableTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -73,8 +75,6 @@ import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.StringBytes;
-import org.apache.hadoop.hbase.util.TagRunner;
-import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
@@ -88,7 +88,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.common.collect.Lists;
@@ -100,7 +100,7 @@ import com.google.common.collect.Lists;
  * emits keys and values like those of {@link PerformanceEvaluation}.  Makes
  * as many splits as "mapred.map.tasks" maps.
  */
-@RunWith(TagRunner.class)
+@Category(LargeTests.class)
 public class TestHFileOutputFormat  {
   private final static int ROWSPERSPLIT = 1024;
 
@@ -1085,7 +1085,7 @@ public class TestHFileOutputFormat  {
   }
 
   // Marked as unstable, recorded in #3297517
-  @TestTag({ "unstable" })
+  @Category(UnstableTests.class)
   @Test
   public void testFavoredNodes() throws Exception {
     Random rand = new Random();

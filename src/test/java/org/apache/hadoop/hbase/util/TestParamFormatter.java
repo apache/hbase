@@ -2,7 +2,9 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -13,6 +15,7 @@ import static junit.framework.Assert.*;
 /**
  * Test the ParamFormatter framework
  */
+@Category(SmallTests.class)
 public class TestParamFormatter {
   private final static Log LOG = LogFactory.getLog(TestParamFormatter.class);
 

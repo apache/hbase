@@ -19,7 +19,9 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static junit.framework.Assert.assertTrue;
 import static junit.framework.Assert.fail;
@@ -28,6 +30,7 @@ import static junit.framework.Assert.fail;
  * Tests to make sure that the default environment edge conforms to appropriate
  * behaviour.
  */
+@Category(SmallTests.class)
 public class TestDefaultEnvironmentEdge {
 
   @Test

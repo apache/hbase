@@ -39,8 +39,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.RuntimeExceptionAbortStrategy;
-import org.apache.hadoop.hbase.util.TagRunner;
-import org.apache.hadoop.hbase.util.TestTag;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooKeeper;
@@ -48,9 +46,9 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.experimental.categories.Category;
 
-@RunWith(TagRunner.class)
+@Category(UnstableTests.class)
 public class TestZooKeeper {
   private final Log LOG = LogFactory.getLog(this.getClass());
 
@@ -94,7 +92,7 @@ public class TestZooKeeper {
    * @throws InterruptedException
    */
   // Marked as unstable and recorded at #2747689
-  @TestTag({ "unstable" })
+  @Category(UnstableTests.class)
   @Test (timeout = 300000)
   public void testClientSessionExpired()
       throws IOException, InterruptedException {
@@ -142,6 +140,7 @@ public class TestZooKeeper {
    * Make sure we can use the cluster
    * @throws Exception
    */
+  @Test
   public void testSanity() throws Exception{
 
     HBaseAdmin admin = new HBaseAdmin(conf);
@@ -211,7 +210,7 @@ public class TestZooKeeper {
 
 
   // Marked as unstable and recorded at #2747689
-  @TestTag({ "unstable" })
+  @Category(UnstableTests.class)
   @Test (timeout = 300000)
   public void testRegionServerSessionExpired() throws Exception{
     LOG.info("Starting testRegionServerSessionExpired");

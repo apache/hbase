@@ -24,6 +24,7 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.coprocessor.endpoints.IEndpointClient.Caller;
@@ -33,10 +34,12 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Testcases for endpoints defined in LongAggregators.
  */
+@Category(MediumTests.class)
 public class TestLongAggregator {
   private static final HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();

@@ -26,10 +26,13 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Iterator;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestSortedCopyOnWriteSet {
 
   @Test

@@ -21,13 +21,16 @@ package org.apache.hadoop.hbase.coprocessor.endpoints;
 
 import java.util.ArrayList;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Testcases for EndpointBytesCodec.
  */
+@Category(SmallTests.class)
 public class TestEndpointBytesCodec {
   @Test
   public void testBasic() throws Exception {

@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import junit.framework.TestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -42,6 +44,7 @@ import java.util.Arrays;
  * perfectly fine when using Hadoop RPC, we just wanted to double check this
  * in thrift.
  */
+@Category(MediumTests.class)
 public class TestReconnectOnRSDeath extends TestCase {
   public static final Log LOG =
     LogFactory.getLog(TestReconnectOnRSDeath.class.getName());

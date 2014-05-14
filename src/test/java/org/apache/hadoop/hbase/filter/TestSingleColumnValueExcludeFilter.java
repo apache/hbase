@@ -22,8 +22,10 @@ package org.apache.hadoop.hbase.filter;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests for {@link SingleColumnValueExcludeFilter}. Because this filter
@@ -33,6 +35,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * @author ferdy
  *
  */
+@Category(SmallTests.class)
 public class TestSingleColumnValueExcludeFilter extends TestCase {
   private static final byte[] ROW = Bytes.toBytes("test");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");

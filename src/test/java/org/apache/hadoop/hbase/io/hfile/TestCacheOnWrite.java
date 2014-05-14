@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.CreateRandomStoreFile;
@@ -54,6 +55,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized.Parameters;
 import org.junit.runners.Parameterized;
@@ -62,6 +64,7 @@ import org.junit.runners.Parameterized;
  * Tests {@link HFile} cache-on-write functionality for the following block
  * types: data blocks, non-root index blocks, and Bloom filter blocks.
  */
+@Category(MediumTests.class)
 @RunWith(Parameterized.class)
 public class TestCacheOnWrite {
 

@@ -30,11 +30,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test for HQuorumPeer.
  */
+@Category(MediumTests.class)
 public class TestHQuorumPeer extends HBaseTestCase {
   private Path dataDir;
 

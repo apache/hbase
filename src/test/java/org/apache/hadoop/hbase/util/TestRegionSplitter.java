@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
@@ -45,11 +46,13 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Tests for {@link RegionSplitter}, which can create a pre-split table or do a
  * rolling split of an existing table.
  */
+@Category(MediumTests.class)
 public class TestRegionSplitter {
   private final static Log LOG = LogFactory.getLog(TestRegionSplitter.class);
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();

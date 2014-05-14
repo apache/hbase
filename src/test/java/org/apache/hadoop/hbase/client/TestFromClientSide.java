@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -82,12 +83,14 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Run tests that use the HBase clients; {@link HTable} and {@link HTablePool}.
  * Sets up the HBase mini cluster once at start and runs through all client tests.
  * Each creates a table named for the method and does its stuff against that.
  */
+@Category(LargeTests.class)
 public class TestFromClientSide {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -103,6 +106,8 @@ public class TestFromClientSide {
    */
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().set(HBaseTestingUtility.FS_TYPE_KEY,
+        HBaseTestingUtility.FS_TYPE_LFS);
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 
@@ -3812,9 +3817,7 @@ public class TestFromClientSide {
     HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     HTableDescriptor[] ts = admin.listTables();
     HashSet<HTableDescriptor> result = new HashSet<HTableDescriptor>(ts.length);
-    for (int i = 0; i < ts.length; i++) {
-      result.add(ts[i]);
-    }
+    Collections.addAll(result, ts);
     int size = result.size();
     assertTrue(size >= tables.length);
     for (int i = 0; i < tables.length && i < size; i++) {

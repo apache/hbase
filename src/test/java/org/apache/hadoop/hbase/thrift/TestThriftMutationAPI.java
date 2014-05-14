@@ -28,6 +28,7 @@ import java.util.Set;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTestConst;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.thrift.generated.IOError;
 import org.apache.hadoop.hbase.thrift.generated.IllegalArgument;
 import org.apache.hadoop.hbase.thrift.generated.Mutation;
@@ -38,12 +39,15 @@ import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.thrift.TException;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
+
 import static org.apache.hadoop.hbase.HTestConst.getRowBytes;
 import static org.apache.hadoop.hbase.HTestConst.getCFQualBytes;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+@Category(SmallTests.class)
 public class TestThriftMutationAPI extends ThriftServerTestBase {
 
   private static final int NUM_ROWS = 3;

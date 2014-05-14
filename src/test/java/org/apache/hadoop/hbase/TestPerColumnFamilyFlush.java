@@ -40,10 +40,12 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * This test verifies the correctness of the Per Column Family flushing strategy
  */
+@Category(LargeTests.class)
 public class TestPerColumnFamilyFlush extends TestCase {
   private static final Log LOG =
           LogFactory.getLog(TestPerColumnFamilyFlush.class);

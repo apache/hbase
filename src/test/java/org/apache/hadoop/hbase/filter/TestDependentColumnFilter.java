@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -41,22 +42,24 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import junit.framework.TestCase;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestDependentColumnFilter extends TestCase {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private static final byte[][] ROWS = {
-	  Bytes.toBytes("test1"),Bytes.toBytes("test2")
+      Bytes.toBytes("test1"), Bytes.toBytes("test2")
   };
   private static final byte[][] FAMILIES = {
-	  Bytes.toBytes("familyOne"),Bytes.toBytes("familyTwo")
+      Bytes.toBytes("familyOne"), Bytes.toBytes("familyTwo")
   };
   private static final long STAMP_BASE = System.currentTimeMillis();
   private static final long[] STAMPS = {
-	  STAMP_BASE-100, STAMP_BASE-200, STAMP_BASE-300
+      STAMP_BASE - 100, STAMP_BASE - 200, STAMP_BASE - 300
   };
   private static final byte[] QUALIFIER = Bytes.toBytes("qualifier");
   private static final byte[][] BAD_VALS = {
-	  Bytes.toBytes("bad1"), Bytes.toBytes("bad2"), Bytes.toBytes("bad3")
+      Bytes.toBytes("bad1"), Bytes.toBytes("bad2"), Bytes.toBytes("bad3")
   };
   private static final byte[] MATCH_VAL = Bytes.toBytes("match");
   private HBaseTestingUtility testUtil;
@@ -114,14 +117,14 @@ public class TestDependentColumnFilter extends TestCase {
   }
 
   private List<KeyValue> makeTestVals() {
-	List<KeyValue> testVals = new ArrayList<KeyValue>();
-	testVals.add(new KeyValue(ROWS[0], FAMILIES[0], QUALIFIER, STAMPS[0], BAD_VALS[0]));
-	testVals.add(new KeyValue(ROWS[0], FAMILIES[0], QUALIFIER, STAMPS[1], BAD_VALS[1]));
-	testVals.add(new KeyValue(ROWS[0], FAMILIES[1], QUALIFIER, STAMPS[1], BAD_VALS[2]));
-	testVals.add(new KeyValue(ROWS[0], FAMILIES[1], QUALIFIER, STAMPS[0], MATCH_VAL));
-	testVals.add(new KeyValue(ROWS[0], FAMILIES[1], QUALIFIER, STAMPS[2], BAD_VALS[2]));
+    List<KeyValue> testVals = new ArrayList<KeyValue>();
+    testVals.add(new KeyValue(ROWS[0], FAMILIES[0], QUALIFIER, STAMPS[0], BAD_VALS[0]));
+    testVals.add(new KeyValue(ROWS[0], FAMILIES[0], QUALIFIER, STAMPS[1], BAD_VALS[1]));
+    testVals.add(new KeyValue(ROWS[0], FAMILIES[1], QUALIFIER, STAMPS[1], BAD_VALS[2]));
+    testVals.add(new KeyValue(ROWS[0], FAMILIES[1], QUALIFIER, STAMPS[0], MATCH_VAL));
+    testVals.add(new KeyValue(ROWS[0], FAMILIES[1], QUALIFIER, STAMPS[2], BAD_VALS[2]));
 
-	return testVals;
+    return testVals;
   }
 
   /**
@@ -134,7 +137,7 @@ public class TestDependentColumnFilter extends TestCase {
    * @throws IOException
    */
   private void verifyScan(Scan s, long expectedRows, long expectedCells)
-  throws IOException {
+      throws IOException {
     InternalScanner scanner = this.region.getScanner(s);
     List<KeyValue> results = new ArrayList<KeyValue>();
     int i = 0;
@@ -147,7 +150,7 @@ public class TestDependentColumnFilter extends TestCase {
       if (results.isEmpty()) break;
       cells += results.size();
       assertTrue("Scanned too many rows! Only expected " + expectedRows +
-          " total but already scanned " + (i+1), expectedRows > i);
+          " total but already scanned " + (i + 1), expectedRows > i);
       assertTrue("Expected " + expectedCells + " cells total but " +
           "already scanned " + cells, expectedCells >= cells);
       results.clear();
@@ -155,7 +158,7 @@ public class TestDependentColumnFilter extends TestCase {
     assertEquals("Expected " + expectedRows + " rows but scanned " + i +
         " rows", expectedRows, i);
     assertEquals("Expected " + expectedCells + " cells but scanned " + cells +
-            " cells", expectedCells, cells);
+        " cells", expectedCells, cells);
   }
 
   /**
@@ -219,27 +222,28 @@ public class TestDependentColumnFilter extends TestCase {
   public void testFilterDropping() throws Exception {
     Filter filter = new DependentColumnFilter(FAMILIES[0], QUALIFIER);
     List<KeyValue> accepted = new ArrayList<KeyValue>();
-    for(KeyValue val : testVals) {
-      if(filter.filterKeyValue(val) == ReturnCode.INCLUDE) {
+    for (KeyValue val : testVals) {
+      if (filter.filterKeyValue(val) == ReturnCode.INCLUDE) {
         accepted.add(val);
       }
     }
     assertEquals("check all values accepted from filterKeyValue", 5, accepted.size());
 
     filter.filterRow(accepted);
-    assertEquals("check filterRow(List<KeyValue>) dropped cell without corresponding column entry", 4, accepted.size());
+    assertEquals("check filterRow(List<KeyValue>) dropped cell without corresponding column entry",
+        4, accepted.size());
 
     // start do it again with dependent column dropping on
     filter = new DependentColumnFilter(FAMILIES[1], QUALIFIER, true);
     accepted.clear();
-    for(KeyValue val : testVals) {
-        if(filter.filterKeyValue(val) == ReturnCode.INCLUDE) {
-          accepted.add(val);
-        }
+    for (KeyValue val : testVals) {
+      if (filter.filterKeyValue(val) == ReturnCode.INCLUDE) {
+        accepted.add(val);
       }
-      assertEquals("check the filtering column cells got dropped", 2, accepted.size());
+    }
+    assertEquals("check the filtering column cells got dropped", 2, accepted.size());
 
-      filter.filterRow(accepted);
-      assertEquals("check cell retention", 2, accepted.size());
+    filter.filterRow(accepted);
+    assertEquals("check cell retention", 2, accepted.size());
   }
 }

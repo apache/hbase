@@ -27,19 +27,18 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.TagRunner;
-import org.apache.hadoop.hbase.util.TestTag;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test various scanner timeout issues.
  */
-@RunWith(TagRunner.class)
+@Category(MediumTests.class)
 public class TestScannerTimeout {
 
   private final static HBaseTestingUtility
@@ -89,7 +88,7 @@ public class TestScannerTimeout {
    * @throws Exception
    */
   // Marked as unstable and recored in #3921333
-  @TestTag({ "unstable" })
+  @Category(org.apache.hadoop.hbase.UnstableTests.class)
   @Test
   public void test2481() throws Exception {
     Scan scan = new Scan();

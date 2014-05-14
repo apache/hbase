@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -28,6 +29,7 @@ import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.BufferedOutputStream;
 import java.io.DataOutputStream;
@@ -35,6 +37,7 @@ import java.io.IOException;
 
 import static org.junit.Assert.*;
 
+@Category(SmallTests.class)
 public class TestCompressionTest {
 
   @Test

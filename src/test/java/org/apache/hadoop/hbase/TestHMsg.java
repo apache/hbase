@@ -27,7 +27,9 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestHMsg extends TestCase {
   public void testList() {
     List<HMsg> msgs = new ArrayList<HMsg>();

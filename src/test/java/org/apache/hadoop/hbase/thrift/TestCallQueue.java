@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.thrift.CallQueue.Call;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.metrics.ContextFactory;
@@ -37,6 +38,7 @@ import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.spi.NoEmitMetricsContext;
 import org.apache.hadoop.metrics.spi.OutputRecord;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -45,6 +47,7 @@ import org.junit.runners.Parameterized.Parameters;
  * Unit testing for CallQueue, a part of the
  * org.apache.hadoop.hbase.thrift package.
  */
+@Category(MediumTests.class)
 @RunWith(Parameterized.class)
 public class TestCallQueue {
 

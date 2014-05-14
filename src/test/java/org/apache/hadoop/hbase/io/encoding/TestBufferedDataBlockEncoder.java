@@ -18,8 +18,11 @@ package org.apache.hadoop.hbase.io.encoding;
 
 import static org.junit.Assert.assertEquals;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestBufferedDataBlockEncoder {
 
   @Test

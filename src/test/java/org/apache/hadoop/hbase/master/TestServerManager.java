@@ -22,9 +22,11 @@ import static org.junit.Assert.*;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
-
+@Category(SmallTests.class)
 public class TestServerManager {
   @Test public void testIsDead() {
     Set<String> deadServers = new HashSet<String>();
