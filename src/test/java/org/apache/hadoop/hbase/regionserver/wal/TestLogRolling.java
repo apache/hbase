@@ -27,11 +27,14 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.hadoop.hbase.HBaseClusterTestCase;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.UnstableTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -41,51 +44,60 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster.DataNodeProperties;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.log4j.Level;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test log deletion as logs are rolled.
  */
 @Category(MediumTests.class)
-public class TestLogRolling extends HBaseClusterTestCase {
+public class TestLogRolling {
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Log LOG = LogFactory.getLog(TestLogRolling.class);
-  private HRegionServer server;
-  private HLog log;
-  private String tableName;
-  private byte[] value;
-
- // verbose logging on classes that are touched in these tests
- {
-   DataNode.LOG.getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)HRegionServer.LOG).getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)HRegion.LOG).getLogger().setLevel(Level.ALL);
-   ((Log4JLogger)HLog.LOG).getLogger().setLevel(Level.ALL);
- }
+  private static HRegionServer server;
+  private static HLog log;
+  private static Configuration conf;
+  private static String tableName;
+  private static byte[] value;
+  private static MiniHBaseCluster cluster;
+  private static FileSystem fs;
+  private static MiniDFSCluster dfsCluster;
 
   /**
    * constructor
    * @throws Exception
    */
-  public TestLogRolling() throws Exception {
-    // start one regionserver and a minidfs.
-    super();
-    try {
-      this.server = null;
-      this.log = null;
-      this.tableName = null;
-      this.value = null;
+  @BeforeClass
+  public static void setUp() throws Exception {
+    DataNode.LOG.getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)LeaseManager.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)FSNamesystem.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)DFSClient.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)HRegionServer.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)HRegion.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)HLog.LOG).getLogger().setLevel(Level.ALL);
 
-      String className = this.getClass().getName();
+
+    // start one regionserver and a minidfs.
+    try {
+      server = null;
+      log = null;
+      tableName = null;
+      value = null;
+
+      String className = TestLogRolling.class.getName();
       StringBuilder v = new StringBuilder(className);
       while (v.length() < 1000) {
         v.append(className);
@@ -96,12 +108,9 @@ public class TestLogRolling extends HBaseClusterTestCase {
       LOG.fatal("error in constructor", e);
       throw e;
     }
-  }
 
-  // Need to override this setup so we can edit the config before it gets sent
- // to the HDFS & HBase cluster startup.
-  @Override
-  protected void setUp() throws Exception {
+    conf = TEST_UTIL.getConfiguration();
+
     /**** configuration for testLogRolling ****/
     // Force a region split after every 768KB
     conf.setLong("hbase.hregion.max.filesize", 768L * 1024L);
@@ -133,14 +142,21 @@ public class TestLogRolling extends HBaseClusterTestCase {
    // for a pipeline, so try to a new pipeline multiple times
    conf.setInt("dfs.client.block.write.retries", 30);
    conf.setBoolean(HConstants.HLOG_FORMAT_BACKWARD_COMPATIBILITY, false);
-   super.setUp();
+   cluster = TEST_UTIL.startMiniCluster(4);
+   dfsCluster = TEST_UTIL.getDFSCluster();
+   fs = dfsCluster.getFileSystem();
+  }
+
+  @AfterClass
+  public static void tearDown() throws Exception {
+    TEST_UTIL.shutdownMiniCluster();
   }
 
   private void startAndWriteData() throws Exception {
     // When the META table can be opened, the region servers are running
     new HTable(conf, HConstants.META_TABLE_NAME);
-    this.server = cluster.getRegionServerThreads().get(0).getRegionServer();
-    this.log = server.getLog(0);
+    server = cluster.getRegionServerThreads().get(0).getRegionServer();
+    log = server.getLog(0);
 
     // Create the test table and open it
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -170,9 +186,9 @@ public class TestLogRolling extends HBaseClusterTestCase {
    */
   // Marked as unstable and recored in #3896573
   @Category(UnstableTests.class)
-  @Test
+  @Test(timeout = 180000)
   public void testLogRolling() throws Exception {
-    this.tableName = getName();
+    tableName = "testLogRolling";
     try {
       startAndWriteData();
       LOG.info("after writing there are " + log.getNumLogFiles() + " log files");
@@ -218,16 +234,16 @@ public class TestLogRolling extends HBaseClusterTestCase {
    * @throws Exception
    */
   // Marked as unstable and recored in #3344583
-  @Category(org.apache.hadoop.hbase.UnstableTests.class)
-  @Test
+  @Category(UnstableTests.class)
+  @Test(timeout = 180000)
   public void testLogRollOnDatanodeDeath() throws Exception {
     assertTrue("This test requires HLog file replication.",
         fs.getDefaultReplication() > 1);
 
     // When the META table can be opened, the region servers are running
     new HTable(conf, HConstants.META_TABLE_NAME);
-    this.server = cluster.getRegionServer(0);
-    this.log = server.getLog(0);
+    server = cluster.getRegionServer(0);
+    log = server.getLog(0);
 
     assertTrue("Need HDFS-826 for this test", log.canGetCurReplicas());
     // don't run this test without append support (HDFS-200 & HDFS-142)
@@ -240,7 +256,7 @@ public class TestLogRolling extends HBaseClusterTestCase {
                fs.getDefaultReplication() + 1);
 
     // Create the test table and open it
-    String tableName = getName();
+    String tableName = "testLogRollOnDatanodeDeath";
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     HBaseAdmin admin = new HBaseAdmin(conf);
@@ -259,18 +275,19 @@ public class TestLogRolling extends HBaseClusterTestCase {
               oldFilenum == log.getFilenum());
 
     // kill a datanode in the pipeline to force a log roll on the next sync()
+    Object repl;
     OutputStream stm = log.getOutputStream();
     Method getPipeline = null;
     for (Method m : stm.getClass().getDeclaredMethods()) {
-      if(m.getName().endsWith("getPipeline")) {
+      if (m.getName().endsWith("getPipeline")) {
         getPipeline = m;
         getPipeline.setAccessible(true);
         break;
       }
     }
     assertTrue("Need DFSOutputStream.getPipeline() for this test",
-                getPipeline != null);
-    Object repl = getPipeline.invoke(stm, new Object []{} /*NO_ARGS*/);
+        getPipeline != null);
+    repl = getPipeline.invoke(stm  /*NO_ARGS*/);
     DatanodeInfo[] pipeline = (DatanodeInfo[]) repl;
     assertEquals(fs.getDefaultReplication(), pipeline.length);
     DataNodeProperties dnprop = dfsCluster.stopDataNode(pipeline[0].getName());
