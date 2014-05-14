@@ -274,6 +274,10 @@ public class TestHRegionSeqidTransition {
     assertTrue(regionHLogNums[0] > 0);
     assertTrue(regionHLogNums[1] > 0);
 
+    // Set the Fast Fail threshold to a smaller value, so that we can retry the fetching the
+    // new location of the ROOT regionserver
+    TEST_UTIL.getConfiguration().setInt("hbase.client.fastfail.threshold", 10000);
+
     // check meta table
     HTable meta = new HTable(TEST_UTIL.getConfiguration(), HConstants.META_TABLE_NAME);
     Scan scan = new Scan();
