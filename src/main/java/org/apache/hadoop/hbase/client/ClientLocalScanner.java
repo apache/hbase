@@ -23,6 +23,7 @@ package org.apache.hadoop.hbase.client;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -115,7 +116,8 @@ public class ClientLocalScanner extends ResultScannerImpl {
     final HRegionInfo info = this.currentRegion;
     this.currentRegion.getTableDesc().setReadOnly(true);
     HTable table = this.htable;
-    final Configuration conf = table.getConfiguration();
+    final Configuration conf =
+        HBaseConfiguration.create(table.getConfiguration());
     conf.setBoolean(HConstants.CLIENT_SIDE_SCAN, true);
     boolean flushAndWait = conf.getBoolean(
         HConstants.CLIENT_LOCAL_SCANNER_FLUSH_AND_WAIT,
