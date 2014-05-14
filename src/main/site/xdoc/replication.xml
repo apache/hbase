@@ -553,6 +553,11 @@
           in HBase (BatchUpdate had that, but it was lost in the new API).
         </p>
       </section>
+      <section name="Is there an issue replicating on Hadoop 1.0/1.1 when short-circuit reads are enabled?">
+        <p>
+          Yes. See <a href="https://issues.apache.org/jira/browse/HDFS-2757">HDFS-2757</a>.
+        </p>
+      </section>
     </section>
   </body>
 </document>
