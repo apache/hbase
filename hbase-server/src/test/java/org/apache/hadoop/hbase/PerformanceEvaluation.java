@@ -1065,6 +1065,15 @@ public class PerformanceEvaluation extends Configured implements Tool {
     return b;
   }
 
+  /**
+   * @deprecated Use {@link #generateData(java.util.Random, int)} instead.
+   * @return Generated random value to insert into a table cell.
+   */
+  @Deprecated
+  public static byte[] generateValue(final Random r) {
+    return generateData(r, VALUE_LENGTH);
+  }
+
   static byte [] getRandomRow(final Random random, final int totalRows) {
     return format(random.nextInt(Integer.MAX_VALUE) % totalRows);
   }
