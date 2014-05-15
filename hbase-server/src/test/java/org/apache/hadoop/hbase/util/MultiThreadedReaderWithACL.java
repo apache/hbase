@@ -26,7 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
@@ -43,12 +43,12 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
    * Maps user with Table instance. Because the table instance has to be created
    * per user inorder to work in that user's context
    */
-  private Map<String, HTable> userVsTable = new HashMap<String, HTable>();
+  private Map<String, HTableInterface> userVsTable = new HashMap<String, HTableInterface>();
   private Map<String, User> users = new HashMap<String, User>();
   private String[] userNames;
 
   public MultiThreadedReaderWithACL(LoadTestDataGenerator dataGen, Configuration conf,
-      TableName tableName, double verifyPercent, String userNames) {
+      TableName tableName, double verifyPercent, String userNames) throws IOException {
     super(dataGen, conf, tableName, verifyPercent);
     this.userNames = userNames.split(COMMA);
   }
@@ -68,13 +68,13 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
     }
 
     @Override
-    protected HTable createTable() throws IOException {
+    protected HTableInterface createTable() throws IOException {
       return null;
     }
 
     @Override
     protected void closeTable() {
-      for (HTable table : userVsTable.values()) {
+      for (HTableInterface table : userVsTable.values()) {
         try {
           table.close();
         } catch (Exception e) {
@@ -93,14 +93,14 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
       PrivilegedExceptionAction<Object> action = new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws Exception {
-          HTable localTable = null;
+          HTableInterface localTable = null;
           try {
             get.setACLStrategy(true);
             Result result = null;
             int specialPermCellInsertionFactor = Integer.parseInt(dataGenerator.getArgs()[2]);
             int mod = ((int) keyToRead % userNames.length);
             if (userVsTable.get(userNames[mod]) == null) {
-              localTable = new HTable(conf, tableName);
+              localTable = connection.getTable(tableName);
               userVsTable.put(userNames[mod], localTable);
               result = localTable.get(get);
             } else {

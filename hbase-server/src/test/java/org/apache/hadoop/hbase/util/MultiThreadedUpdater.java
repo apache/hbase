@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
@@ -65,7 +65,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
   private final double updatePercent;
 
   public MultiThreadedUpdater(LoadTestDataGenerator dataGen, Configuration conf,
-      TableName tableName, double updatePercent) {
+      TableName tableName, double updatePercent) throws IOException {
     super(dataGen, conf, tableName, "U");
     this.updatePercent = updatePercent;
   }
@@ -122,17 +122,18 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
   }
 
   protected class HBaseUpdaterThread extends Thread {
-    protected final HTable table;
+    protected final HTableInterface table;
 
     public HBaseUpdaterThread(int updaterId) throws IOException {
       setName(getClass().getSimpleName() + "_" + updaterId);
       table = createTable();
     }
 
-    protected HTable createTable() throws IOException {
-      return new HTable(conf, tableName);
+    protected HTableInterface createTable() throws IOException {
+      return connection.getTable(tableName);
     }
 
+    @Override
     public void run() {
       try {
         long rowKeyBase;
@@ -273,11 +274,11 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
       return result;
     }
 
-    public void mutate(HTable table, Mutation m, long keyBase) {
+    public void mutate(HTableInterface table, Mutation m, long keyBase) {
       mutate(table, m, keyBase, null, null, null, null);
     }
 
-    public void mutate(HTable table, Mutation m,
+    public void mutate(HTableInterface table, Mutation m,
         long keyBase, byte[] row, byte[] cf, byte[] q, byte[] v) {
       long start = System.currentTimeMillis();
       try {
@@ -326,11 +327,11 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
     }
   }
 
-  public void mutate(HTable table, Mutation m, long keyBase) {
+  public void mutate(HTableInterface table, Mutation m, long keyBase) {
     mutate(table, m, keyBase, null, null, null, null);
   }
 
-  public void mutate(HTable table, Mutation m,
+  public void mutate(HTableInterface table, Mutation m,
       long keyBase, byte[] row, byte[] cf, byte[] q, byte[] v) {
     long start = System.currentTimeMillis();
     try {

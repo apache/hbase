@@ -110,13 +110,13 @@ public class TestMiniClusterLoadSequential {
   }
 
   protected MultiThreadedReader prepareReaderThreads(LoadTestDataGenerator dataGen,
-      Configuration conf, TableName tableName, double verifyPercent) {
+      Configuration conf, TableName tableName, double verifyPercent) throws IOException {
     MultiThreadedReader reader = new MultiThreadedReader(dataGen, conf, tableName, verifyPercent);
     return reader;
   }
 
   protected MultiThreadedWriter prepareWriterThreads(LoadTestDataGenerator dataGen,
-      Configuration conf, TableName tableName) {
+      Configuration conf, TableName tableName) throws IOException {
     MultiThreadedWriter writer = new MultiThreadedWriter(dataGen, conf, tableName);
     writer.setMultiPut(isMultiPut);
     return writer;

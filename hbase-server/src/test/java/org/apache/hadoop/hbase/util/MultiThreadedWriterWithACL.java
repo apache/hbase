@@ -26,7 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.security.User;
@@ -42,7 +42,7 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
   private User userOwner;
 
   public MultiThreadedWriterWithACL(LoadTestDataGenerator dataGen, Configuration conf,
-      TableName tableName, User userOwner) {
+      TableName tableName, User userOwner) throws IOException {
     super(dataGen, conf, tableName);
     this.userOwner = userOwner;
   }
@@ -62,7 +62,7 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
 
   public class HBaseWriterThreadWithACL extends HBaseWriterThread {
 
-    private HTable table;
+    private HTableInterface table;
     private WriteAccessAction writerAction = new WriteAccessAction();
 
     public HBaseWriterThreadWithACL(int writerId) throws IOException {
@@ -70,7 +70,7 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
     }
 
     @Override
-    protected HTable createTable() throws IOException {
+    protected HTableInterface createTable() throws IOException {
       return null;
     }
 
@@ -86,7 +86,7 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
     }
 
     @Override
-    public void insert(final HTable table, Put put, final long keyBase) {
+    public void insert(final HTableInterface table, Put put, final long keyBase) {
       final long start = System.currentTimeMillis();
       try {
         put = (Put) dataGenerator.beforeMutate(keyBase, put);
@@ -125,7 +125,7 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
       public Object run() throws Exception {
         try {
           if (table == null) {
-            table = new HTable(conf, tableName);
+            table = connection.getTable(tableName);
           }
           table.put(put);
         } catch (IOException e) {
@@ -136,7 +136,7 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
     }
   }
 
-  private void recordFailure(final HTable table, final Put put, final long keyBase,
+  private void recordFailure(final HTableInterface table, final Put put, final long keyBase,
       final long start, IOException e) {
     failedKeySet.add(keyBase);
     String exceptionInfo;

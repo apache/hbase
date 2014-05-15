@@ -29,7 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
+
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 
@@ -79,7 +80,7 @@ public class MultiThreadedReader extends MultiThreadedAction
   private int batchSize = DEFAULT_BATCH_SIZE;
 
   public MultiThreadedReader(LoadTestDataGenerator dataGen, Configuration conf,
-      TableName tableName, double verifyPercent) {
+      TableName tableName, double verifyPercent) throws IOException {
     super(dataGen, conf, tableName, "R");
     this.verifyPercent = verifyPercent;
   }
@@ -127,7 +128,7 @@ public class MultiThreadedReader extends MultiThreadedAction
 
   public class HBaseReaderThread extends Thread {
     protected final int readerId;
-    protected final HTable table;
+    protected final HTableInterface table;
 
     /** The "current" key being read. Increases from startKey to endKey. */
     private long curKey;
@@ -150,8 +151,8 @@ public class MultiThreadedReader extends MultiThreadedAction
       setName(getClass().getSimpleName() + "_" + readerId);
     }
 
-    protected HTable createTable() throws IOException {
-      return new HTable(conf, tableName);
+    protected HTableInterface createTable() throws IOException {
+      return connection.getTable(tableName);
     }
 
     @Override
@@ -342,7 +343,7 @@ public class MultiThreadedReader extends MultiThreadedAction
     }
 
     protected void verifyResultsAndUpdateMetrics(boolean verify, Get[] gets, long elapsedNano,
-        Result[] results, HTable table, boolean isNullExpected)
+        Result[] results, HTableInterface table, boolean isNullExpected)
         throws IOException {
       totalOpTimeMs.addAndGet(elapsedNano / 1000000);
       numKeys.addAndGet(gets.length);
@@ -354,23 +355,23 @@ public class MultiThreadedReader extends MultiThreadedAction
     }
 
     protected void verifyResultsAndUpdateMetrics(boolean verify, Get get, long elapsedNano,
-        Result result, HTable table, boolean isNullExpected)
+        Result result, HTableInterface table, boolean isNullExpected)
         throws IOException {
       verifyResultsAndUpdateMetrics(verify, new Get[]{get}, elapsedNano,
           new Result[]{result}, table, isNullExpected);
     }
 
     private void verifyResultsAndUpdateMetricsOnAPerGetBasis(boolean verify, Get get,
-        Result result, HTable table, boolean isNullExpected) throws IOException {
+        Result result, HTableInterface table, boolean isNullExpected) throws IOException {
       if (!result.isEmpty()) {
         if (verify) {
           numKeysVerified.incrementAndGet();
         }
       } else {
-         HRegionLocation hloc = table.getRegionLocation(get.getRow());
+		HRegionLocation hloc = connection.getRegionLocation(tableName,
+		    get.getRow(), false);
          String rowKey = Bytes.toString(get.getRow());
-        LOG.info("Key = " + rowKey + ", RegionServer: "
-            + hloc.getHostname());
+        LOG.info("Key = " + rowKey + ", Region location: " + hloc);
         if(isNullExpected) {
           nullResult.incrementAndGet();
           LOG.debug("Null result obtained for the key ="+rowKey);

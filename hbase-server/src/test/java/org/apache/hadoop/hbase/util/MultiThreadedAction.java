@@ -34,6 +34,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -53,6 +55,7 @@ public abstract class MultiThreadedAction {
 
   protected final TableName tableName;
   protected final Configuration conf;
+  protected final HConnection connection; // all reader / writer threads will share this connection
 
   protected int numThreads = 1;
 
@@ -142,11 +145,12 @@ public abstract class MultiThreadedAction {
 
   public MultiThreadedAction(LoadTestDataGenerator dataGen, Configuration conf,
                              TableName tableName,
-                             String actionLetter) {
+                             String actionLetter) throws IOException {
     this.conf = conf;
     this.dataGenerator = dataGen;
     this.tableName = tableName;
     this.actionLetter = actionLetter;
+    this.connection = HConnectionManager.createConnection(conf);
   }
 
   public void start(long startKey, long endKey, int numThreads) throws IOException {
@@ -243,10 +247,21 @@ public abstract class MultiThreadedAction {
     }
   }
 
+  public void close() {
+    if (connection != null) {
+      try {
+        connection.close();
+      } catch (Exception ex) {
+        LOG.warn("Could not close the connection: " + ex);
+      }
+    }
+  }
+
   public void waitForFinish() {
     while (numThreadsWorking.get() != 0) {
       Threads.sleepWithoutInterrupt(1000);
     }
+    close();
   }
 
   public boolean isDone() {

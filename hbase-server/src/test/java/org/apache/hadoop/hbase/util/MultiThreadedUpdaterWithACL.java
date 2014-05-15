@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
@@ -53,12 +53,13 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
    * Maps user with Table instance. Because the table instance has to be created
    * per user inorder to work in that user's context
    */
-  private Map<String, HTable> userVsTable = new HashMap<String, HTable>();
+  private Map<String, HTableInterface> userVsTable = new HashMap<String, HTableInterface>();
   private Map<String, User> users = new HashMap<String, User>();
   private String[] userNames;
 
   public MultiThreadedUpdaterWithACL(LoadTestDataGenerator dataGen, Configuration conf,
-      TableName tableName, double updatePercent, User userOwner, String userNames) {
+      TableName tableName, double updatePercent, User userOwner, String userNames)
+          throws IOException {
     super(dataGen, conf, tableName, updatePercent);
     this.userOwner = userOwner;
     this.userNames = userNames.split(COMMA);
@@ -74,7 +75,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
 
   public class HBaseUpdaterThreadWithACL extends HBaseUpdaterThread {
 
-    private HTable table;
+    private HTableInterface table;
     private MutateAccessAction mutateAction = new MutateAccessAction();
 
     public HBaseUpdaterThreadWithACL(int updaterId) throws IOException {
@@ -82,7 +83,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
     }
 
     @Override
-    protected HTable createTable() throws IOException {
+    protected HTableInterface createTable() throws IOException {
       return null;
     }
 
@@ -92,7 +93,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
         if (table != null) {
           table.close();
         }
-        for (HTable table : userVsTable.values()) {
+        for (HTableInterface table : userVsTable.values()) {
           try {
             table.close();
           } catch (Exception e) {
@@ -111,11 +112,11 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
         @Override
         public Object run() throws Exception {
           Result res = null;
-          HTable localTable = null;
+          HTableInterface localTable = null;
           try {
             int mod = ((int) rowKeyBase % userNames.length);
             if (userVsTable.get(userNames[mod]) == null) {
-              localTable = new HTable(conf, tableName);
+              localTable = connection.getTable(tableName);
               userVsTable.put(userNames[mod], localTable);
               res = localTable.get(get);
             } else {
@@ -158,7 +159,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
     }
 
     @Override
-    public void mutate(final HTable table, Mutation m, final long keyBase, final byte[] row,
+    public void mutate(final HTableInterface table, Mutation m, final long keyBase, final byte[] row,
         final byte[] cf, final byte[] q, final byte[] v) {
       final long start = System.currentTimeMillis();
       try {
@@ -179,7 +180,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
     }
 
     class MutateAccessAction implements PrivilegedExceptionAction<Object> {
-      private HTable table;
+      private HTableInterface table;
       private long start;
       private Mutation m;
       private long keyBase;
@@ -224,7 +225,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
       public Object run() throws Exception {
         try {
           if (table == null) {
-            table = new HTable(conf, tableName);
+            table = connection.getTable(tableName);
           }
           if (m instanceof Increment) {
             table.increment((Increment) m);

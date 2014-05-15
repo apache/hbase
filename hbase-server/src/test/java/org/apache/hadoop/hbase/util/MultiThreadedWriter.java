@@ -33,7 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
@@ -48,7 +48,7 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
   protected boolean isMultiPut = false;
 
   public MultiThreadedWriter(LoadTestDataGenerator dataGen, Configuration conf,
-      TableName tableName) {
+      TableName tableName) throws IOException {
     super(dataGen, conf, tableName, "W");
   }
 
@@ -79,15 +79,15 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
   }
 
   public class HBaseWriterThread extends Thread {
-    private final HTable table;
+    private final HTableInterface table;
 
     public HBaseWriterThread(int writerId) throws IOException {
       setName(getClass().getSimpleName() + "_" + writerId);
       table = createTable();
     }
 
-    protected HTable createTable() throws IOException {
-      return new HTable(conf, tableName);
+    protected HTableInterface createTable() throws IOException {
+      return connection.getTable(tableName);
     }
 
     @Override
@@ -138,7 +138,7 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
       }
     }
 
-    public void insert(HTable table, Put put, long keyBase) {
+    public void insert(HTableInterface table, Put put, long keyBase) {
       long start = System.currentTimeMillis();
       try {
         put = (Put) dataGenerator.beforeMutate(keyBase, put);
