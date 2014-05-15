@@ -1130,13 +1130,6 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
-    <name>hbase.rest.filter.classes</name>
-    <value>org.apache.hadoop.hbase.rest.filter.GzipFilter</value>
-    <description>
-      Servlet filters for REST service.
-    </description>
-  </property>
-  <property>
     <name>hbase.master.loadbalancer.class</name>
     <value>org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer</value>
     <description>
