@@ -671,6 +671,11 @@ public abstract class FSUtils {
     c.set(HConstants.HBASE_DIR, root.toString());
   }
 
+  public static void setFsDefault(final Configuration c, final Path root) throws IOException {
+    c.set("fs.defaultFS", root.toString());    // for hadoop 0.21+
+    c.set("fs.default.name", root.toString()); // for hadoop 0.20
+  }
+
   /**
    * Checks if root region exists
    *
