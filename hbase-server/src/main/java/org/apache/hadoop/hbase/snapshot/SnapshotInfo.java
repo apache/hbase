@@ -20,13 +20,17 @@ package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
 import java.io.FileNotFoundException;
+import java.net.URI;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -233,6 +237,8 @@ public final class SnapshotInfo extends Configured implements Tool {
 
   @Override
   public int run(String[] args) throws IOException, InterruptedException {
+    final Configuration conf = getConf();
+    boolean listSnapshots = false;
     String snapshotName = null;
     boolean showSchema = false;
     boolean showFiles = false;
@@ -251,6 +257,13 @@ public final class SnapshotInfo extends Configured implements Tool {
           showStats = true;
         } else if (cmd.equals("-schema")) {
           showSchema = true;
+        } else if (cmd.equals("-remote-dir")) {
+          Path sourceDir = new Path(args[++i]);
+          URI defaultFs = sourceDir.getFileSystem(conf).getUri();
+          FSUtils.setFsDefault(conf, new Path(defaultFs));
+          FSUtils.setRootDir(conf, sourceDir);
+        } else if (cmd.equals("-list-snapshots")) {
+          listSnapshots = true;
         } else if (cmd.equals("-h") || cmd.equals("--help")) {
           printUsageAndExit();
         } else {
@@ -262,15 +275,28 @@ public final class SnapshotInfo extends Configured implements Tool {
       }
     }
 
+    // List Available Snapshots
+    if (listSnapshots) {
+      SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+      System.out.printf("%-20s | %-20s | %s%n", "SNAPSHOT", "CREATION TIME", "TABLE NAME");
+      for (SnapshotDescription desc: getSnapshotList(conf)) {
+        System.out.printf("%-20s | %20s | %s%n",
+                          desc.getName(),
+                          df.format(new Date(desc.getCreationTime())),
+                          desc.getTable());
+      }
+      return 0;
+    }
+
     if (snapshotName == null) {
       System.err.println("Missing snapshot name!");
       printUsageAndExit();
       return 1;
     }
 
-    Configuration conf = getConf();
-    fs = FileSystem.get(conf);
     rootDir = FSUtils.getRootDir(conf);
+    fs = FileSystem.get(rootDir.toUri(), conf);
+    LOG.debug("fs=" + fs.getUri().toString() + " root=" + rootDir);
 
     // Load snapshot information
     if (!loadSnapshotInfo(snapshotName)) {
@@ -398,6 +424,8 @@ public final class SnapshotInfo extends Configured implements Tool {
     System.err.printf("Usage: bin/hbase %s [options]%n", getClass().getName());
     System.err.println(" where [options] are:");
     System.err.println("  -h|-help                Show this help and exit.");
+    System.err.println("  -remote-dir             Root directory that contains the snapshots.");
+    System.err.println("  -list-snapshots         List all the available snapshots and exit.");
     System.err.println("  -snapshot NAME          Snapshot to examine.");
     System.err.println("  -files                  Files and logs list.");
     System.err.println("  -stats                  Files and logs stats.");
@@ -418,7 +446,7 @@ public final class SnapshotInfo extends Configured implements Tool {
   public static SnapshotStats getSnapshotStats(final Configuration conf,
       final SnapshotDescription snapshot) throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
-    FileSystem fs = FileSystem.get(conf);
+    FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
     final SnapshotStats stats = new SnapshotStats(conf, fs, snapshot);
     SnapshotReferenceUtil.visitReferencedFiles(conf, fs, snapshotDir, snapshot,
@@ -437,6 +465,26 @@ public final class SnapshotInfo extends Configured implements Tool {
         }
     });
     return stats;
+  }
+
+  /**
+   * Returns the list of available snapshots in the specified location
+   * @param conf the {@link Configuration} to use
+   * @return the list of snapshots
+   */
+  public static List<SnapshotDescription> getSnapshotList(final Configuration conf)
+      throws IOException {
+    Path rootDir = FSUtils.getRootDir(conf);
+    FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
+    Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
+    FileStatus[] snapshots = fs.listStatus(snapshotDir,
+      new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
+    List<SnapshotDescription> snapshotLists =
+      new ArrayList<SnapshotDescription>(snapshots.length);
+    for (FileStatus snapshotDirStat: snapshots) {
+      snapshotLists.add(SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDirStat.getPath()));
+    }
+    return snapshotLists;
   }
 
   /**
