@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.util.LoadTestTool;
@@ -236,7 +236,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
     protected Thread timeoutThread;
 
     public TimeBoundedMultiThreadedReader(LoadTestDataGenerator dataGen, Configuration conf,
-        TableName tableName, double verifyPercent) {
+        TableName tableName, double verifyPercent) throws IOException {
       super(dataGen, conf, tableName, verifyPercent);
       long timeoutMs = conf.getLong(
         String.format("%s.%s", TEST_NAME, GET_TIMEOUT_KEY), DEFAULT_GET_TIMEOUT);
@@ -324,7 +324,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
 
       @Override
       protected void verifyResultsAndUpdateMetrics(boolean verify, Get[] gets, long elapsedNano,
-          Result[] results, HTable table, boolean isNullExpected)
+          Result[] results, HTableInterface table, boolean isNullExpected)
           throws IOException {
         super.verifyResultsAndUpdateMetrics(verify, gets, elapsedNano, results, table, isNullExpected);
         // we actually do not timeout and cancel the reads after timeout. We just wait for the RPC

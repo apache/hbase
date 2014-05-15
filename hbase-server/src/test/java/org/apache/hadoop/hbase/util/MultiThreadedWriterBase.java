@@ -33,7 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 
 /** Creates multiple threads that write key/values into the */
@@ -73,7 +73,7 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
   protected boolean trackWroteKeys;
 
   public MultiThreadedWriterBase(LoadTestDataGenerator dataGen, Configuration conf,
-      TableName tableName, String actionLetter) {
+      TableName tableName, String actionLetter) throws IOException {
     super(dataGen, conf, tableName, actionLetter);
   }
 
@@ -89,11 +89,11 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
     }
   }
 
-  protected String getRegionDebugInfoSafe(HTable table, byte[] rowKey) {
+  protected String getRegionDebugInfoSafe(HTableInterface table, byte[] rowKey) {
     HRegionLocation cached = null, real = null;
     try {
-      cached = table.getRegionLocation(rowKey, false);
-      real = table.getRegionLocation(rowKey, true);
+      cached = connection.getRegionLocation(tableName, rowKey, false);
+      real = connection.getRegionLocation(tableName, rowKey, true);
     } catch (Throwable t) {
       // Cannot obtain region information for another catch block - too bad!
     }
