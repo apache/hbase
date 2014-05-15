@@ -25,7 +25,7 @@
 
 This stylesheet is used making an html version of hbase-default.xml.
 -->
-<section xml:id="hbase_default_configurations"
+<glossary xml:id="hbase_default_configurations"
 version="5.0" xmlns="http://docbook.org/ns/docbook"
       xmlns:xlink="http://www.w3.org/1999/xlink"
       xmlns:xi="http://www.w3.org/2001/XInclude"
@@ -34,11 +34,7 @@ version="5.0" xmlns="http://docbook.org/ns/docbook"
       xmlns:html="http://www.w3.org/1999/xhtml"
       xmlns:db="http://docbook.org/ns/docbook">
 <title>HBase Default Configuration</title>
-<para>
-</para>
 
-<glossary xmlns='http://docbook.org/ns/docbook' xml:id="hbase.default.configuration">
-<title>HBase Default Configuration</title>
 <para>
 The documentation below is generated using the default hbase configuration file,
 <filename>hbase-default.xml</filename>, as source.
@@ -47,7 +43,7 @@ The documentation below is generated using the default hbase configuration file,
 <xsl:for-each select="property">
 <xsl:if test="not(@skipInDoc)">
 <glossentry>
-  <xsl:attribute name="id">
+  <xsl:attribute name="xml:id">
     <xsl:value-of select="name" />
   </xsl:attribute>
   <glossterm>
@@ -55,7 +51,10 @@ The documentation below is generated using the default hbase configuration file,
   </glossterm>
   <glossdef>
   <para><xsl:value-of select="description"/></para>
-  <para>Default: <varname><xsl:value-of select="value"/></varname></para>
+  <formalpara>
+    <title>Default</title>
+    <para><varname><xsl:value-of select="value"/></varname></para>
+  </formalpara>
   </glossdef>
 </glossentry>
 </xsl:if>
@@ -63,6 +62,5 @@ The documentation below is generated using the default hbase configuration file,
 
 </glossary>
 
-</section>
 </xsl:template>
 </xsl:stylesheet>
