@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Put;
@@ -69,7 +70,16 @@ public class TableMapReduceUtil {
     Class<? extends TableMap> mapper,
     Class<?> outputKeyClass,
     Class<?> outputValueClass, JobConf job) {
-    initTableMapJob(table, columns, mapper, outputKeyClass, outputValueClass, job, true);
+    initTableMapJob(table, columns, mapper, outputKeyClass, outputValueClass, job,
+      true, TableInputFormat.class);
+  }
+
+  public static void initTableMapJob(String table, String columns,
+    Class<? extends TableMap> mapper,
+    Class<?> outputKeyClass,
+    Class<?> outputValueClass, JobConf job, boolean addDependencyJars) {
+    initTableMapJob(table, columns, mapper, outputKeyClass, outputValueClass, job,
+      addDependencyJars, TableInputFormat.class);
   }
 
   /**
@@ -88,9 +98,10 @@ public class TableMapReduceUtil {
   public static void initTableMapJob(String table, String columns,
     Class<? extends TableMap> mapper,
     Class<?> outputKeyClass,
-    Class<?> outputValueClass, JobConf job, boolean addDependencyJars) {
+    Class<?> outputValueClass, JobConf job, boolean addDependencyJars,
+    Class<? extends InputFormat> inputFormat) {
 
-    job.setInputFormat(TableInputFormat.class);
+    job.setInputFormat(inputFormat);
     job.setMapOutputValueClass(outputValueClass);
     job.setMapOutputKeyClass(outputKeyClass);
     job.setMapperClass(mapper);
@@ -111,6 +122,37 @@ public class TableMapReduceUtil {
       // just spit out the stack trace?  really?
       ioe.printStackTrace();
     }
+  }
+
+  /**
+   * Sets up the job for reading from a table snapshot. It bypasses hbase servers
+   * and read directly from snapshot files.
+   *
+   * @param snapshotName The name of the snapshot (of a table) to read from.
+   * @param columns  The columns to scan.
+   * @param mapper  The mapper class to use.
+   * @param outputKeyClass  The class of the output key.
+   * @param outputValueClass  The class of the output value.
+   * @param job  The current job to adjust.  Make sure the passed job is
+   * carrying all necessary HBase configuration.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured
+   *           job classes via the distributed cache (tmpjars).
+   * @param tmpRestoreDir a temporary directory to copy the snapshot files into. Current user should
+   * have write permissions to this directory, and this should not be a subdirectory of rootdir.
+   * After the job is finished, restore directory can be deleted.
+   * @throws IOException When setting up the details fails.
+   * @see TableSnapshotInputFormat
+   */
+  public static void initTableSnapshotMapJob(String snapshotName, String columns,
+      Class<? extends TableMap> mapper,
+      Class<?> outputKeyClass,
+      Class<?> outputValueClass, JobConf job,
+      boolean addDependencyJars, Path tmpRestoreDir)
+  throws IOException {
+    TableSnapshotInputFormat.setInput(job, snapshotName, tmpRestoreDir);
+    initTableMapJob(snapshotName, columns, mapper, outputKeyClass, outputValueClass, job,
+      addDependencyJars, TableSnapshotInputFormat.class);
+    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.resetCacheConfig(job);
   }
 
   /**

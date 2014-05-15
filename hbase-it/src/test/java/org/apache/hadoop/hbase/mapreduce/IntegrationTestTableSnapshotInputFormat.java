@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.Before;
@@ -59,7 +60,7 @@ import org.junit.experimental.categories.Category;
  * <br>"IntegrationTestTableSnapshotInputFormat.table" =&gt; the name of the table
  * <br>"IntegrationTestTableSnapshotInputFormat.snapshot" =&gt; the name of the snapshot
  * <br>"IntegrationTestTableSnapshotInputFormat.numRegions" =&gt; number of regions in the table 
- * to be created
+ * to be created (default, 32).
  * <br>"IntegrationTestTableSnapshotInputFormat.tableDir" =&gt; temporary directory to restore the
  * snapshot files
  *
@@ -78,9 +79,21 @@ public class IntegrationTestTableSnapshotInputFormat extends IntegrationTestBase
   private static final String NUM_REGIONS_KEY = 
       "IntegrationTestTableSnapshotInputFormat.numRegions";
 
-  private static final int DEFAULT_NUM_REGIONS = 32;
+  private static final String MR_IMPLEMENTATION_KEY =
+    "IntegrationTestTableSnapshotInputFormat.API";
+  private static final String MAPRED_IMPLEMENTATION = "mapred";
+  private static final String MAPREDUCE_IMPLEMENTATION = "mapreduce";
 
+  private static final int DEFAULT_NUM_REGIONS = 32;
   private static final String TABLE_DIR_KEY = "IntegrationTestTableSnapshotInputFormat.tableDir";
+
+  private static final byte[] START_ROW = Bytes.toBytes("bbb");
+  private static final byte[] END_ROW = Bytes.toBytes("yyy");
+
+  // mapred API missing feature pairity with mapreduce. See comments in
+  // mapred.TestTableSnapshotInputFormat
+  private static final byte[] MAPRED_START_ROW = Bytes.toBytes("aaa");
+  private static final byte[] MAPRED_END_ROW = Bytes.toBytes("zz{"); // 'z' + 1 => '{'
 
   private IntegrationTestingUtility util;
 
@@ -124,17 +137,39 @@ public class IntegrationTestTableSnapshotInputFormat extends IntegrationTestBase
       tableDir = new Path(tableDirStr);
     }
 
-    /* We create the table using HBaseAdmin#createTable(), which will create the table
-     * with desired number of regions. We pass bbb as startKey and yyy as endKey, so if
-     * desiredNumRegions is > 2, we create regions empty - bbb and yyy - empty, and we
-     * create numRegions - 2 regions between bbb - yyy. The test uses a Scan with startRow
-     * bbb and endRow yyy, so, we expect the first and last region to be filtered out in
-     * the input format, and we expect numRegions - 2 splits between bbb and yyy.
-     */
-    int expectedNumSplits = numRegions > 2 ? numRegions - 2 : numRegions;
+    final String mr = conf.get(MR_IMPLEMENTATION_KEY, MAPREDUCE_IMPLEMENTATION);
+    if (mr.equalsIgnoreCase(MAPREDUCE_IMPLEMENTATION)) {
+      /*
+       * We create the table using HBaseAdmin#createTable(), which will create the table
+       * with desired number of regions. We pass bbb as startKey and yyy as endKey, so if
+       * desiredNumRegions is > 2, we create regions empty - bbb and yyy - empty, and we
+       * create numRegions - 2 regions between bbb - yyy. The test uses a Scan with startRow
+       * bbb and endRow yyy, so, we expect the first and last region to be filtered out in
+       * the input format, and we expect numRegions - 2 splits between bbb and yyy.
+       */
+      LOG.debug("Running job with mapreduce API.");
+      int expectedNumSplits = numRegions > 2 ? numRegions - 2 : numRegions;
 
-    TestTableSnapshotInputFormat.doTestWithMapReduce(util, tableName, snapshotName, tableDir,
-      numRegions, expectedNumSplits, false);
+      org.apache.hadoop.hbase.mapreduce.TestTableSnapshotInputFormat.doTestWithMapReduce(util,
+        tableName, snapshotName, START_ROW, END_ROW, tableDir, numRegions,
+        expectedNumSplits, false);
+    } else if (mr.equalsIgnoreCase(MAPRED_IMPLEMENTATION)) {
+      /*
+       * Similar considerations to above. The difference is that mapred API does not support
+       * specifying start/end rows (or a scan object at all). Thus the omission of first and
+       * last regions are not performed. See comments in mapred.TestTableSnapshotInputFormat
+       * for details of how that test works around the problem. This feature should be added
+       * in follow-on work.
+       */
+      LOG.debug("Running job with mapred API.");
+      int expectedNumSplits = numRegions;
+
+      org.apache.hadoop.hbase.mapred.TestTableSnapshotInputFormat.doTestWithMapReduce(util,
+        tableName, snapshotName, MAPRED_START_ROW, MAPRED_END_ROW, tableDir, numRegions,
+        expectedNumSplits, false);
+    } else {
+      throw new IllegalArgumentException("Unrecognized mapreduce implementation: " + mr +".");
+    }
 
     return 0;
   }

@@ -272,6 +272,19 @@ public class TableMapReduceUtil {
   }
 
   /**
+   * Enable a basic on-heap cache for these jobs. Any BlockCache implementation based on
+   * direct memory will likely cause the map tasks to OOM when opening the region. This
+   * is done here instead of in TableSnapshotRegionRecordReader in case an advanced user
+   * wants to override this behavior in their job.
+   */
+  public static void resetCacheConfig(Configuration conf) {
+    conf.setFloat(
+      HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
+    conf.setFloat("hbase.offheapcache.percentage", 0f);
+    conf.setFloat("hbase.bucketcache.size", 0f);
+  }
+
+  /**
    * Sets up the job for reading from a table snapshot. It bypasses hbase servers
    * and read directly from snapshot files.
    *
@@ -300,17 +313,7 @@ public class TableMapReduceUtil {
     TableSnapshotInputFormat.setInput(job, snapshotName, tmpRestoreDir);
     initTableMapperJob(snapshotName, scan, mapper, outputKeyClass,
         outputValueClass, job, addDependencyJars, false, TableSnapshotInputFormat.class);
-
-    /*
-     * Enable a basic on-heap cache for these jobs. Any BlockCache implementation based on
-     * direct memory will likely cause the map tasks to OOM when opening the region. This
-     * is done here instead of in TableSnapshotRegionRecordReader in case an advanced user
-     * wants to override this behavior in their job.
-     */
-    job.getConfiguration().setFloat(
-      HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
-    job.getConfiguration().setFloat("hbase.offheapcache.percentage", 0f);
-    job.getConfiguration().setFloat("hbase.bucketcache.size", 0f);
+    resetCacheConfig(job.getConfiguration());
   }
 
   /**
