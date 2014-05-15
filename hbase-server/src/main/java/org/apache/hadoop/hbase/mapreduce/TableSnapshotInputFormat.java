@@ -18,49 +18,24 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.HDFSBlocksDistribution.HostAndWeight;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.client.ClientSideRegionScanner;
-import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableSnapshotScanner;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.snapshot.ExportSnapshot;
-import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
-import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -111,268 +86,112 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable, Result> {
-  // TODO: Snapshots files are owned in fs by the hbase user. There is no
-  // easy way to delegate access.
 
   private static final Log LOG = LogFactory.getLog(TableSnapshotInputFormat.class);
 
-  /** See {@link #getBestLocations(Configuration, HDFSBlocksDistribution)} */
-  private static final String LOCALITY_CUTOFF_MULTIPLIER = "hbase.tablesnapshotinputformat.locality.cutoff.multiplier";
-  private static final float DEFAULT_LOCALITY_CUTOFF_MULTIPLIER = 0.8f;
+  @VisibleForTesting
+  static class TableSnapshotRegionSplit extends InputSplit implements Writable {
+    private TableSnapshotInputFormatImpl.InputSplit delegate;
 
-  private static final String SNAPSHOT_NAME_KEY = "hbase.TableSnapshotInputFormat.snapshot.name";
-  private static final String TABLE_DIR_KEY = "hbase.TableSnapshotInputFormat.table.dir";
-
-  public static class TableSnapshotRegionSplit extends InputSplit implements Writable {
-    private String regionName;
-    private String[] locations;
-
-    // constructor for mapreduce framework / Writable
-    public TableSnapshotRegionSplit() { }
-
-    TableSnapshotRegionSplit(String regionName, List<String> locations) {
-      this.regionName = regionName;
-      if (locations == null || locations.isEmpty()) {
-        this.locations = new String[0];
-      } else {
-        this.locations = locations.toArray(new String[locations.size()]);
-      }
+    public TableSnapshotRegionSplit() {
+      this.delegate = new TableSnapshotInputFormatImpl.InputSplit();
     }
+
+    public TableSnapshotRegionSplit(TableSnapshotInputFormatImpl.InputSplit delegate) {
+      this.delegate = delegate;
+    }
+
+    public TableSnapshotRegionSplit(String regionName, List<String> locations) {
+      this.delegate = new TableSnapshotInputFormatImpl.InputSplit(regionName, locations);
+    }
+
     @Override
     public long getLength() throws IOException, InterruptedException {
-      //TODO: We can obtain the file sizes of the snapshot here.
-      return 0;
+      return delegate.getLength();
     }
 
     @Override
     public String[] getLocations() throws IOException, InterruptedException {
-      return locations;
+      return delegate.getLocations();
     }
 
-    // TODO: We should have ProtobufSerialization in Hadoop, and directly use PB objects instead of
-    // doing this wrapping with Writables.
     @Override
     public void write(DataOutput out) throws IOException {
-    MapReduceProtos.TableSnapshotRegionSplit.Builder builder =
-      MapReduceProtos.TableSnapshotRegionSplit.newBuilder()
-        .setRegion(RegionSpecifier.newBuilder()
-          .setType(RegionSpecifierType.ENCODED_REGION_NAME)
-          .setValue(HBaseZeroCopyByteString.wrap(Bytes.toBytes(regionName))).build());
-
-      for (String location : locations) {
-        builder.addLocations(location);
-      }
-
-      MapReduceProtos.TableSnapshotRegionSplit split = builder.build();
-
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      split.writeTo(baos);
-      baos.close();
-      byte[] buf = baos.toByteArray();
-      out.writeInt(buf.length);
-      out.write(buf);
+      delegate.write(out);
     }
+
     @Override
     public void readFields(DataInput in) throws IOException {
-      int len = in.readInt();
-      byte[] buf = new byte[len];
-      in.readFully(buf);
-      MapReduceProtos.TableSnapshotRegionSplit split = MapReduceProtos.TableSnapshotRegionSplit.PARSER.parseFrom(buf);
-      this.regionName = Bytes.toString(split.getRegion().getValue().toByteArray());
-      List<String> locationsList = split.getLocationsList();
-      this.locations = locationsList.toArray(new String[locationsList.size()]);
+      delegate.readFields(in);
     }
   }
 
   @VisibleForTesting
   static class TableSnapshotRegionRecordReader extends RecordReader<ImmutableBytesWritable, Result> {
-    private TableSnapshotRegionSplit split;
-    private Scan scan;
-    private Result result = null;
-    private ImmutableBytesWritable row = null;
-    private ClientSideRegionScanner scanner;
+    private TableSnapshotInputFormatImpl.RecordReader delegate =
+      new TableSnapshotInputFormatImpl.RecordReader();
     private TaskAttemptContext context;
     private Method getCounter;
 
     @Override
     public void initialize(InputSplit split, TaskAttemptContext context) throws IOException,
-        InterruptedException {
+      InterruptedException {
 
-      Configuration conf = context.getConfiguration();
-      this.split = (TableSnapshotRegionSplit) split;
-      String regionName = this.split.regionName;
-      String snapshotName = getSnapshotName(conf);
-      Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
-      FileSystem fs = rootDir.getFileSystem(conf);
-
-      Path tmpRootDir = new Path(conf.get(TABLE_DIR_KEY)); // This is the user specified root
-      // directory where snapshot was restored
-
-      Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-
-      //load table descriptor
-      HTableDescriptor htd = FSTableDescriptors.getTableDescriptorFromFs(fs, snapshotDir);
-
-      //load region descriptor
-      Path regionDir = new Path(snapshotDir, regionName);
-      HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
-
-      // create scan
-      String scanStr = conf.get(TableInputFormat.SCAN);
-      if (scanStr == null) {
-        throw new IllegalArgumentException("A Scan is not configured for this job");
-      }
-      scan = TableMapReduceUtil.convertStringToScan(scanStr);
-      // region is immutable, this should be fine,
-      // otherwise we have to set the thread read point
-      scan.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
-      // disable caching of data blocks
-      scan.setCacheBlocks(false);
-
-      scanner = new ClientSideRegionScanner(conf, fs, tmpRootDir, htd, hri, scan, null);
-      if (context != null) {
-        this.context = context;
-        getCounter = TableRecordReaderImpl.retrieveGetCounterWithStringsParams(context);
-      }
+      this.context = context;
+      getCounter = TableRecordReaderImpl.retrieveGetCounterWithStringsParams(context);
+      delegate.initialize(
+        ((TableSnapshotRegionSplit) split).delegate,
+        context.getConfiguration());
     }
 
     @Override
     public boolean nextKeyValue() throws IOException, InterruptedException {
-      result = scanner.next();
-      if (result == null) {
-        //we are done
-        return false;
+      boolean result = delegate.nextKeyValue();
+      if (result) {
+        ScanMetrics scanMetrics = delegate.getScanner().getScanMetrics();
+        if (scanMetrics != null && context != null) {
+          TableRecordReaderImpl.updateCounters(scanMetrics, 0, getCounter, context);
+        }
       }
 
-      if (this.row == null) {
-        this.row = new ImmutableBytesWritable();
-      }
-      this.row.set(result.getRow());
-
-      ScanMetrics scanMetrics = scanner.getScanMetrics();
-      if (scanMetrics != null && context != null) {
-        TableRecordReaderImpl.updateCounters(scanMetrics, 0, getCounter, context);
-      }
-
-      return true;
-    }
-
-    @Override
-    public ImmutableBytesWritable getCurrentKey() throws IOException, InterruptedException {
-      return row;
-    }
-
-    @Override
-    public Result getCurrentValue() throws IOException, InterruptedException {
       return result;
     }
 
     @Override
+    public ImmutableBytesWritable getCurrentKey() throws IOException, InterruptedException {
+      return delegate.getCurrentKey();
+    }
+
+    @Override
+    public Result getCurrentValue() throws IOException, InterruptedException {
+      return delegate.getCurrentValue();
+    }
+
+    @Override
     public float getProgress() throws IOException, InterruptedException {
-      return 0; // TODO: use total bytes to estimate
+      return delegate.getProgress();
     }
 
     @Override
     public void close() throws IOException {
-      if (this.scanner != null) {
-        this.scanner.close();
-      }
+      delegate.close();
     }
   }
 
   @Override
   public RecordReader<ImmutableBytesWritable, Result> createRecordReader(
-      InputSplit split, TaskAttemptContext context) throws IOException {
+    InputSplit split, TaskAttemptContext context) throws IOException {
     return new TableSnapshotRegionRecordReader();
   }
 
   @Override
   public List<InputSplit> getSplits(JobContext job) throws IOException, InterruptedException {
-    Configuration conf = job.getConfiguration();
-    String snapshotName = getSnapshotName(conf);
-
-    Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
-    FileSystem fs = rootDir.getFileSystem(conf);
-
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
-
-    Set<String> snapshotRegionNames
-      = SnapshotReferenceUtil.getSnapshotRegionNames(fs, snapshotDir);
-    if (snapshotRegionNames == null) {
-      throw new IllegalArgumentException("Snapshot seems empty");
+    List<InputSplit> results = new ArrayList<InputSplit>();
+    for (TableSnapshotInputFormatImpl.InputSplit split :
+      TableSnapshotInputFormatImpl.getSplits(job.getConfiguration())) {
+      results.add(new TableSnapshotRegionSplit(split));
     }
-
-    // load table descriptor
-    HTableDescriptor htd = FSTableDescriptors.getTableDescriptorFromFs(fs,
-        snapshotDir);
-
-    Scan scan = TableMapReduceUtil.convertStringToScan(conf
-      .get(TableInputFormat.SCAN));
-    Path tableDir = new Path(conf.get(TABLE_DIR_KEY));
-
-    List<InputSplit> splits = new ArrayList<InputSplit>();
-    for (String regionName : snapshotRegionNames) {
-      // load region descriptor
-      Path regionDir = new Path(snapshotDir, regionName);
-      HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs,
-          regionDir);
-
-      if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(),
-          hri.getStartKey(), hri.getEndKey())) {
-        // compute HDFS locations from snapshot files (which will get the locations for
-        // referred hfiles)
-        List<String> hosts = getBestLocations(conf,
-          HRegion.computeHDFSBlocksDistribution(conf, htd, hri, tableDir));
-
-        int len = Math.min(3, hosts.size());
-        hosts = hosts.subList(0, len);
-        splits.add(new TableSnapshotRegionSplit(regionName, hosts));
-      }
-    }
-
-    return splits;
-  }
-
-  /**
-   * This computes the locations to be passed from the InputSplit. MR/Yarn schedulers does not take
-   * weights into account, thus will treat every location passed from the input split as equal. We
-   * do not want to blindly pass all the locations, since we are creating one split per region, and
-   * the region's blocks are all distributed throughout the cluster unless favorite node assignment
-   * is used. On the expected stable case, only one location will contain most of the blocks as local.
-   * On the other hand, in favored node assignment, 3 nodes will contain highly local blocks. Here
-   * we are doing a simple heuristic, where we will pass all hosts which have at least 80%
-   * (hbase.tablesnapshotinputformat.locality.cutoff.multiplier) as much block locality as the top
-   * host with the best locality.
-   */
-  @VisibleForTesting
-  List<String> getBestLocations(Configuration conf, HDFSBlocksDistribution blockDistribution) {
-    List<String> locations = new ArrayList<String>(3);
-
-    HostAndWeight[] hostAndWeights = blockDistribution.getTopHostsWithWeights();
-
-    if (hostAndWeights.length == 0) {
-      return locations;
-    }
-
-    HostAndWeight topHost = hostAndWeights[0];
-    locations.add(topHost.getHost());
-
-    // Heuristic: filter all hosts which have at least cutoffMultiplier % of block locality
-    double cutoffMultiplier
-      = conf.getFloat(LOCALITY_CUTOFF_MULTIPLIER, DEFAULT_LOCALITY_CUTOFF_MULTIPLIER);
-
-    double filterWeight = topHost.getWeight() * cutoffMultiplier;
-
-    for (int i = 1; i < hostAndWeights.length; i++) {
-      if (hostAndWeights[i].getWeight() >= filterWeight) {
-        locations.add(hostAndWeights[i].getHost());
-      } else {
-        break;
-      }
-    }
-
-    return locations;
+    return results;
   }
 
   /**
@@ -385,25 +204,6 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
    * @throws IOException if an error occurs
    */
   public static void setInput(Job job, String snapshotName, Path restoreDir) throws IOException {
-    Configuration conf = job.getConfiguration();
-    conf.set(SNAPSHOT_NAME_KEY, snapshotName);
-
-    Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
-    FileSystem fs = rootDir.getFileSystem(conf);
-
-    restoreDir = new Path(restoreDir, UUID.randomUUID().toString());
-
-    // TODO: restore from record readers to parallelize.
-    RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
-
-    conf.set(TABLE_DIR_KEY, restoreDir.toString());
-  }
-
-  private static String getSnapshotName(Configuration conf) {
-    String snapshotName = conf.get(SNAPSHOT_NAME_KEY);
-    if (snapshotName == null) {
-      throw new IllegalArgumentException("Snapshot name must be provided");
-    }
-    return snapshotName;
+    TableSnapshotInputFormatImpl.setInput(job.getConfiguration(), snapshotName, restoreDir);
   }
 }
