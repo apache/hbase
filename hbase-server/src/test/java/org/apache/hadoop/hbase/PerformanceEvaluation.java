@@ -1146,6 +1146,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" traceRate       Enable HTrace spans. Initiate tracing every N rows. " +
       "Default: 0");
     System.err.println(" table           Alternate table name. Default: 'TestTable'");
+    System.err.println(" multiGet        If >0, when doing RandomRead, perform multiple gets " +
+      "instead of single gets. Default: 0");
     System.err.println(" compress        Compression type to use (GZ, LZO, ...). Default: 'NONE'");
     System.err.println(" flushCommits    Used to determine if the test should flush the table. " +
       "Default: false");
