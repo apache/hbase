@@ -45,12 +45,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListenableFutureTask;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -93,6 +99,8 @@ import org.apache.thrift.transport.TTransportException;
 
 import com.google.common.base.Preconditions;
 
+import javax.annotation.Nullable;
+
 /* Encapsulates finding the servers for an HBase instance */
 public class TableServers implements ServerConnection {
   static final Log LOG = LogFactory.getLog(TableServers.class);
@@ -100,6 +108,7 @@ public class TableServers implements ServerConnection {
   private final int prefetchRegionLimit;
 
   private final Object masterLock = new Object();
+  private final int maxOutstandRequestsPerServer;
   private volatile boolean closed;
   private volatile HMasterInterface master;
   private volatile boolean masterChecked;
@@ -138,7 +147,9 @@ public class TableServers implements ServerConnection {
   private long fastFailClearingTimeMilliSec;
   private final boolean recordClientContext;
 
-  private ThreadLocal<List<OperationContext>> operationContextPerThread = new ThreadLocal<List<OperationContext>>();
+  private ThreadLocal<List<OperationContext>> operationContextPerThread = new ThreadLocal<>();
+
+  private final ConcurrentHashMap<HServerAddress, AtomicInteger> outstandingRequests = new ConcurrentHashMap<>();
 
   @Override
   public void resetOperationContext() {
@@ -285,6 +296,7 @@ public class TableServers implements ServerConnection {
 
     this.recordClientContext = conf.getBoolean("hbase.client.record.context", false);
 
+    this.maxOutstandRequestsPerServer = conf.getInt("hbase.client.max.outstanding.requests.per.server", 50);
   }
 
   // Used by master and region servers during safe mode only
@@ -1895,23 +1907,30 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
     return actionsByServer;
   }
 
-  private Map<HServerAddress, Future<MultiResponse>> makeServerRequests(
+  private Map<HServerAddress, ListenableFuture<MultiResponse>> makeServerRequests(
       Map<HServerAddress, MultiAction> actionsByServer,
-      final byte[] tableName, ExecutorService pool, HBaseRPCOptions options) {
+      final byte[] tableName, ListeningExecutorService pool, HBaseRPCOptions options) {
 
-    Map<HServerAddress, Future<MultiResponse>> futures = new HashMap<HServerAddress, Future<MultiResponse>>(
+    Map<HServerAddress, ListenableFuture<MultiResponse>> futures = new HashMap<>(
         actionsByServer.size());
 
     boolean singleServer = (actionsByServer.size() == 1);
     for (Entry<HServerAddress, MultiAction> e : actionsByServer.entrySet()) {
       Callable<MultiResponse> callable = createMultiActionCallable(
           e.getKey(), e.getValue(), tableName, options);
-      Future<MultiResponse> task;
-      if (singleServer) {
-        task = new FutureTask<MultiResponse>(callable);
-        ((FutureTask<MultiResponse>) task).run();
-      } else {
-        task = pool.submit(callable);
+      ListenableFuture<MultiResponse> task;
+
+      try {
+       validateAndIncrementNumOutstandingPerServer(e.getKey());
+        if (singleServer) {
+          task =  ListenableFutureTask.create(callable);
+          ((FutureTask<MultiResponse>) task).run();
+        } else {
+          task = pool.submit(callable);
+        }
+        Futures.addCallback(task, new OutstandingRequestCallback(e.getKey()));
+      } catch (IOException e1) {
+        task = Futures.immediateFailedFuture(e1);
       }
       futures.put(e.getKey(), task);
     }
@@ -1925,12 +1944,12 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
   private List<Mutation> collectResponsesForMutateFromAllRS(
       StringBytes tableName,
       Map<HServerAddress, MultiAction> actionsByServer,
-      Map<HServerAddress, Future<MultiResponse>> futures,
+      Map<HServerAddress, ListenableFuture<MultiResponse>> futures,
       Map<String, HRegionFailureInfo> failureInfo)
       throws InterruptedException, IOException {
 
     List<Mutation> newWorkingList = null;
-    for (Entry<HServerAddress, Future<MultiResponse>> responsePerServer : futures
+    for (Entry<HServerAddress, ListenableFuture<MultiResponse>> responsePerServer : futures
         .entrySet()) {
       HServerAddress address = responsePerServer.getKey();
       MultiAction request = actionsByServer.get(address);
@@ -1972,13 +1991,13 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
    */
   private List<Get> collectResponsesForGetFromAllRS(StringBytes tableName,
       Map<HServerAddress, MultiAction> actionsByServer,
-      Map<HServerAddress, Future<MultiResponse>> futures,
+      Map<HServerAddress, ListenableFuture<MultiResponse>> futures,
       List<Get> orig_list, Result[] results,
       Map<String, HRegionFailureInfo> failureInfo) throws IOException,
       InterruptedException {
 
     List<Get> newWorkingList = null;
-    for (Entry<HServerAddress, Future<MultiResponse>> responsePerServer : futures
+    for (Entry<HServerAddress, ListenableFuture<MultiResponse>> responsePerServer : futures
         .entrySet()) {
       HServerAddress address = responsePerServer.getKey();
       MultiAction request = actionsByServer.get(address);
@@ -2116,7 +2135,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
 
   @Override
   public void processBatchedMutations(List<Mutation> orig_list,
-      StringBytes tableName, ExecutorService pool, List<Mutation> failures,
+      StringBytes tableName, ListeningExecutorService pool, List<Mutation> failures,
       HBaseRPCOptions options) throws IOException, InterruptedException {
 
     // Keep track of the most recent servers for any given item for better
@@ -2146,7 +2165,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
           workingList, tableName, false);
 
       // step 2: make the requests
-      Map<HServerAddress, Future<MultiResponse>> futures = makeServerRequests(
+      Map<HServerAddress, ListenableFuture<MultiResponse>> futures = makeServerRequests(
           actionsByServer, tableName.getBytes(), pool, options);
 
       // step 3: collect the failures and successes and prepare for retry
@@ -2165,7 +2184,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
 
   @Override
   public void processBatchedGets(List<Get> orig_list, StringBytes tableName,
-      ExecutorService pool, Result[] results, HBaseRPCOptions options)
+      ListeningExecutorService pool, Result[] results, HBaseRPCOptions options)
       throws IOException, InterruptedException {
 
     Map<String, HRegionFailureInfo> failureInfo = new HashMap<String, HRegionFailureInfo>();
@@ -2197,7 +2216,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
           workingList, tableName, true);
 
       // step 2: make the requests
-      Map<HServerAddress, Future<MultiResponse>> futures = makeServerRequests(
+      Map<HServerAddress, ListenableFuture<MultiResponse>> futures = makeServerRequests(
           actionsByServer, tableName.getBytes(), pool, options);
 
       // step 3: collect the failures and successes and prepare for retry
@@ -2520,21 +2539,28 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
       Map<String, HRegionFailureInfo> failedRegionsInfo) throws IOException {
     List<Put> failed = null;
 
-    List<Future<MultiPutResponse>> futures = new ArrayList<Future<MultiPutResponse>>(
+    List<ListenableFuture<MultiPutResponse>> futures = new ArrayList<>(
         multiPuts.size());
     boolean singleServer = (multiPuts.size() == 1);
     for (MultiPut put : multiPuts) {
       Callable<MultiPutResponse> callable = createPutCallable(put.address,
           put, options);
-      Future<MultiPutResponse> task;
-      if (singleServer) {
-        FutureTask<MultiPutResponse> futureTask = new FutureTask<MultiPutResponse>(
-            callable);
-        task = futureTask;
-        futureTask.run();
-      } else {
-        task = HTable.multiActionThreadPool.submit(callable);
+      ListenableFuture<MultiPutResponse> task;
+      try {
+        validateAndIncrementNumOutstandingPerServer(put.address);
+        if (singleServer) {
+          ListenableFutureTask<MultiPutResponse> futureTask = ListenableFutureTask.create(
+              callable);
+          task = futureTask;
+          futureTask.run();
+        } else {
+          task = HTable.listeningMultiActionPool.submit(callable);
+        }
+        Futures.addCallback(task, new OutstandingRequestCallback(put.address));
+      } catch (IOException e1) {
+        task = Futures.immediateFailedFuture(e1);
       }
+
       futures.add(task);
     }
 
@@ -3329,8 +3355,49 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
     return regionFlushTimesMap;
   }
 
+  void validateAndIncrementNumOutstandingPerServer(HServerAddress address)
+      throws TooManyOutstandingRequestsException {
+    AtomicInteger atomicOutstanding = outstandingRequests.computeIfAbsent(address, new Function<HServerAddress, AtomicInteger>() {
+      @Override public AtomicInteger apply(HServerAddress address) {
+        return new AtomicInteger(0);
+      }
+    });
+
+    int outstanding = atomicOutstanding.get();
+    if (outstanding > maxOutstandRequestsPerServer) {
+      throw new TooManyOutstandingRequestsException(address, outstanding);
+    }
+    atomicOutstanding.incrementAndGet();
+  }
+
+  void decrementNumOutstandingPerServer(HServerAddress address) {
+    AtomicInteger outstanding = outstandingRequests.computeIfAbsent(address, new Function<HServerAddress, AtomicInteger>() {
+      @Override public AtomicInteger apply(HServerAddress address) {
+        return new AtomicInteger(0);
+      }
+    });
+    outstanding.decrementAndGet();
+  }
+
   @Override
   public Configuration getConf() {
     return this.conf;
+  }
+
+  private class OutstandingRequestCallback<V> implements FutureCallback<V> {
+
+    private final HServerAddress server;
+
+    public OutstandingRequestCallback(HServerAddress server) {
+      this.server = server;
+    }
+
+    @Override public void onSuccess(@Nullable V result) {
+      decrementNumOutstandingPerServer(server);
+    }
+
+    @Override public void onFailure(Throwable t) {
+      decrementNumOutstandingPerServer(server);
+    }
   }
 }

@@ -38,6 +38,8 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -96,11 +98,12 @@ public class HTable implements HTableInterface, IEndpointClient {
 
   // Share this multiaction thread pool across all the HTable instance;
   // The total number of threads will be bounded #HTable * #RegionServer.
-  static ExecutorService multiActionThreadPool =
-    new ThreadPoolExecutor(1, Integer.MAX_VALUE,
+  static ExecutorService multiActionThreadPool = new ThreadPoolExecutor(1, Integer.MAX_VALUE,
       60, TimeUnit.SECONDS,
       new SynchronousQueue<Runnable>(),
       new DaemonThreadFactory("htable-thread-"));
+
+  static ListeningExecutorService listeningMultiActionPool = MoreExecutors.listeningDecorator(multiActionThreadPool);
   static {
     ((ThreadPoolExecutor)multiActionThreadPool).allowCoreThreadTimeOut(true);
   }
@@ -798,7 +801,7 @@ public class HTable implements HTableInterface, IEndpointClient {
       throws IOException {
     Result[] results = new Result[actions.size()];
     try {
-      this.getConnectionAndResetOperationContext().processBatchedGets(actions, tableName, multiActionThreadPool,
+      this.getConnectionAndResetOperationContext().processBatchedGets(actions, tableName, listeningMultiActionPool,
           results, this.options);
     } catch (Exception e) {
       e.printStackTrace();
@@ -815,7 +818,7 @@ public class HTable implements HTableInterface, IEndpointClient {
       throws IOException {
     try {
       this.getConnectionAndResetOperationContext().processBatchedMutations(actions,
-          tableName, multiActionThreadPool, null, this.options);
+          tableName, listeningMultiActionPool, null, this.options);
     } catch (Exception e) {
       throw new IOException(e);
     }

@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -227,7 +229,7 @@ public class HConnectionMockImpl implements HConnection {
 
   @Override
   public void processBatchedGets(List<Get> actions, StringBytes tableName,
-      ExecutorService pool, Result[] results, HBaseRPCOptions options)
+      ListeningExecutorService pool, Result[] results, HBaseRPCOptions options)
       throws IOException, InterruptedException {
     // TODO Auto-generated method stub
 
@@ -235,7 +237,7 @@ public class HConnectionMockImpl implements HConnection {
 
   @Override
   public void processBatchedMutations(List<Mutation> actions,
-      StringBytes tableName, ExecutorService pool, List<Mutation> failures,
+      StringBytes tableName, ListeningExecutorService pool, List<Mutation> failures,
       HBaseRPCOptions options) throws IOException, InterruptedException {
     // TODO Auto-generated method stub
 
