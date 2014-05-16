@@ -36,10 +36,11 @@
 
     <para>Here we list HBase tools for administration, analysis, fixup, and debugging.</para>
     <section xml:id="canary"><title>Canary</title>
-<para>There is a Canary class can help users to canary-test the HBase cluster status, with every column-family for every regions or regionservers granularity. To see the usage,
-<programlisting>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -help</programlisting>
-Will output
-<programlisting>Usage: bin/hbase org.apache.hadoop.hbase.tool.Canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]..]
+<para>There is a Canary class can help users to canary-test the HBase cluster status, with every
+        column-family for every regions or regionservers granularity. To see the usage,
+        <programlisting>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -help</programlisting>
+        Will output
+        <programlisting>Usage: bin/hbase org.apache.hadoop.hbase.tool.Canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]..]
  where [opts] are:
    -help          Show this help and exit.
    -regionserver  replace the table argument to regionserver,
@@ -49,25 +50,46 @@ Will output
    -e             Use region/regionserver as regular expression
       which means the region/regionserver is regular expression pattern
    -f &lt;B>         stop whole program if first error occurs, default is true
-   -t &lt;N>         timeout for a check, default is 600000 (milisecs)</programlisting>
-This tool will return non zero error codes to user for collaborating with other monitoring tools, such as Nagios.
-The error code definitions are...
-<programlisting>private static final int USAGE_EXIT_CODE = 1;
+   -t &lt;N>         timeout for a check, default is 600000 (milliseconds)</programlisting>
+        This tool will return non zero error codes to user for collaborating with other monitoring
+        tools, such as Nagios. The error code definitions are...
+        <programlisting>private static final int USAGE_EXIT_CODE = 1;
 private static final int INIT_ERROR_EXIT_CODE = 2;
 private static final int TIMEOUT_ERROR_EXIT_CODE = 3;
 private static final int ERROR_EXIT_CODE = 4;</programlisting>
-Here are some examples based on the following given case. There are two HTable called test-01 and test-02, they have two column family cf1 and cf2 respectively, and deployed on the 3 regionservers. see following table.
-	     <table>
-		 <tgroup cols='3' align='center' colsep='1' rowsep='1'><colspec colname='regionserver' align='center'/><colspec colname='test-01' align='center'/><colspec colname='test-02' align='center'/>
-         <thead>
-         <row><entry>RegionServer</entry><entry>test-01</entry><entry>test-02</entry></row>
-	     </thead><tbody>
-          <row><entry>rs1</entry><entry>r1</entry>          <entry>r2</entry></row>
-          <row><entry>rs2</entry><entry>r2</entry>          <entry></entry></row>
-          <row><entry>rs3</entry><entry>r2</entry>          <entry>r1</entry></row>
-		 </tbody></tgroup></table>
-Following are some examples based on the previous given case.
-</para>
+        Here are some examples based on the following given case. There are two HTable called
+        test-01 and test-02, they have two column family cf1 and cf2 respectively, and deployed on
+        the 3 regionservers. see following table. <table>
+          <tgroup cols="3" align="center" colsep="1" rowsep="1">
+            <colspec colname="regionserver" align="center"/>
+            <colspec colname="test-01" align="center"/>
+            <colspec colname="test-02" align="center"/>
+            <thead>
+              <row>
+                <entry>RegionServer</entry>
+                <entry>test-01</entry>
+                <entry>test-02</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry>rs1</entry>
+                <entry>r1</entry>
+                <entry>r2</entry>
+              </row>
+              <row>
+                <entry>rs2</entry>
+                <entry>r2</entry>
+                <entry/>
+              </row>
+              <row>
+                <entry>rs3</entry>
+                <entry>r2</entry>
+                <entry>r1</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table> Following are some examples based on the previous given case. </para>
 <section><title>Canary test for every column family (store) of every region of every table</title>
 <para>
 <programlisting>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary</programlisting>

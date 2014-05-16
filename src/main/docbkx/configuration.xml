@@ -29,7 +29,7 @@
     <title>Apache HBase Configuration</title>
     <para>This chapter is the Not-So-Quick start guide to Apache HBase configuration.  It goes
     over system requirements, Hadoop setup, the different Apache HBase run modes, and the
-    various configurations in HBase.  Please read this chapter carefully.  At a mimimum
+    various configurations in HBase.  Please read this chapter carefully.  At a minimum
     ensure that all <xref linkend="basic.prerequisites" /> have
       been satisfied.  Failure to do so will cause you (and us) grief debugging strange errors
       and/or data loss.</para>
@@ -778,7 +778,7 @@ stopping hbase...............</programlisting> Shutdown can take a moment to
       <title><filename>hbase-env.sh</filename></title>
       <para>Set HBase environment variables in this file.
       Examples include options to pass the JVM on start of
-      an HBase daemon such as heap size and garbarge collector configs.
+      an HBase daemon such as heap size and garbage collector configs.
       You can also set configurations for HBase configuration, log directories,
       niceness, ssh options, where to locate process pid files,
       etc. Open the file at

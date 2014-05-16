@@ -620,18 +620,21 @@ Harsh J investigated the issue as part of the mailing list thread
        </section>
        <section xml:id="trouble.client.oome.directmemory.leak">
             <title>Client running out of memory though heap size seems to be stable (but the off-heap/direct heap keeps growing)</title>
-            <para>
-You are likely running into the issue that is described and worked through in
-the mail thread <link xhref="http://search-hadoop.com/m/ubhrX8KvcH/Suspected+memory+leak&amp;subj=Re+Suspected+memory+leak">HBase, mail # user - Suspected memory leak</link>
-and continued over in <link xhref="http://search-hadoop.com/m/p2Agc1Zy7Va/MaxDirectMemorySize+Was%253A+Suspected+memory+leak&amp;subj=Re+FeedbackRe+Suspected+memory+leak">HBase, mail # dev - FeedbackRe: Suspected memory leak</link>.
-A workaround is passing your client-side JVM a reasonable value for <code>-XX:MaxDirectMemorySize</code>.  By default,
-the <varname>MaxDirectMemorySize</varname> is equal to your <code>-Xmx</code> max heapsize setting (if <code>-Xmx</code> is set).
-Try seting it to something smaller (for example, one user had success setting it to <code>1g</code> when
-they had a client-side heap of <code>12g</code>).  If you set it too small, it will bring on <code>FullGCs</code> so keep
-it  a bit hefty.  You want to make this setting client-side only especially if you are running the new experiemental
-server-side off-heap cache since this feature depends on being able to use big direct buffers (You may have to keep
-separate client-side and server-side config dirs).
-            </para>
+            <para> You are likely running into the issue that is described and worked through in the
+        mail thread <link
+          xhref="http://search-hadoop.com/m/ubhrX8KvcH/Suspected+memory+leak&amp;subj=Re+Suspected+memory+leak"
+          >HBase, mail # user - Suspected memory leak</link> and continued over in <link
+          xhref="http://search-hadoop.com/m/p2Agc1Zy7Va/MaxDirectMemorySize+Was%253A+Suspected+memory+leak&amp;subj=Re+FeedbackRe+Suspected+memory+leak"
+          >HBase, mail # dev - FeedbackRe: Suspected memory leak</link>. A workaround is passing
+        your client-side JVM a reasonable value for <code>-XX:MaxDirectMemorySize</code>. By
+        default, the <varname>MaxDirectMemorySize</varname> is equal to your <code>-Xmx</code> max
+        heapsize setting (if <code>-Xmx</code> is set). Try seting it to something smaller (for
+        example, one user had success setting it to <code>1g</code> when they had a client-side heap
+        of <code>12g</code>). If you set it too small, it will bring on <code>FullGCs</code> so keep
+        it a bit hefty. You want to make this setting client-side only especially if you are running
+        the new experimental server-side off-heap cache since this feature depends on being able to
+        use big direct buffers (You may have to keep separate client-side and server-side config
+        dirs). </para>
        </section>
        <section xml:id="trouble.client.slowdown.admin">
             <title>Client Slowdown When Calling Admin Methods (flush, compact, etc.)</title>
@@ -728,15 +731,17 @@ Caused by: java.io.FileNotFoundException: File _partition.lst does not exist.
        </section>
        <section xml:id="trouble.namenode.hbase.objects">
             <title>Browsing HDFS for HBase Objects</title>
-            <para>Somtimes it will be necessary to explore the HBase objects that exist on HDFS.  These objects could include the WALs (Write Ahead Logs), tables, regions, StoreFiles, etc.
-            The easiest way to do this is with the NameNode web application that runs on port 50070.  The NameNode web application will provide links to the all the DataNodes in the cluster so that
-            they can be browsed seamlessly. </para>
+            <para>Sometimes it will be necessary to explore the HBase objects that exist on HDFS.
+        These objects could include the WALs (Write Ahead Logs), tables, regions, StoreFiles, etc.
+        The easiest way to do this is with the NameNode web application that runs on port 50070. The
+        NameNode web application will provide links to the all the DataNodes in the cluster so that
+        they can be browsed seamlessly. </para>
             <para>The HDFS directory structure of HBase tables in the cluster is...
             <programlisting>
 <filename>/hbase</filename>
      <filename>/&lt;Table&gt;</filename>             (Tables in the cluster)
           <filename>/&lt;Region&gt;</filename>           (Regions for the table)
-               <filename>/&lt;ColumnFamiy&gt;</filename>      (ColumnFamilies for the Region for the table)
+               <filename>/&lt;ColumnFamily&gt;</filename>      (ColumnFamilies for the Region for the table)
                     <filename>/&lt;StoreFile&gt;</filename>        (StoreFiles for the ColumnFamily for the Regions for the table)
             </programlisting>
             </para>

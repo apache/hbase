@@ -68,8 +68,8 @@
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="preface.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="getting_started.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="configuration.xml" />
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="upgrading.xml" />
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="shell.xml" />
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="upgrading.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="shell.xml"/>
 
   <chapter xml:id="datamodel">
     <title>Data Model</title>
@@ -658,7 +658,7 @@ htable.put(put);
   </chapter>  <!-- data model -->
 
   <!--  schema design -->
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="schema_design.xml" />
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="schema_design.xml"/>
 
   <chapter xml:id="mapreduce">
   <title>HBase and MapReduce</title>
@@ -1319,11 +1319,16 @@ scan.setFilter(list);
       </section>
       <section xml:id="client.filter.cv"><title>Column Value</title>
         <section xml:id="client.filter.cv.scvf"><title>SingleColumnValueFilter</title>
-          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SingleColumnValueFilter.html">SingleColumnValueFilter</link>
-          can be used to test column values for equivalence (<code><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/CompareFilter.CompareOp.html">CompareOp.EQUAL</link>
-          </code>), inequality (<code>CompareOp.NOT_EQUAL</code>), or ranges
-          (e.g., <code>CompareOp.GREATER</code>).  The folowing is example of testing equivalence a column to a String value "my value"...
-<programlisting>
+          <para><link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SingleColumnValueFilter.html"
+              >SingleColumnValueFilter</link> can be used to test column values for equivalence
+                (<code><link
+                xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/CompareFilter.CompareOp.html"
+                >CompareOp.EQUAL</link>
+            </code>), inequality (<code>CompareOp.NOT_EQUAL</code>), or ranges (e.g.,
+              <code>CompareOp.GREATER</code>). The following is example of testing equivalence a
+            column to a String value "my value"...
+            <programlisting>
 SingleColumnValueFilter filter = new SingleColumnValueFilter(
 	cf,
 	column,
@@ -1604,9 +1609,9 @@ rs.close();
             <listitem>Single access priority: The first time a block is loaded from HDFS it normally has this priority and it will be part of the first group to be considered
             during evictions. The advantage is that scanned blocks are more likely to get evicted than blocks that are getting more usage.
             </listitem>
-            <listitem>Mutli access priority: If a block in the previous priority group is accessed again, it upgrades to this priority. It is thus part of the second group
-            considered during evictions.
-            </listitem>
+            <listitem>Multi access priority: If a block in the previous priority group is accessed
+              again, it upgrades to this priority. It is thus part of the second group considered
+              during evictions. </listitem>
             <listitem>In-memory access priority: If the block's family was configured to be "in-memory", it will be part of this priority disregarding the number of times it
             was accessed. Catalog tables are configured like this. This group is the last one considered during evictions.
             </listitem>
@@ -2418,13 +2423,13 @@ All the settings that apply to normal compactions (file size limits, etc.) apply
 
   </chapter>   <!--  architecture -->
 
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="external_apis.xml" />
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="external_apis.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="cp.xml" />
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="performance.xml" />
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="troubleshooting.xml" />
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="performance.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="troubleshooting.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="case_studies.xml" />
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="ops_mgt.xml" />
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="developer.xml" />
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="ops_mgt.xml"/>
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="developer.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="zookeeper.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="cp.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="community.xml" />
@@ -2533,9 +2538,8 @@ All the settings that apply to normal compactions (file size limits, etc.) apply
         <qandaentry xml:id="faq.changing.rowkeys">
             <question><para>Can I change a table's rowkeys?</para></question>
             <answer>
-                <para>
-                    This is a very common quesiton.  You can't.  See <xref linkend="changing.rowkeys" />.
-                </para>
+                <para> This is a very common question. You can't. See <xref
+                linkend="changing.rowkeys"/>. </para>
             </answer>
         </qandaentry>
         <qandaentry xml:id="faq.apis">

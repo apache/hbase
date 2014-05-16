@@ -141,7 +141,7 @@ admin.enableTable(table);
          </para>
        <para>See <xref linkend="keyvalue"/> for more information on HBase stores data internally to see why this is important.</para>
        </section>
-       <section xml:id="keysize.atttributes"><title>Attributes</title>
+       <section xml:id="keysize.attributes"><title>Attributes</title>
          <para>Although verbose attribute names (e.g., "myVeryImportantAttribute") are easier to read, prefer shorter attribute names (e.g., "via")
          to store in HBase.
          </para>
@@ -335,10 +335,11 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
   <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Result.html">Result</link>, so anything that can be
   converted to an array of bytes can be stored as a value.  Input could be strings, numbers, complex objects, or even images as long as they can rendered as bytes.
   </para>
-  <para>There are practical limits to the size of values (e.g., storing 10-50MB objects in HBase would probably be too much to ask);
-  search the mailling list for conversations on this topic. All rows in HBase conform to the <xref linkend="datamodel">datamodel</xref>, and
-  that includes versioning.  Take that into consideration when making your design, as well as block size for the ColumnFamily.
-  </para>
+  <para>There are practical limits to the size of values (e.g., storing 10-50MB objects in HBase
+      would probably be too much to ask); search the mailing list for conversations on this topic.
+      All rows in HBase conform to the <xref linkend="datamodel">datamodel</xref>, and that includes
+      versioning. Take that into consideration when making your design, as well as block size for
+      the ColumnFamily. </para>
     <section xml:id="counters">
       <title>Counters</title>
       <para>
@@ -396,10 +397,11 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
    ... and solutions are also influenced by the size of the cluster and how much processing power you have to throw at the solution.
    Common techniques are in sub-sections below.  This is a comprehensive, but not exhaustive, list of approaches.
   </para>
-  <para>It should not be a surprise that secondary indexes require additional cluster space and processing.
-  This is precisely what happens in an RDBMS because the act of creating an alternate index requires both space and processing cycles to update.  RBDMS products
-  are more advanced in this regard to handle alternative index management out of the box.  However, HBase scales better at larger data volumes, so this is a feature trade-off.
-  </para>
+  <para>It should not be a surprise that secondary indexes require additional cluster space and
+      processing. This is precisely what happens in an RDBMS because the act of creating an
+      alternate index requires both space and processing cycles to update. RDBMS products are more
+      advanced in this regard to handle alternative index management out of the box. However, HBase
+      scales better at larger data volumes, so this is a feature trade-off. </para>
   <para>Pay attention to <xref linkend="performance"/> when implementing any of these approaches.</para>
   <para>Additionally, see the David Butler response in this dist-list thread <link xlink:href="http://search-hadoop.com/m/nvbiBp2TDP/Stargate%252Bhbase&amp;subj=Stargate+hbase">HBase, mail # user - Stargate+hbase</link>
    </para>
@@ -765,10 +767,11 @@ reasonable spread in the keyspace, similar options appear:
 	  tall and wide tables.  These are general guidelines and not laws - each application must consider its own needs.
 	  </para>
 	  <section xml:id="schema.smackdown.rowsversions"><title>Rows vs. Versions</title>
-	    <para>A common question is whether one should prefer rows or HBase's built-in-versioning.  The context is typically where there are
-	    "a lot" of versions of a row to be retained (e.g., where it is significantly above the HBase default of 1 max versions).  The
-	    rows-approach would require storing a timstamp in some portion of the rowkey so that they would not overwite with each successive update.
-	    </para>
+	    <para>A common question is whether one should prefer rows or HBase's built-in-versioning. The
+          context is typically where there are "a lot" of versions of a row to be retained (e.g.,
+          where it is significantly above the HBase default of 1 max versions). The rows-approach
+          would require storing a timestamp in some portion of the rowkey so that they would not
+          overwite with each successive update. </para>
 	    <para>Preference:  Rows (generally speaking).
 	    </para>
 	  </section>

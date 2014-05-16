@@ -45,10 +45,9 @@
   </section>
   <section xml:id="perf.network">
     <title>Network</title>
-    <para>
-    Perhaps the most important factor in avoiding network issues degrading Hadoop and HBbase performance is the switching hardware
-    that is used, decisions made early in the scope of the project can cause major problems when you double or triple the size of your cluster (or more).
-    </para>
+    <para> Perhaps the most important factor in avoiding network issues degrading Hadoop and HBase
+      performance is the switching hardware that is used, decisions made early in the scope of the
+      project can cause major problems when you double or triple the size of your cluster (or more). </para>
     <para>
     Important items to consider:
         <itemizedlist>
@@ -400,7 +399,7 @@ Deferred log flush can be configured on tables via <link
     <section xml:id="perf.hbase.client.regiongroup">
       <title>HBase Client: Group Puts by RegionServer</title>
       <para>In addition to using the writeBuffer, grouping <classname>Put</classname>s by RegionServer can reduce the number of client RPC calls per writeBuffer flush.
-      There is a utility <classname>HTableUtil</classname> currently on TRUNK that does this, but you can either copy that or implement your own verison for
+      There is a utility <classname>HTableUtil</classname> currently on TRUNK that does this, but you can either copy that or implement your own version for
       those still on 0.90.x or earlier.
       </para>
     </section>

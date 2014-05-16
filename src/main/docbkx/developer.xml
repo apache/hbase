@@ -492,12 +492,13 @@ HBase have a character not usually seen in other projects.</para>
 <section xml:id="hbase.moduletests">
 <title>Apache HBase Modules</title>
 <para>As of 0.96, Apache HBase is split into multiple modules which creates "interesting" rules for
-how and where tests are written. If you are writting code for <classname>hbase-server</classname>, see
-<xref linkend="hbase.unittests"/> for how to write your tests; these tests can spin
-up a minicluster and will need to be categorized. For any other module, for example
-<classname>hbase-common</classname>, the tests must be strict unit tests and just test the class
-under test - no use of the HBaseTestingUtility or minicluster is allowed (or even possible
-given the dependency tree).</para>
+                how and where tests are written. If you are writing code for
+                    <classname>hbase-server</classname>, see <xref linkend="hbase.unittests"/> for
+                how to write your tests; these tests can spin up a minicluster and will need to be
+                categorized. For any other module, for example <classname>hbase-common</classname>,
+                the tests must be strict unit tests and just test the class under test - no use of
+                the HBaseTestingUtility or minicluster is allowed (or even possible given the
+                dependency tree).</para>
   <section xml:id="hbase.moduletest.run">
   <title>Running Tests in other Modules</title>
   If the module you are developing in has no other dependencies on other HBase modules, then
@@ -643,22 +644,22 @@ error will be reported when a non-existent test case is specified.
 
 <section xml:id="hbase.unittests.test.faster">
 <title>Running tests faster</title>
-<para>
-By default, <code>$ mvn test -P runAllTests</code> runs 5 tests in parallel.
-It can be increased on a developer's machine. Allowing that you can have 2
-tests in parallel per core, and you need about 2Gb of memory per test (at the
-extreme), if you have an 8 core, 24Gb box, you can have 16 tests in parallel.
-but the memory available limits it to 12 (24/2), To run all tests with 12 tests
-in parallell, do this:
-<command>mvn test -P runAllTests -Dsurefire.secondPartThreadCount=12</command>.
-To increase the speed, you can as well use a ramdisk. You will need 2Gb of memory
-to run all tests. You will also need to delete the files between two test run.
-The typical way to configure a ramdisk on Linux is:
-<programlisting>$ sudo mkdir /ram2G
+<para> By default, <code>$ mvn test -P runAllTests</code> runs 5 tests in parallel. It can be
+                    increased on a developer's machine. Allowing that you can have 2 tests in
+                    parallel per core, and you need about 2Gb of memory per test (at the extreme),
+                    if you have an 8 core, 24Gb box, you can have 16 tests in parallel. but the
+                    memory available limits it to 12 (24/2), To run all tests with 12 tests in
+                    parallel, do this: <command>mvn test -P runAllTests
+                        -Dsurefire.secondPartThreadCount=12</command>. To increase the speed, you
+                    can as well use a ramdisk. You will need 2Gb of memory to run all tests. You
+                    will also need to delete the files between two test run. The typical way to
+                    configure a ramdisk on Linux is:
+                    <programlisting>$ sudo mkdir /ram2G
 sudo mount -t tmpfs -o size=2048M tmpfs /ram2G</programlisting>
-You can then use it to run all HBase tests with the command:
-<command>mvn test -P runAllTests -Dsurefire.secondPartThreadCount=12 -Dtest.build.data.basedirectory=/ram2G</command>
-</para>
+                    You can then use it to run all HBase tests with the command: <command>mvn test
+                        -P runAllTests -Dsurefire.secondPartThreadCount=12
+                        -Dtest.build.data.basedirectory=/ram2G</command>
+                </para>
 </section>
 
 <section xml:id="hbase.unittests.cmds.test.hbasetests">
@@ -818,7 +819,7 @@ This actually runs ALL the integration tests.
           <programlisting>mvn failsafe:verify</programlisting>
           The above command basically looks at all the test results (so don't remove the 'target' directory) for test failures and reports the results.</para>
 
-      <section xml:id="maven.build.commanas.integration.tests2">
+      <section xml:id="maven.build.commands.integration.tests2">
           <title>Running a subset of Integration tests</title>
           <para>This is very similar to how you specify running a subset of unit tests (see above), but use the property
 	      <code>it.test</code> instead of <code>test</code>.
@@ -970,9 +971,9 @@ pecularity that is probably fixable but we've not spent the time trying to figur
          Similarly, for 3.0, you would just replace the profile value. Note that Hadoop-3.0.0-SNAPSHOT does not currently have a
          deployed maven artificat - you will need to build and install your own in your local maven repository if you want to run against this profile.
          </para>
-         <para>
-         In earilier verions of Apache HBase, you can build against older versions of Apache Hadoop, notably, Hadoop 0.22.x and 0.23.x.
-         If you are running, for example HBase-0.94 and wanted to build against Hadoop 0.23.x, you would run with:</para>
+         <para> In earilier versions of Apache HBase, you can build against older versions of Apache
+                Hadoop, notably, Hadoop 0.22.x and 0.23.x. If you are running, for example
+                HBase-0.94 and wanted to build against Hadoop 0.23.x, you would run with:</para>
           <programlisting>mvn -Dhadoop.profile=22 ...</programlisting>
       </section>
     </section>
@@ -1420,8 +1421,7 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
           <para>
           Committers do this.  See <link xlink:href="http://wiki.apache.org/hadoop/Hbase/HowToCommit">How To Commit</link> in the Apache HBase wiki.
           </para>
-          <para>Commiters will also resolve the Jira, typically after the patch passes a build.
-          </para>
+          <para>Committers will also resolve the Jira, typically after the patch passes a build. </para>
           <section xml:id="committer.tests">
               <title>Committers are responsible for making sure commits do not break the build or tests</title>
           <para>

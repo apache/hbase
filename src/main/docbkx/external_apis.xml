@@ -295,7 +295,8 @@
             <para><emphasis role="bold">Description:</emphasis> This filter takes two
               arguments – a limit and offset. It returns limit number of columns after offset number
               of columns. It does this for all the rows</para>
-            <para><emphasis role="bold">Syntax:</emphasis> ColumnPaginationFilter(‘&lt;limit>’, ‘&lt;offest>’) </para>
+            <para><emphasis role="bold">Syntax:</emphasis> ColumnPaginationFilter(‘&lt;limit>’,
+              ‘&lt;offset>’) </para>
             <para><emphasis role="bold">Example:</emphasis> "ColumnPaginationFilter (3, 5)" </para>
           </listitem>
 

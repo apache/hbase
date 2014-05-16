@@ -27,9 +27,8 @@
  */
 -->
     <title>Upgrading</title>
-    <para>You cannot skip major verisons upgrading.  If you are upgrading from
-    version 0.90.x to 0.94.x, you must first go from 0.90.x to 0.92.x and then go
-    from 0.92.x to 0.94.x.</para>
+    <para>You cannot skip major versions upgrading. If you are upgrading from version 0.90.x to
+        0.94.x, you must first go from 0.90.x to 0.92.x and then go from 0.92.x to 0.94.x.</para>
     <note><para>It may be possible to skip across versions -- for example go from
     0.92.2 straight to 0.98.0 just following the 0.96.x upgrade instructions --
     but we have not tried it so cannot say whether it works or not.</para>
