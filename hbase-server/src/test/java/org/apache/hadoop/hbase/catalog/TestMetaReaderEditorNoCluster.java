@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
@@ -186,19 +188,20 @@ public class TestMetaReaderEditorNoCluster {
       // to shove this in here first so it gets picked up all over; e.g. by
       // HTable.
       connection = HConnectionTestingUtility.getSpiedConnection(UTIL.getConfiguration());
+      
       // Fix the location lookup so it 'works' though no network.  First
       // make an 'any location' object.
       final HRegionLocation anyLocation =
         new HRegionLocation(HRegionInfo.FIRST_META_REGIONINFO, sn);
-      // Return the any location object when locateRegion is called in HTable
-      // constructor and when its called by ServerCallable (it uses getRegionLocation).
+      final RegionLocations rl = new RegionLocations(anyLocation);
+      // Return the RegionLocations object when locateRegion
       // The ugly format below comes of 'Important gotcha on spying real objects!' from
       // http://mockito.googlecode.com/svn/branches/1.6/javadoc/org/mockito/Mockito.html
-      Mockito.doReturn(anyLocation).
-        when(connection).locateRegion((TableName) Mockito.any(), (byte[]) Mockito.any());
-      Mockito.doReturn(anyLocation).
-        when(connection).getRegionLocation((TableName) Mockito.any(),
-          (byte[]) Mockito.any(), Mockito.anyBoolean());
+      ClusterConnection cConnection =
+          HConnectionTestingUtility.getSpiedClusterConnection(UTIL.getConfiguration());
+      Mockito.doReturn(rl).when
+      (cConnection).locateRegion((TableName)Mockito.any(), (byte[])Mockito.any(),
+              Mockito.anyBoolean(), Mockito.anyBoolean(), Mockito.anyInt());
 
       // Now shove our HRI implementation into the spied-upon connection.
       Mockito.doReturn(implementation).

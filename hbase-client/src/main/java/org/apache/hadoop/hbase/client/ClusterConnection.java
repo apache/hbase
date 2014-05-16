@@ -34,8 +34,9 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 
 /** Internal methods on HConnection that should not be used by user code. */
 @InterfaceAudience.Private
-// NOTE: DO NOT make this class public. It was made package-private on purpose.
-interface ClusterConnection extends HConnection {
+// NOTE: Although this class is public, this class is meant to be used directly from internal
+// classes and unit tests only.
+public interface ClusterConnection extends HConnection {
 
   /** @return - true if the master server is running */
   @Override

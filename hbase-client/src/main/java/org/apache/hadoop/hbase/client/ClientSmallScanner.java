@@ -19,8 +19,8 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.LinkedList;
+import java.io.InterruptedIOException;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,7 +29,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
@@ -53,7 +52,7 @@ import com.google.protobuf.ServiceException;
 @InterfaceStability.Evolving
 public class ClientSmallScanner extends ClientScanner {
   private final Log LOG = LogFactory.getLog(this.getClass());
-  private RegionServerCallable<Result[]> smallScanCallable = null;
+  private ScannerCallableWithReplicas smallScanCallable = null;
   // When fetching results from server, skip the first result if it has the same
   // row with this one
   private byte[] skipRowOfFirstResult = null;
@@ -70,7 +69,7 @@ public class ClientSmallScanner extends ClientScanner {
    */
   public ClientSmallScanner(final Configuration conf, final Scan scan,
       final TableName tableName) throws IOException {
-    this(conf, scan, tableName, HConnectionManager.getConnection(conf));
+    this(conf, scan, tableName, ConnectionManager.getConnectionInternal(conf));
   }
 
   /**
@@ -84,8 +83,25 @@ public class ClientSmallScanner extends ClientScanner {
    * @throws IOException
    */
   public ClientSmallScanner(final Configuration conf, final Scan scan,
-      final TableName tableName, HConnection connection) throws IOException {
+      final TableName tableName, ClusterConnection connection) throws IOException {
     this(conf, scan, tableName, connection, new RpcRetryingCallerFactory(conf));
+  }
+
+  /**
+   * Create a new ClientSmallScanner for the specified table. Note that the passed
+   * {@link Scan} 's start row maybe changed. 
+   * @param conf
+   * @param scan
+   * @param tableName
+   * @param connection
+   * @param pool
+   * @param primaryOperationTimeout
+   * @throws IOException
+   */
+  public ClientSmallScanner(final Configuration conf, final Scan scan,
+      final TableName tableName, ClusterConnection connection, ExecutorService pool,
+      int primaryOperationTimeout) throws IOException {
+    super(conf, scan, tableName, connection, pool, primaryOperationTimeout);
   }
 
   /**
@@ -100,7 +116,7 @@ public class ClientSmallScanner extends ClientScanner {
    * @throws IOException
    */
   public ClientSmallScanner(final Configuration conf, final Scan scan,
-      final TableName tableName, HConnection connection,
+      final TableName tableName, ClusterConnection connection,
       RpcRetryingCallerFactory rpcFactory) throws IOException {
     super(conf, scan, tableName, connection, rpcFactory);
   }
@@ -160,27 +176,50 @@ public class ClientSmallScanner extends ClientScanner {
     return true;
   }
 
-  private RegionServerCallable<Result[]> getSmallScanCallable(
+  private ScannerCallableWithReplicas getSmallScanCallable(
       byte[] localStartKey, final int cacheNum) {
     this.scan.setStartRow(localStartKey);
-    RegionServerCallable<Result[]> callable = new RegionServerCallable<Result[]>(
-        getConnection(), getTable(), scan.getStartRow()) {
-      public Result[] call() throws IOException {
-        ScanRequest request = RequestConverter.buildScanRequest(getLocation()
-            .getRegionInfo().getRegionName(), scan, cacheNum, true);
-        ScanResponse response = null;
-        PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
-        try {
-          controller.setPriority(getTableName());
-          response = getStub().scan(controller, request);
-          return ResponseConverter.getResults(controller.cellScanner(),
-              response);
-        } catch (ServiceException se) {
-          throw ProtobufUtil.getRemoteException(se);
-        }
+    SmallScannerCallable s = new SmallScannerCallable(0, cacheNum);
+    ScannerCallableWithReplicas scannerCallableWithReplicas =
+        new ScannerCallableWithReplicas(getTable(), getConnection(),
+            s, getPool(), getPrimaryOperationTimeout(), getScan(), getRetries(),
+            getScannerTimeout(), cacheNum, conf, caller);
+    return scannerCallableWithReplicas;
+  }
+
+  class SmallScannerCallable extends ScannerCallable {
+    public SmallScannerCallable(int id, int caching) {
+      super(ClientSmallScanner.this.getConnection(), ClientSmallScanner.this.getTable(),
+          ClientSmallScanner.this.getScan(), null, id);
+      this.setCaching(caching);
+    }
+
+    @Override
+    public Result[] call() throws IOException {
+      if (Thread.interrupted()) {
+        throw new InterruptedIOException();
       }
-    };
-    return callable;
+      ScanRequest request = RequestConverter.buildScanRequest(getLocation()
+          .getRegionInfo().getRegionName(), scan, getCaching(), true);
+      ScanResponse response = null;
+      PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+      try {
+        controller.setPriority(getTableName());
+        response = getStub().scan(controller, request);
+        return ResponseConverter.getResults(controller.cellScanner(),
+            response);
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
+      }
+    }
+
+    @Override
+    public ScannerCallable getScannerCallableForReplica(int id) {
+      return new SmallScannerCallable(id, this.getCaching());
+    }
+
+    @Override
+    public void setClose(){}
   }
 
   @Override
@@ -201,7 +240,9 @@ public class ClientSmallScanner extends ClientScanner {
         // Server returns a null values if scanning is to stop. Else,
         // returns an empty array if scanning is to go on and we've just
         // exhausted current region.
-        values = this.caller.callWithRetries(smallScanCallable);
+        // callWithoutRetries is at this layer. Within the ScannerCallableWithReplicas,
+        // we do a callWithRetries
+        values = this.caller.callWithoutRetries(smallScanCallable);
         this.currentRegion = smallScanCallable.getHRegionInfo();
         long currentTime = System.currentTimeMillis();
         if (this.scanMetrics != null) {

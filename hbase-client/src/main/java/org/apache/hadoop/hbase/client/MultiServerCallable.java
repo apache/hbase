@@ -54,7 +54,7 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
   private final MultiAction<R> multiAction;
   private final boolean cellBlock;
 
-  MultiServerCallable(final HConnection connection, final TableName tableName,
+  MultiServerCallable(final ClusterConnection connection, final TableName tableName,
       final ServerName location, final MultiAction<R> multi) {
     super(connection, tableName, null);
     this.multiAction = multi;

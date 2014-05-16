@@ -196,7 +196,6 @@ public class TestRestoreSnapshotFromClient {
     assertEquals(500, TEST_UTIL.countRows(table, TEST_FAMILY2));
     Set<String> fsFamilies = getFamiliesFromFS(tableName);
     assertEquals(2, fsFamilies.size());
-    table.close();
 
     // Take a snapshot
     admin.disableTable(tableName);
@@ -217,7 +216,6 @@ public class TestRestoreSnapshotFromClient {
     assertEquals(1, htd.getFamilies().size());
     fsFamilies = getFamiliesFromFS(tableName);
     assertEquals(1, fsFamilies.size());
-    table.close();
 
     // Restore back the snapshot (with the cf)
     admin.disableTable(tableName);

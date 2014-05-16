@@ -898,6 +898,9 @@ public final class ProtobufUtil {
     if (scan.isReversed()) {
       scanBuilder.setReversed(scan.isReversed());
     }
+    if (scan.getConsistency() == Consistency.TIMELINE) {
+      scanBuilder.setConsistency(toConsistency(scan.getConsistency()));
+    }
     return scanBuilder.build();
   }
 
@@ -976,6 +979,9 @@ public final class ProtobufUtil {
     }
     if (proto.hasReversed()) {
       scan.setReversed(proto.getReversed());
+    }
+    if (proto.hasConsistency()) {
+      scan.setConsistency(toConsistency(proto.getConsistency()));
     }
     return scan;
   }

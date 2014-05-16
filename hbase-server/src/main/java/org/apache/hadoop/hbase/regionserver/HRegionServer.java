@@ -211,7 +211,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.Threads;
@@ -3160,6 +3159,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             try {
               int i = 0;
               synchronized(scanner) {
+                boolean stale = (region.getRegionInfo().getReplicaId() != 0);
                 for (; i < rows
                     && currentScanResultSize < maxResultSize; ) {
                   // Collect values to be returned here
@@ -3170,7 +3170,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
                         currentScanResultSize += KeyValueUtil.ensureKeyValue(kv).heapSize();
                       }
                     }
-                    results.add(Result.create(values));
+                    results.add(Result.create(values, null, stale));
                     i++;
                   }
                   if (!moreRows) {
@@ -3197,7 +3197,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             moreResults = false;
             results = null;
           } else {
-            addResults(builder, results, controller);
+            addResults(builder, results, controller, region.getRegionInfo().getReplicaId() == 0);
           }
         } finally {
           // We're done. On way out re-add the above removed lease.
@@ -3243,8 +3243,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   }
 
   private void addResults(final ScanResponse.Builder builder, final List<Result> results,
-      final RpcController controller) {
+      final RpcController controller, boolean isDefaultRegion) {
     if (results == null || results.isEmpty()) return;
+    builder.setStale(!isDefaultRegion);
     if (isClientCellBlockSupport()) {
       for (Result res : results) {
         builder.addCellsPerResult(res.size());

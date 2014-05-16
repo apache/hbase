@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.LinkedList;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,6 +36,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
+import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
@@ -54,23 +57,70 @@ public class ClientScanner extends AbstractClientScanner {
     // Current region scanner is against.  Gets cleared if current region goes
     // wonky: e.g. if it splits on us.
     protected HRegionInfo currentRegion = null;
-    protected ScannerCallable callable = null;
+    protected ScannerCallableWithReplicas callable = null;
     protected final LinkedList<Result> cache = new LinkedList<Result>();
     protected final int caching;
     protected long lastNext;
     // Keep lastResult returned successfully in case we have to reset scanner.
     protected Result lastResult = null;
     protected final long maxScannerResultSize;
-    private final HConnection connection;
+    private final ClusterConnection connection;
     private final TableName tableName;
     private final int scannerTimeout;
     protected boolean scanMetricsPublished = false;
     protected RpcRetryingCaller<Result []> caller;
+    protected Configuration conf;
+    //The timeout on the primary. Applicable if there are multiple replicas for a region
+    //In that case, we will only wait for this much timeout on the primary before going
+    //to the replicas and trying the same scan. Note that the retries will still happen
+    //on each replica and the first successful results will be taken. A timeout of 0 is
+    //disallowed.
+    protected final int primaryOperationTimeout;
+    private int retries;
+    protected final ExecutorService pool;
 
     /**
-     * Create a new ClientScanner for the specified table. An HConnection will be
+     * Create a new ClientScanner for the specified table.
+     * Note that the passed {@link Scan}'s start row maybe changed.
+     * 
+     * @param conf
+     * @param scan
+     * @param tableName
+     * @param connection
+     * @param pool
+     * @param primaryOperationTimeout
+     * @throws IOException
+     */
+    public ClientScanner(final Configuration conf, final Scan scan,
+        final TableName tableName, ClusterConnection connection, 
+        ExecutorService pool, int primaryOperationTimeout)
+            throws IOException {
+      this(conf, scan, tableName, connection,
+          new RpcRetryingCallerFactory(conf), pool, primaryOperationTimeout);
+    }
+
+    /**
+     * Create a new ClientScanner for the specified table.
+     * Note that the passed {@link Scan}'s start row maybe changed.
+     * 
+     * @param conf
+     * @param scan
+     * @param tableName
+     * @param connection
+     * @param rpcFactory
+     * @throws IOException
+     */
+    public ClientScanner(final Configuration conf, final Scan scan,
+        final TableName tableName, ClusterConnection connection, 
+        RpcRetryingCallerFactory rpcFactory)
+            throws IOException {
+      this(conf, scan, tableName, connection, rpcFactory, null, 0);
+    }
+
+    /**
+     * Create a new ClientScanner for the specified table. A ClusterConnection will be
      * retrieved using the passed Configuration.
-     * Note that the passed {@link Scan}'s start row maybe changed changed.
+     * Note that the passed {@link Scan}'s start row maybe changed.
      *
      * @param conf The {@link Configuration} to use.
      * @param scan {@link Scan} to use in this scanner
@@ -79,7 +129,7 @@ public class ClientScanner extends AbstractClientScanner {
      */
     public ClientScanner(final Configuration conf, final Scan scan,
         final TableName tableName) throws IOException {
-      this(conf, scan, tableName, HConnectionManager.getConnection(conf));
+      this(conf, scan, tableName, ConnectionManager.getConnectionInternal(conf));
     }
 
     /**
@@ -94,7 +144,7 @@ public class ClientScanner extends AbstractClientScanner {
 
     /**
      * Create a new ClientScanner for the specified table
-     * Note that the passed {@link Scan}'s start row maybe changed changed.
+     * Note that the passed {@link Scan}'s start row maybe changed.
      *
      * @param conf The {@link Configuration} to use.
      * @param scan {@link Scan} to use in this scanner
@@ -103,8 +153,8 @@ public class ClientScanner extends AbstractClientScanner {
      * @throws IOException
      */
   public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
-      HConnection connection) throws IOException {
-    this(conf, scan, tableName, connection, new RpcRetryingCallerFactory(conf));
+      ClusterConnection connection) throws IOException {
+    this(conf, scan, tableName, connection, new RpcRetryingCallerFactory(conf), null, 0);
   }
 
   /**
@@ -112,8 +162,9 @@ public class ClientScanner extends AbstractClientScanner {
    */
   @Deprecated
   public ClientScanner(final Configuration conf, final Scan scan, final byte [] tableName,
-      HConnection connection) throws IOException {
-    this(conf, scan, TableName.valueOf(tableName), connection, new RpcRetryingCallerFactory(conf));
+      ClusterConnection connection) throws IOException {
+    this(conf, scan, TableName.valueOf(tableName), connection, new RpcRetryingCallerFactory(conf),
+        null, 0);
   }
 
   /**
@@ -126,7 +177,8 @@ public class ClientScanner extends AbstractClientScanner {
    * @throws IOException
    */
   public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
-      HConnection connection, RpcRetryingCallerFactory rpcFactory) throws IOException {
+      ClusterConnection connection, RpcRetryingCallerFactory rpcFactory, ExecutorService pool,
+      int primaryOperationTimeout) throws IOException {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Scan table=" + tableName
             + ", startRow=" + Bytes.toStringBinary(scan.getStartRow()));
@@ -135,6 +187,10 @@ public class ClientScanner extends AbstractClientScanner {
       this.tableName = tableName;
       this.lastNext = System.currentTimeMillis();
       this.connection = connection;
+      this.pool = pool;
+      this.primaryOperationTimeout = primaryOperationTimeout;
+      this.retries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+          HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
       if (scan.getMaxResultSize() > 0) {
         this.maxScannerResultSize = scan.getMaxResultSize();
       } else {
@@ -159,8 +215,8 @@ public class ClientScanner extends AbstractClientScanner {
             HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
       }
 
-    this.caller = rpcFactory.<Result[]> newCaller();
-
+      this.caller = rpcFactory.<Result[]> newCaller();
+      this.conf = conf;
       initializeScannerInConstruction();
     }
 
@@ -169,7 +225,7 @@ public class ClientScanner extends AbstractClientScanner {
       nextScanner(this.caching, false);
     }
 
-    protected HConnection getConnection() {
+    protected ClusterConnection getConnection() {
       return this.connection;
     }
 
@@ -186,8 +242,32 @@ public class ClientScanner extends AbstractClientScanner {
       return this.tableName;
     }
 
+    protected int getRetries() {
+      return this.retries;
+    }
+
+    protected int getScannerTimeout() {
+      return this.scannerTimeout;
+    }
+
+    protected Configuration getConf() {
+      return this.conf;
+    }
+
     protected Scan getScan() {
       return scan;
+    }
+
+    protected ExecutorService getPool() {
+      return pool;
+    }
+
+    protected int getPrimaryOperationTimeout() {
+      return primaryOperationTimeout;
+    }
+
+    protected int getCaching() {
+      return caching;
     }
 
     protected long getTimestamp() {
@@ -210,6 +290,15 @@ public class ClientScanner extends AbstractClientScanner {
       return false; //unlikely.
     }
 
+    private boolean possiblyNextScanner(int nbRows, final boolean done) throws IOException {
+      // If we have just switched replica, don't go to the next scanner yet. Rather, try
+      // the scanner operations on the new replica, from the right point in the scan
+      // Note that when we switched to a different replica we left it at a point
+      // where we just did the "openScanner" with the appropriate startrow
+      if (callable != null && callable.switchedToADifferentReplica()) return true;
+      return nextScanner(nbRows, done);
+    }
+
     /*
      * Gets a scanner for the next region.  If this.currentRegion != null, then
      * we will move to the endrow of this.currentRegion.  Else we will get
@@ -224,7 +313,7 @@ public class ClientScanner extends AbstractClientScanner {
       // Close the previous scanner if it's open
       if (this.callable != null) {
         this.callable.setClose();
-        this.caller.callWithRetries(callable);
+        call(scan, callable, caller);
         this.callable = null;
       }
 
@@ -261,7 +350,7 @@ public class ClientScanner extends AbstractClientScanner {
         callable = getScannerCallable(localStartKey, nbRows);
         // Open a scanner on the region server starting at the
         // beginning of the region
-        this.caller.callWithRetries(callable);
+        call(scan, callable, caller);
         this.currentRegion = callable.getHRegionInfo();
         if (this.scanMetrics != null) {
           this.scanMetrics.countOfRegions.incrementAndGet();
@@ -273,14 +362,28 @@ public class ClientScanner extends AbstractClientScanner {
       return true;
     }
 
+  static Result[] call(Scan scan, ScannerCallableWithReplicas callable,
+      RpcRetryingCaller<Result[]> caller) 
+      throws IOException, RuntimeException {
+    if (Thread.interrupted()) {
+      throw new InterruptedIOException(); 
+    }
+    // callWithoutRetries is at this layer. Within the ScannerCallableWithReplicas,
+    // we do a callWithRetries
+    return caller.callWithoutRetries(callable);
+  }
+
     @InterfaceAudience.Private
-    protected ScannerCallable getScannerCallable(byte [] localStartKey,
+    protected ScannerCallableWithReplicas getScannerCallable(byte [] localStartKey,
         int nbRows) {
       scan.setStartRow(localStartKey);
       ScannerCallable s = new ScannerCallable(getConnection(),
         getTable(), scan, this.scanMetrics);
       s.setCaching(nbRows);
-      return s;
+      ScannerCallableWithReplicas sr = new ScannerCallableWithReplicas(tableName, getConnection(),
+       s, pool, primaryOperationTimeout, scan,
+       retries, scannerTimeout, caching, conf, caller);
+      return sr;
     }
 
     /**
@@ -326,17 +429,43 @@ public class ClientScanner extends AbstractClientScanner {
               // Skip only the first row (which was the last row of the last
               // already-processed batch).
               callable.setCaching(1);
-              values = this.caller.callWithRetries(callable);
+              values = call(scan, callable, caller);
+              // When the replica switch happens, we need to do certain operations
+              // again. The scannercallable will openScanner with the right startkey
+              // but we need to pick up from there. Bypass the rest of the loop
+              // and let the catch-up happen in the beginning of the loop as it
+              // happens for the cases where we see exceptions. Since only openScanner
+              // would have happened, values would be null
+              if (values == null && callable.switchedToADifferentReplica()) {
+                if (this.lastResult != null) { //only skip if there was something read earlier
+                  skipFirst = true;
+                }
+                this.currentRegion = callable.getHRegionInfo();
+                continue;
+              }
               callable.setCaching(this.caching);
               skipFirst = false;
             }
             // Server returns a null values if scanning is to stop.  Else,
             // returns an empty array if scanning is to go on and we've just
             // exhausted current region.
-            values = this.caller.callWithRetries(callable);
+            values = call(scan, callable, caller);
             if (skipFirst && values != null && values.length == 1) {
               skipFirst = false; // Already skipped, unset it before scanning again
-              values = this.caller.callWithRetries(callable);
+              values = call(scan, callable, caller);
+            }
+            // When the replica switch happens, we need to do certain operations
+            // again. The callable will openScanner with the right startkey
+            // but we need to pick up from there. Bypass the rest of the loop
+            // and let the catch-up happen in the beginning of the loop as it
+            // happens for the cases where we see exceptions. Since only openScanner
+            // would have happened, values would be null
+            if (values == null && callable.switchedToADifferentReplica()) {
+              if (this.lastResult != null) { //only skip if there was something read earlier
+                skipFirst = true;
+              }
+              this.currentRegion = callable.getHRegionInfo();
+              continue;
             }
             retryAfterOutOfOrderException  = true;
           } catch (DoNotRetryIOException e) {
@@ -410,7 +539,8 @@ public class ClientScanner extends AbstractClientScanner {
             }
           }
           // Values == null means server-side filter has determined we must STOP
-        } while (remainingResultSize > 0 && countdown > 0 && nextScanner(countdown, values == null));
+        } while (remainingResultSize > 0 && countdown > 0 && 
+            possiblyNextScanner(countdown, values == null));
       }
 
       if (cache.size() > 0) {
@@ -428,7 +558,7 @@ public class ClientScanner extends AbstractClientScanner {
       if (callable != null) {
         callable.setClose();
         try {
-          this.caller.callWithRetries(callable);
+          call(scan, callable, caller);
         } catch (IOException e) {
           // We used to catch this error, interpret, and rethrow. However, we
           // have since decided that it's not nice for a scanner's close to

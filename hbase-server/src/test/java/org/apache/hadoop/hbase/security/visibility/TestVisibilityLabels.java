@@ -735,7 +735,7 @@ public class TestVisibilityLabels {
       table.put(puts);
     } finally {
       if (table != null) {
-        table.close();
+        table.flushCommits();
       }
     }
     return table;
