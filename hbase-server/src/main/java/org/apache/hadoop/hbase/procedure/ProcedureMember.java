@@ -246,7 +246,8 @@ public class ProcedureMember implements Closeable {
           ", ignoring it.", ee);
       return; // Procedure has already completed
     }
-    LOG.error("Propagating foreign exception to subprocedure " + sub.getName(), ee);
-    sub.monitor.receive(ee);
+    String msg = "Propagating foreign exception to subprocedure " + sub.getName();
+    LOG.error(msg, ee);
+    sub.cancel(msg, ee);
   }
 }

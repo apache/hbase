@@ -263,6 +263,7 @@ abstract public class Subprocedure implements Callable<Void> {
    */
   public void cancel(String msg, Throwable cause) {
     LOG.error(msg, cause);
+    complete = true;
     if (cause instanceof ForeignException) {
       monitor.receive((ForeignException) cause);
     } else {
