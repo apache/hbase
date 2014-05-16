@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
-import java.rmi.UnexpectedException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -961,7 +960,7 @@ public class TestDefaultMemStore extends TestCase {
     return ROW_COUNT;
   }
 
-  private long runSnapshot(final DefaultMemStore hmc) throws UnexpectedException {
+  private long runSnapshot(final DefaultMemStore hmc) throws UnexpectedStateException {
     // Save off old state.
     int oldHistorySize = hmc.snapshot.size();
     MemStoreSnapshot snapshot = hmc.snapshot();

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.rmi.UnexpectedException;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -44,9 +43,10 @@ public interface MemStore extends HeapSize {
   /**
    * Clears the current snapshot of the Memstore.
    * @param id
+   * @throws UnexpectedStateException
    * @see #snapshot()
    */
-  void clearSnapshot(long id) throws UnexpectedException;
+  void clearSnapshot(long id) throws UnexpectedStateException;
 
   /**
    * On flush, how much memory we will clear.

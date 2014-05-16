@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.rmi.UnexpectedException;
 import java.util.List;
 import java.util.Random;
 
@@ -97,7 +96,7 @@ public class TestMemStoreChunkPool {
   }
 
   @Test
-  public void testPuttingBackChunksAfterFlushing() throws UnexpectedException {
+  public void testPuttingBackChunksAfterFlushing() throws UnexpectedStateException {
     byte[] row = Bytes.toBytes("testrow");
     byte[] fam = Bytes.toBytes("testfamily");
     byte[] qf1 = Bytes.toBytes("testqualifier1");
@@ -132,7 +131,7 @@ public class TestMemStoreChunkPool {
 
   @Test
   public void testPuttingBackChunksWithOpeningScanner()
-      throws UnexpectedException {
+      throws UnexpectedStateException {
     byte[] row = Bytes.toBytes("testrow");
     byte[] fam = Bytes.toBytes("testfamily");
     byte[] qf1 = Bytes.toBytes("testqualifier1");

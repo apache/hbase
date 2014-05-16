@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
-import java.rmi.UnexpectedException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -176,14 +175,15 @@ public class DefaultMemStore implements MemStore {
   /**
    * The passed snapshot was successfully persisted; it can be let go.
    * @param id Id of the snapshot to clean out.
-   * @throws UnexpectedException
+   * @throws UnexpectedStateException
    * @see #snapshot()
    */
   @Override
-  public void clearSnapshot(long id) throws UnexpectedException {
+  public void clearSnapshot(long id) throws UnexpectedStateException {
     MemStoreLAB tmpAllocator = null;
     if (this.snapshotId != id) {
-      throw new UnexpectedException("Current snapshot id is " + this.snapshotId + ",passed " + id);
+      throw new UnexpectedStateException("Current snapshot id is " + this.snapshotId + ",passed "
+          + id);
     }
     // OK. Passed in snapshot is same as current snapshot. If not-empty,
     // create a new snapshot and let the old one go.
