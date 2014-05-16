@@ -586,10 +586,10 @@ public class SchemaMetrics {
   public static void configureGlobally(Configuration conf) {
     if (conf != null) {
       final boolean useTableNameNew =
-          conf.getBoolean(SHOW_TABLE_NAME_CONF_KEY, false);
+          conf.getBoolean(SHOW_TABLE_NAME_CONF_KEY, true);
       setUseTableName(useTableNameNew);
     } else {
-      setUseTableName(false);
+      setUseTableName(true);
     }
   }
 
