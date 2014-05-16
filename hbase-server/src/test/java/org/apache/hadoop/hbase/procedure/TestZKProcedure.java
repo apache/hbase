@@ -231,7 +231,7 @@ public class TestZKProcedure {
     final int[] elem = new int[1];
     for (int i = 0; i < members.size(); i++) {
       ForeignExceptionDispatcher cohortMonitor = new ForeignExceptionDispatcher();
-      ProcedureMember comms = members.get(i).getFirst();
+      final ProcedureMember comms = members.get(i).getFirst();
       Subprocedure commit = Mockito
       .spy(new SubprocedureImpl(comms, opName, cohortMonitor, WAKE_FREQUENCY, TIMEOUT));
       // This nasty bit has one of the impls throw a TimeoutException
@@ -245,7 +245,8 @@ public class TestZKProcedure {
                 new TimeoutException("subprocTimeout" , 1, 2, 0));
             Subprocedure r = ((Subprocedure) invocation.getMock());
             LOG.error("Remote commit failure, not propagating error:" + remoteCause);
-            r.monitor.receive(remoteCause);
+            comms.receiveAbortProcedure(r.getName(), remoteCause);
+            assertEquals(r.isComplete(), true);
             // don't complete the error phase until the coordinator has gotten the error
             // notification (which ensures that we never progress past prepare)
             try {
