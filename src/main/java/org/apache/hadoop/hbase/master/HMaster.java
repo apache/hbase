@@ -2019,9 +2019,6 @@ public class HMaster extends HasThread implements HMasterInterface,
         " as closing on " + name + "; cleaning SERVER + STARTCODE; " +
           "master will tell regionserver to close region on next heartbeat");
       this.regionManager.setClosing(name, hri, hri.isOffline());
-      MetaRegion meta = this.regionManager.getMetaRegionForRow(regionname);
-      HRegionInterface srvr = getMETAServer(meta);
-      HRegion.cleanRegionInMETA(srvr, meta.getRegionName(), hri);
       break;
 
     default:
