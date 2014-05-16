@@ -50,11 +50,12 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * SlabCache is composed of multiple SingleSizeCaches. It uses a TreeMap in
  * order to determine where a given element fits. Redirects gets and puts to the
  * correct SingleSizeCache.
+ * 
+ * <p>It is configured with a call to {@link #addSlab(int, int)}
  *
  **/
 @InterfaceAudience.Private
 public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
-
   private final ConcurrentHashMap<BlockCacheKey, SingleSizeCache> backingStore;
   private final TreeMap<Integer, SingleSizeCache> sizer;
   static final Log LOG = LogFactory.getLog(SlabCache.class);
@@ -72,12 +73,25 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
       SlabCache.class, false);
 
   /**
+   * Key used reading from configuration list of the percentage of our total space we allocate to
+   * the slabs.  Defaults: "0.80", "0.20".
+   * @see #SLAB_CACHE_SIZES_KEY Must have corresponding number of elements.
+   */
+  static final String SLAB_CACHE_PROPORTIONS_KEY = "hbase.offheapcache.slab.proportions";
+
+  /**
+   * Configuration key for list of the blocksize of the slabs in bytes. (E.g. the slab holds
+   * blocks of this size).  Defaults: avgBlockSize * 11 / 10, avgBlockSize * 21 / 10
+   * @see #SLAB_CACHE_PROPORTIONS_KEY
+   */
+  static final String SLAB_CACHE_SIZES_KEY = "hbase.offheapcache.slab.sizes";
+
+  /**
    * Default constructor, creates an empty SlabCache.
    *
    * @param size Total size allocated to the SlabCache. (Bytes)
    * @param avgBlockSize Average size of a block being cached.
    **/
-
   public SlabCache(long size, long avgBlockSize) {
     this.avgBlockSize = avgBlockSize;
     this.size = size;
@@ -108,9 +122,8 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
    */
   public void addSlabByConf(Configuration conf) {
     // Proportions we allocate to each slab of the total size.
-    String[] porportions = conf.getStrings(
-        "hbase.offheapcache.slab.proportions", "0.80", "0.20");
-    String[] sizes = conf.getStrings("hbase.offheapcache.slab.sizes",
+    String[] porportions = conf.getStrings(SLAB_CACHE_PROPORTIONS_KEY, "0.80", "0.20");
+    String[] sizes = conf.getStrings(SLAB_CACHE_SIZES_KEY,
         Long.valueOf(avgBlockSize * 11 / 10).toString(),
         Long.valueOf(avgBlockSize * 21 / 10).toString());
 
@@ -178,8 +191,8 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
   }
 
   private void addSlab(int blockSize, int numBlocks) {
-    LOG.info("Creating a slab of blockSize " + blockSize + " with " + numBlocks
-        + " blocks, " + StringUtils.humanReadableInt(blockSize * (long) numBlocks) + "bytes.");
+    LOG.info("Creating slab of blockSize " + blockSize + " with " + numBlocks
+        + " blocks, " + StringUtils.byteDesc(blockSize * (long) numBlocks) + "bytes.");
     sizer.put(blockSize, new SingleSizeCache(blockSize, numBlocks, this));
   }
 
@@ -325,6 +338,7 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
 
   /*
    * Statistics thread. Periodically prints the cache statistics to the log.
+   * TODO: Fix.  Just emit to metrics.  Don't run a thread just to do a log.
    */
   static class StatisticsThread extends HasThread {
     SlabCache ourcache;

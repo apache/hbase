@@ -337,8 +337,7 @@ public interface HLog {
    * able to sync an explicit edit only (the current default implementation syncs up to the time
    * of the sync call syncing whatever is behind the sync).
    * @throws IOException
-   * @deprecated Use
-   * {@link #appendNoSync(HRegionInfo, HLogKey, WALEdit, HTableDescriptor, AtomicLong, boolean)}
+   * @deprecated Use {@link #appendNoSync(HTableDescriptor, HRegionInfo, HLogKey, WALEdit, AtomicLong, boolean)}
    * instead because you can get back the region edit/sequenceid; it is set into the passed in
    * <code>key</code>.
    */

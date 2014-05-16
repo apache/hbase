@@ -131,7 +131,7 @@ import com.google.protobuf.Service;
  *
  * <p>
  * To perform authorization checks, {@code AccessController} relies on the
- * {@link org.apache.hadoop.hbase.ipc.RpcServerEngine} being loaded to provide
+ * RpcServerEngine being loaded to provide
  * the user identities for remote requests.
  * </p>
  *

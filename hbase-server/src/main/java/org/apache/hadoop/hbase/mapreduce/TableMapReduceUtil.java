@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.mapreduce.hadoopbackport.JarFinder;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -280,6 +281,8 @@ public class TableMapReduceUtil {
   public static void resetCacheConfig(Configuration conf) {
     conf.setFloat(
       HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
+    conf.setFloat(CacheConfig.SLAB_CACHE_OFFHEAP_PERCENTAGE_KEY, 0f);
+    conf.setFloat(CacheConfig.BUCKET_CACHE_SIZE_KEY, 0f);
     conf.setFloat("hbase.offheapcache.percentage", 0f);
     conf.setFloat("hbase.bucketcache.size", 0f);
   }

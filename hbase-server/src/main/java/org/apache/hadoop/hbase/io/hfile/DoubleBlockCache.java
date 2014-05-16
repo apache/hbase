@@ -63,15 +63,15 @@ public class DoubleBlockCache implements ResizableBlockCache, HeapSize {
       long onHeapBlockSize, long offHeapBlockSize, Configuration conf) {
 
     LOG.info("Creating on-heap cache of size "
-        + StringUtils.humanReadableInt(onHeapSize)
-        + "bytes with an average block size of "
-        + StringUtils.humanReadableInt(onHeapBlockSize) + " bytes.");
+        + StringUtils.byteDesc(onHeapSize)
+        + " with an average block size of "
+        + StringUtils.byteDesc(onHeapBlockSize));
     onHeapCache = new LruBlockCache(onHeapSize, onHeapBlockSize, conf);
 
     LOG.info("Creating off-heap cache of size "
-        + StringUtils.humanReadableInt(offHeapSize)
-        + "bytes with an average block size of "
-        + StringUtils.humanReadableInt(offHeapBlockSize) + " bytes.");
+        + StringUtils.byteDesc(offHeapSize)
+        + "with an average block size of "
+        + StringUtils.byteDesc(offHeapBlockSize));
     offHeapCache = new SlabCache(offHeapSize, offHeapBlockSize);
 
     offHeapCache.addSlabByConf(conf);

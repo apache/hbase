@@ -26,17 +26,17 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.List;
 
+import javax.management.JMException;
+import javax.management.MBeanServer;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import com.google.common.base.Preconditions;
-
-import javax.management.JMException;
-import javax.management.MBeanServer;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
 
 /**
  * Utilities for interacting with and monitoring DirectByteBuffer allocations.
@@ -71,7 +71,7 @@ public class DirectMemoryUtils {
       try {
         a = BEAN_SERVER.getAttribute(NIO_DIRECT_POOL, MEMORY_USED);
       } catch (JMException e) {
-        LOG.debug("Failed to retrieve nio.BufferPool direct MemoryUsed attribute.", e);
+        LOG.debug("Failed to retrieve nio.BufferPool direct MemoryUsed attribute: " + e);
       }
     }
     HAS_MEMORY_USED_ATTRIBUTE = a != null;

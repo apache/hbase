@@ -33,6 +33,8 @@ import org.apache.hadoop.hbase.io.hfile.slab.SlabCache;
 import org.apache.hadoop.hbase.util.DirectMemoryUtils;
 import org.apache.hadoop.util.StringUtils;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Stores all of the cache objects and configuration for a single HFile.
  */
@@ -83,7 +85,7 @@ public class CacheConfig {
    * to the file that will host the file-based cache.  See BucketCache#getIOEngineFromName() for
    * list of supported ioengine options.
    * 
-   * <p>Set this option and a non-zero {@link BUCKET_CACHE_SIZE_KEY} to enable bucket cache.
+   * <p>Set this option and a non-zero {@link #BUCKET_CACHE_SIZE_KEY} to enable bucket cache.
    */
   public static final String BUCKET_CACHE_IOENGINE_KEY = "hbase.bucketcache.ioengine";
 
@@ -91,10 +93,10 @@ public class CacheConfig {
    * When using bucket cache, this is a float that EITHER represents a percentage of total heap
    * memory size to give to the cache (if < 1.0) OR, it is the capacity in megabytes of the cache.
    * 
-   * <p>The resultant size is further divided if {@link BUCKET_CACHE_COMBINED_KEY} is set (It is
+   * <p>The resultant size is further divided if {@link #BUCKET_CACHE_COMBINED_KEY} is set (It is
    * set by default. When false, bucket cache serves as an "L2" cache to the "L1"
    * {@link LruBlockCache}).  The percentage is set in
-   * with {@link BUCKET_CACHE_COMBINED_PERCENTAGE_KEY} float.
+   * with {@link #BUCKET_CACHE_COMBINED_PERCENTAGE_KEY} float.
    */
   public static final String BUCKET_CACHE_SIZE_KEY = "hbase.bucketcache.size";
 
@@ -115,7 +117,7 @@ public class CacheConfig {
 
   /**
    * A float which designates how much of the overall cache to give to bucket cache
-   * and how much to on-heap lru cache when {@link BUCKET_CACHE_COMBINED_KEY} is set.
+   * and how much to on-heap lru cache when {@link #BUCKET_CACHE_COMBINED_KEY} is set.
    */
   public static final String BUCKET_CACHE_COMBINED_PERCENTAGE_KEY = 
       "hbase.bucketcache.percentage.in.combinedcache";
@@ -251,6 +253,7 @@ public class CacheConfig {
     this.cacheBloomsOnWrite = cacheBloomsOnWrite;
     this.evictOnClose = evictOnClose;
     this.cacheCompressed = cacheCompressed;
+    LOG.info(this);
   }
 
   /**
@@ -369,13 +372,13 @@ public class CacheConfig {
     if (!isBlockCacheEnabled()) {
       return "CacheConfig:disabled";
     }
-    return "CacheConfig:enabled " +
-      "[cacheDataOnRead=" + shouldCacheDataOnRead() + "] " +
-      "[cacheDataOnWrite=" + shouldCacheDataOnWrite() + "] " +
-      "[cacheIndexesOnWrite=" + shouldCacheIndexesOnWrite() + "] " +
-      "[cacheBloomsOnWrite=" + shouldCacheBloomsOnWrite() + "] " +
-      "[cacheEvictOnClose=" + shouldEvictOnClose() + "] " +
-      "[cacheCompressed=" + shouldCacheCompressed() + "]";
+    return "blockCache=" + getBlockCache() +
+      ", cacheDataOnRead=" + shouldCacheDataOnRead() +
+      ", cacheDataOnWrite=" + shouldCacheDataOnWrite() +
+      ", cacheIndexesOnWrite=" + shouldCacheIndexesOnWrite() +
+      ", cacheBloomsOnWrite=" + shouldCacheBloomsOnWrite() +
+      ", cacheEvictOnClose=" + shouldEvictOnClose() +
+      ", cacheCompressed=" + shouldCacheCompressed();
   }
 
   // Static block cache reference and methods
@@ -384,7 +387,9 @@ public class CacheConfig {
    * Static reference to the block cache, or null if no caching should be used
    * at all.
    */
-  private static BlockCache globalBlockCache;
+  // Clear this if in tests you'd make more than one block cache instance.
+  @VisibleForTesting
+  static BlockCache GLOBAL_BLOCK_CACHE_INSTANCE;
 
   /** Boolean whether we have disabled the block cache entirely. */
   private static boolean blockCacheDisabled = false;
@@ -396,7 +401,7 @@ public class CacheConfig {
    * @return The block cache or <code>null</code>.
    */
   public static synchronized BlockCache instantiateBlockCache(Configuration conf) {
-    if (globalBlockCache != null) return globalBlockCache;
+    if (GLOBAL_BLOCK_CACHE_INSTANCE != null) return GLOBAL_BLOCK_CACHE_INSTANCE;
     if (blockCacheDisabled) return null;
 
     float cachePercentage = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
@@ -414,10 +419,10 @@ public class CacheConfig {
     MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
     long lruCacheSize = (long) (mu.getMax() * cachePercentage);
     int blockSize = conf.getInt("hbase.offheapcache.minblocksize", HConstants.DEFAULT_BLOCKSIZE);
-    long offHeapCacheSize =
-      (long) (conf.getFloat("hbase.offheapcache.percentage", (float) 0) *
+    long slabCacheOffHeapCacheSize =
+      (long) (conf.getFloat(SLAB_CACHE_OFFHEAP_PERCENTAGE_KEY, (float) 0) *
           DirectMemoryUtils.getDirectMemorySize());
-    if (offHeapCacheSize <= 0) {
+    if (slabCacheOffHeapCacheSize <= 0) {
       String bucketCacheIOEngineName = conf.get(BUCKET_CACHE_IOENGINE_KEY, null);
       float bucketCachePercentage = conf.getFloat(BUCKET_CACHE_SIZE_KEY, 0F);
       // A percentage of max heap size or a absolute value with unit megabytes
@@ -452,19 +457,19 @@ public class CacheConfig {
           throw new RuntimeException(ioex);
         }
       }
-      LOG.info("Allocating LruBlockCache with maximum size " +
-        StringUtils.humanReadableInt(lruCacheSize) + ", blockSize=" + blockSize);
+      LOG.info("Allocating LruBlockCache size=" +
+        StringUtils.byteDesc(lruCacheSize) + ", blockSize=" + StringUtils.byteDesc(blockSize));
       LruBlockCache lruCache = new LruBlockCache(lruCacheSize, blockSize);
       lruCache.setVictimCache(bucketCache);
       if (bucketCache != null && combinedWithLru) {
-        globalBlockCache = new CombinedBlockCache(lruCache, bucketCache);
+        GLOBAL_BLOCK_CACHE_INSTANCE = new CombinedBlockCache(lruCache, bucketCache);
       } else {
-        globalBlockCache = lruCache;
+        GLOBAL_BLOCK_CACHE_INSTANCE = lruCache;
       }
     } else {
-      globalBlockCache = new DoubleBlockCache(
-          lruCacheSize, offHeapCacheSize, blockSize, blockSize, conf);
+      GLOBAL_BLOCK_CACHE_INSTANCE = new DoubleBlockCache(
+          lruCacheSize, slabCacheOffHeapCacheSize, blockSize, blockSize, conf);
     }
-    return globalBlockCache;
+    return GLOBAL_BLOCK_CACHE_INSTANCE;
   }
 }

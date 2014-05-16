@@ -1590,7 +1590,9 @@ rs.close();
        <title>Block Cache</title>
        <para>Below we describe the default block cache implementation, the LRUBlockCache.
        Read for an understanding of how it works and an overview of the facility it provides.
-       Other, off-heap options have since been added.  After reading the below,
+       Other, off-heap options have since been added.  These are described in the
+       javadoc <link xlink:href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/package-summary.html#package_description">org.apache.hadoop.hbase.io.hfile package description</link>.
+       After reading the below,
        be sure to visit the blog series <link xlink:href="http://www.n10k.com/blog/blockcache-101/">BlockCache 101</link> by Nick Dimiduk
        where other Block Cache implementations are described.
        </para>
@@ -1669,6 +1671,12 @@ rs.close();
             counting the number of rows in a table that serves live traffic, caching every block of that table would create massive churn and would surely evict data that's currently in use.
             </listitem>
         </itemizedlist>
+      </section>
+      <section xml:id="offheap.blockcache"><title>Offheap Block Cache</title>
+      <para>There are a few options for configuring an off-heap cache for blocks read from HDFS.
+      The options and their setup are described in a javadoc package doc.  See
+      <link xlink:href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/package-summary.html#package_description">org.apache.hadoop.hbase.io.hfile package description</link>.
+      </para>
       </section>
       </section>
 

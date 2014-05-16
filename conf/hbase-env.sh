@@ -66,10 +66,12 @@ export HBASE_OPTS="-XX:+UseConcMarkSweepGC"
 # If FILE-PATH is not replaced, the log file(.gc) would still be generated in the HBASE_LOG_DIR .
 # export CLIENT_GC_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:<FILE-PATH> -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=1 -XX:GCLogFileSize=512M"
 
-# Uncomment below if you intend to use the EXPERIMENTAL off heap cache.
-# export HBASE_OPTS="$HBASE_OPTS -XX:MaxDirectMemorySize="
-# Set hbase.offheapcache.percentage in hbase-site.xml to a nonzero value.
-
+# Uncomment below if you intend to use off heap cache.
+# export HBASE_OPTS="$HBASE_OPTS -XX:MaxDirectMemorySize=SET_THIS_TO_HOW_MANY_GIGS_OF_OFFHEAP"
+# For example, to allocate 8G of offheap, set SET_THIS_TO_HOW_MANY_GIGS_OF_OFFHEAP to 8G as in:
+# export HBASE_OPTS="$HBASE_OPTS -XX:MaxDirectMemorySize=8G"
+# See the package documentation for org.apache.hadoop.hbase.io.hfile for other configurations
+# needed setting up off-heap block caching. 
 
 # Uncomment and adjust to enable JMX exporting
 # See jmxremote.password and jmxremote.access in $JRE_HOME/lib/management to configure remote password access.

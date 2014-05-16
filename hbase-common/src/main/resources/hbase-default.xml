@@ -939,8 +939,10 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.offheapcache.percentage</name>
     <value>0</value>
     <description>The percentage of the off heap space (-XX:MaxDirectMemorySize) to be
-     allocated towards the experimental off heap cache. If you desire the cache to be
-     disabled, simply set this value to 0.</description>
+     allocated towards the experimental off heap "SlabCache" (This is different to
+     the BucketCache -- see the package javadoc for org.apache.hadoop.hbase.io.hfile
+     for more on your options). If you desire the cache to be disabled, simply set this
+      value to 0.</description>
   </property>
   <property>
     <name>hbase.data.umask.enable</name>
