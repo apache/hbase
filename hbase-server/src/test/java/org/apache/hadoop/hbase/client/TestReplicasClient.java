@@ -37,11 +37,12 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster;
-import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
@@ -53,9 +54,14 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -84,16 +90,44 @@ public class TestReplicasClient {
    */
   public static class SlowMeCopro extends BaseRegionObserver {
     static final AtomicLong sleepTime = new AtomicLong(0);
+    static final AtomicBoolean slowDownNext = new AtomicBoolean(false);
+    static final AtomicInteger countOfNext = new AtomicInteger(0);
     static final AtomicReference<CountDownLatch> cdl =
         new AtomicReference<CountDownLatch>(new CountDownLatch(0));
-
+    Random r = new Random();
     public SlowMeCopro() {
     }
 
     @Override
     public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
                          final Get get, final List<Cell> results) throws IOException {
+      slowdownCode(e);
+    }
 
+    @Override
+    public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final Scan scan, final RegionScanner s) throws IOException {
+      slowdownCode(e);
+      return s;
+    }
+
+    @Override
+    public boolean preScannerNext(final ObserverContext<RegionCoprocessorEnvironment> e,
+        final InternalScanner s, final List<Result> results,
+        final int limit, final boolean hasMore) throws IOException {
+      //this will slow down a certain next operation if the conditions are met. The slowness
+      //will allow the call to go to a replica
+      if (slowDownNext.get()) {
+        //have some "next" return successfully from the primary; hence countOfNext checked
+        if (countOfNext.incrementAndGet() == 2) {
+          sleepTime.set(2000);
+          slowdownCode(e);
+        }
+      }
+      return true;
+    }
+
+    private void slowdownCode(final ObserverContext<RegionCoprocessorEnvironment> e) {
       if (e.getEnvironment().getRegion().getRegionInfo().getReplicaId() == 0) {
         CountDownLatch latch = cdl.get();
         try {
@@ -121,7 +155,7 @@ public class TestReplicasClient {
     // enable store file refreshing
     HTU.getConfiguration().setInt(
         StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, REFRESH_PERIOD);
-
+    HTU.getConfiguration().setBoolean("hbase.client.log.scanner.activity", true);
     HTU.startMiniCluster(NB_SERVERS);
 
     // Create table then get the single region for our new table.
@@ -161,12 +195,24 @@ public class TestReplicasClient {
   @Before
   public void before() throws IOException {
     HTU.getHBaseAdmin().getConnection().clearRegionCache();
+    try {
+      openRegion(hriPrimary);
+    } catch (Exception ignored) {
+    }
+    try {
+      openRegion(hriSecondary);
+    } catch (Exception ignored) {
+    }
   }
 
   @After
   public void after() throws IOException, KeeperException {
     try {
       closeRegion(hriSecondary);
+    } catch (Exception ignored) {
+    }
+    try {
+      closeRegion(hriPrimary);
     } catch (Exception ignored) {
     }
     ZKAssign.deleteNodeFailSilent(HTU.getZooKeeperWatcher(), hriPrimary);
@@ -180,6 +226,9 @@ public class TestReplicasClient {
   }
 
   private void openRegion(HRegionInfo hri) throws Exception {
+    try {
+      if (isRegionOpened(hri)) return;
+    } catch (Exception e){}
     ZKAssign.createNodeOffline(HTU.getZooKeeperWatcher(), hri, getRS().getServerName());
     // first version is '0'
     AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(
@@ -213,6 +262,10 @@ public class TestReplicasClient {
 
     Assert.assertTrue(
         ZKAssign.deleteOpenedNode(HTU.getZooKeeperWatcher(), hri.getEncodedName(), null));
+  }
+
+  private boolean isRegionOpened(HRegionInfo hri) throws Exception {
+    return getRS().getRegionByEncodedName(hri.getEncodedName()).isAvailable();
   }
 
   private void checkRegionIsClosed(String encodedRegionName) throws Exception {
@@ -473,6 +526,108 @@ public class TestReplicasClient {
       Delete d = new Delete(b1);
       table.delete(d);
       closeRegion(hriSecondary);
+    }
+  }
+
+  @Test
+  public void testScanWithReplicas() throws Exception {
+    //simple scan
+    runMultipleScansOfOneType(false, false);
+  }
+
+  @Test
+  public void testSmallScanWithReplicas() throws Exception {
+    //small scan
+    runMultipleScansOfOneType(false, true);
+  }
+
+  @Test
+  public void testReverseScanWithReplicas() throws Exception {
+    //reverse scan
+    runMultipleScansOfOneType(true, false);
+  }
+
+  private void runMultipleScansOfOneType(boolean reversed, boolean small) throws Exception {
+    openRegion(hriSecondary);
+    int NUMROWS = 100;
+    try {
+      for (int i = 0; i < NUMROWS; i++) {
+        byte[] b1 = Bytes.toBytes("testUseRegionWithReplica" + i);
+        Put p = new Put(b1);
+        p.add(f, b1, b1);
+        table.put(p);
+      }
+      LOG.debug("PUT done");
+      int caching = 20;
+      byte[] start;
+      if (reversed) start = Bytes.toBytes("testUseRegionWithReplica" + (NUMROWS - 1));
+      else start = Bytes.toBytes("testUseRegionWithReplica" + 0);
+
+      scanWithReplicas(reversed, small, Consistency.TIMELINE, caching, start, NUMROWS, false, false);
+
+      //Even if we were to slow the server down, unless we ask for stale
+      //we won't get it
+      SlowMeCopro.sleepTime.set(5000);
+      scanWithReplicas(reversed, small, Consistency.STRONG, caching, start, NUMROWS, false, false);
+      SlowMeCopro.sleepTime.set(0);
+
+      HTU.getHBaseAdmin().flush(table.getTableName());
+      LOG.info("flush done");
+      Thread.sleep(1000 + REFRESH_PERIOD * 2);
+
+      //Now set the flag to get a response even if stale
+      SlowMeCopro.sleepTime.set(5000);
+      scanWithReplicas(reversed, small, Consistency.TIMELINE, caching, start, NUMROWS, true, false);
+      SlowMeCopro.sleepTime.set(0);
+
+      // now make some 'next' calls slow
+      SlowMeCopro.slowDownNext.set(true);
+      SlowMeCopro.countOfNext.set(0);
+      scanWithReplicas(reversed, small, Consistency.TIMELINE, caching, start, NUMROWS, true, true);
+      SlowMeCopro.slowDownNext.set(false);
+      SlowMeCopro.countOfNext.set(0);
+    } finally {
+      SlowMeCopro.cdl.get().countDown();
+      SlowMeCopro.sleepTime.set(0);
+      SlowMeCopro.slowDownNext.set(false);
+      SlowMeCopro.countOfNext.set(0);
+      for (int i = 0; i < NUMROWS; i++) {
+        byte[] b1 = Bytes.toBytes("testUseRegionWithReplica" + i);
+        Delete d = new Delete(b1);
+        table.delete(d);
+      }
+      closeRegion(hriSecondary);
+    }
+  }
+
+  private void scanWithReplicas(boolean reversed, boolean small, Consistency consistency,
+      int caching, byte[] startRow, int numRows, boolean staleExpected, boolean slowNext)
+          throws Exception {
+    Scan scan = new Scan(startRow);
+    scan.setCaching(caching);
+    scan.setReversed(reversed);
+    scan.setSmall(small);
+    scan.setConsistency(consistency);
+    ResultScanner scanner = table.getScanner(scan);
+    Iterator<Result> iter = scanner.iterator();
+    HashMap<String, Boolean> map = new HashMap<String, Boolean>();
+    int count = 0;
+    int countOfStale = 0;
+    while (iter.hasNext()) {
+      count++;
+      Result r = iter.next();
+      if (map.containsKey(new String(r.getRow()))) {
+        throw new Exception("Unexpected scan result. Repeated row " + Bytes.toString(r.getRow()));
+      }
+      map.put(new String(r.getRow()), true);
+      if (!slowNext) Assert.assertTrue(r.isStale() == staleExpected);
+      if (r.isStale()) countOfStale++;
+    }
+    LOG.debug("Count of rows " + count + " num rows expected " + numRows);
+    Assert.assertTrue(count == numRows);
+    if (slowNext) {
+      LOG.debug("Count of Stale " + countOfStale);
+      Assert.assertTrue(countOfStale > 1 && countOfStale < numRows);
     }
   }
 }

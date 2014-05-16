@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.UnknownHostException;
 
 import org.apache.commons.logging.Log;
@@ -28,11 +29,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
@@ -63,15 +67,17 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   public static final String LOG_SCANNER_ACTIVITY = "hbase.client.log.scanner.activity";
 
   public static final Log LOG = LogFactory.getLog(ScannerCallable.class);
-  private long scannerId = -1L;
+  protected long scannerId = -1L;
   protected boolean instantiated = false;
-  private boolean closed = false;
+  protected boolean closed = false;
   private Scan scan;
   private int caching = 1;
+  protected final ClusterConnection cConnection;
   protected ScanMetrics scanMetrics;
   private boolean logScannerActivity = false;
   private int logCutOffLatency = 1000;
   private static String myAddress;
+  protected final int id;
   static {
     try {
       myAddress = DNS.getDefaultHost("default", "default");
@@ -83,8 +89,8 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   // indicate if it is a remote server call
   protected boolean isRegionServerRemote = true;
   private long nextCallSeq = 0;
-  private RpcControllerFactory rpcFactory;
-  
+  protected RpcControllerFactory controllerFactory;
+
   /**
    * @param connection which connection
    * @param tableName table callable is on
@@ -93,26 +99,29 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
    *          metrics
    * @param rpcControllerFactory factory to use when creating {@link RpcController}
    */
-  public ScannerCallable (HConnection connection, TableName tableName, Scan scan,
+  public ScannerCallable (ClusterConnection connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory) {
+    this(connection, tableName, scan, scanMetrics, rpcControllerFactory, 0);
+  }
+  /**
+   *
+   * @param connection
+   * @param tableName
+   * @param scan
+   * @param scanMetrics
+   * @param id the replicaId
+   */
+  public ScannerCallable (ClusterConnection connection, TableName tableName, Scan scan,
+      ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory, int id) {
     super(connection, tableName, scan.getStartRow());
+    this.id = id;
+    this.cConnection = connection;
     this.scan = scan;
     this.scanMetrics = scanMetrics;
     Configuration conf = connection.getConfiguration();
     logScannerActivity = conf.getBoolean(LOG_SCANNER_ACTIVITY, false);
     logCutOffLatency = conf.getInt(LOG_SCANNER_LATENCY_CUTOFF, 1000);
-    this.rpcFactory = rpcControllerFactory;
-  }
-
-  /**
-   * @deprecated Use {@link #ScannerCallable(HConnection, TableName, Scan, ScanMetrics,
-   *                 RpcControllerFactory)}
-   */
-  @Deprecated
-  public ScannerCallable (HConnection connection, final byte [] tableName, Scan scan,
-      ScanMetrics scanMetrics) {
-    this(connection, TableName.valueOf(tableName), scan, scanMetrics, RpcControllerFactory
-        .instantiate(connection.getConfiguration()));
+    this.controllerFactory = rpcControllerFactory;
   }
 
   /**
@@ -121,8 +130,20 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
    */
   @Override
   public void prepare(boolean reload) throws IOException {
+    if (Thread.interrupted()) {
+      throw new InterruptedIOException();
+    }
+    RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(!reload,
+        id, getConnection(), getTableName(), getRow());
+    location = id < rl.size() ? rl.getRegionLocation(id) : null;
+    if (location == null || location.getServerName() == null) {
+      // With this exception, there will be a retry. The location can be null for a replica
+      //  when the table is created or after a split.
+      throw new HBaseIOException("There is no location for replica id #" + id);
+    }
+    ServerName dest = location.getServerName();
+    setStub(super.getConnection().getClient(dest));
     if (!instantiated || reload) {
-      super.prepare(reload);
       checkIfRegionServerIsRemote();
       instantiated = true;
     }
@@ -154,6 +175,9 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   @Override
   @SuppressWarnings("deprecation")
   public Result [] call(int callTimeout) throws IOException {
+    if (Thread.interrupted()) {
+      throw new InterruptedIOException();
+    }
     if (closed) {
       if (scannerId != -1) {
         close();
@@ -168,7 +192,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
           incRPCcallsMetrics();
           request = RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq);
           ScanResponse response = null;
-          PayloadCarryingRpcController controller = rpcFactory.newController();
+          PayloadCarryingRpcController controller = controllerFactory.newController();
           controller.setPriority(getTableName());
           controller.setCallTimeout(callTimeout);
           try {
@@ -332,6 +356,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   /**
    * @return the HRegionInfo for the current region
    */
+  @Override
   public HRegionInfo getHRegionInfo() {
     if (!instantiated) {
       return null;
@@ -347,11 +372,23 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     return caching;
   }
 
+  @Override
+  public ClusterConnection getConnection() {
+    return cConnection;
+  }
+
   /**
    * Set the number of rows that will be fetched on next
    * @param caching the number of rows for caching
    */
   public void setCaching(int caching) {
     this.caching = caching;
+  }
+
+  public ScannerCallable getScannerCallableForReplica(int id) {
+    ScannerCallable s = new ScannerCallable(this.getConnection(), this.tableName,
+        this.getScan(), this.scanMetrics, controllerFactory, id);
+    s.setCaching(this.caching);
+    return s;
   }
 }

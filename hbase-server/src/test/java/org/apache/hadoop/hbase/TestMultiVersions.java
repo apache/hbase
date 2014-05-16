@@ -241,7 +241,7 @@ public class TestMultiVersions {
         }
         assertTrue(cellCount == 1);
       }
-      table.close();
+      table.flushCommits();
     }
 
     // Case 1: scan with LATEST_TIMESTAMP. Should get two rows

@@ -55,7 +55,7 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
   private final boolean cellBlock;
   private RpcControllerFactory rpcFactory;
 
-  MultiServerCallable(final HConnection connection, final TableName tableName,
+  MultiServerCallable(final ClusterConnection connection, final TableName tableName,
       final ServerName location, RpcControllerFactory rpcFactory, final MultiAction<R> multi) {
     super(connection, tableName, null);
     this.rpcFactory = rpcFactory;

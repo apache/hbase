@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
@@ -323,7 +324,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   private void addResults(final ScanResponse.Builder builder, final List<Result> results,
-      final RpcController controller) {
+      final RpcController controller, boolean isDefaultRegion) {
+    builder.setStale(!isDefaultRegion);
     if (results == null || results.isEmpty()) return;
     if (isClientCellBlockSupport()) {
       for (Result res : results) {
@@ -1942,6 +1944,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             try {
               int i = 0;
               synchronized(scanner) {
+                boolean stale = (region.getRegionInfo().getReplicaId() != 0);
                 for (; i < rows
                     && currentScanResultSize < maxResultSize; ) {
                   // Collect values to be returned here
@@ -1952,7 +1955,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                         currentScanResultSize += KeyValueUtil.ensureKeyValue(kv).heapSize();
                       }
                     }
-                    results.add(Result.create(values));
+                    results.add(Result.create(values, null, stale));
                     i++;
                   }
                   if (!moreRows) {
@@ -1979,7 +1982,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             moreResults = false;
             results = null;
           } else {
-            addResults(builder, results, controller);
+            addResults(builder, results, controller, RegionReplicaUtil.isDefaultReplica(region.getRegionInfo()));
           }
         } finally {
           // We're done. On way out re-add the above removed lease.

@@ -114,7 +114,7 @@ public class RpcRetryingCallerWithReadReplicas {
       }
 
       if (reload || location == null) {
-        RegionLocations rl = getRegionLocations(false, id);
+        RegionLocations rl = getRegionLocations(false, id, cConnection, tableName, get.getRow());
         location = id < rl.size() ? rl.getRegionLocation(id) : null;
       }
 
@@ -189,7 +189,8 @@ public class RpcRetryingCallerWithReadReplicas {
    */
   public synchronized Result call()
       throws DoNotRetryIOException, InterruptedIOException, RetriesExhaustedException {
-    RegionLocations rl = getRegionLocations(true, RegionReplicaUtil.DEFAULT_REPLICA_ID);
+    RegionLocations rl = getRegionLocations(true, RegionReplicaUtil.DEFAULT_REPLICA_ID,
+        cConnection, tableName, get.getRow());
     BoundedCompletionService<Result> cs = new BoundedCompletionService<Result>(pool, rl.size());
 
     List<ExecutionException> exceptions = null;
@@ -241,7 +242,7 @@ public class RpcRetryingCallerWithReadReplicas {
     }
 
     if (exceptions != null && !exceptions.isEmpty()) {
-      throwEnrichedException(exceptions.get(0)); // just rethrow the first exception for now.
+      throwEnrichedException(exceptions.get(0), retries, toString()); // just rethrow the first exception for now.
     }
     return null; // unreachable
   }
@@ -250,7 +251,7 @@ public class RpcRetryingCallerWithReadReplicas {
    * Extract the real exception from the ExecutionException, and throws what makes more
    * sense.
    */
-  private void throwEnrichedException(ExecutionException e)
+  static void throwEnrichedException(ExecutionException e, int retries, String str)
       throws RetriesExhaustedException, DoNotRetryIOException {
     Throwable t = e.getCause();
     assert t != null; // That's what ExecutionException is about: holding an exception
@@ -265,7 +266,7 @@ public class RpcRetryingCallerWithReadReplicas {
 
     RetriesExhaustedException.ThrowableWithExtraContext qt =
         new RetriesExhaustedException.ThrowableWithExtraContext(t,
-            EnvironmentEdgeManager.currentTimeMillis(), toString());
+            EnvironmentEdgeManager.currentTimeMillis(), str);
 
     List<RetriesExhaustedException.ThrowableWithExtraContext> exceptions =
         Collections.singletonList(qt);
@@ -293,11 +294,12 @@ public class RpcRetryingCallerWithReadReplicas {
     return max - min + 1;
   }
 
-  private RegionLocations getRegionLocations(boolean useCache, int replicaId)
+  static RegionLocations getRegionLocations(boolean useCache, int replicaId,
+      ClusterConnection cConnection, TableName tableName, byte[] row)
       throws RetriesExhaustedException, DoNotRetryIOException, InterruptedIOException {
     RegionLocations rl;
     try {
-      rl = cConnection.locateRegion(tableName, get.getRow(), useCache, true, replicaId);
+      rl = cConnection.locateRegion(tableName, row, useCache, true, replicaId);
     } catch (DoNotRetryIOException e) {
       throw e;
     } catch (RetriesExhaustedException e) {

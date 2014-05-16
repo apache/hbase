@@ -143,6 +143,7 @@ public class HTable implements HTableInterface {
   private final boolean cleanupConnectionOnClose; // close the connection in close()
   private Consistency defaultConsistency = Consistency.STRONG;
   private int primaryCallTimeoutMicroSecond;
+  private int replicaCallTimeoutMicroSecondScan;
 
 
   /** The Async process for puts with autoflush set to false or multiputs */
@@ -281,10 +282,14 @@ public class HTable implements HTableInterface {
     this.connection = ConnectionManager.getConnectionInternal(conf);
     this.configuration = conf;
     this.pool = pool;
+    if (pool == null) {
+      this.pool = getDefaultExecutor(conf);
+      this.cleanupPoolOnClose = true;
+    } else {
+      this.cleanupPoolOnClose = false;
+    }
     this.tableName = tableName;
-    this.cleanupPoolOnClose = false;
     this.cleanupConnectionOnClose = true;
-
     this.finishSetup();
   }
 
@@ -331,10 +336,16 @@ public class HTable implements HTableInterface {
       throw new IllegalArgumentException("Connection is null or closed.");
     }
     this.tableName = tableName;
-    this.cleanupPoolOnClose = this.cleanupConnectionOnClose = false;
+    this.cleanupConnectionOnClose = false;
     this.connection = connection;
     this.configuration = connection.getConfiguration();
     this.pool = pool;
+    if (pool == null) {
+      this.pool = getDefaultExecutor(this.configuration);
+      this.cleanupPoolOnClose = true;
+    } else {
+      this.cleanupPoolOnClose = false;
+    }
 
     this.finishSetup();
   }
@@ -367,6 +378,8 @@ public class HTable implements HTableInterface {
         HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
     this.primaryCallTimeoutMicroSecond =
         this.configuration.getInt("hbase.client.primaryCallTimeout.get", 10000); // 10 ms
+    this.replicaCallTimeoutMicroSecondScan =
+        this.configuration.getInt("hbase.client.replicaCallTimeout.scan", 1000000); // 1000 ms
     this.retries = configuration.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
             HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
 
@@ -771,9 +784,10 @@ public class HTable implements HTableInterface {
      return rpcCallerFactory.<Result>newCaller().callWithRetries(callable, this.operationTimeout);
    }
 
-   /**
-    * {@inheritDoc}
-    */
+  /**
+   * The underlying {@link HTable} must not be closed.
+   * {@link HTableInterface#getScanner(Scan)} has other usage details.
+   */
   @Override
   public ResultScanner getScanner(final Scan scan) throws IOException {
     if (scan.getCaching() <= 0) {
@@ -783,24 +797,29 @@ public class HTable implements HTableInterface {
     if (scan.isReversed()) {
       if (scan.isSmall()) {
         return new ClientSmallReversedScanner(getConfiguration(), scan, getName(),
-            this.connection);
+            this.connection, this.rpcCallerFactory, this.rpcControllerFactory,
+            pool, replicaCallTimeoutMicroSecondScan);
       } else {
         return new ReversedClientScanner(getConfiguration(), scan, getName(),
-            this.connection);
+            this.connection, this.rpcCallerFactory, this.rpcControllerFactory,
+            pool, replicaCallTimeoutMicroSecondScan);
       }
     }
 
     if (scan.isSmall()) {
       return new ClientSmallScanner(getConfiguration(), scan, getName(),
-          this.connection, this.rpcCallerFactory, this.rpcControllerFactory);
+          this.connection, this.rpcCallerFactory, this.rpcControllerFactory,
+          pool, replicaCallTimeoutMicroSecondScan);
     } else {
       return new ClientScanner(getConfiguration(), scan, getName(), this.connection,
-          this.rpcCallerFactory, this.rpcControllerFactory);
+          this.rpcCallerFactory, this.rpcControllerFactory,
+          pool, replicaCallTimeoutMicroSecondScan);
     }
   }
 
   /**
-   * {@inheritDoc}
+   * The underlying {@link HTable} must not be closed.
+   * {@link HTableInterface#getScanner(byte[])} has other usage details.
    */
   @Override
   public ResultScanner getScanner(byte [] family) throws IOException {
@@ -810,7 +829,8 @@ public class HTable implements HTableInterface {
   }
 
   /**
-   * {@inheritDoc}
+   * The underlying {@link HTable} must not be closed.
+   * {@link HTableInterface#getScanner(byte[], byte[])} has other usage details.
    */
   @Override
   public ResultScanner getScanner(byte [] family, byte [] qualifier)
@@ -1445,6 +1465,15 @@ public class HTable implements HTableInterface {
     flushCommits();
     if (cleanupPoolOnClose) {
       this.pool.shutdown();
+      try {
+        boolean terminated = false;
+        do {
+          // wait until the pool has terminated
+          terminated = this.pool.awaitTermination(60, TimeUnit.SECONDS);
+        } while (!terminated);
+      } catch (InterruptedException e) {
+        LOG.warn("waitForTermination interrupted");
+      }
     }
     if (cleanupConnectionOnClose) {
       if (this.connection != null) {

@@ -160,6 +160,20 @@ public class HConnectionTestingUtility {
     }
   }
 
+  public static ClusterConnection getSpiedClusterConnection(final Configuration conf)
+  throws IOException {
+    HConnectionKey connectionKey = new HConnectionKey(conf);
+    synchronized (ConnectionManager.CONNECTION_INSTANCES) {
+      HConnectionImplementation connection =
+          ConnectionManager.CONNECTION_INSTANCES.get(connectionKey);
+      if (connection == null) {
+        connection = Mockito.spy(new HConnectionImplementation(conf, true));
+        ConnectionManager.CONNECTION_INSTANCES.put(connectionKey, connection);
+      }
+      return connection;
+    }
+  }
+
   /**
    * @return Count of extant connection instances
    */

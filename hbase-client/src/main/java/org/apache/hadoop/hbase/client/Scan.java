@@ -136,7 +136,7 @@ public class Scan extends Query {
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
   private Boolean loadColumnFamiliesOnDemand = null;
-  private Consistency consistency = null;
+  private Consistency consistency = Consistency.STRONG;
 
   /**
    * Set it true for small scan to get better performance

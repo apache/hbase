@@ -29,9 +29,11 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import java.io.IOException;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Client scanner for small reversed scan. Generally, only one RPC is called to fetch the
@@ -44,7 +46,7 @@ import java.io.IOException;
 @InterfaceStability.Evolving
 public class ClientSmallReversedScanner extends ReversedClientScanner {
   private static final Log LOG = LogFactory.getLog(ClientSmallReversedScanner.class);
-  private RegionServerCallable<Result[]> smallScanCallable = null;
+  private ScannerCallableWithReplicas smallScanCallable = null;
   private byte[] skipRowOfFirstResult = null;
 
   /**
@@ -58,8 +60,26 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
    * @throws java.io.IOException
    */
   public ClientSmallReversedScanner(Configuration conf, Scan scan, TableName tableName,
-                                    HConnection connection) throws IOException {
+                                    ClusterConnection connection) throws IOException {
     super(conf, scan, tableName, connection);
+  }
+
+  /**
+   * Create a new ReversibleClientScanner for the specified table Note that the
+   * passed {@link Scan}'s start row maybe changed changed.
+   *
+   * @param conf The {@link Configuration} to use.
+   * @param scan {@link Scan} to use in this scanner
+   * @param tableName The table that we wish to rangeGet
+   * @param connection Connection identifying the cluster
+   * @param rpcFactory
+   * @throws IOException
+   */
+  public ClientSmallReversedScanner(final Configuration conf, final Scan scan,
+      final TableName tableName, ClusterConnection connection,
+      RpcRetryingCallerFactory rpcFactory, RpcControllerFactory controllerFactory,
+      ExecutorService pool, int primaryOperationTimeout) throws IOException {
+    super(conf, scan, tableName, connection, rpcFactory, controllerFactory, pool, primaryOperationTimeout);
   }
 
   /**
@@ -109,7 +129,9 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
     }
 
     smallScanCallable = ClientSmallScanner.getSmallScanCallable(
-        scan, getConnection(), getTable(), localStartKey, cacheNum, this.rpcControllerFactory);
+      getConnection(), getTable(), scan, getScanMetrics(), localStartKey, cacheNum,
+      rpcControllerFactory, getPool(), getPrimaryOperationTimeout(),
+      getRetries(), getScannerTimeout(), getConf(), caller);
 
     if (this.scanMetrics != null && skipRowOfFirstResult == null) {
       this.scanMetrics.countOfRegions.incrementAndGet();
@@ -135,7 +157,9 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
         // Server returns a null values if scanning is to stop. Else,
         // returns an empty array if scanning is to go on and we've just
         // exhausted current region.
-        values = this.caller.callWithRetries(smallScanCallable, scannerTimeout);
+        // callWithoutRetries is at this layer. Within the ScannerCallableWithReplicas,
+        // we do a callWithRetries
+        values = this.caller.callWithoutRetries(smallScanCallable, scannerTimeout);
         this.currentRegion = smallScanCallable.getHRegionInfo();
         long currentTime = System.currentTimeMillis();
         if (this.scanMetrics != null) {

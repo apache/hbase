@@ -1153,7 +1153,6 @@ class ConnectionManager {
       s.setSmall(true);
       s.setCaching(1);
 
-      HConnection connection = ConnectionManager.getConnectionInternal(conf);
       int localNumRetries = (retry ? numTries : 1);
 
       for (int tries = 0; true; tries++) {
@@ -1178,7 +1177,7 @@ class ConnectionManager {
           Result regionInfoRow = null;
           ReversedClientScanner rcs = null;
           try {
-            rcs = new ClientSmallReversedScanner(conf, s, TableName.META_TABLE_NAME, connection);
+            rcs = new ClientSmallReversedScanner(conf, s, TableName.META_TABLE_NAME, this);
             regionInfoRow = rcs.next();
           } finally {
             if (rcs != null) {

@@ -370,7 +370,7 @@ public final class ResponseConverter {
           }
           cells.add(cellScanner.current());
         }
-        results[i] = Result.create(cells);
+        results[i] = Result.create(cells, null, response.getStale());
       } else {
         // Result is pure pb.
         results[i] = ProtobufUtil.toResult(response.getResults(i));

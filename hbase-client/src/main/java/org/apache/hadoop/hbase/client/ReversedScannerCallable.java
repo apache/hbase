@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -55,9 +57,24 @@ public class ReversedScannerCallable extends ScannerCallable {
    * @param locateStartRow The start row for locating regions
    * @param rpcFactory to create an {@link RpcController} to talk to the regionserver
    */
-  public ReversedScannerCallable(HConnection connection, TableName tableName, Scan scan,
+  public ReversedScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
       ScanMetrics scanMetrics, byte[] locateStartRow, RpcControllerFactory rpcFactory) {
     super(connection, tableName, scan, scanMetrics, rpcFactory);
+    this.locateStartRow = locateStartRow;
+  }
+
+  /**
+   * @param connection
+   * @param tableName
+   * @param scan
+   * @param scanMetrics
+   * @param locateStartRow The start row for locating regions
+   * @param rpcFactory to create an {@link RpcController} to talk to the regionserver
+   * @param replicaId the replica id
+   */
+  public ReversedScannerCallable(ClusterConnection connection, TableName tableName, Scan scan,
+      ScanMetrics scanMetrics, byte[] locateStartRow, RpcControllerFactory rpcFactory, int replicaId) {
+    super(connection, tableName, scan, scanMetrics, rpcFactory, replicaId);
     this.locateStartRow = locateStartRow;
   }
 
@@ -66,7 +83,7 @@ public class ReversedScannerCallable extends ScannerCallable {
    *             {@link #ReversedScannerCallable(HConnection, TableName, Scan, ScanMetrics, byte[], RpcControllerFactory)}
    */
   @Deprecated
-  public ReversedScannerCallable(HConnection connection, TableName tableName,
+  public ReversedScannerCallable(ClusterConnection connection, TableName tableName,
       Scan scan, ScanMetrics scanMetrics, byte[] locateStartRow) {
     this(connection, tableName, scan, scanMetrics, locateStartRow, RpcControllerFactory
         .instantiate(connection.getConfiguration()));
@@ -78,10 +95,15 @@ public class ReversedScannerCallable extends ScannerCallable {
    */
   @Override
   public void prepare(boolean reload) throws IOException {
+    if (Thread.interrupted()) {
+      throw new InterruptedIOException();
+    }
     if (!instantiated || reload) {
       if (locateStartRow == null) {
         // Just locate the region with the row
-        this.location = connection.getRegionLocation(tableName, row, reload);
+        RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(reload, id,
+            getConnection(), tableName, row);
+        this.location = id < rl.size() ? rl.getRegionLocation(id) : null;
         if (this.location == null) {
           throw new IOException("Failed to find location, tableName="
               + tableName + ", row=" + Bytes.toStringBinary(row) + ", reload="
@@ -137,9 +159,10 @@ public class ReversedScannerCallable extends ScannerCallable {
     List<HRegionLocation> regionList = new ArrayList<HRegionLocation>();
     byte[] currentKey = startKey;
     do {
-      HRegionLocation regionLocation = connection.getRegionLocation(tableName,
-          currentKey, reload);
-      if (regionLocation.getRegionInfo().containsRow(currentKey)) {
+      RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(reload, id,
+          getConnection(), tableName, currentKey);
+      HRegionLocation regionLocation = id < rl.size() ? rl.getRegionLocation(id) : null;
+      if (regionLocation != null && regionLocation.getRegionInfo().containsRow(currentKey)) {
         regionList.add(regionLocation);
       } else {
         throw new DoNotRetryIOException("Does hbase:meta exist hole? Locating row "
@@ -152,4 +175,11 @@ public class ReversedScannerCallable extends ScannerCallable {
     return regionList;
   }
 
+  @Override
+  public ScannerCallable getScannerCallableForReplica(int id) {
+    ReversedScannerCallable r = new ReversedScannerCallable(this.cConnection, this.tableName,
+        this.getScan(), this.scanMetrics, this.locateStartRow, controllerFactory, id);
+    r.setCaching(this.getCaching());
+    return r;
+  }
 }
