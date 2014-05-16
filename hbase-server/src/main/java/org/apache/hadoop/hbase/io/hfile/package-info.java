@@ -53,7 +53,8 @@
  * <a href="http://blog.cloudera.com/blog/2012/01/caching-in-hbase-slabcache/">Caching
  * in Apache HBase: SlabCache</a>.To enable it,
  * set the float <code>hbase.offheapcache.percentage</code>
- * ({@link CacheConfig#SLAB_CACHE_OFFHEAP_PERCENTAGE_KEY}) to some value between 0 and 1 in
+ * ({@link org.apache.hadoop.hbase.io.hfile.CacheConfig#SLAB_CACHE_OFFHEAP_PERCENTAGE_KEY}) to some
+ * value between 0 and 1 in
  * your <code>hbase-site.xml</code> file. This
  * enables {@link org.apache.hadoop.hbase.io.hfile.DoubleBlockCache}, a facade over
  * {@link org.apache.hadoop.hbase.io.hfile.LruBlockCache} and
@@ -66,7 +67,8 @@
  * multiplied by whatever the setting for <code>-XX:MaxDirectMemorySize</code> is in
  * your <code>hbase-env.sh</code> configuration file and this is what
  * will be used by {@link org.apache.hadoop.hbase.io.hfile.slab.SlabCache} as its offheap store.
- * Onheap store will be whatever the float {@link HConstants#HFILE_BLOCK_CACHE_SIZE_KEY} setting is
+ * Onheap store will be whatever the float
+ * {@link org.apache.hadoop.hbase.HConstants#HFILE_BLOCK_CACHE_SIZE_KEY} setting is
  * (some value between 0 and 1) times the size of the allocated java heap.
  * 
  * <p>Restart (or rolling restart) your cluster for the configs to take effect.  Check logs to
@@ -90,7 +92,8 @@
  * as a strict L2 cache to the L1 LruBlockCache (i.e. on eviction from L1, blocks go to L2), set
  * {@link org.apache.hadoop.hbase.io.hfile.CacheConfig#BUCKET_CACHE_COMBINED_KEY} to false.
  * Also by default, unless you change it,
- * {@link CacheConfig#BUCKET_CACHE_COMBINED_PERCENTAGE_KEY} defaults to <code>0.9</code> (see
+ * {@link org.apache.hadoop.hbase.io.hfile.CacheConfig#BUCKET_CACHE_COMBINED_PERCENTAGE_KEY}
+ * defaults to <code>0.9</code> (see
  * the top of the CacheConfig in the BucketCache defaults section).  This means that whatever
  * size you set for the bucket cache with
  * {@link org.apache.hadoop.hbase.io.hfile.CacheConfig#BUCKET_CACHE_SIZE_KEY},
