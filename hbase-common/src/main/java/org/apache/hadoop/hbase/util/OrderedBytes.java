@@ -98,7 +98,7 @@ import com.google.common.annotations.VisibleForTesting;
  * "BlobVar" encodes the input byte[] in a manner similar to a variable length
  * integer encoding. As with the other {@code OrderedBytes} encodings,
  * the first encoded byte is used to indicate what kind of value follows. This
- * header byte is 0x35 for BlobVar encoded values. As with the traditional
+ * header byte is 0x37 for BlobVar encoded values. As with the traditional
  * varint encoding, the most significant bit of each subsequent encoded
  * {@code byte} is used as a continuation marker. The 7 remaining bits
  * contain the 7 most significant bits of the first unencoded byte. The next
@@ -112,7 +112,7 @@ import com.google.common.annotations.VisibleForTesting;
  * </p>
  * <h4>BlobCopy</h4>
  * <p>
- * "BlobCopy" is a simple byte-for-byte copy of the input data. It uses 0x36
+ * "BlobCopy" is a simple byte-for-byte copy of the input data. It uses 0x38
  * as the header byte, and is terminated by 0x00 in the DESCENDING case. This
  * alternative encoding is faster and more space-efficient, but it cannot
  * accept values containing a 0x00 byte in DESCENDING order.
