@@ -1271,15 +1271,6 @@ connection.close();</programlisting>
            <para>Information on non-Java clients and custom protocols is covered in <xref linkend="external_apis" />
            </para>
 		</section>
-	   <section xml:id="client.rowlocks"><title>RowLocks</title>
-           <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#lockRow%28byte[]%29">RowLocks</link> are still
-           in the client API <emphasis>however</emphasis> they are discouraged because if not managed properly these can
-           lock up the RegionServers.
-           </para>
-           <para>There is an oustanding ticket <link xlink:href="https://issues.apache.org/jira/browse/HBASE-2332">HBASE-2332</link> to
-           remove this feature from the client.
-           </para>
-		</section>
 	</section>
 
     <section xml:id="client.filter"><title>Client Request Filters</title>

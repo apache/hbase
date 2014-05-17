@@ -851,9 +851,6 @@ java.lang.UnsatisfiedLinkError: no gplcompression in java.library.path
             Adding <code>-XX:+UseMembar</code> to the HBase <varname>HBASE_OPTS</varname> in <filename>conf/hbase-env.sh</filename>
             may fix it.
             </para>
-            <para>Also, are you using <xref linkend="client.rowlocks"/>?  These are discouraged because they can lock up the
-            RegionServers if not managed properly.
-            </para>
         </section>
         <section xml:id="trouble.rs.runtime.filehandles">
            <title>java.io.IOException...(Too many open files)</title>
