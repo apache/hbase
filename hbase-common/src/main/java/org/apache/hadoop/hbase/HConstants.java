@@ -495,6 +495,13 @@ public final class HConstants {
    */
   public static final int WEEK_IN_SECONDS = 7 * 24 * 3600;
 
+  /**
+   * Seconds in a day, hour and minute
+   */
+  public static final int DAY_IN_SECONDS = 24 * 60 * 60;
+  public static final int HOUR_IN_SECONDS = 60 * 60;
+  public static final int MINUTE_IN_SECONDS = 60;
+
   //TODO: although the following are referenced widely to format strings for
   //      the shell. They really aren't a part of the public API. It would be
   //      nice if we could put them somewhere where they did not need to be

@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.PrettyPrinter;
+import org.apache.hadoop.hbase.util.PrettyPrinter.Unit;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -884,6 +886,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   @Override
   public String toString() {
     StringBuilder s = new StringBuilder();
+
     s.append('{');
     s.append(HConstants.NAME);
     s.append(" => '");
@@ -928,7 +931,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
         s.append(", ");
         s.append(key);
         s.append(" => ");
-        s.append('\'').append(value).append('\'');
+        s.append('\'').append(PrettyPrinter.format(value, getUnit(key))).append('\'');
       }
     }
 
@@ -950,7 +953,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
         printComma = true;
         s.append('\'').append(key).append('\'');
         s.append(" => ");
-        s.append('\'').append(value).append('\'');
+        s.append('\'').append(PrettyPrinter.format(value, getUnit(key))).append('\'');
       }
       s.append('}');
     }
@@ -965,11 +968,22 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
         printCommaForConfiguration = true;
         s.append('\'').append(e.getKey()).append('\'');
         s.append(" => ");
-        s.append('\'').append(e.getValue()).append('\'');
+        s.append('\'').append(PrettyPrinter.format(e.getValue(), getUnit(e.getKey()))).append('\'');
       }
       s.append("}");
     }
     return s;
+  }
+
+  public static Unit getUnit(String key) {
+    Unit unit;
+      /* TTL for now, we can add more as we neeed */
+    if (key.equals(HColumnDescriptor.TTL)) {
+      unit = Unit.TIME_INTERVAL;
+    } else {
+      unit = Unit.NONE;
+    }
+    return unit;
   }
 
   public static Map<String, String> getDefaultValues() {
