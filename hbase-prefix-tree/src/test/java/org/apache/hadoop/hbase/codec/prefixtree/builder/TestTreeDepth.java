@@ -20,14 +20,18 @@ package org.apache.hadoop.hbase.codec.prefixtree.builder;
 
 import java.util.List;
 
+
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.Tokenizer;
 import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
 
+@Category(SmallTests.class)
 public class TestTreeDepth {
 
   @Test

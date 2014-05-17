@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.builder;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.Tokenizer;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.TokenizerNode;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.TokenizerRowSearchResult;
@@ -28,10 +29,12 @@ import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+@Category(SmallTests.class)
 @RunWith(Parameterized.class)
 public class TestTokenizer {
 

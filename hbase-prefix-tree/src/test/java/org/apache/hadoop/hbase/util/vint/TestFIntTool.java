@@ -21,12 +21,15 @@ package org.apache.hadoop.hbase.util.vint;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.vint.UFIntTool;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /********************** tests *************************/
 
+@Category(SmallTests.class)
 public class TestFIntTool {
   @Test
   public void testLeadingZeros() {
