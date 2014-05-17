@@ -50,7 +50,6 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -3357,11 +3356,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
 
   void validateAndIncrementNumOutstandingPerServer(HServerAddress address)
       throws TooManyOutstandingRequestsException {
-    AtomicInteger atomicOutstanding = outstandingRequests.computeIfAbsent(address, new Function<HServerAddress, AtomicInteger>() {
-      @Override public AtomicInteger apply(HServerAddress address) {
-        return new AtomicInteger(0);
-      }
-    });
+    AtomicInteger atomicOutstanding = getOutstandingCount(address);
 
     int outstanding = atomicOutstanding.get();
     if (outstanding > maxOutstandRequestsPerServer) {
@@ -3371,12 +3366,16 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
   }
 
   void decrementNumOutstandingPerServer(HServerAddress address) {
-    AtomicInteger outstanding = outstandingRequests.computeIfAbsent(address, new Function<HServerAddress, AtomicInteger>() {
-      @Override public AtomicInteger apply(HServerAddress address) {
-        return new AtomicInteger(0);
-      }
-    });
+    AtomicInteger outstanding = getOutstandingCount(address);
     outstanding.decrementAndGet();
+  }
+
+  private AtomicInteger getOutstandingCount(HServerAddress address) {
+    AtomicInteger out = outstandingRequests.get(address);
+    if (out == null) {
+      out = outstandingRequests.putIfAbsent(address, new AtomicInteger(0));
+    }
+    return out;
   }
 
   @Override
