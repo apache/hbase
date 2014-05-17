@@ -21,15 +21,18 @@ package org.apache.hadoop.hbase.codec.prefixtree.timestamp;
 import java.io.IOException;
 import java.util.Collection;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.timestamp.TimestampDecoder;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.other.LongEncoder;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
+@Category(SmallTests.class)
 @RunWith(Parameterized.class)
 public class TestTimestampEncoder {
 
