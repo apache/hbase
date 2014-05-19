@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.hbase.snapshot;
 
+import java.io.BufferedInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -47,6 +49,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HLogLink;
+import org.apache.hadoop.hbase.io.hadoopbackport.ThrottledInputStream;
 import org.apache.hadoop.hbase.mapreduce.JobUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -84,6 +87,7 @@ public final class ExportSnapshot extends Configured implements Tool {
   private static final String CONF_CHECKSUM_VERIFY = "snapshot.export.checksum.verify";
   private static final String CONF_OUTPUT_ROOT = "snapshot.export.output.root";
   private static final String CONF_INPUT_ROOT = "snapshot.export.input.root";
+  private static final String CONF_BANDWIDTH_MB = "snapshot.export.map.bandwidth.mb";
   private static final String CONF_BUFFER_SIZE = "snapshot.export.buffer.size";
   private static final String CONF_MAP_GROUP = "snapshot.export.default.map.group";
   protected static final String CONF_SKIP_TMP = "snapshot.export.skip.tmp";
@@ -226,7 +230,11 @@ public final class ExportSnapshot extends Configured implements Tool {
         }
       }
 
-      FSDataInputStream in = openSourceFile(context, inputPath);
+      InputStream in = openSourceFile(context, inputPath);
+      int bandwidthMB = context.getConfiguration().getInt(CONF_BANDWIDTH_MB, 100);
+      if (Integer.MAX_VALUE != bandwidthMB) {
+        in = new ThrottledInputStream(new BufferedInputStream(in), bandwidthMB * 1024 * 1024);
+      }
       try {
         context.getCounter(Counter.BYTES_EXPECTED).increment(inputStat.getLen());
 
@@ -299,7 +307,7 @@ public final class ExportSnapshot extends Configured implements Tool {
     }
 
     private void copyData(final Context context,
-        final Path inputPath, final FSDataInputStream in,
+        final Path inputPath, final InputStream in,
         final Path outputPath, final FSDataOutputStream out,
         final long inputFileSize)
         throws IOException {
@@ -586,7 +594,8 @@ public final class ExportSnapshot extends Configured implements Tool {
   private void runCopyJob(final Path inputRoot, final Path outputRoot,
       final List<Pair<Path, Long>> snapshotFiles, final boolean verifyChecksum,
       final String filesUser, final String filesGroup, final int filesMode,
-      final int mappers) throws IOException, InterruptedException, ClassNotFoundException {
+      final int mappers, final int bandwidthMB)
+          throws IOException, InterruptedException, ClassNotFoundException {
     Configuration conf = getConf();
     if (filesGroup != null) conf.set(CONF_FILES_GROUP, filesGroup);
     if (filesUser != null) conf.set(CONF_FILES_USER, filesUser);
@@ -595,6 +604,7 @@ public final class ExportSnapshot extends Configured implements Tool {
     conf.set(CONF_OUTPUT_ROOT, outputRoot.toString());
     conf.set(CONF_INPUT_ROOT, inputRoot.toString());
     conf.setInt("mapreduce.job.maps", mappers);
+    conf.setInt(CONF_BANDWIDTH_MB, bandwidthMB);
 
     Job job = new Job(conf);
     job.setJobName("ExportSnapshot");
@@ -658,6 +668,7 @@ public final class ExportSnapshot extends Configured implements Tool {
     String filesGroup = null;
     String filesUser = null;
     Path outputRoot = null;
+    int bandwidthMB = Integer.MAX_VALUE;
     int filesMode = 0;
     int mappers = 0;
 
@@ -688,6 +699,8 @@ public final class ExportSnapshot extends Configured implements Tool {
           filesUser = args[++i];
         } else if (cmd.equals("-chgroup")) {
           filesGroup = args[++i];
+        } else if (cmd.equals("-bandwidth")) {
+          bandwidthMB = Integer.parseInt(args[++i]);
         } else if (cmd.equals("-chmod")) {
           filesMode = Integer.parseInt(args[++i], 8);
         } else if (cmd.equals("-overwrite")) {
@@ -799,7 +812,7 @@ public final class ExportSnapshot extends Configured implements Tool {
         LOG.warn("There are 0 store file to be copied. There may be no data in the table.");
       } else {
         runCopyJob(inputRoot, outputRoot, files, verifyChecksum,
-                   filesUser, filesGroup, filesMode, mappers);
+                   filesUser, filesGroup, filesMode, mappers, bandwidthMB);
       }
 
 
