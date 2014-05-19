@@ -77,12 +77,6 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       "ENCODE_ON_DISK";
   public static final String DATA_BLOCK_ENCODING =
       "DATA_BLOCK_ENCODING";
-  /**
-   * Key for the BLOCKCACHE attribute.
-   * A more exact name would be CACHE_DATA_ON_READ because this flag sets whether or not we
-   * cache DATA blocks.  We always cache INDEX and BLOOM blocks; caching these blocks cannot be
-   * disabled.
-   */
   public static final String BLOCKCACHE = "BLOCKCACHE";
   public static final String CACHE_DATA_ON_WRITE = "CACHE_DATA_ON_WRITE";
   public static final String CACHE_INDEX_ON_WRITE = "CACHE_INDEX_ON_WRITE";
@@ -798,8 +792,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /**
-   * @return True if hfile DATA type blocks should be cached (You cannot disable caching of INDEX
-   * and BLOOM type blocks).
+   * @return True if MapFile blocks should be cached.
    */
   public boolean isBlockCacheEnabled() {
     String value = getValue(BLOCKCACHE);
@@ -809,8 +802,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /**
-   * @param blockCacheEnabled True if hfile DATA type blocks should be cached (We always cache
-   * INDEX and BLOOM blocks; you cannot turn this off).
+   * @param blockCacheEnabled True if MapFile blocks should be cached.
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setBlockCacheEnabled(boolean blockCacheEnabled) {

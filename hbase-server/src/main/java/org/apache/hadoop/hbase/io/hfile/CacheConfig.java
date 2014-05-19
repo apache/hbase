@@ -111,9 +111,7 @@ public class CacheConfig {
 
   /**
    * Whether blocks should be cached on read (default is on if there is a
-   * cache but this can be turned off on a per-family or per-request basis).
-   * If off we will STILL cache meta blocks; i.e. INDEX and BLOOM types.
-   * This cannot be disabled.
+   * cache but this can be turned off on a per-family or per-request basis)
    */
   private boolean cacheDataOnRead;
 
@@ -184,8 +182,7 @@ public class CacheConfig {
    * Create a block cache configuration with the specified cache and
    * configuration parameters.
    * @param blockCache reference to block cache, null if completely disabled
-   * @param cacheDataOnRead whether DATA blocks should be cached on read (we always cache INDEX
-   * blocks and BLOOM blocks; this cannot be disabled).
+   * @param cacheDataOnRead whether data blocks should be cached on read
    * @param inMemory whether blocks should be flagged as in-memory
    * @param cacheDataOnWrite whether data blocks should be cached on write
    * @param cacheIndexesOnWrite whether index blocks should be cached on write
@@ -235,8 +232,7 @@ public class CacheConfig {
   }
 
   /**
-   * Returns whether the DATA blocks of this HFile should be cached on read or not (we always
-   * cache the meta blocks, the INDEX and BLOOM blocks).
+   * Returns whether the blocks of this HFile should be cached on read or not.
    * @return true if blocks should be cached on read, false if not
    */
   public boolean shouldCacheDataOnRead() {
