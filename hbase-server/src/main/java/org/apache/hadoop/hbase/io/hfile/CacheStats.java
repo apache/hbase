@@ -87,6 +87,12 @@ public class CacheStats {
     this.requestCachingCounts = initializeZeros(numPeriodsInWindow);
   }
 
+  @Override
+  public String toString() {
+    return "hitCount=" + this.hitCount + ", hitCachingCount=" + this.hitCachingCount +
+      ", missCount=" + this.missCount;
+  }
+
   public void miss(boolean caching) {
     missCount.incrementAndGet();
     if (caching) missCachingCount.incrementAndGet();
