@@ -376,7 +376,8 @@ EOF
         stoprow = args["STOPROW"]
         timestamp = args["TIMESTAMP"]
         columns = args["COLUMNS"] || args["COLUMN"] || []
-        cache_blocks = args["CACHE_BLOCKS"] || true
+        # If CACHE_BLOCKS not set, then default 'true'.
+        cache_blocks = args["CACHE_BLOCKS"].nil? ? true: args["CACHE_BLOCKS"]
         cache = args["CACHE"] || 0
         reversed = args["REVERSED"] || false
         versions = args["VERSIONS"] || 1
