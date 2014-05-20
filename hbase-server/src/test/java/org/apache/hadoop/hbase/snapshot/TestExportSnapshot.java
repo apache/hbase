@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
+import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -74,6 +75,7 @@ public class TestExportSnapshot {
 
   private byte[] emptySnapshotName;
   private byte[] snapshotName;
+  private int tableNumFiles;
   private TableName tableName;
   private HBaseAdmin admin;
 
@@ -119,7 +121,8 @@ public class TestExportSnapshot {
 
     // Add some rows
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
+    SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 50, FAMILY);
+    tableNumFiles = admin.getTableRegions(tableName).size();
 
     // take a snapshot
     admin.snapshot(snapshotName, tableName);
@@ -187,32 +190,32 @@ public class TestExportSnapshot {
    */
   @Test
   public void testExportFileSystemState() throws Exception {
-    testExportFileSystemState(tableName, snapshotName, snapshotName, 2);
+    testExportFileSystemState(tableName, snapshotName, snapshotName, tableNumFiles);
   }
 
   @Test
   public void testExportFileSystemStateWithSkipTmp() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(ExportSnapshot.CONF_SKIP_TMP, true);
-    testExportFileSystemState(tableName, snapshotName, snapshotName, 2);
+    testExportFileSystemState(tableName, snapshotName, snapshotName, tableNumFiles);
   }
 
   @Test
   public void testEmptyExportFileSystemState() throws Exception {
-    testExportFileSystemState(tableName, emptySnapshotName, emptySnapshotName, 1);
+    testExportFileSystemState(tableName, emptySnapshotName, emptySnapshotName, 0);
   }
 
   @Test
   public void testConsecutiveExports() throws Exception {
     Path copyDir = getLocalDestinationDir();
-    testExportFileSystemState(tableName, snapshotName, snapshotName, 2, copyDir, false);
-    testExportFileSystemState(tableName, snapshotName, snapshotName, 2, copyDir, true);
+    testExportFileSystemState(tableName, snapshotName, snapshotName, tableNumFiles, copyDir, false);
+    testExportFileSystemState(tableName, snapshotName, snapshotName, tableNumFiles, copyDir, true);
     removeExportDir(copyDir);
   }
 
   @Test
   public void testExportWithTargetName() throws Exception {
     final byte[] targetName = Bytes.toBytes("testExportWithTargetName");
-    testExportFileSystemState(tableName, snapshotName, targetName, 2);
+    testExportFileSystemState(tableName, snapshotName, targetName, tableNumFiles);
   }
 
   /**
@@ -223,53 +226,32 @@ public class TestExportSnapshot {
   public void testSnapshotWithRefsExportFileSystemState() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
 
-    final TableName tableWithRefsName =
-        TableName.valueOf("tableWithRefs");
-    final String snapshotName = "tableWithRefs";
-    final String TEST_FAMILY = Bytes.toString(FAMILY);
-    final String TEST_HFILE = "abc";
-
-    final SnapshotDescription sd = SnapshotDescription.newBuilder()
-        .setName(snapshotName)
-        .setTable(tableWithRefsName.getNameAsString()).build();
-
-    FileSystem fs = TEST_UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
     Path rootDir = TEST_UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
-    Path archiveDir = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
+    FileSystem fs = TEST_UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
 
-    // First region, simple with one plain hfile.
-    HRegionInfo hri = new HRegionInfo(tableWithRefsName);
-    HRegionFileSystem r0fs = HRegionFileSystem.createRegionOnFileSystem(conf,
-      fs, FSUtils.getTableDir(archiveDir, hri.getTable()), hri);
-    Path storeFile = new Path(rootDir, TEST_HFILE);
-    FSDataOutputStream out = fs.create(storeFile);
-    out.write(Bytes.toBytes("Test Data"));
-    out.close();
-    r0fs.commitStoreFile(TEST_FAMILY, storeFile);
+    SnapshotMock snapshotMock = new SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
+    SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2("tableWithRefsV1");
+    testSnapshotWithRefsExportFileSystemState(builder);
 
-    // Second region, used to test the split case.
-    // This region contains a reference to the hfile in the first region.
-    hri = new HRegionInfo(tableWithRefsName);
-    HRegionFileSystem r1fs = HRegionFileSystem.createRegionOnFileSystem(conf,
-      fs, new Path(archiveDir, hri.getTable().getNameAsString()), hri);
-    storeFile = new Path(rootDir, TEST_HFILE + '.' + r0fs.getRegionInfo().getEncodedName());
-    out = fs.create(storeFile);
-    out.write(Bytes.toBytes("Test Data"));
-    out.close();
-    r1fs.commitStoreFile(TEST_FAMILY, storeFile);
+    snapshotMock = new SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
+    builder = snapshotMock.createSnapshotV2("tableWithRefsV2");
+    testSnapshotWithRefsExportFileSystemState(builder);
+  }
 
-    Path tableDir = FSUtils.getTableDir(archiveDir, tableWithRefsName);
-    HTableDescriptor htd = new HTableDescriptor(tableWithRefsName);
-    htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-    new FSTableDescriptors(fs, rootDir)
-        .createTableDescriptorForTableDirectory(tableDir, htd, false);
+  /**
+   * Generates a couple of regions for the specified SnapshotMock,
+   * and then it will run the export and verification.
+   */
+  private void testSnapshotWithRefsExportFileSystemState(SnapshotMock.SnapshotBuilder builder)
+      throws Exception {
+    Path[] r1Files = builder.addRegion();
+    Path[] r2Files = builder.addRegion();
+    builder.commit();
+    int snapshotFilesCount = r1Files.length + r2Files.length;
 
-    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    FileUtil.copy(fs, tableDir, fs, snapshotDir, false, conf);
-    SnapshotDescriptionUtils.writeSnapshotInfo(sd, snapshotDir, fs);
-
-    byte[] name = Bytes.toBytes(snapshotName);
-    testExportFileSystemState(tableWithRefsName, name, name, 2);
+    byte[] snapshotName = Bytes.toBytes(builder.getSnapshotDescription().getName());
+    TableName tableName = builder.getTableDescriptor().getTableName();
+    testExportFileSystemState(tableName, snapshotName, snapshotName, snapshotFilesCount);
   }
 
   private void testExportFileSystemState(final TableName tableName, final byte[] snapshotName,
@@ -307,7 +289,7 @@ public class TestExportSnapshot {
 
     // Verify File-System state
     FileStatus[] rootFiles = fs.listStatus(copyDir);
-    assertEquals(filesExpected, rootFiles.length);
+    assertEquals(filesExpected > 0 ? 2 : 1, rootFiles.length);
     for (FileStatus fileStatus: rootFiles) {
       String name = fileStatus.getPath().getName();
       assertTrue(fileStatus.isDirectory());
@@ -319,10 +301,10 @@ public class TestExportSnapshot {
     final FileSystem hdfs = FileSystem.get(hdfsUri, TEST_UTIL.getConfiguration());
     final Path snapshotDir = new Path(HConstants.SNAPSHOT_DIR_NAME, Bytes.toString(snapshotName));
     final Path targetDir = new Path(HConstants.SNAPSHOT_DIR_NAME, Bytes.toString(targetName));
-    verifySnapshot(hdfs, new Path(TEST_UTIL.getDefaultRootDirPath(), snapshotDir),
+    verifySnapshotDir(hdfs, new Path(TEST_UTIL.getDefaultRootDirPath(), snapshotDir),
         fs, new Path(copyDir, targetDir));
-    verifyArchive(fs, copyDir, tableName, Bytes.toString(targetName));
-    FSUtils.logFileSystemState(hdfs, snapshotDir, LOG);
+    Set<String> snapshotFiles = verifySnapshot(fs, copyDir, tableName, Bytes.toString(targetName));
+    assertEquals(filesExpected, snapshotFiles.size());
   }
 
   /**
@@ -368,39 +350,40 @@ public class TestExportSnapshot {
   /*
    * verify if the snapshot folder on file-system 1 match the one on file-system 2
    */
-  private void verifySnapshot(final FileSystem fs1, final Path root1,
+  private void verifySnapshotDir(final FileSystem fs1, final Path root1,
       final FileSystem fs2, final Path root2) throws IOException {
-    Set<String> s = new HashSet<String>();
     assertEquals(listFiles(fs1, root1, root1), listFiles(fs2, root2, root2));
   }
 
   /*
    * Verify if the files exists
    */
-  private void verifyArchive(final FileSystem fs, final Path rootDir,
+  private Set<String> verifySnapshot(final FileSystem fs, final Path rootDir,
       final TableName tableName, final String snapshotName) throws IOException {
     final Path exportedSnapshot = new Path(rootDir,
       new Path(HConstants.SNAPSHOT_DIR_NAME, snapshotName));
+    final Set<String> snapshotFiles = new HashSet<String>();
     final Path exportedArchive = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
-    LOG.debug(listFiles(fs, exportedArchive, exportedArchive));
     SnapshotReferenceUtil.visitReferencedFiles(TEST_UTIL.getConfiguration(), fs, exportedSnapshot,
           new SnapshotReferenceUtil.SnapshotVisitor() {
+        @Override
         public void storeFile(final HRegionInfo regionInfo, final String family,
             final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
           String hfile = storeFile.getName();
-          verifyNonEmptyFile(new Path(exportedArchive,
-            new Path(FSUtils.getTableDir(new Path("./"), tableName),
-                new Path(regionInfo.getEncodedName(), new Path(family, hfile)))));
+          snapshotFiles.add(hfile);
+          if (storeFile.hasReference()) {
+            // Nothing to do here, we have already the reference embedded
+          } else {
+            verifyNonEmptyFile(new Path(exportedArchive,
+              new Path(FSUtils.getTableDir(new Path("./"), tableName),
+                  new Path(regionInfo.getEncodedName(), new Path(family, hfile)))));
+          }
         }
 
-        public void recoveredEdits (final String region, final String logfile)
-            throws IOException {
-          verifyNonEmptyFile(new Path(exportedSnapshot,
-            new Path(tableName.getNameAsString(), new Path(region, logfile))));
-        }
-
+        @Override
         public void logFile (final String server, final String logfile)
             throws IOException {
+          snapshotFiles.add(logfile);
           verifyNonEmptyFile(new Path(exportedSnapshot, new Path(server, logfile)));
         }
 
@@ -414,6 +397,7 @@ public class TestExportSnapshot {
     SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, exportedSnapshot);
     assertTrue(desc.getName().equals(snapshotName));
     assertTrue(desc.getTable().equals(tableName.getNameAsString()));
+    return snapshotFiles;
   }
 
   private Set<String> listFiles(final FileSystem fs, final Path root, final Path dir)
@@ -449,7 +433,6 @@ public class TestExportSnapshot {
 
   private void removeExportDir(final Path path) throws IOException {
     FileSystem fs = FileSystem.get(path.toUri(), new Configuration());
-    FSUtils.logFileSystemState(fs, path, LOG);
     fs.delete(path, true);
   }
 }
