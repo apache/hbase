@@ -37,14 +37,15 @@ import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
  * Common functionality needed by all versions of {@link HFile} readers.
  */
 @InterfaceAudience.Private
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
 public abstract class AbstractHFileReader
     implements HFile.Reader, Configurable {
   /** Stream to read from. Does checksum verifications in file system */
-  protected FSDataInputStream istream;
+  protected FSDataInputStream istream; // UUF_UNUSED_PUBLIC_OR_PROTECTED_FIELD
 
   /** The file system stream of the underlying {@link HFile} that
    * does not do checksum verification in the file system */
-  protected FSDataInputStream istreamNoFsChecksum;
+  protected FSDataInputStream istreamNoFsChecksum;  // UUF_UNUSED_PUBLIC_OR_PROTECTED_FIELD
 
   /** Data block index reader keeping the root data index in memory */
   protected HFileBlockIndex.BlockIndexReader dataBlockIndexReader;
@@ -95,6 +96,7 @@ public abstract class AbstractHFileReader
 
   protected Configuration conf;
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
   protected AbstractHFileReader(Path path, FixedFileTrailer trailer,
       final long fileSize, final CacheConfig cacheConf, final HFileSystem hfs,
       final Configuration conf) {
@@ -104,7 +106,7 @@ public abstract class AbstractHFileReader
     this.fileSize = fileSize;
     this.path = path;
     this.name = path.getName();
-    this.hfs = hfs;
+    this.hfs = hfs; // URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD
     this.conf = conf;
   }
 

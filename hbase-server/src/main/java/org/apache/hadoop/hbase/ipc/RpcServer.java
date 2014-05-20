@@ -1165,8 +1165,7 @@ public class RpcServer implements RpcServerInterface {
     // Fake 'call' for failed authorization response
     private static final int AUTHROIZATION_FAILED_CALLID = -1;
     private final Call authFailedCall =
-      new Call(AUTHROIZATION_FAILED_CALLID, this.service, null,
-        null, null, null, this, null, 0, null);
+      new Call(AUTHROIZATION_FAILED_CALLID, null, null, null, null, null, this, null, 0, null);
     private ByteArrayOutputStream authFailedResponse =
         new ByteArrayOutputStream();
     // Fake 'call' for SASL context setup

@@ -77,8 +77,8 @@ public class NullComparator extends ByteArrayComparable {
   public static NullComparator parseFrom(final byte [] pbBytes)
   throws DeserializationException {
     try {
-      @SuppressWarnings("unused")
-      ComparatorProtos.NullComparator proto = ComparatorProtos.NullComparator.parseFrom(pbBytes);
+      // Just parse.  Don't use what we parse since on end we are returning new NullComparator.
+      ComparatorProtos.NullComparator.parseFrom(pbBytes);
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
     }

@@ -450,7 +450,7 @@ public class AggregationClient {
       S sum = null;
       Long rowCount = 0l;
 
-      public Pair<S, Long> getAvgArgs() {
+      public synchronized Pair<S, Long> getAvgArgs() {
         return new Pair<S, Long>(sum, rowCount);
       }
 
@@ -547,7 +547,7 @@ public class AggregationClient {
       long rowCountVal = 0l;
       S sumVal = null, sumSqVal = null;
 
-      public Pair<List<S>, Long> getStdParams() {
+      public synchronized Pair<List<S>, Long> getStdParams() {
         List<S> l = new ArrayList<S>();
         l.add(sumVal);
         l.add(sumSqVal);
@@ -670,7 +670,7 @@ public class AggregationClient {
     class StdCallback implements Batch.Callback<List<S>> {
       S sumVal = null, sumWeights = null;
 
-      public Pair<NavigableMap<byte[], List<S>>, List<S>> getMedianParams() {
+      public synchronized Pair<NavigableMap<byte[], List<S>>, List<S>> getMedianParams() {
         List<S> l = new ArrayList<S>();
         l.add(sumVal);
         l.add(sumWeights);

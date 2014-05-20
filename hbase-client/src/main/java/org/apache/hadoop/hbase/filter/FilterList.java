@@ -235,6 +235,8 @@ final public class FilterList extends Filter {
 
   
   @Override
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="SF_SWITCH_FALLTHROUGH",
+    justification="Intentional")
   public ReturnCode filterKeyValue(Cell v) throws IOException {
     this.referenceKV = v;
 
@@ -252,7 +254,7 @@ final public class FilterList extends Filter {
         switch (code) {
         // Override INCLUDE and continue to evaluate.
         case INCLUDE_AND_NEXT_COL:
-          rc = ReturnCode.INCLUDE_AND_NEXT_COL;
+          rc = ReturnCode.INCLUDE_AND_NEXT_COL; // FindBugs SF_SWITCH_FALLTHROUGH
         case INCLUDE:
           transformed = filter.transformCell(transformed);
           continue;
