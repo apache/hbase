@@ -76,7 +76,7 @@ public class PutSortReducer extends
       int index = 0;
       for (KeyValue kv : map) {
         context.write(row, kv);
-        if (index > 0 && index % 100 == 0)
+        if (++index % 100 == 0)
           context.setStatus("Wrote " + index);
       }
 
