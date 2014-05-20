@@ -1145,7 +1145,7 @@ class FSHLog implements HLog, Syncable {
             }
           }
           if (!hasIdleSyncer) {
-            int idx = (int)this.lastWrittenTxid % asyncSyncers.length;
+            int idx = (int)(this.lastWrittenTxid % asyncSyncers.length);
             asyncSyncers[idx].setWrittenTxid(this.lastWrittenTxid);
           }
         }
