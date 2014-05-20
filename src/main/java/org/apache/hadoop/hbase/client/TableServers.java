@@ -107,7 +107,7 @@ public class TableServers implements ServerConnection {
   private final int prefetchRegionLimit;
 
   private final Object masterLock = new Object();
-  private final int maxOutstandRequestsPerServer;
+  private final int maxOutstandingRequestsPerServer;
   private volatile boolean closed;
   private volatile HMasterInterface master;
   private volatile boolean masterChecked;
@@ -295,7 +295,7 @@ public class TableServers implements ServerConnection {
 
     this.recordClientContext = conf.getBoolean("hbase.client.record.context", false);
 
-    this.maxOutstandRequestsPerServer = conf.getInt("hbase.client.max.outstanding.requests.per.server", 50);
+    this.maxOutstandingRequestsPerServer = conf.getInt("hbase.client.max.outstanding.requests.per.server", 50);
   }
 
   // Used by master and region servers during safe mode only
@@ -3359,7 +3359,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
     AtomicInteger atomicOutstanding = getOutstandingCount(address);
 
     int outstanding = atomicOutstanding.get();
-    if (outstanding > maxOutstandRequestsPerServer) {
+    if (outstanding > maxOutstandingRequestsPerServer) {
       throw new TooManyOutstandingRequestsException(address, outstanding);
     }
     atomicOutstanding.incrementAndGet();
@@ -3373,7 +3373,11 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
   private AtomicInteger getOutstandingCount(HServerAddress address) {
     AtomicInteger out = outstandingRequests.get(address);
     if (out == null) {
-      out = outstandingRequests.putIfAbsent(address, new AtomicInteger(0));
+      out = new AtomicInteger(0);
+      AtomicInteger prev = outstandingRequests.putIfAbsent(address, out);
+      if (prev != null) {
+        out = prev;
+      }
     }
     return out;
   }

@@ -152,7 +152,6 @@ public class TestLoadShedding {
           ht.flushCommits();
         }
       } catch (IOException e) {
-        e.printStackTrace();
         NUM_SHED.incrementAndGet();
       }
     }
