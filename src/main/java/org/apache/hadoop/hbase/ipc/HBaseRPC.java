@@ -28,6 +28,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.InetSocketAddress;
+import java.net.Proxy.Type;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -50,8 +51,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ParamFormatHelper;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.net.SocksSocketFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.codehaus.jackson.map.ObjectMapper;
+
+import com.google.common.net.HostAndPort;
 
 /** A simple RPC mechanism.
  *
@@ -393,6 +397,28 @@ public class HBaseRPC {
                               (long) serverVersion);
   }
 
+  public static SocketFactory getSocksProxySocketFactoryFromConf(
+      Configuration conf) {
+    String socksProxyHostName =
+        conf.get(HConstants.HADOOPRPC_CLIENT_SOCKS_PROXY_HOSTNAME, "");
+    int socksProxyPort =
+        conf.getInt(HConstants.HADOOPRPC_CLIENT_SOCKS_PROXY_PORT, 0);
+    SocketFactory socketFactory = null;
+    if (!socksProxyHostName.isEmpty() && socksProxyPort != 0) {
+      try {
+        java.net.Proxy proxy = new java.net.Proxy(Type.SOCKS,
+            new InetSocketAddress(socksProxyHostName, socksProxyPort));
+        socketFactory = new SocksSocketFactory(proxy);
+      } catch (Exception e) {
+        LOG.warn("Proxy resolution failed", e);
+      }
+    }
+    if (socketFactory == null) {
+      socketFactory = SocketFactory.getDefault();
+    }
+    return socketFactory;
+  }
+
   /**
    * Construct a client-side proxy object with the default SocketFactory
    *
@@ -409,8 +435,8 @@ public class HBaseRPC {
       int rpcTimeout, HBaseRPCOptions options)
       throws IOException {
 
-    return getProxy(protocol, clientVersion, addr, conf, 
-        SocketFactory.getDefault(), rpcTimeout, options);
+    return getProxy(protocol, clientVersion, addr, conf,
+        getSocksProxySocketFactoryFromConf(conf), rpcTimeout, options);
   }
   
   /* this is needed for unit tests. some tests start multiple

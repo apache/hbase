@@ -1098,6 +1098,12 @@ public final class HConstants {
 
   public static final String SWIFT_CLIENT_SOCKS_PROXY_HOST_AND_PORT =
       "hbase.client.swift.socks.proxy.hostAndPort";
+
+  public static final String HADOOPRPC_CLIENT_SOCKS_PROXY_HOSTNAME =
+      "hbase.client.socks.proxy.host.name";
+  public static final String HADOOPRPC_CLIENT_SOCKS_PROXY_PORT =
+      "hbase.client.socks.proxy.port";
+
   /**
    * Key of the number of store-files for blocking flush
    */
