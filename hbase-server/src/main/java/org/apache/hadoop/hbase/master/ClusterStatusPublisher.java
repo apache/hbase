@@ -21,6 +21,16 @@
 package org.apache.hadoop.hbase.master;
 
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.handler.codec.MessageToMessageEncoder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
@@ -28,24 +38,18 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
-import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
-import org.jboss.netty.channel.ChannelEvent;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelUpstreamHandler;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.socket.DatagramChannel;
-import org.jboss.netty.channel.socket.DatagramChannelFactory;
-import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
-import org.jboss.netty.handler.codec.protobuf.ProtobufEncoder;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -54,8 +58,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Class to publish the cluster status to the client. This allows them to know immediately
@@ -233,50 +235,65 @@ public class ClusterStatusPublisher extends Chore {
 
   public static class MulticastPublisher implements Publisher {
     private DatagramChannel channel;
-    private final ExecutorService service = Executors.newSingleThreadExecutor(
-        Threads.newDaemonThreadFactory("hbase-master-clusterStatus-worker"));
+    private final EventLoopGroup group = new NioEventLoopGroup(
+        1, Threads.newDaemonThreadFactory("hbase-master-clusterStatusPublisher"));
 
     public MulticastPublisher() {
     }
 
     @Override
     public void connect(Configuration conf) throws IOException {
+      NetworkInterface ni = NetworkInterface.getByInetAddress(Addressing.getIpAddress());
+
       String mcAddress = conf.get(HConstants.STATUS_MULTICAST_ADDRESS,
           HConstants.DEFAULT_STATUS_MULTICAST_ADDRESS);
       int port = conf.getInt(HConstants.STATUS_MULTICAST_PORT,
           HConstants.DEFAULT_STATUS_MULTICAST_PORT);
 
-      // Can't be NiO with Netty today => not implemented in Netty.
-      DatagramChannelFactory f = new OioDatagramChannelFactory(service);
-
-      ConnectionlessBootstrap b = new ConnectionlessBootstrap(f);
-      b.setPipeline(Channels.pipeline(new ProtobufEncoder(),
-          new ChannelUpstreamHandler() {
-            @Override
-            public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
-                throws Exception {
-              // We're just writing here. Discard any incoming data. See HBASE-8466.
-            }
-          }));
-
-
-      channel = (DatagramChannel) b.bind(new InetSocketAddress(0));
-      channel.getConfig().setReuseAddress(true);
-
-      InetAddress ina;
+      final InetAddress ina;
       try {
         ina = InetAddress.getByName(mcAddress);
       } catch (UnknownHostException e) {
+        close();
         throw new IOException("Can't connect to " + mcAddress, e);
       }
-      channel.joinGroup(ina);
-      channel.connect(new InetSocketAddress(mcAddress, port));
+
+      final InetSocketAddress isa = new InetSocketAddress(mcAddress, port);
+
+      Bootstrap b = new Bootstrap();
+      b.group(group)
+          .channel(NioDatagramChannel.class)
+          .option(ChannelOption.SO_REUSEADDR, true)
+          .handler(new ClusterStatusEncoder(isa));
+
+      try {
+        channel = (DatagramChannel) b.bind(new InetSocketAddress(0)).sync().channel();
+        channel.joinGroup(ina, ni, null, channel.newPromise()).sync();
+        channel.connect(isa).sync();
+      } catch (InterruptedException e) {
+        close();
+        throw ExceptionUtil.asInterrupt(e);
+      }
+    }
+
+    private static class ClusterStatusEncoder extends MessageToMessageEncoder<ClusterStatus> {
+      final private InetSocketAddress isa;
+
+      private ClusterStatusEncoder(InetSocketAddress isa) {
+        this.isa = isa;
+      }
+
+      @Override
+      protected void encode(ChannelHandlerContext channelHandlerContext,
+                            ClusterStatus clusterStatus, List<Object> objects) {
+        ClusterStatusProtos.ClusterStatus csp = clusterStatus.convert();
+        objects.add(new DatagramPacket(Unpooled.wrappedBuffer(csp.toByteArray()), isa));
+      }
     }
 
     @Override
     public void publish(ClusterStatus cs) {
-      ClusterStatusProtos.ClusterStatus csp = cs.convert();
-      channel.write(csp);
+      channel.writeAndFlush(cs).syncUninterruptibly();
     }
 
     @Override
@@ -284,7 +301,7 @@ public class ClusterStatusPublisher extends Chore {
       if (channel != null) {
         channel.close();
       }
-      service.shutdown();
+      group.shutdownGracefully();
     }
   }
 }

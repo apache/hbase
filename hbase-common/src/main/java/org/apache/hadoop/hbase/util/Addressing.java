@@ -18,7 +18,13 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.util.Enumeration;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
@@ -74,5 +80,26 @@ public class Addressing {
       throw new IllegalArgumentException("Not a host:port pair: " + hostAndPort);
     }
     return Integer.parseInt(hostAndPort.substring(colonIndex + 1));
+  }
+
+  public static InetAddress getIpAddress() throws SocketException {
+    // Before we connect somewhere, we cannot be sure about what we'd be bound to; however,
+    // we only connect when the message where client ID is, is long constructed. Thus,
+    // just use whichever IP address we can find.
+    Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+    while (interfaces.hasMoreElements()) {
+      NetworkInterface current = interfaces.nextElement();
+      if (!current.isUp() || current.isLoopback() || current.isVirtual()) continue;
+      Enumeration<InetAddress> addresses = current.getInetAddresses();
+      while (addresses.hasMoreElements()) {
+        InetAddress addr = addresses.nextElement();
+        if (addr.isLoopbackAddress()) continue;
+        if (addr instanceof Inet4Address || addr instanceof Inet6Address) {
+          return addr;
+        }
+      }
+    }
+
+    throw new SocketException("Can't get our ip address, interfaces are: " + interfaces);
   }
 }

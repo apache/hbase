@@ -20,18 +20,16 @@
 package org.apache.hadoop.hbase.client;
 
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
+import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBufInputStream;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -40,17 +38,19 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
+import org.apache.hadoop.hbase.util.Addressing;
+import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.channel.socket.DatagramChannel;
-import org.jboss.netty.channel.socket.DatagramChannelFactory;
-import org.jboss.netty.channel.socket.oio.OioDatagramChannelFactory;
-import org.jboss.netty.handler.codec.protobuf.ProtobufDecoder;
+
+import java.io.Closeable;
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -178,22 +178,14 @@ class ClusterStatusListener implements Closeable {
    */
   class MulticastListener implements Listener {
     private DatagramChannel channel;
-    private final ExecutorService service = Executors.newSingleThreadExecutor(
-        Threads.newDaemonThreadFactory("hbase-client-clusterStatus-multiCastListener"));
-
+    private final EventLoopGroup group = new NioEventLoopGroup(
+        1, Threads.newDaemonThreadFactory("hbase-client-clusterStatusListener"));
 
     public MulticastListener() {
     }
 
     @Override
     public void connect(Configuration conf) throws IOException {
-      // Can't be NiO with Netty today => not implemented in Netty.
-      DatagramChannelFactory f = new OioDatagramChannelFactory(service);
-
-      ConnectionlessBootstrap b = new ConnectionlessBootstrap(f);
-      b.setPipeline(Channels.pipeline(
-          new ProtobufDecoder(ClusterStatusProtos.ClusterStatus.getDefaultInstance()),
-          new ClusterStatusHandler()));
 
       String mcAddress = conf.get(HConstants.STATUS_MULTICAST_ADDRESS,
           HConstants.DEFAULT_STATUS_MULTICAST_ADDRESS);
@@ -202,17 +194,29 @@ class ClusterStatusListener implements Closeable {
       int port = conf.getInt(HConstants.STATUS_MULTICAST_PORT,
           HConstants.DEFAULT_STATUS_MULTICAST_PORT);
 
-      channel = (DatagramChannel) b.bind(new InetSocketAddress(bindAddress, port));
-
-      channel.getConfig().setReuseAddress(true);
-
       InetAddress ina;
       try {
         ina = InetAddress.getByName(mcAddress);
       } catch (UnknownHostException e) {
+        close();
         throw new IOException("Can't connect to " + mcAddress, e);
       }
-      channel.joinGroup(ina);
+
+      try {
+        Bootstrap b = new Bootstrap();
+        b.group(group)
+            .channel(NioDatagramChannel.class)
+            .option(ChannelOption.SO_REUSEADDR, true)
+            .handler(new ClusterStatusHandler());
+
+        channel = (DatagramChannel)b.bind(bindAddress, port).sync().channel();
+      } catch (InterruptedException e) {
+        close();
+        throw ExceptionUtil.asInterrupt(e);
+      }
+
+      NetworkInterface ni = NetworkInterface.getByInetAddress(Addressing.getIpAddress());
+      channel.joinGroup(ina, ni, null, channel.newPromise());
     }
 
     @Override
@@ -221,30 +225,40 @@ class ClusterStatusListener implements Closeable {
         channel.close();
         channel = null;
       }
-      service.shutdown();
+      group.shutdownGracefully();
     }
+
 
 
     /**
      * Class, conforming to the Netty framework, that manages the message received.
      */
-    private class ClusterStatusHandler extends SimpleChannelUpstreamHandler {
+    private class ClusterStatusHandler extends SimpleChannelInboundHandler<DatagramPacket> {
 
-      @Override
-      public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) throws Exception {
-        ClusterStatusProtos.ClusterStatus csp = (ClusterStatusProtos.ClusterStatus) e.getMessage();
-        ClusterStatus ncs = ClusterStatus.convert(csp);
-        receive(ncs);
-      }
-
-      /**
-       * Invoked when an exception was raised by an I/O thread or a
-       * {@link org.jboss.netty.channel.ChannelHandler}.
-       */
       @Override
       public void exceptionCaught(
-          ChannelHandlerContext ctx, ExceptionEvent e) throws Exception {
-        LOG.error("Unexpected exception, continuing.", e.getCause());
+          ChannelHandlerContext ctx, Throwable cause)
+          throws Exception {
+        LOG.error("Unexpected exception, continuing.", cause);
+      }
+
+      @Override
+      public boolean acceptInboundMessage(Object msg)
+          throws Exception {
+        return super.acceptInboundMessage(msg);
+      }
+
+
+      @Override
+      protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket dp) throws Exception {
+        ByteBufInputStream bis = new ByteBufInputStream(dp.content());
+        try {
+          ClusterStatusProtos.ClusterStatus csp = ClusterStatusProtos.ClusterStatus.parseFrom(bis);
+          ClusterStatus ncs = ClusterStatus.convert(csp);
+          receive(ncs);
+        } finally {
+          bis.close();
+        }
       }
     }
   }

@@ -212,7 +212,7 @@ public class TestHCM {
     con1.close();
   }
 
-  @Ignore ("Fails in IDEs: HBASE-9042") @Test(expected = RegionServerStoppedException.class)
+  @Test(expected = RegionServerStoppedException.class)
   public void testClusterStatus() throws Exception {
     TableName tn =
         TableName.valueOf("testClusterStatus");

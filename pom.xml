@@ -931,7 +931,7 @@
     <clover.version>2.6.3</clover.version>
     <jamon-runtime.version>2.3.1</jamon-runtime.version>
     <jettison.version>1.3.1</jettison.version>
-    <netty.version>3.6.6.Final</netty.version>
+    <netty.version>4.0.19.Final</netty.version>
     <!-- Plugin Dependencies -->
     <maven.assembly.version>2.4</maven.assembly.version>
     <maven.antrun.version>1.6</maven.antrun.version>
@@ -1179,14 +1179,14 @@
             <artifactId>jms</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>org.jboss.netty</groupId>
+            <groupId>io.netty</groupId>
             <artifactId>netty</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
-        <artifactId>netty</artifactId>
+        <artifactId>netty-all</artifactId>
         <version>${netty.version}</version>
       </dependency>
       <dependency>
@@ -1529,11 +1529,23 @@
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-mapreduce-client-core</artifactId>
             <version>${hadoop-two.version}</version>
+            <exclusions>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty</artifactId>
+              </exclusion>
+            </exclusions>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
             <version>${hadoop-two.version}</version>
+            <exclusions>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty</artifactId>
+              </exclusion>
+            </exclusions>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -1541,6 +1553,12 @@
             <version>${hadoop-two.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
+            <exclusions>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty</artifactId>
+              </exclusion>
+            </exclusions>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -1604,6 +1622,10 @@
                 <groupId>stax</groupId>
                 <artifactId>stax-api</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -1634,6 +1656,10 @@
               <exclusion>
                 <groupId>stax</groupId>
                 <artifactId>stax-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty</artifactId>
               </exclusion>
             </exclusions>
           </dependency>

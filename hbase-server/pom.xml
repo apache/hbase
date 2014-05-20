@@ -415,6 +415,10 @@
       <groupId>org.jamon</groupId>
       <artifactId>jamon-runtime</artifactId>
     </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-all</artifactId>
+    </dependency>
     <!-- REST dependencies -->
     <dependency>
       <groupId>com.google.protobuf</groupId>
@@ -607,6 +611,13 @@
           <artifactId>hadoop-minicluster</artifactId>
           <scope>test</scope>
         </dependency>
+        <!-- Hadoop needs Netty 3.x at test scope for the minicluster -->
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty</artifactId>
+          <version>3.6.2.Final</version>
+          <scope>test</scope>
+        </dependency>
       </dependencies>
       <build>
         <plugins>
@@ -659,6 +670,13 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-minicluster</artifactId>
+        </dependency>
+        <!-- Hadoop needs Netty 3.x at test scope for the minicluster -->
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty</artifactId>
+          <version>3.6.2.Final</version>
+          <scope>test</scope>
         </dependency>
       </dependencies>
       <build>

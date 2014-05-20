@@ -685,7 +685,7 @@ public class TableMapReduceUtil {
       org.apache.hadoop.hbase.mapreduce.TableMapper.class,           // hbase-server
       // pull necessary dependencies
       org.apache.zookeeper.ZooKeeper.class,
-      org.jboss.netty.channel.ChannelFactory.class,
+      io.netty.channel.Channel.class,
       com.google.protobuf.Message.class,
       com.google.common.collect.Lists.class,
       org.htrace.Trace.class);

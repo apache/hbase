@@ -29,6 +29,7 @@ import java.util.Enumeration;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -84,22 +85,7 @@ class ClientIdGenerator {
    */
   public static byte[] getIpAddressBytes() {
     try {
-      // Before we connect somewhere, we cannot be sure about what we'd be bound to; however,
-      // we only connect when the message where client ID is, is long constructed. Thus,
-      // just use whichever IP address we can find.
-      Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
-      while (interfaces.hasMoreElements()) {
-        NetworkInterface current = interfaces.nextElement();
-        if (!current.isUp() || current.isLoopback() || current.isVirtual()) continue;
-        Enumeration<InetAddress> addresses = current.getInetAddresses();
-        while (addresses.hasMoreElements()) {
-          InetAddress addr = addresses.nextElement();
-          if (addr.isLoopbackAddress()) continue;
-          if (addr instanceof Inet4Address || addr instanceof Inet6Address) {
-            return addr.getAddress();
-          }
-        }
-      }
+      return Addressing.getIpAddress().getAddress();
     } catch (IOException ex) {
       LOG.warn("Failed to get IP address bytes", ex);
     }
