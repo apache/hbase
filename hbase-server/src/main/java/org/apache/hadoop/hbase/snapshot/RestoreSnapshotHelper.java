@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -153,6 +155,15 @@ public class RestoreSnapshotHelper {
    * @return the set of regions touched by the restore operation
    */
   public RestoreMetaChanges restoreHdfsRegions() throws IOException {
+    ThreadPoolExecutor exec = SnapshotManifest.createExecutor(conf, "RestoreSnapshot");
+    try {
+      return restoreHdfsRegions(exec);
+    } finally {
+      exec.shutdown();
+    }
+  }
+
+  private RestoreMetaChanges restoreHdfsRegions(final ThreadPoolExecutor exec) throws IOException {
     LOG.debug("starting restore");
 
     Map<String, SnapshotRegionManifest> regionManifests = snapshotManifest.getRegionManifestsMap();
@@ -187,13 +198,13 @@ public class RestoreSnapshotHelper {
       // Restore regions using the snapshot data
       monitor.rethrowException();
       status.setStatus("Restoring table regions...");
-      restoreHdfsRegions(regionManifests, metaChanges.getRegionsToRestore());
+      restoreHdfsRegions(exec, regionManifests, metaChanges.getRegionsToRestore());
       status.setStatus("Finished restoring all table regions.");
 
       // Remove regions from the current table
       monitor.rethrowException();
       status.setStatus("Starting to delete excess regions from table");
-      removeHdfsRegions(metaChanges.getRegionsToRemove());
+      removeHdfsRegions(exec, metaChanges.getRegionsToRemove());
       status.setStatus("Finished deleting excess regions from table.");
     }
 
@@ -210,7 +221,7 @@ public class RestoreSnapshotHelper {
       // Create new regions cloning from the snapshot
       monitor.rethrowException();
       status.setStatus("Cloning regions...");
-      HRegionInfo[] clonedRegions = cloneHdfsRegions(regionManifests, regionsToAdd);
+      HRegionInfo[] clonedRegions = cloneHdfsRegions(exec, regionManifests, regionsToAdd);
       metaChanges.setNewRegions(clonedRegions);
       status.setStatus("Finished cloning regions.");
     }
@@ -345,23 +356,30 @@ public class RestoreSnapshotHelper {
   /**
    * Remove specified regions from the file-system, using the archiver.
    */
-  private void removeHdfsRegions(final List<HRegionInfo> regions) throws IOException {
-    if (regions != null && regions.size() > 0) {
-      for (HRegionInfo hri: regions) {
+  private void removeHdfsRegions(final ThreadPoolExecutor exec, final List<HRegionInfo> regions)
+      throws IOException {
+    if (regions == null || regions.size() == 0) return;
+    ModifyRegionUtils.editRegions(exec, regions, new ModifyRegionUtils.RegionEditTask() {
+      @Override
+      public void editRegion(final HRegionInfo hri) throws IOException {
         HFileArchiver.archiveRegion(conf, fs, hri);
       }
-    }
+    });
   }
 
   /**
    * Restore specified regions by restoring content to the snapshot state.
    */
-  private void restoreHdfsRegions(final Map<String, SnapshotRegionManifest> regionManifests,
+  private void restoreHdfsRegions(final ThreadPoolExecutor exec,
+      final Map<String, SnapshotRegionManifest> regionManifests,
       final List<HRegionInfo> regions) throws IOException {
     if (regions == null || regions.size() == 0) return;
-    for (HRegionInfo hri: regions) {
-      restoreRegion(hri, regionManifests.get(hri.getEncodedName()));
-    }
+    ModifyRegionUtils.editRegions(exec, regions, new ModifyRegionUtils.RegionEditTask() {
+      @Override
+      public void editRegion(final HRegionInfo hri) throws IOException {
+        restoreRegion(hri, regionManifests.get(hri.getEncodedName()));
+      }
+    });
   }
 
   private Map<String, List<SnapshotRegionManifest.StoreFile>> getRegionHFileReferences(
@@ -465,7 +483,8 @@ public class RestoreSnapshotHelper {
    * Clone specified regions. For each region create a new region
    * and create a HFileLink for each hfile.
    */
-  private HRegionInfo[] cloneHdfsRegions(final Map<String, SnapshotRegionManifest> regionManifests,
+  private HRegionInfo[] cloneHdfsRegions(final ThreadPoolExecutor exec,
+      final Map<String, SnapshotRegionManifest> regionManifests,
       final List<HRegionInfo> regions) throws IOException {
     if (regions == null || regions.size() == 0) return null;
 
@@ -490,7 +509,7 @@ public class RestoreSnapshotHelper {
     }
 
     // create the regions on disk
-    ModifyRegionUtils.createRegions(conf, rootDir, tableDir,
+    ModifyRegionUtils.createRegions(exec, conf, rootDir, tableDir,
       tableDesc, clonedRegionsInfo, new ModifyRegionUtils.RegionFillTask() {
         @Override
         public void fillRegion(final HRegion region) throws IOException {

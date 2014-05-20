@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,6 +37,9 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
 
@@ -88,8 +92,17 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
           + ClientSnapshotDescriptionUtils.toString(snapshot);
       LOG.info(msg);
       status.setStatus(msg);
-      for (HRegionInfo regionInfo: regions) {
-        snapshotDisabledRegion(regionInfo);
+
+      ThreadPoolExecutor exec = SnapshotManifest.createExecutor(conf, "DisabledTableSnapshot");
+      try {
+        ModifyRegionUtils.editRegions(exec, regions, new ModifyRegionUtils.RegionEditTask() {
+          @Override
+          public void editRegion(final HRegionInfo regionInfo) throws IOException {
+            snapshotManifest.addRegion(FSUtils.getTableDir(rootDir, snapshotTable), regionInfo);
+          }
+        });
+      } finally {
+        exec.shutdown();
       }
     } catch (Exception e) {
       // make sure we capture the exception to propagate back to the client later

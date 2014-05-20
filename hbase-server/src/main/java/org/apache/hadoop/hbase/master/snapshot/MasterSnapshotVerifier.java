@@ -129,7 +129,7 @@ public final class MasterSnapshotVerifier {
 
   /**
    * Check that the table descriptor for the snapshot is a valid table descriptor
-   * @param snapshotDir snapshot directory to check
+   * @param manifest snapshot manifest to inspect
    */
   private void verifyTableInfo(final SnapshotManifest manifest) throws IOException {
     HTableDescriptor htd = manifest.getTableDescriptor();
@@ -145,7 +145,7 @@ public final class MasterSnapshotVerifier {
 
   /**
    * Check that all the regions in the snapshot are valid, and accounted for.
-   * @param snapshotDir snapshot directory to check
+   * @param manifest snapshot manifest to inspect
    * @throws IOException if we can't reach hbase:meta or read the files from the FS
    */
   private void verifyRegions(final SnapshotManifest manifest) throws IOException {
@@ -167,6 +167,7 @@ public final class MasterSnapshotVerifier {
       LOG.error(errorMsg);
     }
 
+    // Verify HRegionInfo
     for (HRegionInfo region : regions) {
       SnapshotRegionManifest regionManifest = regionManifests.get(region.getEncodedName());
       if (regionManifest == null) {
@@ -177,20 +178,23 @@ public final class MasterSnapshotVerifier {
         continue;
       }
 
-      verifyRegion(fs, manifest.getSnapshotDir(), region, regionManifest);
+      verifyRegionInfo(region, regionManifest);
     }
+
     if (!errorMsg.isEmpty()) {
       throw new CorruptedSnapshotException(errorMsg);
     }
+
+    // Verify Snapshot HFiles
+    SnapshotReferenceUtil.verifySnapshot(services.getConfiguration(), fs, manifest);
   }
 
   /**
-   * Verify that the region (regioninfo, hfiles) are valid
-   * @param fs the FileSystem instance
-   * @param snapshotDir snapshot directory to check
+   * Verify that the regionInfo is valid
    * @param region the region to check
+   * @param manifest snapshot manifest to inspect
    */
-  private void verifyRegion(final FileSystem fs, final Path snapshotDir, final HRegionInfo region,
+  private void verifyRegionInfo(final HRegionInfo region,
       final SnapshotRegionManifest manifest) throws IOException {
     HRegionInfo manifestRegionInfo = HRegionInfo.convert(manifest.getRegionInfo());
     if (!region.equals(manifestRegionInfo)) {
@@ -198,16 +202,5 @@ public final class MasterSnapshotVerifier {
                    "doesn't match expected region:" + region;
       throw new CorruptedSnapshotException(msg, snapshot);
     }
-
-    // make sure we have all the expected store files
-    SnapshotReferenceUtil.visitRegionStoreFiles(manifest,
-        new SnapshotReferenceUtil.StoreFileVisitor() {
-      @Override
-      public void storeFile(final HRegionInfo regionInfo, final String family,
-          final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-        SnapshotReferenceUtil.verifyStoreFile(services.getConfiguration(), fs, snapshotDir,
-          snapshot, region, family, storeFile);
-      }
-    });
   }
 }

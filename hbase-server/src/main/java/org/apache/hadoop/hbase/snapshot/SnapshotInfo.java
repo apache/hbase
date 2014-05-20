@@ -25,6 +25,8 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -99,14 +101,14 @@ public final class SnapshotInfo extends Configured implements Tool {
       }
     }
 
-    private int hfileArchiveCount = 0;
-    private int hfilesMissing = 0;
-    private int hfilesCount = 0;
-    private int logsMissing = 0;
-    private int logsCount = 0;
-    private long hfileArchiveSize = 0;
-    private long hfileSize = 0;
-    private long logSize = 0;
+    private AtomicInteger hfileArchiveCount = new AtomicInteger();
+    private AtomicInteger hfilesMissing = new AtomicInteger();
+    private AtomicInteger hfilesCount = new AtomicInteger();
+    private AtomicInteger logsMissing = new AtomicInteger();
+    private AtomicInteger logsCount = new AtomicInteger();
+    private AtomicLong hfileArchiveSize = new AtomicLong();
+    private AtomicLong hfileSize = new AtomicLong();
+    private AtomicLong logSize = new AtomicLong();
 
     private final SnapshotDescription snapshot;
     private final TableName snapshotTable;
@@ -128,57 +130,57 @@ public final class SnapshotInfo extends Configured implements Tool {
 
     /** @return true if the snapshot is corrupted */
     public boolean isSnapshotCorrupted() {
-      return hfilesMissing > 0 || logsMissing > 0;
+      return hfilesMissing.get() > 0 || logsMissing.get() > 0;
     }
 
     /** @return the number of available store files */
     public int getStoreFilesCount() {
-      return hfilesCount + hfileArchiveCount;
+      return hfilesCount.get() + hfileArchiveCount.get();
     }
 
     /** @return the number of available store files in the archive */
     public int getArchivedStoreFilesCount() {
-      return hfileArchiveCount;
+      return hfileArchiveCount.get();
     }
 
     /** @return the number of available log files */
     public int getLogsCount() {
-      return logsCount;
+      return logsCount.get();
     }
 
     /** @return the number of missing store files */
     public int getMissingStoreFilesCount() {
-      return hfilesMissing;
+      return hfilesMissing.get();
     }
 
     /** @return the number of missing log files */
     public int getMissingLogsCount() {
-      return logsMissing;
+      return logsMissing.get();
     }
 
     /** @return the total size of the store files referenced by the snapshot */
     public long getStoreFilesSize() {
-      return hfileSize + hfileArchiveSize;
+      return hfileSize.get() + hfileArchiveSize.get();
     }
 
     /** @return the total size of the store files shared */
     public long getSharedStoreFilesSize() {
-      return hfileSize;
+      return hfileSize.get();
     }
 
     /** @return the total size of the store files in the archive */
     public long getArchivedStoreFileSize() {
-      return hfileArchiveSize;
+      return hfileArchiveSize.get();
     }
 
     /** @return the percentage of the shared store files */
     public float getSharedStoreFilePercentage() {
-      return ((float)hfileSize / (hfileSize + hfileArchiveSize)) * 100;
+      return ((float)hfileSize.get() / (hfileSize.get() + hfileArchiveSize.get())) * 100;
     }
 
     /** @return the total log size */
     public long getLogsSize() {
-      return logSize;
+      return logSize.get();
     }
 
     /**
@@ -197,15 +199,15 @@ public final class SnapshotInfo extends Configured implements Tool {
       try {
         if ((inArchive = fs.exists(link.getArchivePath()))) {
           size = fs.getFileStatus(link.getArchivePath()).getLen();
-          hfileArchiveSize += size;
-          hfileArchiveCount++;
+          hfileArchiveSize.addAndGet(size);
+          hfileArchiveCount.incrementAndGet();
         } else {
           size = link.getFileStatus(fs).getLen();
-          hfileSize += size;
-          hfilesCount++;
+          hfileSize.addAndGet(size);
+          hfilesCount.incrementAndGet();
         }
       } catch (FileNotFoundException e) {
-        hfilesMissing++;
+        hfilesMissing.incrementAndGet();
       }
       return new FileInfo(inArchive, size);
     }
@@ -221,10 +223,10 @@ public final class SnapshotInfo extends Configured implements Tool {
       long size = -1;
       try {
         size = logLink.getFileStatus(fs).getLen();
-        logSize += size;
-        logsCount++;
+        logSize.addAndGet(size);
+        logsCount.incrementAndGet();
       } catch (FileNotFoundException e) {
-        logsMissing++;
+        logsMissing.incrementAndGet();
       }
       return new FileInfo(false, size);
     }
@@ -368,8 +370,8 @@ public final class SnapshotInfo extends Configured implements Tool {
     final SnapshotDescription snapshotDesc = snapshotManifest.getSnapshotDescription();
     final String table = snapshotDesc.getTable();
     final SnapshotStats stats = new SnapshotStats(this.getConf(), this.fs, snapshotDesc);
-    SnapshotReferenceUtil.visitReferencedFiles(getConf(), fs,
-      snapshotManifest.getSnapshotDir(), snapshotDesc, new SnapshotReferenceUtil.SnapshotVisitor() {
+    SnapshotReferenceUtil.concurrentVisitReferencedFiles(getConf(), fs, snapshotManifest,
+      new SnapshotReferenceUtil.SnapshotVisitor() {
         @Override
         public void storeFile(final HRegionInfo regionInfo, final String family,
             final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
@@ -448,8 +450,9 @@ public final class SnapshotInfo extends Configured implements Tool {
     Path rootDir = FSUtils.getRootDir(conf);
     FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
+    SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshot);
     final SnapshotStats stats = new SnapshotStats(conf, fs, snapshot);
-    SnapshotReferenceUtil.visitReferencedFiles(conf, fs, snapshotDir, snapshot,
+    SnapshotReferenceUtil.concurrentVisitReferencedFiles(conf, fs, manifest,
       new SnapshotReferenceUtil.SnapshotVisitor() {
         @Override
         public void storeFile(final HRegionInfo regionInfo, final String family,

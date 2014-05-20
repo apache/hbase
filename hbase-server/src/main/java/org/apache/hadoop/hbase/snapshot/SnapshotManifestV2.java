@@ -103,14 +103,15 @@ public class SnapshotManifestV2 {
     }
 
     public void storeFile(final SnapshotRegionManifest.Builder region,
-        final SnapshotRegionManifest.FamilyFiles.Builder family, final StoreFileInfo storeFile) {
+        final SnapshotRegionManifest.FamilyFiles.Builder family, final StoreFileInfo storeFile)
+        throws IOException {
       SnapshotRegionManifest.StoreFile.Builder sfManifest =
             SnapshotRegionManifest.StoreFile.newBuilder();
       sfManifest.setName(storeFile.getPath().getName());
       if (storeFile.isReference()) {
         sfManifest.setReference(storeFile.getReference().convert());
       }
-      sfManifest.setFileSize(storeFile.getFileStatus().getLen());
+      sfManifest.setFileSize(storeFile.getReferencedFileStatus(fs).getLen());
       family.addStoreFiles(sfManifest.build());
     }
   }

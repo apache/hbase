@@ -223,6 +223,20 @@ public class StoreFileInfo {
    */
   public HDFSBlocksDistribution computeHDFSBlocksDistribution(final FileSystem fs)
       throws IOException {
+    FileStatus status = getReferencedFileStatus(fs);
+    if (this.reference != null) {
+      return computeRefFileHDFSBlockDistribution(fs, reference, status);
+    } else {
+      return FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
+    }
+  }
+
+  /**
+   * Get the {@link FileStatus} of the file referenced by this StoreFileInfo
+   * @param fs The current file system to use.
+   * @return The {@link FileStatus} of the file referenced by this StoreFileInfo
+   */
+  public FileStatus getReferencedFileStatus(final FileSystem fs) throws IOException {
     FileStatus status;
     if (this.reference != null) {
       if (this.link != null) {
@@ -233,7 +247,6 @@ public class StoreFileInfo {
         Path referencePath = getReferredToFile(this.getPath());
         status = fs.getFileStatus(referencePath);
       }
-      return computeRefFileHDFSBlockDistribution(fs, reference, status);
     } else {
       if (this.link != null) {
         // HFileLink
@@ -241,8 +254,8 @@ public class StoreFileInfo {
       } else {
         status = this.fileStatus;
       }
-      return FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
     }
+    return status;
   }
 
   /** @return The {@link Path} of the file */
