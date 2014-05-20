@@ -20,11 +20,13 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static java.lang.String.format;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -49,6 +51,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -77,6 +80,9 @@ public class ImportTsv extends Configured implements Tool {
   public final static String BULK_OUTPUT_CONF_KEY = "importtsv.bulk.output";
   public final static String TIMESTAMP_CONF_KEY = "importtsv.timestamp";
   public final static String JOB_NAME_CONF_KEY = "mapred.job.name";
+  //This config is used to propagate credentials from parent MR jobs which launch
+  //ImportTSV jobs. SEE IntegrationTestImportTsv.
+  public final static String CREDENTIALS_LOCATION = "credentials_location";
   // TODO: the rest of these configs are used exclusively by TsvImporterMapper.
   // Move them out of the tool and let the mapper handle its own validation.
   public final static String SKIP_LINES_CONF_KEY = "importtsv.skip.bad.lines";
@@ -394,7 +400,6 @@ public class ImportTsv extends Configured implements Tool {
       throws IOException, ClassNotFoundException {
 
     HBaseAdmin admin = new HBaseAdmin(conf);
-
     // Support non-XML supported characters
     // by re-encoding the passed separator as a Base64 string.
     String actualSeparator = conf.get(SEPARATOR_CONF_KEY);
@@ -416,9 +421,14 @@ public class ImportTsv extends Configured implements Tool {
     FileInputFormat.setInputPaths(job, inputDir);
     job.setInputFormatClass(TextInputFormat.class);
     job.setMapperClass(mapperClass);
-
     String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
     String columns[] = conf.getStrings(COLUMNS_CONF_KEY);
+    if(StringUtils.isNotEmpty(conf.get(CREDENTIALS_LOCATION))) {
+      String fileLoc = conf.get(CREDENTIALS_LOCATION);
+      Credentials cred = Credentials.readTokenStorageFile(new File(fileLoc), conf);
+      job.getCredentials().addAll(cred);
+    }
+
     if (hfileOutPath != null) {
       if (!admin.tableExists(tableName)) {
         LOG.warn(format("Table '%s' does not exist.", tableName));
