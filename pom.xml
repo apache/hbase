@@ -436,6 +436,7 @@
         <plugin>
           <groupId>org.apache.rat</groupId>
           <artifactId>apache-rat-plugin</artifactId>
+          <version>${rat.version}</version>
         </plugin>
       </plugins>
     </pluginManagement>
@@ -631,7 +632,7 @@
     <compileSource>1.7</compileSource>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <hbase.version>0.21.0-SNAPSHOT</hbase.version>
-    <hadoop.version>4.41819</hadoop.version>
+    <hadoop.version>4.42343</hadoop.version>
     <swift.version>0.12.0</swift.version>
     <commons-cli.version>1.2</commons-cli.version>
     <commons-io.version>2.1</commons-io.version>
@@ -659,6 +660,7 @@
     <commons-pool.version>1.6</commons-pool.version>
     <hbase.skip-jacoco>false</hbase.skip-jacoco>
     <jacoco.version>0.6.2.201302030002</jacoco.version>
+    <rat.version>0.10</rat.version>
 
     <surefire.version>2.15</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
@@ -1106,6 +1108,7 @@
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
+        <version>${rat.version}</version>
       </plugin>
     </plugins>
   </reporting>
