@@ -73,7 +73,7 @@ public class TestServerSideException {
         true);
 
     conf.setClass(HConstants.THRIFT_REGION_SERVER_IMPL,
-        FailureInjectingThriftHRegionServer.class, ThriftHRegionInterface.class);
+        FailureInjectingThriftHRegionServer.class, ThriftHRegionInterface.Sync.class);
 
     conf.setInt(HConstants.CLIENT_RETRY_NUM_STRING, 5);
     // Server will allow client to retry once when there is RegionOverloadedException
@@ -211,7 +211,7 @@ public class TestServerSideException {
   public void testTTransportException() throws Exception {
     HTableAsync table = TEST_UTIL.createTable(new StringBytes("testTable2"),
         new byte[][] { FAMILY }, 3, Bytes.toBytes("bbb"),
-        Bytes.toBytes("yyy"), 25);
+        Bytes.toBytes("yyy"), 6);
 
     Put put = new Put(ROW);
     put.add(FAMILY, null, VALUE);

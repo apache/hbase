@@ -1185,7 +1185,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
       // attempts
       if (this.useThrift) {
         Class<? extends ThriftClientInterface> serverInterface =
-            ThriftHRegionInterface.class;
+            ThriftHRegionInterface.Async.class;
         if (thriftPortWrittenToMeta) {
           server = (HRegionInterface) HBaseThriftRPC.getClient(
               regionServer.getInetSocketAddress(), this.conf,

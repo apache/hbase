@@ -4185,7 +4185,7 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
   @Override
   public byte[] callEndpoint(String epName, String methodName,
       List<byte[]> params, final byte[] regionName, final byte[] startRow,
-      final byte[] stopRow) throws ThriftHBaseException {
+      final byte[] stopRow) throws ThriftHBaseException, IOException {
     return endpointServer.callEndpoint(epName, methodName, params, regionName,
         startRow, stopRow);
   }

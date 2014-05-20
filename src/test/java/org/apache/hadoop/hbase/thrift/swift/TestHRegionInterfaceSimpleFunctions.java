@@ -73,7 +73,7 @@ public class TestHRegionInterfaceSimpleFunctions {
       throws IOException, InterruptedException, ExecutionException, TimeoutException, ThriftHBaseException {
     HTable table = TEST_UTIL.createTable(TABLENAME, FAMILY);
     HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(0);
-    ThriftHRegionInterface thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
+    ThriftHRegionInterface.Sync thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
     TEST_UTIL.loadTable(table, FAMILY);
 
     HServerInfo info = server.getHServerInfo();
@@ -90,7 +90,7 @@ public class TestHRegionInterfaceSimpleFunctions {
     InetSocketAddress addr =
         new InetSocketAddress(info.getHostname(), server.getThriftServerPort());
     HRegionInterface client = (HRegionInterface) HBaseThriftRPC
-        .getClient(addr, TEST_UTIL.getConfiguration(), ThriftHRegionInterface.class, HBaseRPCOptions.DEFAULT);
+        .getClient(addr, TEST_UTIL.getConfiguration(), ThriftHRegionInterface.Async.class, HBaseRPCOptions.DEFAULT);
 
     // tGetClosestRowBefore
     Result r = null;
@@ -161,7 +161,7 @@ public class TestHRegionInterfaceSimpleFunctions {
   @Test
   public void testAtomicMutation() throws Exception {
     HTable table = TEST_UTIL.createTable(TABLENAME, FAMILY);
-    ThriftHRegionInterface thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
+    ThriftHRegionInterface.Sync thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
 
     byte[] row = Bytes.toBytes("test-row");
     byte[] invalidValue = Bytes.toBytes("test-row2");
@@ -190,7 +190,7 @@ public class TestHRegionInterfaceSimpleFunctions {
   @Test
   public void testQuorumConfigurationChanges() throws Exception {
     HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(0);
-    ThriftHRegionInterface thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
+    ThriftHRegionInterface.Sync thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
 
     int threads = server.getQuorumReadThreadsMax() + 1;
     long timeout = server.getQuorumReadTimeoutMillis() + 1;
@@ -208,7 +208,7 @@ public class TestHRegionInterfaceSimpleFunctions {
   @Test
   public void testCloseRegion() throws Exception {
     HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(0);
-    ThriftHRegionInterface thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
+    ThriftHRegionInterface.Sync thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
 
     HRegion[] region = server.getOnlineRegionsAsArray();
     HRegionInfo regionInfo = region[0].getRegionInfo();
@@ -235,7 +235,7 @@ public class TestHRegionInterfaceSimpleFunctions {
    */
   @Test
   public void testStopRegionServer() throws Exception {
-    ThriftHRegionInterface thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
+    ThriftHRegionInterface.Sync thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
     thriftServer.updateConfiguration();
 
     String why = "test reason";

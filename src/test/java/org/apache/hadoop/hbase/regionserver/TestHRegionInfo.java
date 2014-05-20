@@ -195,7 +195,7 @@ public class TestHRegionInfo {
         .getServerInfo().getHostname(),
        region.getRegionServer().getThriftServerPort());
     HRegionInterface server = (HRegionInterface) HBaseThriftRPC.getClient(addr,
-        conf, ThriftHRegionInterface.class, HBaseRPCOptions.DEFAULT);
+        conf, ThriftHRegionInterface.Async.class, HBaseRPCOptions.DEFAULT);
     HRegionInfo regionInfo = server.getRegionInfo(region.getRegionName());
     assertEquals(region.getRegionInfo(), regionInfo);
     testUtil.shutdownMiniCluster();

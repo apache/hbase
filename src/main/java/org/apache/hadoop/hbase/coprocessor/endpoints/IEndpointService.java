@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.coprocessor.endpoints;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
@@ -44,5 +45,5 @@ public interface IEndpointService {
    */
   public byte[] callEndpoint(String epName, String methodName,
       List<byte[]> params, byte[] regionName, byte[] startRow,
-      byte[] stopRow) throws ThriftHBaseException;
+      byte[] stopRow) throws ThriftHBaseException, IOException;
 }

@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.ipc;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
 
+import java.io.IOException;
+
 /**
  * Interface of scanner service in a region.
  *
@@ -41,7 +43,7 @@ public interface IRegionScanService {
    *         and EOR is set to true for sure in this case.
    */
   ScannerResult scanOpen(byte[] regionName, Scan scan, int numberOfRows)
-      throws ThriftHBaseException;
+      throws ThriftHBaseException, IOException;
 
   /**
    * Returns next scanning results.
@@ -52,7 +54,7 @@ public interface IRegionScanService {
    *         The length of the Result list of the return value could be empty
    *         and EOR is set to true for sure in this case.
    */
-  ScannerResult scanNext(long id, int numberOfRows) throws ThriftHBaseException;
+  ScannerResult scanNext(long id, int numberOfRows) throws ThriftHBaseException, IOException;
 
   /**
    * Closes the scanner on the server side.
@@ -60,5 +62,5 @@ public interface IRegionScanService {
    * @param id  the ID of the scanner to close
    * @return true  if a scanner is closed. false if the scanner doesn't exist.
    */
-  boolean scanClose(long id) throws ThriftHBaseException;
+  boolean scanClose(long id) throws ThriftHBaseException, IOException;
 }

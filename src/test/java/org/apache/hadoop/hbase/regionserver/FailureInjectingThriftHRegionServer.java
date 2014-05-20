@@ -68,23 +68,23 @@ public class FailureInjectingThriftHRegionServer extends ThriftHRegionServer {
   }
 
   @Override
-  public ListenableFuture<Result> getAsync(byte[] regionName, Get get) {
+  public Result get(byte[] regionName, Get get) throws ThriftHBaseException {
     switch (failureType) {
       // Region server will throw RegionOverloadedException, wrapped in ThriftHBaseException
       case REGIONOVERLOADEDEXCEPTION:
         if (++repeatCount > repeats) {
           clearExceptionMode();
-          return super.getAsync(regionName, get);
+          return super.get(regionName, get);
         }
         LOG.debug("Exception repeat count: " + repeatCount);
-        return Futures.immediateFailedFuture(new ThriftHBaseException(
-            new RegionOverloadedException("GetAsync Test ROE", HConstants.DEFAULT_HBASE_CLIENT_PAUSE)));
+        throw new ThriftHBaseException(
+            new RegionOverloadedException("GetAsync Test ROE", HConstants.DEFAULT_HBASE_CLIENT_PAUSE));
 
       // Region server will disconnect the client, cause TTransportException on client side
       case STOP:
         if (++repeatCount > repeats) {
           clearExceptionMode();
-          return super.getAsync(regionName, get);
+          return super.get(regionName, get);
         }
         LOG.debug("Exception repeat count: " + repeatCount);
         stop("GetAsync Test Stop");
@@ -98,22 +98,22 @@ public class FailureInjectingThriftHRegionServer extends ThriftHRegionServer {
       case MIXEDRETRIABLEEXCEPTIONS:
         if (++repeatCount > repeats) {
           clearExceptionMode();
-          return super.getAsync(regionName, get);
+          return super.get(regionName, get);
         }
         LOG.debug("Exception repeat count: " + repeatCount);
-        return Futures.immediateFailedFuture(getRetriableExceptions(repeatCount));
+        throw new ThriftHBaseException(getRetriableExceptions(repeatCount));
 
       case DONOTRETRYEXCEPTION:
         if (++repeatCount > repeats) {
           clearExceptionMode();
-          return super.getAsync(regionName, get);
+          return super.get(regionName, get);
         }
         LOG.debug("Exception repeat count: " + repeatCount);
-        return Futures.immediateFailedFuture(new ThriftHBaseException(
-            new DoNotRetryIOException("GetAsync Test DoNotRetryIOE")));
+        throw new ThriftHBaseException(
+            new DoNotRetryIOException("GetAsync Test DoNotRetryIOE"));
 
       default:
-        return super.getAsync(regionName, get);
+        return super.get(regionName, get);
     }
   }
 

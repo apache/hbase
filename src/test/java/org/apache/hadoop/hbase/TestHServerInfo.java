@@ -235,7 +235,7 @@ public class TestHServerInfo {
 
     HRegionInterface client = (HRegionInterface) HBaseThriftRPC.getClient(
         regionServer.getServerInfo().getServerAddress().getInetSocketAddress(),
-        conf, ThriftHRegionInterface.class, HBaseRPCOptions.DEFAULT);
+        conf, ThriftHRegionInterface.Async.class, HBaseRPCOptions.DEFAULT);
 
     assertEquals(regionServer.getHServerInfo(), client.getHServerInfo());
   }

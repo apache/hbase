@@ -32,6 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.TableServers.FailureInfo;
@@ -55,13 +56,13 @@ import org.junit.experimental.categories.Category;
  * Sets up the HBase mini cluster once at start and runs through all client tests.
  * Each creates a table named for the method and does its stuff against that.
  */
-@Category(MediumTests.class)
+@Category(LargeTests.class)
 public class TestFastFail {
   private static final Log LOG = LogFactory.getLog(TestFastFail.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   private static byte [] QUALIFIER = Bytes.toBytes("testQualifier");
-  private static int SLAVES = 15;
+  private static int SLAVES = 8;
 
   private static  byte [] TABLE = Bytes.toBytes("testFastFail");
   private static  int NUM_REGIONS = 100;

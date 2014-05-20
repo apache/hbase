@@ -36,12 +36,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import static org.junit.Assert.assertTrue;
+
 /**
  * Test to verify that the thrift metrics are calculated and propagated in the
  * HBaseRpcMetrics.
  */
 @Category(MediumTests.class)
-public class TestThriftMetrics extends TestCase {
+public class TestThriftMetrics {
   private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final int SLAVES = 1;
   static final byte[] TABLE = Bytes.toBytes("testTable");
@@ -95,6 +97,7 @@ public class TestThriftMetrics extends TestCase {
    * Test if we report operations which are too slow and large.
    * @throws IOException
    */
+  @Test
   public void testAbnormalOperationsAreReported() throws IOException,
     InterruptedException {
     // Set the warning time to 0, so that we get tooSlow alarms triggered.

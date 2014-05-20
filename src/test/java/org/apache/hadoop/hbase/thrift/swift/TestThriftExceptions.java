@@ -37,11 +37,15 @@ import org.junit.experimental.categories.Category;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 /**
  * This is a test class to verify if the Thrift Exceptions work as expected.
  */
 @Category(MediumTests.class)
-public class TestThriftExceptions extends TestCase {
+public class TestThriftExceptions {
   /**
    * Test if the ThriftHBaseException can be serialized and deserialized
    * correctly.
@@ -67,8 +71,7 @@ public class TestThriftExceptions extends TestCase {
    * HBaseThriftAdapter.
    */
   @Test
-  public void testExceptionTranslation()
-    throws InterruptedException, IOException {
+  public void testExceptionTranslation() throws InterruptedException, IOException {
     HBaseTestingUtility testUtil = new HBaseTestingUtility();
     testUtil.getConfiguration().setBoolean(
       HConstants.REGION_SERVER_WRITE_THRIFT_INFO_TO_META, true);
@@ -83,13 +86,15 @@ public class TestThriftExceptions extends TestCase {
 
     InetSocketAddress addr = new InetSocketAddress(port);
     HRegionInterface client = (HRegionInterface) HBaseThriftRPC.getClient(addr,
-      conf, ThriftHRegionInterface.class, HBaseRPCOptions.DEFAULT);
+      conf, ThriftHRegionInterface.Async.class, HBaseRPCOptions.DEFAULT);
 
     boolean illegalArgumentException = false;
     try {
       client.flushRegion(Bytes.toBytes("foobar"));
     } catch (IllegalArgumentException e) {
       illegalArgumentException = true;
+    } catch (Exception e) {
+      assertFalse(true);
     }
     assertTrue("Expected IllegalArgumentException", illegalArgumentException);
 

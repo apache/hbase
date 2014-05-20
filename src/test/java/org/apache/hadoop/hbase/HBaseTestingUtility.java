@@ -615,7 +615,7 @@ public class HBaseTestingUtility {
     } else {
       new HBaseAdmin(getConfiguration()).createTable(desc, startKey, endKey,
           numRegions);
-    };
+    }
     return new HTableAsync(getConfiguration(), tableName);
   }
 

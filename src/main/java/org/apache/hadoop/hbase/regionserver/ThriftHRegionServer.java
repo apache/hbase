@@ -67,7 +67,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  * This is just a wrapper around {@link HRegionServer}
  *
  */
-public class ThriftHRegionServer implements ThriftHRegionInterface {
+public class ThriftHRegionServer implements ThriftHRegionInterface.Sync {
   private static Log LOG = LogFactory.getLog(ThriftHRegionServer.class);
 
   private HRegionServer server;
@@ -101,17 +101,6 @@ public class ThriftHRegionServer implements ThriftHRegionInterface {
       }
     } catch (IOException e) {
       throw new ThriftHBaseException(e);
-    }
-  }
-
-  @Override
-  public ListenableFuture<Result> getClosestRowBeforeAsync(final byte[] regionName,
-      final byte[] row, final byte[] family) {
-    try {
-      Result result = getClosestRowBefore(regionName, row, family);
-      return Futures.immediateFuture(result);
-    } catch (ThriftHBaseException e) {
-      return Futures.immediateFailedFuture(e);
     }
   }
 
@@ -255,14 +244,6 @@ public class ThriftHRegionServer implements ThriftHRegionInterface {
     }
   }
 
-  @Override
-  public ListenableFuture<Result> getAsync(byte[] regionName, Get get) {
-    try {
-      return Futures.immediateFuture(get(regionName, get));
-    } catch (ThriftHBaseException e) {
-      return Futures.immediateFailedFuture(e);
-    }
-  }
 
   @Override
   public List<Result> getRows(byte[] regionName, List<Get> gets)
@@ -313,16 +294,6 @@ public class ThriftHRegionServer implements ThriftHRegionInterface {
       server.delete(regionName, delete);
     } catch (IOException e) {
       throw new ThriftHBaseException(e);
-    }
-  }
-
-  @Override
-  public ListenableFuture<Void> deleteAsync(final byte[] regionName, final Delete delete) {
-    try {
-      processDelete(regionName, delete);
-      return Futures.immediateFuture(null);
-    } catch (ThriftHBaseException e) {
-      return Futures.immediateFailedFuture(e);
     }
   }
 
@@ -404,16 +375,6 @@ public class ThriftHRegionServer implements ThriftHRegionInterface {
   }
 
   @Override
-  public ListenableFuture<Void> mutateRowAsync(byte[] regionName, TRowMutations arm) {
-    try {
-      mutateRow(regionName, arm);
-      return Futures.immediateFuture(null);
-    } catch (ThriftHBaseException e) {
-      return Futures.immediateFailedFuture(e);
-    }
-  }
-
-  @Override
   @Deprecated
   public Result next(long scannerId) throws ThriftHBaseException {
     try {
@@ -448,22 +409,12 @@ public class ThriftHRegionServer implements ThriftHRegionInterface {
   }
 
   @Override
-  public long lockRow(byte[] regionName, byte[] row)
+  public RowLock lockRow(byte[] regionName, byte[] row)
       throws ThriftHBaseException {
     try {
-      return server.lockRow(regionName, row);
+      return new RowLock(server.lockRow(regionName, row));
     } catch (IOException e) {
       throw new ThriftHBaseException(e);
-    }
-  }
-
-  @Override
-  public ListenableFuture<RowLock> lockRowAsync(byte[] regionName, byte[] row) {
-    try {
-      long lockId = lockRow(regionName, row);
-      return Futures.immediateFuture(new RowLock(row, lockId));
-    } catch (ThriftHBaseException e) {
-      return Futures.immediateFailedFuture(e);
     }
   }
 
@@ -474,16 +425,6 @@ public class ThriftHRegionServer implements ThriftHRegionInterface {
       server.unlockRow(regionName, lockId);
     } catch (IOException e) {
       throw new ThriftHBaseException(e);
-    }
-  }
-
-  @Override
-  public ListenableFuture<Void> unlockRowAsync(byte[] regionName, long lockId) {
-    try {
-      unlockRow(regionName, lockId);
-      return Futures.immediateFuture(null);
-    } catch (ThriftHBaseException e) {
-      return Futures.immediateFailedFuture(e);
     }
   }
 
@@ -636,7 +577,7 @@ public class ThriftHRegionServer implements ThriftHRegionInterface {
   @Override
   public byte[] callEndpoint(String epName, String methodName,
       List<byte[]> params, final byte[] regionName, final byte[] startRow,
-      final byte[] stopRow) throws ThriftHBaseException {
+      final byte[] stopRow) throws ThriftHBaseException, IOException {
     return server.callEndpoint(epName, methodName, params, regionName,
         startRow, stopRow);
   }

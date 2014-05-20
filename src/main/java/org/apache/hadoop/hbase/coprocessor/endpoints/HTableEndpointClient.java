@@ -72,7 +72,7 @@ public class HTableEndpointClient implements IEndpointClient {
             table.getConnection(), table.getTableNameStringBytes(),
             region.getStartKey(), table.getOptions()) {
           @Override
-          public Object call() throws ThriftHBaseException {
+          public Object call() throws ThriftHBaseException, IOException {
             byte[] res = server.callEndpoint(clazz.getName(), method.getName(),
                 EndpointBytesCodec.encodeArray(args),
                 region.getRegionName(), startRow, stopRow);

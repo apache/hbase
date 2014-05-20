@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -82,7 +83,7 @@ import com.google.common.util.concurrent.ListenableFuture;
  */
 public class HBaseToThriftAdapter implements HRegionInterface {
   public static final Log LOG = LogFactory.getLog(HBaseToThriftAdapter.class);
-  public ThriftHRegionInterface connection;
+  public ThriftHRegionInterface.Async connection;
   public ThriftClientManager clientManager;
   private InetSocketAddress addr;
   private Configuration conf;
@@ -97,7 +98,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       InetSocketAddress addr, Configuration conf,
       Class<? extends ThriftClientInterface> clazz,
       HBaseRPCOptions options) {
-    this.connection = (ThriftHRegionInterface)connection;
+    this.connection = (ThriftHRegionInterface.Async)connection;
     this.clientManager = clientManager;
     this.addr = addr;
     this.conf = conf;
@@ -120,18 +121,32 @@ public class HBaseToThriftAdapter implements HRegionInterface {
    */
   public void refreshConnectionAndThrowIOException(Exception e)
       throws IOException {
-    if (e instanceof TApplicationException) {
-      throw new RuntimeException(e);
-    } else if (e instanceof RuntimeTApplicationException) {
-      throw new RuntimeException(e);
+
+    Throwable throwable = e;
+    if (e instanceof ExecutionException) {
+      throwable = e.getCause();
+    }
+
+    if (throwable instanceof ThriftHBaseException) {
+      Exception serverCause  = ((ThriftHBaseException) throwable).getServerJavaException();
+      handleNotServingRegionException(serverCause);
+      handleIllegalArgumentException(serverCause);
+      handleIOException(serverCause);
+      throw new RuntimeException(serverCause);
+    }
+
+    if (throwable instanceof TApplicationException) {
+      throw new RuntimeException(throwable);
+    } else if (throwable instanceof RuntimeTApplicationException) {
+      throw new RuntimeException(throwable);
     } else {
       //TODO: creating a new connection is unnecessary.
       // We should replace it with cleanUpConnection later
       Pair<ThriftClientInterface, ThriftClientManager> interfaceAndManager = HBaseThriftRPC
           .refreshConnection(this.addr, this.conf, this.connection, this.clazz);
-      this.connection = (ThriftHRegionInterface) interfaceAndManager.getFirst();
+      this.connection = (ThriftHRegionInterface.Async) interfaceAndManager.getFirst();
       this.clientManager = interfaceAndManager.getSecond();
-      throw new IOException(e);
+      throw new IOException(throwable);
     }
   }
 
@@ -199,7 +214,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       try {
         Pair<ThriftClientInterface, ThriftClientManager> clientAndManager = HBaseThriftRPC
             .getClientWithoutWrapper(addr, conf, clazz);
-        this.connection = (ThriftHRegionInterface) clientAndManager.getFirst();
+        this.connection = (ThriftHRegionInterface.Async) clientAndManager.getFirst();
         this.clientManager = clientAndManager.getSecond();
       } catch (Exception e) {
         throw new RuntimeException(e);
@@ -308,7 +323,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public boolean isStopped() {
     preProcess();
     try {
-      return connection.isStopped();
+      return connection.isStopped().get();
     } catch (Exception e) {
       refreshConnectionAndThrowRuntimeException(e);
       return false;
@@ -331,12 +346,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       throws NotServingRegionException {
     preProcess();
     try {
-      return connection.getRegionInfo(regionName);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleNotServingRegionException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      throw new RuntimeException(e);
+      return connection.getRegionInfo(regionName).get();
     } catch (Exception e) {
       refreshConnectionAndThrowRuntimeException(e);
       return null;
@@ -350,17 +360,12 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       throws IOException {
     preProcess();
     try {
-      Result r = connection.getClosestRowBefore(regionName, row, family);
+      Result r = connection.getClosestRowBefore(regionName, row, family).get();
       if (r.isSentinelResult()) {
         return null;
       } else {
         return r;
       }
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      throw new RuntimeException(e);
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return null;
@@ -371,7 +376,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
 
   public ListenableFuture<Result> getClosestRowBeforeAsync(byte[] regionName, byte[] row, byte[] family) {
     preProcess();
-    return connection.getClosestRowBeforeAsync(regionName, row, family);
+    return connection.getClosestRowBefore(regionName, row, family);
   }
 
   // TODO: we will decide whether to remove it from HRegionInterface in the future
@@ -386,12 +391,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       IOException {
     preProcess();
     try {
-      connection.flushRegion(regionName);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIllegalArgumentException(e);
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
+      connection.flushRegion(regionName).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
     } finally {
@@ -404,12 +404,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       throws IllegalArgumentException, IOException {
     preProcess();
     try {
-      connection.flushRegion(regionName, ifOlderThanTS);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIllegalArgumentException(e);
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
+      connection.flushRegion(regionName, ifOlderThanTS).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
     } finally {
@@ -421,7 +416,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public long getLastFlushTime(byte[] regionName) {
     preProcess();
     try {
-      return connection.getLastFlushTime(regionName);
+      return connection.getLastFlushTime(regionName).get();
     } catch (Exception e) {
       refreshConnectionAndThrowRuntimeException(e);
       return -1;
@@ -434,7 +429,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public MapWritable getLastFlushTimes() {
     preProcess();
     try {
-      Map<byte[], Long> map = connection.getLastFlushTimes();
+      Map<byte[], Long> map = connection.getLastFlushTimes().get();
       MapWritable writableMap = new MapWritable();
       for (Entry<byte[], Long> e : map.entrySet()) {
         writableMap.put(new BytesWritable(e.getKey()),
@@ -453,7 +448,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public long getCurrentTimeMillis() {
     preProcess();
     try {
-      return connection.getCurrentTimeMillis();
+      return connection.getCurrentTimeMillis().get();
     } catch (Exception e) {
       refreshConnectionAndThrowRuntimeException(e);
       return -1;
@@ -466,7 +461,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public long getStartCode() {
     preProcess();
     try {
-      return connection.getStartCode();
+      return connection.getStartCode().get();
     } catch (Exception e) {
       refreshConnectionAndThrowRuntimeException(e);
       return -1;
@@ -480,12 +475,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       throws IllegalArgumentException {
     preProcess();
     try {
-      return connection.getStoreFileList(regionName, columnFamily);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIllegalArgumentException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      throw new RuntimeException(e);
+      return connection.getStoreFileList(regionName, columnFamily).get();
     } catch (Exception e) {
       refreshConnectionAndThrowRuntimeException(e);
       return null;
@@ -502,12 +492,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       List<byte[]> columnFamiliesList = new ArrayList<>();
       Collections.addAll(columnFamiliesList, columnFamilies);
       return connection.getStoreFileListForColumnFamilies(regionName,
-          columnFamiliesList);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIllegalArgumentException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      throw new RuntimeException(e);
+          columnFamiliesList).get();
     } catch (Exception e) {
       refreshConnectionAndThrowRuntimeException(e);
       return null;
@@ -521,12 +506,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       throws IllegalArgumentException {
     preProcess();
     try {
-      return connection.getStoreFileListForAllColumnFamilies(regionName);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIllegalArgumentException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      throw new RuntimeException(e);
+      return connection.getStoreFileListForAllColumnFamilies(regionName).get();
     } catch (Exception e) {
       refreshConnectionAndThrowRuntimeException(e);
       return null;
@@ -539,12 +519,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public List<String> getHLogsList(boolean rollCurrentHLog) throws IOException {
     preProcess();
     try {
-      return connection.getHLogsList(rollCurrentHLog);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      throw new RuntimeException(e);
+      return connection.getHLogsList(rollCurrentHLog).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return null;
@@ -557,12 +532,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public Result get(byte[] regionName, Get get) throws IOException {
     preProcess();
     try {
-      return connection.get(regionName, get);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      throw new RuntimeException(e);
+      return connection.get(regionName, get).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return null;
@@ -575,13 +545,8 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public Result[] get(byte[] regionName, List<Get> gets) throws IOException {
     preProcess();
     try {
-      List<Result> listOfResults = connection.getRows(regionName, gets);
+      List<Result> listOfResults = connection.getRows(regionName, gets).get();
       return listOfResults.toArray(new Result[listOfResults.size()]);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      throw new RuntimeException(e);
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return null;
@@ -592,19 +557,14 @@ public class HBaseToThriftAdapter implements HRegionInterface {
 
   public ListenableFuture<Result> getAsync(byte[] regionName, Get get) {
     preProcess();
-    return connection.getAsync(regionName, get);
+    return connection.get(regionName, get);
   }
 
   @Override
   public boolean exists(byte[] regionName, Get get) throws IOException {
     preProcess();
     try {
-      return connection.exists(regionName, get);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      return false;
+      return connection.exists(regionName, get).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return false;
@@ -617,11 +577,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public void put(byte[] regionName, Put put) throws IOException {
     preProcess();
     try {
-      connection.put(regionName, put);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
+      connection.put(regionName, put).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
     } finally {
@@ -633,12 +589,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public int put(byte[] regionName, List<Put> puts) throws IOException {
     preProcess();
     try {
-      return connection.putRows(regionName, puts);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      return -1;
+      return connection.putRows(regionName, puts).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return -1;
@@ -651,11 +602,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public void delete(byte[] regionName, Delete delete) throws IOException {
     preProcess();
     try {
-      connection.processDelete(regionName, delete);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
+      connection.processDelete(regionName, delete).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
     } finally {
@@ -665,7 +612,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
 
   public ListenableFuture<Void> deleteAsync(final byte[] regionName, final Delete delete) {
     preProcess();
-    return connection.deleteAsync(regionName, delete);
+    return connection.processDelete(regionName, delete);
   }
 
   @Override
@@ -673,13 +620,8 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       throws IOException {
     preProcess();
     try {
-      return connection.processListOfDeletes(regionName, deletes);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      return -1;
-    } catch (Exception e) {
+      return connection.processListOfDeletes(regionName, deletes).get();
+    }  catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return -1;
     } finally {
@@ -692,12 +634,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       byte[] qualifier, byte[] value, Put put) throws IOException {
     preProcess();
     try {
-      return connection.checkAndPut(regionName, row, family, qualifier, value, put);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      return false;
+      return connection.checkAndPut(regionName, row, family, qualifier, value, put).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return false;
@@ -711,13 +648,8 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       byte[] qualifier, byte[] value, Delete delete) throws IOException {
     preProcess();
     try {
-      return connection.checkAndDelete(regionName, row, family, qualifier, value, delete);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      return false;
-    } catch (Exception e) {
+      return connection.checkAndDelete(regionName, row, family, qualifier, value, delete).get();
+    }  catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return false;
     } finally {
@@ -731,12 +663,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       throws IOException {
     preProcess();
     try {
-      return connection.incrementColumnValue(regionName, row, family, qualifier, amount, writeToWAL);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      return -1;
+      return connection.incrementColumnValue(regionName, row, family, qualifier, amount, writeToWAL).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return -1;
@@ -749,12 +676,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public long openScanner(byte[] regionName, Scan scan) throws IOException {
     preProcess();
     try {
-      return connection.openScanner(regionName, scan);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      return -1;
+      return connection.openScanner(regionName, scan).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return -1;
@@ -768,12 +690,8 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       throws IOException {
     preProcess();
     try {
-      connection.mutateRow(regionName, TRowMutations.Builder.createFromRowMutations(arm));
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-    } catch (Exception e) {
+      connection.mutateRow(regionName, TRowMutations.Builder.createFromRowMutations(arm)).get();
+    }  catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
     } finally {
       postProcess();
@@ -783,8 +701,9 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public ListenableFuture<Void> mutateRowAsync(byte[] regionName, RowMutations arm) {
     preProcess();
     try {
-      return connection.mutateRowAsync(regionName, TRowMutations.Builder.createFromRowMutations(arm));
+      return connection.mutateRow(regionName, TRowMutations.Builder.createFromRowMutations(arm));
     } catch (IOException e) {
+      // From creating thrift.
       return Futures.immediateFailedFuture(e);
     }
   }
@@ -798,11 +717,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       for (RowMutations mutation : armList) {
         listOfMutations.add(TRowMutations.Builder.createFromRowMutations(mutation));
       }
-      connection.mutateRows(regionName, listOfMutations);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
+      connection.mutateRows(regionName, listOfMutations).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
     } finally {
@@ -815,12 +730,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public Result next(long scannerId) throws IOException {
     preProcess();
     try {
-      return connection.next(scannerId);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      throw new RuntimeException(e);
+      return connection.next(scannerId).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return null;
@@ -853,14 +763,9 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public Result[] next(long scannerId, int numberOfRows) throws IOException {
     preProcess();
     try {
-      List<Result> resultList = connection.nextRows(scannerId, numberOfRows);
+      List<Result> resultList = connection.nextRows(scannerId, numberOfRows).get();
       Result[] ret = resultList.toArray(new Result[resultList.size()]);
       return validateResults(ret);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      throw new RuntimeException(e);
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return null;
@@ -873,11 +778,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public void close(long scannerId) throws IOException {
     preProcess();
     try {
-      connection.close(scannerId);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
+      connection.close(scannerId).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
     } finally {
@@ -889,12 +790,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public long lockRow(byte[] regionName, byte[] row) throws IOException {
     preProcess();
     try {
-      return connection.lockRow(regionName, row);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      return -1;
+      return connection.lockRow(regionName, row).get().getLockId();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return -1;
@@ -905,19 +801,14 @@ public class HBaseToThriftAdapter implements HRegionInterface {
 
   public ListenableFuture<RowLock> lockRowAsync(byte[] regionName, byte[] row) {
     preProcess();
-    return connection.lockRowAsync(regionName, row);
+    return connection.lockRow(regionName, row);
   }
 
   @Override
   public void unlockRow(byte[] regionName, long lockId) throws IOException {
     preProcess();
     try {
-      connection.unlockRow(regionName, lockId);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      return;
+      connection.unlockRow(regionName, lockId).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
     } finally {
@@ -927,20 +818,15 @@ public class HBaseToThriftAdapter implements HRegionInterface {
 
   public ListenableFuture<Void> unlockRowAsync(byte[] regionName, long lockId) {
     preProcess();
-    return connection.unlockRowAsync(regionName, lockId);
+    return connection.unlockRow(regionName, lockId);
   }
 
   @Override
   public HRegionInfo[] getRegionsAssignment() throws IOException {
     preProcess();
     try {
-      List<HRegionInfo> hRegionInfos = connection.getRegionsAssignment();
+      List<HRegionInfo> hRegionInfos = connection.getRegionsAssignment().get();
       return hRegionInfos.toArray(new HRegionInfo[hRegionInfos.size()]);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      throw new RuntimeException(e);
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return null;
@@ -953,12 +839,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public HServerInfo getHServerInfo() throws IOException {
     preProcess();
     try {
-      return connection.getHServerInfo();
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      throw new RuntimeException(e);
+      return connection.getHServerInfo().get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return null;
@@ -972,12 +853,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     preProcess();
     try {
       return MultiResponse.Builder.createFromTMultiResponse(connection
-          .multiAction(multi));
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      throw new RuntimeException(e);
+          .multiAction(multi).get());
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return null;
@@ -990,12 +866,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public MultiPutResponse multiPut(MultiPut puts) throws IOException {
     preProcess();
     try {
-      return connection.multiPut(puts);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      throw new RuntimeException(e);
+      return connection.multiPut(puts).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return null;
@@ -1009,11 +880,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       byte[] familyName) throws IOException {
     preProcess();
     try {
-      connection.bulkLoadHFile(hfilePath, regionName, familyName);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
+      connection.bulkLoadHFile(hfilePath, regionName, familyName).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
     } finally {
@@ -1026,11 +893,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       byte[] familyName, boolean assignSeqNum) throws IOException {
     preProcess();
     try {
-      connection.bulkLoadHFile(hfilePath, regionName, familyName, assignSeqNum);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
+      connection.bulkLoadHFile(hfilePath, regionName, familyName, assignSeqNum).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
     } finally {
@@ -1043,11 +906,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
       throws IOException {
     preProcess();
     try {
-      connection.closeRegion(hri, reportWhenCompleted);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
+      connection.closeRegion(hri, reportWhenCompleted).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
     } finally {
@@ -1059,12 +918,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public int updateFavoredNodes(AssignmentPlan plan) throws IOException {
     preProcess();
     try {
-      return connection.updateFavoredNodes(plan);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      return -1;
+      return connection.updateFavoredNodes(plan).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return -1;
@@ -1077,7 +931,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public void updateConfiguration() {
     preProcess();
     try {
-      connection.updateConfiguration();
+      connection.updateConfiguration().get();
     } catch (Exception e) {
       refreshConnectionAndThrowRuntimeException(e);
     } finally {
@@ -1089,7 +943,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public void stop(String why) {
     preProcess();
     try {
-      connection.stop(why);
+      connection.stop(why).get();
     } catch (Exception e) {
       refreshConnectionAndThrowRuntimeException(e);
     } finally {
@@ -1101,7 +955,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public String getStopReason() {
     preProcess();
     try {
-      return connection.getStopReason();
+      return connection.getStopReason().get();
     } catch (Exception e) {
       refreshConnectionAndThrowRuntimeException(e);
       throw new RuntimeException(e);
@@ -1114,7 +968,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public void setNumHDFSQuorumReadThreads(int maxThreads) {
     preProcess();
     try {
-      connection.setNumHDFSQuorumReadThreads(maxThreads);
+      connection.setNumHDFSQuorumReadThreads(maxThreads).get();
     } catch (Exception e) {
       refreshConnectionAndThrowRuntimeException(e);
     } finally {
@@ -1126,7 +980,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public void setHDFSQuorumReadTimeoutMillis(long timeoutMillis) {
     preProcess();
     try {
-      connection.setHDFSQuorumReadTimeoutMillis(timeoutMillis);
+      connection.setHDFSQuorumReadTimeoutMillis(timeoutMillis).get();
     } catch (Exception e) {
       refreshConnectionAndThrowRuntimeException(e);
     } finally {
@@ -1138,12 +992,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public String getConfProperty(String paramName) throws IOException {
     preProcess();
     try {
-      return connection.getConfProperty(paramName);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      return null;
+      return connection.getConfProperty(paramName).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return null;
@@ -1156,16 +1005,11 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   public List<Bucket> getHistogram(byte[] regionName) throws IOException {
     preProcess();
     try {
-       List<Bucket> buckets = connection.getHistogram(regionName);
+       List<Bucket> buckets = connection.getHistogram(regionName).get();
       if (buckets.isEmpty()) {
         return null;
       }
       return buckets;
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      return null;
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return null;
@@ -1180,16 +1024,11 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     preProcess();
     try {
       List<Bucket> buckets =
-          connection.getHistogramForStore(regionName, family);
+          connection.getHistogramForStore(regionName, family).get();
       if (buckets.isEmpty()) {
         return null;
       }
       return buckets;
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      return null;
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return null;
@@ -1201,11 +1040,14 @@ public class HBaseToThriftAdapter implements HRegionInterface {
   @Override
   public byte[] callEndpoint(String epName, String methodName,
       List<byte[]> params, byte[] regionName, byte[] startRow,
-      byte[] stopRow) throws ThriftHBaseException {
+      byte[] stopRow) throws IOException {
     preProcess();
     try {
       return connection.callEndpoint(epName, methodName, params, regionName,
-          startRow, stopRow);
+          startRow, stopRow).get();
+    } catch (Exception e) {
+      refreshConnectionAndThrowIOException(e);
+      return null;
     } finally {
       postProcess();
     }
@@ -1216,12 +1058,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     throws IOException {
     preProcess();
     try {
-      return connection.getHistograms(regionNames);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      return null;
+      return connection.getHistograms(regionNames).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return null;
@@ -1235,12 +1072,7 @@ public class HBaseToThriftAdapter implements HRegionInterface {
     throws IOException {
     preProcess();
     try {
-      return connection.getLocation(table, row, reload);
-    } catch (ThriftHBaseException te) {
-      Exception e = te.getServerJavaException();
-      handleIOException(e);
-      LOG.warn("Unexpected Exception: " + e);
-      throw new RuntimeException(e);
+      return connection.getLocation(table, row, reload).get();
     } catch (Exception e) {
       refreshConnectionAndThrowIOException(e);
       return null;
@@ -1251,32 +1083,41 @@ public class HBaseToThriftAdapter implements HRegionInterface {
 
   @Override
   public ScannerResult scanOpen(byte[] regionName, Scan scan, int numberOfRows)
-      throws ThriftHBaseException {
+      throws IOException {
     preProcess();
     try {
-      return connection.scanOpen(regionName, scan, numberOfRows);
-    } finally {
+      return connection.scanOpen(regionName, scan, numberOfRows).get();
+    } catch (Exception e) {
+      refreshConnectionAndThrowIOException(e);
+      return null;
+    }  finally {
       postProcess();
     }
   }
 
   @Override
   public ScannerResult scanNext(long id, int numberOfRows)
-      throws ThriftHBaseException {
+      throws IOException {
     preProcess();
     try {
-      return connection.scanNext(id, numberOfRows);
+      return connection.scanNext(id, numberOfRows).get();
+    } catch (Exception e) {
+      refreshConnectionAndThrowIOException(e);
+      return null;
     } finally {
       postProcess();
     }
   }
 
   @Override
-  public boolean scanClose(long id) throws ThriftHBaseException {
+  public boolean scanClose(long id) throws IOException {
     preProcess();
     try {
-      return connection.scanClose(id);
-    } finally {
+      return connection.scanClose(id).get();
+    } catch (Exception e) {
+      refreshConnectionAndThrowIOException(e);
+      return false;
+    }  finally {
       postProcess();
     }
   }

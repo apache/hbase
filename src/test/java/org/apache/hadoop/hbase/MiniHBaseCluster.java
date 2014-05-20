@@ -439,7 +439,7 @@ public class MiniHBaseCluster {
     return hbaseCluster.getRegionServer(serverNumber);
   }
 
-  public ThriftHRegionInterface getThriftRegionServer(int serverNumber) {
+  public ThriftHRegionInterface.Sync getThriftRegionServer(int serverNumber) {
     return new ThriftHRegionServer(getRegionServer(serverNumber));
   }
 
