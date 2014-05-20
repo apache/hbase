@@ -27,8 +27,8 @@
  */
 -->
   <title>Apache HBase External APIs</title>
-  This chapter will cover access to Apache HBase either through non-Java languages, or through custom protocols.
-
+<para>  This chapter will cover access to Apache HBase either through non-Java languages, or through custom protocols.
+</para>
   <section xml:id="nonjava.jvm">
     <title>Non-Java Languages Talking to the JVM</title>
     <para>Currently the documentation on this topic in the
@@ -172,7 +172,7 @@
                <para>Example4:<code> =, 'substring:abc123' </code>will match everything that begins with the substring "abc123"</para>
              </section>
 
-             <section xml:id="example PHP Client Program"><title>Example PHP Client Program that uses the Filter Language</title>
+             <section xml:id="examplePHPClientProgram"><title>Example PHP Client Program that uses the Filter Language</title>
                <programlisting>
 &lt;? $_SERVER['PHP_ROOT'] = realpath(dirname(__FILE__).'/..');
    require_once $_SERVER['PHP_ROOT'].'/flib/__flib.php';
@@ -205,7 +205,7 @@
         </para>
 
         <orderedlist>
-          <para>
+          <listitem>
             <itemizedlist>
               <listitem>
                 <para><code>“(RowFilter (=, ‘binary:Row 1’) AND TimeStampsFilter (74689, 89734)) OR
@@ -216,7 +216,7 @@
                 <para>1) The key-value pair must be in a column that is lexicographically >= abc and &lt; xyz </para>
               </listitem>
             </itemizedlist>
-          </para>
+          </listitem>
         </orderedlist>
 
         <para>
@@ -228,7 +228,7 @@
         </para>
       </section>
 
-      <section xml:id="Individual Filter Syntax"><title>Individual Filter Syntax</title>
+      <section xml:id="IndividualFilterSyntax"><title>Individual Filter Syntax</title>
         <orderedlist>
           <listitem>
             <para><emphasis role="bold"><emphasis role="underline">KeyOnlyFilter</emphasis></emphasis></para>

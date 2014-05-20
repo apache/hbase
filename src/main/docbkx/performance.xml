@@ -51,9 +51,9 @@
     <para>
     Important items to consider:
         <itemizedlist>
-          <listitem>Switching capacity of the device</listitem>
-          <listitem>Number of systems connected</listitem>
-          <listitem>Uplink capacity</listitem>
+          <listitem><para>Switching capacity of the device</para></listitem>
+          <listitem><para>Number of systems connected</para></listitem>
+          <listitem><para>Uplink capacity</para></listitem>
         </itemizedlist>
     </para>
     <section xml:id="perf.network.1switch">
@@ -71,9 +71,9 @@
       </para>
       <para>Mitigation of this issue is fairly simple and can be accomplished in multiple ways:
       <itemizedlist>
-        <listitem>Use appropriate hardware for the scale of the cluster which you're attempting to build.</listitem>
-        <listitem>Use larger single switch configurations i.e. single 48 port as opposed to 2x 24 port</listitem>
-        <listitem>Configure port trunking for uplinks to utilize multiple interfaces to increase cross switch bandwidth.</listitem>
+        <listitem><para>Use appropriate hardware for the scale of the cluster which you're attempting to build.</para></listitem>
+        <listitem><para>Use larger single switch configurations i.e. single 48 port as opposed to 2x 24 port</para></listitem>
+        <listitem><para>Configure port trunking for uplinks to utilize multiple interfaces to increase cross switch bandwidth.</para></listitem>
       </itemizedlist>
       </para>
     </section>
@@ -81,8 +81,8 @@
       <title>Multiple Racks</title>
       <para>Multiple rack configurations carry the same potential issues as multiple switches, and can suffer performance degradation from two main areas:
          <itemizedlist>
-           <listitem>Poor switch capacity performance</listitem>
-           <listitem>Insufficient uplink to another rack</listitem>
+           <listitem><para>Poor switch capacity performance</para></listitem>
+           <listitem><para>Insufficient uplink to another rack</para></listitem>
          </itemizedlist>
       If the the switches in your rack have appropriate switching capacity to handle all the hosts at full speed, the next most likely issue will be caused by homing
       more of your cluster across racks.  The easiest way to avoid issues when spanning multiple racks is to use port trunking to create a bonded uplink to other racks.

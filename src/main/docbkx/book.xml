@@ -34,7 +34,7 @@
     <subtitle><link xlink:href="http://www.hbase.org">
            <inlinemediaobject>
                <imageobject>
-                   <imagedata align="middle" valign="middle" fileref="hbase_logo.png" />
+                   <imagedata align="center" valign="middle" fileref="hbase_logo.png" />
                </imageobject>
            </inlinemediaobject>
        </link>
@@ -104,8 +104,7 @@
       column
       <emphasis>contents:html</emphasis> is made up of the column family <varname>contents</varname>
       and <varname>html</varname> qualifier.
-          The colon character (<literal
-          moreinfo="none">:</literal>) delimits the column family from the
+          The colon character (<literal>:</literal>) delimits the column family from the
           column family <emphasis>qualifier</emphasis>.
     </para>
     </note>
@@ -189,53 +188,58 @@
       A namespace is a logical grouping of tables analogous to a database in relation database
         systems. This abstraction lays the groundwork for upcoming multi-tenancy related features:
         <itemizedlist>
-          <listitem>Quota Management (HBASE-8410) - Restrict the amount of resources (ie
-            regions, tables) a namespace can consume.</listitem>
-          <listitem>Namespace Security Administration (HBASE-9206) - provide another
-            level of security administration for tenants.</listitem>
-          <listitem>Region server groups (HBASE-6721) - A namespace/table can be
+          <listitem><para>Quota Management (HBASE-8410) - Restrict the amount of resources (ie
+            regions, tables) a namespace can consume.</para></listitem>
+          <listitem><para>Namespace Security Administration (HBASE-9206) - provide another
+            level of security administration for tenants.</para></listitem>
+          <listitem><para>Region server groups (HBASE-6721) - A namespace/table can be
             pinned onto a subset of regionservers thus guaranteeing a course level of
-            isolation.</listitem>
+            isolation.</para></listitem>
         </itemizedlist>
       </para>
       <section xml:id="namespace_creation">
         <title>Namespace management</title>
         <para>
         A namespace can be created, removed or altered. Namespace membership is determined during
-          table creation by specifying a fully-qualified table name of the form:
-          <para>
-            <code>&lt;table namespace&gt;:&lt;table qualifier&gt;</code>
-          </para>
-          <para>
-            Examples:
-          </para>
-<programlisting>
+          table creation by specifying a fully-qualified table name of the form:</para>
+  
+            <programlisting>&lt;table namespace&gt;:&lt;table qualifier&gt;</programlisting>
+          
+
+        <example>
+          <title>Examples</title>
+
+            <programlisting>
 #Create a namespace
 create_namespace 'my_ns'
-
+            </programlisting>
+          <programlisting>
 #create my_table in my_ns namespace
 create 'my_ns:my_table', 'fam'
-
+          </programlisting>
+          <programlisting>
 #drop namespace
 drop_namespace 'my_ns'
-
+          </programlisting>
+          <programlisting>
 #alter namespace
 alter_namespace 'my_ns', {METHOD => 'set', 'PROPERTY_NAME' => 'PROPERTY_VALUE'}
-</programlisting>
-        </para>
+        </programlisting>
+        </example>
       </section>
       <section xml:id="namespace_special">
         <title>Predefined namespaces</title>
         <para>
           There are two predefined special namespaces:
           <itemizedlist>
-            <listitem>hbase - system namespace, used to contain hbase internal tables</listitem>
-            <listitem>default - tables with no explicit specified namespace will automatically
-              fall into this namespace.</listitem>
+            <listitem><para>hbase - system namespace, used to contain hbase internal tables</para></listitem>
+            <listitem><para>default - tables with no explicit specified namespace will automatically
+              fall into this namespace.</para></listitem>
           </itemizedlist>
         </para>
-        <para>
-          Examples:
+<example>
+  <title>Examples</title>
+
 <programlisting>
 #namespace=foo and table qualifier=bar
 create 'foo:bar', 'fam'
@@ -243,7 +247,7 @@ create 'foo:bar', 'fam'
 #namespace=default and table qualifier=bar
 create 'bar', 'fam'
 </programlisting>
-        </para>
+        </example>
       </section>
     </section>
 
@@ -271,8 +275,8 @@ create 'bar', 'fam'
       <emphasis>courses:math</emphasis> are both members of the
       <emphasis>courses</emphasis> column family.
           The colon character (<literal
-          moreinfo="none">:</literal>) delimits the column family from the
-      <indexterm>column family <emphasis>qualifier</emphasis><primary>Column Family Qualifier</primary></indexterm>.
+          >:</literal>) delimits the column family from the
+          <indexterm><primary>column family qualifier</primary><secondary>Column Family Qualifier</secondary></indexterm>.
         The column family prefix must be composed of
       <emphasis>printable</emphasis> characters. The qualifying tail, the
       column family <emphasis>qualifier</emphasis>, can be made of any
@@ -651,9 +655,9 @@ htable.put(put);
       </para>
     </section>
     <section xml:id="acid"><title>ACID</title>
-        <pre>See <link xlink:href="http://hbase.apache.org/acid-semantics.html">ACID Semantics</link>.
+        <para>See <link xlink:href="http://hbase.apache.org/acid-semantics.html">ACID Semantics</link>.
             Lars Hofhansl has also written a note on
-            <link xlink:href="http://hadoop-hbase.blogspot.com/2012/03/acid-in-hbase.html">ACID in HBase</link>.</pre>
+            <link xlink:href="http://hadoop-hbase.blogspot.com/2012/03/acid-in-hbase.html">ACID in HBase</link>.</para>
     </section>
   </chapter>  <!-- data model -->
 
@@ -794,7 +798,7 @@ public static class MyMapper extends TableMapper&lt;Text, Text&gt; {
     <section xml:id="mapreduce.example.readwrite">
     <title>HBase MapReduce Read/Write Example</title>
     <para>The following is an example of using HBase both as a source and as a sink with MapReduce.
-    This example will simply copy data from one table to another.
+    This example will simply copy data from one table to another.</para>
     <programlisting>
 Configuration config = HBaseConfiguration.create();
 Job job = new Job(config,"ExampleReadWrite");
@@ -823,11 +827,11 @@ if (!b) {
     throw new IOException("error with job!");
 }
     </programlisting>
-	An explanation is required of what <classname>TableMapReduceUtil</classname> is doing, especially with the reducer.
+	<para>An explanation is required of what <classname>TableMapReduceUtil</classname> is doing, especially with the reducer.
 	<link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html">TableOutputFormat</link> is being used
 	as the outputFormat class, and several parameters are being set on the config (e.g., TableOutputFormat.OUTPUT_TABLE), as
 	well as setting the reducer output key to <classname>ImmutableBytesWritable</classname> and reducer value to <classname>Writable</classname>.
-	These could be set by the programmer on the job and conf, but <classname>TableMapReduceUtil</classname> tries to make things easier.
+	These could be set by the programmer on the job and conf, but <classname>TableMapReduceUtil</classname> tries to make things easier.</para>
 	<para>The following is the example mapper, which will create a <classname>Put</classname> and matching the input <classname>Result</classname>
 	and emit it.  Note:  this is what the CopyTable utility does.
 	</para>
@@ -853,7 +857,6 @@ public static class MyMapper extends TableMapper&lt;ImmutableBytesWritable, Put&
     </para>
     <para>This is just an example, developers could choose not to use <classname>TableOutputFormat</classname> and connect to the
     target table themselves.
-    </para>
     </para>
     </section>
     <section xml:id="mapreduce.example.readwrite.multi">
@@ -962,8 +965,8 @@ if (!b) {
 	throw new IOException("error with job!");
 }
     </programlisting>
-    As stated above, the previous Mapper can run unchanged with this example.
-    As for the Reducer, it is a "generic" Reducer instead of extending TableMapper and emitting Puts.
+    <para>As stated above, the previous Mapper can run unchanged with this example.
+    As for the Reducer, it is a "generic" Reducer instead of extending TableMapper and emitting Puts.</para>
     <programlisting>
  public static class MyReducer extends Reducer&lt;Text, IntWritable, Text, IntWritable&gt;  {
 
@@ -1082,18 +1085,18 @@ if (!b) {
 	  RDBMS can scale well, but only up to a point - specifically, the size of a single database server - and for the best
 	  performance requires specialized hardware and storage devices.  HBase features of note are:
 	        <itemizedlist>
-              <listitem>Strongly consistent reads/writes:  HBase is not an "eventually consistent" DataStore.  This
-              makes it very suitable for tasks such as high-speed counter aggregation.  </listitem>
-              <listitem>Automatic sharding:  HBase tables are distributed on the cluster via regions, and regions are
-              automatically split and re-distributed as your data grows.</listitem>
-              <listitem>Automatic RegionServer failover</listitem>
-              <listitem>Hadoop/HDFS Integration:  HBase supports HDFS out of the box as its distributed file system.</listitem>
-              <listitem>MapReduce:  HBase supports massively parallelized processing via MapReduce for using HBase as both
-              source and sink.</listitem>
-              <listitem>Java Client API:  HBase supports an easy to use Java API for programmatic access.</listitem>
-              <listitem>Thrift/REST API:  HBase also supports Thrift and REST for non-Java front-ends.</listitem>
-              <listitem>Block Cache and Bloom Filters:  HBase supports a Block Cache and Bloom Filters for high volume query optimization.</listitem>
-              <listitem>Operational Management:  HBase provides build-in web-pages for operational insight as well as JMX metrics.</listitem>
+              <listitem><para>Strongly consistent reads/writes:  HBase is not an "eventually consistent" DataStore.  This
+              makes it very suitable for tasks such as high-speed counter aggregation.</para>  </listitem>
+              <listitem><para>Automatic sharding:  HBase tables are distributed on the cluster via regions, and regions are
+              automatically split and re-distributed as your data grows.</para></listitem>
+              <listitem><para>Automatic RegionServer failover</para></listitem>
+              <listitem><para>Hadoop/HDFS Integration:  HBase supports HDFS out of the box as its distributed file system.</para></listitem>
+              <listitem><para>MapReduce:  HBase supports massively parallelized processing via MapReduce for using HBase as both
+              source and sink.</para></listitem>
+              <listitem><para>Java Client API:  HBase supports an easy to use Java API for programmatic access.</para></listitem>
+              <listitem><para>Thrift/REST API:  HBase also supports Thrift and REST for non-Java front-ends.</para></listitem>
+              <listitem><para>Block Cache and Bloom Filters:  HBase supports a Block Cache and Bloom Filters for high volume query optimization.</para></listitem>
+              <listitem><para>Operational Management:  HBase provides build-in web-pages for operational insight as well as JMX metrics.</para></listitem>
             </itemizedlist>
 	  </para>
       </section>
@@ -1140,15 +1143,15 @@ if (!b) {
        </para>
        <para>Key:
             <itemizedlist>
-              <listitem>.META. region key (<code>.META.,,1</code>)</listitem>
+              <listitem><para>.META. region key (<code>.META.,,1</code>)</para></listitem>
             </itemizedlist>
        </para>
        <para>Values:
             <itemizedlist>
-              <listitem><code>info:regioninfo</code> (serialized <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HRegionInfo.html">HRegionInfo</link>
-               instance of .META.)</listitem>
-              <listitem><code>info:server</code> (server:port of the RegionServer holding .META.)</listitem>
-              <listitem><code>info:serverstartcode</code> (start-time of the RegionServer process holding .META.)</listitem>
+              <listitem><para><code>info:regioninfo</code> (serialized <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HRegionInfo.html">HRegionInfo</link>
+               instance of .META.)</para></listitem>
+              <listitem><para><code>info:server</code> (server:port of the RegionServer holding .META.)</para></listitem>
+              <listitem><para><code>info:serverstartcode</code> (start-time of the RegionServer process holding .META.)</para></listitem>
             </itemizedlist>
        </para>
 	   </section>
@@ -1158,16 +1161,16 @@ if (!b) {
        </para>
        <para>Key:
             <itemizedlist>
-              <listitem>Region key of the format (<code>[table],[region start key],[region id]</code>)</listitem>
+              <listitem><para>Region key of the format (<code>[table],[region start key],[region id]</code>)</para></listitem>
             </itemizedlist>
        </para>
        <para>Values:
             <itemizedlist>
-              <listitem><code>info:regioninfo</code> (serialized <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HRegionInfo.html">
-              HRegionInfo</link> instance for this region)
+              <listitem><para><code>info:regioninfo</code> (serialized <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HRegionInfo.html">
+              HRegionInfo</link> instance for this region)</para>
               </listitem>
-              <listitem><code>info:server</code> (server:port of the RegionServer containing this region)</listitem>
-              <listitem><code>info:serverstartcode</code> (start-time of the RegionServer process containing this region)</listitem>
+              <listitem><para><code>info:server</code> (server:port of the RegionServer containing this region)</para></listitem>
+              <listitem><para><code>info:serverstartcode</code> (start-time of the RegionServer process containing this region)</para></listitem>
             </itemizedlist>
        </para>
        <para>When a table is in the process of splitting two other columns will be created, <code>info:splitA</code> and <code>info:splitB</code>
@@ -1351,7 +1354,7 @@ scan.setFilter(filter);
           See the Oracle JavaDoc for <link xlink:href="http://download.oracle.com/javase/6/docs/api/java/util/regex/Pattern.html">supported RegEx patterns in Java</link>.
           </para>
         </section>
-        <section xml:id="client.filter.cvp.rcs"><title>SubstringComparator</title>
+        <section xml:id="client.filter.cvp.SubStringComparator"><title>SubstringComparator</title>
           <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SubstringComparator.html">SubstringComparator</link>
           can be used to determine if a given substring exists in a value.  The comparison is case-insensitive.
           </para>
@@ -1518,12 +1521,12 @@ rs.close();
        <section xml:id="master.api"><title>Interface</title>
          <para>The methods exposed by <code>HMasterInterface</code> are primarily metadata-oriented methods:
          <itemizedlist>
-            <listitem>Table (createTable, modifyTable, removeTable, enable, disable)
-            </listitem>
-            <listitem>ColumnFamily (addColumn, modifyColumn, removeColumn)
-            </listitem>
-            <listitem>Region (move, assign, unassign)
-            </listitem>
+            <listitem><para>Table (createTable, modifyTable, removeTable, enable, disable)
+            </para></listitem>
+            <listitem><para>ColumnFamily (addColumn, modifyColumn, removeColumn)
+            </para></listitem>
+            <listitem><para>Region (move, assign, unassign)
+            </para></listitem>
          </itemizedlist>
          For example, when the <code>HBaseAdmin</code> method <code>disableTable</code> is invoked, it is serviced by the Master server.
          </para>
@@ -1551,9 +1554,9 @@ rs.close();
        <section xml:id="regionserver.arch.api"><title>Interface</title>
          <para>The methods exposed by <code>HRegionRegionInterface</code> contain both data-oriented and region-maintenance methods:
          <itemizedlist>
-            <listitem>Data (get, put, delete, next, etc.)
+            <listitem><para>Data (get, put, delete, next, etc.)</para>
             </listitem>
-            <listitem>Region (splitRegion, compactRegion, etc.)
+            <listitem><para>Region (splitRegion, compactRegion, etc.)</para>
             </listitem>
          </itemizedlist>
          For example, when the <code>HBaseAdmin</code> method <code>majorCompact</code> is invoked on a table, the client is actually iterating through
@@ -1597,14 +1600,14 @@ rs.close();
         <para>The Block Cache is an LRU cache that contains three levels of block priority to allow for scan-resistance and in-memory ColumnFamilies:
         </para>
         <itemizedlist>
-            <listitem>Single access priority: The first time a block is loaded from HDFS it normally has this priority and it will be part of the first group to be considered
-            during evictions. The advantage is that scanned blocks are more likely to get evicted than blocks that are getting more usage.
+            <listitem><para>Single access priority: The first time a block is loaded from HDFS it normally has this priority and it will be part of the first group to be considered
+            during evictions. The advantage is that scanned blocks are more likely to get evicted than blocks that are getting more usage.</para>
             </listitem>
-            <listitem>Multi access priority: If a block in the previous priority group is accessed
-              again, it upgrades to this priority. It is thus part of the second group considered
-              during evictions. </listitem>
-            <listitem>In-memory access priority: If the block's family was configured to be "in-memory", it will be part of this priority disregarding the number of times it
-            was accessed. Catalog tables are configured like this. This group is the last one considered during evictions.
+            <listitem><para>Mutli access priority: If a block in the previous priority group is accessed again, it upgrades to this priority. It is thus part of the second group
+            considered during evictions.</para>
+            </listitem>
+            <listitem><para>In-memory access priority: If the block's family was configured to be "in-memory", it will be part of this priority disregarding the number of times it
+            was accessed. Catalog tables are configured like this. This group is the last one considered during evictions.</para>
             </listitem>
         </itemizedlist>
         <para>
@@ -1628,27 +1631,27 @@ rs.close();
         make the process blocking from the point where it loads new blocks. Here are some examples:
         </para>
         <itemizedlist>
-            <listitem>One region server with the default heap size (1GB) and the default block cache size will have 217MB of block cache available.
+            <listitem><para>One region server with the default heap size (1GB) and the default block cache size will have 217MB of block cache available.</para>
             </listitem>
-            <listitem>20 region servers with the heap size set to 8GB and a default block cache size will have 34GB of block cache.
+            <listitem><para>20 region servers with the heap size set to 8GB and a default block cache size will have 34GB of block cache.</para>
             </listitem>
-            <listitem>100 region servers with the heap size set to 24GB and a block cache size of 0.5 will have about 1TB of block cache.
+            <listitem><para>100 region servers with the heap size set to 24GB and a block cache size of 0.5 will have about 1TB of block cache.</para>
             </listitem>
         </itemizedlist>
         <para>Your data isn't the only resident of the block cache, here are others that you may have to take into account:
         </para>
         <itemizedlist>
-            <listitem>Catalog tables: The -ROOT- and .META. tables are forced into the block cache and have the in-memory priority which means that they are harder to evict. The former never uses
-            more than a few hundreds of bytes while the latter can occupy a few MBs (depending on the number of regions).
+            <listitem><para>Catalog tables: The -ROOT- and .META. tables are forced into the block cache and have the in-memory priority which means that they are harder to evict. The former never uses
+            more than a few hundreds of bytes while the latter can occupy a few MBs (depending on the number of regions).</para>
             </listitem>
-            <listitem>HFiles indexes: HFile is the file format that HBase uses to store data in HDFS and it contains a multi-layered index in order seek to the data without having to read the whole file.
+            <listitem><para>HFiles indexes: HFile is the file format that HBase uses to store data in HDFS and it contains a multi-layered index in order seek to the data without having to read the whole file.
             The size of those indexes is a factor of the block size (64KB by default), the size of your keys and the amount of data you are storing. For big data sets it's not unusual to see numbers around
-            1GB per region server, although not all of it will be in cache because the LRU will evict indexes that aren't used.
+            1GB per region server, although not all of it will be in cache because the LRU will evict indexes that aren't used.</para>
             </listitem>
-            <listitem>Keys: Taking into account only the values that are being stored is missing half the picture since every value is stored along with its keys
-            (row key, family, qualifier, and timestamp). See <xref linkend="keysize"/>.
+            <listitem><para>Keys: Taking into account only the values that are being stored is missing half the picture since every value is stored along with its keys
+            (row key, family, qualifier, and timestamp). See <xref linkend="keysize"/>.</para>
             </listitem>
-            <listitem>Bloom filters: Just like the HFile indexes, those data structures (when enabled) are stored in the LRU.
+            <listitem><para>Bloom filters: Just like the HFile indexes, those data structures (when enabled) are stored in the LRU.</para>
             </listitem>
             </itemizedlist>
         <para>Currently the recommended way to measure HFile indexes and bloom filters sizes is to look at the region server web UI and checkout the relevant metrics. For keys,
@@ -1658,14 +1661,14 @@ rs.close();
         but you need to process 1TB of data. One of the reasons is that the churn generated by the evictions will trigger more garbage collections unnecessarily. Here are two use cases:
         </para>
         <itemizedlist>
-            <listitem>Fully random reading pattern: This is a case where you almost never access the same row twice within a short amount of time such that the chance of hitting a cached block is close
+            <listitem><para>Fully random reading pattern: This is a case where you almost never access the same row twice within a short amount of time such that the chance of hitting a cached block is close
             to 0. Setting block caching on such a table is a waste of memory and CPU cycles, more so that it will generate more garbage to pick up by the JVM. For more information on monitoring GC,
-            see <xref linkend="trouble.log.gc"/>.
+            see <xref linkend="trouble.log.gc"/>.</para>
             </listitem>
-            <listitem>Mapping a table: In a typical MapReduce job that takes a table in input, every row will be read only once so there's no need to put them into the block cache. The Scan object has
+            <listitem><para>Mapping a table: In a typical MapReduce job that takes a table in input, every row will be read only once so there's no need to put them into the block cache. The Scan object has
             the option of turning this off via the setCaching method (set it to false). You can still keep block caching turned on on this table if you need fast random read access. An example would be
             counting the number of rows in a table that serves live traffic, caching every block of that table would create massive churn and would surely evict data that's currently in use.
-            </listitem>
+            </para></listitem>
         </itemizedlist>
       </section>
       <section xml:id="offheap.blockcache"><title>Offheap Block Cache</title>
@@ -1687,7 +1690,7 @@ rs.close();
         This ensures that HBase has durable writes. Without WAL, there is the possibility of data loss in the case of a RegionServer failure
         before each MemStore is flushed and new StoreFiles are written.  <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/wal/HLog.html">HLog</link>
         is the HBase WAL implementation, and there is one HLog instance per RegionServer.
-       </para>The WAL is in HDFS in <filename>/hbase/.logs/</filename> with subdirectories per region.
+       </para><para>The WAL is in HDFS in <filename>/hbase/.logs/</filename> with subdirectories per region.</para>
        <para>
         For more general information about the concept of write ahead logs, see the Wikipedia
         <link xlink:href="http://en.wikipedia.org/wiki/Write-ahead_logging">Write-Ahead Log</link> article.
@@ -1759,13 +1762,14 @@ rs.close();
      For a description of what HBase files look like when written to HDFS, see <xref linkend="trouble.namenode.hbase.objects"/>.
             </para>
     <section xml:id="arch.regions.size">
+      <title>Considerations for Number of Regions</title>
 <para> In general, HBase is designed to run with a small (20-200) number of relatively large (5-20Gb) regions per server. The considerations for this are as follows:</para>
 <section xml:id="too_many_regions">
           <title>Why cannot I have too many regions?</title>
           <para>
               Typically you want to keep your region count low on HBase for numerous reasons.
               Usually right around 100 regions per RegionServer has yielded the best results.
-              Here are some of the reasons below for keeping region count low:
+              Here are some of the reasons below for keeping region count low:</para>
               <orderedlist>
                   <listitem><para>
                           MSLAB requires 2mb per memstore (that's 2mb per family per region).
@@ -1795,12 +1799,13 @@ rs.close();
                           creating memory pressure or OOME on the RSs
                   </para></listitem>
           </orderedlist>
-      </para>
+            <para>Another issue is the effect of the number of regions on mapreduce jobs; it is typical to have one mapper per HBase region.
+              Thus, hosting only 5 regions per RS may not be enough to get sufficient number of tasks for a mapreduce job, while 1000 regions will generate far too many tasks.
+            </para>
+            <para>See <xref linkend="ops.capacity.regions" /> for configuration guidelines.</para>
+
       </section>
-      <para>Another issue is the effect of the number of regions on mapreduce jobs; it is typical to have one mapper per HBase region.
-          Thus, hosting only 5 regions per RS may not be enough to get sufficient number of tasks for a mapreduce job, while 1000 regions will generate far too many tasks.
-      </para>
-      <para>See <xref linkend="ops.capacity.regions" /> for configuration guidelines.</para>
+
     </section>
 
       <section xml:id="regions.arch.assignment">
@@ -1812,18 +1817,18 @@ rs.close();
           <title>Startup</title>
           <para>When HBase starts regions are assigned as follows (short version):
             <orderedlist>
-              <listitem>The Master invokes the <code>AssignmentManager</code> upon startup.
+              <listitem><para>The Master invokes the <code>AssignmentManager</code> upon startup.</para>
               </listitem>
-              <listitem>The <code>AssignmentManager</code> looks at the existing region assignments in META.
+              <listitem><para>The <code>AssignmentManager</code> looks at the existing region assignments in META.</para>
               </listitem>
-              <listitem>If the region assignment is still valid (i.e., if the RegionServer is still online)
-                then the assignment is kept.
+              <listitem><para>If the region assignment is still valid (i.e., if the RegionServer is still online)
+                then the assignment is kept.</para>
               </listitem>
-              <listitem>If the assignment is invalid, then the <code>LoadBalancerFactory</code> is invoked to assign the
-                region.  The <code>DefaultLoadBalancer</code> will randomly assign the region to a RegionServer.
+              <listitem><para>If the assignment is invalid, then the <code>LoadBalancerFactory</code> is invoked to assign the
+                region.  The <code>DefaultLoadBalancer</code> will randomly assign the region to a RegionServer.</para>
               </listitem>
-              <listitem>META is updated with the RegionServer assignment (if needed) and the RegionServer start codes
-              (start time of the RegionServer process) upon region opening by the RegionServer.
+              <listitem><para>META is updated with the RegionServer assignment (if needed) and the RegionServer start codes
+              (start time of the RegionServer process) upon region opening by the RegionServer.</para>
               </listitem>
            </orderedlist>
           </para>
@@ -1833,12 +1838,12 @@ rs.close();
           <title>Failover</title>
           <para>When a RegionServer fails (short version):
             <orderedlist>
-              <listitem>The regions immediately become unavailable because the RegionServer is down.
+              <listitem><para>The regions immediately become unavailable because the RegionServer is down.</para>
               </listitem>
-              <listitem>The Master will detect that the RegionServer has failed.
+              <listitem><para>The Master will detect that the RegionServer has failed.</para>
               </listitem>
-              <listitem>The region assignments will be considered invalid and will be re-assigned just
-                like the startup sequence.
+              <listitem><para>The region assignments will be considered invalid and will be re-assigned just
+                like the startup sequence.</para>
               </listitem>
             </orderedlist>
            </para>
@@ -1856,18 +1861,19 @@ rs.close();
       <section xml:id="regions.arch.locality">
         <title>Region-RegionServer Locality</title>
         <para>Over time, Region-RegionServer locality is achieved via HDFS block replication.
-          The HDFS client does the following by default when choosing locations to write replicas:
+          The HDFS client does the following by default when choosing locations to write replicas:</para>
            <orderedlist>
-             <listitem>First replica is written to local node
+             <listitem><para>First replica is written to local node</para>
              </listitem>
-             <listitem>Second replica is written to a random node on another rack
+             <listitem><para>Second replica is written to a random node on another rack</para>
              </listitem>
-             <listitem>Third replica is written on the same rack as the second, but on a different node chosen randomly
+             <listitem><para>Third replica is written on the same rack as the second, but on a different node chosen randomly</para>
              </listitem>
-             <listitem>Subsequent replicas are written on random nodes on the cluster
+             <listitem><para>Subsequent replicas are written on random nodes on the cluster
 <footnote><para>See <emphasis>Replica Placement: The First Baby Steps</emphasis> on this page: <link xlink:href="http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html">HDFS Architecture</link></para></footnote>
-             </listitem>
+             </para></listitem>
            </orderedlist>
+        <para>
           Thus, HBase eventually achieves locality for a region after a flush or a compaction.
           In a RegionServer failover situation a RegionServer may be assigned regions with non-local
           StoreFiles (because none of the replicas are local), however as new data is written
@@ -1949,7 +1955,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
               the SSTable file described in the <link xlink:href="http://research.google.com/archive/bigtable.html">BigTable [2006]</link> paper and on
               Hadoop's <link xlink:href="http://hadoop.apache.org/common/docs/current/api/org/apache/hadoop/io/file/tfile/TFile.html">tfile</link>
               (The unit test suite and the compression harness were taken directly from tfile).
-              Schubert Zhang's blog post on <link xlink:ref="http://cloudepr.blogspot.com/2009/09/hfile-block-indexed-file-format-to.html">HFile: A Block-Indexed File Format to Store Sorted Key-Value Pairs</link> makes for a thorough introduction to HBase's hfile.  Matteo Bertozzi has also put up a
+              Schubert Zhang's blog post on <link xlink:href="http://cloudepr.blogspot.com/2009/09/hfile-block-indexed-file-format-to.html">HFile: A Block-Indexed File Format to Store Sorted Key-Value Pairs</link> makes for a thorough introduction to HBase's hfile.  Matteo Bertozzi has also put up a
               helpful description, <link xlink:href="http://th30z.blogspot.com/2011/02/hbase-io-hfile.html?spref=tw">HBase I/O: HFile</link>.
           </para>
           <para>For more information, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/HFile.html">HFile source code</link>.
@@ -1992,21 +1998,21 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
         </para>
         <para>The KeyValue format inside a byte array is:
            <itemizedlist>
-             <listitem>keylength</listitem>
-             <listitem>valuelength</listitem>
-             <listitem>key</listitem>
-             <listitem>value</listitem>
+             <listitem><para>keylength</para></listitem>
+             <listitem><para>valuelength</para></listitem>
+             <listitem><para>key</para></listitem>
+             <listitem><para>value</para></listitem>
            </itemizedlist>
         </para>
         <para>The Key is further decomposed as:
            <itemizedlist>
-             <listitem>rowlength</listitem>
-             <listitem>row (i.e., the rowkey)</listitem>
-             <listitem>columnfamilylength</listitem>
-             <listitem>columnfamily</listitem>
-             <listitem>columnqualifier</listitem>
-             <listitem>timestamp</listitem>
-             <listitem>keytype (e.g., Put, Delete, DeleteColumn, DeleteFamily)</listitem>
+             <listitem><para>rowlength</para></listitem>
+             <listitem><para>row (i.e., the rowkey)</para></listitem>
+             <listitem><para>columnfamilylength</para></listitem>
+             <listitem><para>columnfamily</para></listitem>
+             <listitem><para>columnqualifier</para></listitem>
+             <listitem><para>timestamp</para></listitem>
+             <listitem><para>keytype (e.g., Put, Delete, DeleteColumn, DeleteFamily)</para></listitem>
            </itemizedlist>
         </para>
         <para>KeyValue instances are <emphasis>not</emphasis> split across blocks.
@@ -2016,37 +2022,38 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
         <section xml:id="keyvalue.example"><title>Example</title>
           <para>To emphasize the points above, examine what happens with two Puts for two different columns for the same row:</para>
            <itemizedlist>
-             <listitem>Put #1:  <code>rowkey=row1, cf:attr1=value1</code></listitem>
-             <listitem>Put #2:  <code>rowkey=row1, cf:attr2=value2</code></listitem>
+             <listitem><para>Put #1:  <code>rowkey=row1, cf:attr1=value1</code></para></listitem>
+             <listitem><para>Put #2:  <code>rowkey=row1, cf:attr2=value2</code></para></listitem>
              </itemizedlist>
           <para>Even though these are for the same row, a KeyValue is created for each column:</para>
           <para>Key portion for Put #1:
            <itemizedlist>
-             <listitem>rowlength <code>------------&gt; 4</code></listitem>
-             <listitem>row <code>-----------------&gt; row1</code></listitem>
-             <listitem>columnfamilylength <code>---&gt; 2</code></listitem>
-             <listitem>columnfamily <code>--------&gt; cf</code></listitem>
-             <listitem>columnqualifier <code>------&gt; attr1</code></listitem>
-             <listitem>timestamp <code>-----------&gt; server time of Put</code></listitem>
-             <listitem>keytype <code>-------------&gt; Put</code></listitem>
+             <listitem><para>rowlength <code>------------&gt; 4</code></para></listitem>
+             <listitem><para>row <code>-----------------&gt; row1</code></para></listitem>
+             <listitem><para>columnfamilylength <code>---&gt; 2</code></para></listitem>
+             <listitem><para>columnfamily <code>--------&gt; cf</code></para></listitem>
+             <listitem><para>columnqualifier <code>------&gt; attr1</code></para></listitem>
+             <listitem><para>timestamp <code>-----------&gt; server time of Put</code></para></listitem>
+             <listitem><para>keytype <code>-------------&gt; Put</code></para></listitem>
            </itemizedlist>
           </para>
           <para>Key portion for Put #2:
            <itemizedlist>
-             <listitem>rowlength <code>------------&gt; 4</code></listitem>
-             <listitem>row <code>-----------------&gt; row1</code></listitem>
-             <listitem>columnfamilylength <code>---&gt; 2</code></listitem>
-             <listitem>columnfamily <code>--------&gt; cf</code></listitem>
-             <listitem>columnqualifier <code>------&gt; attr2</code></listitem>
-             <listitem>timestamp <code>-----------&gt; server time of Put</code></listitem>
-             <listitem>keytype <code>-------------&gt; Put</code></listitem>
+             <listitem><para>rowlength <code>------------&gt; 4</code></para></listitem>
+             <listitem><para>row <code>-----------------&gt; row1</code></para></listitem>
+             <listitem><para>columnfamilylength <code>---&gt; 2</code></para></listitem>
+             <listitem><para>columnfamily <code>--------&gt; cf</code></para></listitem>
+             <listitem><para>columnqualifier <code>------&gt; attr2</code></para></listitem>
+             <listitem><para>timestamp <code>-----------&gt; server time of Put</code></para></listitem>
+             <listitem><para>keytype <code>-------------&gt; Put</code></para></listitem>
            </itemizedlist>
            <!--  trying to get the above arrows to line up at the same horizontal position has proven
            harder than I thought -->
           </para>
+          <para>It is critical to understand that the rowkey, ColumnFamily, and column (aka columnqualifier) are embedded within
+            the KeyValue instance.  The longer these identifiers are, the bigger the KeyValue is.</para>
         </section>
-       <para>It is critical to understand that the rowkey, ColumnFamily, and column (aka columnqualifier) are embedded within
-       the KeyValue instance.  The longer these identifiers are, the bigger the KeyValue is.</para>
+
       </section>
       <section xml:id="compaction">
         <title>Compaction</title>
@@ -2078,16 +2085,16 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
 </programlisting>
           Important knobs:
           <itemizedlist>
-            <listitem><code>hbase.store.compaction.ratio</code> Ratio used in compaction
-            file selection algorithm (default 1.2f). </listitem>
-            <listitem><code>hbase.hstore.compaction.min</code> (.90 hbase.hstore.compactionThreshold) (files) Minimum number
-            of StoreFiles per Store to be selected for a compaction to occur (default 2).</listitem>
-            <listitem><code>hbase.hstore.compaction.max</code> (files) Maximum number of StoreFiles to compact per minor compaction (default 10).</listitem>
-            <listitem><code>hbase.hstore.compaction.min.size</code> (bytes)
+            <listitem><para><code>hbase.store.compaction.ratio</code> Ratio used in compaction
+            file selection algorithm (default 1.2f).</para> </listitem>
+            <listitem><para><code>hbase.hstore.compaction.min</code> (.90 hbase.hstore.compactionThreshold) (files) Minimum number
+            of StoreFiles per Store to be selected for a compaction to occur (default 2).</para></listitem>
+            <listitem><para><code>hbase.hstore.compaction.max</code> (files) Maximum number of StoreFiles to compact per minor compaction (default 10).</para></listitem>
+            <listitem><para><code>hbase.hstore.compaction.min.size</code> (bytes)
             Any StoreFile smaller than this setting with automatically be a candidate for compaction.  Defaults to
-            <code>hbase.hregion.memstore.flush.size</code> (128 mb). </listitem>
-            <listitem><code>hbase.hstore.compaction.max.size</code> (.92) (bytes)
-            Any StoreFile larger than this setting with automatically be excluded from compaction (default Long.MAX_VALUE). </listitem>
+            <code>hbase.hregion.memstore.flush.size</code> (128 mb). </para></listitem>
+            <listitem><para><code>hbase.hstore.compaction.max.size</code> (.92) (bytes)
+            Any StoreFile larger than this setting with automatically be excluded from compaction (default Long.MAX_VALUE). </para></listitem>
             </itemizedlist>
           </para>
           <para>The minor compaction StoreFile selection logic is size based, and selects a file for compaction when the file
@@ -2096,26 +2103,27 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
         </section>
         <section xml:id="compaction.file.selection.example1">
           <title>Minor Compaction File Selection - Example #1 (Basic Example)</title>
-          <para>This example mirrors an example from the unit test <code>TestCompactSelection</code>.
+          <para>This example mirrors an example from the unit test <code>TestCompactSelection</code>.</para>
           <itemizedlist>
-            <listitem><code>hbase.store.compaction.ratio</code> = 1.0f </listitem>
-            <listitem><code>hbase.hstore.compaction.min</code> = 3 (files) </listitem>>
-            <listitem><code>hbase.hstore.compaction.max</code> = 5 (files) </listitem>>
-            <listitem><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </listitem>>
-            <listitem><code>hbase.hstore.compaction.max.size</code> = 1000 (bytes) </listitem>>
+            <listitem><para><code>hbase.store.compaction.ratio</code> = 1.0f </para></listitem>
+            <listitem><para><code>hbase.hstore.compaction.min</code> = 3 (files) </para></listitem>
+            <listitem><para><code>hbase.hstore.compaction.max</code> = 5 (files) </para></listitem>
+            <listitem><para><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </para></listitem>
+            <listitem><para><code>hbase.hstore.compaction.max.size</code> = 1000 (bytes) </para></listitem>
           </itemizedlist>
+          <para>
           The following StoreFiles exist: 100, 50, 23, 12, and 12 bytes apiece (oldest to newest).
           With the above parameters, the files that would be selected for minor compaction are 23, 12, and 12.
           </para>
           <para>Why?
           <itemizedlist>
-            <listitem>100 --&gt;  No, because sum(50, 23, 12, 12) * 1.0 = 97. </listitem>
-            <listitem>50 --&gt;  No, because sum(23, 12, 12) * 1.0 = 47. </listitem>
-            <listitem>23 --&gt;  Yes, because sum(12, 12) * 1.0 = 24. </listitem>
-            <listitem>12 --&gt;  Yes, because the previous file has been included, and because this
-          does not exceed the the max-file limit of 5  </listitem>
-            <listitem>12 --&gt;  Yes, because the previous file had been included, and because this
-          does not exceed the the max-file limit of 5.</listitem>
+            <listitem><para>100 --&gt;  No, because sum(50, 23, 12, 12) * 1.0 = 97. </para></listitem>
+            <listitem><para>50 --&gt;  No, because sum(23, 12, 12) * 1.0 = 47. </para></listitem>
+            <listitem><para>23 --&gt;  Yes, because sum(12, 12) * 1.0 = 24. </para></listitem>
+            <listitem><para>12 --&gt;  Yes, because the previous file has been included, and because this
+          does not exceed the the max-file limit of 5  </para></listitem>
+            <listitem><para>12 --&gt;  Yes, because the previous file had been included, and because this
+          does not exceed the the max-file limit of 5.</para></listitem>
           </itemizedlist>
           </para>
         </section>
@@ -2123,11 +2131,11 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
           <title>Minor Compaction File Selection - Example #2 (Not Enough Files To Compact)</title>
           <para>This example mirrors an example from the unit test <code>TestCompactSelection</code>.
           <itemizedlist>
-            <listitem><code>hbase.store.compaction.ratio</code> = 1.0f </listitem>
-            <listitem><code>hbase.hstore.compaction.min</code> = 3 (files) </listitem>>
-            <listitem><code>hbase.hstore.compaction.max</code> = 5 (files) </listitem>>
-            <listitem><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </listitem>>
-            <listitem><code>hbase.hstore.compaction.max.size</code> = 1000 (bytes) </listitem>>
+            <listitem><para><code>hbase.store.compaction.ratio</code> = 1.0f </para></listitem>
+            <listitem><para><code>hbase.hstore.compaction.min</code> = 3 (files) </para></listitem>
+            <listitem><para><code>hbase.hstore.compaction.max</code> = 5 (files)</para> </listitem>
+            <listitem><para><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </para></listitem>
+            <listitem><para><code>hbase.hstore.compaction.max.size</code> = 1000 (bytes) </para></listitem>
           </itemizedlist>
           </para>
           <para>The following StoreFiles exist: 100, 25, 12, and 12 bytes apiece (oldest to newest).
@@ -2135,35 +2143,35 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
           </para>
           <para>Why?
           <itemizedlist>
-            <listitem>100 --&gt; No, because sum(25, 12, 12) * 1.0 = 47</listitem>
-            <listitem>25 --&gt;  No, because sum(12, 12) * 1.0 = 24</listitem>
-            <listitem>12 --&gt;  No. Candidate because sum(12) * 1.0 = 12, there are only 2 files to compact and that is less than the threshold of 3</listitem>
-            <listitem>12 --&gt;  No. Candidate because the previous StoreFile was, but there are not enough files to compact</listitem>
+            <listitem><para>100 --&gt; No, because sum(25, 12, 12) * 1.0 = 47</para></listitem>
+            <listitem><para>25 --&gt;  No, because sum(12, 12) * 1.0 = 24</para></listitem>
+            <listitem><para>12 --&gt;  No. Candidate because sum(12) * 1.0 = 12, there are only 2 files to compact and that is less than the threshold of 3</para></listitem>
+            <listitem><para>12 --&gt;  No. Candidate because the previous StoreFile was, but there are not enough files to compact</para></listitem>
           </itemizedlist>
           </para>
         </section>
-        <section xml:id="compaction.file.selection.example2">
+        <section xml:id="compaction.file.selection.example3">
           <title>Minor Compaction File Selection - Example #3 (Limiting Files To Compact)</title>
           <para>This example mirrors an example from the unit test <code>TestCompactSelection</code>.
           <itemizedlist>
-            <listitem><code>hbase.store.compaction.ratio</code> = 1.0f </listitem>
-            <listitem><code>hbase.hstore.compaction.min</code> = 3 (files) </listitem>>
-            <listitem><code>hbase.hstore.compaction.max</code> = 5 (files) </listitem>>
-            <listitem><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </listitem>>
-            <listitem><code>hbase.hstore.compaction.max.size</code> = 1000 (bytes) </listitem>>
+            <listitem><para><code>hbase.store.compaction.ratio</code> = 1.0f </para></listitem>
+            <listitem><para><code>hbase.hstore.compaction.min</code> = 3 (files) </para></listitem>
+            <listitem><para><code>hbase.hstore.compaction.max</code> = 5 (files)</para> </listitem>
+            <listitem><para><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </para></listitem>
+            <listitem><para><code>hbase.hstore.compaction.max.size</code> = 1000 (bytes) </para></listitem>
           </itemizedlist>
           The following StoreFiles exist: 7, 6, 5, 4, 3, 2, and 1 bytes apiece (oldest to newest).
           With the above parameters, the files that would be selected for minor compaction are 7, 6, 5, 4, 3.
           </para>
           <para>Why?
           <itemizedlist>
-            <listitem>7 --&gt;  Yes, because sum(6, 5, 4, 3, 2, 1) * 1.0 = 21.  Also, 7 is less than the min-size</listitem>
-            <listitem>6 --&gt;  Yes, because sum(5, 4, 3, 2, 1) * 1.0 = 15.  Also, 6 is less than the min-size. </listitem>
-            <listitem>5 --&gt;  Yes, because sum(4, 3, 2, 1) * 1.0 = 10.  Also, 5 is less than the min-size. </listitem>
-            <listitem>4 --&gt;  Yes, because sum(3, 2, 1) * 1.0 = 6.  Also, 4 is less than the min-size. </listitem>
-            <listitem>3 --&gt;  Yes, because sum(2, 1) * 1.0 = 3.  Also, 3 is less than the min-size. </listitem>
-            <listitem>2 --&gt;  No.  Candidate because previous file was selected and 2 is less than the min-size, but the max-number of files to compact has been reached. </listitem>
-            <listitem>1 --&gt;  No.  Candidate because previous file was selected and 1 is less than the min-size, but max-number of files to compact has been reached. </listitem>
+            <listitem><para>7 --&gt;  Yes, because sum(6, 5, 4, 3, 2, 1) * 1.0 = 21.  Also, 7 is less than the min-size</para></listitem>
+            <listitem><para>6 --&gt;  Yes, because sum(5, 4, 3, 2, 1) * 1.0 = 15.  Also, 6 is less than the min-size. </para></listitem>
+            <listitem><para>5 --&gt;  Yes, because sum(4, 3, 2, 1) * 1.0 = 10.  Also, 5 is less than the min-size. </para></listitem>
+            <listitem><para>4 --&gt;  Yes, because sum(3, 2, 1) * 1.0 = 6.  Also, 4 is less than the min-size. </para></listitem>
+            <listitem><para>3 --&gt;  Yes, because sum(2, 1) * 1.0 = 3.  Also, 3 is less than the min-size. </para></listitem>
+            <listitem><para>2 --&gt;  No.  Candidate because previous file was selected and 2 is less than the min-size, but the max-number of files to compact has been reached. </para></listitem>
+            <listitem><para>1 --&gt;  No.  Candidate because previous file was selected and 1 is less than the min-size, but max-number of files to compact has been reached. </para></listitem>
           </itemizedlist>
           </para>
         </section>
@@ -2187,11 +2195,11 @@ This feature is fully compatible with default compactions - it can be enabled fo
 </section><section xml:id="ops.stripe.when"><title>When to use</title>
 <para>You might want to consider using this feature if you have:
 <itemizedlist>
-<listitem>
-large regions (in that case, you can get the positive effect of much smaller regions without additional memstore and region management overhead); or
-</listitem><listitem>
+<listitem><para>large regions (in that case, you can get the positive effect of much smaller regions without additional memstore and region management overhead); or
+</para></listitem>
+  <listitem><para>
 non-uniform row keys, e.g. time dimension in a key (in that case, only the stripes receiving the new keys will keep compacting - old data will not compact as much, or at all).
-</listitem>
+</para></listitem>
 </itemizedlist>
 </para><para>
 According to perf testing performed, in these case the read performance can improve somewhat, and the read and write performance variability due to compactions is greatly reduced. There's overall perf improvement on large, non-uniform row key regions (hash-prefixed timestamp key) over long term. All of these performance gains are best realized when table is already large. In future, the perf improvement might also extend to region splits.
@@ -2226,21 +2234,23 @@ Based on your region sizing, you might want to also change your stripe sizing. B
 You can improve this pattern for your data. You should generally aim at stripe size of at least 1Gb, and about 8-12 stripes for uniform row keys - so, for example if your regions are 30 Gb, 12x2.5Gb stripes might be a good idea.
 </para><para>
 The settings are as follows:
-<table frame='all'><tgroup cols='2' align='left' colsep='1' rowsep='1'><colspec colname='c1'/><colspec colname='c2'/>
+<informaltable frame='all'><tgroup cols='2' align='left' colsep='1' rowsep='1'><colspec colname='c1'/><colspec colname='c2'/>
 <thead><row><entry>Setting</entry><entry>Notes</entry></row></thead>
 <tbody>
 <row><entry>
 <varname>hbase.store.stripe.initialStripeCount</varname>
 </entry><entry>
-Initial stripe count to create. You can use it as follows:
-<itemizedlist>
-<listitem>
+<para>Initial stripe count to create. You can use it as follows:
+</para><itemizedlist>
+<listitem><para>
 for relatively uniform row keys, if you know the approximate target number of stripes from the above, you can avoid some splitting overhead by starting w/several stripes (2, 5, 10...). Note that if the early data is not representative of overall row key distribution, this will not be as efficient.
-</listitem><listitem>
+</para></listitem>
+  <listitem><para>
 for existing tables with lots of data, you can use this to pre-split stripes.
-</listitem><listitem>
-for e.g. hash-prefixed sequential keys, with more than one hash prefix per region, you know that some pre-splitting makes sense.
-</listitem>
+</para></listitem>
+  <listitem>
+<para>for e.g. hash-prefixed sequential keys, with more than one hash prefix per region, you know that some pre-splitting makes sense.
+</para></listitem>
 </itemizedlist>
 </entry></row><row><entry>
 <varname>hbase.store.stripe.sizeToSplit</varname>
@@ -2252,7 +2262,7 @@ Maximum stripe size before it's split. You can use this in conjunction with the 
 The number of new stripes to create when splitting one. The default is 2, and is good for most cases. For non-uniform row keys, you might experiment with increasing the number somewhat (3-4), to isolate the arriving updates into narrower slice of the region with just one split instead of several.
 </entry></row>
 </tbody>
-</tgroup></table>
+</tgroup></informaltable>
 </para>
 </section><section xml:id="ops.stripe.config.memstore"><title>Memstore sizing</title>
 <para>
@@ -2354,7 +2364,7 @@ All the settings that apply to normal compactions (file size limits, etc.) apply
         where <code>importtsv</code> or your MapReduce job put its results, and
         the table name to import into. For example:
       </para>
-      <code>$ hadoop jar hbase-VERSION.jar completebulkload [-c /path/to/hbase/config/hbase-site.xml] /user/todd/myoutput mytable</code>
+      <screen>$ hadoop jar hbase-VERSION.jar completebulkload [-c /path/to/hbase/config/hbase-site.xml] /user/todd/myoutput mytable</screen>
       <para>
         The <code>-c config-file</code> option can be used to specify a file
         containing the appropriate hbase parameters (e.g., hbase-site.xml) if
@@ -2374,7 +2384,7 @@ All the settings that apply to normal compactions (file size limits, etc.) apply
       <para>For more information about the referenced utilities, see <xref linkend="importtsv"/> and  <xref linkend="completebulkload"/>.
       </para>
       <para>
-          See <link xlink:ref="http://blog.cloudera.com/blog/2013/09/how-to-use-hbase-bulk-loading-and-why/">How-to: Use HBase Bulk Loading, and Why</link>
+          See <link xlink:href="http://blog.cloudera.com/blog/2013/09/how-to-use-hbase-bulk-loading-and-why/">How-to: Use HBase Bulk Loading, and Why</link>
           for a recent blog on current state of bulk loading.
       </para>
     </section>
@@ -2422,12 +2432,11 @@ All the settings that apply to normal compactions (file size limits, etc.) apply
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="ops_mgt.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="developer.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="zookeeper.xml" />
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="cp.xml" />
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="community.xml" />
 
 <appendix xml:id="faq">
     <title >FAQ</title>
-    <qandaset defaultlabel='faq'>
+    <qandaset defaultlabel='qanda'>
         <qandadiv><title>General</title>
         <qandaentry>
                 <question><para>When should I use HBase?</para></question>
@@ -2488,7 +2497,7 @@ All the settings that apply to normal compactions (file size limits, etc.) apply
                 </para>
             </answer>
             </qandaentry>
-        <qandaentry xml:id="faq.config.started">
+        <qandaentry xml:id="faq.config.options">
             <question><para>Where can I learn about the rest of the configuration options?</para></question>
             <answer>
                 <para>
@@ -2629,7 +2638,7 @@ identifying mode and a multi-phase read-write repair mode.
 	</para>
 	<section>
 	  <title>Running hbck to identify inconsistencies</title>
-To check to see if your HBase cluster has corruptions, run hbck against your HBase cluster:
+<para>To check to see if your HBase cluster has corruptions, run hbck against your HBase cluster:</para>
 <programlisting>
 $ ./bin/hbase hbck
 </programlisting>
@@ -2645,9 +2654,9 @@ listing of all the splits present in all the tables.
 <programlisting>
 $ ./bin/hbase hbck -details
 </programlisting>
-If you just want to know if some tables are corrupted, you can limit hbck to identify inconsistencies
+<para>If you just want to know if some tables are corrupted, you can limit hbck to identify inconsistencies
 in only specific tables. For example the following command would only attempt to check table
-TableFoo and TableBar. The benefit is that hbck will run in less time.
+TableFoo and TableBar. The benefit is that hbck will run in less time.</para>
 <programlisting>
 $ ./bin/hbase hbck TableFoo TableBar
 </programlisting>
@@ -2662,12 +2671,12 @@ the hbck tool enabled with automatic repair options.
 	There are two invariants that when violated create inconsistencies in HBase:
 	</para>
 	<itemizedlist>
-	  <listitem>HBase’s region consistency invariant is satisfied if every region is assigned and
+	  <listitem><para>HBase’s region consistency invariant is satisfied if every region is assigned and
 deployed on exactly one region server, and all places where this state kept is in
-accordance.
+accordance.</para>
 	</listitem>
-	<listitem>HBase’s table integrity invariant is satisfied if for each table, every possible row key
-resolves to exactly one region.
+	<listitem><para>HBase’s table integrity invariant is satisfied if for each table, every possible row key
+resolves to exactly one region.</para>
 	</listitem>
 	</itemizedlist>
 	<para>
@@ -2698,11 +2707,11 @@ Region consistency requires that the HBase instance has the state of the region�
 (.regioninfo files), the region’s row in the .META. table., and region’s deployment/assignments on
 region servers and the master in accordance. Options for repairing region consistency include:
 	<itemizedlist>
-		<listitem><code>-fixAssignments</code> (equivalent to the 0.90 <code>-fix</code> option) repairs unassigned, incorrectly
-assigned or multiply assigned regions.
+		<listitem><para><code>-fixAssignments</code> (equivalent to the 0.90 <code>-fix</code> option) repairs unassigned, incorrectly
+assigned or multiply assigned regions.</para>
 		</listitem>
-		<listitem><code>-fixMeta</code> which removes meta rows when corresponding regions are not present in
-HDFS and adds new meta rows if they regions are present in HDFS while not in META.
+		<listitem><para><code>-fixMeta</code> which removes meta rows when corresponding regions are not present in
+		  HDFS and adds new meta rows if they regions are present in HDFS while not in META.</para>
 		</listitem>
 	</itemizedlist>
 	To fix deployment and assignment problems you can run this command:
@@ -2710,48 +2719,48 @@ HDFS and adds new meta rows if they regions are present in HDFS while not in MET
 <programlisting>
 $ ./bin/hbase hbck -fixAssignments
 </programlisting>
-To fix deployment and assignment problems as well as repairing incorrect meta rows you can
-run this command:.
+<para>To fix deployment and assignment problems as well as repairing incorrect meta rows you can
+run this command:</para>
 <programlisting>
 $ ./bin/hbase hbck -fixAssignments -fixMeta
 </programlisting>
-There are a few classes of table integrity problems that are low risk repairs. The first two are
+<para>There are a few classes of table integrity problems that are low risk repairs. The first two are
 degenerate (startkey == endkey) regions and backwards regions (startkey > endkey). These are
 automatically handled by sidelining the data to a temporary directory (/hbck/xxxx).
-The third low-risk class is hdfs region holes. This can be repaired by using the:
+The third low-risk class is hdfs region holes. This can be repaired by using the:</para>
 	<itemizedlist>
-		<listitem><code>-fixHdfsHoles</code> option for fabricating new empty regions on the file system.
-If holes are detected you can use -fixHdfsHoles and should include -fixMeta and -fixAssignments to make the new region consistent.
+		<listitem><para><code>-fixHdfsHoles</code> option for fabricating new empty regions on the file system.
+If holes are detected you can use -fixHdfsHoles and should include -fixMeta and -fixAssignments to make the new region consistent.</para>
 		</listitem>
 	</itemizedlist>
 <programlisting>
 $ ./bin/hbase hbck -fixAssignments -fixMeta -fixHdfsHoles
 </programlisting>
-Since this is a common operation, we’ve added a the <code>-repairHoles</code> flag that is equivalent to the
-previous command:
+<para>Since this is a common operation, we’ve added a the <code>-repairHoles</code> flag that is equivalent to the
+previous command:</para>
 <programlisting>
 $ ./bin/hbase hbck -repairHoles
 </programlisting>
-If inconsistencies still remain after these steps, you most likely have table integrity problems
-related to orphaned or overlapping regions.
+<para>If inconsistencies still remain after these steps, you most likely have table integrity problems
+related to orphaned or overlapping regions.</para>
 	</section>
 	<section><title>Region Overlap Repairs</title>
-Table integrity problems can require repairs that deal with overlaps. This is a riskier operation
+<para>Table integrity problems can require repairs that deal with overlaps. This is a riskier operation
 because it requires modifications to the file system, requires some decision making, and may
 require some manual steps. For these repairs it is best to analyze the output of a <code>hbck -details</code>
 run so that you isolate repairs attempts only upon problems the checks identify. Because this is
 riskier, there are safeguard that should be used to limit the scope of the repairs.
 WARNING: This is a relatively new and have only been tested on online but idle HBase instances
 (no reads/writes). Use at your own risk in an active production environment!
-The options for repairing table integrity violations include:
+The options for repairing table integrity violations include:</para>
 	<itemizedlist>
-		<listitem><code>-fixHdfsOrphans</code> option for “adopting” a region directory that is missing a region
-metadata file (the .regioninfo file).
+		<listitem><para><code>-fixHdfsOrphans</code> option for “adopting” a region directory that is missing a region
+metadata file (the .regioninfo file).</para>
 		</listitem>
-		<listitem><code>-fixHdfsOverlaps</code> ability for fixing overlapping regions
+		<listitem><para><code>-fixHdfsOverlaps</code> ability for fixing overlapping regions</para>
 		</listitem>
 	</itemizedlist>
-When repairing overlapping regions, a region’s data can be modified on the file system in two
+<para>When repairing overlapping regions, a region’s data can be modified on the file system in two
 ways: 1) by merging regions into a larger region or 2) by sidelining regions by moving data to
 “sideline” directory where data could be restored later. Merging a large number of regions is
 technically correct but could result in an extremely large region that requires series of costly
@@ -2760,58 +2769,58 @@ that overlap with the most other regions (likely the largest ranges) so that mer
 a more reasonable scale. Since these sidelined regions are already laid out in HBase’s native
 directory and HFile format, they can be restored by using HBase’s bulk load mechanism.
 The default safeguard thresholds are conservative. These options let you override the default
-thresholds and to enable the large region sidelining feature.
+thresholds and to enable the large region sidelining feature.</para>
 	<itemizedlist>
-		<listitem><code>-maxMerge &lt;n&gt;</code> maximum number of overlapping regions to merge
+		<listitem><para><code>-maxMerge &lt;n&gt;</code> maximum number of overlapping regions to merge</para>
 		</listitem>
-		<listitem><code>-sidelineBigOverlaps</code> if more than maxMerge regions are overlapping, sideline attempt
-to sideline the regions overlapping with the most other regions.
+		<listitem><para><code>-sidelineBigOverlaps</code> if more than maxMerge regions are overlapping, sideline attempt
+to sideline the regions overlapping with the most other regions.</para>
 		</listitem>
-		<listitem><code>-maxOverlapsToSideline &lt;n&gt;</code> if sidelining large overlapping regions, sideline at most n
-regions.
+		<listitem><para><code>-maxOverlapsToSideline &lt;n&gt;</code> if sidelining large overlapping regions, sideline at most n
+regions.</para>
 		</listitem>
 	</itemizedlist>
 
-Since often times you would just want to get the tables repaired, you can use this option to turn
-on all repair options:
+<para>Since often times you would just want to get the tables repaired, you can use this option to turn
+on all repair options:</para>
 	<itemizedlist>
-		<listitem><code>-repair</code> includes all the region consistency options and only the hole repairing table
-integrity options.
+		<listitem><para><code>-repair</code> includes all the region consistency options and only the hole repairing table
+integrity options.</para>
 		</listitem>
 	</itemizedlist>
-Finally, there are safeguards to limit repairs to only specific tables. For example the following
-command would only attempt to check and repair table TableFoo and TableBar.
-<programlisting>
+<para>Finally, there are safeguards to limit repairs to only specific tables. For example the following
+command would only attempt to check and repair table TableFoo and TableBar.</para>
+<screen>
 $ ./bin/hbase hbck -repair TableFoo TableBar
-</programlisting>
+</screen>
 	<section><title>Special cases: Meta is not properly assigned</title>
-There are a few special cases that hbck can handle as well.
+<para>There are a few special cases that hbck can handle as well.
 Sometimes the meta table’s only region is inconsistently assigned or deployed. In this case
-there is a special <code>-fixMetaOnly</code> option that can try to fix meta assignments.
-<programlisting>
+there is a special <code>-fixMetaOnly</code> option that can try to fix meta assignments.</para>
+<screen>
 $ ./bin/hbase hbck -fixMetaOnly -fixAssignments
-</programlisting>
+</screen>
 	</section>
 	<section><title>Special cases: HBase version file is missing</title>
-HBase’s data on the file system requires a version file in order to start. If this flie is missing, you
+<para>HBase’s data on the file system requires a version file in order to start. If this flie is missing, you
 can use the <code>-fixVersionFile</code> option to fabricating a new HBase version file. This assumes that
-the version of hbck you are running is the appropriate version for the HBase cluster.
+the version of hbck you are running is the appropriate version for the HBase cluster.</para>
 	</section>
 	<section><title>Special case: Root and META are corrupt.</title>
-The most drastic corruption scenario is the case where the ROOT or META is corrupted and
+<para>The most drastic corruption scenario is the case where the ROOT or META is corrupted and
 HBase will not start. In this case you can use the OfflineMetaRepair tool create new ROOT
 and META regions and tables.
 This tool assumes that HBase is offline. It then marches through the existing HBase home
 directory, loads as much information from region metadata files (.regioninfo files) as possible
 from the file system. If the region metadata has proper table integrity, it sidelines the original root
 and meta table directories, and builds new ones with pointers to the region directories and their
-data.
-<programlisting>
+data.</para>
+<screen>
 $ ./bin/hbase org.apache.hadoop.hbase.util.hbck.OfflineMetaRepair
-</programlisting>
-NOTE: This tool is not as clever as uberhbck but can be used to bootstrap repairs that uberhbck
+</screen>
+<para>NOTE: This tool is not as clever as uberhbck but can be used to bootstrap repairs that uberhbck
 can complete.
-If the tool succeeds you should be able to start hbase and run online repairs if necessary.
+If the tool succeeds you should be able to start hbase and run online repairs if necessary.</para>
 	</section>
 	<section><title>Special cases: Offline split parent</title>
     <para>
@@ -3022,15 +3031,12 @@ hbase> describe 't1'</programlisting>
    <section><title>HFile format version 1 overview </title><para>As we will be discussing the changes we are making to the HFile format, it is useful to give a short overview of the previous (HFile version 1) format. An HFile in the existing format is structured as follows:
            <inlinemediaobject>
                <imageobject>
-                   <imagedata align="middle" valign="middle" fileref="hfile.png" />
+                   <imagedata align="center" valign="middle" fileref="hfile.png" />
                </imageobject>
                <textobject>
                  <phrase>HFile Version 1</phrase>
                </textobject>
-               <caption>
-                   <para>HFile Version 1
-                 </para>
-               </caption>
+               
            </inlinemediaobject>
            <footnote><para>Image courtesy of Lars George, <link xlink:href="http://www.larsgeorge.com/2009/10/hbase-architecture-101-storage.html">hbase-architecture-101-storage.html</link>.</para></footnote>
        </para>
@@ -3065,15 +3071,11 @@ hbase> describe 't1'</programlisting>
    <para>The version of HBase introducing the above features reads both version 1 and 2 HFiles, but only writes version 2 HFiles. A version 2 HFile is structured as follows:
            <inlinemediaobject>
                <imageobject>
-                   <imagedata align="middle" valign="middle" fileref="hfilev2.png" />
+                   <imagedata align="center" valign="middle" fileref="hfilev2.png" />
                </imageobject>
                <textobject>
                  <phrase>HFile Version 2</phrase>
                </textobject>
-               <caption>
-                   <para>HFile Version 2
-                 </para>
-               </caption>
            </inlinemediaobject>
 
    </para>
@@ -3341,7 +3343,7 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
       </orderedlist>
       </listitem>
    </orderedlist></section><section><title>File Info format in versions 1 and 2</title>
-   <para>The file info block is a serialized <ulink url="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/io/HbaseMapWritable.html">HbaseMapWritable</ulink> (essentially a map from byte arrays to byte arrays) with the following keys, among others. StoreFile-level logic adds more keys to this.</para>
+   <para>The file info block is a serialized <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/io/HbaseMapWritable.html">HbaseMapWritable</link> (essentially a map from byte arrays to byte arrays) with the following keys, among others. StoreFile-level logic adds more keys to this.</para>
    <informaltable frame="all">
       <tgroup cols="2"><tbody><row>
             <entry>
@@ -3479,8 +3481,8 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
      <para>In HBASE-7845, we generate a new key that is lexicographically larger than the last key of the previous block and lexicographically equal or smaller than the start key of the current block. While actual keys can potentially be very long, this "fake key" or "virtual key" can be much shorter. For example, if the stop key of previous block is "the quick brown fox", the start key of current block is "the who", we could use "the r" as our virtual key in our hfile index.</para>
      <para>There are two benefits to this:</para>
      <itemizedlist>
-     <listitem><section>having shorter keys reduces the hfile index size, (allowing us to keep more indexes in memory), and</section></listitem>
-     <listitem><section>using something closer to the end key of the previous block allows us to avoid a potential extra IO when the target key lives in between the "virtual key" and the key of the first element in the target block.</section></listitem>
+     <listitem><para>having shorter keys reduces the hfile index size, (allowing us to keep more indexes in memory), and</para></listitem>
+     <listitem><para>using something closer to the end key of the previous block allows us to avoid a potential extra IO when the target key lives in between the "virtual key" and the key of the first element in the target block.</para></listitem>
      </itemizedlist>
      <para>This optimization (implemented by the getShortMidpointKey method) is inspired by LevelDB's ByteWiseComparatorImpl::FindShortestSeparator() and FindShortSuccessor().</para>
    </section></section></appendix>
@@ -3490,10 +3492,10 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
        <section xml:id="other.info.videos"><title>HBase Videos</title>
          <para>Introduction to HBase
             <itemizedlist>
-              <listitem><link xlink:href="http://www.cloudera.com/content/cloudera/en/resources/library/presentation/chicago_data_summit_apache_hbase_an_introduction_todd_lipcon.html">Introduction to HBase</link> by Todd Lipcon (Chicago Data Summit 2011).
-			  </listitem>
-			  <listitem><link xlink:href="http://www.cloudera.com/videos/intorduction-hbase-todd-lipcon">Introduction to HBase</link> by Todd Lipcon (2010).
-			  </listitem>
+              <listitem><para><link xlink:href="http://www.cloudera.com/content/cloudera/en/resources/library/presentation/chicago_data_summit_apache_hbase_an_introduction_todd_lipcon.html">Introduction to HBase</link> by Todd Lipcon (Chicago Data Summit 2011).
+			  </para></listitem>
+			  <listitem><para><link xlink:href="http://www.cloudera.com/videos/intorduction-hbase-todd-lipcon">Introduction to HBase</link> by Todd Lipcon (2010).
+			  </para></listitem>
 			</itemizedlist>
          </para>
          <para><link xlink:href="http://www.cloudera.com/videos/hadoop-world-2011-presentation-video-building-realtime-big-data-services-at-facebook-with-hadoop-and-hbase">Building Real Time Services at Facebook with HBase</link> by Jonathan Gray (Hadoop World 2011).
@@ -3520,8 +3522,8 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
        <section xml:id="other.info.sites"><title>HBase Sites</title>
          <para><link xlink:href="http://www.cloudera.com/blog/category/hbase/">Cloudera's HBase Blog</link> has a lot of links to useful HBase information.
 		<itemizedlist>
-			<listitem><link xlink:href="http://www.cloudera.com/blog/2010/04/cap-confusion-problems-with-partition-tolerance/">CAP Confusion</link> is a relevant entry for background information on
-			distributed storage systems.
+			<listitem><para><link xlink:href="http://www.cloudera.com/blog/2010/04/cap-confusion-problems-with-partition-tolerance/">CAP Confusion</link> is a relevant entry for background information on
+			distributed storage systems.</para>
 			</listitem>
 		</itemizedlist>
          </para>
@@ -3543,14 +3545,14 @@ Comparator class used for Bloom filter keys, a UTF>8 encoded string stored   usi
 
   <appendix xml:id="hbase.history"><title>HBase History</title>
     <itemizedlist>
-	  <listitem>2006:  <link xlink:href="http://research.google.com/archive/bigtable.html">BigTable</link> paper published by Google.
-	  </listitem>
-	  <listitem>2006 (end of year):  HBase development starts.
-	  </listitem>
-	  <listitem>2008:  HBase becomes Hadoop sub-project.
-	  </listitem>
-	  <listitem>2010:  HBase becomes Apache top-level project.
-	  </listitem>
+	  <listitem><para>2006:  <link xlink:href="http://research.google.com/archive/bigtable.html">BigTable</link> paper published by Google.
+	  </para></listitem>
+	  <listitem><para>2006 (end of year):  HBase development starts.
+	  </para></listitem>
+	  <listitem><para>2008:  HBase becomes Hadoop sub-project.
+	  </para></listitem>
+	  <listitem><para>2010:  HBase becomes Apache top-level project.
+	  </para></listitem>
 	</itemizedlist>
   </appendix>
 

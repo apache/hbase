@@ -173,7 +173,7 @@ needed for servers to pick up changes (caveat dynamic config. to be described la
         <footnote>
             <para>A useful read setting config on you hadoop cluster is Aaron
             Kimballs' <link
-            xlink:ref="http://www.cloudera.com/blog/2009/03/configuration-parameters-what-can-you-just-ignore/">Configuration
+            xlink:href="http://www.cloudera.com/blog/2009/03/configuration-parameters-what-can-you-just-ignore/">Configuration
             Parameters: What can you just ignore?</link></para>
           </footnote></para>
 
@@ -527,8 +527,7 @@ homed on the node <varname>h-24-30.example.com</varname>.
 </para>
           <para>Now skip to <xref linkend="confirm" /> for how to start and verify your
           pseudo-distributed install. <footnote>
-              <para>See <xref linkend="pseudo.extras">Pseudo-distributed
-              mode extras</xref> for notes on how to start extra Masters and
+              <para>See <xref linkend="pseudo.extras"/> for notes on how to start extra Masters and
               RegionServers when running pseudo-distributed.</para>
             </footnote></para>
 
@@ -695,11 +694,7 @@ homed on the node <varname>h-24-30.example.com</varname>.
 
         <programlisting>bin/start-hbase.sh</programlisting>
 
-         Run the above from the
-
-        <varname>HBASE_HOME</varname>
-
-         directory.
+         <para>Run the above from the <varname>HBASE_HOME</varname> directory.</para>
 
         <para>You should now have a running HBase instance. HBase logs can be
         found in the <filename>logs</filename> subdirectory. Check them out
@@ -771,7 +766,79 @@ stopping hbase...............</programlisting> Shutdown can take a moment to
     The generated file is a docbook section with a glossary
     in it-->
     <!--presumes the pre-site target has put the hbase-default.xml at this location-->
-    <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="../../../target/docbkx/hbase-default.xml" />
+      <xi:include  xmlns:xi="http://www.w3.org/2001/XInclude" href="../../../target/docbkx/hbase-default.xml">
+        <xi:fallback>
+          <section xml:id="hbase_default_configurations">
+            <title></title>
+            <para>
+              <emphasis>This file is fallback content</emphasis>. If you are seeing this, something is wrong with the build of the HBase documentation or you are doing pre-build verification.
+            </para>
+            <para>
+              The file hbase-default.xml is generated as part of
+              the build of the hbase site.  See the hbase <filename>pom.xml</filename>.
+              The generated file is a docbook glossary.
+            </para>
+            <section>
+              <title>IDs that are auto-generated and cause validation errors if not present</title>
+              <para>
+                Each of these is a reference to a configuration file parameter which will cause an error if you are using the fallback content here. This is a dirty dirty hack.
+              </para>
+              <section xml:id="fail.fast.expired.active.master">
+                <title>fail.fast.expired.active.master</title>
+                <para />
+              </section>
+              <section xml:id="hbase.hregion.memstore.flush.size">
+                <title>"hbase.hregion.memstore.flush.size"</title>
+                <para />
+              </section>
+              <section xml:id="hbase.hstore.bytes.per.checksum">
+                <title>hbase.hstore.bytes.per.checksum</title>
+                <para />
+              </section>
+              <section xml:id="hbase.online.schema.update.enable">
+                <title>hbase.online.schema.update.enable</title>
+                <para />
+              </section>
+              <section xml:id="hbase.regionserver.global.memstore.size">
+                <title>hbase.regionserver.global.memstore.size</title>
+                <para />
+              </section>
+              <section xml:id="hbase.hregion.max.filesize">
+                <title>hbase.hregion.max.filesize</title>
+                <para />
+              </section>
+              <section xml:id="hbase.hstore.blockingStoreFiles">
+                <title>hbase.hstore.BlockingStoreFiles</title>
+                <para />
+              </section>
+              <section xml:id="hfile.block.cache.size">
+                <title>hfile.block.cache.size</title>
+                <para />
+              </section>
+              <section xml:id="copy.table">
+                <title>copy.table</title>
+                <para />
+              </section>
+              <section xml:id="hbase.hstore.checksum.algorithm">
+                <title>hbase.hstore.checksum.algorithm</title>
+                <para />
+              </section>
+              <section xml:id="hbase.zookeeper.useMulti">
+                <title>hbase.zookeeper.useMulti</title>
+                <para />
+              </section>
+              <section xml:id="hbase.hregion.memstore.block.multiplier">
+                <title>hbase.hregion.memstore.block.multiplier</title>
+                <para />
+              </section>
+              <section xml:id="hbase.regionserver.global.memstore.size.lower.limit">
+                <title>hbase.regionserver.global.memstore.size.lower.limit</title>
+                <para />
+              </section>
+            </section>
+          </section>
+        </xi:fallback>
+      </xi:include>
     </section>
 
       <section xml:id="hbase.env.sh">

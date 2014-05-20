@@ -517,7 +517,7 @@
     <para>
        You must configure HBase for secure or simple user access operation. Refer to the
        <link linkend='hbase.accesscontrol.configuration'>Secure Client Access to HBase</link> or
-       <link linkend='hbase.accesscontrol.simpleconfiguration'>Simple User Access to HBase</link>
+       <link linkend='hbase.secure.simpleconfiguration'>Simple User Access to HBase</link>
         sections and complete all of the steps described
        there.
     </para>
@@ -779,14 +779,16 @@ Access control mechanisms are mature and fairly standardized in the relational d
     <para>
 The HBase shell has been extended to provide simple commands for editing and updating user permissions. The following commands have been added for access control list management:
     </para>
-    Grant
-    <para>
-    <programlisting>
+
+
+ <example>   
+   <title>Grant</title>
+   <programlisting>
     grant &lt;user|@group&gt; &lt;permissions&gt; [ &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ] ]
-    </programlisting>
-    </para>
+    </programlisting></example>
+    
     <para>
-    <code class="code">&lt;user|@group&gt;</code> is user or group  (start with character '@'), Groups are created and manipulated via the Hadoop group mapping service.
+    <code>&lt;user|@group&gt;</code> is user or group  (start with character '@'), Groups are created and manipulated via the Hadoop group mapping service.
     </para>
     <para>
     <code>&lt;permissions&gt;</code> is zero or more letters from the set "RWCA": READ('R'), WRITE('W'), CREATE('C'), ADMIN('A').
@@ -794,32 +796,32 @@ The HBase shell has been extended to provide simple commands for editing and upd
     <para>
     Note: Grants and revocations of individual permissions on a resource are both accomplished using the <code>grant</code> command. A separate <code>revoke</code> command is also provided by the shell, but this is for fast revocation of all of a user's access rights to a given resource only.
     </para>
-    <para>
-    Revoke
-    </para>
-    <para>
+    <example>
+      <title>Revoke</title>
+
     <programlisting>
     revoke &lt;user|@group&gt; [ &lt;table&gt; [ &lt;column family&gt; [ &lt;column qualifier&gt; ] ] ]
     </programlisting>
-    </para>
+    </example>
+<example>
+  <title>Alter</title>
+
     <para>
-    Alter
-    </para>
-    <para>
-    The <code>alter</code> command has been extended to allow ownership assignment:
+    The <code>alter</code> command has been extended to allow ownership assignment:</para>
     <programlisting>
       alter 'tablename', {OWNER => 'username|@group'}
     </programlisting>
-    </para>
+</example>
+      
+<example>
+  <title>User Permission</title>
+
     <para>
-    User Permission
-    </para>
-    <para>
-    The <code>user_permission</code> command shows all access permissions for the current user for a given table:
+    The <code>user_permission</code> command shows all access permissions for the current user for a given table:</para>
     <programlisting>
       user_permission &lt;table&gt;
     </programlisting>
-    </para>
+</example>
   </section>
 
 </section>  <!-- Access Control -->
@@ -829,12 +831,12 @@ The HBase shell has been extended to provide simple commands for editing and upd
     <para>
 	Bulk loading in secure mode is a bit more involved than normal setup, since the client has to transfer the ownership of the files generated from the mapreduce job to HBase. Secure bulk loading is implemented by a coprocessor, named <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/security/access/SecureBulkLoadEndpoint.html">SecureBulkLoadEndpoint</link>. SecureBulkLoadEndpoint uses a staging directory <code>"hbase.bulkload.staging.dir"</code>, which defaults to <code>/tmp/hbase-staging/</code>. The algorithm is as follows.
 	<itemizedlist>
-      <listitem>Create an hbase owned staging directory which is world traversable (<code>-rwx--x--x, 711</code>) <code>/tmp/hbase-staging</code>. </listitem>
-      <listitem>A user writes out data to his secure output directory: /user/foo/data </listitem>
-      <listitem>A call is made to hbase to create a secret staging directory
-  which is globally readable/writable (<code>-rwxrwxrwx, 777</code>): /tmp/hbase-staging/averylongandrandomdirectoryname</listitem>
-  <listitem>The user makes the data world readable and writable, then moves it
-  into the random staging directory, then calls bulkLoadHFiles()</listitem>
+      <listitem><para>Create an hbase owned staging directory which is world traversable (<code>-rwx--x--x, 711</code>) <code>/tmp/hbase-staging</code>. </para></listitem>
+      <listitem><para>A user writes out data to his secure output directory: /user/foo/data </para></listitem>
+      <listitem><para>A call is made to hbase to create a secret staging directory
+  which is globally readable/writable (<code>-rwxrwxrwx, 777</code>): /tmp/hbase-staging/averylongandrandomdirectoryname</para></listitem>
+  <listitem><para>The user makes the data world readable and writable, then moves it
+  into the random staging directory, then calls bulkLoadHFiles()</para></listitem>
   </itemizedlist>
   </para>
   <para>
@@ -870,9 +872,9 @@ The HBase shell has been extended to provide simple commands for editing and upd
 	<para>
 	Visibility expressions like the above can be added when storing or mutating a cell using the API,
 	</para>
-	<para><code>Mutation#setCellVisibility(new CellVisibility(String labelExpession));</code></para>
-	Where the labelExpression could be &#39;( secret | topsecret ) &amp; !probationary&#39;
-	
+	<programlisting>Mutation#setCellVisibility(new CellVisibility(String labelExpession));</programlisting>
+<para>	Where the labelExpression could be &#39;( secret | topsecret ) &amp; !probationary&#39;
+</para>	
 	<para>
 	We build the user&#39;s label set in the RPC context when a request is first received by the HBase RegionServer. How users are associated with labels is pluggable. The default plugin passes through labels specified in Authorizations added to the Get or Scan and checks those against the calling user&#39;s authenticated labels list. When client passes some labels for which the user is not authenticated, this default algorithm will drop those. One can pass a subset of user authenticated labels via the Scan/Get authorizations.
 	</para>
@@ -896,7 +898,7 @@ The HBase shell has been extended to provide simple commands for editing and upd
 			</para>
 		</section>
 
-		<section xml:id="hbase.visibility.label.administration.add.label">
+		<section xml:id="hbase.visibility.label.administration.add.label2">
 		    <title>User Label Association</title>
 			<para>A set of labels can be associated with a user by using the API</para>
 			<para><code>VisibilityClient#setAuths(Configuration conf, final String[] auths, final String user)</code></para>

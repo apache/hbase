@@ -235,7 +235,7 @@ export SERVER_GC_OPTS="$SERVER_GC_OPTS -XX:NewSize=64m -XX:MaxNewSize=64m"
         is generally used for questions on released versions of Apache HBase.  Before going to the mailing list, make sure your
         question has not already been answered by searching the mailing list archives first.  Use
         <xref linkend="trouble.resources.searchhadoop" />.
-        Take some time crafting your question<footnote><para>See <link xlink="http://www.mikeash.com/getting_answers.html">Getting Answers</link></para></footnote>; a quality question that includes all context and
+        Take some time crafting your question<footnote><para>See <link xlink:href="http://www.mikeash.com/getting_answers.html">Getting Answers</link></para></footnote>; a quality question that includes all context and
         exhibits evidence the author has tried to find answers in the manual and out on lists
         is more likely to get a prompt response.
         </para>
@@ -360,15 +360,15 @@ hadoop@sv4borg12:~$ jps
         </programlisting>
         In order, we see a:
         <itemizedlist>
-          <listitem>Hadoop TaskTracker, manages the local Childs</listitem>
-          <listitem>HBase RegionServer, serves regions</listitem>
-          <listitem>Child, its MapReduce task, cannot tell which type exactly</listitem>
-          <listitem>Hadoop TaskTracker, manages the local Childs</listitem>
-          <listitem>Hadoop DataNode, serves blocks</listitem>
-          <listitem>HQuorumPeer, a ZooKeeper ensemble member</listitem>
-          <listitem>Jps, well… it’s the current process</listitem>
-          <listitem>ThriftServer, it’s a special one will be running only if thrift was started</listitem>
-          <listitem>jmx, this is a local process that’s part of our monitoring platform ( poorly named maybe). You probably don’t have that.</listitem>
+          <listitem><para>Hadoop TaskTracker, manages the local Childs</para></listitem>
+          <listitem><para>HBase RegionServer, serves regions</para></listitem>
+          <listitem><para>Child, its MapReduce task, cannot tell which type exactly</para></listitem>
+          <listitem><para>Hadoop TaskTracker, manages the local Childs</para></listitem>
+          <listitem><para>Hadoop DataNode, serves blocks</para></listitem>
+          <listitem><para>HQuorumPeer, a ZooKeeper ensemble member</para></listitem>
+          <listitem><para>Jps, well… it’s the current process</para></listitem>
+          <listitem><para>ThriftServer, it’s a special one will be running only if thrift was started</para></listitem>
+          <listitem><para>jmx, this is a local process that’s part of our monitoring platform ( poorly named maybe). You probably don’t have that.</para></listitem>
         </itemizedlist>
         </para>
         <para>
@@ -620,21 +620,19 @@ Harsh J investigated the issue as part of the mailing list thread
        </section>
        <section xml:id="trouble.client.oome.directmemory.leak">
             <title>Client running out of memory though heap size seems to be stable (but the off-heap/direct heap keeps growing)</title>
-            <para> You are likely running into the issue that is described and worked through in the
-        mail thread <link
-          xhref="http://search-hadoop.com/m/ubhrX8KvcH/Suspected+memory+leak&amp;subj=Re+Suspected+memory+leak"
-          >HBase, mail # user - Suspected memory leak</link> and continued over in <link
-          xhref="http://search-hadoop.com/m/p2Agc1Zy7Va/MaxDirectMemorySize+Was%253A+Suspected+memory+leak&amp;subj=Re+FeedbackRe+Suspected+memory+leak"
-          >HBase, mail # dev - FeedbackRe: Suspected memory leak</link>. A workaround is passing
-        your client-side JVM a reasonable value for <code>-XX:MaxDirectMemorySize</code>. By
-        default, the <varname>MaxDirectMemorySize</varname> is equal to your <code>-Xmx</code> max
-        heapsize setting (if <code>-Xmx</code> is set). Try seting it to something smaller (for
-        example, one user had success setting it to <code>1g</code> when they had a client-side heap
-        of <code>12g</code>). If you set it too small, it will bring on <code>FullGCs</code> so keep
-        it a bit hefty. You want to make this setting client-side only especially if you are running
-        the new experimental server-side off-heap cache since this feature depends on being able to
-        use big direct buffers (You may have to keep separate client-side and server-side config
-        dirs). </para>
+            <para>
+You are likely running into the issue that is described and worked through in
+the mail thread <link xlink:href="http://search-hadoop.com/m/ubhrX8KvcH/Suspected+memory+leak&amp;subj=Re+Suspected+memory+leak">HBase, mail # user - Suspected memory leak</link>
+and continued over in <link xlink:href="http://search-hadoop.com/m/p2Agc1Zy7Va/MaxDirectMemorySize+Was%253A+Suspected+memory+leak&amp;subj=Re+FeedbackRe+Suspected+memory+leak">HBase, mail # dev - FeedbackRe: Suspected memory leak</link>.
+A workaround is passing your client-side JVM a reasonable value for <code>-XX:MaxDirectMemorySize</code>.  By default,
+the <varname>MaxDirectMemorySize</varname> is equal to your <code>-Xmx</code> max heapsize setting (if <code>-Xmx</code> is set).
+Try seting it to something smaller (for example, one user had success setting it to <code>1g</code> when
+they had a client-side heap of <code>12g</code>).  If you set it too small, it will bring on <code>FullGCs</code> so keep
+it  a bit hefty.  You want to make this setting client-side only especially if you are running the new experiemental
+server-side off-heap cache since this feature depends on being able to use big direct buffers (You may have to keep
+separate client-side and server-side config dirs).
+            </para>
+
        </section>
        <section xml:id="trouble.client.slowdown.admin">
             <title>Client Slowdown When Calling Admin Methods (flush, compact, etc.)</title>
@@ -753,7 +751,7 @@ Caused by: java.io.FileNotFoundException: File _partition.lst does not exist.
                <filename>/&lt;HLog&gt;</filename>           (WAL HLog files for the RegionServer)
             </programlisting>
             </para>
-		    <para>See the <link xlink:href="see http://hadoop.apache.org/common/docs/current/hdfs_user_guide.html">HDFS User Guide</link> for other non-shell diagnostic
+		    <para>See the <link xlink:href="http://hadoop.apache.org/common/docs/current/hdfs_user_guide.html">HDFS User Guide</link> for other non-shell diagnostic
 		    utilities like <code>fsck</code>.
             </para>
           <section xml:id="trouble.namenode.0size.hlogs">
@@ -926,25 +924,26 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
            Since the RegionServer's local ZooKeeper client cannot send heartbeats, the session times out.
            By design, we shut down any node that isn't able to contact the ZooKeeper ensemble after getting a timeout so that it stops serving data that may already be assigned elsewhere.
            </para>
-           <para>
+
             <itemizedlist>
-              <listitem>Make sure you give plenty of RAM (in <filename>hbase-env.sh</filename>), the default of 1GB won't be able to sustain long running imports.</listitem>
-              <listitem>Make sure you don't swap, the JVM never behaves well under swapping.</listitem>
-              <listitem>Make sure you are not CPU starving the RegionServer thread. For example, if you are running a MapReduce job using 6 CPU-intensive tasks on a machine with 4 cores, you are probably starving the RegionServer enough to create longer garbage collection pauses.</listitem>
-              <listitem>Increase the ZooKeeper session timeout</listitem>
+              <listitem><para>Make sure you give plenty of RAM (in <filename>hbase-env.sh</filename>), the default of 1GB won't be able to sustain long running imports.</para></listitem>
+              <listitem><para>Make sure you don't swap, the JVM never behaves well under swapping.</para></listitem>
+              <listitem><para>Make sure you are not CPU starving the RegionServer thread. For example, if you are running a MapReduce job using 6 CPU-intensive tasks on a machine with 4 cores, you are probably starving the RegionServer enough to create longer garbage collection pauses.</para></listitem>
+              <listitem><para>Increase the ZooKeeper session timeout</para></listitem>
            </itemizedlist>
-           If you wish to increase the session timeout, add the following to your <filename>hbase-site.xml</filename> to increase the timeout from the default of 60 seconds to 120 seconds.
-           <programlisting>
-&lt;property&gt;
-    &lt;name&gt;zookeeper.session.timeout&lt;/name&gt;
-    &lt;value&gt;1200000&lt;/value&gt;
-&lt;/property&gt;
-&lt;property&gt;
-    &lt;name&gt;hbase.zookeeper.property.tickTime&lt;/name&gt;
-    &lt;value&gt;6000&lt;/value&gt;
-&lt;/property&gt;
+           <para>If you wish to increase the session timeout, add the following to your <filename>hbase-site.xml</filename> to increase the timeout from the default of 60 seconds to 120 seconds.
+</para>           
+          <programlisting>
+<![CDATA[<property>
+    <name>zookeeper.session.timeout</name>
+    <value>1200000</value>
+</property>
+<property>
+    <name>hbase.zookeeper.property.tickTime</name>
+    <value>6000</value>
+</property>]]>
             </programlisting>
-           </para>
+           
            <para>
            Be aware that setting a higher timeout means that the regions served by a failed RegionServer will take at least
            that amount of time to be transfered to another RegionServer. For a production system serving live requests, we would instead
@@ -954,8 +953,8 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
            <para>
            If this is happening during an upload which only happens once (like initially loading all your data into HBase), consider bulk loading.
            </para>
-           See <xref linkend="trouble.zookeeper.general"/> for other general information about ZooKeeper troubleshooting.
-        </section>
+<para>See <xref linkend="trouble.zookeeper.general"/> for other general information about ZooKeeper troubleshooting.
+</para>        </section>
         <section xml:id="trouble.rs.runtime.notservingregion">
            <title>NotServingRegionException</title>
            <para>This exception is "normal" when found in the RegionServer logs at DEBUG level.  This exception is returned back to the client
@@ -970,7 +969,7 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
            RegionServer is not using the name given it by the master; double entry in master listing of servers</link> for gorey details.
           </para>
         </section>
-        <section xml:id="trouble.rs.runtime.codecmsgs">
+        <section xml:id="brand.new.compressor">
           <title>Logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Got
             brand-new compressor' messages</title>
                 <para>We are not using the native versions of compression
@@ -992,7 +991,7 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
       </section>
       <section xml:id="trouble.rs.shutdown">
         <title>Shutdown Errors</title>
-
+  <para />
       </section>
 
     </section>
@@ -1020,7 +1019,7 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
       </section>
       <section xml:id="trouble.master.shutdown">
         <title>Shutdown Errors</title>
-
+        <para/>
       </section>
 
     </section>

@@ -32,7 +32,7 @@
           the various non-rdbms datastores is Ian Varley's Master thesis,
           <link xlink:href="http://ianvarley.com/UT/MR/Varley_MastersReport_Full_2009-08-07.pdf">No Relation: The Mixed Blessings of Non-Relational Databases</link>.
           Recommended.  Also, read <xref linkend="keyvalue"/> for how HBase stores data internally, and the section on 
-          <xref linkend="schema.casestudies">HBase Schema Design Case Studies</xref>.
+          <xref linkend="schema.casestudies"/>.
       </para>      
   <section xml:id="schema.creation">
   <title>
@@ -41,7 +41,7 @@
   <para>HBase schemas can be created or updated with <xref linkend="shell" />
       or by using <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html">HBaseAdmin</link> in the Java API.
       </para>
-      <para>Tables must be disabled when making ColumnFamily modifications, for example..
+      <para>Tables must be disabled when making ColumnFamily modifications, for example:</para>
       <programlisting>
 Configuration config = HBaseConfiguration.create();
 HBaseAdmin admin = new HBaseAdmin(conf);
@@ -56,7 +56,7 @@ admin.modifyColumn(table, cf2);    // modifying existing ColumnFamily
 
 admin.enableTable(table);
       </programlisting>
-      </para>See <xref linkend="client_dependencies"/> for more information about configuring client connections.
+      <para>See <xref linkend="client_dependencies"/> for more information about configuring client connections.</para>
       <para>Note:  online schema changes are supported in the 0.92.x codebase, but the 0.90.x codebase requires the table
       to be disabled.
       </para>
@@ -98,7 +98,7 @@ admin.enableTable(table);
     Monotonically Increasing Row Keys/Timeseries Data
     </title>
     <para>
-      In the HBase chapter of Tom White's book <link xlink:url="http://oreilly.com/catalog/9780596521981">Hadoop: The Definitive Guide</link> (O'Reilly) there is a an optimization note on watching out for a phenomenon where an import process walks in lock-step with all clients in concert pounding one of the table's regions (and thus, a single node), then moving onto the next region, etc.  With monotonically increasing row-keys (i.e., using a timestamp), this will happen.  See this comic by IKai Lan on why monotonically increasing row keys are problematic in BigTable-like datastores:
+      In the HBase chapter of Tom White's book <link xlink:href="http://oreilly.com/catalog/9780596521981">Hadoop: The Definitive Guide</link> (O'Reilly) there is a an optimization note on watching out for a phenomenon where an import process walks in lock-step with all clients in concert pounding one of the table's regions (and thus, a single node), then moving onto the next region, etc.  With monotonically increasing row-keys (i.e., using a timestamp), this will happen.  See this comic by IKai Lan on why monotonically increasing row keys are problematic in BigTable-like datastores:
       <link xlink:href="http://ikaisays.com/2011/01/25/app-engine-datastore-tip-monotonically-increasing-values-are-bad/">monotonically increasing values are bad</link>.  The pile-up on a single region brought on
       by monotonically increasing keys can be mitigated by randomizing the input records to not be in sorted order, but in general it's best to avoid using a timestamp or a sequence (e.g. 1, 2, 3) as the row-key.
     </para>
@@ -107,7 +107,7 @@ admin.enableTable(table);
     successful example.  It has a page describing the <link xlink:href=" http://opentsdb.net/schema.html">schema</link> it uses in
     HBase.  The key format in OpenTSDB is effectively [metric_type][event_timestamp], which would appear at first glance to contradict the previous advice about not using a timestamp as the key.  However, the difference is that the timestamp is not in the <emphasis>lead</emphasis> position of the key, and the design assumption is that there are dozens or hundreds (or more) of different metric types.  Thus, even with a continual stream of input data with a mix of metric types, the Puts are distributed across various points of regions in the table.
    </para>
-   <para>See <xref linkend="schema.casestudies">HBase Schema Design Case Studies</xref> for some rowkey design examples.
+   <para>See <xref linkend="schema.casestudies"/> for some rowkey design examples.
    </para>
   </section>
   <section xml:id="keysize">
@@ -119,7 +119,7 @@ admin.enableTable(table);
           are large, especially compared to the size of the cell value, then
           you may run up against some interesting scenarios.  One such is
           the case described by Marc Limotte at the tail of
-          <link xlink:url="https://issues.apache.org/jira/browse/HBASE-3551?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel&amp;focusedCommentId=13005272#comment-13005272">HBASE-3551</link>
+          <link xlink:href="https://issues.apache.org/jira/browse/HBASE-3551?page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel&amp;focusedCommentId=13005272#comment-13005272">HBASE-3551</link>
           (recommended!).
           Therein, the indices that are kept on HBase storefiles (<xref linkend="hfile" />)
                   to facilitate random access may end up occupyng large chunks of the HBase
@@ -213,7 +213,7 @@ COLUMN                                        CELL
     <para>The most recent value for [key] in a table can be found by performing a Scan for [key] and obtaining the first record.  Since HBase keys
     are in sorted order, this key sorts before any older row-keys for [key] and thus is first.
     </para>
-    <para>This technique would be used instead of using <xref linkend="schema.versions">HBase Versioning</xref> where the intent is to hold onto all versions
+    <para>This technique would be used instead of using <xref linkend="schema.versions"/> where the intent is to hold onto all versions
     "forever" (or a very long time) and at the same time quickly obtain access to any other version by using the same Scan technique.
     </para>
     </section>
@@ -335,11 +335,11 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
   <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Result.html">Result</link>, so anything that can be
   converted to an array of bytes can be stored as a value.  Input could be strings, numbers, complex objects, or even images as long as they can rendered as bytes.
   </para>
-  <para>There are practical limits to the size of values (e.g., storing 10-50MB objects in HBase
-      would probably be too much to ask); search the mailing list for conversations on this topic.
-      All rows in HBase conform to the <xref linkend="datamodel">datamodel</xref>, and that includes
-      versioning. Take that into consideration when making your design, as well as block size for
-      the ColumnFamily. </para>
+  <para>There are practical limits to the size of values (e.g., storing 10-50MB objects in HBase would probably be too much to ask);
+  search the mailling list for conversations on this topic. All rows in HBase conform to the <xref linkend="datamodel"/>, and
+  that includes versioning.  Take that into consideration when making your design, as well as block size for the ColumnFamily.
+  </para>
+
     <section xml:id="counters">
       <title>Counters</title>
       <para>
@@ -389,10 +389,10 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
   </para>
   <para>There is no single answer on the best way to handle this because it depends on...
    <itemizedlist>
-       <listitem>Number of users</listitem>
-       <listitem>Data size and data arrival rate</listitem>
-       <listitem>Flexibility of reporting requirements (e.g., completely ad-hoc date selection vs. pre-configured ranges) </listitem>
-       <listitem>Desired execution speed of query (e.g., 90 seconds may be reasonable to some for an ad-hoc report, whereas it may be too long for others) </listitem>
+       <listitem><para>Number of users</para></listitem>
+       <listitem><para>Data size and data arrival rate</para></listitem>
+       <listitem><para>Flexibility of reporting requirements (e.g., completely ad-hoc date selection vs. pre-configured ranges) </para></listitem>
+       <listitem><para>Desired execution speed of query (e.g., 90 seconds may be reasonable to some for an ad-hoc report, whereas it may be too long for others) </para></listitem>
    </itemizedlist>
    ... and solutions are also influenced by the size of the cluster and how much processing power you have to throw at the solution.
    Common techniques are in sub-sections below.  This is a comprehensive, but not exhaustive, list of approaches.
@@ -455,26 +455,26 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
    can be approached.  Note:  this is just an illustration of potential approaches, not an exhaustive list. 
    Know your data, and know your processing requirements.
   </para>  
-  <para>It is highly recommended that you read the rest of the <xref linkend="schema">Schema Design Chapter</xref> first, before reading
+  <para>It is highly recommended that you read the rest of the <xref linkend="schema"/> first, before reading
   these case studies.
   </para>
   <para>Thee following case studies are described:    
       <itemizedlist>
-         <listitem>Log Data / Timeseries Data</listitem>
-         <listitem>Log Data / Timeseries on Steroids</listitem>
-         <listitem>Customer/Order</listitem>
-         <listitem>Tall/Wide/Middle Schema Design</listitem>
-         <listitem>List Data</listitem>
+         <listitem><para>Log Data / Timeseries Data</para></listitem>
+         <listitem><para>Log Data / Timeseries on Steroids</para></listitem>
+         <listitem><para>Customer/Order</para></listitem>
+         <listitem><para>Tall/Wide/Middle Schema Design</para></listitem>
+         <listitem><para>List Data</para></listitem>
      </itemizedlist> 
   </para>
     <section xml:id="schema.casestudies.log-timeseries">
       <title>Case Study - Log Data and Timeseries Data</title>
       <para>Assume that the following data elements are being collected.
         <itemizedlist>
-          <listitem>Hostname</listitem>
-          <listitem>Timestamp</listitem>
-          <listitem>Log event</listitem>
-          <listitem>Value/message</listitem>
+          <listitem><para>Hostname</para></listitem>
+          <listitem><para>Timestamp</para></listitem>
+          <listitem><para>Log event</para></listitem>
+          <listitem><para>Value/message</para></listitem>
         </itemizedlist>
         We can store them in an HBase table called LOG_DATA, but what will the rowkey be?  
        From these attributes the rowkey will be some combination of hostname, timestamp, and log-event - but what specifically?        
@@ -531,9 +531,9 @@ long bucket = timestamp % numBuckets;
         </para>
         <para>Composite Rowkey With Hashes:  
            <itemizedlist>
-             <listitem>[MD5 hash of hostname] = 16 bytes</listitem>
-             <listitem>[MD5 hash of event-type] = 16 bytes</listitem>
-             <listitem>[timestamp] = 8 bytes</listitem>
+             <listitem><para>[MD5 hash of hostname] = 16 bytes</para></listitem>
+             <listitem><para>[MD5 hash of event-type] = 16 bytes</para></listitem>
+             <listitem><para>[timestamp] = 8 bytes</para></listitem>
            </itemizedlist>
         </para>
         <para>Composite Rowkey With Numeric Substitution: 
@@ -541,17 +541,17 @@ long bucket = timestamp % numBuckets;
         <para>For this approach another lookup table would be needed in addition to LOG_DATA, called LOG_TYPES.  
         The rowkey of LOG_TYPES would be:
 		  <itemizedlist>
-             <listitem>[type]  (e.g., byte indicating hostname vs. event-type)</listitem>
-             <listitem>[bytes]  variable length bytes for raw hostname or event-type.</listitem>
+             <listitem><para>[type]  (e.g., byte indicating hostname vs. event-type)</para></listitem>
+             <listitem><para>[bytes]  variable length bytes for raw hostname or event-type.</para></listitem>
 		  </itemizedlist>
         A column for this rowkey could be a long with an assigned number, which could be obtained by using an 
 		<link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#incrementColumnValue%28byte[],%20byte[],%20byte[],%20long%29">HBase counter</link>.
         </para>
         <para>So the resulting composite rowkey would be:
 		<itemizedlist>
-		  <listitem>[substituted long for hostname] = 8 bytes</listitem>
-		  <listitem>[substituted long for event type] = 8 bytes</listitem>
-		  <listitem>[timestamp] = 8 bytes</listitem>
+		  <listitem><para>[substituted long for hostname] = 8 bytes</para></listitem>
+		  <listitem><para>[substituted long for event type] = 8 bytes</para></listitem>
+		  <listitem><para>[timestamp] = 8 bytes</para></listitem>
 		</itemizedlist>
 		In either the Hash or Numeric substitution approach, the raw values for hostname and event-type can be stored as columns.
         </para>      
@@ -586,19 +586,19 @@ long bucket = timestamp % numBuckets;
       </para>
       <para>The Customer record type would include all the things that you’d typically expect:
         <itemizedlist>
-          <listitem>Customer number</listitem>
-          <listitem>Customer name</listitem>
-          <listitem>Address (e.g., city, state, zip)</listitem>
-          <listitem>Phone numbers, etc.</listitem>
+          <listitem><para>Customer number</para></listitem>
+          <listitem><para>Customer name</para></listitem>
+          <listitem><para>Address (e.g., city, state, zip)</para></listitem>
+          <listitem><para>Phone numbers, etc.</para></listitem>
         </itemizedlist>
      </para>
      <para>The Order record type would include things like:
         <itemizedlist>
-          <listitem>Customer number</listitem>
-          <listitem>Order number</listitem>
-          <listitem>Sales date</listitem>
-          <listitem>A series of nested objects for shipping locations and line-items (see <xref linkend="schema.casestudies.custorder.obj"/>
-           for details)</listitem>
+          <listitem><para>Customer number</para></listitem>
+          <listitem><para>Order number</para></listitem>
+          <listitem><para>Sales date</para></listitem>
+          <listitem><para>A series of nested objects for shipping locations and line-items (see <xref linkend="schema.casestudies.custorder.obj"/>
+           for details)</para></listitem>
         </itemizedlist>
     </para>
     <para>Assuming that the combination of customer number and sales order uniquely identify an order, these two attributes will compose
@@ -614,14 +614,14 @@ reasonable spread in the keyspace, similar options appear:
     </para>
     <para>Composite Rowkey With Hashes:  
       <itemizedlist>
-        <listitem>[MD5 of customer number] = 16 bytes</listitem>
-        <listitem>[MD5 of order number] = 16 bytes</listitem>
+        <listitem><para>[MD5 of customer number] = 16 bytes</para></listitem>
+        <listitem><para>[MD5 of order number] = 16 bytes</para></listitem>
       </itemizedlist>
     </para>
     <para>Composite Numeric/Hash Combo Rowkey: 
       <itemizedlist>
-        <listitem>[substituted long for customer number] = 8 bytes</listitem>
-        <listitem>[MD5 of order number] = 16 bytes</listitem>
+        <listitem><para>[substituted long for customer number] = 8 bytes</para></listitem>
+        <listitem><para>[MD5 of order number] = 16 bytes</para></listitem>
       </itemizedlist>
      </para>
         <section xml:id="schema.casestudies.custorder.tables">
@@ -631,15 +631,15 @@ reasonable spread in the keyspace, similar options appear:
             </para>
             <para>Customer Record Type Rowkey:
               <itemizedlist>
-                <listitem>[customer-id]</listitem>
-                <listitem>[type] = type indicating ‘1’ for customer record type</listitem>
+                <listitem><para>[customer-id]</para></listitem>
+                <listitem><para>[type] = type indicating ‘1’ for customer record type</para></listitem>
               </itemizedlist>
             </para>
             <para>Order Record Type Rowkey:
               <itemizedlist>
-                <listitem>[customer-id]</listitem>
-                <listitem>[type] = type indicating ‘2’ for order record type</listitem>
-                <listitem>[order]</listitem>
+                <listitem><para>[customer-id]</para></listitem>
+                <listitem><para>[type] = type indicating ‘2’ for order record type</para></listitem>
+                <listitem><para>[order]</para></listitem>
               </itemizedlist>
             </para>
             <para>The advantage of this particular CUSTOMER++ approach is that organizes many different record-types by customer-id 
@@ -665,23 +665,23 @@ reasonable spread in the keyspace, similar options appear:
 	        </para>
 	        <para>The SHIPPING_LOCATION's composite rowkey would be something like this:
 	          <itemizedlist>
-	            <listitem>[order-rowkey]</listitem>
-	            <listitem>[shipping location number] (e.g., 1st location, 2nd, etc.)</listitem>
+	            <listitem><para>[order-rowkey]</para></listitem>
+	            <listitem><para>[shipping location number] (e.g., 1st location, 2nd, etc.)</para></listitem>
 	          </itemizedlist>
 	        </para>
 	        <para>The LINE_ITEM table's composite rowkey would be something like this:
 	          <itemizedlist>
-	            <listitem>[order-rowkey]</listitem>
-	            <listitem>[shipping location number] (e.g., 1st location, 2nd, etc.)</listitem>
-	            <listitem>[line item number] (e.g., 1st lineitem, 2nd, etc.)</listitem>
+	            <listitem><para>[order-rowkey]</para></listitem>
+	            <listitem><para>[shipping location number] (e.g., 1st location, 2nd, etc.)</para></listitem>
+	            <listitem><para>[line item number] (e.g., 1st lineitem, 2nd, etc.)</para></listitem>
 	          </itemizedlist>
 	        </para>
 	        <para>Such a normalized model is likely to be the approach with an RDBMS, but that's not your only option with HBase.
 	        The cons of such an approach is that to retrieve information about any Order, you will need:
 	          <itemizedlist>
-	            <listitem>Get on the ORDER table for the Order</listitem>
-	            <listitem>Scan on the SHIPPING_LOCATION table for that order to get the ShippingLocation instances</listitem>
-	            <listitem>Scan on the LINE_ITEM for each ShippingLocation</listitem>
+	            <listitem><para>Get on the ORDER table for the Order</para></listitem>
+	            <listitem><para>Scan on the SHIPPING_LOCATION table for that order to get the ShippingLocation instances</para></listitem>
+	            <listitem><para>Scan on the LINE_ITEM for each ShippingLocation</para></listitem>
 	          </itemizedlist>
 	          ... granted, this is what an RDBMS would do under the covers anyway, but since there are no joins in HBase
 	          you're just more aware of this fact.
@@ -693,23 +693,23 @@ reasonable spread in the keyspace, similar options appear:
 	        </para>
 	        <para>The Order rowkey was described above: <xref linkend="schema.casestudies.custorder"/>
 	          <itemizedlist>
-	            <listitem>[order-rowkey]</listitem>
-	            <listitem>[ORDER record type]</listitem>
+	            <listitem><para>[order-rowkey]</para></listitem>
+	            <listitem><para>[ORDER record type]</para></listitem>
 	          </itemizedlist>
 	        </para>
 	        <para>The ShippingLocation composite rowkey would be something like this:
 	          <itemizedlist>
-	            <listitem>[order-rowkey]</listitem>
-	            <listitem>[SHIPPING record type]</listitem>
-	            <listitem>[shipping location number] (e.g., 1st location, 2nd, etc.)</listitem>
+	            <listitem><para>[order-rowkey]</para></listitem>
+	            <listitem><para>[SHIPPING record type]</para></listitem>
+	            <listitem><para>[shipping location number] (e.g., 1st location, 2nd, etc.)</para></listitem>
 	          </itemizedlist>
 	        </para>
 	        <para>The LineItem composite rowkey would be something like this:
 	          <itemizedlist>
-	            <listitem>[order-rowkey]</listitem>
-	            <listitem>[LINE record type]</listitem>
-	            <listitem>[shipping location number] (e.g., 1st location, 2nd, etc.)</listitem>
-	            <listitem>[line item number] (e.g., 1st lineitem, 2nd, etc.)</listitem>
+	            <listitem><para>[order-rowkey]</para></listitem>
+	            <listitem><para>[LINE record type]</para></listitem>
+	            <listitem><para>[shipping location number] (e.g., 1st location, 2nd, etc.)</para></listitem>
+	            <listitem><para>[line item number] (e.g., 1st lineitem, 2nd, etc.)</para></listitem>
 	          </itemizedlist>
 	        </para>
 	      </section>
@@ -720,21 +720,21 @@ reasonable spread in the keyspace, similar options appear:
 	        </para>
 	        <para>The LineItem composite rowkey would be something like this:
 	          <itemizedlist>
-	            <listitem>[order-rowkey]</listitem>
-	            <listitem>[LINE record type]</listitem>
-	            <listitem>[line item number] (e.g., 1st lineitem, 2nd, etc. - care must be taken that there are unique across the entire order)</listitem>
+	            <listitem><para>[order-rowkey]</para></listitem>
+	            <listitem><para>[LINE record type]</para></listitem>
+	            <listitem><para>[line item number] (e.g., 1st lineitem, 2nd, etc. - care must be taken that there are unique across the entire order)</para></listitem>
 	          </itemizedlist>
 	        </para>
 	        <para>... and the LineItem columns would be something like this:
 	          <itemizedlist>
-	            <listitem>itemNumber</listitem>
-	            <listitem>quantity</listitem>
-	            <listitem>price</listitem>
-	            <listitem>shipToLine1 (denormalized from ShippingLocation)</listitem>
-	            <listitem>shipToLine2 (denormalized from ShippingLocation)</listitem>
-	            <listitem>shipToCity (denormalized from ShippingLocation)</listitem>
-	            <listitem>shipToState (denormalized from ShippingLocation)</listitem>
-	            <listitem>shipToZip (denormalized from ShippingLocation)</listitem>
+	            <listitem><para>itemNumber</para></listitem>
+	            <listitem><para>quantity</para></listitem>
+	            <listitem><para>price</para></listitem>
+	            <listitem><para>shipToLine1 (denormalized from ShippingLocation)</para></listitem>
+	            <listitem><para>shipToLine2 (denormalized from ShippingLocation)</para></listitem>
+	            <listitem><para>shipToCity (denormalized from ShippingLocation)</para></listitem>
+	            <listitem><para>shipToState (denormalized from ShippingLocation)</para></listitem>
+	            <listitem><para>shipToZip (denormalized from ShippingLocation)</para></listitem>
 	          </itemizedlist>
 	        </para>
 	        <para>The pros of this approach include a less complex object heirarchy, but one of the cons is that updating gets more 
@@ -789,7 +789,7 @@ reasonable spread in the keyspace, similar options appear:
 	    OpenTSDB is the best example of this case where a single row represents a defined time-range, and then discrete events are treated as
 	    columns.  This approach is often more complex, and may require the additional complexity of re-writing your data, but has the
 	    advantage of being I/O efficient.  For an overview of this approach, see
-	    <xref linkend="schema.casestudies.log-timeseries.log-steroids"/>.
+	      <xref linkend="schema.casestudies.log-steroids"/>.
 	    </para>
 	  </section>
 	</section>  
@@ -815,7 +815,7 @@ we could have something like:
 &lt;FixedWidthUserName&gt;&lt;FixedWidthValueId3&gt;:"" (no value)
 			</programlisting>
 
-The other option we had was to do this entirely using:
+<para>The other option we had was to do this entirely using:</para>
     		<programlisting>
 &lt;FixedWidthUserName&gt;&lt;FixedWidthPageNum0&gt;:&lt;FixedWidthLength&gt;&lt;FixedIdNextPageNum&gt;&lt;ValueId1&gt;&lt;ValueId2&gt;&lt;ValueId3&gt;...
 &lt;FixedWidthUserName&gt;&lt;FixedWidthPageNum1&gt;:&lt;FixedWidthLength&gt;&lt;FixedIdNextPageNum&gt;&lt;ValueId1&gt;&lt;ValueId2&gt;&lt;ValueId3&gt;...
@@ -827,8 +827,8 @@ So in one case reading the first thirty values would be:
     		<programlisting>
 scan { STARTROW =&gt; 'FixedWidthUsername' LIMIT =&gt; 30}
     		</programlisting>
-And in the second case it would be
-    		<programlisting>
+<para>And in the second case it would be
+</para>    		<programlisting>
 get 'FixedWidthUserName\x00\x00\x00\x00'
     		</programlisting>
 			<para>

@@ -225,8 +225,8 @@
              Now start up hbase-0.96.0.
          </para>
      </section>
-     <section xml:id="096.migration.troubleshooting"><title>Troubleshooting</title>
-     <section xml:id="096.migration.troubleshooting.old.client"><title>Old Client connecting to 0.96 cluster</title>
+     <section xml:id="s096.migration.troubleshooting"><title>Troubleshooting</title>
+     <section xml:id="s096.migration.troubleshooting.old.client"><title>Old Client connecting to 0.96 cluster</title>
          <para>It will fail with an exception like the below.  Upgrade.
              <programlisting>17:22:15  Exception in thread "main" java.lang.IllegalArgumentException: Not a host:port pair: PBUF
 17:22:15  *
@@ -266,20 +266,20 @@
 <para>
 If you've not patience, here are the important things to know upgrading.
 <orderedlist>
-<listitem>Once you upgrade, you can’t go back.
+<listitem><para>Once you upgrade, you can’t go back.</para>
 </listitem>
-<listitem>
-MSLAB is on by default. Watch that heap usage if you have a lot of regions.
+<listitem><para>
+MSLAB is on by default. Watch that heap usage if you have a lot of regions.</para>
 </listitem>
-<listitem>
+<listitem><para>
 Distributed splitting is on by defaul.  It should make region server failover faster.
-</listitem>
-<listitem>
+</para></listitem>
+<listitem><para>
 There’s a separate tarball for security.
-</listitem>
-<listitem>
+</para></listitem>
+<listitem><para>
 If -XX:MaxDirectMemorySize is set in your hbase-env.sh, it’s going to enable the experimental off-heap cache (You may not want this).
-</listitem>
+</para></listitem>
 </orderedlist>
 </para>
 </note>
@@ -301,7 +301,7 @@ This means you cannot go back to 0.90.x once you’ve started HBase 0.92.0 over 
 <para>In 0.92.0, the <link xlink:href="http://hbase.apache.org/book.html#hbase.hregion.memstore.mslab.enabled">hbase.hregion.memstore.mslab.enabled</link> flag is set to true
 (See <xref linkend="mslab" />).  In 0.90.x it was <constant>false</constant>.  When it is enabled, memstores will step allocate memory in MSLAB 2MB chunks even if the
 memstore has zero or just a few small elements.  This is fine usually but if you had lots of regions per regionserver in a 0.90.x cluster (and MSLAB was off),
-you may find yourself OOME'ing on upgrade because the <mathphrase>thousands of regions * number of column families * 2MB MSLAB (at a minimum)</mathphrase>
+you may find yourself OOME'ing on upgrade because the <code>thousands of regions * number of column families * 2MB MSLAB (at a minimum)</code>
 puts your heap over the top.  Set <varname>hbase.hregion.memstore.mslab.enabled</varname> to
 <constant>false</constant> or set the MSLAB size down from 2MB by setting <varname>hbase.hregion.memstore.mslab.chunksize</varname> to something less.
 </para>

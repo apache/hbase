@@ -118,8 +118,8 @@ git clone git://github.com/apache/hbase.git
             <title>Maven Classpath Variable</title>
             <para>The <varname>M2_REPO</varname> classpath variable needs to be set up for the project.  This needs to be set to
             your local Maven repository, which is usually <filename>~/.m2/repository</filename></para>
-            If this classpath variable is not configured, you will see compile errors in Eclipse like this...
-            <programlisting>
+<para>If this classpath variable is not configured, you will see compile errors in Eclipse like this:
+</para>            <programlisting>
 Description	Resource	Path	Location	Type
 The project cannot be built until build path errors are resolved	hbase		Unknown	Java Problem
 Unbound classpath variable: 'M2_REPO/asm/asm/3.1/asm-3.1.jar' in project 'hbase'	hbase		Build path	Build Path Problem
@@ -223,51 +223,52 @@ mvn compile -Dcompile-protobuf -Dprotoc.path=/opt/local/bin/protoc
              poms when you build. For now, just be aware of the difference between HBase 1.x
              builds and those of HBase 0.96-0.98. Below we will come back to this difference
              when we list out build instructions.</para>
-         </section>
+
+        
 <para xml:id="mvn.settings.file">Publishing to maven requires you sign the artifacts you want to upload.  To have the
          build do this for you, you need to make sure you have a properly configured
          <filename>settings.xml</filename> in your local repository under <filename>.m2</filename>.
             Here is my <filename>~/.m2/settings.xml</filename>.
-        <programlisting>&lt;settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+        <programlisting><![CDATA[<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
                       http://maven.apache.org/xsd/settings-1.0.0.xsd">
-  &lt;servers>
-    &lt;!- To publish a snapshot of some part of Maven -->
-    &lt;server>
-      &lt;id>apache.snapshots.https&lt;/id>
-      &lt;username>YOUR_APACHE_ID
-      &lt;/username>
-      &lt;password>YOUR_APACHE_PASSWORD
-      &lt;/password>
-    &lt;/server>
-    &lt;!-- To publish a website using Maven -->
-    &lt;!-- To stage a release of some part of Maven -->
-    &lt;server>
-      &lt;id>apache.releases.https&lt;/id>
-      &lt;username>YOUR_APACHE_ID
-      &lt;/username>
-      &lt;password>YOUR_APACHE_PASSWORD
-      &lt;/password>
-    &lt;/server>
-  &lt;/servers>
-  &lt;profiles>
-    &lt;profile>
-      &lt;id>apache-release&lt;/id>
-      &lt;properties>
-    &lt;gpg.keyname>YOUR_KEYNAME&lt;/gpg.keyname>
-    &lt;!--Keyname is something like this ... 00A5F21E... do gpg --list-keys to find it-->
-    &lt;gpg.passphrase>YOUR_KEY_PASSWORD
-    &lt;/gpg.passphrase>
-      &lt;/properties>
-    &lt;/profile>
-  &lt;/profiles>
-&lt;/settings>
+  <servers>
+    <!- To publish a snapshot of some part of Maven -->
+    <server>
+      <id>apache.snapshots.https</id>
+      <username>YOUR_APACHE_ID
+      </username>
+      <password>YOUR_APACHE_PASSWORD
+      </password>
+    </server>
+    <!-- To publish a website using Maven -->
+    <!-- To stage a release of some part of Maven -->
+    <server>
+      <id>apache.releases.https</id>
+      <username>YOUR_APACHE_ID
+      </username>
+      <password>YOUR_APACHE_PASSWORD
+      </password>
+    </server>
+  </servers>
+  <profiles>
+    <profile>
+      <id>apache-release</id>
+      <properties>
+    <gpg.keyname>YOUR_KEYNAME</gpg.keyname>
+    <!--Keyname is something like this ... 00A5F21E... do gpg --list-keys to find it-->
+    <gpg.passphrase>YOUR_KEY_PASSWORD
+    </gpg.passphrase>
+      </properties>
+    </profile>
+  </profiles>
+</settings>]]>
         </programlisting>
         </para>
         <para>You must use maven 3.0.x (Check by running <command>mvn -version</command>).
         </para>
-
+             </section>
      <section xml:id="maven.release">
          <title>Making a Release Candidate</title>
          <para>I'll explain by running through the process.  See later in this section for more detail on particular steps.
@@ -501,17 +502,17 @@ HBase have a character not usually seen in other projects.</para>
                 dependency tree).</para>
   <section xml:id="hbase.moduletest.run">
   <title>Running Tests in other Modules</title>
-  If the module you are developing in has no other dependencies on other HBase modules, then
-  you can cd into that module and just run:
+  <para>If the module you are developing in has no other dependencies on other HBase modules, then
+  you can cd into that module and just run:</para>
   <programlisting>mvn test</programlisting>
-  which will just run the tests IN THAT MODULE. If there are other dependencies on other modules,
+  <para>which will just run the tests IN THAT MODULE. If there are other dependencies on other modules,
   then you will have run the command from the ROOT HBASE DIRECTORY. This will run the tests in the other
   modules, unless you specify to skip the tests in that module. For instance, to skip the tests in the hbase-server module,
-  you would run:
+  you would run:</para>
   <programlisting>mvn clean test -PskipServerTests</programlisting>
-  from the top level directory to run all the tests in modules other than hbase-server. Note that you
+  <para>from the top level directory to run all the tests in modules other than hbase-server. Note that you
   can specify to skip tests in multiple modules as well as just for a single module. For example, to skip
-  the tests in <classname>hbase-server</classname> and <classname>hbase-common</classname>, you would run:
+  the tests in <classname>hbase-server</classname> and <classname>hbase-common</classname>, you would run:</para>
   <programlisting>mvn clean test -PskipServerTests -PskipCommonTests</programlisting>
   <para>Also, keep in mind that if you are running tests in the <classname>hbase-server</classname> module you will need to
   apply the maven profiles discussed in <xref linkend="hbase.unittests.cmds"/> to get the tests to run properly.</para>
@@ -541,7 +542,7 @@ The first three categories, small, medium, and large are for tests run when
 you type <code>$ mvn test</code>; i.e. these three categorizations are for
 HBase unit tests. The integration category is for not for unit tests but for integration
 tests.  These are run when you invoke <code>$ mvn verify</code>.  Integration tests
-are described in <xref linkend="integration.tests">integration tests section</xref> and will not be discussed further
+are described in <xref linkend="integration.tests"/> and will not be discussed further
 in this section on HBase unit tests.</para>
 <para>
 Apache HBase uses a patched maven surefire plugin and maven profiles to implement
@@ -579,7 +580,7 @@ the developer machine as well.
 <section xml:id="hbase.unittests.integration">
 <title>Integration Tests<indexterm><primary>IntegrationTests</primary></indexterm></title>
 <para><emphasis>Integration</emphasis> tests are system level tests. See
-<xref linkend="integration.tests">integration tests section</xref> for more info.
+<xref linkend="integration.tests"/> for more info.
 </para>
 </section>
 </section>
@@ -704,17 +705,17 @@ should not impact these resources, it's worth checking these log lines
 <title>General rules</title>
 <itemizedlist>
 <listitem>
-As much as possible, tests should be written as category small tests.
+<para>As much as possible, tests should be written as category small tests.</para>
 </listitem>
 <listitem>
-All tests must be written to support parallel execution on the same machine, hence they should not use shared resources as fixed ports or fixed file names.
+<para>All tests must be written to support parallel execution on the same machine, hence they should not use shared resources as fixed ports or fixed file names.</para>
 </listitem>
 <listitem>
-Tests should not overlog. More than 100 lines/second makes the logs complex to read and use i/o that are hence not available for the other tests.
+<para>Tests should not overlog. More than 100 lines/second makes the logs complex to read and use i/o that are hence not available for the other tests.</para>
 </listitem>
 <listitem>
-Tests can be written with <classname>HBaseTestingUtility</classname>.
-This class offers helper functions to create a temp directory and do the cleanup, or to start a cluster.
+<para>Tests can be written with <classname>HBaseTestingUtility</classname>.
+This class offers helper functions to create a temp directory and do the cleanup, or to start a cluster.</para>
 </listitem>
 </itemizedlist>
 </section>
@@ -722,19 +723,19 @@ This class offers helper functions to create a temp directory and do the cleanup
 <title>Categories and execution time</title>
 <itemizedlist>
 <listitem>
-All tests must be categorized, if not they could be skipped.
+<para>All tests must be categorized, if not they could be skipped.</para>
 </listitem>
 <listitem>
-All tests should be written to be as fast as possible.
+<para>All tests should be written to be as fast as possible.</para>
 </listitem>
 <listitem>
-Small category tests should last less than 15 seconds, and must not have any side effect.
+<para>Small category tests should last less than 15 seconds, and must not have any side effect.</para>
 </listitem>
 <listitem>
-Medium category tests should last less than 50 seconds.
+<para>Medium category tests should last less than 50 seconds.</para>
 </listitem>
 <listitem>
-Large category tests should last less than 3 minutes.  This should ensure a good parallelization for people using it, and ease the analysis when the test fails.
+<para>Large category tests should last less than 3 minutes.  This should ensure a good parallelization for people using it, and ease the analysis when the test fails.</para>
 </listitem>
 </itemizedlist>
 </section>
@@ -862,17 +863,17 @@ are running other tests.
 </para>
 
 <para>
-ChaosMonkey defines Action's and Policy's. Actions are sequences of events. We have at least the following actions:
+ChaosMonkey defines Action's and Policy's. Actions are sequences of events. We have at least the following actions:</para>
 <itemizedlist>
-<listitem>Restart active master (sleep 5 sec)</listitem>
-<listitem>Restart random regionserver (sleep 5 sec)</listitem>
-<listitem>Restart random regionserver (sleep 60 sec)</listitem>
-<listitem>Restart META regionserver (sleep 5 sec)</listitem>
-<listitem>Restart ROOT regionserver (sleep 5 sec)</listitem>
-<listitem>Batch restart of 50% of regionservers (sleep 5 sec)</listitem>
-<listitem>Rolling restart of 100% of regionservers (sleep 5 sec)</listitem>
+<listitem><para>Restart active master (sleep 5 sec)</para></listitem>
+<listitem><para>Restart random regionserver (sleep 5 sec)</para></listitem>
+<listitem><para>Restart random regionserver (sleep 60 sec)</para></listitem>
+<listitem><para>Restart META regionserver (sleep 5 sec)</para></listitem>
+<listitem><para>Restart ROOT regionserver (sleep 5 sec)</para></listitem>
+<listitem><para>Batch restart of 50% of regionservers (sleep 5 sec)</para></listitem>
+<listitem><para>Rolling restart of 100% of regionservers (sleep 5 sec)</para></listitem>
 </itemizedlist>
-
+<para>
 Policies on the other hand are responsible for executing the actions based on a strategy.
 The default policy is to execute a random action every minute based on predefined action
 weights. ChaosMonkey executes predefined named policies until it is stopped. More than one
@@ -881,11 +882,12 @@ policy can be active at any time.
 
 <para>
   To run ChaosMonkey as a standalone tool deploy your HBase cluster as usual. ChaosMonkey uses the configuration
-from the bin/hbase script, thus no extra configuration needs to be done. You can invoke the ChaosMonkey by running:
+from the bin/hbase script, thus no extra configuration needs to be done. You can invoke the ChaosMonkey by running:</para>
 <programlisting>bin/hbase org.apache.hadoop.hbase.util.ChaosMonkey</programlisting>
-
+<para>
 This will output smt like:
-<programlisting>
+</para>
+<screen>
 12/11/19 23:21:57 INFO util.ChaosMonkey: Using ChaosMonkey Policy: class org.apache.hadoop.hbase.util.ChaosMonkey$PeriodicRandomActionPolicy, period:60000
 12/11/19 23:21:57 INFO util.ChaosMonkey: Sleeping for 26953 to add jitter
 12/11/19 23:22:24 INFO util.ChaosMonkey: Performing action: Restart active master
@@ -921,8 +923,8 @@ This will output smt like:
 12/11/19 23:24:26 INFO hbase.ClusterManager: Executed remote command, exit code:0 , output:starting regionserver, logging to /homes/enis/code/hbase-0.94/bin/../logs/hbase-enis-regionserver-rs3.example.com.out
 
 12/11/19 23:24:27 INFO util.ChaosMonkey: Started region server:rs3.example.com,60020,1353367027826. Reported num of rs:6
-</programlisting>
-
+</screen>
+<para>
 As you can see from the log, ChaosMonkey started the default PeriodicRandomActionPolicy, which is configured with all the available actions, and ran RestartActiveMaster and RestartRandomRs actions. ChaosMonkey tool, if run from command line, will keep on running until the process is killed.
 </para>
 </section>
@@ -958,7 +960,7 @@ mvn compile
          <para>
          The above will build against whatever explicit hadoop 1.x version we have in our <filename>pom.xml</filename> as our '1.0' version.
          Tests may not all pass so you may need to pass <code>-DskipTests</code> unless you are inclined to fix the failing tests.</para>
-<note id="maven.build.passing.default.profile">
+<note xml:id="maven.build.passing.default.profile">
 <title>'dependencyManagement.dependencies.dependency.artifactId' for org.apache.hbase:${compat.module}:test-jar with value '${compat.module}' does not match a valid id pattern</title>
 <para>You will see ERRORs like the above title if you pass the <emphasis>default</emphasis> profile; e.g. if
 you pass <property>hadoop.profile=1.1</property> when building 0.96 or
@@ -1001,12 +1003,12 @@ pecularity that is probably fixable but we've not spent the time trying to figur
           <section xml:id="jira.priorities"><title>Jira Priorities</title>
           <para>The following is a guideline on setting Jira issue priorities:
                 <itemizedlist>
-                <listitem>Blocker: Should only be used if the issue WILL cause data loss or cluster instability reliably.</listitem>
-                <listitem>Critical: The issue described can cause data loss or cluster instability in some cases.</listitem>
-                <listitem>Major: Important but not tragic issues, like updates to the client API that will add a lot of much-needed functionality or significant
-                bugs that need to be fixed but that don't cause data loss.</listitem>
-                <listitem>Minor: Useful enhancements and annoying but not damaging bugs.</listitem>
-                <listitem>Trivial: Useful enhancements but generally cosmetic.</listitem>
+                <listitem><para>Blocker: Should only be used if the issue WILL cause data loss or cluster instability reliably.</para></listitem>
+                <listitem><para>Critical: The issue described can cause data loss or cluster instability in some cases.</para></listitem>
+                <listitem><para>Major: Important but not tragic issues, like updates to the client API that will add a lot of much-needed functionality or significant
+                bugs that need to be fixed but that don't cause data loss.</para></listitem>
+                <listitem><para>Minor: Useful enhancements and annoying but not damaging bugs.</para></listitem>
+                <listitem><para>Trivial: Useful enhancements but generally cosmetic.</para></listitem>
                 </itemizedlist>
              </para>
         </section>
@@ -1161,10 +1163,9 @@ pecularity that is probably fixable but we've not spent the time trying to figur
           <para>Please submit one patch-file per Jira.  For example, if multiple files are changed make sure the
           selected resource when generating the patch is a directory.  Patch files can reflect changes in multiple files. </para>
       <para>
-          Generating patches using git:<sbr/>
-              <programlisting>
-$ git diff --no-prefix  > HBASE_XXXX.patch
-              </programlisting>
+          Generating patches using git:</para>
+<screen>$ git diff --no-prefix  > HBASE_XXXX.patch</screen>
+              <para>
               Don't forget the 'no-prefix' option; and generate the diff from the root directory of project
       </para>
           <para>Make sure you review <xref linkend="eclipse.code.formatting"/> for code style. </para>
@@ -1283,11 +1284,10 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
           </section>
           <section xml:id="common.patch.feedback.javadoc">
             <title>Javadoc</title>
-            <para>This is also a very common feedback item.  Don't forget Javadoc!
+            <para>This is also a very common feedback item.  Don't forget Javadoc!</para>
                 <para>Javadoc warnings are checked during precommit. If the precommit tool gives you a '-1',
                     please fix the javadoc issue. Your patch won't be committed if it adds such warnings.
                 </para>
-            </para>
           </section>
           <section xml:id="common.patch.feedback.findbugs">
             <title>Findbugs</title>
@@ -1345,25 +1345,25 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
             </para>
             <itemizedlist>
                 <listitem>
-                    Do not delete the old patch file
+                    <para>Do not delete the old patch file</para>
                 </listitem>
                 <listitem>
-                    version your new patch file using a simple scheme like this: <sbr/>
-                    HBASE-{jira number}-{version}.patch <sbr/>
-                    e.g:
-                    HBASE_XXXX-v2.patch
+                    <para>version your new patch file using a simple scheme like this:</para>
+                    <screen>HBASE-{jira number}-{version}.patch</screen>
+                    <para>e.g:</para>
+                    <screen>HBASE_XXXX-v2.patch</screen>
                 </listitem>
                 <listitem>
-                    'Cancel Patch' on JIRA.. bug status will change back to Open
+                    <para>'Cancel Patch' on JIRA.. bug status will change back to Open</para>
                 </listitem>
                 <listitem>
-                    Attach new patch file (e.g. HBASE_XXXX-v2.patch) using 'Files --> Attach'
+                    <para>Attach new patch file (e.g. HBASE_XXXX-v2.patch) using 'Files --> Attach'</para>
                 </listitem>
                 <listitem>
-                    Click on 'Submit Patch'.  Now the bug status will say 'Patch Available'.
+                    <para>Click on 'Submit Patch'.  Now the bug status will say 'Patch Available'.</para>
                 </listitem>
             </itemizedlist>
-            Committers will review the patch.  Rinse and repeat as many times as needed :-)
+            <para>Committers will review the patch.  Rinse and repeat as many times as needed :-)</para>
         </section>
 
         <section>
@@ -1372,32 +1372,32 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
                 At times you may want to break a big change into mulitple patches.  Here is a sample work-flow using git
                 <itemizedlist>
                     <listitem>
-                        patch 1:
+                        <para>patch 1:</para>
                         <itemizedlist>
                             <listitem>
-                                $ git diff --no-prefix > HBASE_XXXX-1.patch
+                                <screen>$ git diff --no-prefix > HBASE_XXXX-1.patch</screen>
                             </listitem>
                         </itemizedlist>
                     </listitem>
                     <listitem>
-                        patch 2:
+                        <para>patch 2:</para>
                         <itemizedlist>
                             <listitem>
-                                create a new git branch <sbr/>
-                                $ git checkout -b my_branch
+                                <para>create a new git branch</para>
+                                <screen>$ git checkout -b my_branch</screen>
                             </listitem>
                             <listitem>
-                                save your work
-                                $ git add file1 file2 <sbr/>
-                                $ git commit -am 'saved after HBASE_XXXX-1.patch' <sbr/>
-                                now you have your own branch, that is different from remote master branch <sbr/>
+                                <para>save your work</para>
+                                <screen>$ git add file1 file2 </screen>
+                                <screen>$ git commit -am 'saved after HBASE_XXXX-1.patch'</screen>
+                                <para>now you have your own branch, that is different from remote master branch</para>
                             </listitem>
                             <listitem>
-                                make more changes...
+                                <para>make more changes...</para>
                             </listitem>
                             <listitem>
-                                create second patch <sbr/>
-                                $ git diff --no-prefix > HBASE_XXXX-2.patch
+                                <para>create second patch</para>
+                                <screen>$ git diff --no-prefix > HBASE_XXXX-2.patch</screen>
                             </listitem>
                         </itemizedlist>
 

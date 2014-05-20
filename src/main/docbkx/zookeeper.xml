@@ -219,7 +219,7 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
               standalone Zookeeper quorum) for ease of learning.
               </para>
 
-              <section><title>Operating System Prerequisites</title></section>
+              <section><title>Operating System Prerequisites</title>
 
               <para>
                   You need to have a working Kerberos KDC setup. For
@@ -283,7 +283,7 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
 
                 <para>We'll refer to this JAAS configuration file as
                 <filename>$CLIENT_CONF</filename> below.</para>
-
+              </section>
               <section>
                 <title>HBase-managed Zookeeper Configuration</title>
 
@@ -312,10 +312,10 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
                   };
                 </programlisting>
 
-                where the <filename>$PATH_TO_HBASE_KEYTAB</filename> and
+                <para>where the <filename>$PATH_TO_HBASE_KEYTAB</filename> and
                 <filename>$PATH_TO_ZOOKEEPER_KEYTAB</filename> files are what
                 you created above, and <code>$HOST</code> is the hostname for that
-                node.
+                node.</para>
 
                 <para>The <code>Server</code> section will be used by
                 the Zookeeper quorum server, while the
@@ -342,9 +342,9 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
                   export HBASE_REGIONSERVER_OPTS="-Djava.security.auth.login.config=$HBASE_SERVER_CONF"
                 </programlisting>
 
-                where <filename>$HBASE_SERVER_CONF</filename> and
+                <para>where <filename>$HBASE_SERVER_CONF</filename> and
                 <filename>$CLIENT_CONF</filename> are the full paths to the
-                JAAS configuration files created above.
+                JAAS configuration files created above.</para>
 
                 <para>Modify your <filename>hbase-site.xml</filename> on each node
                 that will run zookeeper, master or regionserver to contain:</para>
@@ -537,10 +537,10 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
               <section>
                 <title>Configuration from Scratch</title>
 
-                This has been tested on the current standard Amazon
+                <para>This has been tested on the current standard Amazon
                 Linux AMI.  First setup KDC and principals as
                 described above. Next checkout code and run a sanity
-                check.
+                check.</para>
 
                 <programlisting>
                 git clone git://git.apache.org/hbase.git
@@ -548,9 +548,9 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
                 mvn clean test -Dtest=TestZooKeeperACL
                 </programlisting>
 
-                Then configure HBase as described above.
-                Manually edit target/cached_classpath.txt (see below)..
-
+                <para>Then configure HBase as described above.
+                Manually edit target/cached_classpath.txt (see below):
+</para>
                 <programlisting>
                 bin/hbase zookeeper &amp;
                 bin/hbase master &amp;
@@ -582,14 +582,16 @@ ${HBASE_HOME}/bin/hbase-daemons.sh {start,stop} zookeeper
                   programmatically</title>
 
 
-                  This would avoid the need for a separate Hadoop jar
+                  <para>This would avoid the need for a separate Hadoop jar
                   that fixes <link xlink:href="https://issues.apache.org/jira/browse/HADOOP-7070">HADOOP-7070</link>.
+                  </para>
                 </section>
 
                 <section>
                   <title>Elimination of
                   <code>kerberos.removeHostFromPrincipal</code> and
                   <code>kerberos.removeRealmFromPrincipal</code></title>
+                  <para />
                 </section>
 
               </section>
