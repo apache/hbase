@@ -400,18 +400,29 @@ public class TableServers implements ServerConnection {
     if (isMetaTableName(tableName)) {
       return true;
     }
-    boolean exists = false;
-    try {
-      HTableDescriptor[] tables = listTables();
-      for (HTableDescriptor table : tables) {
-        if (tableName.equalBytes(table.getName())) {
-          exists = true;
+    byte[] tname = Bytes.toBytes(tableName + ",,");
+    Scan scan = new Scan(tname);
+    scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
+
+    try (HTable table = new HTable(conf, HConstants.META_TABLE_NAME)) {
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        Result data = scanner.next();
+        if (data != null && data.size() > 0) {
+          HRegionInfo info = Writables.getHRegionInfo(
+            data.getValue(HConstants.CATALOG_FAMILY,
+                HConstants.REGIONINFO_QUALIFIER));
+          if (info.getTableDesc().getNameAsString().equals(tableName.getString())) {
+            // A region for this table already exists. Ergo table exists.
+            return true;
+          }
         }
+      } catch (IOException e) {
+        LOG.warn("Testing for table existence threw exception", e);
       }
     } catch (IOException e) {
       LOG.warn("Testing for table existence threw exception", e);
     }
-    return exists;
+    return false;
   }
 
   /*

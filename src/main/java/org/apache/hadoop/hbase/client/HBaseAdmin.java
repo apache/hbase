@@ -61,6 +61,8 @@ import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RemoteException;
 
+import com.google.common.base.Preconditions;
+
 
 /**
  * Provides an interface to manage HBase database table metadata + general
@@ -326,6 +328,7 @@ public class HBaseAdmin {
         tries = -1;
       }
     }
+    Preconditions.checkArgument(tableExists(desc.getName()));
   }
 
   /**
