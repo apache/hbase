@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapred.JobClient;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
@@ -60,6 +61,7 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -257,7 +259,8 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
       // look a lot like TestImportTsv#testMROnTable.
       final String table = format("%s-%s-child", NAME, context.getJobID());
       final String cf = "FAM";
-
+      String fileLocation = System.getenv(UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
+      conf.set(ImportTsv.CREDENTIALS_LOCATION, fileLocation);
       String[] args = {
           "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B",
           "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b",
@@ -271,7 +274,9 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
       } catch (Exception e) {
         throw new IOException("Underlying MapReduce job failed. Aborting commit.", e);
       } finally {
-        util.deleteTable(table);
+        if (util.getHBaseAdmin().tableExists(table)) {
+          util.deleteTable(table);
+        }
       }
     }
   }
@@ -362,6 +367,10 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
     JobLaunchingOutputFormat.setOutputPath(job, outputPath);
     TableMapReduceUtil.addDependencyJars(job);
     addTestDependencyJars(job.getConfiguration());
+    TableMapReduceUtil.initCredentials(job);
+    JobClient jc = new JobClient(job.getConfiguration());
+    job.getCredentials().addToken(new Text("my_mr_token"),
+      jc.getDelegationToken(new Text("renewer")));
 
     // Job launched by the OutputCommitter will fail if dependency jars are
     // not shipped properly.
