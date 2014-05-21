@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -23,14 +24,11 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.ipc.HMasterInterface;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.master.AssignmentPlan;
 import org.apache.hadoop.hbase.master.RegionPlacement;
@@ -40,6 +38,14 @@ import org.apache.log4j.Logger;
 public class RollingRestart {
 
   private static final Log LOG = LogFactory.getLog(RollingRestart.class);
+
+  final static int DEFAULT_SLEEP_AFTER_RESTART_INTERVAL = 10000;
+  final static int DEFAULT_SLEEP_BEFORE_RESTART_INTERVAL = 10000;
+  final static int DEFAULT_REGION_DRAIN_INTERVAL = 1000;
+  final static int DEFAULT_REGION_UNDRAIN_INTERVAL = 10000;
+  final static int DEFAULT_GETOP_FREQUENCY = 1000;
+  final static int DEFAULT_MOVE_RETRIES = 1;
+  final static int DEFAULT_MOVE_TIMEOUT = 60000;
 
   HServerAddress serverAddr;
   final Configuration conf;
@@ -56,17 +62,10 @@ public class RollingRestart {
   int moveRetries = 1;
   boolean useHadoopCtl = true;
   private int port = HConstants.DEFAULT_REGIONSERVER_PORT;
+  final Random random;
   HashMap<HServerAddress, HRegionInterface> serverConnectionMap =
       new HashMap<HServerAddress, HRegionInterface>();
   ArrayList<RegionChecker> regionCheckers = new ArrayList<RegionChecker>();
-
-  final static int DEFAULT_SLEEP_AFTER_RESTART_INTERVAL = 10000;
-  final static int DEFAULT_SLEEP_BEFORE_RESTART_INTERVAL = 10000;
-  final static int DEFAULT_REGION_DRAIN_INTERVAL = 1000;
-  final static int DEFAULT_REGION_UNDRAIN_INTERVAL = 10000;
-  final static int DEFAULT_GETOP_FREQUENCY = 1000;
-  final static int DEFAULT_MOVE_RETRIES = 1;
-  final static int DEFAULT_MOVE_TIMEOUT = 60000;
 
   RollingRestart(String serverName, int regionDrainInterval,
       int regionUndrainInterval, int sleepIntervalAfterRestart,
@@ -91,6 +90,7 @@ public class RollingRestart {
     this.regionUndrainInterval = regionUndrainInterval;
     this.getOpFrequency = getOpFrequency;
     this.port = port;
+    this.random = new Random(System.currentTimeMillis());
 
     this.conf = conf;
     this.moveRetries = conf.getInt("hbase.rollingrestart.move.maxretries", DEFAULT_MOVE_RETRIES);
@@ -291,8 +291,14 @@ public class RollingRestart {
       return getHRegionConnection(serverAddr);
     }
 
+    // destination regionserver
+    HRegionInterface regionServer = null;
+
+    // 1. First attempt is to use the assignment plan
     List<HServerAddress> serversForRegion = plan.getAssignment(region);
 
+    // 2. Let's make absolutely sure, that the assignment plan does not have this
+    // region.
     if (serversForRegion == null) {
       LOG.warn("Cannot locate the favored nodes for " +
         region.getRegionNameAsString() + ", hashcode " + region.hashCode() +
@@ -308,23 +314,60 @@ public class RollingRestart {
       }
     }
 
-    // Get the preferred region server from the Assignment Plan
-    for (HServerAddress server : serversForRegion) {
-      if (!server.equals(serverAddr)) {
-        try {
-          HRegionInterface candidate = getHRegionConnection(server);
-          if (!candidate.isStopped()) {
-            return candidate;
+    // 3. If we found the region in the assignment plan. Let's get the region
+    // server which is preferred and alive.
+    if (serversForRegion != null) {
+      // Get the preferred region server from the Assignment Plan
+      for (HServerAddress server : serversForRegion) {
+        if (!server.equals(serverAddr)) {
+          if ((regionServer = getServerConnection(server)) != null) {
+            break;
           }
-        } catch (IOException e) {
-          // server not online/reachable skip
         }
       }
     }
 
-    LOG.error("No favored nodes alive for " +
-      region.getRegionNameAsString());
-    // if none found we should return a random server. For now return null
+    // 4. Cannot find a live region server. Let's go a random assignment
+    if (regionServer == null) {
+      regionServer = getRandomDestinationServer(serverAddr);
+      LOG.error("No favored nodes alive for " +
+        region.getRegionNameAsString() + ". Using a random region server " +
+        regionServer);
+    }
+
+    return regionServer;
+  }
+
+  private final HRegionInterface getRandomDestinationServer(
+    final HServerAddress currentServerAddr)
+    throws MasterNotRunningException {
+    HMasterInterface master = admin.getMaster();
+    HRegionInterface regionServer = null;
+
+    List<HServerInfo> liveServers = new ArrayList<HServerInfo>(
+      master.getClusterStatus().getServerInfo());
+
+    HServerAddress candidate = liveServers.get(
+      random.nextInt(liveServers.size())).getServerAddress();
+    while (serverAddr.equals(candidate) ||
+      (regionServer = getServerConnection(candidate)) == null) {
+      candidate = liveServers.get(
+        random.nextInt(liveServers.size())).getServerAddress();
+    }
+
+    LOG.info("Got a random region server " + candidate);
+    return regionServer;
+  }
+
+  private HRegionInterface getServerConnection(final HServerAddress serverAddr) {
+    try {
+      HRegionInterface candidate = getHRegionConnection(serverAddr);
+      if (!candidate.isStopped()) {
+        return candidate;
+      }
+    } catch (IOException e) {
+      // server not online/reachable skip
+    }
     return null;
   }
 
