@@ -45,14 +45,6 @@ public class RowLock {
   }
 
   /**
-   * Creates a RowLock with only a lock id
-   * @param lockId lock id
-   */
-  public RowLock(final long lockId) {
-    this.lockId = lockId;
-  }
-
-  /**
    * Get the row for this RowLock
    * @return the row
    */

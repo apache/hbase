@@ -412,7 +412,7 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Sync {
   public RowLock lockRow(byte[] regionName, byte[] row)
       throws ThriftHBaseException {
     try {
-      return new RowLock(server.lockRow(regionName, row));
+      return new RowLock(row, server.lockRow(regionName, row));
     } catch (IOException e) {
       throw new ThriftHBaseException(e);
     }

@@ -260,7 +260,7 @@ public class TestSerialization extends HBaseTestCase {
     long ts = System.currentTimeMillis();
     int maxVersions = 2;
     long lockid = 5;
-    RowLock rowLock = new RowLock(lockid);
+    RowLock rowLock = new RowLock(row, lockid);
 
     Get get = new Get(row, rowLock);
     get.addColumn(fam, qf1);
