@@ -26,7 +26,9 @@ import java.lang.management.MemoryUsage;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Constructor;
 import java.net.BindException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -427,6 +429,37 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
   /** Configuration variable to prefer IPv6 address for HRegionServer */
   public static final String HREGIONSERVER_PREFER_IPV6_Address =
     "hregionserver.prefer.ipv6.address";
+
+  /**
+   * RegionServer constructor which can be used for testing.
+   * Initialized the final config variables.
+   * @throws UnknownHostException
+   */
+  public HRegionServer() throws UnknownHostException {
+    machineName = InetAddress.getLocalHost().getHostName();
+    String addressStr = machineName + ":" + 60021;
+    address = new HServerAddress(addressStr);
+    this.conf = HBaseConfiguration.create();
+    this.connection = ServerConnectionManager.getConnection(conf);
+    this.regionServerConnection = null;
+    this.numRetries = 1;
+    this.threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY,
+        10 * 1000);
+    this.msgInterval = HConstants.REGION_SERVER_MSG_INTERVAL;
+    sleeper = null;
+    this.numRegionsToReport =
+      conf.getInt("hbase.regionserver.numregionstoreport", 10);
+
+    this.rpcTimeoutToMaster = HConstants.DEFAULT_RS_REPORT_TIMEOUT;
+
+    responseSizeLimit = Integer.MAX_VALUE;
+    cacheConfig = new CacheConfig(conf);
+    configurationManager.registerObserver(cacheConfig);
+
+    logCloseThreadPool = null;
+
+    regionOpenCloseThreadPool = null;
+  }
 
   /**
    * Starts a HRegionServer at the default location. This should be followed

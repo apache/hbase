@@ -303,7 +303,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     this.encodedName = other.getEncodedName();
   }
 
-  private static byte [] createRegionName(final byte [] tableName,
+  public static byte [] createRegionName(final byte [] tableName,
       final byte [] startKey, final long regionid, boolean newFormat) {
     return createRegionName(tableName, startKey, Long.toString(regionid), newFormat);
   }

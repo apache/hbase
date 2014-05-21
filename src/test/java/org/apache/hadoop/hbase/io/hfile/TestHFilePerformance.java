@@ -23,6 +23,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -35,6 +36,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.BytesWritable;
@@ -133,7 +135,11 @@ public class TestHFilePerformance extends TestCase {
   //TODO to have a sample compressable data, for now, made 1 out of 3 values random
   //     keys are all random.
 
-  private static class KeyValueGenerator {
+  /**
+   * Creates key values in for a give column family
+   *
+   */
+  public static class KeyValueGenerator {
     Random keyRandomizer;
     Random valueRandomizer;
     int randomPartsRatio = 10; // 1 out of randomValueRatio generated values will be random.
@@ -146,8 +152,7 @@ public class TestHFilePerformance extends TestCase {
     final int randomPartsDiffLength = 1 + randomPartsMaxLength -
         randomPartsMinLength;
 
-
-    KeyValueGenerator() {
+    public KeyValueGenerator() {
       keyRandomizer = new Random(0L); //TODO with seed zero
       valueRandomizer = new Random(1L); //TODO with seed one
       randomParts = new byte[randomPartsCount][];
@@ -183,6 +188,28 @@ public class TestHFilePerformance extends TestCase {
         pos += copyLength;
       }
       valueSequence++;
+    }
+
+    public KeyValue getKeyValue(int rowlen, byte[] cf, byte[] qual,
+        long timestamp, int valuelen) {
+      byte[] row = new byte[rowlen];
+      byte[] value = new byte[valuelen];
+      getKey(row);
+      getValue(value);
+      return new KeyValue(row, cf, qual, timestamp, value);
+    }
+
+    public KeyValue getKeyValue(byte[] cf, byte[] qual, long timestamp) {
+      Random r = new Random();
+      return getKeyValue(r.nextInt(100), cf, qual, timestamp, r.nextInt(1000));
+    }
+
+    public KeyValue getKeyValue(byte[] cf, byte[] qual) {
+      return getKeyValue(cf, qual, HConstants.LATEST_TIMESTAMP);
+    }
+
+    public KeyValue getKeyValue(byte[] cf) {
+      return getKeyValue(cf, null);
     }
   }
 

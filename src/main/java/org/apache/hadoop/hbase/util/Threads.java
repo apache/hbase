@@ -28,6 +28,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -55,6 +56,20 @@ public class Threads {
       final String name) {
     setDaemonThreadRunning(t.getThread(), name, null);
     return t;
+  }
+
+  public static ThreadFactory getNamedDemonThreadFactory(
+      final String namePrefix) {
+    return new ThreadFactory() {
+      AtomicInteger id = new AtomicInteger(0);
+      @Override
+      public Thread newThread(Runnable r) {
+        Thread t = new Thread(r);
+        t.setDaemon(true);
+        t.setName(namePrefix + id.addAndGet(1));
+        return t;
+      }
+    };
   }
 
   /**

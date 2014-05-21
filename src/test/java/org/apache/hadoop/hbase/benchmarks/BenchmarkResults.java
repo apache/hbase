@@ -21,7 +21,7 @@ public class BenchmarkResults<DimensionX, DimensionY, Result> {
   List<String> headerEntries;
   private Map<DimensionX, Map<DimensionY, Result>> results = 
     new HashMap<DimensionX, Map<DimensionY, Result>>();
-  
+
   public BenchmarkResults(DimensionX[] xValues, DimensionY[] yValues, 
       String xFormat, String resultFormat, List<String> headerEntries) {
     this.xValues = xValues;
@@ -30,7 +30,7 @@ public class BenchmarkResults<DimensionX, DimensionY, Result> {
     this.resultFormat = resultFormat;
     this.headerEntries = headerEntries;
   }
-  
+
   /**
    * Add a single result entry
    * @param xValue

@@ -1,11 +1,16 @@
 package org.apache.hadoop.hbase.benchmarks;
 
 import java.io.IOException;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.Random;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -22,18 +27,16 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.mapreduce.HFileOutputFormat;
 import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
+import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestTool;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
@@ -44,7 +47,7 @@ import org.apache.log4j.Logger;
  * Abstract class to run a benchmark. Extend this class to implement a 
  * benchmark. See GetBenchmark as an example.
  */
-public abstract class Benchmark {
+public abstract class Benchmark extends AbstractHBaseTool {
   public static final Log LOG = LogFactory.getLog(Benchmark.class);
   // the zk to run against, defaults to localhost
   public static final String ARG_ZOOKEEPER = "--zookeeper";
@@ -53,7 +56,7 @@ public abstract class Benchmark {
   // use local zookeeper by default
   public String zkNodeName = null;
   // cached config object
-  public Configuration conf;
+  public Configuration conf = HBaseConfiguration.create();
   // benchmark results abstraction
   public BenchmarkResults benchmarkResults;
 
@@ -61,32 +64,68 @@ public abstract class Benchmark {
    * Initialize the benchmark results structure "benchmarkResults"
    */
   public abstract void initBenchmarkResults();
-  
+
   /**
    * Run the actual benchmark
    * @throws Throwable
    */
   public abstract void runBenchmark() throws Throwable;
-  
+
+  public Options getOptions(Options opt) {
+
+    OptionBuilder.withArgName("property=value");
+    OptionBuilder.hasArg();
+    OptionBuilder.withDescription("Override HBase Configuration Settings");
+    OptionBuilder.withValueSeparator('=');
+    opt.addOption(OptionBuilder.create("D"));
+
+    OptionBuilder.withArgName("zookeeper");
+    OptionBuilder.hasArg();
+    OptionBuilder.withDescription("Zookeeper property");
+    opt.addOption(OptionBuilder.create("zk"));
+
+
+    OptionBuilder.withArgName("help");
+    OptionBuilder.hasArg();
+    OptionBuilder.withDescription("Print help");
+    opt.addOption(OptionBuilder.create("h"));
+    return opt;
+  }
+
   /**
    * Parse the args to the benchmark
    * @param args
+   * @throws ParseException
    */
-  public void parseArgs(String[] args) {
-    for (int i = 0; i < args.length; i++) {
-      if (args[i].equals(ARG_ZOOKEEPER)) {
-        zkNodeName = args[i+1];
-        i++;
+  public CommandLine parseArgs(String[] args) throws ParseException {
+    Options opt = new Options();
+    opt = getOptions(opt);
+    CommandLine cmd = null;
+    try {
+      cmd = new GnuParser().parse(opt, args);
+      if (cmd.hasOption("D")) {
+        for (String confOpt : cmd.getOptionValues("D")) {
+          String[] kv = confOpt.split("=", 2);
+          if (kv.length == 2) {
+            conf.set(kv[0], kv[1]);
+            LOG.debug("-D configuration override: " + kv[0] + "=" + kv[1]);
+          } else {
+            throw new ParseException("-D option format invalid: " + confOpt);
+          }
+        }
       }
-      else if (args[i].equals(ARG_HELP)) {
-        System.out.println("Usage: \n" +
-            "bin/hbase org.apache.hadoop.hbase.benchmarks.<CLASSNAME>" 
-            + " [--zookeeper zknode]\n");
-        System.exit(0);
-      }
+    } catch (ParseException e) {
+      new HelpFormatter().printHelp("Benchmark", opt);
+      System.exit(1);
     }
+    // any unknown args or -h
+    if (!cmd.getArgList().isEmpty() || cmd.hasOption("h")) {
+      new HelpFormatter().printHelp("Benchmark", opt);
+      System.exit(1);
+    }
+    return cmd;
   }
-  
+
   /**
    * Returns the zk nodename we are to run against
    */
@@ -372,15 +411,15 @@ public abstract class Benchmark {
     LOG.info("Done bulk loading file.");
 
   }
-  
+
   public static byte[] getRowKeyFromLong(long l) {
     return Bytes.toBytes(l);
   }
-  
+
   public static long getLongFromRowKey(byte[] rowKey) {
     return Bytes.toLong(rowKey);
   }
-  
+
   /**
    * Sets up the environment for the benchmark. All extending class should call 
    * this method from their main() method.
@@ -392,13 +431,28 @@ public abstract class Benchmark {
     Logger.getLogger("org.apache.zookeeper").setLevel(Level.ERROR);
     Logger.getLogger("org.apache.hadoop.hbase.client").setLevel(Level.ERROR);
     Logger.getLogger("org.apache.hadoop.hbase.zookeeper").setLevel(Level.ERROR);
-    Logger.getLogger("org.apache.hadoop.hbase.benchmark").setLevel(Level.DEBUG);    
-    
-    Benchmark benchmark = benchmarkClass.newInstance();    
+    Logger.getLogger("org.apache.hadoop.hbase.benchmark").setLevel(Level.DEBUG);
+
+    Benchmark benchmark = benchmarkClass.newInstance();
     benchmark.parseArgs(args);
     benchmark.initialize();
     benchmark.initBenchmarkResults();
     benchmark.runBenchmark();
-    benchmark.printBenchmarkResults();    
+    benchmark.printBenchmarkResults();
+  }
+
+  @Override
+  protected void addOptions() {
+
+  }
+
+  @Override
+  protected void processOptions(CommandLine cmd) {
+
+  }
+
+  @Override
+  protected void doWork() throws Exception {
+
   }
 }

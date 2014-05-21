@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.util.HasThread;
  * can be interrupted when there is something to do, rather than the Chore
  * sleep time which is invariant.
  */
-class LogRoller extends HasThread implements LogRollListener {
+public class LogRoller extends HasThread implements LogRollListener {
   static final Log LOG = LogFactory.getLog(LogRoller.class);
   private final ReentrantLock rollLock = new ReentrantLock();
   private final AtomicBoolean rollLog = new AtomicBoolean(false);

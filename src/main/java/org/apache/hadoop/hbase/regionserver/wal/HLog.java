@@ -96,7 +96,6 @@ import org.apache.hadoop.hbase.util.RuntimeExceptionAbortStrategy;
 import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.StringUtils;
 
@@ -167,7 +166,6 @@ public class HLog implements Syncable {
   private final FileSystem fs;
   private final Path dir;
   private final Configuration conf;
-  private final boolean perColumnFamilyFlushEnabled;
   private final LogRollListener listener;
   private final long optionalFlushInterval;
   private final long blocksize;
@@ -295,19 +293,21 @@ public class HLog implements Syncable {
   protected static final byte[] DUMMY = Bytes.toBytes("");
 
   public static class Metric {
-    public long min = Long.MAX_VALUE;
-    public long max = 0;
-    public long total = 0;
-    public int count = 0;
+    volatile public long min = Long.MAX_VALUE;
+    volatile public long max = 0;
+    volatile public long total = 0;
+    volatile public int count = 0;
 
-    synchronized void inc(final long val) {
-      min = Math.min(min, val);
-      max = Math.max(max, val);
+    void inc(final long val) {
+      synchronized (this) {
+        min = Math.min(min, val);
+        max = Math.max(max, val);
+      }
       total += val;
       ++count;
     }
 
-    synchronized Metric get() {
+    Metric get() {
       Metric copy = new Metric();
       copy.min = min;
       copy.max = max;
@@ -447,9 +447,6 @@ public class HLog implements Syncable {
         RuntimeHaltAbortStrategy.INSTANCE : RuntimeExceptionAbortStrategy.INSTANCE;
     this.fs = fs;
     this.conf = conf;
-    this.perColumnFamilyFlushEnabled = conf.getBoolean(
-            HConstants.HREGION_MEMSTORE_PER_COLUMN_FAMILY_FLUSH,
-            HConstants.DEFAULT_HREGION_MEMSTORE_PER_COLUMN_FAMILY_FLUSH);
     this.listener = listener;
     this.flushlogentries =
       conf.getInt("hbase.regionserver.flushlogentries", 1);
@@ -1087,14 +1084,14 @@ public class HLog implements Syncable {
     writeSize.inc(len);
 
     // sync txn to file system
-    start = System.currentTimeMillis();
+    start = System.nanoTime();
     this.sync(info.isMetaRegion(), txid);
 
     // Update the metrics and log down the outliers
-    long end = System.currentTimeMillis();
+    long end = System.nanoTime();
     long syncTime = end - start;
     gsyncTime.inc(syncTime);
-    if (syncTime > 1000) {
+    if (syncTime > 1000000000) {
       LOG.warn(String.format(
         "%s took %d ms appending an edit to hlog; editcount=%d, len~=%s",
         Thread.currentThread().getName(), syncTime, this.numEntries.get(),
@@ -1913,8 +1910,8 @@ public class HLog implements Syncable {
     // More means faster but bigger mem consumption.
     int logWriterThreads =
       conf.getInt("hbase.regionserver.hlog.splitlog.writer.threads", 3);
-    boolean skipErrors = conf.getBoolean("hbase.skip.errors", false);
-    HashMap<byte[], Future> writeFutureResult = new HashMap<byte[], Future>();
+    HashMap<byte[], Future<Void>> writeFutureResult =
+        new HashMap<byte[], Future<Void>>();
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
     tfb.setNameFormat((shutdownStatus == null ? "" : shutdownStatus + "-")
         + "SplitWriter-%1$d");
@@ -1923,7 +1920,7 @@ public class HLog implements Syncable {
     ThreadPoolExecutor threadPool = (ThreadPoolExecutor)
         Executors.newFixedThreadPool(logWriterThreads, f);
     for (final byte [] region : splitLogsMap.keySet()) {
-      Callable splitter = createNewSplitter(rootDir, logWriters, splitLogsMap,
+      Callable<Void> splitter = createNewSplitter(rootDir, logWriters, splitLogsMap,
           region, fs, conf, shutdownStatus);
       writeFutureResult.put(region, threadPool.submit(splitter));
     }
@@ -1947,7 +1944,7 @@ public class HLog implements Syncable {
           errorMsgr).initCause(ex);
     }
 
-    for (Map.Entry<byte[], Future> entry : writeFutureResult.entrySet()) {
+    for (Map.Entry<byte[], Future<Void>> entry : writeFutureResult.entrySet()) {
       try {
         entry.getValue().get();
       } catch (ExecutionException e) {
@@ -2274,29 +2271,6 @@ public class HLog implements Syncable {
     System.err.println("         For example: HLog --dump hdfs://example.com:9000/hbase/.logs/MACHINE/LOGFILE");
     System.err.println(" --split Split the passed directory of WAL logs");
     System.err.println("         For example: HLog --split hdfs://example.com:9000/hbase/.logs/DIR");
-  }
-
-  private static void dump(final Configuration conf, final Path p)
-  throws IOException {
-    FileSystem fs = FileSystem.get(conf);
-    if (!fs.exists(p)) {
-      throw new FileNotFoundException(p.toString());
-    }
-    if (!fs.isFile(p)) {
-      throw new IOException(p + " is not a file");
-    }
-    Reader log = getReader(fs, p, conf);
-    try {
-      int count = 0;
-      HLog.Entry entry;
-      while ((entry = log.next()) != null) {
-        System.out.println("#" + count + ", pos=" + log.getPosition() + " " +
-          entry.toString());
-        count++;
-      }
-    } finally {
-      log.close();
-    }
   }
 
   private static void checkForShutdown(Stoppable shutdownStatus)
