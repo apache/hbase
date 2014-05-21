@@ -107,7 +107,6 @@ public class TableServers implements ServerConnection {
   private final int prefetchRegionLimit;
 
   private final Object masterLock = new Object();
-  private final int maxOutstandingRequestsPerServer;
   private volatile boolean closed;
   private volatile HMasterInterface master;
   private volatile boolean masterChecked;
@@ -149,6 +148,8 @@ public class TableServers implements ServerConnection {
   private ThreadLocal<List<OperationContext>> operationContextPerThread = new ThreadLocal<>();
 
   private final ConcurrentHashMap<HServerAddress, AtomicInteger> outstandingRequests = new ConcurrentHashMap<>();
+
+  private volatile int maxOutstandingRequestsPerServer;
 
   @Override
   public void resetOperationContext() {
@@ -375,6 +376,20 @@ public class TableServers implements ServerConnection {
       throw new MasterNotRunningException(masterLocation.toString());
     }
     return this.master;
+  }
+
+  @Deprecated
+  public int getMaxOutstandingRequestsPerServer() {
+    return maxOutstandingRequestsPerServer;
+  }
+
+  /**
+   * This is provided but it's better to just create a new HTable
+   * with hbase.client.max.outstanding.requests.per.server set if possible.
+   */
+  @Deprecated
+  public void setMaxOutstandingRequestsPerServer(int maxOutstandingRequestsPerServer) {
+    this.maxOutstandingRequestsPerServer = maxOutstandingRequestsPerServer;
   }
 
   @Override

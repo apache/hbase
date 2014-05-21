@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -71,9 +72,72 @@ public class TestLoadShedding {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
-  public void testLoadSheddingWrites() {
+  @Before
+  public void cleanUp() throws Exception {
+    RUNNING.set(true);
+    NUM_SHED.set(0);
+  }
 
+  @Test(timeout = 180000)
+  public void testLoadSheddingWrites() {
+    assertTooManyCreated();
+    assertNotTooMany(4, MAX_WRITER_THREADS);
+  }
+
+
+  @Test(timeout = 180000)
+  public void testConfig() throws Exception {
+    assertTooManyCreated();
+    // Create a new HTable so that we can get an HConnection.
+    // This will be the same HConnection as the writer threads since the
+    // config is the same.
+    HTable ht = new HTable(TEST_UTIL.getConfiguration(), TABLE_NAME);
+    HConnection hc = ht.getConnection();
+
+    // Just in case we ever change types.
+    if (hc instanceof TableServers) {
+      TableServers ts = (TableServers) hc;
+      ts.setMaxOutstandingRequestsPerServer(MAX_WRITER_THREADS);
+    }
+
+    assertNotTooMany(MAX_WRITER_THREADS, MAX_WRITER_THREADS);
+  }
+
+  /**
+   * Assert that creating specified number of writer threads does not cause Exceptions to be thrown.
+   */
+  protected void assertNotTooMany(int numToCreate, int createdBefore) {
+    // Make sure that just a few threads don't contend
+    List<Thread> threads = new ArrayList<>(numToCreate);
+    for (int x=0; x< numToCreate; x++) {
+      Thread t = new WriterThread(x + createdBefore);
+      t.setDaemon(true);
+      t.start();
+      threads.add(t);
+    }
+
+    try {
+      Thread.sleep(1000);
+    } catch (InterruptedException e) {
+    }
+    RUNNING.set(false);
+    assertEquals(0, NUM_SHED.get());
+
+    // Now wait for everything to stop
+    for (Thread t:threads) {
+      try {
+        t.join();
+        t.stop();
+      } catch (InterruptedException e) {
+
+      }
+    }
+  }
+
+  /**
+   * Assert that creating specified number of writer threads does cause Exceptions to be thrown.
+   */
+  protected void assertTooManyCreated() {
     // Start lots of threads so that there will be more than 2 contending per
     // server
     List<Thread> threads = new ArrayList<>(MAX_WRITER_THREADS);
@@ -85,7 +149,7 @@ public class TestLoadShedding {
     }
 
     try {
-      Thread.sleep(5000);
+      Thread.sleep(1000);
     } catch (InterruptedException e) {
     }
 
@@ -105,23 +169,6 @@ public class TestLoadShedding {
     // Clean up
     NUM_SHED.set(0);
     RUNNING.set(true);
-
-    // Make sure that just a few threads don't contend
-    for (int x=0; x< 4; x++) {
-      Thread t = new WriterThread(x + MAX_WRITER_THREADS);
-      t.setDaemon(true);
-      t.start();
-    }
-
-    try {
-      Thread.sleep(5000);
-    } catch (InterruptedException e) {
-    }
-
-    RUNNING.set(false);
-    assertEquals(0, NUM_SHED.get());
-
-
   }
 
   protected static Put generateRandomPut() {
