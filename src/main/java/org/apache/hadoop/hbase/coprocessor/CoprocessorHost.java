@@ -69,6 +69,16 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   public static final boolean DEFAULT_ABORT_ON_ERROR = true;
   public static final String USER_REGION_COPROCESSOR_FROM_HDFS_KEY = "hbase.coprocessor.jars.and.classes";
 
+  /**
+   * Key in the configuration to the root of coprocessors on DFS
+   */
+  public static final String COPROCESSOR_DFS_ROOT_KEY =
+      "hbase.coprocessor.dfs.root";
+  /**
+   * Default values of the root of coprocessors on DFS.
+   */
+  public static final String COPROCESSOR_DFS_ROOT_DEF = "/coprocessors";
+
   private static final Log LOG = LogFactory.getLog(CoprocessorHost.class);
   protected ThriftClientInterface tcInter;
   /** Ordered set of currently loaded coprocessors with lock */
@@ -78,6 +88,23 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   // unique file prefix to use for local copies of jars when classloading
   protected String pathPrefix;
   protected AtomicInteger loadSequence = new AtomicInteger();
+  /**
+   * The field name for "loaded classes"
+   */
+  public static final String COPROCESSOR_JSON_LOADED_CLASSES_FIELD =
+      "loaded_classes";
+  /**
+   * The field name for "version"
+   */
+  public static final String COPROCESSOR_JSON_VERSION_FIELD = "version";
+  /**
+   * The field name for "name"
+   */
+  public static final String COPROCESSOR_JSON_NAME_FIELD = "name";
+  /**
+   * The file name of the configuration json file within the coprocessor folder.
+   */
+  public static final String CONFIG_JSON = "config.json";
 
   public CoprocessorHost() {
     this.pathPrefix = UUID.randomUUID().toString();
@@ -386,6 +413,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    */
   static class EnvironmentPriorityComparator
       implements Comparator<CoprocessorEnvironment> {
+    @Override
     public int compare(final CoprocessorEnvironment env1,
         final CoprocessorEnvironment env2) {
       if (env1.getPriority() < env2.getPriority()) {
@@ -585,4 +613,21 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     }
   }
 
+  /**
+   * Returns the root of coprocessors on DFS.
+   */
+  public static String getCoprocessorDfsRoot(Configuration conf) {
+    return conf.get(COPROCESSOR_DFS_ROOT_KEY, COPROCESSOR_DFS_ROOT_DEF);
+  }
+
+  /**
+   * Returns the path to a version of a coprocessor.
+   *
+   * @param root the root to all coprocessors on DFS
+   * @param name the name of the coprocessor.
+   * @param version the version
+   */
+  public static String getCoprocessorPath(String root, String name, int version) {
+    return root + Path.SEPARATOR + name + Path.SEPARATOR + version;
+  }
 }
