@@ -1142,6 +1142,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
    * @return
    */
   private boolean isNetworkException(Throwable e) {
+    if (e == null) return false;
     // This list covers most connectivity exceptions but not all.
     // For example, in SocketOutputStream a plain IOException is thrown
     // at times when the channel is closed.
@@ -1150,7 +1151,8 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
             e instanceof ClosedChannelException ||
             e instanceof SyncFailedException ||
             e instanceof EOFException ||
-            e instanceof TTransportException);
+            e instanceof TTransportException ||
+            isNetworkException(e.getCause()));
   }
 
   @Override
