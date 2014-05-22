@@ -91,22 +91,25 @@ public class DoubleBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
-  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat) {
+  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
+      boolean updateCacheMetrics) {
     Cacheable cachedBlock;
 
-    if ((cachedBlock = onHeapCache.getBlock(cacheKey, caching, repeat)) != null) {
-      stats.hit(caching);
+    if ((cachedBlock = onHeapCache.getBlock(cacheKey, caching, repeat,
+        updateCacheMetrics)) != null) {
+      if (updateCacheMetrics) stats.hit(caching);
       return cachedBlock;
 
-    } else if ((cachedBlock = offHeapCache.getBlock(cacheKey, caching, repeat)) != null) {
+    } else if ((cachedBlock = offHeapCache.getBlock(cacheKey, caching, repeat,
+        updateCacheMetrics)) != null) {
       if (caching) {
         onHeapCache.cacheBlock(cacheKey, cachedBlock);
       }
-      stats.hit(caching);
+      if (updateCacheMetrics) stats.hit(caching);
       return cachedBlock;
     }
 
-    if (!repeat) stats.miss(caching);
+    if (!repeat && updateCacheMetrics) stats.miss(caching);
     return null;
   }
 

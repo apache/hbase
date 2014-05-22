@@ -459,7 +459,8 @@ public class HFile {
      */
     HFileBlock readBlock(long offset, long onDiskBlockSize,
         boolean cacheBlock, final boolean pread, final boolean isCompaction,
-        BlockType expectedBlockType, DataBlockEncoding expectedDataBlockEncoding)
+        final boolean updateCacheMetrics, BlockType expectedBlockType,
+        DataBlockEncoding expectedDataBlockEncoding)
         throws IOException;
   }
 

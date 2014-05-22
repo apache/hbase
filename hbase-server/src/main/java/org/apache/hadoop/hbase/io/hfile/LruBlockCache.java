@@ -377,19 +377,21 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    * @param caching true if the caller caches blocks on cache misses
    * @param repeat Whether this is a repeat lookup for the same block
    *        (used to avoid double counting cache misses when doing double-check locking)
+   * @param updateCacheMetrics Whether to update cache metrics or not
    * @return buffer of specified cache key, or null if not in cache
-   * @see HFileReaderV2#readBlock(long, long, boolean, boolean, boolean, BlockType, DataBlockEncoding)
    */
   @Override
-  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat) {
+  public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
+      boolean updateCacheMetrics) {
     CachedBlock cb = map.get(cacheKey);
     if (cb == null) {
-      if (!repeat) stats.miss(caching);
-      if (victimHandler != null)
-        return victimHandler.getBlock(cacheKey, caching, repeat);
+      if (!repeat && updateCacheMetrics) stats.miss(caching);
+      if (victimHandler != null) {
+        return victimHandler.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
+      }
       return null;
     }
-    stats.hit(caching);
+    if (updateCacheMetrics) stats.hit(caching);
     cb.access(count.incrementAndGet());
     return cb.getBuffer();
   }

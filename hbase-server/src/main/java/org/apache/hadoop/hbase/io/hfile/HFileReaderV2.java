@@ -46,6 +46,8 @@ import org.apache.hadoop.io.WritableUtils;
 import org.htrace.Trace;
 import org.htrace.TraceScope;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * {@link HFile} reader for version 2.
  */
@@ -116,7 +118,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
    * @param hfs
    * @param conf
    */
-  public HFileReaderV2(Path path, FixedFileTrailer trailer,
+  public HFileReaderV2(final Path path, final FixedFileTrailer trailer,
       final FSDataInputStreamWrapper fsdis, final long size, final CacheConfig cacheConf,
       final HFileSystem hfs, final Configuration conf) throws IOException {
     super(path, trailer, size, cacheConf, hfs, conf);
@@ -177,6 +179,42 @@ public class HFileReaderV2 extends AbstractHFileReader {
     while ((b = blockIter.nextBlock()) != null) {
       loadOnOpenBlocks.add(b);
     }
+
+    // Prefetch file blocks upon open if requested
+    if (cacheConf.shouldPrefetchOnOpen()) {
+      PrefetchExecutor.request(path, new Runnable() {
+        public void run() {
+          try {
+            long offset = 0;
+            long end = fileSize - getTrailer().getTrailerSize();
+            HFileBlock prevBlock = null;
+            while (offset < end) {
+              if (Thread.interrupted()) {
+                break;
+              }
+              long onDiskSize = -1;
+              if (prevBlock != null) {
+                onDiskSize = prevBlock.getNextBlockOnDiskSizeWithHeader();
+              }
+              HFileBlock block = readBlock(offset, onDiskSize, true, false, false, false,
+                null, null);
+              prevBlock = block;
+              offset += block.getOnDiskSizeWithHeader();
+            }
+          } catch (IOException e) {
+            // IOExceptions are probably due to region closes (relocation, etc.)
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Exception encountered while prefetching " + path + ":", e);
+            }
+          } catch (Exception e) {
+            // Other exceptions are interesting
+            LOG.warn("Exception encountered while prefetching " + path + ":", e);
+          } finally {
+            PrefetchExecutor.complete(path);
+          }
+        }
+      });
+    }
   }
 
   protected HFileContext createHFileContext(FSDataInputStreamWrapper fsdis, long fileSize,
@@ -212,13 +250,13 @@ public class HFileReaderV2 extends AbstractHFileReader {
   }
 
    private HFileBlock getCachedBlock(BlockCacheKey cacheKey, boolean cacheBlock, boolean useLock,
-       boolean isCompaction, BlockType expectedBlockType,
+       boolean isCompaction, boolean updateCacheMetrics, BlockType expectedBlockType,
        DataBlockEncoding expectedDataBlockEncoding) throws IOException {
      // Check cache for block. If found return.
      if (cacheConf.isBlockCacheEnabled()) {
        BlockCache cache = cacheConf.getBlockCache();
-       HFileBlock cachedBlock =
-               (HFileBlock) cache.getBlock(cacheKey, cacheBlock, useLock);
+       HFileBlock cachedBlock = (HFileBlock) cache.getBlock(cacheKey, cacheBlock, useLock,
+         updateCacheMetrics);
        if (cachedBlock != null) {
          validateBlockType(cachedBlock, expectedBlockType);
 
@@ -297,7 +335,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
       cacheBlock &= cacheConf.shouldCacheDataOnRead();
       if (cacheConf.isBlockCacheEnabled()) {
-        HFileBlock cachedBlock = getCachedBlock(cacheKey, cacheBlock, false, false,
+        HFileBlock cachedBlock = getCachedBlock(cacheKey, cacheBlock, false, true, true,
           BlockType.META, null);
         if (cachedBlock != null) {
           // Return a distinct 'shallow copy' of the block,
@@ -348,7 +386,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
   @Override
   public HFileBlock readBlock(long dataBlockOffset, long onDiskBlockSize,
       final boolean cacheBlock, boolean pread, final boolean isCompaction,
-      BlockType expectedBlockType, DataBlockEncoding expectedDataBlockEncoding)
+      boolean updateCacheMetrics, BlockType expectedBlockType,
+      DataBlockEncoding expectedDataBlockEncoding)
       throws IOException {
     if (dataBlockIndexReader == null) {
       throw new IOException("Block index not loaded");
@@ -382,12 +421,13 @@ public class HFileReaderV2 extends AbstractHFileReader {
           // Try and get the block from the block cache. If the useLock variable is true then this
           // is the second time through the loop and it should not be counted as a block cache miss.
           HFileBlock cachedBlock = getCachedBlock(cacheKey, cacheBlock, useLock, isCompaction,
-            expectedBlockType, expectedDataBlockEncoding);
+            updateCacheMetrics, expectedBlockType, expectedDataBlockEncoding);
           if (cachedBlock != null) {
             validateBlockType(cachedBlock, expectedBlockType);
             if (cachedBlock.getBlockType().isData()) {
-              HFile.dataBlockReadCnt.incrementAndGet();
-
+              if (updateCacheMetrics) {
+                HFile.dataBlockReadCnt.incrementAndGet();
+              }
               // Validate encoding type for data blocks. We include encoding
               // type in the cache key, and we expect it to match on a cache hit.
               if (cachedBlock.getDataBlockEncoding() != dataBlockEncoder.getDataBlockEncoding()) {
@@ -422,7 +462,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
           cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock, cacheConf.isInMemory());
         }
 
-        if (hfileBlock.getBlockType().isData()) {
+        if (updateCacheMetrics && hfileBlock.getBlockType().isData()) {
           HFile.dataBlockReadCnt.incrementAndGet();
         }
 
@@ -493,6 +533,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
   }
 
   public void close(boolean evictOnClose) throws IOException {
+    PrefetchExecutor.cancel(path);
     if (evictOnClose && cacheConf.isBlockCacheEnabled()) {
       int numEvicted = cacheConf.getBlockCache().evictBlocksByHfileName(name);
       if (LOG.isTraceEnabled()) {
@@ -644,7 +685,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         // figure out the size.
         seekToBlock = reader.readBlock(previousBlockOffset,
             seekToBlock.getOffset() - previousBlockOffset, cacheBlocks,
-            pread, isCompaction, BlockType.DATA, getEffectiveDataBlockEncoding());
+            pread, isCompaction, true, BlockType.DATA, getEffectiveDataBlockEncoding());
         // TODO shortcut: seek forward in this block to the last key of the
         // block.
       }
@@ -680,7 +721,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         curBlock = reader.readBlock(curBlock.getOffset()
             + curBlock.getOnDiskSizeWithHeader(),
             curBlock.getNextBlockOnDiskSizeWithHeader(), cacheBlocks, pread,
-            isCompaction, null, getEffectiveDataBlockEncoding());
+            isCompaction, true, null, getEffectiveDataBlockEncoding());
       } while (!curBlock.getBlockType().isData());
 
       return curBlock;
@@ -844,7 +885,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
 
       block = reader.readBlock(firstDataBlockOffset, -1, cacheBlocks, pread,
-          isCompaction, BlockType.DATA, getEffectiveDataBlockEncoding());
+          isCompaction, true, BlockType.DATA, getEffectiveDataBlockEncoding());
       if (block.getOffset() < 0) {
         throw new IOException("Invalid block offset: " + block.getOffset());
       }
@@ -1139,7 +1180,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
 
       block = reader.readBlock(firstDataBlockOffset, -1, cacheBlocks, pread,
-          isCompaction, BlockType.DATA, getEffectiveDataBlockEncoding());
+          isCompaction, true, BlockType.DATA, getEffectiveDataBlockEncoding());
       if (block.getOffset() < 0) {
         throw new IOException("Invalid block offset: " + block.getOffset());
       }
@@ -1285,5 +1326,14 @@ public class HFileReaderV2 extends AbstractHFileReader {
   @Override
   public HFileContext getFileContext() {
     return hfileContext;
+  }
+
+  /**
+   * Returns false if block prefetching was requested for this file and has
+   * not completed, true otherwise
+   */
+  @VisibleForTesting
+  boolean prefetchComplete() {
+    return PrefetchExecutor.isCompleted(path);
   }
 }

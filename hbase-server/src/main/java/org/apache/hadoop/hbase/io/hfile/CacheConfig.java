@@ -146,6 +146,13 @@ public class CacheConfig {
   public static final String SLAB_CACHE_OFFHEAP_PERCENTAGE_KEY =
     "hbase.offheapcache.percentage";
 
+ /**
+   * Configuration key to prefetch all blocks of a given file into the block cache
+   * when the file is opened.
+   */
+  public static final String PREFETCH_BLOCKS_ON_OPEN_KEY =
+      "hbase.rs.prefetchblocksonopen";
+
   // Defaults
 
   public static final boolean DEFAULT_CACHE_DATA_ON_READ = true;
@@ -155,6 +162,7 @@ public class CacheConfig {
   public static final boolean DEFAULT_CACHE_BLOOMS_ON_WRITE = false;
   public static final boolean DEFAULT_EVICT_ON_CLOSE = false;
   public static final boolean DEFAULT_COMPRESSED_CACHE = false;
+  public static final boolean DEFAULT_PREFETCH_ON_OPEN = false;
 
   /** Local reference to the block cache, null if completely disabled */
   private final BlockCache blockCache;
@@ -185,6 +193,9 @@ public class CacheConfig {
   /** Whether data blocks should be stored in compressed form in the cache */
   private final boolean cacheCompressed;
 
+  /** Whether data blocks should be prefetched into the cache */
+  private final boolean prefetchOnOpen;
+
   /**
    * Create a cache configuration using the specified configuration object and
    * family descriptor.
@@ -205,7 +216,9 @@ public class CacheConfig {
             DEFAULT_CACHE_BLOOMS_ON_WRITE) || family.shouldCacheBloomsOnWrite(),
         conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY,
             DEFAULT_EVICT_ON_CLOSE) || family.shouldEvictBlocksOnClose(),
-        conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_COMPRESSED_CACHE)
+        conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_COMPRESSED_CACHE),
+        conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY,
+            DEFAULT_PREFETCH_ON_OPEN) || family.shouldPrefetchBlocksOnOpen()
      );
   }
 
@@ -226,7 +239,8 @@ public class CacheConfig {
                 DEFAULT_CACHE_BLOOMS_ON_WRITE),
         conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE),
         conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY,
-            DEFAULT_COMPRESSED_CACHE)
+            DEFAULT_COMPRESSED_CACHE),
+        conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN)
      );
   }
 
@@ -242,12 +256,13 @@ public class CacheConfig {
    * @param cacheBloomsOnWrite whether blooms should be cached on write
    * @param evictOnClose whether blocks should be evicted when HFile is closed
    * @param cacheCompressed whether to store blocks as compressed in the cache
+   * @param prefetchOnOpen whether to prefetch blocks upon open
    */
   CacheConfig(final BlockCache blockCache,
       final boolean cacheDataOnRead, final boolean inMemory,
       final boolean cacheDataOnWrite, final boolean cacheIndexesOnWrite,
       final boolean cacheBloomsOnWrite, final boolean evictOnClose,
-      final boolean cacheCompressed) {
+      final boolean cacheCompressed, final boolean prefetchOnOpen) {
     this.blockCache = blockCache;
     this.cacheDataOnRead = cacheDataOnRead;
     this.inMemory = inMemory;
@@ -256,6 +271,7 @@ public class CacheConfig {
     this.cacheBloomsOnWrite = cacheBloomsOnWrite;
     this.evictOnClose = evictOnClose;
     this.cacheCompressed = cacheCompressed;
+    this.prefetchOnOpen = prefetchOnOpen;
     LOG.info(this);
   }
 
@@ -267,7 +283,7 @@ public class CacheConfig {
     this(cacheConf.blockCache, cacheConf.cacheDataOnRead, cacheConf.inMemory,
         cacheConf.cacheDataOnWrite, cacheConf.cacheIndexesOnWrite,
         cacheConf.cacheBloomsOnWrite, cacheConf.evictOnClose,
-        cacheConf.cacheCompressed);
+        cacheConf.cacheCompressed, cacheConf.prefetchOnOpen);
   }
 
   /**
@@ -303,7 +319,10 @@ public class CacheConfig {
     boolean shouldCache = isBlockCacheEnabled()
         && (cacheDataOnRead ||
             category == BlockCategory.INDEX ||
-            category == BlockCategory.BLOOM);
+            category == BlockCategory.BLOOM ||
+            (prefetchOnOpen &&
+                (category != BlockCategory.META &&
+                 category != BlockCategory.UNKNOWN)));
     return shouldCache;
   }
 
@@ -371,6 +390,13 @@ public class CacheConfig {
     return isBlockCacheEnabled() && this.cacheCompressed;
   }
 
+  /**
+   * @return true if blocks should be prefetched into the cache on open, false if not
+   */
+  public boolean shouldPrefetchOnOpen() {
+    return isBlockCacheEnabled() && this.prefetchOnOpen;
+  }
+
   @Override
   public String toString() {
     if (!isBlockCacheEnabled()) {
@@ -382,7 +408,8 @@ public class CacheConfig {
       ", cacheIndexesOnWrite=" + shouldCacheIndexesOnWrite() +
       ", cacheBloomsOnWrite=" + shouldCacheBloomsOnWrite() +
       ", cacheEvictOnClose=" + shouldEvictOnClose() +
-      ", cacheCompressed=" + shouldCacheCompressed();
+      ", cacheCompressed=" + shouldCacheCompressed() +
+      ", prefetchOnOpen=" + shouldPrefetchOnOpen();
   }
 
   // Static block cache reference and methods

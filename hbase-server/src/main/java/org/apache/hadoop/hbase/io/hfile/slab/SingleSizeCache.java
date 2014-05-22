@@ -149,14 +149,15 @@ public class SingleSizeCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public Cacheable getBlock(BlockCacheKey key, boolean caching, boolean repeat) {
+  public Cacheable getBlock(BlockCacheKey key, boolean caching, boolean repeat,
+      boolean updateCacheMetrics) {
     CacheablePair contentBlock = backingMap.get(key);
     if (contentBlock == null) {
-      if (!repeat) stats.miss(caching);
+      if (!repeat && updateCacheMetrics) stats.miss(caching);
       return null;
     }
 
-    stats.hit(caching);
+    if (updateCacheMetrics) stats.hit(caching);
     // If lock cannot be obtained, that means we're undergoing eviction.
     try {
       contentBlock.recentlyAccessed.set(System.nanoTime());

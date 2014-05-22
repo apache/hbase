@@ -88,6 +88,13 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String CACHE_INDEX_ON_WRITE = "CACHE_INDEX_ON_WRITE";
   public static final String CACHE_BLOOMS_ON_WRITE = "CACHE_BLOOMS_ON_WRITE";
   public static final String EVICT_BLOCKS_ON_CLOSE = "EVICT_BLOCKS_ON_CLOSE";
+  /**
+   * Key for the PREFETCH_BLOCKS_ON_OPEN attribute.
+   * If set, all INDEX, BLOOM, and DATA blocks of HFiles belonging to this
+   * family will be loaded into the cache as soon as the file is opened. These
+   * loads will not count as cache misses.
+   */
+  public static final String PREFETCH_BLOCKS_ON_OPEN = "PREFETCH_BLOCKS_ON_OPEN";
 
   /**
    * Size of storefile/hfile 'blocks'.  Default is {@link #DEFAULT_BLOCKSIZE}.
@@ -207,6 +214,11 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public static final boolean DEFAULT_COMPRESS_TAGS = true;
 
+  /*
+   * Default setting for whether to prefetch blocks into the blockcache on open.
+   */
+  public static final boolean DEFAULT_PREFETCH_BLOCKS_ON_OPEN = false;
+
   private final static Map<String, String> DEFAULT_VALUES
     = new HashMap<String, String>();
   private final static Set<ImmutableBytesWritable> RESERVED_KEYWORDS
@@ -227,6 +239,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       DEFAULT_VALUES.put(CACHE_INDEX_ON_WRITE, String.valueOf(DEFAULT_CACHE_INDEX_ON_WRITE));
       DEFAULT_VALUES.put(CACHE_BLOOMS_ON_WRITE, String.valueOf(DEFAULT_CACHE_BLOOMS_ON_WRITE));
       DEFAULT_VALUES.put(EVICT_BLOCKS_ON_CLOSE, String.valueOf(DEFAULT_EVICT_BLOCKS_ON_CLOSE));
+      DEFAULT_VALUES.put(PREFETCH_BLOCKS_ON_OPEN, String.valueOf(DEFAULT_PREFETCH_BLOCKS_ON_OPEN));
       for (String s : DEFAULT_VALUES.keySet()) {
         RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(s)));
       }
@@ -931,6 +944,25 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public HColumnDescriptor setEvictBlocksOnClose(boolean value) {
     return setValue(EVICT_BLOCKS_ON_CLOSE, Boolean.toString(value));
+  }
+
+  /**
+   * @return true if we should prefetch blocks into the blockcache on open
+   */
+  public boolean shouldPrefetchBlocksOnOpen() {
+    String value = getValue(PREFETCH_BLOCKS_ON_OPEN);
+   if (value != null) {
+      return Boolean.valueOf(value).booleanValue();
+    }
+    return DEFAULT_PREFETCH_BLOCKS_ON_OPEN;
+  }
+
+  /**
+   * @param value true if we should prefetch blocks into the blockcache on open
+   * @return this (for chained invocation)
+   */
+  public HColumnDescriptor setPrefetchBlocksOnOpen(boolean value) {
+    return setValue(PREFETCH_BLOCKS_ON_OPEN, Boolean.toString(value));
   }
 
   /**

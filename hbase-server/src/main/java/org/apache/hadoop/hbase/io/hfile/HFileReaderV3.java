@@ -69,7 +69,7 @@ public class HFileReaderV3 extends HFileReaderV2 {
    * @param conf
    *          Configuration
    */
-  public HFileReaderV3(Path path, FixedFileTrailer trailer, final FSDataInputStreamWrapper fsdis,
+  public HFileReaderV3(final Path path, FixedFileTrailer trailer, final FSDataInputStreamWrapper fsdis,
       final long size, final CacheConfig cacheConf, final HFileSystem hfs,
       final Configuration conf) throws IOException {
     super(path, trailer, fsdis, size, cacheConf, hfs, conf);

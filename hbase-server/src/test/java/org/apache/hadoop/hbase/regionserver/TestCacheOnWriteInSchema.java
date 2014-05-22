@@ -234,10 +234,10 @@ public class TestCacheOnWriteInSchema {
         // Flags: don't cache the block, use pread, this is not a compaction.
         // Also, pass null for expected block type to avoid checking it.
         HFileBlock block = reader.readBlock(offset, onDiskSize, false, true,
-          false, null, DataBlockEncoding.NONE);
+          false, true, null, DataBlockEncoding.NONE);
         BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(),
           offset);
-        boolean isCached = cache.getBlock(blockCacheKey, true, false) != null;
+        boolean isCached = cache.getBlock(blockCacheKey, true, false, true) != null;
         boolean shouldBeCached = cowType.shouldBeCached(block.getBlockType());
         if (shouldBeCached != isCached) {
           throw new AssertionError(

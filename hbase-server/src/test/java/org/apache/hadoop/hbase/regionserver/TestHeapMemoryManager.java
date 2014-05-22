@@ -279,7 +279,8 @@ public class TestHeapMemoryManager {
     }
 
     @Override
-    public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat) {
+    public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
+        boolean updateCacheMetrics) {
       return null;
     }
 
