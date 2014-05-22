@@ -32,29 +32,11 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.test.RedundantKVGenerator;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestSeekToBlockWithEncoders {
-
-  private static int ENCODED_DATA_OFFSET = HConstants.HFILEBLOCK_HEADER_SIZE
-      + DataBlockEncoding.ID_SIZE;
-
-  private HFileBlockEncodingContext getEncodingContext(Compression.Algorithm algo,
-      DataBlockEncoding encoding) {
-    DataBlockEncoder encoder = encoding.getEncoder();
-    HFileContext meta = new HFileContextBuilder().withHBaseCheckSum(false).withIncludesMvcc(false)
-        .withIncludesTags(false).withCompression(algo).build();
-    if (encoder != null) {
-      return encoder
-          .newDataBlockEncodingContext(encoding, HConstants.HFILEBLOCK_DUMMY_HEADER, meta);
-    } else {
-      return new HFileBlockDefaultEncodingContext(encoding, HConstants.HFILEBLOCK_DUMMY_HEADER,
-          meta);
-    }
-  }
 
   /**
    * Test seeking while file is encoded.
@@ -77,10 +59,9 @@ public class TestSeekToBlockWithEncoders {
     KeyValue kv5 = new KeyValue(Bytes.toBytes("bba"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
         Bytes.toBytes("val"));
     sampleKv.add(kv5);
-    ByteBuffer originalBuffer = RedundantKVGenerator.convertKvToByteBuffer(sampleKv, false);
     KeyValue toSeek = new KeyValue(Bytes.toBytes("aae"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
         Bytes.toBytes("val"));
-    seekToTheKey(kv4, originalBuffer, toSeek);
+    seekToTheKey(kv4, sampleKv, toSeek);
   }
 
   /**
@@ -104,10 +85,9 @@ public class TestSeekToBlockWithEncoders {
     KeyValue kv5 = new KeyValue(Bytes.toBytes("aaaad"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
         Bytes.toBytes("val"));
     sampleKv.add(kv5);
-    ByteBuffer originalBuffer = RedundantKVGenerator.convertKvToByteBuffer(sampleKv, false);
     KeyValue toSeek = new KeyValue(Bytes.toBytes("aaaa"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
         Bytes.toBytes("val"));
-    seekToTheKey(kv1, originalBuffer, toSeek);
+    seekToTheKey(kv1, sampleKv, toSeek);
   }
 
   /**
@@ -131,10 +111,9 @@ public class TestSeekToBlockWithEncoders {
     KeyValue kv5 = new KeyValue(Bytes.toBytes("bbbcd"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
         Bytes.toBytes("val"));
     sampleKv.add(kv5);
-    ByteBuffer originalBuffer = RedundantKVGenerator.convertKvToByteBuffer(sampleKv, false);
     KeyValue toSeek = new KeyValue(Bytes.toBytes("bbbce"), Bytes.toBytes("f1"),
         Bytes.toBytes("q1"), Bytes.toBytes("val"));
-    seekToTheKey(kv5, originalBuffer, toSeek);
+    seekToTheKey(kv5, sampleKv, toSeek);
   }
 
   /**
@@ -155,10 +134,9 @@ public class TestSeekToBlockWithEncoders {
     KeyValue kv4 = new KeyValue(Bytes.toBytes("row11baa"), Bytes.toBytes("f1"),
         Bytes.toBytes("q1"), Bytes.toBytes("val"));
     sampleKv.add(kv4);
-    ByteBuffer originalBuffer = RedundantKVGenerator.convertKvToByteBuffer(sampleKv, false);
     KeyValue toSeek = KeyValueUtil.createLastOnRow(kv3.getRowArray(), kv3.getRowOffset(),
         kv3.getRowLength(), null, 0, 0, null, 0, 0);
-    seekToTheKey(kv3, originalBuffer, toSeek);
+    seekToTheKey(kv3, sampleKv, toSeek);
   }
 
   @Test
@@ -176,10 +154,9 @@ public class TestSeekToBlockWithEncoders {
     KeyValue kv5 = new KeyValue(Bytes.toBytes("aac"), Bytes.toBytes("f1"), Bytes.toBytes("q2"),
         Bytes.toBytes("val"));
     sampleKv.add(kv5);
-    ByteBuffer originalBuffer = RedundantKVGenerator.convertKvToByteBuffer(sampleKv, false);
     KeyValue toSeek = new KeyValue(Bytes.toBytes("aac"), Bytes.toBytes("f1"), Bytes.toBytes("q2"),
         Bytes.toBytes("val"));
-    seekToTheKey(kv5, originalBuffer, toSeek);
+    seekToTheKey(kv5, sampleKv, toSeek);
   }
 
   @Test
@@ -200,10 +177,9 @@ public class TestSeekToBlockWithEncoders {
     KeyValue kv6 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("q5"),
         Bytes.toBytes("val"));
     sampleKv.add(kv6);
-    ByteBuffer originalBuffer = RedundantKVGenerator.convertKvToByteBuffer(sampleKv, false);
     KeyValue toSeek = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("q5"),
         Bytes.toBytes("val"));
-    seekToTheKey(kv6, originalBuffer, toSeek);
+    seekToTheKey(kv6, sampleKv, toSeek);
   }
 
   @Test
@@ -224,10 +200,9 @@ public class TestSeekToBlockWithEncoders {
     KeyValue kv6 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("z5"),
         Bytes.toBytes("val"));
     sampleKv.add(kv6);
-    ByteBuffer originalBuffer = RedundantKVGenerator.convertKvToByteBuffer(sampleKv, false);
     KeyValue toSeek = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("q5"),
         Bytes.toBytes("val"));
-    seekToTheKey(kv5, originalBuffer, toSeek);
+    seekToTheKey(kv5, sampleKv, toSeek);
   }
 
   @Test
@@ -248,10 +223,9 @@ public class TestSeekToBlockWithEncoders {
     KeyValue kv6 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("qz"),
         Bytes.toBytes("val"));
     sampleKv.add(kv6);
-    ByteBuffer originalBuffer = RedundantKVGenerator.convertKvToByteBuffer(sampleKv, false);
     KeyValue toSeek = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("qz"),
         Bytes.toBytes("val"));
-    seekToTheKey(kv6, originalBuffer, toSeek);
+    seekToTheKey(kv6, sampleKv, toSeek);
   }
 
   @Test
@@ -269,27 +243,28 @@ public class TestSeekToBlockWithEncoders {
     KeyValue kv5 = new KeyValue(Bytes.toBytes("aac"), Bytes.toBytes("fam1"), Bytes.toBytes("q2"),
         Bytes.toBytes("val"));
     sampleKv.add(kv5);
-    ByteBuffer originalBuffer = RedundantKVGenerator.convertKvToByteBuffer(sampleKv, false);
     KeyValue toSeek = new KeyValue(Bytes.toBytes("aac"), Bytes.toBytes("fam2"),
         Bytes.toBytes("q2"), Bytes.toBytes("val"));
-    seekToTheKey(kv5, originalBuffer, toSeek);
+    seekToTheKey(kv5, sampleKv, toSeek);
   }
 
-  private void seekToTheKey(KeyValue expected, ByteBuffer originalBuffer, KeyValue toSeek)
+  private void seekToTheKey(KeyValue expected, List<KeyValue> kvs, KeyValue toSeek)
       throws IOException {
     // create all seekers
-    List<DataBlockEncoder.EncodedSeeker> encodedSeekers = 
-        new ArrayList<DataBlockEncoder.EncodedSeeker>();
+    List<DataBlockEncoder.EncodedSeeker> encodedSeekers = new ArrayList<DataBlockEncoder.EncodedSeeker>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
       if (encoding.getEncoder() == null || encoding == DataBlockEncoding.PREFIX_TREE) {
         continue;
       }
 
-      ByteBuffer encodedBuffer = ByteBuffer.wrap(encodeBytes(encoding, originalBuffer));
       DataBlockEncoder encoder = encoding.getEncoder();
       HFileContext meta = new HFileContextBuilder().withHBaseCheckSum(false)
           .withIncludesMvcc(false).withIncludesTags(false)
           .withCompression(Compression.Algorithm.NONE).build();
+      HFileBlockEncodingContext encodingContext = encoder.newDataBlockEncodingContext(encoding,
+          HConstants.HFILEBLOCK_DUMMY_HEADER, meta);
+      ByteBuffer encodedBuffer = TestDataBlockEncoders.encodeKeyValues(encoding, kvs,
+          encodingContext);
       DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(KeyValue.COMPARATOR,
           encoder.newDataBlockDecodingContext(meta));
       seeker.setCurrentBuffer(encodedBuffer);
@@ -310,18 +285,5 @@ public class TestSeekToBlockWithEncoders {
       assertEquals(expected, keyValue2);
       seeker.rewind();
     }
-  }
-
-  private byte[] encodeBytes(DataBlockEncoding encoding, ByteBuffer dataset) throws IOException {
-    DataBlockEncoder encoder = encoding.getEncoder();
-    HFileBlockEncodingContext encodingCtx = getEncodingContext(Compression.Algorithm.NONE, encoding);
-
-    encoder.encodeKeyValues(dataset, encodingCtx);
-
-    byte[] encodedBytesWithHeader = encodingCtx.getUncompressedBytesWithHeader();
-    byte[] encodedData = new byte[encodedBytesWithHeader.length - ENCODED_DATA_OFFSET];
-    System.arraycopy(encodedBytesWithHeader, ENCODED_DATA_OFFSET, encodedData, 0,
-        encodedData.length);
-    return encodedData;
   }
 }

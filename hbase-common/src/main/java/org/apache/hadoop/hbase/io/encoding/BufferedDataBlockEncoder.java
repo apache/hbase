@@ -474,10 +474,18 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     abstract protected void decodeNext();
   }
 
-  protected final void afterEncodingKeyValue(ByteBuffer in,
-      DataOutputStream out, HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
+  /**
+   * @param kv
+   * @param out
+   * @param encodingCtx
+   * @return unencoded size added
+   * @throws IOException
+   */
+  protected final int afterEncodingKeyValue(KeyValue kv, DataOutputStream out,
+      HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
+    int size = 0;
     if (encodingCtx.getHFileContext().isIncludesTags()) {
-      short tagsLength = in.getShort();
+      short tagsLength = kv.getTagsLength();
       ByteBufferUtils.putCompressedInt(out, tagsLength);
       // There are some tags to be written
       if (tagsLength > 0) {
@@ -485,23 +493,23 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         // When tag compression is enabled, tagCompressionContext will have a not null value. Write
         // the tags using Dictionary compression in such a case
         if (tagCompressionContext != null) {
-          tagCompressionContext.compressTags(out, in, tagsLength);
+          tagCompressionContext
+              .compressTags(out, kv.getTagsArray(), kv.getTagsOffset(), tagsLength);
         } else {
-          ByteBufferUtils.moveBufferToStream(out, in, tagsLength);
+          out.write(kv.getTagsArray(), kv.getTagsOffset(), tagsLength);
         }
       }
+      size += tagsLength + KeyValue.TAGS_LENGTH_SIZE;
     }
     if (encodingCtx.getHFileContext().isIncludesMvcc()) {
       // Copy memstore timestamp from the byte buffer to the output stream.
-      long memstoreTS = -1;
-      try {
-        memstoreTS = ByteBufferUtils.readVLong(in);
-        WritableUtils.writeVLong(out, memstoreTS);
-      } catch (IOException ex) {
-        throw new RuntimeException("Unable to copy memstore timestamp " +
-            memstoreTS + " after encoding a key/value");
-      }
+      long memstoreTS = kv.getMvccVersion();
+      WritableUtils.writeVLong(out, memstoreTS);
+      // TODO use a writeVLong which returns the #bytes written so that 2 time parsing can be
+      // avoided.
+      size += WritableUtils.getVIntSize(memstoreTS);
     }
+    return size;
   }
 
   protected final void afterDecodingKeyValue(DataInputStream source,
@@ -545,56 +553,9 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     return new HFileBlockDefaultDecodingContext(meta);
   }
 
-  /**
-   * Compress KeyValues and write them to output buffer.
-   * @param out Where to write compressed data.
-   * @param in Source of KeyValue for compression.
-   * @param encodingCtx use the Encoding ctx associated with the current block
-   * @throws IOException If there is an error writing to output stream.
-   */
-  public abstract void internalEncodeKeyValues(DataOutputStream out,
-      ByteBuffer in, HFileBlockDefaultEncodingContext encodingCtx) throws IOException;
-
   protected abstract ByteBuffer internalDecodeKeyValues(DataInputStream source,
       int allocateHeaderLength, int skipLastBytes, HFileBlockDefaultDecodingContext decodingCtx)
       throws IOException;
-
-  @Override
-  public void encodeKeyValues(ByteBuffer in,
-      HFileBlockEncodingContext blkEncodingCtx) throws IOException {
-    if (blkEncodingCtx.getClass() != HFileBlockDefaultEncodingContext.class) {
-      throw new IOException (this.getClass().getName() + " only accepts "
-          + HFileBlockDefaultEncodingContext.class.getName() + " as the " +
-          "encoding context.");
-    }
-
-    HFileBlockDefaultEncodingContext encodingCtx =
-        (HFileBlockDefaultEncodingContext) blkEncodingCtx;
-    encodingCtx.prepareEncoding();
-    DataOutputStream dataOut = encodingCtx.getOutputStreamForEncoder();
-    if (encodingCtx.getHFileContext().isIncludesTags()
-        && encodingCtx.getHFileContext().isCompressTags()) {
-      if (encodingCtx.getTagCompressionContext() != null) {
-        // It will be overhead to create the TagCompressionContext again and again for every block
-        // encoding.
-        encodingCtx.getTagCompressionContext().clear();
-      } else {
-        try {
-          TagCompressionContext tagCompressionContext = new TagCompressionContext(
-              LRUDictionary.class, Byte.MAX_VALUE);
-          encodingCtx.setTagCompressionContext(tagCompressionContext);
-        } catch (Exception e) {
-          throw new IOException("Failed to initialize TagCompressionContext", e);
-        }
-      }
-    }
-    internalEncodeKeyValues(dataOut, in, encodingCtx);
-    if (encodingCtx.getDataBlockEncoding() != DataBlockEncoding.NONE) {
-      encodingCtx.postEncoding(BlockType.ENCODED_DATA);
-    } else {
-      encodingCtx.postEncoding(BlockType.DATA);
-    }
-  }
 
   /**
    * Asserts that there is at least the given amount of unfilled space
@@ -613,4 +574,68 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
   }
 
+  @Override
+  public void startBlockEncoding(HFileBlockEncodingContext blkEncodingCtx, DataOutputStream out)
+      throws IOException {
+    if (blkEncodingCtx.getClass() != HFileBlockDefaultEncodingContext.class) {
+      throw new IOException (this.getClass().getName() + " only accepts "
+          + HFileBlockDefaultEncodingContext.class.getName() + " as the " +
+          "encoding context.");
+    }
+
+    HFileBlockDefaultEncodingContext encodingCtx =
+        (HFileBlockDefaultEncodingContext) blkEncodingCtx;
+    encodingCtx.prepareEncoding(out);
+    if (encodingCtx.getHFileContext().isIncludesTags()
+        && encodingCtx.getHFileContext().isCompressTags()) {
+      if (encodingCtx.getTagCompressionContext() != null) {
+        // It will be overhead to create the TagCompressionContext again and again for every block
+        // encoding.
+        encodingCtx.getTagCompressionContext().clear();
+      } else {
+        try {
+          TagCompressionContext tagCompressionContext = new TagCompressionContext(
+              LRUDictionary.class, Byte.MAX_VALUE);
+          encodingCtx.setTagCompressionContext(tagCompressionContext);
+        } catch (Exception e) {
+          throw new IOException("Failed to initialize TagCompressionContext", e);
+        }
+      }
+    }
+    ByteBufferUtils.putInt(out, 0); // DUMMY length. This will be updated in endBlockEncoding()
+    blkEncodingCtx.setEncodingState(new BufferedDataBlockEncodingState());
+  }
+
+  private static class BufferedDataBlockEncodingState extends EncodingState {
+    int unencodedDataSizeWritten = 0;
+  }
+
+  @Override
+  public int encode(KeyValue kv, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+      throws IOException {
+    BufferedDataBlockEncodingState state = (BufferedDataBlockEncodingState) encodingCtx
+        .getEncodingState();
+    int encodedKvSize = internalEncode(kv, (HFileBlockDefaultEncodingContext) encodingCtx, out);
+    state.unencodedDataSizeWritten += encodedKvSize;
+    return encodedKvSize;
+  }
+
+  public abstract int internalEncode(KeyValue kv, HFileBlockDefaultEncodingContext encodingCtx,
+      DataOutputStream out) throws IOException;
+
+  @Override
+  public void endBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out,
+      byte[] uncompressedBytesWithHeader) throws IOException {
+    BufferedDataBlockEncodingState state = (BufferedDataBlockEncodingState) encodingCtx
+        .getEncodingState();
+    // Write the unencodedDataSizeWritten (with header size)
+    Bytes.putInt(uncompressedBytesWithHeader, HConstants.HFILEBLOCK_HEADER_SIZE
+        + DataBlockEncoding.ID_SIZE, state.unencodedDataSizeWritten
+        );
+    if (encodingCtx.getDataBlockEncoding() != DataBlockEncoding.NONE) {
+      encodingCtx.postEncoding(BlockType.ENCODED_DATA);
+    } else {
+      encodingCtx.postEncoding(BlockType.DATA);
+    }
+  }
 }

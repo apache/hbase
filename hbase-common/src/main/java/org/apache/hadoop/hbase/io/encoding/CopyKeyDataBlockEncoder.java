@@ -22,9 +22,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.io.WritableUtils;
 
 /**
  * Just copy data, do not do any kind of compression. Use for comparison and
@@ -32,14 +34,33 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
-  @Override
-  public void internalEncodeKeyValues(DataOutputStream out,
-      ByteBuffer in, HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
-    in.rewind();
-    ByteBufferUtils.putInt(out, in.limit());
-    ByteBufferUtils.moveBufferToStream(out, in, in.limit());
-  }
 
+  @Override
+  public int internalEncode(KeyValue kv, HFileBlockDefaultEncodingContext encodingContext,
+      DataOutputStream out) throws IOException {
+    int klength = kv.getKeyLength();
+    int vlength = kv.getValueLength();
+
+    out.writeInt(klength);
+    out.writeInt(vlength);
+    out.write(kv.getBuffer(), kv.getKeyOffset(), klength);
+    out.write(kv.getValueArray(), kv.getValueOffset(), vlength);
+    int size = klength + vlength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
+    // Write the additional tag into the stream
+    if (encodingContext.getHFileContext().isIncludesTags()) {
+      short tagsLength = kv.getTagsLength();
+      out.writeShort(tagsLength);
+      if (tagsLength > 0) {
+        out.write(kv.getTagsArray(), kv.getTagsOffset(), tagsLength);
+      }
+      size += tagsLength + KeyValue.TAGS_LENGTH_SIZE;
+    }
+    if (encodingContext.getHFileContext().isIncludesMvcc()) {
+      WritableUtils.writeVLong(out, kv.getMvccVersion());
+      size += WritableUtils.getVIntSize(kv.getMvccVersion());
+    }
+    return size;
+  }
 
   @Override
   public ByteBuffer getFirstKeyInBlock(ByteBuffer block) {

@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
+import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.compress.Compressor;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,21 +69,13 @@ import com.google.common.base.Preconditions;
 @Category(SmallTests.class)
 @RunWith(Parameterized.class)
 public class TestHFileBlockCompatibility {
-  // change this value to activate more logs
-  private static final boolean[] BOOLEAN_VALUES = new boolean[] { false, true };
 
   private static final Log LOG = LogFactory.getLog(TestHFileBlockCompatibility.class);
-
   private static final Compression.Algorithm[] COMPRESSION_ALGORITHMS = {
       NONE, GZ };
 
-  // The mnior version for pre-checksum files
-  private static int MINOR_VERSION = 0;
-
-  private static final HBaseTestingUtility TEST_UTIL =
-    new HBaseTestingUtility();
+  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private HFileSystem fs;
-  private int uncompressedSizeV1;
 
   private final boolean includesMemstoreTS;
   private final boolean includesTag;
@@ -109,7 +103,6 @@ public class TestHFileBlockCompatibility {
     DataOutputStream dos = new DataOutputStream(os);
     BlockType.META.write(dos); // Let's make this a meta block.
     TestHFileBlock.writeTestBlockContents(dos);
-    uncompressedSizeV1 = dos.size();
     dos.flush();
     algo.returnCompressor(compressor);
     return baos.toByteArray();
@@ -259,8 +252,8 @@ public class TestHFileBlockCompatibility {
           Path path = new Path(TEST_UTIL.getDataTestDir(), "blocks_v2_"
               + algo + "_" + encoding.toString());
           FSDataOutputStream os = fs.create(path);
-          HFileDataBlockEncoder dataBlockEncoder =
-              new HFileDataBlockEncoderImpl(encoding);
+          HFileDataBlockEncoder dataBlockEncoder = (encoding != DataBlockEncoding.NONE) ?
+              new HFileDataBlockEncoderImpl(encoding) : NoOpDataBlockEncoder.INSTANCE;
           TestHFileBlockCompatibility.Writer hbw =
               new TestHFileBlockCompatibility.Writer(algo,
                   dataBlockEncoder, includesMemstoreTS, includesTag);
@@ -268,12 +261,25 @@ public class TestHFileBlockCompatibility {
           final List<Integer> encodedSizes = new ArrayList<Integer>();
           final List<ByteBuffer> encodedBlocks = new ArrayList<ByteBuffer>();
           for (int blockId = 0; blockId < numBlocks; ++blockId) {
-            DataOutputStream dos = hbw.startWriting(BlockType.DATA);
-            TestHFileBlock.writeEncodedBlock(algo, encoding, dos, encodedSizes,
-                encodedBlocks, blockId, includesMemstoreTS,
-                TestHFileBlockCompatibility.Writer.DUMMY_HEADER, includesTag);
-
+            hbw.startWriting(BlockType.DATA);
+            TestHFileBlock.writeTestKeyValues(hbw, blockId, pread, includesTag);
             hbw.writeHeaderAndData(os);
+            int headerLen = HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM;
+            byte[] encodedResultWithHeader = hbw.getUncompressedDataWithHeader();
+            final int encodedSize = encodedResultWithHeader.length - headerLen;
+            if (encoding != DataBlockEncoding.NONE) {
+              // We need to account for the two-byte encoding algorithm ID that
+              // comes after the 24-byte block header but before encoded KVs.
+              headerLen += DataBlockEncoding.ID_SIZE;
+            }
+            byte[] encodedDataSection =
+                new byte[encodedResultWithHeader.length - headerLen];
+            System.arraycopy(encodedResultWithHeader, headerLen,
+                encodedDataSection, 0, encodedDataSection.length);
+            final ByteBuffer encodedBuf =
+                ByteBuffer.wrap(encodedDataSection);
+            encodedSizes.add(encodedSize);
+            encodedBlocks.add(encodedBuf);
             totalSize += hbw.getOnDiskSizeWithHeader();
           }
           os.close();
@@ -329,7 +335,7 @@ public class TestHFileBlockCompatibility {
    * in this class but the code in HFileBlock.Writer will continually
    * evolve.
    */
-  public static final class Writer {
+  public static final class Writer extends HFileBlock.Writer{
 
     // These constants are as they were in minorVersion 0.
     private static final int HEADER_SIZE = HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM;
@@ -408,34 +414,31 @@ public class TestHFileBlockCompatibility {
     /** The offset of the previous block of the same type */
     private long prevOffset;
 
-    private HFileContext meta;
+    private int unencodedDataSizeWritten;
 
     /**
      * @param compressionAlgorithm compression algorithm to use
      * @param dataBlockEncoderAlgo data block encoding algorithm to use
      */
     public Writer(Compression.Algorithm compressionAlgorithm,
-          HFileDataBlockEncoder dataBlockEncoder, boolean includesMemstoreTS, boolean includesTag) {
-      compressAlgo = compressionAlgorithm == null ? NONE : compressionAlgorithm;
-      this.dataBlockEncoder = dataBlockEncoder != null
-          ? dataBlockEncoder : NoOpDataBlockEncoder.INSTANCE;
+        HFileDataBlockEncoder dataBlockEncoder, boolean includesMemstoreTS, boolean includesTag) {
+      this(dataBlockEncoder, new HFileContextBuilder().withHBaseCheckSum(false)
+          .withIncludesMvcc(includesMemstoreTS).withIncludesTags(includesTag)
+          .withCompression(compressionAlgorithm).build());
+    }
 
-      meta = new HFileContextBuilder()
-              .withHBaseCheckSum(false)
-              .withIncludesMvcc(includesMemstoreTS)
-              .withIncludesTags(includesTag)
-              .withCompression(compressionAlgorithm)
-              .build();
+    public Writer(HFileDataBlockEncoder dataBlockEncoder, HFileContext meta) {
+      super(dataBlockEncoder, meta);
+      compressAlgo = meta.getCompression() == null ? NONE : meta.getCompression();
+      this.dataBlockEncoder = dataBlockEncoder != null ? dataBlockEncoder
+          : NoOpDataBlockEncoder.INSTANCE;
       defaultBlockEncodingCtx = new HFileBlockDefaultEncodingContext(null, DUMMY_HEADER, meta);
-      dataBlockEncodingCtx =
-          this.dataBlockEncoder.newDataBlockEncodingContext(
-              DUMMY_HEADER, meta);
+      dataBlockEncodingCtx = this.dataBlockEncoder.newDataBlockEncodingContext(DUMMY_HEADER, meta);
       baosInMemory = new ByteArrayOutputStream();
 
       prevOffsetByType = new long[BlockType.values().length];
       for (int i = 0; i < prevOffsetByType.length; ++i)
         prevOffsetByType[i] = -1;
-
     }
 
     /**
@@ -462,7 +465,20 @@ public class TestHFileBlockCompatibility {
 
       // We will compress it later in finishBlock()
       userDataStream = new DataOutputStream(baosInMemory);
+      if (newBlockType == BlockType.DATA) {
+        this.dataBlockEncoder.startBlockEncoding(dataBlockEncodingCtx, userDataStream);
+      }
+      this.unencodedDataSizeWritten = 0;
       return userDataStream;
+    }
+
+    public void write(KeyValue kv) throws IOException{
+      expectState(State.WRITING);
+      this.dataBlockEncoder.encode(kv, dataBlockEncodingCtx, this.userDataStream);
+      this.unencodedDataSizeWritten += kv.getLength();
+      if (dataBlockEncodingCtx.getHFileContext().isIncludesMvcc()) {
+        this.unencodedDataSizeWritten += WritableUtils.getVIntSize(kv.getMvccVersion());
+      }
     }
 
     /**
@@ -481,7 +497,7 @@ public class TestHFileBlockCompatibility {
      * Transitions the block writer from the "writing" state to the "block
      * ready" state.  Does nothing if a block is already finished.
      */
-    private void ensureBlockReady() throws IOException {
+    void ensureBlockReady() throws IOException {
       Preconditions.checkState(state != State.INIT,
           "Unexpected state: " + state);
 
@@ -498,7 +514,12 @@ public class TestHFileBlockCompatibility {
      * uncompressed stream for caching on write, if applicable. Sets block
      * write state to "block ready".
      */
-    private void finishBlock() throws IOException {
+    void finishBlock() throws IOException {
+      if (blockType == BlockType.DATA) {
+        this.dataBlockEncoder.endBlockEncoding(dataBlockEncodingCtx, userDataStream,
+            baosInMemory.toByteArray(), blockType);
+        blockType = dataBlockEncodingCtx.getBlockType();
+      }
       userDataStream.flush();
       // This does an array copy, so it is safe to cache this byte array.
       uncompressedBytesWithHeader = baosInMemory.toByteArray();
@@ -508,13 +529,12 @@ public class TestHFileBlockCompatibility {
       // cache-on-write. In a way, the block is ready, but not yet encoded or
       // compressed.
       state = State.BLOCK_READY;
-      if (blockType == BlockType.DATA) {
-        encodeDataBlockForDisk();
+      if (blockType == BlockType.DATA || blockType == BlockType.ENCODED_DATA) {
+        onDiskBytesWithHeader = dataBlockEncodingCtx
+            .compressAndEncrypt(uncompressedBytesWithHeader);
       } else {
-        defaultBlockEncodingCtx.compressAfterEncodingWithBlockType(
-            uncompressedBytesWithHeader, blockType);
-        onDiskBytesWithHeader =
-          defaultBlockEncodingCtx.getOnDiskBytesWithHeader();
+        onDiskBytesWithHeader = defaultBlockEncodingCtx
+            .compressAndEncrypt(uncompressedBytesWithHeader);
       }
 
       // put the header for on disk bytes
@@ -525,26 +545,6 @@ public class TestHFileBlockCompatibility {
       putHeader(uncompressedBytesWithHeader, 0,
           onDiskBytesWithHeader.length,
         uncompressedBytesWithHeader.length);
-    }
-
-    /**
-     * Encodes this block if it is a data block and encoding is turned on in
-     * {@link #dataBlockEncoder}.
-     */
-    private void encodeDataBlockForDisk() throws IOException {
-      // do data block encoding, if data block encoder is set
-      ByteBuffer rawKeyValues =
-          ByteBuffer.wrap(uncompressedBytesWithHeader, HEADER_SIZE,
-              uncompressedBytesWithHeader.length - HEADER_SIZE).slice();
-
-      //do the encoding
-      dataBlockEncoder.beforeWriteToDisk(rawKeyValues, dataBlockEncodingCtx, blockType);
-
-      uncompressedBytesWithHeader =
-          dataBlockEncodingCtx.getUncompressedBytesWithHeader();
-      onDiskBytesWithHeader =
-          dataBlockEncodingCtx.getOnDiskBytesWithHeader();
-      blockType = dataBlockEncodingCtx.getBlockType();
     }
 
     /**
@@ -676,7 +676,7 @@ public class TestHFileBlockCompatibility {
     public int blockSizeWritten() {
       if (state != State.WRITING)
         return 0;
-      return userDataStream.size();
+      return this.unencodedDataSizeWritten;
     }
 
     /**

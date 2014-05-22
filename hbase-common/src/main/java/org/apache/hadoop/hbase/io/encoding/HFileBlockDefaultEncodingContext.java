@@ -49,12 +49,8 @@ import com.google.common.base.Preconditions;
 public class HFileBlockDefaultEncodingContext implements
     HFileBlockEncodingContext {
   private byte[] onDiskBytesWithHeader;
-  private byte[] uncompressedBytesWithHeader;
   private BlockType blockType;
   private final DataBlockEncoding encodingAlgo;
-
-  private ByteArrayOutputStream encodedStream = new ByteArrayOutputStream();
-  private DataOutputStream dataOut = new DataOutputStream(encodedStream);
 
   private byte[] dummyHeader;
 
@@ -76,6 +72,8 @@ public class HFileBlockDefaultEncodingContext implements
   private ByteArrayOutputStream cryptoByteStream;
   /** Initialization vector */
   private byte[] iv;
+
+  private EncodingState encoderState;
 
   /**
    * @param encoding encoding used
@@ -113,52 +111,35 @@ public class HFileBlockDefaultEncodingContext implements
       "Please pass HConstants.HFILEBLOCK_DUMMY_HEADER instead of null for param headerBytes");
   }
 
-  @Override
-  public void setDummyHeader(byte[] headerBytes) {
-    dummyHeader = headerBytes;
-  }
-
   /**
    * prepare to start a new encoding.
    * @throws IOException
    */
-  public void prepareEncoding() throws IOException {
-    encodedStream.reset();
-    dataOut.write(dummyHeader);
-    if (encodingAlgo != null
-        && encodingAlgo != DataBlockEncoding.NONE) {
-      encodingAlgo.writeIdInBytes(dataOut);
+  public void prepareEncoding(DataOutputStream out) throws IOException {
+    if (encodingAlgo != null && encodingAlgo != DataBlockEncoding.NONE) {
+      encodingAlgo.writeIdInBytes(out);
     }
   }
 
   @Override
   public void postEncoding(BlockType blockType)
       throws IOException {
-    dataOut.flush();
-    compressAfterEncodingWithBlockType(encodedStream.toByteArray(), blockType);
     this.blockType = blockType;
   }
 
-  /**
-   * @param uncompressedBytesWithHeader
-   * @param blockType
-   * @throws IOException
-   */
-  public void compressAfterEncodingWithBlockType(byte[] uncompressedBytesWithHeader,
-      BlockType blockType) throws IOException {
-    compressAfterEncoding(uncompressedBytesWithHeader, blockType, dummyHeader);
+  @Override
+  public byte[] compressAndEncrypt(byte[] uncompressedBytesWithHeader) throws IOException {
+    compressAfterEncoding(uncompressedBytesWithHeader, dummyHeader);
+    return onDiskBytesWithHeader;
   }
 
   /**
    * @param uncompressedBytesWithHeader
-   * @param blockType
    * @param headerBytes
    * @throws IOException
    */
-  protected void compressAfterEncoding(byte[] uncompressedBytesWithHeader,
-      BlockType blockType, byte[] headerBytes) throws IOException {
-    this.uncompressedBytesWithHeader = uncompressedBytesWithHeader;
-
+  protected void compressAfterEncoding(byte[] uncompressedBytesWithHeader, byte[] headerBytes)
+      throws IOException {
     Encryption.Context cryptoContext = fileContext.getEncryptionContext();
     if (cryptoContext != Encryption.Context.NONE) {
 
@@ -238,20 +219,7 @@ public class HFileBlockDefaultEncodingContext implements
       } else {
         onDiskBytesWithHeader = uncompressedBytesWithHeader;
       }
-
     }
-
-    this.blockType = blockType;
-  }
-
-  @Override
-  public byte[] getOnDiskBytesWithHeader() {
-    return onDiskBytesWithHeader;
-  }
-
-  @Override
-  public byte[] getUncompressedBytesWithHeader() {
-    return uncompressedBytesWithHeader;
   }
 
   @Override
@@ -271,10 +239,6 @@ public class HFileBlockDefaultEncodingContext implements
     }
   }
 
-  public DataOutputStream getOutputStreamForEncoder() {
-    return this.dataOut;
-  }
-
   @Override
   public DataBlockEncoding getDataBlockEncoding() {
     return this.encodingAlgo;
@@ -291,5 +255,15 @@ public class HFileBlockDefaultEncodingContext implements
 
   public void setTagCompressionContext(TagCompressionContext tagCompressionContext) {
     this.tagCompressionContext = tagCompressionContext;
+  }
+
+  @Override
+  public EncodingState getEncodingState() {
+    return this.encoderState;
+  }
+
+  @Override
+  public void setEncodingState(EncodingState state) {
+    this.encoderState = state;
   }
 }

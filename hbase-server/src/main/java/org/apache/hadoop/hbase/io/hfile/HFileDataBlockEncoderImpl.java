@@ -16,10 +16,11 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
@@ -89,24 +90,11 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
     }
     return encoding;
   }
-  /**
-   * Precondition: a non-encoded buffer. Postcondition: on-disk encoding.
-   *
-   * The encoded results can be stored in {@link HFileBlockEncodingContext}.
-   *
-   * @throws IOException
-   */
+
   @Override
-  public void beforeWriteToDisk(ByteBuffer in,
-      HFileBlockEncodingContext encodeCtx,
-      BlockType blockType) throws IOException {
-    if (encoding == DataBlockEncoding.NONE) {
-      // there is no need to encode the block before writing it to disk
-      ((HFileBlockDefaultEncodingContext) encodeCtx).compressAfterEncodingWithBlockType(
-          in.array(), blockType);
-      return;
-    }
-    encodeBufferToHFileBlockBuffer(in, encoding, encodeCtx);
+  public int encode(KeyValue kv, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+      throws IOException {
+    return this.encoding.getEncoder().encode(kv, encodingCtx, out);
   }
 
   @Override
@@ -114,26 +102,6 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
     return encoding != DataBlockEncoding.NONE;
   }
 
-  /**
-   * Encode a block of key value pairs.
-   *
-   * @param in input data to encode
-   * @param algo encoding algorithm
-   * @param encodeCtx where will the output data be stored
-   */
-  private void encodeBufferToHFileBlockBuffer(ByteBuffer in, DataBlockEncoding algo,
-      HFileBlockEncodingContext encodeCtx) {
-    DataBlockEncoder encoder = algo.getEncoder();
-    try {
-      encoder.encodeKeyValues(in, encodeCtx);
-    } catch (IOException e) {
-      throw new RuntimeException(String.format(
-          "Bug in data block encoder "
-              + "'%s', it probably requested too much data, " +
-              "exception message: %s.",
-              algo.toString(), e.getMessage()), e);
-    }
-  }
 
   @Override
   public String toString() {
@@ -157,5 +125,19 @@ public class HFileDataBlockEncoderImpl implements HFileDataBlockEncoder {
       return encoder.newDataBlockDecodingContext(fileContext);
     }
     return new HFileBlockDefaultDecodingContext(fileContext);
+  }
+
+  @Override
+  public void startBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+      throws IOException {
+    if (this.encoding != null && this.encoding != DataBlockEncoding.NONE) {
+      this.encoding.getEncoder().startBlockEncoding(encodingCtx, out);
+    }
+  }
+
+  @Override
+  public void endBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out,
+      byte[] uncompressedBytesWithHeader, BlockType blockType) throws IOException {
+    this.encoding.getEncoder().endBlockEncoding(encodingCtx, out, uncompressedBytesWithHeader);
   }
 }

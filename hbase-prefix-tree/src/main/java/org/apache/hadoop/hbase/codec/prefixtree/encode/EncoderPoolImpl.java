@@ -15,42 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.codec.prefixtree.encode;
 
 import java.io.OutputStream;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
-/**
- * Retrieve PrefixTreeEncoders from this factory which handles pooling them and preparing the
- * ones retrieved from the pool for usage.
- */
 @InterfaceAudience.Private
-public class EncoderFactory {
+public class EncoderPoolImpl implements EncoderPool {
 
-  private static final EncoderPool POOL = new EncoderPoolImpl();
+  private BlockingQueue<PrefixTreeEncoder> unusedEncoders = 
+      new LinkedBlockingQueue<PrefixTreeEncoder>();
 
-
-  public static PrefixTreeEncoder checkOut(OutputStream outputStream, boolean includeMvccVersion) {
-    return POOL.checkOut(outputStream, includeMvccVersion);
-  }
-
-  public static void checkIn(PrefixTreeEncoder encoder) {
-    POOL.checkIn(encoder);
-  }
-
-
-  /**************************** helper ******************************/
-
-  protected static PrefixTreeEncoder prepareEncoder(PrefixTreeEncoder encoder,
-      OutputStream outputStream, boolean includeMvccVersion) {
-    PrefixTreeEncoder ret = encoder;
+  @Override
+  public PrefixTreeEncoder checkOut(OutputStream outputStream, boolean includeMvccVersion) {
+    PrefixTreeEncoder encoder = unusedEncoders.poll();
     if (encoder == null) {
-      ret = new PrefixTreeEncoder(outputStream, includeMvccVersion);
+      encoder = new PrefixTreeEncoder(outputStream, includeMvccVersion);
+    } else {
+      encoder.reset(outputStream, includeMvccVersion);
     }
-    ret.reset(outputStream, includeMvccVersion);
-    return ret;
+    return encoder;
   }
 
+  @Override
+  public void checkIn(PrefixTreeEncoder encoder) {
+    this.unusedEncoders.add(encoder);
+  }
 }

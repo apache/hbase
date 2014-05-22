@@ -98,7 +98,6 @@ public class TestPrefixTreeEncoding {
     formatRowNum = true;
     PrefixTreeCodec encoder = new PrefixTreeCodec();
     int batchId = numBatchesWritten++;
-    ByteBuffer dataBuffer = generateFixedTestData(kvset, batchId, false, includesTag);
     HFileContext meta = new HFileContextBuilder()
                         .withHBaseCheckSum(false)
                         .withIncludesMvcc(false)
@@ -106,10 +105,13 @@ public class TestPrefixTreeEncoding {
                         .withCompression(Algorithm.NONE).build();
     HFileBlockEncodingContext blkEncodingCtx = new HFileBlockDefaultEncodingContext(
         DataBlockEncoding.PREFIX_TREE, new byte[0], meta);
-    encoder.encodeKeyValues(dataBuffer, blkEncodingCtx);
+    ByteArrayOutputStream baosInMemory = new ByteArrayOutputStream();
+    DataOutputStream userDataStream = new DataOutputStream(baosInMemory);
+    generateFixedTestData(kvset, batchId, false, includesTag, encoder, blkEncodingCtx,
+        userDataStream);
     EncodedSeeker seeker = encoder.createSeeker(KeyValue.COMPARATOR,
         encoder.newDataBlockDecodingContext(meta));
-    byte[] onDiskBytes = blkEncodingCtx.getOnDiskBytesWithHeader();
+    byte[] onDiskBytes = baosInMemory.toByteArray();
     ByteBuffer readBuffer = ByteBuffer.wrap(onDiskBytes, DataBlockEncoding.ID_SIZE,
         onDiskBytes.length - DataBlockEncoding.ID_SIZE);
     seeker.setCurrentBuffer(readBuffer);
@@ -142,7 +144,8 @@ public class TestPrefixTreeEncoding {
   @Test
   public void testScanWithRandomData() throws Exception {
     PrefixTreeCodec encoder = new PrefixTreeCodec();
-    ByteBuffer dataBuffer = generateRandomTestData(kvset, numBatchesWritten++, includesTag);
+    ByteArrayOutputStream baosInMemory = new ByteArrayOutputStream();
+    DataOutputStream userDataStream = new DataOutputStream(baosInMemory);
     HFileContext meta = new HFileContextBuilder()
                         .withHBaseCheckSum(false)
                         .withIncludesMvcc(false)
@@ -151,10 +154,11 @@ public class TestPrefixTreeEncoding {
                         .build();
     HFileBlockEncodingContext blkEncodingCtx = new HFileBlockDefaultEncodingContext(
         DataBlockEncoding.PREFIX_TREE, new byte[0], meta);
-    encoder.encodeKeyValues(dataBuffer, blkEncodingCtx);
+    generateRandomTestData(kvset, numBatchesWritten++, includesTag, encoder, blkEncodingCtx,
+        userDataStream);
     EncodedSeeker seeker = encoder.createSeeker(KeyValue.COMPARATOR,
         encoder.newDataBlockDecodingContext(meta));
-    byte[] onDiskBytes = blkEncodingCtx.getOnDiskBytesWithHeader();
+    byte[] onDiskBytes = baosInMemory.toByteArray();
     ByteBuffer readBuffer = ByteBuffer.wrap(onDiskBytes, DataBlockEncoding.ID_SIZE,
         onDiskBytes.length - DataBlockEncoding.ID_SIZE);
     seeker.setCurrentBuffer(readBuffer);
@@ -178,8 +182,9 @@ public class TestPrefixTreeEncoding {
   @Test
   public void testSeekWithRandomData() throws Exception {
     PrefixTreeCodec encoder = new PrefixTreeCodec();
+    ByteArrayOutputStream baosInMemory = new ByteArrayOutputStream();
+    DataOutputStream userDataStream = new DataOutputStream(baosInMemory);
     int batchId = numBatchesWritten++;
-    ByteBuffer dataBuffer = generateRandomTestData(kvset, batchId, includesTag);
     HFileContext meta = new HFileContextBuilder()
                         .withHBaseCheckSum(false)
                         .withIncludesMvcc(false)
@@ -188,10 +193,10 @@ public class TestPrefixTreeEncoding {
                         .build();
     HFileBlockEncodingContext blkEncodingCtx = new HFileBlockDefaultEncodingContext(
         DataBlockEncoding.PREFIX_TREE, new byte[0], meta);
-    encoder.encodeKeyValues(dataBuffer, blkEncodingCtx);
+    generateRandomTestData(kvset, batchId, includesTag, encoder, blkEncodingCtx, userDataStream);
     EncodedSeeker seeker = encoder.createSeeker(KeyValue.COMPARATOR,
         encoder.newDataBlockDecodingContext(meta));
-    byte[] onDiskBytes = blkEncodingCtx.getOnDiskBytesWithHeader();
+    byte[] onDiskBytes = baosInMemory.toByteArray();
     ByteBuffer readBuffer = ByteBuffer.wrap(onDiskBytes, DataBlockEncoding.ID_SIZE,
         onDiskBytes.length - DataBlockEncoding.ID_SIZE);
     verifySeeking(seeker, readBuffer, batchId);
@@ -201,7 +206,6 @@ public class TestPrefixTreeEncoding {
   public void testSeekWithFixedData() throws Exception {
     PrefixTreeCodec encoder = new PrefixTreeCodec();
     int batchId = numBatchesWritten++;
-    ByteBuffer dataBuffer = generateFixedTestData(kvset, batchId, includesTag);
     HFileContext meta = new HFileContextBuilder()
                         .withHBaseCheckSum(false)
                         .withIncludesMvcc(false)
@@ -210,10 +214,12 @@ public class TestPrefixTreeEncoding {
                         .build();
     HFileBlockEncodingContext blkEncodingCtx = new HFileBlockDefaultEncodingContext(
         DataBlockEncoding.PREFIX_TREE, new byte[0], meta);
-    encoder.encodeKeyValues(dataBuffer, blkEncodingCtx);
+    ByteArrayOutputStream baosInMemory = new ByteArrayOutputStream();
+    DataOutputStream userDataStream = new DataOutputStream(baosInMemory);
+    generateFixedTestData(kvset, batchId, includesTag, encoder, blkEncodingCtx, userDataStream);
     EncodedSeeker seeker = encoder.createSeeker(KeyValue.COMPARATOR,
         encoder.newDataBlockDecodingContext(meta));
-    byte[] onDiskBytes = blkEncodingCtx.getOnDiskBytesWithHeader();
+    byte[] onDiskBytes = baosInMemory.toByteArray();
     ByteBuffer readBuffer = ByteBuffer.wrap(onDiskBytes, DataBlockEncoding.ID_SIZE,
         onDiskBytes.length - DataBlockEncoding.ID_SIZE);
     verifySeeking(seeker, readBuffer, batchId);
@@ -255,15 +261,15 @@ public class TestPrefixTreeEncoding {
     }
   }
 
-  private static ByteBuffer generateFixedTestData(ConcurrentSkipListSet<KeyValue> kvset,
-      int batchId, boolean useTags) throws Exception {
-    return generateFixedTestData(kvset, batchId, true, useTags);
+  private static void generateFixedTestData(ConcurrentSkipListSet<KeyValue> kvset, int batchId,
+      boolean useTags, PrefixTreeCodec encoder, HFileBlockEncodingContext blkEncodingCtx,
+      DataOutputStream userDataStream) throws Exception {
+    generateFixedTestData(kvset, batchId, true, useTags, encoder, blkEncodingCtx, userDataStream);
   }
 
-  private static ByteBuffer generateFixedTestData(ConcurrentSkipListSet<KeyValue> kvset,
-      int batchId, boolean partial, boolean useTags) throws Exception {
-    ByteArrayOutputStream baosInMemory = new ByteArrayOutputStream();
-    DataOutputStream userDataStream = new DataOutputStream(baosInMemory);
+  private static void generateFixedTestData(ConcurrentSkipListSet<KeyValue> kvset,
+      int batchId, boolean partial, boolean useTags, PrefixTreeCodec encoder,
+      HFileBlockEncodingContext blkEncodingCtx, DataOutputStream userDataStream) throws Exception {
     for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
       if (partial && i / 10 % 2 == 1)
         continue;
@@ -279,24 +285,16 @@ public class TestPrefixTreeEncoding {
         }
       }
     }
+    encoder.startBlockEncoding(blkEncodingCtx, userDataStream);
     for (KeyValue kv : kvset) {
-      userDataStream.writeInt(kv.getKeyLength());
-      userDataStream.writeInt(kv.getValueLength());
-      userDataStream.write(kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength());
-      userDataStream.write(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength());
-      if (useTags) {
-        userDataStream.writeShort(kv.getTagsLength());
-        userDataStream.write(kv.getBuffer(), kv.getValueOffset() + kv.getValueLength()
-            + Bytes.SIZEOF_SHORT, kv.getTagsLength());
-      }
+      encoder.encode(kv, blkEncodingCtx, userDataStream);
     }
-    return ByteBuffer.wrap(baosInMemory.toByteArray());
+    encoder.endBlockEncoding(blkEncodingCtx, userDataStream, null);
   }
 
-  private static ByteBuffer generateRandomTestData(ConcurrentSkipListSet<KeyValue> kvset,
-      int batchId, boolean useTags) throws Exception {
-    ByteArrayOutputStream baosInMemory = new ByteArrayOutputStream();
-    DataOutputStream userDataStream = new DataOutputStream(baosInMemory);
+  private static void generateRandomTestData(ConcurrentSkipListSet<KeyValue> kvset,
+      int batchId, boolean useTags, PrefixTreeCodec encoder,
+      HFileBlockEncodingContext blkEncodingCtx, DataOutputStream userDataStream) throws Exception {
     Random random = new Random();
     for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
       if (random.nextInt(100) < 50)
@@ -315,19 +313,11 @@ public class TestPrefixTreeEncoding {
         }
       }
     }
-
+    encoder.startBlockEncoding(blkEncodingCtx, userDataStream);
     for (KeyValue kv : kvset) {
-      userDataStream.writeInt(kv.getKeyLength());
-      userDataStream.writeInt(kv.getValueLength());
-      userDataStream.write(kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength());
-      userDataStream.write(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength());
-      if (useTags) {
-        userDataStream.writeShort(kv.getTagsLength());
-        userDataStream.write(kv.getBuffer(), kv.getValueOffset() + kv.getValueLength()
-            + Bytes.SIZEOF_SHORT, kv.getTagsLength());
-      }
+      encoder.encode(kv, blkEncodingCtx, userDataStream);
     }
-    return ByteBuffer.wrap(baosInMemory.toByteArray());
+    encoder.endBlockEncoding(blkEncodingCtx, userDataStream, null);
   }
 
   private static byte[] getRowKey(int batchId, int i) {

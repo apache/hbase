@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
@@ -37,7 +36,6 @@ import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.WritableUtils;
 
 /**
  * {@link HFile} writer for version 3.
@@ -86,10 +84,11 @@ public class HFileWriterV3 extends HFileWriterV2 {
   @Override
   public void append(final KeyValue kv) throws IOException {
     // Currently get the complete arrays
-    append(kv.getMvccVersion(), kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength(),
-        kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(), kv.getTagsArray(),
-        kv.getTagsOffset(), kv.getTagsLength());
-    this.maxMemstoreTS = Math.max(this.maxMemstoreTS, kv.getMvccVersion());
+    super.append(kv);
+    short tagsLength = kv.getTagsLength();
+    if (tagsLength > this.maxTagsLength) {
+      this.maxTagsLength = tagsLength;
+    }
   }
   
   /**
@@ -119,73 +118,20 @@ public class HFileWriterV3 extends HFileWriterV2 {
    */
   @Override
   public void append(final byte[] key, final byte[] value, byte[] tag) throws IOException {
-    append(0, key, 0, key.length, value, 0, value.length, tag, 0, tag.length);
+    int kvlen = (int) KeyValue.getKeyValueDataStructureSize(key.length, value.length, tag.length);
+    byte[] b = new byte[kvlen];
+    int pos = 0;
+    pos = Bytes.putInt(b, pos, key.length);
+    pos = Bytes.putInt(b, pos, value.length);
+    pos = Bytes.putBytes(b, pos, key, 0, key.length);
+    pos = Bytes.putBytes(b, pos, value, 0, value.length);
+    if (tag.length > 0) {
+      pos = Bytes.putShort(b, pos, (short) tag.length);
+      Bytes.putBytes(b, pos, tag, 0, tag.length);
+    }
+    append(new KeyValue(b, 0, kvlen));
   }
 
-  /**
-   * Add key/value to file. Keys must be added in an order that agrees with the
-   * Comparator passed on construction.
-   * @param key
-   * @param koffset
-   * @param klength
-   * @param value
-   * @param voffset
-   * @param vlength
-   * @param tag
-   * @param tagsOffset
-   * @param tagLength
-   * @throws IOException
-   */
-  private void append(final long memstoreTS, final byte[] key, final int koffset,
-      final int klength, final byte[] value, final int voffset, final int vlength,
-      final byte[] tag, final int tagsOffset, final int tagsLength) throws IOException {
-    boolean dupKey = checkKey(key, koffset, klength);
-    checkValue(value, voffset, vlength);
-    if (!dupKey) {
-      checkBlockBoundary();
-    }
-
-    if (!fsBlockWriter.isWriting())
-      newBlock();
-
-    // Write length of key and value and then actual key and value bytes.
-    // Additionally, we may also write down the memstoreTS.
-    {
-      DataOutputStream out = fsBlockWriter.getUserDataStream();
-      out.writeInt(klength);
-      totalKeyLength += klength;
-      out.writeInt(vlength);
-      totalValueLength += vlength;
-      out.write(key, koffset, klength);
-      out.write(value, voffset, vlength);
-      // Write the additional tag into the stream
-      if (hFileContext.isIncludesTags()) {
-        out.writeShort((short) tagsLength);
-        if (tagsLength > 0) {
-          out.write(tag, tagsOffset, tagsLength);
-          if (tagsLength > maxTagsLength) {
-            maxTagsLength = tagsLength;
-          }
-        }
-      }
-      if (this.hFileContext.isIncludesMvcc()) {
-        WritableUtils.writeVLong(out, memstoreTS);
-      }
-    }
-
-    // Are we the first key in this block?
-    if (firstKeyInBlock == null) {
-      // Copy the key.
-      firstKeyInBlock = new byte[klength];
-      System.arraycopy(key, koffset, firstKeyInBlock, 0, klength);
-    }
-
-    lastKeyBuffer = key;
-    lastKeyOffset = koffset;
-    lastKeyLength = klength;
-    entryCount++;
-  }
-  
   protected void finishFileInfo() throws IOException {
     super.finishFileInfo();
     if (hFileContext.getDataBlockEncoding() == DataBlockEncoding.PREFIX_TREE) {

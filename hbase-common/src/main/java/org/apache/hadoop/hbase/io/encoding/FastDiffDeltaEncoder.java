@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io.encoding;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -102,118 +101,14 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
 
   }
 
-  private void compressSingleKeyValue(
-        FastDiffCompressionState previousState,
-        FastDiffCompressionState currentState,
-        OutputStream out, ByteBuffer in) throws IOException {
-    currentState.prevOffset = in.position();
-    int keyLength = in.getInt();
-    int valueOffset =
-        currentState.prevOffset + keyLength + KeyValue.ROW_OFFSET;
-    int valueLength = in.getInt();
-    byte flag = 0;
-
-    if (previousState.isFirst()) {
-      // copy the key, there is no common prefix with none
-      out.write(flag);
-      ByteBufferUtils.putCompressedInt(out, keyLength);
-      ByteBufferUtils.putCompressedInt(out, valueLength);
-      ByteBufferUtils.putCompressedInt(out, 0);
-
-      currentState.readKey(in, keyLength, valueLength);
-
-      ByteBufferUtils.moveBufferToStream(out, in, keyLength + valueLength);
-    } else {
-      // find a common prefix and skip it
-      int commonPrefix = ByteBufferUtils.findCommonPrefix(in, in.position(),
-          previousState.prevOffset + KeyValue.ROW_OFFSET,
-          Math.min(keyLength, previousState.keyLength) -
-          KeyValue.TIMESTAMP_TYPE_SIZE);
-
-      currentState.readKey(in, keyLength, valueLength,
-          commonPrefix, previousState);
-
-      if (keyLength == previousState.keyLength) {
-        flag |= FLAG_SAME_KEY_LENGTH;
-      }
-      if (valueLength == previousState.valueLength) {
-        flag |= FLAG_SAME_VALUE_LENGTH;
-      }
-      if (currentState.type == previousState.type) {
-        flag |= FLAG_SAME_TYPE;
-      }
-
-      int commonTimestampPrefix = findCommonTimestampPrefix(
-          currentState, previousState);
-      flag |= commonTimestampPrefix << SHIFT_TIMESTAMP_LENGTH;
-
-      // Check if current and previous values are the same. Compare value
-      // length first as an optimization.
-      if (valueLength == previousState.valueLength) {
-        int previousValueOffset = previousState.prevOffset
-            + previousState.keyLength + KeyValue.ROW_OFFSET;
-        if (ByteBufferUtils.arePartsEqual(in,
-                previousValueOffset, previousState.valueLength,
-                valueOffset, valueLength)) {
-          flag |= FLAG_SAME_VALUE;
-        }
-      }
-
-      out.write(flag);
-      if ((flag & FLAG_SAME_KEY_LENGTH) == 0) {
-        ByteBufferUtils.putCompressedInt(out, keyLength);
-      }
-      if ((flag & FLAG_SAME_VALUE_LENGTH) == 0) {
-        ByteBufferUtils.putCompressedInt(out, valueLength);
-      }
-      ByteBufferUtils.putCompressedInt(out, commonPrefix);
-
-      ByteBufferUtils.skip(in, commonPrefix);
-      if (commonPrefix < currentState.rowLength + KeyValue.ROW_LENGTH_SIZE) {
-        // Previous and current rows are different. Copy the differing part of
-        // the row, skip the column family, and copy the qualifier.
-        ByteBufferUtils.moveBufferToStream(out, in,
-            currentState.rowLength + KeyValue.ROW_LENGTH_SIZE - commonPrefix);
-        ByteBufferUtils.skip(in, currentState.familyLength +
-            KeyValue.FAMILY_LENGTH_SIZE);
-        ByteBufferUtils.moveBufferToStream(out, in,
-            currentState.qualifierLength);
-      } else {
-        // The common part includes the whole row. As the column family is the
-        // same across the whole file, it will automatically be included in the
-        // common prefix, so we need not special-case it here.
-        int restKeyLength = keyLength - commonPrefix -
-            KeyValue.TIMESTAMP_TYPE_SIZE;
-        ByteBufferUtils.moveBufferToStream(out, in, restKeyLength);
-      }
-      ByteBufferUtils.skip(in, commonTimestampPrefix);
-      ByteBufferUtils.moveBufferToStream(out, in,
-          KeyValue.TIMESTAMP_SIZE - commonTimestampPrefix);
-
-      // Write the type if it is not the same as before.
-      if ((flag & FLAG_SAME_TYPE) == 0) {
-        out.write(currentState.type);
-      }
-
-      // Write the value if it is not the same as before.
-      if ((flag & FLAG_SAME_VALUE) == 0) {
-        ByteBufferUtils.copyBufferToStream(out, in, valueOffset, valueLength);
-      }
-
-      // Skip key type and value in the input buffer.
-      ByteBufferUtils.skip(in, KeyValue.TYPE_SIZE + currentState.valueLength);
+  private int findCommonTimestampPrefix(byte[] curKvBuf, int curKvTsOff, byte[] preKvBuf,
+      int preKvTsOff) {
+    int commonPrefix = 0;
+    while (commonPrefix < (KeyValue.TIMESTAMP_SIZE - 1)
+        && curKvBuf[curKvTsOff + commonPrefix] == preKvBuf[preKvTsOff + commonPrefix]) {
+      commonPrefix++;
     }
-  }
-
-  private int findCommonTimestampPrefix(FastDiffCompressionState left,
-      FastDiffCompressionState right) {
-    int prefixTimestamp = 0;
-    while (prefixTimestamp < (KeyValue.TIMESTAMP_SIZE - 1) &&
-        left.timestamp[prefixTimestamp]
-            == right.timestamp[prefixTimestamp]) {
-      prefixTimestamp++;
-    }
-    return prefixTimestamp; // has to be at most 7 bytes
+    return commonPrefix; // has to be at most 7 bytes
   }
 
   private void uncompressSingleKeyValue(DataInputStream source,
@@ -342,22 +237,98 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public void internalEncodeKeyValues(DataOutputStream out, ByteBuffer in,
-      HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
-    in.rewind();
-    ByteBufferUtils.putInt(out, in.limit());
-    FastDiffCompressionState previousState = new FastDiffCompressionState();
-    FastDiffCompressionState currentState = new FastDiffCompressionState();
-    while (in.hasRemaining()) {
-      compressSingleKeyValue(previousState, currentState,
-          out, in);
-      afterEncodingKeyValue(in, out, encodingCtx);
+  public int internalEncode(KeyValue kv, HFileBlockDefaultEncodingContext encodingContext,
+      DataOutputStream out) throws IOException {
+    EncodingState state = encodingContext.getEncodingState();
+    int size = compressSingleKeyValue(out, kv, state.prevKv);
+    size += afterEncodingKeyValue(kv, out, encodingContext);
+    state.prevKv = kv;
+    return size;
+  }
 
-      // swap previousState <-> currentState
-      FastDiffCompressionState tmp = previousState;
-      previousState = currentState;
-      currentState = tmp;
+  private int compressSingleKeyValue(DataOutputStream out, KeyValue kv, KeyValue prevKv)
+      throws IOException {
+    byte flag = 0;
+    int kLength = kv.getKeyLength();
+    int vLength = kv.getValueLength();
+    byte[] curKvBuf = kv.getBuffer();
+
+    if (prevKv == null) {
+      // copy the key, there is no common prefix with none
+      out.write(flag);
+      ByteBufferUtils.putCompressedInt(out, kLength);
+      ByteBufferUtils.putCompressedInt(out, vLength);
+      ByteBufferUtils.putCompressedInt(out, 0);
+      out.write(curKvBuf, kv.getKeyOffset(), kLength + vLength);
+    } else {
+      byte[] preKvBuf = prevKv.getBuffer();
+      int preKeyLength = prevKv.getKeyLength();
+      int preValLength = prevKv.getValueLength();
+      // find a common prefix and skip it
+      int commonPrefix = ByteBufferUtils.findCommonPrefix(curKvBuf, kv.getKeyOffset(), kLength
+          - KeyValue.TIMESTAMP_TYPE_SIZE, preKvBuf, prevKv.getKeyOffset(), preKeyLength
+          - KeyValue.TIMESTAMP_TYPE_SIZE);
+
+      if (kLength == prevKv.getKeyLength()) {
+        flag |= FLAG_SAME_KEY_LENGTH;
+      }
+      if (vLength == prevKv.getValueLength()) {
+        flag |= FLAG_SAME_VALUE_LENGTH;
+      }
+      if (kv.getTypeByte() == prevKv.getTypeByte()) {
+        flag |= FLAG_SAME_TYPE;
+      }
+
+      int commonTimestampPrefix = findCommonTimestampPrefix(curKvBuf, kv.getKeyOffset() + kLength
+          - KeyValue.TIMESTAMP_TYPE_SIZE, preKvBuf, prevKv.getKeyOffset() + preKeyLength
+          - KeyValue.TIMESTAMP_TYPE_SIZE);
+
+      flag |= commonTimestampPrefix << SHIFT_TIMESTAMP_LENGTH;
+
+      // Check if current and previous values are the same. Compare value
+      // length first as an optimization.
+      if (vLength == preValLength
+          && Bytes.equals(kv.getValueArray(), kv.getValueOffset(), vLength,
+              prevKv.getValueArray(), prevKv.getValueOffset(), preValLength)) {
+        flag |= FLAG_SAME_VALUE;
+      }
+
+      out.write(flag);
+      if ((flag & FLAG_SAME_KEY_LENGTH) == 0) {
+        ByteBufferUtils.putCompressedInt(out, kLength);
+      }
+      if ((flag & FLAG_SAME_VALUE_LENGTH) == 0) {
+        ByteBufferUtils.putCompressedInt(out, vLength);
+      }
+      ByteBufferUtils.putCompressedInt(out, commonPrefix);
+
+      if (commonPrefix < kv.getRowLength() + KeyValue.ROW_LENGTH_SIZE) {
+        // Previous and current rows are different. Copy the differing part of
+        // the row, skip the column family, and copy the qualifier.
+        out.write(curKvBuf, kv.getKeyOffset() + commonPrefix, kv.getRowLength()
+            + KeyValue.ROW_LENGTH_SIZE - commonPrefix);
+        out.write(curKvBuf, kv.getQualifierOffset(), kv.getQualifierLength());
+      } else {
+        // The common part includes the whole row. As the column family is the
+        // same across the whole file, it will automatically be included in the
+        // common prefix, so we need not special-case it here.
+        int restKeyLength = kLength - commonPrefix - KeyValue.TIMESTAMP_TYPE_SIZE;
+        out.write(curKvBuf, kv.getKeyOffset() + commonPrefix, restKeyLength);
+      }
+      out.write(curKvBuf, kv.getKeyOffset() + kLength - KeyValue.TIMESTAMP_TYPE_SIZE
+          + commonTimestampPrefix, KeyValue.TIMESTAMP_SIZE - commonTimestampPrefix);
+
+      // Write the type if it is not the same as before.
+      if ((flag & FLAG_SAME_TYPE) == 0) {
+        out.write(kv.getTypeByte());
+      }
+
+      // Write the value if it is not the same as before.
+      if ((flag & FLAG_SAME_VALUE) == 0) {
+        out.write(kv.getValueArray(), kv.getValueOffset(), vLength);
+      }
     }
+    return kLength + vLength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
   }
 
   @Override

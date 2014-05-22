@@ -17,11 +17,13 @@
 package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 
@@ -34,28 +36,42 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
  * <li>knowledge of Key Value format</li>
  * </ul>
  * It is designed to work fast enough to be feasible as in memory compression.
- *
- * After encoding, it also optionally compresses the encoded data if a
- * compression algorithm is specified in HFileBlockEncodingContext argument of
- * {@link #encodeKeyValues(ByteBuffer, HFileBlockEncodingContext)}.
  */
 @InterfaceAudience.Private
 public interface DataBlockEncoder {
 
   /**
-   * Encodes KeyValues. It will first encode key value pairs, and then
-   * optionally do the compression for the encoded data.
-   *
-   * @param in
-   *          Source of KeyValue for compression.
+   * Starts encoding for a block of KeyValues. Call
+   * {@link #endBlockEncoding(HFileBlockEncodingContext, DataOutputStream, byte[])} to finish
+   * encoding of a block.
    * @param encodingCtx
-   *          the encoding context which will contain encoded uncompressed bytes
-   *          as well as compressed encoded bytes if compression is enabled, and
-   *          also it will reuse resources across multiple calls.
+   * @param out
    * @throws IOException
-   *           If there is an error writing to output stream.
    */
-  void encodeKeyValues(ByteBuffer in, HFileBlockEncodingContext encodingCtx) throws IOException;
+  void startBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+      throws IOException;
+
+  /**
+   * Encodes a KeyValue.
+   * @param kv
+   * @param encodingCtx
+   * @param out
+   * @return unencoded kv size written
+   * @throws IOException
+   */
+  int encode(KeyValue kv, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+      throws IOException;
+
+  /**
+   * Ends encoding for a block of KeyValues. Gives a chance for the encoder to do the finishing
+   * stuff for the encoded block. It must be called at the end of block encoding.
+   * @param encodingCtx
+   * @param out
+   * @param uncompressedBytesWithHeader
+   * @throws IOException
+   */
+  void endBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out,
+      byte[] uncompressedBytesWithHeader) throws IOException;
 
   /**
    * Decode.

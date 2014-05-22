@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -641,6 +642,10 @@ public class HFileBlock implements Cacheable {
      */
     private DataOutputStream userDataStream;
 
+    // Size of actual data being written. Not considering the block encoding/compression. This
+    // includes the header size also.
+    private int unencodedDataSizeWritten;
+
     /**
      * Bytes to be written to the file system, including the header. Compressed
      * if compression is turned on. It also includes the checksum data that 
@@ -731,7 +736,22 @@ public class HFileBlock implements Cacheable {
 
       // We will compress it later in finishBlock()
       userDataStream = new DataOutputStream(baosInMemory);
+      if (newBlockType == BlockType.DATA) {
+        this.dataBlockEncoder.startBlockEncoding(dataBlockEncodingCtx, userDataStream);
+      }
+      this.unencodedDataSizeWritten = 0;
       return userDataStream;
+    }
+
+    /**
+     * Writes the kv to this block
+     * @param kv
+     * @throws IOException
+     */
+    public void write(KeyValue kv) throws IOException{
+      expectState(State.WRITING);
+      this.unencodedDataSizeWritten += this.dataBlockEncoder.encode(kv, dataBlockEncodingCtx,
+          this.userDataStream);
     }
 
     /**
@@ -750,7 +770,7 @@ public class HFileBlock implements Cacheable {
      * Transitions the block writer from the "writing" state to the "block
      * ready" state.  Does nothing if a block is already finished.
      */
-    private void ensureBlockReady() throws IOException {
+    void ensureBlockReady() throws IOException {
       Preconditions.checkState(state != State.INIT,
           "Unexpected state: " + state);
 
@@ -768,6 +788,14 @@ public class HFileBlock implements Cacheable {
      * write state to "block ready".
      */
     private void finishBlock() throws IOException {
+      if (blockType == BlockType.DATA) {
+        BufferGrabbingByteArrayOutputStream baosInMemoryCopy = 
+            new BufferGrabbingByteArrayOutputStream();
+        baosInMemory.writeTo(baosInMemoryCopy);
+        this.dataBlockEncoder.endBlockEncoding(dataBlockEncodingCtx, userDataStream,
+            baosInMemoryCopy.buf, blockType);
+        blockType = dataBlockEncodingCtx.getBlockType();
+      }
       userDataStream.flush();
       // This does an array copy, so it is safe to cache this byte array.
       uncompressedBytesWithHeader = baosInMemory.toByteArray();
@@ -777,15 +805,13 @@ public class HFileBlock implements Cacheable {
       // cache-on-write. In a way, the block is ready, but not yet encoded or
       // compressed.
       state = State.BLOCK_READY;
-      if (blockType == BlockType.DATA) {
-        encodeDataBlockForDisk();
+      if (blockType == BlockType.DATA || blockType == BlockType.ENCODED_DATA) {
+        onDiskBytesWithHeader = dataBlockEncodingCtx
+            .compressAndEncrypt(uncompressedBytesWithHeader);
       } else {
-        defaultBlockEncodingCtx.compressAfterEncodingWithBlockType(
-            uncompressedBytesWithHeader, blockType);
-        onDiskBytesWithHeader =
-          defaultBlockEncodingCtx.getOnDiskBytesWithHeader();
+        onDiskBytesWithHeader = defaultBlockEncodingCtx
+            .compressAndEncrypt(uncompressedBytesWithHeader);
       }
-
       int numBytes = (int) ChecksumUtil.numBytes(
           onDiskBytesWithHeader.length,
           fileContext.getBytesPerChecksum());
@@ -805,24 +831,17 @@ public class HFileBlock implements Cacheable {
           onDiskChecksum, 0, fileContext.getChecksumType(), fileContext.getBytesPerChecksum());
     }
 
-    /**
-     * Encodes this block if it is a data block and encoding is turned on in
-     * {@link #dataBlockEncoder}.
-     */
-    private void encodeDataBlockForDisk() throws IOException {
-      // do data block encoding, if data block encoder is set
-      ByteBuffer rawKeyValues =
-          ByteBuffer.wrap(uncompressedBytesWithHeader, HConstants.HFILEBLOCK_HEADER_SIZE,
-              uncompressedBytesWithHeader.length - HConstants.HFILEBLOCK_HEADER_SIZE).slice();
+    public static class BufferGrabbingByteArrayOutputStream extends ByteArrayOutputStream {
+      private byte[] buf;
 
-      // do the encoding
-      dataBlockEncoder.beforeWriteToDisk(rawKeyValues, dataBlockEncodingCtx, blockType);
+      @Override
+      public void write(byte[] b, int off, int len) {
+        this.buf = b;
+      }
 
-      uncompressedBytesWithHeader =
-          dataBlockEncodingCtx.getUncompressedBytesWithHeader();
-      onDiskBytesWithHeader =
-          dataBlockEncodingCtx.getOnDiskBytesWithHeader();
-      blockType = dataBlockEncodingCtx.getBlockType();
+      public byte[] getBuffer() {
+        return this.buf;
+      }
     }
 
     /**
@@ -873,7 +892,7 @@ public class HFileBlock implements Cacheable {
      * @param out the output stream to write the
      * @throws IOException
      */
-    private void finishBlockAndWriteHeaderAndData(DataOutputStream out)
+    protected void finishBlockAndWriteHeaderAndData(DataOutputStream out)
       throws IOException {
       ensureBlockReady();
       out.write(onDiskBytesWithHeader);
@@ -972,9 +991,8 @@ public class HFileBlock implements Cacheable {
      * @return the number of bytes written
      */
     public int blockSizeWritten() {
-      if (state != State.WRITING)
-        return 0;
-      return userDataStream.size();
+      if (state != State.WRITING) return 0;
+      return this.unencodedDataSizeWritten;
     }
 
     /**

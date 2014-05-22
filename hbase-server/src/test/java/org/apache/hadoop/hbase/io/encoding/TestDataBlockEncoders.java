@@ -20,7 +20,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -36,6 +38,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock.Writer.BufferGrabbingByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -91,48 +94,6 @@ public class TestDataBlockEncoders {
           HConstants.HFILEBLOCK_DUMMY_HEADER, meta);
     }
   }
-  
-  private byte[] encodeBytes(DataBlockEncoding encoding, ByteBuffer dataset)
-      throws IOException {
-    DataBlockEncoder encoder = encoding.getEncoder();
-    HFileBlockEncodingContext encodingCtx = getEncodingContext(Compression.Algorithm.NONE,
-        encoding);
-
-    encoder.encodeKeyValues(dataset, encodingCtx);
-
-    byte[] encodedBytesWithHeader = encodingCtx.getUncompressedBytesWithHeader();
-    byte[] encodedData = new byte[encodedBytesWithHeader.length - ENCODED_DATA_OFFSET];
-    System.arraycopy(encodedBytesWithHeader, ENCODED_DATA_OFFSET, encodedData, 0,
-        encodedData.length);
-    return encodedData;
-  }
-  
-  private void testAlgorithm(ByteBuffer dataset, DataBlockEncoding encoding,
-      List<KeyValue> kvList) throws IOException {
-    // encode
-    byte[] encodedBytes = encodeBytes(encoding, dataset);
-    // decode
-    ByteArrayInputStream bais = new ByteArrayInputStream(encodedBytes);
-    DataInputStream dis = new DataInputStream(bais);
-    ByteBuffer actualDataset;
-    DataBlockEncoder encoder = encoding.getEncoder();
-    HFileContext meta = new HFileContextBuilder()
-                        .withHBaseCheckSum(false)
-                        .withIncludesMvcc(includesMemstoreTS)
-                        .withIncludesTags(includesTags)
-                        .withCompression(Compression.Algorithm.NONE).build();
-    actualDataset = encoder.decodeKeyValues(dis, encoder.newDataBlockDecodingContext(meta));
-    dataset.rewind();
-    actualDataset.rewind();
-
-    // this is because in case of prefix tree the decoded stream will not have
-    // the
-    // mvcc in it.
-    // if (encoding != DataBlockEncoding.PREFIX_TREE) {
-    assertEquals("Encoding -> decoding gives different results for " + encoder,
-        Bytes.toStringBinary(dataset), Bytes.toStringBinary(actualDataset));
-    // }
-  }
 
   /**
    * Test data block encoding of empty KeyValue.
@@ -158,8 +119,7 @@ public class TestDataBlockEncoders {
       kvList.add(new KeyValue(row, family, qualifier, 0l, value, new Tag[] { new Tag((byte) 1,
           metaValue2) }));
     }
-    testEncodersOnDataset(RedundantKVGenerator.convertKvToByteBuffer(kvList, includesMemstoreTS),
-        kvList);
+    testEncodersOnDataset(kvList, includesMemstoreTS, includesTags);
   }
 
   /**
@@ -186,8 +146,7 @@ public class TestDataBlockEncoders {
       kvList.add(new KeyValue(row, family, qualifier, -1l, Type.Put, value));
       kvList.add(new KeyValue(row, family, qualifier, -2l, Type.Put, value));
     }
-    testEncodersOnDataset(RedundantKVGenerator.convertKvToByteBuffer(kvList, includesMemstoreTS),
-        kvList);
+    testEncodersOnDataset(kvList, includesMemstoreTS, includesTags);
   }
 
 
@@ -199,8 +158,7 @@ public class TestDataBlockEncoders {
   @Test
   public void testExecutionOnSample() throws IOException {
     List<KeyValue> kvList = generator.generateTestKeyValues(NUMBER_OF_KV, includesTags);
-    testEncodersOnDataset(RedundantKVGenerator.convertKvToByteBuffer(kvList, includesMemstoreTS),
-        kvList);
+    testEncodersOnDataset(kvList, includesMemstoreTS, includesTags);
   }
 
   /**
@@ -209,18 +167,17 @@ public class TestDataBlockEncoders {
   @Test
   public void testSeekingOnSample() throws IOException {
     List<KeyValue> sampleKv = generator.generateTestKeyValues(NUMBER_OF_KV, includesTags);
-    ByteBuffer originalBuffer = RedundantKVGenerator.convertKvToByteBuffer(sampleKv,
-        includesMemstoreTS);
 
     // create all seekers
-    List<DataBlockEncoder.EncodedSeeker> encodedSeekers = new ArrayList<DataBlockEncoder.EncodedSeeker>();
+    List<DataBlockEncoder.EncodedSeeker> encodedSeekers = 
+        new ArrayList<DataBlockEncoder.EncodedSeeker>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
-      if (encoding.getEncoder() == null) {
+      DataBlockEncoder encoder = encoding.getEncoder();
+      if (encoder == null) {
         continue;
       }
-
-      ByteBuffer encodedBuffer = ByteBuffer.wrap(encodeBytes(encoding, originalBuffer));
-      DataBlockEncoder encoder = encoding.getEncoder();
+      ByteBuffer encodedBuffer = encodeKeyValues(encoding, sampleKv,
+          getEncodingContext(Compression.Algorithm.NONE, encoding));
       HFileContext meta = new HFileContextBuilder()
                           .withHBaseCheckSum(false)
                           .withIncludesMvcc(includesMemstoreTS)
@@ -258,25 +215,35 @@ public class TestDataBlockEncoders {
     }
   }
 
+  static ByteBuffer encodeKeyValues(DataBlockEncoding encoding, List<KeyValue> kvs,
+      HFileBlockEncodingContext encodingContext) throws IOException {
+    DataBlockEncoder encoder = encoding.getEncoder();
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    baos.write(HConstants.HFILEBLOCK_DUMMY_HEADER);
+    DataOutputStream dos = new DataOutputStream(baos);
+    encoder.startBlockEncoding(encodingContext, dos);
+    for (KeyValue kv : kvs) {
+      encoder.encode(kv, encodingContext, dos);
+    }
+    BufferGrabbingByteArrayOutputStream stream = new BufferGrabbingByteArrayOutputStream();
+    baos.writeTo(stream);
+    encoder.endBlockEncoding(encodingContext, dos, stream.getBuffer());
+    byte[] encodedData = new byte[baos.size() - ENCODED_DATA_OFFSET];
+    System.arraycopy(baos.toByteArray(), ENCODED_DATA_OFFSET, encodedData, 0, encodedData.length);
+    return ByteBuffer.wrap(encodedData);
+  }
+
   @Test
-  public void testNextOnSample() {
+  public void testNextOnSample() throws IOException {
     List<KeyValue> sampleKv = generator.generateTestKeyValues(NUMBER_OF_KV, includesTags);
-    ByteBuffer originalBuffer = RedundantKVGenerator.convertKvToByteBuffer(sampleKv,
-        includesMemstoreTS);
 
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
       if (encoding.getEncoder() == null) {
         continue;
       }
-
       DataBlockEncoder encoder = encoding.getEncoder();
-      ByteBuffer encodedBuffer = null;
-      try {
-        encodedBuffer = ByteBuffer.wrap(encodeBytes(encoding, originalBuffer));
-      } catch (IOException e) {
-        throw new RuntimeException(String.format("Bug while encoding using '%s'",
-            encoder.toString()), e);
-      }
+      ByteBuffer encodedBuffer = encodeKeyValues(encoding, sampleKv,
+          getEncodingContext(Compression.Algorithm.NONE, encoding));
       HFileContext meta = new HFileContextBuilder()
                           .withHBaseCheckSum(false)
                           .withIncludesMvcc(includesMemstoreTS)
@@ -318,25 +285,19 @@ public class TestDataBlockEncoders {
 
   /**
    * Test whether the decompression of first key is implemented correctly.
+   * @throws IOException
    */
   @Test
-  public void testFirstKeyInBlockOnSample() {
+  public void testFirstKeyInBlockOnSample() throws IOException {
     List<KeyValue> sampleKv = generator.generateTestKeyValues(NUMBER_OF_KV, includesTags);
-    ByteBuffer originalBuffer = RedundantKVGenerator.convertKvToByteBuffer(sampleKv,
-        includesMemstoreTS);
 
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
       if (encoding.getEncoder() == null) {
         continue;
       }
       DataBlockEncoder encoder = encoding.getEncoder();
-      ByteBuffer encodedBuffer = null;
-      try {
-        encodedBuffer = ByteBuffer.wrap(encodeBytes(encoding, originalBuffer));
-      } catch (IOException e) {
-        throw new RuntimeException(String.format("Bug while encoding using '%s'",
-            encoder.toString()), e);
-      }
+      ByteBuffer encodedBuffer = encodeKeyValues(encoding, sampleKv,
+          getEncodingContext(Compression.Algorithm.NONE, encoding));
       ByteBuffer keyBuffer = encoder.getFirstKeyInBlock(encodedBuffer);
       KeyValue firstKv = sampleKv.get(0);
       if (0 != Bytes.compareTo(keyBuffer.array(), keyBuffer.arrayOffset(), keyBuffer.limit(),
@@ -360,9 +321,7 @@ public class TestDataBlockEncoders {
     ByteBuffer expectedKey = null;
     ByteBuffer expectedValue = null;
     for (DataBlockEncoder.EncodedSeeker seeker : encodedSeekers) {
-      seeker.seekToKeyInBlock(
-          new KeyValue.KeyOnlyKeyValue(keyValue.getBuffer(), keyValue.getKeyOffset(), keyValue
-              .getKeyLength()), seekBefore);
+      seeker.seekToKeyInBlock(keyValue, seekBefore);
       seeker.rewind();
 
       ByteBuffer actualKeyValue = seeker.getKeyValueBuffer();
@@ -388,24 +347,34 @@ public class TestDataBlockEncoders {
       }
     }
   }
-  
-  private void testEncodersOnDataset(ByteBuffer onDataset, List<KeyValue> kvList) throws IOException {
-    ByteBuffer dataset = ByteBuffer.allocate(onDataset.capacity());
-    onDataset.rewind();
-    dataset.put(onDataset);
-    onDataset.rewind();
-    dataset.flip();
 
+  private void testEncodersOnDataset(List<KeyValue> kvList, boolean includesMemstoreTS,
+      boolean includesTags) throws IOException {
+    ByteBuffer unencodedDataBuf = RedundantKVGenerator.convertKvToByteBuffer(kvList,
+        includesMemstoreTS);
+    HFileContext fileContext = new HFileContextBuilder().withIncludesMvcc(includesMemstoreTS)
+        .withIncludesTags(includesTags).build();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
-      if (encoding.getEncoder() == null) {
+      DataBlockEncoder encoder = encoding.getEncoder();
+      if (encoder == null) {
         continue;
       }
+      HFileBlockEncodingContext encodingContext = new HFileBlockDefaultEncodingContext(encoding,
+          HConstants.HFILEBLOCK_DUMMY_HEADER, fileContext);
 
-      testAlgorithm(dataset, encoding, kvList);
+      ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      baos.write(HConstants.HFILEBLOCK_DUMMY_HEADER);
+      DataOutputStream dos = new DataOutputStream(baos);
+      encoder.startBlockEncoding(encodingContext, dos);
+      for (KeyValue kv : kvList) {
+        encoder.encode(kv, encodingContext, dos);
+      }
+      BufferGrabbingByteArrayOutputStream stream = new BufferGrabbingByteArrayOutputStream();
+      baos.writeTo(stream);
+      encoder.endBlockEncoding(encodingContext, dos, stream.getBuffer());
+      byte[] encodedData = baos.toByteArray();
 
-      // ensure that dataset is unchanged
-      dataset.rewind();
-      assertEquals("Input of two methods is changed", onDataset, dataset);
+      testAlgorithm(encodedData, unencodedDataBuf, encoder);
     }
   }
   
@@ -427,8 +396,26 @@ public class TestDataBlockEncoders {
       kvList.add(new KeyValue(row, family, qualifier0, 0, Type.Put, value0));
       kvList.add(new KeyValue(row, family, qualifier1, 0, Type.Put, value1));
     }
-    testEncodersOnDataset(RedundantKVGenerator.convertKvToByteBuffer(kvList, includesMemstoreTS),
-        kvList);
+    testEncodersOnDataset(kvList, includesMemstoreTS, includesTags);
   }
 
+  private void testAlgorithm(byte[] encodedData, ByteBuffer unencodedDataBuf,
+      DataBlockEncoder encoder) throws IOException {
+    // decode
+    ByteArrayInputStream bais = new ByteArrayInputStream(encodedData, ENCODED_DATA_OFFSET,
+        encodedData.length - ENCODED_DATA_OFFSET);
+    DataInputStream dis = new DataInputStream(bais);
+    ByteBuffer actualDataset;
+    HFileContext meta = new HFileContextBuilder().withHBaseCheckSum(false)
+        .withIncludesMvcc(includesMemstoreTS).withIncludesTags(includesTags)
+        .withCompression(Compression.Algorithm.NONE).build();
+    actualDataset = encoder.decodeKeyValues(dis, encoder.newDataBlockDecodingContext(meta));
+    actualDataset.rewind();
+
+    // this is because in case of prefix tree the decoded stream will not have
+    // the
+    // mvcc in it.
+    assertEquals("Encoding -> decoding gives different results for " + encoder,
+        Bytes.toStringBinary(unencodedDataBuf), Bytes.toStringBinary(actualDataset));
+  }
 }

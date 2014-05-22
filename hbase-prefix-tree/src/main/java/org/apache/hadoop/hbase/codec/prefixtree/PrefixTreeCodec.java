@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.codec.prefixtree.encode.PrefixTreeEncoder;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.encoding.EncodingState;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.hadoop.io.WritableUtils;
 
 /**
  * This class is created via reflection in DataBlockEncoding enum. Update the enum if class name or
@@ -62,50 +64,6 @@ public class PrefixTreeCodec implements DataBlockEncoder{
    */
   public PrefixTreeCodec() {
   }
-
-  /**
-   * Copied from BufferedDataBlockEncoder. Almost definitely can be improved, but i'm not familiar
-   * enough with the concept of the HFileBlockEncodingContext.
-   */
-  @Override
-  public void encodeKeyValues(ByteBuffer in,
-      HFileBlockEncodingContext blkEncodingCtx) throws IOException {
-    if (blkEncodingCtx.getClass() != HFileBlockDefaultEncodingContext.class) {
-      throw new IOException(this.getClass().getName() + " only accepts "
-          + HFileBlockDefaultEncodingContext.class.getName() + " as the " + "encoding context.");
-    }
-
-    HFileBlockDefaultEncodingContext encodingCtx
-        = (HFileBlockDefaultEncodingContext) blkEncodingCtx;
-    encodingCtx.prepareEncoding();
-    DataOutputStream dataOut = encodingCtx.getOutputStreamForEncoder();
-    internalEncodeKeyValues(dataOut, in, encodingCtx.getHFileContext().isIncludesMvcc(),
-        encodingCtx.getHFileContext().isIncludesTags());
-
-    //do i need to check this, or will it always be DataBlockEncoding.PREFIX_TREE?
-    if (encodingCtx.getDataBlockEncoding() != DataBlockEncoding.NONE) {
-      encodingCtx.postEncoding(BlockType.ENCODED_DATA);
-    } else {
-      encodingCtx.postEncoding(BlockType.DATA);
-    }
-  }
-
-  private void internalEncodeKeyValues(DataOutputStream encodedOutputStream,
-      ByteBuffer rawKeyValues, boolean includesMvccVersion, boolean includesTag) throws IOException {
-    rawKeyValues.rewind();
-    PrefixTreeEncoder builder = EncoderFactory.checkOut(encodedOutputStream, includesMvccVersion);
-
-    try {
-      KeyValue kv;
-      while ((kv = KeyValueUtil.nextShallowCopy(rawKeyValues, includesMvccVersion, includesTag)) != null) {
-        builder.write(kv);
-      }
-      builder.flush();
-    } finally {
-      EncoderFactory.checkIn(builder);
-    }
-  }
-
 
   @Override
   public ByteBuffer decodeKeyValues(DataInputStream source, HFileBlockDecodingContext decodingCtx)
@@ -202,4 +160,54 @@ public class PrefixTreeCodec implements DataBlockEncoder{
     return new PrefixTreeSeeker(decodingCtx.getHFileContext().isIncludesMvcc());
   }
 
+  @Override
+  public int encode(KeyValue kv, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+      throws IOException {
+    PrefixTreeEncodingState state = (PrefixTreeEncodingState) encodingCtx.getEncodingState();
+    PrefixTreeEncoder builder = state.builder;
+    builder.write(kv);
+    int size = kv.getLength();
+    if (encodingCtx.getHFileContext().isIncludesMvcc()) {
+      size += WritableUtils.getVIntSize(kv.getMvccVersion());
+    }
+    return size;
+  }
+
+  private static class PrefixTreeEncodingState extends EncodingState {
+    PrefixTreeEncoder builder = null;
+  }
+
+  @Override
+  public void startBlockEncoding(HFileBlockEncodingContext blkEncodingCtx, DataOutputStream out)
+      throws IOException {
+    if (blkEncodingCtx.getClass() != HFileBlockDefaultEncodingContext.class) {
+      throw new IOException(this.getClass().getName() + " only accepts "
+          + HFileBlockDefaultEncodingContext.class.getName() + " as the " + "encoding context.");
+    }
+
+    HFileBlockDefaultEncodingContext encodingCtx = 
+        (HFileBlockDefaultEncodingContext) blkEncodingCtx;
+    encodingCtx.prepareEncoding(out);
+
+    PrefixTreeEncoder builder = EncoderFactory.checkOut(out, encodingCtx.getHFileContext()
+        .isIncludesMvcc());
+    PrefixTreeEncodingState state = new PrefixTreeEncodingState();
+    state.builder = builder;
+    blkEncodingCtx.setEncodingState(state);
+  }
+
+  @Override
+  public void endBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out,
+      byte[] uncompressedBytesWithHeader) throws IOException {
+    PrefixTreeEncodingState state = (PrefixTreeEncodingState) encodingCtx.getEncodingState();
+    PrefixTreeEncoder builder = state.builder;
+    builder.flush();
+    EncoderFactory.checkIn(builder);
+    // do i need to check this, or will it always be DataBlockEncoding.PREFIX_TREE?
+    if (encodingCtx.getDataBlockEncoding() != DataBlockEncoding.NONE) {
+      encodingCtx.postEncoding(BlockType.ENCODED_DATA);
+    } else {
+      encodingCtx.postEncoding(BlockType.DATA);
+    }
+  }
 }

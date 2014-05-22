@@ -17,6 +17,7 @@
 package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -36,13 +37,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.compress.Compressor;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
  * Encapsulates a data block compressed using a particular encoding algorithm.
  * Useful for testing and benchmarking.
+ * This is used only in testing.
  */
 @InterfaceAudience.Private
+@VisibleForTesting
 public class EncodedDataBlock {
   private byte[] rawKVs;
   private ByteBuffer rawBuffer;
@@ -215,16 +219,53 @@ public class EncodedDataBlock {
    * @return encoded data block with header and checksum
    */
   public byte[] encodeData() {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
     try {
-      this.dataBlockEncoder.encodeKeyValues(
-          getUncompressedBuffer(), encodingCtx);
+      baos.write(HConstants.HFILEBLOCK_DUMMY_HEADER);
+      DataOutputStream out = new DataOutputStream(baos);
+      this.dataBlockEncoder.startBlockEncoding(encodingCtx, out);
+      ByteBuffer in = getUncompressedBuffer();
+      in.rewind();
+      int klength, vlength;
+      short tagsLength = 0;
+      long memstoreTS = 0L;
+      KeyValue kv = null;
+      while (in.hasRemaining()) {
+        int kvOffset = in.position();
+        klength = in.getInt();
+        vlength = in.getInt();
+        ByteBufferUtils.skip(in, klength + vlength);
+        if (this.meta.isIncludesTags()) {
+          tagsLength = in.getShort();
+          ByteBufferUtils.skip(in, tagsLength);
+        }
+        if (this.meta.isIncludesMvcc()) {
+          memstoreTS = ByteBufferUtils.readVLong(in);
+        }
+        kv = new KeyValue(in.array(), kvOffset, (int) KeyValue.getKeyValueDataStructureSize(
+            klength, vlength, tagsLength));
+        kv.setMvccVersion(memstoreTS);
+        this.dataBlockEncoder.encode(kv, encodingCtx, out);
+      }
+      BufferGrabbingByteArrayOutputStream stream = new BufferGrabbingByteArrayOutputStream();
+      baos.writeTo(stream);
+      this.dataBlockEncoder.endBlockEncoding(encodingCtx, out, stream.buf);
     } catch (IOException e) {
       throw new RuntimeException(String.format(
           "Bug in encoding part of algorithm %s. " +
           "Probably it requested more bytes than are available.",
           toString()), e);
     }
-    return encodingCtx.getUncompressedBytesWithHeader();
+    return baos.toByteArray();
+  }
+
+  private static class BufferGrabbingByteArrayOutputStream extends ByteArrayOutputStream {
+    private byte[] buf;
+
+    @Override
+    public void write(byte[] b, int off, int len) {
+      this.buf = b;
+    }
   }
 
   @Override

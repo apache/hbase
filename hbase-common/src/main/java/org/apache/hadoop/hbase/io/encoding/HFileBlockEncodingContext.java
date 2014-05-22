@@ -17,7 +17,6 @@
 package org.apache.hadoop.hbase.io.encoding;
 
 import java.io.IOException;
-import java.io.OutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -34,31 +33,9 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 public interface HFileBlockEncodingContext {
 
   /**
-   * @return OutputStream to which encoded data is written
-   */
-  OutputStream getOutputStreamForEncoder();
-
-  /**
-   * @return encoded and compressed bytes with header which are ready to write
-   *         out to disk
-   */
-  byte[] getOnDiskBytesWithHeader();
-
-  /**
-   * @return encoded but not heavily compressed bytes with header which can be
-   *         cached in block cache
-   */
-  byte[] getUncompressedBytesWithHeader();
-
-  /**
    * @return the block type after encoding
    */
   BlockType getBlockType();
-
-  /**
-   * sets the dummy header bytes
-   */
-  void setDummyHeader(byte[] headerBytes);
 
   /**
    * @return the {@link DataBlockEncoding} encoding used
@@ -83,4 +60,22 @@ public interface HFileBlockEncodingContext {
    * @return HFile context information
    */
   HFileContext getHFileContext();
+
+  /**
+   * Sets the encoding state.
+   * @param state
+   */
+  void setEncodingState(EncodingState state);
+
+  /**
+   * @return the encoding state
+   */
+  EncodingState getEncodingState();
+
+  /**
+   * @param uncompressedBytesWithHeader encoded bytes with header
+   * @return Bytes with header which are ready to write out to disk. This is compressed and
+   *         encrypted bytes applying the set compression algorithm and encryption.
+   */
+  byte[] compressAndEncrypt(byte[] uncompressedBytesWithHeader) throws IOException;
 }

@@ -16,15 +16,17 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
+import org.apache.hadoop.io.WritableUtils;
 
 /**
  * Does not perform any kind of encoding/decoding.
@@ -40,18 +42,30 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
   }
 
   @Override
-  public void beforeWriteToDisk(ByteBuffer in,
-      HFileBlockEncodingContext encodeCtx, BlockType blockType)
+  public int encode(KeyValue kv, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
       throws IOException {
-    if (!(encodeCtx.getClass().getName().equals(
-        HFileBlockDefaultEncodingContext.class.getName()))) {
-      throw new IOException (this.getClass().getName() + " only accepts " +
-          HFileBlockDefaultEncodingContext.class.getName() + ".");
-    }
+    int klength = kv.getKeyLength();
+    int vlength = kv.getValueLength();
 
-    HFileBlockDefaultEncodingContext defaultContext =
-        (HFileBlockDefaultEncodingContext) encodeCtx;
-    defaultContext.compressAfterEncodingWithBlockType(in.array(), blockType);
+    out.writeInt(klength);
+    out.writeInt(vlength);
+    out.write(kv.getBuffer(), kv.getKeyOffset(), klength);
+    out.write(kv.getValueArray(), kv.getValueOffset(), vlength);
+    int encodedKvSize = klength + vlength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
+    // Write the additional tag into the stream
+    if (encodingCtx.getHFileContext().isIncludesTags()) {
+      short tagsLength = kv.getTagsLength();
+      out.writeShort(tagsLength);
+      if (tagsLength > 0) {
+        out.write(kv.getTagsArray(), kv.getTagsOffset(), tagsLength);
+      }
+      encodedKvSize += tagsLength + KeyValue.TAGS_LENGTH_SIZE;
+    }
+    if (encodingCtx.getHFileContext().isIncludesMvcc()) {
+      WritableUtils.writeVLong(out, kv.getMvccVersion());
+      encodedKvSize += WritableUtils.getVIntSize(kv.getMvccVersion());
+    }
+    return encodedKvSize;
   }
 
   @Override
@@ -87,5 +101,16 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
   @Override
   public HFileBlockDecodingContext newDataBlockDecodingContext(HFileContext meta) {
     return new HFileBlockDefaultDecodingContext(meta);
+  }
+
+  @Override
+  public void startBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+      throws IOException {
+  }
+
+  @Override
+  public void endBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out,
+      byte[] uncompressedBytesWithHeader, BlockType blockType) throws IOException {
+    encodingCtx.postEncoding(BlockType.DATA);
   }
 }

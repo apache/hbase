@@ -75,130 +75,6 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     }
   }
 
-  private void compressSingleKeyValue(DiffCompressionState previousState,
-      DiffCompressionState currentState, DataOutputStream out,
-      ByteBuffer in) throws IOException {
-    byte flag = 0;
-    int kvPos = in.position();
-    int keyLength = in.getInt();
-    int valueLength = in.getInt();
-
-    long timestamp;
-    long diffTimestamp = 0;
-    int diffTimestampFitsInBytes = 0;
-
-    int commonPrefix;
-
-    int timestampFitsInBytes;
-
-    if (previousState.isFirst()) {
-      currentState.readKey(in, keyLength, valueLength);
-      currentState.prevOffset = kvPos;
-      timestamp = currentState.timestamp;
-      if (timestamp < 0) {
-        flag |= FLAG_TIMESTAMP_SIGN;
-        timestamp = -timestamp;
-      }
-      timestampFitsInBytes = ByteBufferUtils.longFitsIn(timestamp);
-
-      flag |= (timestampFitsInBytes - 1) << SHIFT_TIMESTAMP_LENGTH;
-      commonPrefix = 0;
-
-      // put column family
-      in.mark();
-      ByteBufferUtils.skip(in, currentState.rowLength
-          + KeyValue.ROW_LENGTH_SIZE);
-      ByteBufferUtils.moveBufferToStream(out, in, currentState.familyLength
-          + KeyValue.FAMILY_LENGTH_SIZE);
-      in.reset();
-    } else {
-      // find a common prefix and skip it
-      commonPrefix =
-          ByteBufferUtils.findCommonPrefix(in, in.position(),
-              previousState.prevOffset + KeyValue.ROW_OFFSET, keyLength
-                  - KeyValue.TIMESTAMP_TYPE_SIZE);
-      // don't compress timestamp and type using prefix
-
-      currentState.readKey(in, keyLength, valueLength,
-          commonPrefix, previousState);
-      currentState.prevOffset = kvPos;
-      timestamp = currentState.timestamp;
-      boolean negativeTimestamp = timestamp < 0;
-      if (negativeTimestamp) {
-        timestamp = -timestamp;
-      }
-      timestampFitsInBytes = ByteBufferUtils.longFitsIn(timestamp);
-
-      if (keyLength == previousState.keyLength) {
-        flag |= FLAG_SAME_KEY_LENGTH;
-      }
-      if (valueLength == previousState.valueLength) {
-        flag |= FLAG_SAME_VALUE_LENGTH;
-      }
-      if (currentState.type == previousState.type) {
-        flag |= FLAG_SAME_TYPE;
-      }
-
-      // encode timestamp
-      diffTimestamp = previousState.timestamp - currentState.timestamp;
-      boolean minusDiffTimestamp = diffTimestamp < 0;
-      if (minusDiffTimestamp) {
-        diffTimestamp = -diffTimestamp;
-      }
-      diffTimestampFitsInBytes = ByteBufferUtils.longFitsIn(diffTimestamp);
-      if (diffTimestampFitsInBytes < timestampFitsInBytes) {
-        flag |= (diffTimestampFitsInBytes - 1) << SHIFT_TIMESTAMP_LENGTH;
-        flag |= FLAG_TIMESTAMP_IS_DIFF;
-        if (minusDiffTimestamp) {
-          flag |= FLAG_TIMESTAMP_SIGN;
-        }
-      } else {
-        flag |= (timestampFitsInBytes - 1) << SHIFT_TIMESTAMP_LENGTH;
-        if (negativeTimestamp) {
-          flag |= FLAG_TIMESTAMP_SIGN;
-        }
-      }
-    }
-
-    out.write(flag);
-
-    if ((flag & FLAG_SAME_KEY_LENGTH) == 0) {
-      ByteBufferUtils.putCompressedInt(out, keyLength);
-    }
-    if ((flag & FLAG_SAME_VALUE_LENGTH) == 0) {
-      ByteBufferUtils.putCompressedInt(out, valueLength);
-    }
-
-    ByteBufferUtils.putCompressedInt(out, commonPrefix);
-    ByteBufferUtils.skip(in, commonPrefix);
-
-    if (previousState.isFirst() ||
-        commonPrefix < currentState.rowLength + KeyValue.ROW_LENGTH_SIZE) {
-      int restRowLength =
-          currentState.rowLength + KeyValue.ROW_LENGTH_SIZE - commonPrefix;
-      ByteBufferUtils.moveBufferToStream(out, in, restRowLength);
-      ByteBufferUtils.skip(in, currentState.familyLength +
-          KeyValue.FAMILY_LENGTH_SIZE);
-      ByteBufferUtils.moveBufferToStream(out, in, currentState.qualifierLength);
-    } else {
-      ByteBufferUtils.moveBufferToStream(out, in,
-          keyLength - commonPrefix - KeyValue.TIMESTAMP_TYPE_SIZE);
-    }
-
-    if ((flag & FLAG_TIMESTAMP_IS_DIFF) == 0) {
-      ByteBufferUtils.putLong(out, timestamp, timestampFitsInBytes);
-    } else {
-      ByteBufferUtils.putLong(out, diffTimestamp, diffTimestampFitsInBytes);
-    }
-
-    if ((flag & FLAG_SAME_TYPE) == 0) {
-      out.write(currentState.type);
-    }
-    ByteBufferUtils.skip(in, KeyValue.TIMESTAMP_TYPE_SIZE);
-
-    ByteBufferUtils.moveBufferToStream(out, in, valueLength);
-  }
-
   private void uncompressSingleKeyValue(DataInputStream source,
       ByteBuffer buffer,
       DiffCompressionState state)
@@ -316,24 +192,110 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public void internalEncodeKeyValues(DataOutputStream out,
-      ByteBuffer in, HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
-    in.rewind();
-    ByteBufferUtils.putInt(out, in.limit());
-    DiffCompressionState previousState = new DiffCompressionState();
-    DiffCompressionState currentState = new DiffCompressionState();
-    while (in.hasRemaining()) {
-      compressSingleKeyValue(previousState, currentState,
-          out, in);
-      afterEncodingKeyValue(in, out, encodingCtx);
-
-      // swap previousState <-> currentState
-      DiffCompressionState tmp = previousState;
-      previousState = currentState;
-      currentState = tmp;
-    }
+  public int internalEncode(KeyValue kv, HFileBlockDefaultEncodingContext encodingContext,
+      DataOutputStream out) throws IOException {
+    EncodingState state = encodingContext.getEncodingState();
+    int size = compressSingleKeyValue(out, kv, state.prevKv);
+    size += afterEncodingKeyValue(kv, out, encodingContext);
+    state.prevKv = kv;
+    return size;
   }
 
+  private int compressSingleKeyValue(DataOutputStream out, KeyValue kv, KeyValue prevKv)
+      throws IOException {
+    byte flag = 0;
+    int kLength = kv.getKeyLength();
+    int vLength = kv.getValueLength();
+
+    long timestamp;
+    long diffTimestamp = 0;
+    int diffTimestampFitsInBytes = 0;
+    int timestampFitsInBytes;
+    int commonPrefix;
+    byte[] curKvBuf = kv.getBuffer();
+
+    if (prevKv == null) {
+      timestamp = kv.getTimestamp();
+      if (timestamp < 0) {
+        flag |= FLAG_TIMESTAMP_SIGN;
+        timestamp = -timestamp;
+      }
+      timestampFitsInBytes = ByteBufferUtils.longFitsIn(timestamp);
+      flag |= (timestampFitsInBytes - 1) << SHIFT_TIMESTAMP_LENGTH;
+      commonPrefix = 0;
+      // put column family
+      byte familyLength = kv.getFamilyLength();
+      out.write(familyLength);
+      out.write(kv.getFamilyArray(), kv.getFamilyOffset(), familyLength);
+    } else {
+      // Finding common prefix
+      int preKeyLength = prevKv.getKeyLength();
+      commonPrefix = ByteBufferUtils.findCommonPrefix(curKvBuf, kv.getKeyOffset(), kLength
+          - KeyValue.TIMESTAMP_TYPE_SIZE, prevKv.getBuffer(), prevKv.getKeyOffset(), preKeyLength
+          - KeyValue.TIMESTAMP_TYPE_SIZE);
+      if (kLength == preKeyLength) {
+        flag |= FLAG_SAME_KEY_LENGTH;
+      }
+      if (vLength == prevKv.getValueLength()) {
+        flag |= FLAG_SAME_VALUE_LENGTH;
+      }
+      if (kv.getTypeByte() == prevKv.getTypeByte()) {
+        flag |= FLAG_SAME_TYPE;
+      }
+      // don't compress timestamp and type using prefix encode timestamp
+      timestamp = kv.getTimestamp();
+      diffTimestamp = prevKv.getTimestamp() - timestamp;
+      boolean negativeTimestamp = timestamp < 0;
+      if (negativeTimestamp) {
+        timestamp = -timestamp;
+      }
+      timestampFitsInBytes = ByteBufferUtils.longFitsIn(timestamp);
+      boolean minusDiffTimestamp = diffTimestamp < 0;
+      if (minusDiffTimestamp) {
+        diffTimestamp = -diffTimestamp;
+      }
+      diffTimestampFitsInBytes = ByteBufferUtils.longFitsIn(diffTimestamp);
+      if (diffTimestampFitsInBytes < timestampFitsInBytes) {
+        flag |= (diffTimestampFitsInBytes - 1) << SHIFT_TIMESTAMP_LENGTH;
+        flag |= FLAG_TIMESTAMP_IS_DIFF;
+        if (minusDiffTimestamp) {
+          flag |= FLAG_TIMESTAMP_SIGN;
+        }
+      } else {
+        flag |= (timestampFitsInBytes - 1) << SHIFT_TIMESTAMP_LENGTH;
+        if (negativeTimestamp) {
+          flag |= FLAG_TIMESTAMP_SIGN;
+        }
+      }
+    }
+    out.write(flag);
+    if ((flag & FLAG_SAME_KEY_LENGTH) == 0) {
+      ByteBufferUtils.putCompressedInt(out, kLength);
+    }
+    if ((flag & FLAG_SAME_VALUE_LENGTH) == 0) {
+      ByteBufferUtils.putCompressedInt(out, vLength);
+    }
+    ByteBufferUtils.putCompressedInt(out, commonPrefix);
+    if (prevKv == null || commonPrefix < kv.getRowLength() + KeyValue.ROW_LENGTH_SIZE) {
+      int restRowLength = kv.getRowLength() + KeyValue.ROW_LENGTH_SIZE - commonPrefix;
+      out.write(curKvBuf, kv.getKeyOffset() + commonPrefix, restRowLength);
+      out.write(curKvBuf, kv.getQualifierOffset(), kv.getQualifierLength());
+    } else {
+      out.write(curKvBuf, kv.getKeyOffset() + commonPrefix, kLength - commonPrefix
+          - KeyValue.TIMESTAMP_TYPE_SIZE);
+    }
+    if ((flag & FLAG_TIMESTAMP_IS_DIFF) == 0) {
+      ByteBufferUtils.putLong(out, timestamp, timestampFitsInBytes);
+    } else {
+      ByteBufferUtils.putLong(out, diffTimestamp, diffTimestampFitsInBytes);
+    }
+
+    if ((flag & FLAG_SAME_TYPE) == 0) {
+      out.write(kv.getTypeByte());
+    }
+    out.write(kv.getValueArray(), kv.getValueOffset(), vLength);
+    return kLength + vLength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
+  }
 
   @Override
   public ByteBuffer getFirstKeyInBlock(ByteBuffer block) {

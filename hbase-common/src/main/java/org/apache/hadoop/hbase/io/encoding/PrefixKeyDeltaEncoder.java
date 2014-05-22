@@ -44,50 +44,33 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
-  private int addKV(int prevKeyOffset, DataOutputStream out,
-      ByteBuffer in, int prevKeyLength) throws IOException {
-    int keyLength = in.getInt();
-    int valueLength = in.getInt();
-
-    if (prevKeyOffset == -1) {
+  @Override
+  public int internalEncode(KeyValue kv, HFileBlockDefaultEncodingContext encodingContext,
+      DataOutputStream out) throws IOException {
+    byte[] kvBuf = kv.getBuffer();
+    int klength = kv.getKeyLength();
+    int vlength = kv.getValueLength();
+    EncodingState state = encodingContext.getEncodingState();
+    if (state.prevKv == null) {
       // copy the key, there is no common prefix with none
-      ByteBufferUtils.putCompressedInt(out, keyLength);
-      ByteBufferUtils.putCompressedInt(out, valueLength);
+      ByteBufferUtils.putCompressedInt(out, klength);
+      ByteBufferUtils.putCompressedInt(out, vlength);
       ByteBufferUtils.putCompressedInt(out, 0);
-      ByteBufferUtils.moveBufferToStream(out, in, keyLength + valueLength);
+      out.write(kvBuf, kv.getKeyOffset(), klength + vlength);
     } else {
       // find a common prefix and skip it
-      int common = ByteBufferUtils.findCommonPrefix(
-          in, prevKeyOffset + KeyValue.ROW_OFFSET,
-          in.position(),
-          Math.min(prevKeyLength, keyLength));
-
-      ByteBufferUtils.putCompressedInt(out, keyLength - common);
-      ByteBufferUtils.putCompressedInt(out, valueLength);
+      int common = ByteBufferUtils.findCommonPrefix(state.prevKv.getBuffer(),
+          state.prevKv.getKeyOffset(), state.prevKv.getKeyLength(), kvBuf, kv.getKeyOffset(),
+          kv.getKeyLength());
+      ByteBufferUtils.putCompressedInt(out, klength - common);
+      ByteBufferUtils.putCompressedInt(out, vlength);
       ByteBufferUtils.putCompressedInt(out, common);
-
-      ByteBufferUtils.skip(in, common);
-      ByteBufferUtils.moveBufferToStream(out, in, keyLength - common
-          + valueLength);
+      out.write(kvBuf, kv.getKeyOffset() + common, klength - common + vlength);
     }
-
-    return keyLength;
-  }
-
-  @Override
-  public void internalEncodeKeyValues(DataOutputStream writeHere, ByteBuffer in,
-      HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
-    in.rewind();
-    ByteBufferUtils.putInt(writeHere, in.limit());
-    int prevOffset = -1;
-    int offset = 0;
-    int keyLength = 0;
-    while (in.hasRemaining()) {
-      offset = in.position();
-      keyLength = addKV(prevOffset, writeHere, in, keyLength);
-      afterEncodingKeyValue(in, writeHere, encodingCtx);
-      prevOffset = offset;
-    }
+    int size = klength + vlength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
+    size += afterEncodingKeyValue(kv, out, encodingContext);
+    state.prevKv = kv;
+    return size;
   }
 
   @Override

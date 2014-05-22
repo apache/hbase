@@ -16,10 +16,11 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
@@ -36,18 +37,38 @@ public interface HFileDataBlockEncoder {
   byte[] DATA_BLOCK_ENCODING = Bytes.toBytes("DATA_BLOCK_ENCODING");
 
   /**
-   * Should be called before an encoded or unencoded data block is written to
-   * disk.
-   * @param in KeyValues next to each other
-   * @param encodingResult the encoded result
-   * @param blockType block type
+   * Starts encoding for a block of KeyValues. Call
+   * {@link #endBlockEncoding(HFileBlockEncodingContext, DataOutputStream, byte[], BlockType)}
+   * to finish encoding of a block.
+   * @param encodingCtx
+   * @param out
    * @throws IOException
    */
-  void beforeWriteToDisk(
-    ByteBuffer in,
-    HFileBlockEncodingContext encodingResult,
-    BlockType blockType
-  ) throws IOException;
+  void startBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+      throws IOException;
+
+  /**
+   * Encodes a KeyValue.
+   * @param kv
+   * @param encodingCtx
+   * @param out
+   * @return unencoded kv size
+   * @throws IOException
+   */
+  int encode(KeyValue kv, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+      throws IOException;
+
+  /**
+   * Ends encoding for a block of KeyValues. Gives a chance for the encoder to do the finishing
+   * stuff for the encoded block. It must be called at the end of block encoding.
+   * @param encodingCtx
+   * @param out
+   * @param uncompressedBytesWithHeader
+   * @param blockType
+   * @throws IOException
+   */
+  void endBlockEncoding(HFileBlockEncodingContext encodingCtx, DataOutputStream out,
+      byte[] uncompressedBytesWithHeader, BlockType blockType) throws IOException;
 
   /**
    * Decides whether we should use a scanner over encoded blocks.

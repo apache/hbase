@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableUtils;
 
 /**
  * Writes HFile format version 2.
@@ -251,8 +250,37 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    */
   @Override
   public void append(final KeyValue kv) throws IOException {
-    append(kv.getMvccVersion(), kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength(),
-        kv.getValueArray(), kv.getValueOffset(), kv.getValueLength());
+    byte[] key = kv.getBuffer();
+    int koffset = kv.getKeyOffset();
+    int klength = kv.getKeyLength();
+    byte[] value = kv.getValueArray();
+    int voffset = kv.getValueOffset();
+    int vlength = kv.getValueLength();
+    boolean dupKey = checkKey(key, koffset, klength);
+    checkValue(value, voffset, vlength);
+    if (!dupKey) {
+      checkBlockBoundary();
+    }
+
+    if (!fsBlockWriter.isWriting())
+      newBlock();
+
+    fsBlockWriter.write(kv);
+
+    totalKeyLength += klength;
+    totalValueLength += vlength;
+
+    // Are we the first key in this block?
+    if (firstKeyInBlock == null) {
+      // Copy the key.
+      firstKeyInBlock = new byte[klength];
+      System.arraycopy(key, koffset, firstKeyInBlock, 0, klength);
+    }
+
+    lastKeyBuffer = key;
+    lastKeyOffset = koffset;
+    lastKeyLength = klength;
+    entryCount++;
     this.maxMemstoreTS = Math.max(this.maxMemstoreTS, kv.getMvccVersion());
   }
 
@@ -268,59 +296,14 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    */
   @Override
   public void append(final byte[] key, final byte[] value) throws IOException {
-    append(0, key, 0, key.length, value, 0, value.length);
-  }
-
-  /**
-   * Add key/value to file. Keys must be added in an order that agrees with the
-   * Comparator passed on construction.
-   *
-   * @param key
-   * @param koffset
-   * @param klength
-   * @param value
-   * @param voffset
-   * @param vlength
-   * @throws IOException
-   */
-  protected void append(final long memstoreTS, final byte[] key, final int koffset,
-      final int klength, final byte[] value, final int voffset, final int vlength)
-      throws IOException {
-    boolean dupKey = checkKey(key, koffset, klength);
-    checkValue(value, voffset, vlength);
-    if (!dupKey) {
-      checkBlockBoundary();
-    }
-
-    if (!fsBlockWriter.isWriting())
-      newBlock();
-
-    // Write length of key and value and then actual key and value bytes.
-    // Additionally, we may also write down the memstoreTS.
-    {
-      DataOutputStream out = fsBlockWriter.getUserDataStream();
-      out.writeInt(klength);
-      totalKeyLength += klength;
-      out.writeInt(vlength);
-      totalValueLength += vlength;
-      out.write(key, koffset, klength);
-      out.write(value, voffset, vlength);
-      if (this.hFileContext.isIncludesMvcc()) {
-        WritableUtils.writeVLong(out, memstoreTS);
-      }
-    }
-
-    // Are we the first key in this block?
-    if (firstKeyInBlock == null) {
-      // Copy the key.
-      firstKeyInBlock = new byte[klength];
-      System.arraycopy(key, koffset, firstKeyInBlock, 0, klength);
-    }
-
-    lastKeyBuffer = key;
-    lastKeyOffset = koffset;
-    lastKeyLength = klength;
-    entryCount++;
+    int kvlen = (int) KeyValue.getKeyValueDataStructureSize(key.length, value.length, 0);
+    byte[] b = new byte[kvlen];
+    int pos = 0;
+    pos = Bytes.putInt(b, pos, key.length);
+    pos = Bytes.putInt(b, pos, value.length);
+    pos = Bytes.putBytes(b, pos, key, 0, key.length);
+    Bytes.putBytes(b, pos, value, 0, value.length);
+    append(new KeyValue(b, 0, kvlen));
   }
 
   @Override
