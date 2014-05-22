@@ -32,27 +32,14 @@
     </para>
     <section xml:id="repos">
       <title>Apache HBase Repositories</title>
-      <para>There are two different repositories for Apache HBase: Subversion (SVN) and Git. The former
-          is the system of record for committers, but the latter is easier to work with to build and contribute.
-          SVN updates get automatically propagated to the Git repo.</para>
-      <section xml:id="svn">
-        <title>SVN</title>
-        <programlisting>
-svn co http://svn.apache.org/repos/asf/hbase/trunk hbase-core-trunk
-        </programlisting>
-      </section>
-      <section xml:id="git">
-        <title>Git</title>
-        <programlisting>
-git clone git://git.apache.org/hbase.git
-        </programlisting>
-          <para>
-              There is also a github repository that mirrors Apache git repository.  If you'd like to develop within github environment (collaborating, pull requests) you can get the source code by:
-              <programlisting>
-git clone git://github.com/apache/hbase.git
-              </programlisting>
-          </para>
-      </section>
+      <para>There are two different repositories for Apache HBase: Subversion (SVN) and Git.
+          GIT is our repository of record for all but the Apache HBase website.
+          We used to be on SVN. We migrated.  See <link xlink:href="https://issues.apache.org/jira/browse/INFRA-7768">Migrade Apache HBase SVN Repos to Git</link>. 
+          Updating hbase.apache.org still requires use of SVN (See <xref linkend="hbase.org" />). 
+          See <link xlink:href="http://hbase.apache.org/source-repository.html">Source Code Management</link>
+          page for contributor and committer links or
+          seach for HBase on the <link xlink:href="http://git.apache.org/">Apache Git</link> page.
+      </para>
     </section>
 
     <section xml:id="ides">
@@ -81,11 +68,6 @@ git clone git://github.com/apache/hbase.git
 </para>
             <para>In addition to the automatic formatting, make sure you follow the style guidelines explained in <xref linkend="common.patch.feedback"/></para>
             <para>Also, no @author tags - that's a rule.  Quality Javadoc comments are appreciated.  And include the Apache license.</para>
-            </section>
-            <section xml:id="eclipse.svn">
-            <title>Subversive Plugin</title>
-            <para>Download and install the Subversive plugin.</para>
-            <para>Set up an SVN Repository target from <xref linkend="svn"/>, then check out the code.</para>
             </section>
             <section xml:id="eclipse.git.plugin">
             <title>Git Plugin</title>
@@ -166,7 +148,7 @@ mvn clean package -DskipTests
       <section xml:id="build.protobuf"><title>Build Protobuf</title>
             <para>You may need to change the protobuf definitions that reside in the hbase-protocol module or other modules.</para>
             <para>
-              The protobuf files are located in <link xlink:href="https://svn.apache.org/repos/asf/hbase/trunk/hbase-protocol/src/main/protobuf">hbase-protocol/src/main/protobuf</link>.
+              The protobuf files are located </filename>hbase-protocol/src/main/protobuf<filename>.
               For the change to be effective, you will need to regenerate the classes. You can use maven profile compile-protobuf to do this.
             <programlisting>
 mvn compile -Dcompile-protobuf
@@ -177,8 +159,7 @@ mvn compile -Pcompile-protobuf
 You may also want to define protoc.path for the protoc binary
              <programlisting>
 mvn compile -Dcompile-protobuf -Dprotoc.path=/opt/local/bin/protoc
-             </programlisting>
- Read the <link xlink:href="https://svn.apache.org/repos/asf/hbase/trunk/hbase-protocol/README.txt">hbase-protocol/README.txt</link> for more details.
+             </programlisting> Read the <filename>hbase-protocol/README.txt</filename> for more details.
            </para>
       </section>
 
@@ -287,14 +268,10 @@ under the respective release documentation folders.
          </para>
 	 <note>
          <title>Point Release Only</title>
-	 <para>At this point you should make svn copy of the previous release branch (ex: 0.96.1) with
+	 <para>At this point you should tag the previous release branch (ex: 0.96.1) with
              the new point release tag (e.g. 0.96.1.1 tag).  Any commits with changes or mentioned below for the point release
 	     should be appled to the new tag. 
 	 </para>
-	 <para><programlisting>
-$ svn copy http://svn.apache.org/repos/asf/hbase/tags/0.96.1 http://svn.apache.org/repos/asf/hbase/tags/0.96.1.1
-$ svn checkout http://svn.apache.org/repos/asf/hbase/tags/0.96.1.1
-	 </programlisting></para>
 	 </note>
 
 
@@ -1150,6 +1127,11 @@ pecularity that is probably fixable but we've not spent the time trying to figur
 
        <section xml:id="submitting.patches">
           <title>Submitting Patches</title>
+          <para><emphasis>TOOD: Needs update now we have moved to GIT.</emphasis>
+          Until then, caveat we have a different branching mode and we don't currently do the merge practice
+          described, the <link xlink:href="http://accumulo.apache.org/git.html">accumulo doc on how to contribute and develop</link> 
+          after the move to GIT is worth a read.
+          </para>
           <para>If you are new to submitting patches to open source or new to submitting patches to Apache,
           I'd suggest you start by reading the <link xlink:href="http://commons.apache.org/patches.html">On Contributing Patches</link>
           page from <link xlink:href="http://commons.apache.org/">Apache Commons Project</link>.  Its a nice overview that
