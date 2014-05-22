@@ -112,6 +112,7 @@ public class TestSplitLogManager {
       return "test";
     }
   };
+  private MiniDFSCluster dfscluster;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -137,11 +138,14 @@ public class TestSplitLogManager {
     assertTrue(zkw.checkExists(zkw.splitLogZNode) != -1);
     LOG.debug(zkw.splitLogZNode + " created");
 
+
+    this.dfscluster = TEST_UTIL.startMiniDFSCluster(1);
     resetCounters();
   }
 
   @After
   public void teardown() throws IOException, KeeperException {
+    TEST_UTIL.shutdownMiniDFSCluster();
     stopped = true;
     zkw.close();
     slm.stop();
@@ -337,6 +341,7 @@ public class TestSplitLogManager {
         return (tot_mgr_resubmit.get() + tot_mgr_resubmit_failed.get());
       }
     }, 0, 1, 5*60000); // wait long enough
+
     if (tot_mgr_resubmit_failed.get() == 0) {
       int version1 = zkw.checkExists(tasknode);
       assertTrue(version1 > version);
@@ -348,7 +353,6 @@ public class TestSplitLogManager {
     } else {
       LOG.warn("Could not run test. Lost ZK connection?");
     }
-    return;
   }
 
   @Test
@@ -484,14 +488,13 @@ public class TestSplitLogManager {
     LOG.info("testEmptyLogDir");
     slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
     slm.finishInitialization();
-    MiniDFSCluster cluster = TEST_UTIL.startMiniDFSCluster(1);
-    FileSystem fs = cluster.getFileSystem();
+
+    FileSystem fs = dfscluster.getFileSystem();
     Path emptyLogDirPath = new Path(fs.getWorkingDirectory(),
         UUID.randomUUID().toString());
     fs.mkdirs(emptyLogDirPath);
     slm.splitLogDistributed(emptyLogDirPath);
     assertFalse(fs.exists(emptyLogDirPath));
-    cluster.shutdown();
   }
 
   @Test
@@ -500,7 +503,6 @@ public class TestSplitLogManager {
     conf.setInt("hbase.splitlog.manager.unassigned.timeout", 0);
     slm = new SplitLogManager(zkw, conf, stopper, "dummy-master", null);
     slm.finishInitialization();
-    MiniDFSCluster dfscluster = TEST_UTIL.startMiniDFSCluster(1);
     FileSystem fs = dfscluster.getFileSystem();
     final Path logDir = new Path(fs.getWorkingDirectory(),
         UUID.randomUUID().toString());
