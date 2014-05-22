@@ -93,12 +93,12 @@ public class CacheTestUtils {
             }
             toBeTested.cacheBlock(ourBlock.blockName, ourBlock.block);
             Cacheable retrievedBlock = toBeTested.getBlock(ourBlock.blockName,
-                false, false);
+                false, false, true);
             if (retrievedBlock != null) {
               assertEquals(ourBlock.block, retrievedBlock);
               toBeTested.evictBlock(ourBlock.blockName);
               hits.incrementAndGet();
-              assertNull(toBeTested.getBlock(ourBlock.blockName, false, false));
+              assertNull(toBeTested.getBlock(ourBlock.blockName, false, false, true));
             } else {
               miss.incrementAndGet();
             }
@@ -126,7 +126,7 @@ public class CacheTestUtils {
     HFileBlockPair[] blocks = generateHFileBlocks(numBlocks, blockSize);
     // Confirm empty
     for (HFileBlockPair block : blocks) {
-      assertNull(toBeTested.getBlock(block.blockName, true, false));
+      assertNull(toBeTested.getBlock(block.blockName, true, false, true));
     }
 
     // Add blocks
@@ -139,7 +139,7 @@ public class CacheTestUtils {
     // MapMaker makes no guarantees when it will evict, so neither can we.
 
     for (HFileBlockPair block : blocks) {
-      HFileBlock buf = (HFileBlock) toBeTested.getBlock(block.blockName, true, false);
+      HFileBlock buf = (HFileBlock) toBeTested.getBlock(block.blockName, true, false, true);
       if (buf != null) {
         assertEquals(block.block, buf);
       }
@@ -150,7 +150,7 @@ public class CacheTestUtils {
 
     for (HFileBlockPair block : blocks) {
       try {
-        if (toBeTested.getBlock(block.blockName, true, false) != null) {
+        if (toBeTested.getBlock(block.blockName, true, false, true) != null) {
           toBeTested.cacheBlock(block.blockName, block.block);
           if (!(toBeTested instanceof BucketCache)) {
             // BucketCache won't throw exception when caching already cached
@@ -184,7 +184,7 @@ public class CacheTestUtils {
         @Override
         public void doAnAction() throws Exception {
           ByteArrayCacheable returned = (ByteArrayCacheable) toBeTested
-              .getBlock(key, false, false);
+              .getBlock(key, false, false, true);
           assertArrayEquals(buf, returned.buf);
           totalQueries.incrementAndGet();
         }
@@ -223,7 +223,7 @@ public class CacheTestUtils {
             final ByteArrayCacheable bac = new ByteArrayCacheable(buf);
 
             ByteArrayCacheable gotBack = (ByteArrayCacheable) toBeTested
-                .getBlock(key, true, false);
+                .getBlock(key, true, false, true);
             if (gotBack != null) {
               assertArrayEquals(gotBack.buf, bac.buf);
             } else {

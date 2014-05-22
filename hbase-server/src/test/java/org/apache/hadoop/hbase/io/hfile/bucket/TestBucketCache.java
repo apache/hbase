@@ -72,7 +72,7 @@ public class TestBucketCache {
     @Override
     public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf,
         boolean inMemory) {
-      if (super.getBlock(cacheKey, true, false) != null) {
+      if (super.getBlock(cacheKey, true, false, true) != null) {
         throw new RuntimeException("Cached an already cached block");
       }
       super.cacheBlock(cacheKey, buf, inMemory);
@@ -80,7 +80,7 @@ public class TestBucketCache {
 
     @Override
     public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
-      if (super.getBlock(cacheKey, true, false) != null) {
+      if (super.getBlock(cacheKey, true, false, true) != null) {
         throw new RuntimeException("Cached an already cached block");
       }
       super.cacheBlock(cacheKey, buf);

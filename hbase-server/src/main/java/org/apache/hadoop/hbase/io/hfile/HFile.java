@@ -440,7 +440,7 @@ public class HFile {
   public interface CachingBlockReader {
     HFileBlock readBlock(long offset, long onDiskBlockSize,
         boolean cacheBlock, final boolean pread, final boolean isCompaction,
-        BlockType expectedBlockType)
+        final boolean updateCacheMetrics, BlockType expectedBlockType)
         throws IOException;
   }
 

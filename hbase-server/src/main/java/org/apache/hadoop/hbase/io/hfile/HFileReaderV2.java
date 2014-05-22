@@ -44,6 +44,8 @@ import org.apache.hadoop.io.WritableUtils;
 import org.cloudera.htrace.Trace;
 import org.cloudera.htrace.TraceScope;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * {@link HFile} reader for version 2.
  */
@@ -114,7 +116,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
    * @param hfs
    * @param conf
    */
-  public HFileReaderV2(Path path, FixedFileTrailer trailer,
+  public HFileReaderV2(final Path path, final FixedFileTrailer trailer,
       final FSDataInputStreamWrapper fsdis, final long size, final CacheConfig cacheConf,
       final HFileSystem hfs, final Configuration conf) throws IOException {
     super(path, trailer, size, cacheConf, hfs, conf);
@@ -174,6 +176,41 @@ public class HFileReaderV2 extends AbstractHFileReader {
     HFileBlock b;
     while ((b = blockIter.nextBlock()) != null) {
       loadOnOpenBlocks.add(b);
+    }
+
+    // Prefetch file blocks upon open if requested
+    if (cacheConf.shouldPrefetchOnOpen()) {
+      PrefetchExecutor.request(path, new Runnable() {
+        public void run() {
+          try {
+            long offset = 0;
+            long end = fileSize - getTrailer().getTrailerSize();
+            HFileBlock prevBlock = null;
+            while (offset < end) {
+              if (Thread.interrupted()) {
+                break;
+              }
+              long onDiskSize = -1;
+              if (prevBlock != null) {
+                onDiskSize = prevBlock.getNextBlockOnDiskSizeWithHeader();
+              }
+              HFileBlock block = readBlock(offset, onDiskSize, true, false, false, false, null);
+              prevBlock = block;
+              offset += block.getOnDiskSizeWithHeader();
+            }
+          } catch (IOException e) {
+            // IOExceptions are probably due to region closes (relocation, etc.)
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Exception encountered while prefetching " + path + ":", e);
+            }
+          } catch (Exception e) {
+            // Other exceptions are interesting
+            LOG.warn("Exception encountered while prefetching " + path + ":", e);
+          } finally {
+            PrefetchExecutor.complete(path);
+          }
+        }
+      });
     }
   }
 
@@ -245,7 +282,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       cacheBlock &= cacheConf.shouldCacheDataOnRead();
       if (cacheConf.isBlockCacheEnabled()) {
         HFileBlock cachedBlock =
-          (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey, cacheBlock, false);
+          (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey, cacheBlock, false, true);
         if (cachedBlock != null) {
           // Return a distinct 'shallow copy' of the block,
           // so pos does not get messed by the scanner
@@ -288,7 +325,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
   @Override
   public HFileBlock readBlock(long dataBlockOffset, long onDiskBlockSize,
       final boolean cacheBlock, boolean pread, final boolean isCompaction,
-      BlockType expectedBlockType)
+      final boolean updateCacheMetrics, BlockType expectedBlockType)
       throws IOException {
     if (dataBlockIndexReader == null) {
       throw new IOException("Block index not loaded");
@@ -323,8 +360,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
         if (cacheConf.isBlockCacheEnabled()) {
           // Try and get the block from the block cache. If the useLock variable is true then this
           // is the second time through the loop and it should not be counted as a block cache miss.
-          HFileBlock cachedBlock = (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey,
-              cacheBlock, useLock);
+          HFileBlock cachedBlock = (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey, 
+            cacheBlock, useLock, updateCacheMetrics);
           if (cachedBlock != null) {
             validateBlockType(cachedBlock, expectedBlockType);
             if (cachedBlock.getBlockType().isData()) {
@@ -364,7 +401,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
           cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock, cacheConf.isInMemory());
         }
 
-        if (hfileBlock.getBlockType().isData()) {
+        if (updateCacheMetrics && hfileBlock.getBlockType().isData()) {
           HFile.dataBlockReadCnt.incrementAndGet();
         }
 
@@ -436,6 +473,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
   }
 
   public void close(boolean evictOnClose) throws IOException {
+    PrefetchExecutor.cancel(path);
     if (evictOnClose && cacheConf.isBlockCacheEnabled()) {
       int numEvicted = cacheConf.getBlockCache().evictBlocksByHfileName(name);
       if (LOG.isTraceEnabled()) {
@@ -568,7 +606,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         // figure out the size.
         seekToBlock = reader.readBlock(previousBlockOffset,
             seekToBlock.getOffset() - previousBlockOffset, cacheBlocks,
-            pread, isCompaction, BlockType.DATA);
+            pread, isCompaction, true, BlockType.DATA);
         // TODO shortcut: seek forward in this block to the last key of the
         // block.
       }
@@ -605,7 +643,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
         curBlock = reader.readBlock(curBlock.getOffset()
             + curBlock.getOnDiskSizeWithHeader(),
             curBlock.getNextBlockOnDiskSizeWithHeader(), cacheBlocks, pread,
-            isCompaction, null);
+            isCompaction, true, null);
       } while (!curBlock.getBlockType().isData());
 
       return curBlock;
@@ -763,7 +801,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
 
       block = reader.readBlock(firstDataBlockOffset, -1, cacheBlocks, pread,
-          isCompaction, BlockType.DATA);
+          isCompaction, true, BlockType.DATA);
       if (block.getOffset() < 0) {
         throw new IOException("Invalid block offset: " + block.getOffset());
       }
@@ -1050,7 +1088,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       }
 
       block = reader.readBlock(firstDataBlockOffset, -1, cacheBlocks, pread,
-          isCompaction, BlockType.DATA);
+          isCompaction, true, BlockType.DATA);
       if (block.getOffset() < 0) {
         throw new IOException("Invalid block offset: " + block.getOffset());
       }
@@ -1192,5 +1230,14 @@ public class HFileReaderV2 extends AbstractHFileReader {
   @Override
   public HFileContext getFileContext() {
     return hfileContext;
+  }
+
+  /**
+   * Returns false if block prefetching was requested for this file and has
+   * not completed, true otherwise
+   */
+  @VisibleForTesting
+  boolean prefetchComplete() {
+    return PrefetchExecutor.isCompleted(path);
   }
 }

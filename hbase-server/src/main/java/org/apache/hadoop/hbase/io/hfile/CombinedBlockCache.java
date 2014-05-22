@@ -72,11 +72,11 @@ public class CombinedBlockCache implements BlockCache, HeapSize {
 
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching,
-      boolean repeat) {
+      boolean repeat, boolean updateCacheMetrics) {
     if (lruCache.containsBlock(cacheKey)) {
-      return lruCache.getBlock(cacheKey, caching, repeat);
+      return lruCache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
     }
-    return bucketCache.getBlock(cacheKey, caching, repeat);
+    return bucketCache.getBlock(cacheKey, caching, repeat, updateCacheMetrics);
   }
 
   @Override

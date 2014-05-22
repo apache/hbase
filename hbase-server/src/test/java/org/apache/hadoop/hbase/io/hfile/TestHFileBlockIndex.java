@@ -164,7 +164,7 @@ public class TestHFileBlockIndex {
     @Override
     public HFileBlock readBlock(long offset, long onDiskSize,
         boolean cacheBlock, boolean pread, boolean isCompaction,
-        BlockType expectedBlockType)
+        boolean updateCacheMetrics, BlockType expectedBlockType)
         throws IOException {
       if (offset == prevOffset && onDiskSize == prevOnDiskSize &&
           pread == prevPread) {

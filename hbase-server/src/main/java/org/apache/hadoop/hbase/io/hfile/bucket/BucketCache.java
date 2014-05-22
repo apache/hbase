@@ -346,15 +346,17 @@ public class BucketCache implements BlockCache, HeapSize {
    * @param key block's cache key
    * @param caching true if the caller caches blocks on cache misses
    * @param repeat Whether this is a repeat lookup for the same block
+   * @param updateCacheMetrics Whether we should update cache metrics or not
    * @return buffer of specified cache key, or null if not in cache
    */
   @Override
-  public Cacheable getBlock(BlockCacheKey key, boolean caching, boolean repeat) {
+  public Cacheable getBlock(BlockCacheKey key, boolean caching, boolean repeat,
+      boolean updateCacheMetrics) {
     if (!cacheEnabled)
       return null;
     RAMQueueEntry re = ramCache.get(key);
     if (re != null) {
-      cacheStats.hit(caching);
+      if (updateCacheMetrics) cacheStats.hit(caching);
       re.access(accessCount.incrementAndGet());
       return re.getData();
     }
@@ -374,8 +376,10 @@ public class BucketCache implements BlockCache, HeapSize {
           Cacheable cachedBlock = bucketEntry.deserializerReference(
               deserialiserMap).deserialize(bb, true);
           long timeTaken = System.nanoTime() - start;
-          cacheStats.hit(caching);
-          cacheStats.ioHit(timeTaken);
+          if (updateCacheMetrics) {
+            cacheStats.hit(caching);
+            cacheStats.ioHit(timeTaken);
+          }
           bucketEntry.access(accessCount.incrementAndGet());
           if (this.ioErrorStartTime > 0) {
             ioErrorStartTime = -1;
@@ -391,7 +395,7 @@ public class BucketCache implements BlockCache, HeapSize {
         }
       }
     }
-    if(!repeat)cacheStats.miss(caching);
+    if (!repeat && updateCacheMetrics) cacheStats.miss(caching);
     return null;
   }
 
