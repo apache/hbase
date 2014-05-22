@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.pool.impl.GenericObjectPool;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ipc.ThriftClientInterface;
+import org.apache.hadoop.hbase.util.ExceptionUtils;
 import org.apache.hadoop.hbase.util.Pair;
 
 import java.io.IOException;
@@ -193,6 +194,10 @@ public class ThriftClientCacheWithConnectionPooling implements
     Pair<InetSocketAddress, Class<? extends ThriftClientInterface>> key = new Pair<InetSocketAddress, Class<? extends ThriftClientInterface>>(
         server, clientInterface);
     GenericObjectPool<ThriftClientInterface> clientPool = clientPools.get(key);
-    clientPool.clear();
+    try {
+      clientPool.close();
+    } catch (Exception e) {
+      throw ExceptionUtils.toIOException(e);
+    }
   }
 }

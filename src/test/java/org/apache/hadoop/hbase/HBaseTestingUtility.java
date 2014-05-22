@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableAsync;
 import org.apache.hadoop.hbase.client.MetaScanner;
@@ -521,6 +522,7 @@ public class HBaseTestingUtility {
     shutdownMiniDFSCluster();
 
     cleanupTestDir();
+    HConnectionManager.deleteAllConnections();
     miniClusterRunning = false;
     LOG.info("Minicluster is down");
   }
