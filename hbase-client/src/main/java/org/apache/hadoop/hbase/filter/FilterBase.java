@@ -103,25 +103,6 @@ public abstract class FilterBase extends Filter {
    */
   @Override
   public void filterRowCells(List<Cell> ignored) throws IOException {
-    // Old filters based off of this class will override KeyValue transform(KeyValue).
-    // Thus to maintain compatibility we need to call the old version.
-    List<KeyValue> kvs = new ArrayList<KeyValue>(ignored.size());
-    for (Cell c : ignored) {
-      kvs.add(KeyValueUtil.ensureKeyValue(c));
-    }
-    filterRow(kvs);
-    ignored.clear();
-    ignored.addAll(kvs);
-  }
-
-  /**
-   * WARNING: please to not override this method.  Instead override {@link #transformCell(Cell)}.
-   *
-   * This is for transition from 0.94 -> 0.96
-   */
-  @Override
-  @Deprecated
-  public void filterRow(List<KeyValue> kvs) throws IOException {
   }
 
   /**

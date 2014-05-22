@@ -178,19 +178,6 @@ final public class FilterWrapper extends Filter {
     return FilterRowRetCode.NOT_CALLED;
   }
 
-  /**
-   * WARNING: please to not override this method.  Instead override {@link #transformCell(Cell)}.
-   *
-   * This is for transition from 0.94 -> 0.96
-   */
-  @Override
-  @Deprecated
-  public void filterRow(List<KeyValue> kvs) throws IOException {
-    // This is only used internally, marked InterfaceAudience.private, and not used anywhere.
-    // We can get away with not implementing this.
-    throw new UnsupportedOperationException("filterRow(List<KeyValue>) should never be called");
-  }
-
   @Override
   public boolean isFamilyEssential(byte[] name) throws IOException {
     return filter.isFamilyEssential(name);

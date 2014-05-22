@@ -188,17 +188,10 @@ public abstract class Filter {
   abstract public void filterRowCells(List<Cell> kvs) throws IOException;
 
   /**
-   * WARNING: please to not override this method.  Instead override {@link #filterRowCells(List)}.
-   * This is for transition from 0.94 -> 0.96
-   **/
-  @Deprecated
-  abstract public void filterRow(List<KeyValue> kvs) throws IOException;
-
-  /**
    * Primarily used to check for conflicts with scans(such as scans that do not read a full row at a
    * time).
    * 
-   * @return True if this filter actively uses filterRow(List) or filterRow().
+   * @return True if this filter actively uses filterRowCells(List) or filterRow().
    */
   abstract public boolean hasFilterRow();
 

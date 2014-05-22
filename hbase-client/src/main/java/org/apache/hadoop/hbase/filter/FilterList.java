@@ -308,43 +308,12 @@ final public class FilterList extends Filter {
    * @inheritDoc
    */
   @Override
-  public void filterRowCells(List<Cell> ignored) throws IOException {
-    // Old filters based off of this class will override KeyValue transform(KeyValue).
-    // Thus to maintain compatibility we need to call the old version.
-    List<KeyValue> kvs = new ArrayList<KeyValue>(ignored.size());
-    for (Cell c : ignored) {
-      kvs.add(KeyValueUtil.ensureKeyValue(c));
-    }
-    filterRow(kvs);
-    ignored.clear();
-    ignored.addAll(kvs);
-  }
-
-  /**
-   * WARNING: please to not override this method.  Instead override {@link #transformCell(Cell)}.
-   *
-   * This is for transition from 0.94 -> 0.96
-   */
-  @Override
-  @Deprecated
-  public void filterRow(List<KeyValue> kvs) throws IOException {
-    // when removing this, this body should be in filterRowCells
-
-    // convert to List<Cell> and call the new interface (this will call 0.96-style
-    // #filterRowCells(List<Cell>) which may delegate to legacy #filterRow(List<KV>) 
-    List<Cell> cells = new ArrayList<Cell>(kvs.size());
-    cells.addAll(kvs);
+  public void filterRowCells(List<Cell> cells) throws IOException {
     for (Filter filter : filters) {
       filter.filterRowCells(cells); 
     }
-
-    // convert results into kvs
-    kvs.clear();
-    for (Cell c : cells) {
-      kvs.add(KeyValueUtil.ensureKeyValue(c));
-    }
   }
-  
+
   @Override
   public boolean hasFilterRow() {
     for (Filter filter : filters) {
