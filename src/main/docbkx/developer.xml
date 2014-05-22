@@ -1006,8 +1006,8 @@ pecularity that is probably fixable but we've not spent the time trying to figur
       <section xml:id="developing">
         <title>Developing</title>
         <section xml:id="codelines"><title>Codelines</title>
-          <para>Most development is done on TRUNK.  However, there are branches for minor releases (e.g., 0.90.1, 0.90.2, and 0.90.3 are on the 0.90 branch).</para>
-          <para>If you have any questions on this just send an email to the dev dist-list.</para>
+          <para>Most development is done on the master branch (TRUNK).
+          However, there are branches for minor releases (e.g., 0.90.1, 0.90.2, and 0.90.3 are on the 0.90 branch).</para>
         </section>
 
         <section xml:id="unit.tests">
@@ -1127,11 +1127,13 @@ pecularity that is probably fixable but we've not spent the time trying to figur
 
        <section xml:id="submitting.patches">
           <title>Submitting Patches</title>
-          <para><emphasis>TOOD: Needs update now we have moved to GIT.</emphasis>
-          Until then, caveat we have a different branching mode and we don't currently do the merge practice
-          described, the <link xlink:href="http://accumulo.apache.org/git.html">accumulo doc on how to contribute and develop</link> 
-          after the move to GIT is worth a read.
+          <para>HBase moved to GIT from SVN.  Until we develop our own documentation for how to contribute patches in our new GIT context,
+          caveat the fact that we have a different
+          branching modes and that we don't currently do the merge practice
+          described in the following, the <link xlink:href="http://accumulo.apache.org/git.html">accumulo doc on how to contribute and develop</link> 
+          after our move to GIT is worth a read.
           </para>
+
           <para>If you are new to submitting patches to open source or new to submitting patches to Apache,
           I'd suggest you start by reading the <link xlink:href="http://commons.apache.org/patches.html">On Contributing Patches</link>
           page from <link xlink:href="http://commons.apache.org/">Apache Commons Project</link>.  Its a nice overview that
@@ -1398,12 +1400,30 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
            <link xlink:href="http://www.reviewboard.org/docs/manual/1.5/">the ReviewBoard documentation</link>.
           </para>
         </section>
-        <section xml:id="committing.patches">
-          <title>Committing Patches</title>
-          <para>
-          Committers do this.  See <link xlink:href="http://wiki.apache.org/hadoop/Hbase/HowToCommit">How To Commit</link> in the Apache HBase wiki.
-          </para>
-          <para>Committers will also resolve the Jira, typically after the patch passes a build. </para>
+
+
+<section><title>Guide for HBase Committers</title>
+
+<section><title>New committers</title><para>New committers are encouraged to first read Apache's generic committer documentation: </para><itemizedlist><listitem><para><link xlink:href="http://www.apache.org/dev/new-committers-guide.html">Apache New Committer Guide</link> </para></listitem>
+<listitem><para><link xlink:href="http://www.apache.org/dev/committers.html">Apache Committer FAQ</link> </para></listitem></itemizedlist></section>
+
+<section><title>Review</title><para>HBase committers should, as often as possible, attempt to review patches submitted by others.  Ideally every submitted patch will get reviewed by a committer within a few days.  If a committer reviews a patch they've not authored, and believe it to be of sufficient quality, then they can commit the patch, otherwise the patch should be cancelled with a clear explanation for why it was rejected. </para><para>The list of submitted patches is in the <link xlink:href="https://issues.apache.org/jira/secure/IssueNavigator.jspa?mode=hide&amp;requestId=12312392">HBase Review Queue</link>.
+This is ordered by time of last modification.  Committers should scan the list from top-to-bottom, looking for patches that they feel qualified to review and possibly commit. </para><para>For non-trivial changes, it is <emphasis role="underline"><emphasis role="strong">required</emphasis></emphasis> to get another committer to review your own patches before commit. Use &quot;Submit Patch&quot; like other contributors, and then wait for a &quot;+1&quot; from another committer before committing. </para></section>
+
+<section><title>Reject</title><para>Patches should be rejected which do not adhere to the guidelines in <link xlink:href="https://wiki.apache.org/hadoop/Hbase/HowToCommit/hadoop/Hbase/HowToContribute#">HowToContribute</link>
+and to the <link xlink:href="https://wiki.apache.org/hadoop/Hbase/HowToCommit/hadoop/CodeReviewChecklist#">code review checklist</link>.
+Committers should always be polite to contributors and try to instruct and encourage them to contribute better patches.
+If a committer wishes to improve an unacceptable patch, then it should first be rejected, and a new patch should be attached by the committer for review. </para></section>
+
+<section xml:id="committing.patches">
+<title>Commit</title>
+<para>Committers commit patches.
+</para>
+<para>When you commit a patch, please: </para><orderedlist numeration="arabic">
+<listitem><para>Include the Jira issue id in the commit message, along with a short description of the change and the name of the contributor if it is not you.
+Be sure to get the issue id right, as this causes Jira to link to the change in Subversion (use the issue's &quot;All&quot; tab to see these). </para></listitem>
+<listitem><para>Resolve the issue as fixed, thanking the contributor.
+Always set the &quot;Fix Version&quot; at this point, but please only set a single fix version, the earliest release in which the change will appear. </para></listitem></orderedlist><para><anchor id="Documentation"/> </para>
           <section xml:id="committer.tests">
               <title>Committers are responsible for making sure commits do not break the build or tests</title>
           <para>
@@ -1415,6 +1435,28 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
               particular vagaries and interconnections that occur
               in a project like hbase.  A committer should.
             </para>
+          </section>
+          <section xml:id="git.patch.flow">
+              <title>Patching Etiquette</title>
+          <para>In the thread <link xlink:href="http://search-hadoop.com/m/DHED4EiwOz">HBase, mail # dev - ANNOUNCEMENT: Git Migration In Progress (WAS => Re: Git Migration)</link>,
+          it was agreed on the following patch flow
+          <orderedlist>
+          <listitem><para>Develop and commit the patch against trunk/master first.</para><listitem>
+          <listitem><para>Try to cherry-pick the patch when backporting if possible.</para><listitem>
+          <listitem><para>If this does not work, manually commit the patch to the branch.</para><listitem>
+          </orderedlist>
+          </para>
+          </section>
+
+<section><title>Committing Documentation</title><para>TBS </para></section></section>
+
+</section>
+
+<section><title>Dialog</title><para>Committers should hang out in the #hbase room on irc.freenode.net for real-time discussions.
+However any substantive discussion (as with any off-list project-related discussion) should be re-iterated in Jira or on the developer list. </para></section>
+<section><title>Do not edit JIRA comments</title><para>Misspellings and/or bad grammar is preferable to the disruption a JIRA comment edit causes: See the discussion at
+<link xlink:href="http://search-hadoop.com/?q=%5BReopened%5D+%28HBASE-451%29+Remove+HTableDescriptor+from+HRegionInfo&amp;fc_project=HBase">Re:(HBASE-451) Remove HTableDescriptor from HRegionInfo</link> </para></section>
+
         </section>
         </section>
 
