@@ -1441,9 +1441,9 @@ Always set the &quot;Fix Version&quot; at this point, but please only set a sing
           <para>In the thread <link xlink:href="http://search-hadoop.com/m/DHED4EiwOz">HBase, mail # dev - ANNOUNCEMENT: Git Migration In Progress (WAS => Re: Git Migration)</link>,
           it was agreed on the following patch flow
           <orderedlist>
-          <listitem><para>Develop and commit the patch against trunk/master first.</para><listitem>
-          <listitem><para>Try to cherry-pick the patch when backporting if possible.</para><listitem>
-          <listitem><para>If this does not work, manually commit the patch to the branch.</para><listitem>
+          <listitem><para>Develop and commit the patch against trunk/master first.</para></listitem>
+          <listitem><para>Try to cherry-pick the patch when backporting if possible.</para></listitem>
+          <listitem><para>If this does not work, manually commit the patch to the branch.</para></listitem>
           </orderedlist>
           </para>
           </section>
