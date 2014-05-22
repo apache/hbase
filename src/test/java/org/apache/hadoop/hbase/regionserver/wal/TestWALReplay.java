@@ -568,9 +568,8 @@ public class TestWALReplay {
   private void moveRegionAndWait(HRegion regionToMove, HRegionServer destServer)
       throws InterruptedException, MasterNotRunningException,
        IOException {
-    TEST_UTIL.getHBaseAdmin().moveRegion(
-        regionToMove.getRegionName(),
-        destServer.getServerInfo().getHostnamePort());
+    TEST_UTIL.moveRegionAndAssignment(regionToMove.getRegionInfo(),
+        destServer.getServerInfo().getServerAddress());
     while (destServer.getOnlineRegion(regionToMove.getRegionName()) == null){
       //Wait for this move to complete.
       Thread.sleep(10);

@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -222,9 +221,8 @@ public class TestBatchedUpload {
   private void moveRegionAndWait(HRegion regionToMove, HRegionServer destServer)
       throws InterruptedException, MasterNotRunningException,
        IOException {
-    TEST_UTIL.getHBaseAdmin().moveRegion(
-        regionToMove.getRegionName(),
-        destServer.getServerInfo().getHostnamePort());
+    TEST_UTIL.moveRegionAndAssignment(regionToMove.getRegionInfo(),
+        destServer.getServerInfo().getServerAddress());
     while (destServer.getOnlineRegion(regionToMove.getRegionName()) == null) {
       //Wait for this move to complete.
       Thread.sleep(10);

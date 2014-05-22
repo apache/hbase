@@ -305,7 +305,7 @@ public class RollingRestart {
       ", number of entries in the plan " + plan.getAssignmentMap().size() +
       ", trying a serial scan of the assignment map to locate the region");
 
-      serversForRegion = plan.getAssignmentForRegion(region.getRegionNameAsString());
+      serversForRegion = plan.getAssignmentForRegion(region.getRegionName());
 
       if (serversForRegion == null) {
         LOG.error("Unable to find the favored nodes for " +
@@ -508,7 +508,8 @@ public class RollingRestart {
       threadPool.scheduleAtFixedRate(this, frequency, frequency, TimeUnit.MILLISECONDS);
      }
 
-     public void run() {
+     @Override
+    public void run() {
       long currentTime = 0;
       Get g = new Get(getOneRandomRow());
       try {

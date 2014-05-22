@@ -26,8 +26,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -40,6 +38,7 @@ import org.apache.hadoop.hbase.client.TableServers;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -77,7 +76,7 @@ public class TestGetRegionLocation {
    * @throws InterruptedException
    * @throws IOException
    */
-  @Test
+  @Test(timeout = 150000)
   public void testGetRegionLocation() throws InterruptedException, IOException {
     List<HRegionServer> regionServers = TEST_UTIL.getOnlineRegionServers();
     List<HServerInfo> serverInfos = new ArrayList<>();
@@ -159,8 +158,8 @@ public class TestGetRegionLocation {
           + " to: " + targetServer.getServerAddress().toString());
 
       // Now move the region to the target server
-      TEST_UTIL.getHBaseAdmin().moveRegion(firstRegionInfo.getRegionName(),
-        targetServer.getServerAddress().toString());
+      TEST_UTIL.moveRegionAndAssignment(firstRegionInfo,
+          targetServer.getServerAddress());
 
       // Wait till the region becomes assigned.
       TEST_UTIL.waitForOnlineRegionsToBeAssigned(NUM_REGIONS);

@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Writable;
 
@@ -41,18 +42,18 @@ import com.facebook.swift.codec.ThriftStruct;
 
 /**
  * AssignmentPlan is a writable object for the region assignment plan.
- * It contains the mapping information between each region and 
+ * It contains the mapping information between each region and
  * its favored region server list.
- * 
+ *
  * All the access to this class is thread-safe.
  */
 @ThriftStruct
 public class AssignmentPlan implements Writable{
   protected static final Log LOG = LogFactory.getLog(
       AssignmentPlan.class.getName());
-  
+
   private static final int VERSION = 1;
-  
+
   /** the map between each region and its favored region server list */
   private Map<HRegionInfo, List<HServerAddress>> assignmentMap;
 
@@ -60,7 +61,7 @@ public class AssignmentPlan implements Writable{
    * time stamp
   */
   private Map<HRegionInfo, Long> assignmentUpdateTS = new HashMap<>();
-  
+
   public static enum POSITION {
     PRIMARY,
     SECONDARY,
@@ -79,8 +80,8 @@ public class AssignmentPlan implements Writable{
 
   /**
    * Initialize the assignment plan with the existing primary region server map
-   * and the existing secondary/tertiary region server map 
-   * 
+   * and the existing secondary/tertiary region server map
+   *
    * if any regions cannot find the proper secondary / tertiary region server
    * for whatever reason, just do NOT update the assignment plan for this region
    * @param primaryRSMap
@@ -94,7 +95,7 @@ public class AssignmentPlan implements Writable{
       HRegionInfo regionInfo = entry.getKey();
       Pair<HServerAddress, HServerAddress> secondaryAndTertiaryPair =
         entry.getValue();
-      
+
       // Get the primary region server
       HServerAddress primaryRS = primaryRSMap.get(regionInfo);
       if (primaryRS == null) {
@@ -102,7 +103,7 @@ public class AssignmentPlan implements Writable{
             regionInfo.getRegionNameAsString());
         continue;
       }
-      
+
       // Update the assignment plan with the favored nodes
       List<HServerAddress> serverList = new ArrayList<HServerAddress>();
       serverList.add(POSITION.PRIMARY.ordinal(), primaryRS);
@@ -128,16 +129,16 @@ public class AssignmentPlan implements Writable{
     this.assignmentMap.put(region, servers);
     LOG.info("Update the assignment plan for region " +
         region.getRegionNameAsString() + " to favored nodes " +
-        RegionPlacement.getFavoredNodes(servers) 
+        RegionPlacement.getFavoredNodes(servers)
         + " at time stamp " + ts + " hashcode " + region.hashCode());
   }
-  
+
   /**
    * Add an assignment to the plan
    * @param region
    * @param servers
    */
-  public synchronized void updateAssignmentPlan(HRegionInfo region, 
+  public synchronized void updateAssignmentPlan(HRegionInfo region,
       List<HServerAddress> servers) {
     if (region == null || servers == null || servers.size() ==0)
       return;
@@ -146,7 +147,7 @@ public class AssignmentPlan implements Writable{
         region.getRegionNameAsString() + " ; favored nodes " +
         RegionPlacement.getFavoredNodes(servers));
   }
- 
+
   /**
    * Remove one assignment from the plan
    * @param region
@@ -159,7 +160,7 @@ public class AssignmentPlan implements Writable{
     this.assignmentMap.remove(region);
     this.assignmentUpdateTS.remove(region);
   }
-  
+
   /**
    * @param region
    * @return true if there is an assignment plan for the particular region.
@@ -167,10 +168,9 @@ public class AssignmentPlan implements Writable{
   public synchronized boolean hasAssignment(HRegionInfo region) {
     return assignmentMap.containsKey(region);
   }
-  
+
   /**
-   * @param region
-   * @return the list of favored region server for this region based on the plan
+   * Returns a reference to the server list in the plan.
    */
   public synchronized List<HServerAddress> getAssignment(HRegionInfo region) {
     return assignmentMap.get(region);
@@ -185,18 +185,17 @@ public class AssignmentPlan implements Writable{
    * @param regionName name of the region
    * @return List of favored nodes if found, else null
    */
-  public synchronized List<HServerAddress> getAssignmentForRegion(String regionName) {
-    List<HServerAddress> serversForRegion = null;
+  public synchronized List<HServerAddress> getAssignmentForRegion(
+      byte[] regionName) {
     for (HRegionInfo info : assignmentMap.keySet()) {
-      if (info.getRegionNameAsString().equals(regionName)) {
-        LOG.info("Found entry for " + regionName);
-        serversForRegion = getAssignment(info);
-        break;
+      if (Bytes.equals(info.getRegionName(), regionName)) {
+        LOG.info("Found entry for " + Bytes.toStringBinary(regionName));
+        return getAssignment(info);
       }
     }
-    return serversForRegion;
+    return null;
   }
-  
+
   /**
    * @param region
    * @return the last update time stamp for the region in the plan
@@ -208,7 +207,7 @@ public class AssignmentPlan implements Writable{
     else
       return updateTS.longValue();
   }
- 
+
   /**
    * @return the mapping between each region to its favored region server list
    */
@@ -267,12 +266,12 @@ public class AssignmentPlan implements Writable{
        addr.readFields(in);
        serverList.add(addr);
      }
-     
+
      // add the assignment to favoredAssignmentMap
      this.assignmentMap.put(region, serverList);
    }
  }
- 
+
  @Override
  public boolean equals(Object o) {
    if (this == o) {
@@ -288,11 +287,11 @@ public class AssignmentPlan implements Writable{
    Map<HRegionInfo, List<HServerAddress>> comparedMap=
      ((AssignmentPlan)o).getAssignmentMap();
 
-     
+
    // compare the size
    if (comparedMap.size() != this.assignmentMap.size())
      return false;
-   
+
    // compare each element in the assignment map
    for (Map.Entry<HRegionInfo, List<HServerAddress>> entry :
      comparedMap.entrySet()) {
@@ -305,7 +304,7 @@ public class AssignmentPlan implements Writable{
    }
    return true;
  }
- 
+
   /**
    * Returns the position of the passed server in the list of favored nodes (the
    * position can be primary, secondary or tertiary)

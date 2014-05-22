@@ -114,7 +114,6 @@ import org.apache.hadoop.hbase.util.InjectionEvent;
 import org.apache.hadoop.hbase.util.InjectionHandler;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RuntimeHaltAbortStrategy;
-import org.apache.hadoop.hbase.util.Sleeper;
 import org.apache.hadoop.hbase.util.StringBytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -194,8 +193,6 @@ public class HMaster extends HasThread implements HMasterInterface,
   private final ZKMasterAddressWatcher zkMasterAddressWatcher;
   // Table level lock manager for schema changes
   private final TableLockManager tableLockManager;
-  // A Sleeper that sleeps for threadWakeFrequency; sleep if nothing todo.
-  private final Sleeper sleeper;
   // Keep around for convenience.
   private final FileSystem fs;
   // Is the filesystem ok?
@@ -301,8 +298,6 @@ public class HMaster extends HasThread implements HMasterInterface,
     this.numRetries =  conf.getInt("hbase.client.retries.number", 2);
     this.threadWakeFrequency = conf.getInt(HConstants.THREAD_WAKE_FREQUENCY,
         10 * 1000);
-
-    this.sleeper = new Sleeper(this.threadWakeFrequency, getStopper());
 
     /**
      * Overriding the useThrift parameter depending upon the configuration.
@@ -1833,13 +1828,11 @@ public class HMaster extends HasThread implements HMasterInterface,
    * @return Result
    * @throws IOException
    */
-  @SuppressWarnings("deprecation")
-  protected Result getFromMETA(final byte [] row, final byte [] family)
+  protected Result getFromMETA(final byte[] row, final byte[] family)
   throws IOException {
     MetaRegion meta = this.regionManager.getMetaRegionForRow(row);
     HRegionInterface srvr = getMETAServer(meta);
-    Get get = new Get(row);
-    get.addFamily(family);
+    Get get = new Get.Builder(row).addFamily(family).create();
     return srvr.get(meta.getRegionName(), get);
   }
 
@@ -2054,7 +2047,7 @@ public class HMaster extends HasThread implements HMasterInterface,
    * @return Null or found HRegionInfo.
    * @throws IOException
    */
-  HRegionInfo getHRegionInfo(final byte [] row, final Result res)
+  static HRegionInfo getHRegionInfo(final byte[] row, final Result res)
   throws IOException {
     byte[] regioninfo = res.getValue(HConstants.CATALOG_FAMILY,
         HConstants.REGIONINFO_QUALIFIER);

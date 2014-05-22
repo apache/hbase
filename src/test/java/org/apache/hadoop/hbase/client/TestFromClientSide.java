@@ -4448,9 +4448,8 @@ public class TestFromClientSide {
       HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(i);
       HServerAddress addr = regionServer.getServerInfo().getServerAddress();
       if (addr.getPort() != addrBefore.getPort()) {
-        admin.moveRegion(regionInfo.getRegionName(), addr.toString());
-        // Wait for the region to move.
-        Thread.sleep(5000);
+        TEST_UTIL.moveRegionAndAssignment(regionInfo, addr);
+        TEST_UTIL.waitForTableConsistent();
         addrAfter = addr;
         break;
       }

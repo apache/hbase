@@ -45,8 +45,7 @@ import java.util.NavigableSet;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
-
-import junit.framework.Assert;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -77,7 +76,9 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.io.hfile.Compression.Algorithm;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
+import org.apache.hadoop.hbase.master.AssignmentPlan;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.RegionPlacement;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -104,6 +105,7 @@ import org.apache.hadoop.mapred.TaskLog;
 import org.apache.hadoop.security.UnixUserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.ZooKeeper;
+import org.junit.Assert;
 
 import com.google.common.base.Preconditions;
 
@@ -483,6 +485,7 @@ public class HBaseTestingUtility {
     ResultScanner s = t.getScanner(new Scan());
     while (s.next() != null) continue;
     LOG.info("Minicluster is up");
+    t.close();
     return this.hbaseCluster;
   }
 
@@ -940,47 +943,48 @@ public class HBaseTestingUtility {
     admin.disableTable(table.getTableName());
 
     Arrays.sort(startKeys, Bytes.BYTES_COMPARATOR);
-    HTable meta = new HTable(c, HConstants.META_TABLE_NAME);
-    HTableDescriptor htd = table.getTableDescriptor();
-    if(!htd.hasFamily(columnFamily)) {
-      HColumnDescriptor hcd = new HColumnDescriptor(columnFamily);
-      htd.addFamily(hcd);
-    }
-    // remove empty region - this is tricky as the mini cluster during the test
-    // setup already has the "<tablename>,,123456789" row with an empty start
-    // and end key. Adding the custom regions below adds those blindly,
-    // including the new start region from empty to "bbb". lg
-    List<byte[]> rows = getMetaTableRows(htd.getName());
-    // add custom ones
-    int count = 0;
-    for (int i = 0; i < startKeys.length; i++) {
-      int j = (i + 1) % startKeys.length;
-      HRegionInfo hri = new HRegionInfo(table.getTableDescriptor(),
-        startKeys[i], startKeys[j]);
-      Put put = new Put(hri.getRegionName());
-      put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
-        Writables.getBytes(hri));
-      if (favNodes != null) {
-        put.add(HConstants.CATALOG_FAMILY, HConstants.FAVOREDNODES_QUALIFIER,
-            favNodes[i]);
+    try(HTable meta = new HTable(c, HConstants.META_TABLE_NAME)) {
+      HTableDescriptor htd = table.getTableDescriptor();
+      if(!htd.hasFamily(columnFamily)) {
+        HColumnDescriptor hcd = new HColumnDescriptor(columnFamily);
+        htd.addFamily(hcd);
       }
-      meta.put(put);
-      LOG.info("createMultiRegions: inserted " + hri.toString());
-      count++;
-    }
-    // see comment above, remove "old" (or previous) single region
-    for (byte[] row : rows) {
-      LOG.info("createMultiRegions: deleting meta row -> " +
-        Bytes.toStringBinary(row));
-      meta.delete(new Delete(row));
-    }
+      // remove empty region - this is tricky as the mini cluster during the test
+      // setup already has the "<tablename>,,123456789" row with an empty start
+      // and end key. Adding the custom regions below adds those blindly,
+      // including the new start region from empty to "bbb". lg
+      List<byte[]> rows = getMetaTableRows(htd.getName());
+      // add custom ones
+      int count = 0;
+      for (int i = 0; i < startKeys.length; i++) {
+        int j = (i + 1) % startKeys.length;
+        HRegionInfo hri = new HRegionInfo(table.getTableDescriptor(),
+          startKeys[i], startKeys[j]);
+        Put put = new Put(hri.getRegionName());
+        put.add(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER,
+          Writables.getBytes(hri));
+        if (favNodes != null) {
+          put.add(HConstants.CATALOG_FAMILY, HConstants.FAVOREDNODES_QUALIFIER,
+              favNodes[i]);
+        }
+        meta.put(put);
+        LOG.info("createMultiRegions: inserted " + hri.toString());
+        count++;
+      }
+      // see comment above, remove "old" (or previous) single region
+      for (byte[] row : rows) {
+        LOG.info("createMultiRegions: deleting meta row -> "
+            + Bytes.toStringBinary(row));
+        meta.delete(new Delete(row));
+      }
 
-    admin.enableTable(table.getTableName());
+      admin.enableTable(table.getTableName());
 
-    // flush cache of regions
-    HConnection conn = table.getConnectionAndResetOperationContext();
-    conn.clearRegionCache();
-    return count;
+      // flush cache of regions
+      HConnection conn = table.getConnectionAndResetOperationContext();
+      conn.clearRegionCache();
+      return count;
+    }
   }
 
   /**
@@ -989,16 +993,17 @@ public class HBaseTestingUtility {
    * @throws IOException When reading the rows fails.
    */
   public List<byte[]> getMetaTableRows() throws IOException {
-    HTable t = new HTable(this.conf, HConstants.META_TABLE_NAME);
-    List<byte[]> rows = new ArrayList<byte[]>();
-    ResultScanner s = t.getScanner(new Scan());
-    for (Result result : s) {
-      LOG.info("getMetaTableRows: row -> " +
-        Bytes.toStringBinary(result.getRow()));
-      rows.add(result.getRow());
+    try (HTable t = new HTable(this.conf, HConstants.META_TABLE_NAME)) {
+      List<byte[]> rows = new ArrayList<byte[]>();
+      ResultScanner s = t.getScanner(new Scan());
+      for (Result result : s) {
+        LOG.info("getMetaTableRows: row -> "
+            + Bytes.toStringBinary(result.getRow()));
+        rows.add(result.getRow());
+      }
+      s.close();
+      return rows;
     }
-    s.close();
-    return rows;
   }
 
   /**
@@ -1007,21 +1012,23 @@ public class HBaseTestingUtility {
    * @throws IOException When reading the rows fails.
    */
   public List<byte[]> getMetaTableRows(byte[] tableName) throws IOException {
-    HTable t = new HTable(this.conf, HConstants.META_TABLE_NAME);
-    List<byte[]> rows = new ArrayList<byte[]>();
-    ResultScanner s = t.getScanner(new Scan());
-    for (Result result : s) {
-      HRegionInfo info = Writables.getHRegionInfo(
-          result.getValue(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER));
-      HTableDescriptor desc = info.getTableDesc();
-      if (Bytes.compareTo(desc.getName(), tableName) == 0) {
-        LOG.info("getMetaTableRows: row -> " +
-            Bytes.toStringBinary(result.getRow()));
-        rows.add(result.getRow());
+    try (HTable t = new HTable(this.conf, HConstants.META_TABLE_NAME)) {
+      List<byte[]> rows = new ArrayList<byte[]>();
+      ResultScanner s = t.getScanner(new Scan());
+      for (Result result : s) {
+        HRegionInfo info = Writables.getHRegionInfo(
+            result.getValue(HConstants.CATALOG_FAMILY,
+            HConstants.REGIONINFO_QUALIFIER));
+        HTableDescriptor desc = info.getTableDesc();
+        if (Bytes.compareTo(desc.getName(), tableName) == 0) {
+          LOG.info("getMetaTableRows: row -> "
+              + Bytes.toStringBinary(result.getRow()));
+          rows.add(result.getRow());
+        }
       }
+      s.close();
+      return rows;
     }
-    s.close();
-    return rows;
   }
 
   /**
@@ -1451,9 +1458,12 @@ public class HBaseTestingUtility {
    * Waits until the META table has same contents as the region servers.
    */
   public void waitForTableConsistent() throws IOException {
+    final AtomicBoolean allInFavor = new AtomicBoolean(true);
+    final Map<String, Map<String, HServerAddress>> fromMeta = new HashMap<>();
     while (true) {
       // Location info from META table
-      final Map<String, Map<String, HServerAddress>> fromMeta = new HashMap<>();
+      fromMeta.clear();
+      allInFavor.set(true);
       MetaScannerVisitor visitor = new MetaScannerVisitor() {
         @Override
         public boolean processRow(Result rowResult) throws IOException {
@@ -1480,39 +1490,54 @@ public class HBaseTestingUtility {
               fromMeta.put(tableName, regionToAddr);
             }
             regionToAddr.put(info.getRegionNameAsString(), server);
+
+            byte[] fnBytes =
+                rowResult.getValue(HConstants.CATALOG_FAMILY,
+                    HConstants.FAVOREDNODES_QUALIFIER);
+            if (fnBytes != null && fnBytes.length > 0) {
+              String fnStr = Bytes.toString(fnBytes);
+              List<HServerAddress> fnServers =
+                  RegionPlacement.getFavoredNodeList(fnStr);
+              if (fnServers.size() > 0) {
+                if (!server.equals(fnServers.get(0))) {
+                  allInFavor.set(false);
+                  return false;
+                }
+              }
+            }
           }
           return true;
         }
-
       };
-      MetaScanner.metaScan(conf, visitor, (StringBytes)null);
+      MetaScanner.metaScan(conf, visitor, (StringBytes) null);
+      if (allInFavor.get()) {
+        // Location info from region servers
+        final Map<String, Map<String, HServerAddress>> fromRS = new HashMap<>();
+        List<HRegionServer> onlineServers = getOnlineRegionServers();
+        for (HRegionServer rs : onlineServers) {
+          for (HRegion region : rs.getOnlineRegions()) {
+            // Ignore META or ROOT regions.
+            if (region.getRegionInfo().isMetaRegion()
+                || region.getRegionInfo().isRootRegion()) {
+              continue;
+            }
 
-      // Location info from region servers
-      final Map<String, Map<String, HServerAddress>> fromRS = new HashMap<>();
-      List<HRegionServer> onlineServers = getOnlineRegionServers();
-      for (HRegionServer rs : onlineServers) {
-        for (HRegion region : rs.getOnlineRegions()) {
-          // Ignore META or ROOT regions.
-          if (region.getRegionInfo().isMetaRegion()
-              || region.getRegionInfo().isRootRegion()) {
-            continue;
+            HRegionInfo info = region.getRegionInfo();
+            String tableName = info.getTableDesc().getNameAsString();
+            Map<String, HServerAddress> regionToAddr = fromRS.get(tableName);
+            if (regionToAddr == null) {
+              regionToAddr = new HashMap<>();
+              fromRS.put(tableName, regionToAddr);
+            }
+            regionToAddr.put(info.getRegionNameAsString(), rs.getServerInfo()
+                .getServerAddress());
           }
-
-          HRegionInfo info = region.getRegionInfo();
-          String tableName = info.getTableDesc().getNameAsString();
-          Map<String, HServerAddress> regionToAddr = fromRS.get(tableName);
-          if (regionToAddr == null) {
-            regionToAddr = new HashMap<>();
-            fromRS.put(tableName, regionToAddr);
-          }
-          regionToAddr.put(info.getRegionNameAsString(), rs.getServerInfo()
-              .getServerAddress());
         }
-      }
 
-      if (fromMeta.equals(fromRS)) {
-        // Consistent now, quit
-        break;
+        if (fromMeta.equals(fromRS)) {
+          // Consistent now, quit
+          break;
+        }
       }
 
       // Sleep for a while before next check
@@ -1544,64 +1569,69 @@ public class HBaseTestingUtility {
    */
   public void waitUntilAllRegionsAssigned(final int countOfRegions)
   throws IOException {
-    HTable meta = new HTable(getConfiguration(), HConstants.META_TABLE_NAME);
-    HConnection connection = ServerConnectionManager.getConnection(conf);
-TOP_LOOP:
-    while (true) {
-      int rows = 0;
-      Scan scan = new Scan();
-      scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-      ResultScanner s;
-      try {
-        s = meta.getScanner(scan);
-      } catch (RetriesExhaustedException ex) {
-        // This function has infinite patience.
-        Threads.sleepWithoutInterrupt(2000);
-        continue;
-      } catch (PreemptiveFastFailException ex) {
-        // Be more patient
-        Threads.sleepWithoutInterrupt(2000);
-        continue;
-      }
-      Map<String, HRegionInfo[]> regionAssignment =
-          new HashMap<String, HRegionInfo[]>();
-REGION_LOOP:
-      for (Result r = null; (r = s.next()) != null;) {
-        byte [] b =
-          r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
-        if (b == null || b.length <= 0) break;
-        // Make sure the regionserver really has this region.
-        String serverAddress = Bytes.toString(b);
-        if (!regionAssignment.containsKey(serverAddress)) {
-          HRegionInterface hri =
-            connection.getHRegionConnection(new HServerAddress(serverAddress),
-                false);
-          HRegionInfo[] regions;
-          try {
-            regions = hri.getRegionsAssignment();
-          } catch (IOException ex) {
-            LOG.info("Could not contact regionserver " + serverAddress);
-            Threads.sleepWithoutInterrupt(1000);
-            continue TOP_LOOP;
-          }
-          regionAssignment.put(serverAddress, regions);
+    try (HTable meta =
+        new HTable(getConfiguration(), HConstants.META_TABLE_NAME)) {
+      HConnection connection = ServerConnectionManager.getConnection(conf);
+      TOP_LOOP:
+      while (true) {
+        int rows = 0;
+        Scan scan = new Scan();
+        scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+        ResultScanner s;
+        try {
+          s = meta.getScanner(scan);
+        } catch (RetriesExhaustedException ex) {
+          // This function has infinite patience.
+          Threads.sleepWithoutInterrupt(2000);
+          continue;
+        } catch (PreemptiveFastFailException ex) {
+          // Be more patient
+          Threads.sleepWithoutInterrupt(2000);
+          continue;
         }
-        String regionName = Bytes.toString(r.getRow());
-        for (HRegionInfo regInfo : regionAssignment.get(serverAddress)) {
-          String regNameOnRS = Bytes.toString(regInfo.getRegionName());
-          if (regNameOnRS.equals(regionName)) {
-            rows++;
-            continue REGION_LOOP;
+        Map<String, HRegionInfo[]> regionAssignment =
+            new HashMap<String, HRegionInfo[]>();
+        REGION_LOOP:
+        for (Result r = null; (r = s.next()) != null;) {
+          byte[] b =
+              r.getValue(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
+          if (b == null || b.length <= 0) {
+            break;
+          }
+          // Make sure the regionserver really has this region.
+          String serverAddress = Bytes.toString(b);
+          if (!regionAssignment.containsKey(serverAddress)) {
+            HRegionInterface hri =
+                connection.getHRegionConnection(new HServerAddress(
+                    serverAddress), false);
+            HRegionInfo[] regions;
+            try {
+              regions = hri.getRegionsAssignment();
+            } catch (IOException ex) {
+              LOG.info("Could not contact regionserver " + serverAddress);
+              Threads.sleepWithoutInterrupt(1000);
+              continue TOP_LOOP;
+            }
+            regionAssignment.put(serverAddress, regions);
+          }
+          String regionName = Bytes.toString(r.getRow());
+          for (HRegionInfo regInfo : regionAssignment.get(serverAddress)) {
+            String regNameOnRS = Bytes.toString(regInfo.getRegionName());
+            if (regNameOnRS.equals(regionName)) {
+              rows++;
+              continue REGION_LOOP;
+            }
           }
         }
+        s.close();
+        // If I get to here and all rows have a Server, then all have been
+        // assigned.
+        if (rows >= countOfRegions)
+          break;
+        LOG.info("Found " + rows + " open regions, waiting for "
+            + countOfRegions);
+        Threads.sleepWithoutInterrupt(1000);
       }
-      s.close();
-      // If I get to here and all rows have a Server, then all have been assigned.
-      if (rows >= countOfRegions)
-        break;
-      LOG.info("Found " + rows + " open regions, waiting for " +
-          countOfRegions);
-      Threads.sleepWithoutInterrupt(1000);
     }
   }
 
@@ -1666,7 +1696,7 @@ REGION_LOOP:
     }
 
     if (eLen != aLen || i != minLen) {
-      Assert.failNotEquals("KeyValue at position " + i + additionalMsg,
+      Assert.assertNotEquals("KeyValue at position " + i + additionalMsg,
           safeGetAsStr(expected, i) + " (length " + eLen + ")",
           safeGetAsStr(actual, i) + " (length " + aLen + ")");
     }
@@ -1987,5 +2017,37 @@ REGION_LOOP:
   public void useAssignmentLoadBalancer() {
     this.conf.set(HConstants.LOAD_BALANCER_IMPL,
         "org.apache.hadoop.hbase.master.RegionManager$AssignmentLoadBalancer");
+  }
+
+  /**
+   * Moves the region to a new server and change the assignment accordingly.
+   *
+   * @throws IOException
+   * @throws MasterNotRunningException
+   */
+  public void moveRegionAndAssignment(HRegionInfo regionInfo,
+      HServerAddress regionServer) throws IOException {
+    RegionPlacement rp = new RegionPlacement(conf, false, false);
+    AssignmentPlan plan = rp.getExistingAssignmentPlan();
+    List<HServerAddress> servers = plan.getAssignment(regionInfo);
+    if (servers != null) {
+      LOG.debug("Servers for " + regionInfo.getRegionNameAsString()
+          + " in plan is " + servers);
+      // Move serverAddress in servers to the first place
+      boolean removed = servers.remove(regionServer);
+      servers.add(0, regionServer);
+      if (!removed) {
+        // To keep the same length of the server list.
+        servers.remove(servers.size() - 1);
+      }
+      LOG.debug("Servers for " + regionInfo.getRegionNameAsString()
+          + " in plan is updated to " + servers);
+
+      plan.updateAssignmentPlan(regionInfo, servers);
+      rp.updateAssignmentPlan(plan);
+    }
+
+    getHBaseAdmin().moveRegion(regionInfo.getRegionName(),
+        regionServer.toString());
   }
 }
