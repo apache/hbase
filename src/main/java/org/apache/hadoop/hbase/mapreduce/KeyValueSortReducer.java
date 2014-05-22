@@ -44,7 +44,7 @@ public class KeyValueSortReducer extends Reducer<ImmutableBytesWritable, KeyValu
     int index = 0;
     for (KeyValue kv: map) {
       context.write(row, kv);
-      if (index > 0 && index % 100 == 0) context.setStatus("Wrote " + index);
+      if (++index % 100 == 0) context.setStatus("Wrote " + index);
     }
   }
 }
