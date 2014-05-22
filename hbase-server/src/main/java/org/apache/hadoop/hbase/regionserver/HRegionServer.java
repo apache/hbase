@@ -1099,8 +1099,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       serverLoad.addCoprocessors(
         Coprocessor.newBuilder().setName(coprocessor).build());
     }
+    RegionLoad.Builder regionLoadBldr = RegionLoad.newBuilder();
+    RegionSpecifier.Builder regionSpecifier = RegionSpecifier.newBuilder();
     for (HRegion region : regions) {
-      serverLoad.addRegionLoads(createRegionLoad(region));
+      serverLoad.addRegionLoads(createRegionLoad(region, regionLoadBldr, regionSpecifier));
     }
     serverLoad.setReportStartTime(reportStartTime);
     serverLoad.setReportEndTime(reportEndTime);
@@ -1302,12 +1304,14 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
   /*
    * @param r Region to get RegionLoad for.
-   *
+   * @param regionLoadBldr the RegionLoad.Builder, can be null
+   * @param regionSpecifier the RegionSpecifier.Builder, can be null
    * @return RegionLoad instance.
    *
    * @throws IOException
    */
-  private RegionLoad createRegionLoad(final HRegion r) {
+  private RegionLoad createRegionLoad(final HRegion r, RegionLoad.Builder regionLoadBldr,
+      RegionSpecifier.Builder regionSpecifier) {
     byte[] name = r.getRegionName();
     int stores = 0;
     int storefiles = 0;
@@ -1344,11 +1348,15 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           (int) (store.getTotalStaticBloomSize() / 1024);
       }
     }
-    RegionLoad.Builder regionLoad = RegionLoad.newBuilder();
-    RegionSpecifier.Builder regionSpecifier = RegionSpecifier.newBuilder();
+    if (regionLoadBldr == null) {
+      regionLoadBldr = RegionLoad.newBuilder();
+    }
+    if (regionSpecifier == null) {
+      regionSpecifier = RegionSpecifier.newBuilder();
+    }
     regionSpecifier.setType(RegionSpecifierType.REGION_NAME);
     regionSpecifier.setValue(HBaseZeroCopyByteString.wrap(name));
-    regionLoad.setRegionSpecifier(regionSpecifier.build())
+    regionLoadBldr.setRegionSpecifier(regionSpecifier.build())
       .setStores(stores)
       .setStorefiles(storefiles)
       .setStoreUncompressedSizeMB(storeUncompressedSizeMB)
@@ -1364,7 +1372,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       .setCurrentCompactedKVs(currentCompactedKVs)
       .setCompleteSequenceId(r.completeSequenceId);
 
-    return regionLoad.build();
+    return regionLoadBldr.build();
   }
 
   /**
@@ -1374,7 +1382,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   public RegionLoad createRegionLoad(final String encodedRegionName) {
     HRegion r = null;
     r = this.onlineRegions.get(encodedRegionName);
-    return r != null ? createRegionLoad(r) : null;
+    return r != null ? createRegionLoad(r, null, null) : null;
   }
 
   /*
