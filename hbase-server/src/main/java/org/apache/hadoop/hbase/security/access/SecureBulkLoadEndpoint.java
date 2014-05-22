@@ -236,7 +236,11 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
         done.run(null);
         return;
       }
-      ugi.addToken(targetfsDelegationToken.getUserToken());
+      Token<?> targetFsToken = targetfsDelegationToken.getUserToken();
+      if (targetFsToken != null && (userToken == null
+          || !targetFsToken.getService().equals(userToken.getService()))) {
+        ugi.addToken(targetFsToken);
+      }
 
       loaded = ugi.doAs(new PrivilegedAction<Boolean>() {
         @Override
