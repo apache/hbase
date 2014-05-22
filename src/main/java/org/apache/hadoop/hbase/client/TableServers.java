@@ -419,7 +419,8 @@ public class TableServers implements ServerConnection {
     Scan scan = new Scan(tname);
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
 
-    try (HTable table = new HTable(conf, HConstants.META_TABLE_NAME)) {
+    try {
+      HTable table = new HTable(conf, HConstants.META_TABLE_NAME);
       try (ResultScanner scanner = table.getScanner(scan)) {
         Result data = scanner.next();
         if (data != null && data.size() > 0) {
@@ -433,6 +434,8 @@ public class TableServers implements ServerConnection {
         }
       } catch (IOException e) {
         LOG.warn("Testing for table existence threw exception", e);
+      } finally {
+        table.close();
       }
     } catch (IOException e) {
       LOG.warn("Testing for table existence threw exception", e);
