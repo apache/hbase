@@ -199,31 +199,5 @@ public class TestServerSideException {
     Assert.assertTrue(hasDoNotRetryIOE);
   }
 
-  /**
-   * Test if HTableAsync is able to retry in network failure (TTransportException).
-   *
-   * WARNING: This test affects number of region servers. Please add new tests above
-   * it to avoid possible unnecessary debugging.
-   *
-   * @throws Exception
-   */
-  @Test
-  public void testTTransportException() throws Exception {
-    HTableAsync table = TEST_UTIL.createTable(new StringBytes("testTable2"),
-        new byte[][] { FAMILY }, 3, Bytes.toBytes("bbb"),
-        Bytes.toBytes("yyy"), 6);
 
-    Put put = new Put(ROW);
-    put.add(FAMILY, null, VALUE);
-    table.put(put);
-    table.flushCommits();
-
-    FailureInjectingThriftHRegionServer.setFailureMode(
-        FailureInjectingThriftHRegionServer.FailureType.STOP, 1);
-
-    Get get = new Get.Builder(ROW).addFamily(FAMILY).create();
-    ListenableFuture<Result> future = table.getAsync(get);
-    Result result = future.get();
-    Assert.assertTrue(Bytes.equals(result.getValue(FAMILY, null), VALUE));
-  }
 }
