@@ -59,7 +59,23 @@ public class FilterList implements Filter {
     MUST_PASS_ONE
   }
 
-  private static final Configuration conf = HBaseConfiguration.create();
+  private static final Configuration CONF;
+  static {
+    // We don't know which thread will load this class, so we don't know what
+    // the state of the context classloader will be when this class is loaded.
+    // HBaseConfiguration.create is dependent on the state of the context
+    // classloader of the current thread, so we set it to be the classloader
+    // that was used to load the Filter class to guarantee the consistent
+    // ability to load this class from any thread
+    ClassLoader saveCtxCl = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(
+          Filter.class.getClassLoader());
+      CONF = HBaseConfiguration.create();
+    } finally {
+      Thread.currentThread().setContextClassLoader(saveCtxCl);
+    }
+  }
   private static final int MAX_LOG_FILTERS = 5;
   private Operator operator = Operator.MUST_PASS_ALL;
   private List<Filter> filters = new ArrayList<Filter>();
@@ -321,7 +337,7 @@ public class FilterList implements Filter {
     if (size > 0) {
       filters = new ArrayList<Filter>(size);
       for (int i = 0; i < size; i++) {
-        Filter filter = HbaseObjectWritable.readFilter(in, conf);
+        Filter filter = HbaseObjectWritable.readFilter(in, CONF);
         filters.add(filter);
       }
     }
@@ -331,7 +347,7 @@ public class FilterList implements Filter {
     out.writeByte(operator.ordinal());
     out.writeInt(filters.size());
     for (Filter filter : filters) {
-      HbaseObjectWritable.writeObject(out, filter, Writable.class, conf);
+      HbaseObjectWritable.writeObject(out, filter, Writable.class, CONF);
     }
   }
 
