@@ -148,7 +148,7 @@ mvn clean package -DskipTests
       <section xml:id="build.protobuf"><title>Build Protobuf</title>
             <para>You may need to change the protobuf definitions that reside in the hbase-protocol module or other modules.</para>
             <para>
-              The protobuf files are located </filename>hbase-protocol/src/main/protobuf<filename>.
+              The protobuf files are located <filename>hbase-protocol/src/main/protobuf</filename>.
               For the change to be effective, you will need to regenerate the classes. You can use maven profile compile-protobuf to do this.
             <programlisting>
 mvn compile -Dcompile-protobuf
