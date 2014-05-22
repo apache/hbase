@@ -1456,11 +1456,5 @@ Always set the &quot;Fix Version&quot; at this point, but please only set a sing
 However any substantive discussion (as with any off-list project-related discussion) should be re-iterated in Jira or on the developer list. </para></section>
 <section><title>Do not edit JIRA comments</title><para>Misspellings and/or bad grammar is preferable to the disruption a JIRA comment edit causes: See the discussion at
 <link xlink:href="http://search-hadoop.com/?q=%5BReopened%5D+%28HBASE-451%29+Remove+HTableDescriptor+from+HRegionInfo&amp;fc_project=HBase">Re:(HBASE-451) Remove HTableDescriptor from HRegionInfo</link> </para></section>
-
-        </section>
-        </section>
-
        </section>   <!--  submitting patches -->
-
-
     </chapter>
