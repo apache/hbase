@@ -25,7 +25,6 @@ import java.util.concurrent.ExecutorService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -49,8 +48,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * If there are multiple regions in a table, this scanner will iterate
  * through them all.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceAudience.Private
 public class ClientScanner extends AbstractClientScanner {
     private final Log LOG = LogFactory.getLog(this.getClass());
     protected Scan scan;
@@ -80,70 +78,6 @@ public class ClientScanner extends AbstractClientScanner {
     protected final int primaryOperationTimeout;
     private int retries;
     protected final ExecutorService pool;
-
-    /**
-     * Create a new ClientScanner for the specified table. A ClusterConnection will be
-     * retrieved using the passed Configuration.
-     * Note that the passed {@link Scan}'s start row maybe changed.
-     *
-     * @param conf The {@link Configuration} to use.
-     * @param scan {@link Scan} to use in this scanner
-     * @param tableName The table that we wish to scan
-     * @throws IOException
-     */
-    public ClientScanner(final Configuration conf, final Scan scan,
-        final TableName tableName) throws IOException {
-      this(conf, scan, tableName, ConnectionManager.getConnectionInternal(conf));
-    }
-
-    /**
-     * @deprecated Use {@link #ClientScanner(Configuration, Scan, TableName)}
-     */
-    @Deprecated
-    public ClientScanner(final Configuration conf, final Scan scan,
-        final byte [] tableName) throws IOException {
-      this(conf, scan, TableName.valueOf(tableName));
-    }
-
-
-    /**
-   * @deprecated use
-   *             {@link #ClientScanner(Configuration, Scan, TableName, HConnection, RpcRetryingCallerFactory, RpcControllerFactory)}
-   */
-  @Deprecated
-  public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
-      ClusterConnection connection) throws IOException {
-    this(conf, scan, tableName, connection, new RpcRetryingCallerFactory(conf),
-        RpcControllerFactory.instantiate(conf));
-  }
-
-  /**
-   * @deprecated Use
-   *             {@link #ClientScanner(Configuration, Scan, TableName, HConnection, RpcRetryingCallerFactory, RpcControllerFactory)}
-   */
-  @Deprecated
-  public ClientScanner(final Configuration conf, final Scan scan, final byte [] tableName,
-      ClusterConnection connection) throws IOException {
-    this(conf, scan, TableName.valueOf(tableName), connection);
-  }
-
-  /**
-   * Create a new ClientScanner for the specified table.
-   * Note that the passed {@link Scan}'s start row maybe changed.
-   *
-   * @param conf
-   * @param scan
-   * @param tableName
-   * @param connection
-   * @param rpcFactory
-   * @throws IOException
-   */
-  public ClientScanner(final Configuration conf, final Scan scan,
-      final TableName tableName, ClusterConnection connection,
-      RpcRetryingCallerFactory rpcFactory, RpcControllerFactory controllerFactory)
-          throws IOException {
-    this(conf, scan, tableName, connection, rpcFactory, controllerFactory, null, 0);
-  }
 
   /**
    * Create a new ClientScanner for the specified table Note that the passed {@link Scan}'s start

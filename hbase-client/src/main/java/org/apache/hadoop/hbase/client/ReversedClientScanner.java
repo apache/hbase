@@ -25,7 +25,6 @@ import java.util.concurrent.ExecutorService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -36,26 +35,12 @@ import org.apache.hadoop.hbase.util.ExceptionUtil;
 /**
  * A reversed client scanner which support backward scanning
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceAudience.Private
 public class ReversedClientScanner extends ClientScanner {
   private static final Log LOG = LogFactory.getLog(ReversedClientScanner.class);
   // A byte array in which all elements are the max byte, and it is used to
   // construct closest front row
   static byte[] MAX_BYTE_ARRAY = Bytes.createMaxByteArray(9);
-  /**
-   * Create a new ReversibleClientScanner for the specified table Note that the
-   * passed {@link Scan}'s start row maybe changed.
-   * @param conf The {@link Configuration} to use.
-   * @param scan {@link Scan} to use in this scanner
-   * @param tableName The table that we wish to scan
-   * @param connection Connection identifying the cluster
-   * @throws IOException
-   */
-  public ReversedClientScanner(Configuration conf, Scan scan,
-      TableName tableName, ClusterConnection connection) throws IOException {
-    super(conf, scan, tableName, connection);
-  }
 
   /**
    * Create a new ReversibleClientScanner for the specified table Note that the

@@ -132,9 +132,9 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
     RegionLocations rl = RpcRetryingCallerWithReadReplicas.getRegionLocations(true,
         RegionReplicaUtil.DEFAULT_REPLICA_ID, cConnection, tableName,
         currentScannerCallable.getRow());
+
     // allocate a boundedcompletion pool of some multiple of number of replicas.
-    // We want accommodate the "scan" RPC call and the "close" RPC call (we schedule "close"
-    // RPCs for unneeded replica scans using the same pool)
+    // We want to accomodate some RPCs for redundant replica scans (but are still in progress)
     BoundedCompletionService<Pair<Result[], ScannerCallable>> cs =
         new BoundedCompletionService<Pair<Result[], ScannerCallable>>(pool, rl.size() * 5);
 
@@ -151,7 +151,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
       if (f != null) {
         Pair<Result[], ScannerCallable> r = f.get();
         if (r != null && r.getSecond() != null) {
-          updateCurrentlyServingReplica(r.getSecond(), r.getFirst(), done, cs);
+          updateCurrentlyServingReplica(r.getSecond(), r.getFirst(), done, pool);
         }
         return r == null ? null : r.getFirst(); //great we got a response
       }
@@ -175,7 +175,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
           Future<Pair<Result[], ScannerCallable>> f = cs.take();
           Pair<Result[], ScannerCallable> r = f.get();
           if (r != null && r.getSecond() != null) {
-            updateCurrentlyServingReplica(r.getSecond(), r.getFirst(), done, cs);
+            updateCurrentlyServingReplica(r.getSecond(), r.getFirst(), done, pool);
           }
           return r == null ? null : r.getFirst(); // great we got an answer
         } catch (ExecutionException e) {
@@ -204,7 +204,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
   }
 
   private void updateCurrentlyServingReplica(ScannerCallable scanner, Result[] result,
-      AtomicBoolean done, BoundedCompletionService<Pair<Result[], ScannerCallable>> cs) {
+      AtomicBoolean done, ExecutorService pool) {
     if (done.compareAndSet(false, true)) {
       if (currentScannerCallable != scanner) replicaSwitched.set(true);
       currentScannerCallable = scanner;
@@ -226,7 +226,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
         // the table is closed (when the awaitTermination of the underlying pool is called)
         s.setClose();
         RetryingRPC r = new RetryingRPC(s);
-        cs.submit(r);
+        pool.submit(r);
       }
       // now clear outstandingCallables since we scheduled a close for all the contained scanners
       outstandingCallables.clear();

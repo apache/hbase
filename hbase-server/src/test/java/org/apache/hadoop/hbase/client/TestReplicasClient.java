@@ -571,7 +571,7 @@ public class TestReplicasClient {
       scanWithReplicas(reversed, small, Consistency.STRONG, caching, start, NUMROWS, false, false);
       SlowMeCopro.sleepTime.set(0);
 
-      HTU.getHBaseAdmin().flush(table.getTableName());
+      flushRegion(hriPrimary);
       LOG.info("flush done");
       Thread.sleep(1000 + REFRESH_PERIOD * 2);
 

@@ -593,6 +593,10 @@ class ConnectionManager {
 
     private User user;
 
+    private RpcRetryingCallerFactory rpcCallerFactory;
+
+    private RpcControllerFactory rpcControllerFactory;
+
     /**
      * Cluster registry of basic info such as clusterid and meta region location.
      */
@@ -623,6 +627,8 @@ class ConnectionManager {
       retrieveClusterId();
 
       this.rpcClient = new RpcClient(this.conf, this.clusterId);
+      this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf);
+      this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
 
       // Do we publish the status?
       boolean shouldListen = conf.getBoolean(HConstants.STATUS_PUBLISHED,
@@ -1177,7 +1183,8 @@ class ConnectionManager {
           Result regionInfoRow = null;
           ReversedClientScanner rcs = null;
           try {
-            rcs = new ClientSmallReversedScanner(conf, s, TableName.META_TABLE_NAME, this);
+            rcs = new ClientSmallReversedScanner(conf, s, TableName.META_TABLE_NAME, this,
+              rpcCallerFactory, rpcControllerFactory, getBatchPool(), 0);
             regionInfoRow = rcs.next();
           } finally {
             if (rcs != null) {

@@ -140,15 +140,15 @@ public class MetaScanner {
     // Calculate startrow for scan.
     byte[] startRow;
     ResultScanner scanner = null;
-
+    HTable metaTable = null;
     try {
+      metaTable = new HTable(TableName.META_TABLE_NAME, connection, null);
       if (row != null) {
         // Scan starting at a particular row in a particular table
         byte[] searchRow = HRegionInfo.createRegionName(tableName, row, HConstants.NINES, false);
-        HTable metaTable;
-        metaTable = new HTable(TableName.META_TABLE_NAME, connection, null);
+
         Result startRowResult = metaTable.getRowOrBefore(searchRow, HConstants.CATALOG_FAMILY);
-        metaTable.close();
+
         if (startRowResult == null) {
           throw new TableNotFoundException("Cannot find row in "+ TableName
               .META_TABLE_NAME.getNameAsString()+" for table: "
@@ -182,9 +182,7 @@ public class MetaScanner {
           Bytes.toStringBinary(startRow) + " for max=" + rowUpperLimit + " with caching=" + rows);
       }
       // Run the scan
-      scanner = (scan.isSmall() ?
-          new ClientSmallScanner(configuration, scan, TableName.META_TABLE_NAME, connection) :
-          new ClientScanner(configuration, scan, TableName.META_TABLE_NAME, connection));
+      scanner = metaTable.getScanner(scan);
       Result result;
       int processedRows = 0;
       while ((result = scanner.next()) != null) {
@@ -211,6 +209,15 @@ public class MetaScanner {
           LOG.debug("Got exception in closing the meta scanner visitor", t);
         }
       }
+      if (metaTable != null) {
+        try {
+          metaTable.close();
+        } catch (Throwable t) {
+          ExceptionUtil.rethrowIfInterrupt(t);
+          LOG.debug("Got exception in closing meta table", t);
+        }
+      }
+
     }
   }
 

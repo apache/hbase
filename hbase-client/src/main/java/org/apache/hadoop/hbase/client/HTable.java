@@ -135,7 +135,7 @@ public class HTable implements HTableInterface {
   protected long currentWriteBufferSize;
   protected int scannerCaching;
   private int maxKeyValueSize;
-  private ExecutorService pool;  // For Multi
+  private ExecutorService pool;  // For Multi & Scan
   private boolean closed;
   private int operationTimeout;
   private int retries;
