@@ -28,7 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.ConsensusProvider;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
@@ -152,7 +152,7 @@ public class TestLogsCleaner {
     }
 
     @Override
-    public ConsensusProvider getConsensusProvider() {
+    public CoordinatedStateManager getCoordinatedStateManager() {
       return null;
     }
 

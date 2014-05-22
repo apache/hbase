@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 
@@ -113,7 +114,8 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
         " because regions is NOT in RIT -- presuming this is because it SPLIT");
     }
     if (!openedNodeDeleted) {
-      if (this.assignmentManager.getZKTable().isDisablingOrDisabledTable(regionInfo.getTable())) {
+      if (this.assignmentManager.getTableStateManager().isTableState(regionInfo.getTable(),
+        ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
         debugLog(regionInfo, "Opened region "
             + regionInfo.getShortNameToLog() + " but "
             + "this table is disabled, triggering close of region");

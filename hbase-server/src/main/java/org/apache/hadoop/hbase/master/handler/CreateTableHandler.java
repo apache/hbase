@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -46,10 +47,10 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Handler to create a table.
@@ -130,10 +131,13 @@ public class CreateTableHandler extends EventHandler {
     // We could have cleared the hbase.rootdir and not zk.  How can we detect this case?
     // Having to clean zk AND hdfs is awkward.
     try {
-      if (!assignmentManager.getZKTable().checkAndSetEnablingTable(tableName)) {
+      if (!assignmentManager.getTableStateManager().setTableStateIfNotInStates(tableName,
+        ZooKeeperProtos.Table.State.ENABLING,
+        ZooKeeperProtos.Table.State.ENABLING,
+        ZooKeeperProtos.Table.State.ENABLED)) {
         throw new TableExistsException(tableName);
       }
-    } catch (KeeperException e) {
+    } catch (CoordinatedStateException e) {
       throw new IOException("Unable to ensure that the table will be" +
         " enabling because of a ZooKeeper issue", e);
     }
@@ -146,8 +150,9 @@ public class CreateTableHandler extends EventHandler {
     // again with the same Active master
     // It will block the creation saying TableAlreadyExists.
     try {
-      assignmentManager.getZKTable().removeEnablingTable(tableName, false);
-    } catch (KeeperException e) {
+      assignmentManager.getTableStateManager().checkAndRemoveTableState(tableName,
+        ZooKeeperProtos.Table.State.ENABLING, false);
+    } catch (CoordinatedStateException e) {
       // Keeper exception should not happen here
       LOG.error("Got a keeper exception while removing the ENABLING table znode "
           + tableName, e);
@@ -211,7 +216,7 @@ public class CreateTableHandler extends EventHandler {
    * - Update ZooKeeper with the enabled state
    */
   private void handleCreateTable(TableName tableName)
-      throws IOException, KeeperException {
+      throws IOException, CoordinatedStateException {
     Path tempdir = fileSystemManager.getTempDir();
     FileSystem fs = fileSystemManager.getFileSystem();
 
@@ -239,8 +244,9 @@ public class CreateTableHandler extends EventHandler {
 
     // 6. Set table enabled flag up in zk.
     try {
-      assignmentManager.getZKTable().setEnabledTable(tableName);
-    } catch (KeeperException e) {
+      assignmentManager.getTableStateManager().setTableState(tableName,
+        ZooKeeperProtos.Table.State.ENABLED);
+    } catch (CoordinatedStateException e) {
       throw new IOException("Unable to ensure that " + tableName + " will be" +
         " enabled because of a ZooKeeper issue", e);
     }

@@ -23,11 +23,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.ConsensusProvider;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
@@ -50,7 +50,7 @@ public class TestMasterMetrics {
   private static HBaseTestingUtility TEST_UTIL;
 
   public static class MyMaster extends HMaster {
-    public MyMaster(Configuration conf, ConsensusProvider cp) throws IOException,
+    public MyMaster(Configuration conf, CoordinatedStateManager cp) throws IOException,
         KeeperException, InterruptedException {
       super(conf, cp);
     }

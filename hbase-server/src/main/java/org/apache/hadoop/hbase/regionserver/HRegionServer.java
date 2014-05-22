@@ -58,6 +58,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -75,8 +77,6 @@ import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.ConsensusProvider;
-import org.apache.hadoop.hbase.ConsensusProviderFactory;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
@@ -392,7 +392,7 @@ public class HRegionServer extends HasThread implements
 
   protected final RSRpcServices rpcServices;
 
-  protected ConsensusProvider consensusProvider;
+  protected CoordinatedStateManager csm;
 
   /**
    * Starts a HRegionServer at the default location.
@@ -401,17 +401,17 @@ public class HRegionServer extends HasThread implements
    * @throws InterruptedException
    */
   public HRegionServer(Configuration conf) throws IOException, InterruptedException {
-    this(conf, ConsensusProviderFactory.getConsensusProvider(conf));
+    this(conf, CoordinatedStateManagerFactory.getCoordinatedStateManager(conf));
   }
 
   /**
    * Starts a HRegionServer at the default location
    * @param conf
-   * @param consensusProvider implementation of ConsensusProvider to be used
+   * @param csm implementation of CoordinatedStateManager to be used
    * @throws IOException
    * @throws InterruptedException
    */
-  public HRegionServer(Configuration conf, ConsensusProvider consensusProvider)
+  public HRegionServer(Configuration conf, CoordinatedStateManager csm)
       throws IOException, InterruptedException {
     this.fsOk = true;
     this.conf = conf;
@@ -483,9 +483,9 @@ public class HRegionServer extends HasThread implements
       zooKeeper = new ZooKeeperWatcher(conf, getProcessName() + ":" +
         rpcServices.isa.getPort(), this, canCreateBaseZNode());
 
-      this.consensusProvider = consensusProvider;
-      this.consensusProvider.initialize(this);
-      this.consensusProvider.start();
+      this.csm = csm;
+      this.csm.initialize(this);
+      this.csm.start();
 
       tableLockManager = TableLockManager.createTableLockManager(
         conf, zooKeeper, serverName);
@@ -2155,8 +2155,8 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public ConsensusProvider getConsensusProvider() {
-    return consensusProvider;
+  public CoordinatedStateManager getCoordinatedStateManager() {
+    return csm;
   }
 
   @Override
@@ -2253,10 +2253,10 @@ public class HRegionServer extends HasThread implements
    */
   public static HRegionServer constructRegionServer(
       Class<? extends HRegionServer> regionServerClass,
-      final Configuration conf2, ConsensusProvider cp) {
+      final Configuration conf2, CoordinatedStateManager cp) {
     try {
       Constructor<? extends HRegionServer> c = regionServerClass
-          .getConstructor(Configuration.class, ConsensusProvider.class);
+          .getConstructor(Configuration.class, CoordinatedStateManager.class);
       return c.newInstance(conf2, cp);
     } catch (Exception e) {
       throw new RuntimeException("Failed construction of " + "Regionserver: "

@@ -35,7 +35,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
@@ -123,7 +122,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
   }
 
   public SplitLogWorker(final ZooKeeperWatcher watcher, final Configuration conf,
-      RegionServerServices server, final LastSequenceId sequenceIdChecker) {
+      final RegionServerServices server, final LastSequenceId sequenceIdChecker) {
     this(watcher, conf, server, new TaskExecutor() {
       @Override
       public Status exec(String filename, CancelableProgressable p) {
@@ -141,7 +140,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
         // encountered a bad non-retry-able persistent error.
         try {
           if (!HLogSplitter.splitLogFile(rootdir, fs.getFileStatus(new Path(rootdir, filename)),
-            fs, conf, p, sequenceIdChecker, watcher)) {
+            fs, conf, p, sequenceIdChecker, watcher, server.getCoordinatedStateManager())) {
             return Status.PREEMPTED;
           }
         } catch (InterruptedIOException iioe) {

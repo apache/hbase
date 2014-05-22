@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -67,7 +68,8 @@ public class TestMaster {
     HMaster m = cluster.getMaster();
 
     HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILYNAME);
-    assertTrue(m.assignmentManager.getZKTable().isEnabledTable(TABLENAME));
+    assertTrue(m.assignmentManager.getTableStateManager().isTableState(TABLENAME,
+      ZooKeeperProtos.Table.State.ENABLED));
     TEST_UTIL.loadTable(ht, FAMILYNAME, false);
     ht.close();
 

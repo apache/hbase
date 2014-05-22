@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.ConsensusProvider;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -219,7 +219,7 @@ public class TestReplicationTrackerZKImpl {
     }
 
     @Override
-    public ConsensusProvider getConsensusProvider() {
+    public CoordinatedStateManager getCoordinatedStateManager() {
       return null;
     }
 

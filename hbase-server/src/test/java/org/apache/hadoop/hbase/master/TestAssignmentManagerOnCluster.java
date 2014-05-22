@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.ConsensusProvider;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -567,7 +568,7 @@ public class TestAssignmentManagerOnCluster {
         Thread.sleep(100);
       }
 
-      am.getZKTable().setDisablingTable(table);
+      am.getTableStateManager().setTableState(table, ZooKeeperProtos.Table.State.DISABLING);
       List<HRegionInfo> toAssignRegions = am.processServerShutdown(destServerName);
       assertTrue("Regions to be assigned should be empty.", toAssignRegions.isEmpty());
       assertTrue("Regions to be assigned should be empty.", am.getRegionStates()
@@ -576,7 +577,7 @@ public class TestAssignmentManagerOnCluster {
       if (hri != null && serverName != null) {
         am.regionOnline(hri, serverName);
       }
-      am.getZKTable().setDisabledTable(table);
+      am.getTableStateManager().setTableState(table, ZooKeeperProtos.Table.State.DISABLED);
       TEST_UTIL.deleteTable(table);
     }
   }
@@ -838,7 +839,7 @@ public class TestAssignmentManagerOnCluster {
   public static class MyMaster extends HMaster {
     AtomicBoolean enabled = new AtomicBoolean(true);
 
-    public MyMaster(Configuration conf, ConsensusProvider cp)
+    public MyMaster(Configuration conf, CoordinatedStateManager cp)
       throws IOException, KeeperException,
         InterruptedException {
       super(conf, cp);

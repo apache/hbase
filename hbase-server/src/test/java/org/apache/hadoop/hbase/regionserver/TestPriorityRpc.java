@@ -25,12 +25,12 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.ConsensusProvider;
-import org.apache.hadoop.hbase.ConsensusProviderFactory;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Get;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
@@ -58,7 +58,7 @@ public class TestPriorityRpc {
   public void setup() {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean("hbase.testing.nocluster", true); // No need to do ZK
-    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(conf);
+    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
     regionServer = HRegionServer.constructRegionServer(HRegionServer.class, conf, cp);
     priority = regionServer.rpcServices.getPriority();
   }

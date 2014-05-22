@@ -56,6 +56,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -66,6 +68,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
@@ -89,6 +92,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.StoreSequenceId;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -104,10 +108,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
-import org.apache.hadoop.hbase.zookeeper.ZKTable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MultipleIOException;
-import org.apache.zookeeper.KeeperException;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -135,6 +137,7 @@ public class HLogSplitter {
   private Set<TableName> disablingOrDisabledTables =
       new HashSet<TableName>();
   private ZooKeeperWatcher watcher;
+  private CoordinatedStateManager csm;
 
   // If an exception is thrown by one of the other threads, it will be
   // stored here.
@@ -168,7 +171,8 @@ public class HLogSplitter {
   private final int minBatchSize;
 
   HLogSplitter(Configuration conf, Path rootDir,
-      FileSystem fs, LastSequenceId idChecker, ZooKeeperWatcher zkw) {
+      FileSystem fs, LastSequenceId idChecker, ZooKeeperWatcher zkw,
+      CoordinatedStateManager csm) {
     this.conf = HBaseConfiguration.create(conf);
     String codecClassName = conf
         .get(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
@@ -177,6 +181,7 @@ public class HLogSplitter {
     this.fs = fs;
     this.sequenceIdChecker = idChecker;
     this.watcher = zkw;
+    this.csm = csm;
 
     entryBuffers = new EntryBuffers(
         this.conf.getInt("hbase.regionserver.hlog.splitlog.buffersize",
@@ -188,7 +193,7 @@ public class HLogSplitter {
     this.distributedLogReplay = HLogSplitter.isDistributedLogReplay(this.conf);
 
     this.numWriterThreads = this.conf.getInt("hbase.regionserver.hlog.splitlog.writer.threads", 3);
-    if (zkw != null && this.distributedLogReplay) {
+    if (zkw != null && csm != null && this.distributedLogReplay) {
       outputSink = new LogReplayOutputSink(numWriterThreads);
     } else {
       if (this.distributedLogReplay) {
@@ -219,8 +224,9 @@ public class HLogSplitter {
    */
   public static boolean splitLogFile(Path rootDir, FileStatus logfile, FileSystem fs,
       Configuration conf, CancelableProgressable reporter, LastSequenceId idChecker,
-      ZooKeeperWatcher zkw) throws IOException {
-    HLogSplitter s = new HLogSplitter(conf, rootDir, fs, idChecker, zkw);
+      ZooKeeperWatcher zkw, CoordinatedStateManager cp) throws IOException {
+    HLogSplitter s = new HLogSplitter(conf, rootDir, fs, idChecker, zkw,
+      cp);
     return s.splitLogFile(logfile, reporter);
   }
 
@@ -234,7 +240,7 @@ public class HLogSplitter {
     List<Path> splits = new ArrayList<Path>();
     if (logfiles != null && logfiles.length > 0) {
       for (FileStatus logfile: logfiles) {
-        HLogSplitter s = new HLogSplitter(conf, rootDir, fs, null, null);
+        HLogSplitter s = new HLogSplitter(conf, rootDir, fs, null, null, null);
         if (s.splitLogFile(logfile, null)) {
           finishSplitLogFile(rootDir, oldLogDir, logfile.getPath(), conf);
           if (s.outputSink.splits != null) {
@@ -288,10 +294,12 @@ public class HLogSplitter {
         LOG.warn("Nothing to split in log file " + logPath);
         return true;
       }
-      if(watcher != null) {
+      if(watcher != null && csm != null) {
         try {
-          disablingOrDisabledTables = ZKTable.getDisabledOrDisablingTables(watcher);
-        } catch (KeeperException e) {
+          TableStateManager tsm = csm.getTableStateManager();
+          disablingOrDisabledTables = tsm.getTablesInStates(
+            ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING);
+        } catch (CoordinatedStateException e) {
           throw new IOException("Can't get disabling/disabled tables", e);
         }
       }

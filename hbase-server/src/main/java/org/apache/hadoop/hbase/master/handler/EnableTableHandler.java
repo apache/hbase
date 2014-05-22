@@ -26,6 +26,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
@@ -45,8 +46,8 @@ import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Handler to run enable of a table.
@@ -88,9 +89,10 @@ public class EnableTableHandler extends EventHandler {
           throw new TableNotFoundException(tableName);
         } 
         try {
-          this.assignmentManager.getZKTable().removeEnablingTable(tableName, true);
+          this.assignmentManager.getTableStateManager().checkAndRemoveTableState(tableName,
+            ZooKeeperProtos.Table.State.ENABLING, true);
           throw new TableNotFoundException(tableName);
-        } catch (KeeperException e) {
+        } catch (CoordinatedStateException e) {
           // TODO : Use HBCK to clear such nodes
           LOG.warn("Failed to delete the ENABLING node for the table " + tableName
               + ".  The table will remain unusable. Run HBCK to manually fix the problem.");
@@ -103,14 +105,15 @@ public class EnableTableHandler extends EventHandler {
       // DISABLED or ENABLED.
       if (!skipTableStateCheck) {
         try {
-          if (!this.assignmentManager.getZKTable().checkDisabledAndSetEnablingTable
-            (this.tableName)) {
+          if (!this.assignmentManager.getTableStateManager().setTableStateIfInStates(
+              this.tableName, ZooKeeperProtos.Table.State.ENABLING,
+              ZooKeeperProtos.Table.State.DISABLED)) {
             LOG.info("Table " + tableName + " isn't disabled; skipping enable");
             throw new TableNotDisabledException(this.tableName);
           }
-        } catch (KeeperException e) {
+        } catch (CoordinatedStateException e) {
           throw new IOException("Unable to ensure that the table will be" +
-            " enabling because of a ZooKeeper issue", e);
+            " enabling because of a coordination engine issue", e);
         }
       }
       success = true;
@@ -147,7 +150,7 @@ public class EnableTableHandler extends EventHandler {
       }
     } catch (IOException e) {
       LOG.error("Error trying to enable the table " + this.tableName, e);
-    } catch (KeeperException e) {
+    } catch (CoordinatedStateException e) {
       LOG.error("Error trying to enable the table " + this.tableName, e);
     } catch (InterruptedException e) {
       LOG.error("Error trying to enable the table " + this.tableName, e);
@@ -166,12 +169,14 @@ public class EnableTableHandler extends EventHandler {
     }
   }
 
-  private void handleEnableTable() throws IOException, KeeperException, InterruptedException {
+  private void handleEnableTable() throws IOException, CoordinatedStateException,
+      InterruptedException {
     // I could check table is disabling and if so, not enable but require
     // that user first finish disabling but that might be obnoxious.
 
     // Set table enabling flag up in zk.
-    this.assignmentManager.getZKTable().setEnablingTable(this.tableName);
+    this.assignmentManager.getTableStateManager().setTableState(this.tableName,
+      ZooKeeperProtos.Table.State.ENABLING);
     boolean done = false;
     ServerManager serverManager = ((HMaster)this.server).getServerManager();
     // Get the regions of this table. We're done when all listed
@@ -206,8 +211,8 @@ public class EnableTableHandler extends EventHandler {
     }
     if (done) {
       // Flip the table to enabled.
-      this.assignmentManager.getZKTable().setEnabledTable(
-        this.tableName);
+      this.assignmentManager.getTableStateManager().setTableState(
+        this.tableName, ZooKeeperProtos.Table.State.ENABLED);
       LOG.info("Table '" + this.tableName
       + "' was successfully enabled. Status: done=" + done);
     } else {

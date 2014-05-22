@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.ConsensusProvider;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
@@ -165,7 +165,7 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public ConsensusProvider getConsensusProvider() {
+    public CoordinatedStateManager getCoordinatedStateManager() {
       return null;
     }
 
@@ -249,7 +249,7 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public ConsensusProvider getConsensusProvider() {
+    public CoordinatedStateManager getCoordinatedStateManager() {
       return null;
     }
 

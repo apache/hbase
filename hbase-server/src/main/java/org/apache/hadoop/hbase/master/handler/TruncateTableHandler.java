@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -27,25 +26,20 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.RegionStates;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
-import org.apache.hadoop.hbase.util.Threads;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Truncate the table by removing META and the HDFS files and recreating it.
@@ -67,7 +61,7 @@ public class TruncateTableHandler extends DeleteTableHandler {
 
   @Override
   protected void handleTableOperation(List<HRegionInfo> regions)
-      throws IOException, KeeperException {
+      throws IOException, CoordinatedStateException {
     MasterCoprocessorHost cpHost = ((HMaster) this.server).getMasterCoprocessorHost();
     if (cpHost != null) {
       cpHost.preTruncateTableHandler(this.tableName);
@@ -137,8 +131,9 @@ public class TruncateTableHandler extends DeleteTableHandler {
 
       // 6. Set table enabled flag up in zk.
       try {
-        assignmentManager.getZKTable().setEnabledTable(tableName);
-      } catch (KeeperException e) {
+        assignmentManager.getTableStateManager().setTableState(tableName,
+          ZooKeeperProtos.Table.State.ENABLED);
+      } catch (CoordinatedStateException e) {
         throw new IOException("Unable to ensure that " + tableName + " will be" +
           " enabled because of a ZooKeeper issue", e);
       }

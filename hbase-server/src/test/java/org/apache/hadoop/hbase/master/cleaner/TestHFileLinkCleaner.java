@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.ConsensusProvider;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -146,7 +146,7 @@ public class TestHFileLinkCleaner {
     }
 
     @Override
-    public ConsensusProvider getConsensusProvider() {
+    public CoordinatedStateManager getCoordinatedStateManager() {
       return null;
     }
 

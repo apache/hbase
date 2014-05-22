@@ -1180,8 +1180,8 @@ possible configurations would overwhelm and obscure the important.
     and add the fully qualified class name here.</description>
   </property>
   <property>
-    <name>hbase.consensus.provider.class</name>
-    <value>org.apache.hadoop.hbase.consensus.ZkConsensusProvider</value>
-    <description>Fully qualified name of class implementing consensus.</description>
+    <name>hbase.coordinated.state.manager.class</name>
+    <value>org.apache.hadoop.hbase.consensus.ZkCoordinatedStateManager</value>
+    <description>Fully qualified name of class implementing coordinated state manager.</description>
   </property>
 </configuration>

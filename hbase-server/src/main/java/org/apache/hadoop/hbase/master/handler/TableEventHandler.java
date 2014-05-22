@@ -29,6 +29,7 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -44,8 +45,8 @@ import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.BulkReOpen;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.zookeeper.KeeperException;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -128,8 +129,8 @@ public abstract class TableEventHandler extends EventHandler {
           tableName);
       handleTableOperation(hris);
       if (eventType.isOnlineSchemaChangeSupported() && this.masterServices.
-          getAssignmentManager().getZKTable().
-          isEnabledTable(tableName)) {
+          getAssignmentManager().getTableStateManager().isTableState(
+          tableName, ZooKeeperProtos.Table.State.ENABLED)) {
         if (reOpenAllRegions(hris)) {
           LOG.info("Completed table operation " + eventType + " on table " +
               tableName);
@@ -141,7 +142,7 @@ public abstract class TableEventHandler extends EventHandler {
     } catch (IOException e) {
       LOG.error("Error manipulating table " + tableName, e);
       completed(e);
-    } catch (KeeperException e) {
+    } catch (CoordinatedStateException e) {
       LOG.error("Error manipulating table " + tableName, e);
       completed(e);
     } finally {
@@ -249,5 +250,5 @@ public abstract class TableEventHandler extends EventHandler {
   }
 
   protected abstract void handleTableOperation(List<HRegionInfo> regions)
-  throws IOException, KeeperException;
+    throws IOException, CoordinatedStateException;
 }
