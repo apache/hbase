@@ -242,7 +242,7 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
-  public int getBlockCacheHitPercent() {
+  public double getBlockCacheHitPercent() {
     if (this.cacheStats == null) {
       return 0;
     }
