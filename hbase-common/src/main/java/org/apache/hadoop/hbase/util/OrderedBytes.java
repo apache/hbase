@@ -56,6 +56,8 @@ import com.google.common.annotations.VisibleForTesting;
  * <tr><td>NaN</td><td>0x25</td></tr>
  * <tr><td>fixed-length 32-bit integer</td><td>0x27, I</td></tr>
  * <tr><td>fixed-length 64-bit integer</td><td>0x28, I</td></tr>
+ * <tr><td>fixed-length 8-bit integer</td><td>0x29</td></tr>
+ * <tr><td>fixed-length 16-bit integer</td><td>0x2a</td></tr>
  * <tr><td>fixed-length 32-bit float</td><td>0x30, F</td></tr>
  * <tr><td>fixed-length 64-bit float</td><td>0x31, F</td></tr>
  * <tr><td>TEXT</td><td>0x33, T</td></tr>
