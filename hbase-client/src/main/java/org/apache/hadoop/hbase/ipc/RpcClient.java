@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo;
 import org.apache.hadoop.hbase.security.AuthMethod;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
+import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -759,7 +760,9 @@ private UserProvider userProvider;
 
     private synchronized boolean setupSaslConnection(final InputStream in2,
         final OutputStream out2) throws IOException {
-      saslRpcClient = new HBaseSaslRpcClient(authMethod, token, serverPrincipal, fallbackAllowed);
+      saslRpcClient = new HBaseSaslRpcClient(authMethod, token, serverPrincipal, fallbackAllowed,
+          conf.get("hbase.rpc.protection", 
+              QualityOfProtection.AUTHENTICATION.name().toLowerCase()));
       return saslRpcClient.saslConnect(in2, out2);
     }
 
