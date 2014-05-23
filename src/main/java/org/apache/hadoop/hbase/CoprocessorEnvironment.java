@@ -44,4 +44,10 @@ public interface CoprocessorEnvironment {
    * @return the classloader for the loaded coprocessor instance
    */
   ClassLoader getClassLoader();
+
+  /**
+   * @return the key from the configuration with which the coprocessor was
+   *         loaded into the system
+   */
+  String getConfKeyForLoading();
 }

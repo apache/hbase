@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -34,6 +36,7 @@ import org.apache.hadoop.hbase.coprocessor.observers.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.observers.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
@@ -42,11 +45,9 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 public class RegionCoprocessorHost extends
     CoprocessorHost<RegionCoprocessorHost.RegionEnvironment> {
   private static final Log LOG = LogFactory.getLog(RegionCoprocessorHost.class);
-  // The shared data map
   private static ReferenceMap sharedDataMap = new ReferenceMap(
       AbstractReferenceMap.HARD, AbstractReferenceMap.WEAK);
-  /** The region */
-  HRegion region;
+  private HRegion region;
 
   /**
    * Constructor
@@ -59,6 +60,8 @@ public class RegionCoprocessorHost extends
     this.conf = conf;
     this.region = region;
     this.pathPrefix = Integer.toString(this.region.getRegionInfo().hashCode());
+    // if configuration contains coprocessor for this table then we should do
+    // the loading - otherwise not!
 
     // load system default cp's from configuration.
     loadSystemCoprocessors(conf, REGION_COPROCESSOR_CONF_KEY);
@@ -73,24 +76,30 @@ public class RegionCoprocessorHost extends
 
   /**
    * Used mainly when we dynamically reload the configuration
+   *
    * @throws IOException
    */
   public void reloadCoprocessors(Configuration newConf) throws IOException {
-    coprocessors.clear();
+    Map<String, List<Pair<String, String>>> map = this
+        .readCoprocessorsFromConf(newConf);
+    String coprocTable = this.region.getTableDesc().getNameAsString();
+    List<Pair<String, String>> forTable = map.get(coprocTable);
     // reload system default cp's from configuration.
     reloadSysCoprocessorsOnConfigChange(newConf, REGION_COPROCESSOR_CONF_KEY);
     // reload system default cp's for user tables from configuration.
     if (!region.getRegionInfo().getTableDesc().isMetaRegion()
         && !region.getRegionInfo().getTableDesc().isRootRegion()) {
-      reloadCoprocessorsFromHdfs(newConf);
-      reloadSysCoprocessorsOnConfigChange(newConf, USER_REGION_COPROCESSOR_CONF_KEY);
+      if (forTable != null) {
+        reloadCoprocessorsFromHdfs(coprocTable, forTable, newConf);
+      }
+      reloadSysCoprocessorsOnConfigChange(newConf,
+          USER_REGION_COPROCESSOR_CONF_KEY);
     }
   }
 
-
   @Override
   public RegionEnvironment createEnvironment(Class<?> implClass,
-      Coprocessor instance, int priority, int seq, Configuration conf) {
+      Coprocessor instance, int priority, int seq, Configuration conf, String confKey) {
     // Check if it's an Endpoint.
     // Due to current dynamic protocol design, Endpoint
     // uses a different way to be registered and executed.
@@ -114,7 +123,7 @@ public class RegionCoprocessorHost extends
       }
     }
     return new RegionEnvironment(instance, priority, seq, conf, region,
-        classData);
+        classData, confKey);
   }
 
   /**
@@ -183,6 +192,8 @@ public class RegionCoprocessorHost extends
 
     private HRegion region;
     ConcurrentMap<String, Object> sharedData;
+    private byte[] tableName;
+    private String keyForLoading;
 
     /**
      * Constructor
@@ -191,10 +202,11 @@ public class RegionCoprocessorHost extends
      */
     public RegionEnvironment(final Coprocessor impl, final int priority,
         final int seq, final Configuration conf, final HRegion region,
-        final ConcurrentMap<String, Object> sharedData) {
-      super(impl, priority, seq, conf);
+        final ConcurrentMap<String, Object> sharedData, String keyForLoading) {
+      super(impl, priority, seq, conf, keyForLoading);
       this.region = region;
       this.sharedData = sharedData;
+      this.tableName = region.getTableDesc().getName();
     }
 
     /** @return the region */
@@ -211,6 +223,15 @@ public class RegionCoprocessorHost extends
     @Override
     public ConcurrentMap<String, Object> getSharedData() {
       return sharedData;
+    }
+
+    @Override
+    public byte[] getTableName() {
+      return tableName;
+    }
+
+    public String getKeyForLoading() {
+      return keyForLoading;
     }
   }
 }

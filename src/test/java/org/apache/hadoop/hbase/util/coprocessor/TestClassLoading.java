@@ -22,7 +22,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -148,8 +147,8 @@ public class TestClassLoading {
     CoprocessorClassLoader.clearCache();
     // remove the firstly added coprocessor
     conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY, "");
-    conf.set(CoprocessorHost.USER_REGION_COPROCESSOR_FROM_HDFS_KEY,
-        pathOnHDFS1 + "," + cpName1);
+    conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_FROM_HDFS_KEY,
+        tableName + "," + pathOnHDFS1.toString() + "," + cpName1);
 
     // invoke online configuration change
     HRegionServer.configurationManager.notifyAllObservers(conf);
@@ -169,8 +168,9 @@ public class TestClassLoading {
     }
     //now load the second coprocessor too
     String current = conf.get(CoprocessorHost.USER_REGION_COPROCESSOR_FROM_HDFS_KEY);
-    current +="," + pathOnHDFS2+"," + cpName2;
-    conf.set(CoprocessorHost.USER_REGION_COPROCESSOR_FROM_HDFS_KEY, current);
+    conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_FROM_HDFS_KEY,
+        current + ";" + tableName + "," + pathOnHDFS2.toString() + ","
+            + cpName2);
     // invoke online config change
     HRegionServer.configurationManager.notifyAllObservers(conf);
     allCoprocessors = RegionCoprocessorHost.getEverLoadedCoprocessors();

@@ -19,12 +19,13 @@ package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -164,7 +165,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       Thread.currentThread().setContextClassLoader(cl);
       try {
         Class<?> implClass = cl.loadClass(className);
-        configured.add(loadInstance(implClass, Coprocessor.PRIORITY_SYSTEM, conf));
+        configured.add(loadInstance(implClass, Coprocessor.PRIORITY_SYSTEM, conf, confKey));
         LOG.info("System coprocessor " + className + " was loaded " +
             "successfully with priority (" + priority++ + ").");
       } catch (Throwable t) {
@@ -183,36 +184,57 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    */
   protected void reloadSysCoprocessorsOnConfigChange(Configuration conf,
       String confKey) {
-    // remove whatever is loaded already
+    // remove whatever is loaded already with that conf key
+    removeLoadedCoprocWithKey(confKey);
     loadSystemCoprocessors(conf, confKey);
   }
 
   /**
-   * read coprocessors that should be loaded from configuration
+   * Will remove loaded coprocessors with specified key
+   * @param confKey
+   */
+  private void removeLoadedCoprocWithKey(String confKey) {
+    for (Iterator<E> iterator = coprocessors.iterator(); iterator.hasNext();) {
+      E currentCoproc = iterator.next();
+      if (currentCoproc.getConfKeyForLoading().equals(confKey)) {
+        iterator.remove();
+      }
+    }
+  }
+
+  /**
+   * Read coprocessors that should be loaded from configuration. In the
+   * configuration we should have string of tuples of [table, jar, class] for
+   * each usage of coprocesssor
    *
    * @param conf
    */
-  private List<Pair<String, String>> readCoprocessorsFromConf(Configuration conf) {
-    List<Pair<String, String>> jarClass = new ArrayList<>();
-    Collection<String> jarsAndImpls = conf
-        .getStringCollection(USER_REGION_COPROCESSOR_FROM_HDFS_KEY);
-    String jar = null;
-    for (Iterator<String> iterator = jarsAndImpls.iterator(); iterator
-        .hasNext();) {
-      String string = (String) iterator.next();
-      if (string.endsWith(".jar")) {
-        if (checkIfCorrectPath(string)) {
-          jar = string;
-        } else {
-          LOG.error("jar " + string
-              + " is not placed on the correct path or path is incorrect!");
-          return null;
-        }
-      } else {
-        jarClass.add(new Pair<>(jar, string));
-      }
+  public Map<String, List<Pair<String, String>>> readCoprocessorsFromConf(
+      Configuration conf) {
+    Map<String, List<Pair<String, String>>> coprocConfigMap = new HashMap<>();
+    String fromConfig = conf.get(USER_REGION_COPROCESSOR_FROM_HDFS_KEY);
+    if (fromConfig == null || fromConfig.isEmpty()) {
+      return coprocConfigMap;
     }
-    return jarClass;
+    String[] tuples = fromConfig.split(";");
+    for (String tuple : tuples) {
+      tuple = tuple.trim();
+      String[] str = tuple.split(",");
+      // str[0] is table, str[1] is path for the jar, str[2] is name of the
+      // class
+      if (str.length != 3) {
+        LOG.error("Configuration is not in expected format: " + str);
+        return null;
+      }
+      String table = str[0].trim();
+      List<Pair<String, String>> inMap = coprocConfigMap.get(table);
+      if (inMap == null) {
+        inMap = new ArrayList<>();
+        coprocConfigMap.put(table, inMap);
+      }
+      inMap.add(new Pair<>(str[1].trim(), str[2].trim()));
+    }
+    return coprocConfigMap;
   }
 
   /**
@@ -246,15 +268,26 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @param config
    * @throws IOException
    */
-  protected void reloadCoprocessorsFromHdfs(Configuration config)
+  protected void reloadCoprocessorsFromHdfs(String table,
+      List<Pair<String, String>> toLoad, Configuration config)
       throws IOException {
-    List<Pair<String, String>> fromConf = this.readCoprocessorsFromConf(config);
+    // remove whatever is loaded first
+    removeLoadedCoprocWithKey(USER_REGION_COPROCESSOR_FROM_HDFS_KEY);
     List<E> newCoprocessors = new ArrayList<>();
-    for (Pair<String, String> pair : fromConf) {
-      System.out.println(pair.getFirst() + " " + pair.getSecond());
+
+    LOG.info("Loading coprocessor for table: " + table);
+    for (Pair<String, String> pair : toLoad) {
+      LOG.info("Jar: " + pair.getFirst() + " class: " + pair.getSecond());
       E coproc = load(new Path(pair.getFirst()), pair.getSecond(),
-          Coprocessor.PRIORITY_USER, config);
+          Coprocessor.PRIORITY_USER, config,
+          USER_REGION_COPROCESSOR_FROM_HDFS_KEY);
       newCoprocessors.add(coproc);
+    }
+    if (newCoprocessors.isEmpty()) {
+      LOG.info("NO region observers were added from hdfs!");
+    } else {
+      LOG.info(newCoprocessors.size()
+          + " region observers were added from hdfs");
     }
     this.coprocessors.addAll(newCoprocessors);
   }
@@ -268,7 +301,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @throws java.io.IOException Exception
    */
   public E load(Path path, String className, int priority,
-      Configuration conf) throws IOException {
+      Configuration conf, String confKey) throws IOException {
     Class<?> implClass = null;
     LOG.debug("Loading coprocessor class " + className + " with path " +
         path + " and priority " + priority);
@@ -292,7 +325,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     //load custom code for coprocessor
     try (ContextResetter ctxResetter = new ContextResetter(cl)) {
 //       switch temporarily to the thread classloader for custom CP
-      E cpInstance = loadInstance(implClass, priority, conf);
+      E cpInstance = loadInstance(implClass, priority, conf, confKey);
       return cpInstance;
     } catch (Exception e) {
       String msg = new StringBuilder()
@@ -308,9 +341,9 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @param conf configuration
    * @throws java.io.IOException Exception
    */
-  public void load(Class<?> implClass, int priority, Configuration conf)
+  public void load(Class<?> implClass, int priority, Configuration conf, String confKey)
       throws IOException {
-    E env = loadInstance(implClass, priority, conf);
+    E env = loadInstance(implClass, priority, conf, confKey);
     coprocessors.add(env);
   }
 
@@ -320,7 +353,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @param conf configuration
    * @throws java.io.IOException Exception
    */
-  public E loadInstance(Class<?> implClass, int priority, Configuration conf)
+  public E loadInstance(Class<?> implClass, int priority, Configuration conf, String keyFromConf)
       throws IOException {
     if (!Coprocessor.class.isAssignableFrom(implClass)) {
       throw new IOException("Configured class " + implClass.getName() + " must implement "
@@ -334,7 +367,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       throw new IOException(e);
     }
     // create the environment
-    E env = createEnvironment(implClass, impl, priority, loadSequence.incrementAndGet(), conf);
+    E env = createEnvironment(implClass, impl, priority, loadSequence.incrementAndGet(), conf, keyFromConf);
     if (env instanceof Environment) {
       ((Environment)env).startup();
     }
@@ -348,7 +381,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * Called when a new Coprocessor class is loaded
    */
   public abstract E createEnvironment(Class<?> implClass, Coprocessor instance,
-      int priority, int sequence, Configuration conf);
+      int priority, int sequence, Configuration conf, String keyForLoading);
 
   public void shutdown(CoprocessorEnvironment e) {
     if (e instanceof Environment) {
@@ -446,6 +479,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       Collections.synchronizedList(new ArrayList<HTableInterface>());
     private int seq;
     private Configuration conf;
+    private String keyForLoading;
 
     /**
      * Constructor
@@ -453,12 +487,13 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
      * @param priority chaining priority
      */
     public Environment(final Coprocessor impl, final int priority,
-        final int seq, final Configuration conf) {
+        final int seq, final Configuration conf, String keyForLoading) {
       this.impl = impl;
       this.priority = priority;
       this.state = Coprocessor.State.INSTALLED;
       this.seq = seq;
       this.conf = conf;
+      this.keyForLoading = keyForLoading;
     }
 
     /** Initialize the environment */
@@ -544,6 +579,11 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     @Override
     public Configuration getConfiguration() {
       return conf;
+    }
+
+    @Override
+    public String getConfKeyForLoading() {
+      return keyForLoading;
     }
 
   }

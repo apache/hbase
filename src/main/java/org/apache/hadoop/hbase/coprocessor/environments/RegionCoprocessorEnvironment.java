@@ -29,4 +29,6 @@ public interface RegionCoprocessorEnvironment extends CoprocessorEnvironment {
   ConcurrentMap<String, Object> getSharedData();
 
   HRegion getRegion();
+
+  byte[] getTableName();
 }
