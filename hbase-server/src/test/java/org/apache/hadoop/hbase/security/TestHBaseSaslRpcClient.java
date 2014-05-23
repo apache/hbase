@@ -38,6 +38,7 @@ import javax.security.auth.callback.NameCallback;
 import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.TextOutputCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.sasl.Sasl;
 import javax.security.sasl.RealmCallback;
 import javax.security.sasl.RealmChoiceCallback;
 import javax.security.sasl.SaslClient;
@@ -73,6 +74,23 @@ public class TestHBaseSaslRpcClient {
   @BeforeClass
   public static void before() {
     Logger.getRootLogger().setLevel(Level.DEBUG);
+  }
+
+  @Test
+  public void testSaslQOPNotEmpty() throws Exception {
+    // default QOP is authentication
+    new HBaseSaslRpcClient(AuthMethod.KERBEROS, createTokenMock(), "principal/host@DOMAIN.COM", false);
+    assertTrue(SaslUtil.SASL_PROPS.get(Sasl.QOP).equals(SaslUtil.QualityOfProtection.AUTHENTICATION.getSaslQop()));
+
+    // check with specific QOPs
+    new HBaseSaslRpcClient(AuthMethod.KERBEROS, createTokenMock(), "principal/host@DOMAIN.COM", false, "authentication");
+    assertTrue(SaslUtil.SASL_PROPS.get(Sasl.QOP).equals(SaslUtil.QualityOfProtection.AUTHENTICATION.getSaslQop()));
+
+    new HBaseSaslRpcClient(AuthMethod.KERBEROS, createTokenMock(), "principal/host@DOMAIN.COM", false, "privacy");
+    assertTrue(SaslUtil.SASL_PROPS.get(Sasl.QOP).equals(SaslUtil.QualityOfProtection.PRIVACY.getSaslQop()));
+
+    new HBaseSaslRpcClient(AuthMethod.KERBEROS, createTokenMock(), "principal/host@DOMAIN.COM", false, "integrity");
+    assertTrue(SaslUtil.SASL_PROPS.get(Sasl.QOP).equals(SaslUtil.QualityOfProtection.INTEGRITY.getSaslQop()));
   }
 
   @Test
