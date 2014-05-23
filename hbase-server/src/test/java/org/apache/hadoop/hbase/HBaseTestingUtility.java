@@ -127,11 +127,12 @@ import org.apache.zookeeper.ZooKeeper.States;
 public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    private MiniZooKeeperCluster zkCluster = null;
 
+  public static final String REGIONS_PER_SERVER_KEY = "hbase.test.regions-per-server";
   /**
    * The default number of regions per regionserver when creating a pre-split
    * table.
    */
-  private static int DEFAULT_REGIONS_PER_SERVER = 5;
+  public static final int DEFAULT_REGIONS_PER_SERVER = 5;
 
   /**
    * Set if we were passed a zkCluster.  If so, we won't shutdown zk as
@@ -3166,10 +3167,11 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         throw new IllegalStateException("No live regionservers");
       }
 
-      totalNumberOfRegions = numberOfServers * DEFAULT_REGIONS_PER_SERVER;
+      int regionsPerServer = conf.getInt(REGIONS_PER_SERVER_KEY, DEFAULT_REGIONS_PER_SERVER);
+      totalNumberOfRegions = numberOfServers * regionsPerServer;
       LOG.info("Number of live regionservers: " + numberOfServers + ", " +
           "pre-splitting table into " + totalNumberOfRegions + " regions " +
-          "(default regions per server: " + DEFAULT_REGIONS_PER_SERVER + ")");
+          "(default regions per server: " + regionsPerServer + ")");
 
       byte[][] splits = new RegionSplitter.HexStringSplit().split(
           totalNumberOfRegions);
