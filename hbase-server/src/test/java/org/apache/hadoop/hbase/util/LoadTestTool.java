@@ -130,7 +130,8 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected static final String OPT_ZK_PARENT_NODE = "zk_root";
   protected static final String OPT_SKIP_INIT = "skip_init";
   protected static final String OPT_INIT_ONLY = "init_only";
-  private static final String NUM_TABLES = "num_tables";
+  protected static final String NUM_TABLES = "num_tables";
+  protected static final String OPT_REGIONS_PER_SERVER = "regions_per_server";
   protected static final String OPT_BATCHUPDATE = "batchupdate";
   protected static final String OPT_UPDATE = "update";
 
@@ -178,6 +179,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   private int verifyPercent;
 
   private int numTables = 1;
+  private int regionsPerServer = HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER;
 
   private String superUser;
 
@@ -292,6 +294,10 @@ public class LoadTestTool extends AbstractHBaseTool {
           + "tool  will load n table parallely. -tn parameter value becomes "
           + "table name prefix. Each table name is in format <tn>_1...<tn>_n");
 
+    addOptWithArg(OPT_REGIONS_PER_SERVER,
+      "A positive integer number. When a number n is specified, load test "
+          + "tool will create the test table with n regions per server");
+
     addOptWithArg(OPT_ENCRYPTION, OPT_ENCRYPTION_USAGE);
   }
 
@@ -399,9 +405,16 @@ public class LoadTestTool extends AbstractHBaseTool {
     }
 
     numTables = 1;
-    if(cmd.hasOption(NUM_TABLES)) {
+    if (cmd.hasOption(NUM_TABLES)) {
       numTables = parseInt(cmd.getOptionValue(NUM_TABLES), 1, Short.MAX_VALUE);
     }
+    regionsPerServer = HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER;
+    if (cmd.hasOption(OPT_REGIONS_PER_SERVER)) {
+      regionsPerServer = parseInt(cmd.getOptionValue(OPT_REGIONS_PER_SERVER), 1,
+        Integer.MAX_VALUE);
+      conf.setInt(HBaseTestingUtility.REGIONS_PER_SERVER_KEY, regionsPerServer);
+    }
+    System.out.println("Regions per server: " + regionsPerServer);
   }
 
   private void parseColumnFamilyOptions(CommandLine cmd) {
