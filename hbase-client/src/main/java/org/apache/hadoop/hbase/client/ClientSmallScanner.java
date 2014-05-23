@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -85,9 +86,20 @@ public class ClientSmallScanner extends ClientScanner {
    */
   public ClientSmallScanner(final Configuration conf, final Scan scan,
       final TableName tableName, HConnection connection) throws IOException {
-    this(conf, scan, tableName, connection, new RpcRetryingCallerFactory(conf));
+    this(conf, scan, tableName, connection, new RpcRetryingCallerFactory(conf),
+        new RpcControllerFactory(conf));
   }
 
+  /**
+   * @deprecated use
+   *             {@link #ClientSmallScanner(Configuration, Scan, TableName, HConnection, RpcRetryingCallerFactory, RpcControllerFactory)
+   *             instead
+   */
+  public ClientSmallScanner(final Configuration conf, final Scan scan, final TableName tableName,
+      HConnection connection, RpcRetryingCallerFactory rpcFactory) throws IOException {
+    this(conf, scan, tableName, connection, rpcFactory, RpcControllerFactory.instantiate(conf));
+  }
+  
   /**
    * Create a new ShortClientScanner for the specified table Note that the
    * passed {@link Scan}'s start row maybe changed changed.
@@ -99,10 +111,10 @@ public class ClientSmallScanner extends ClientScanner {
    * @param rpcFactory
    * @throws IOException
    */
-  public ClientSmallScanner(final Configuration conf, final Scan scan,
-      final TableName tableName, HConnection connection,
-      RpcRetryingCallerFactory rpcFactory) throws IOException {
-    super(conf, scan, tableName, connection, rpcFactory);
+  public ClientSmallScanner(final Configuration conf, final Scan scan, final TableName tableName,
+      HConnection connection, RpcRetryingCallerFactory rpcFactory,
+      RpcControllerFactory controllerFactory) throws IOException {
+    super(conf, scan, tableName, connection, rpcFactory, controllerFactory);
   }
 
   @Override
@@ -154,7 +166,7 @@ public class ClientSmallScanner extends ClientScanner {
           + Bytes.toStringBinary(localStartKey) + "'");
     }
     smallScanCallable = getSmallScanCallable(
-        scan, getConnection(), getTable(), localStartKey, cacheNum);
+        scan, getConnection(), getTable(), localStartKey, cacheNum, rpcControllerFactory);
     if (this.scanMetrics != null && skipRowOfFirstResult == null) {
       this.scanMetrics.countOfRegions.incrementAndGet();
     }
@@ -163,14 +175,14 @@ public class ClientSmallScanner extends ClientScanner {
 
   static RegionServerCallable<Result[]> getSmallScanCallable(
       final Scan sc, HConnection connection, TableName table,
-      byte[] localStartKey, final int cacheNum) {
+      byte[] localStartKey, final int cacheNum, final RpcControllerFactory rpcControllerFactory) {
     sc.setStartRow(localStartKey);
     RegionServerCallable<Result[]> callable = new RegionServerCallable<Result[]>(
         connection, table, sc.getStartRow()) {
       public Result[] call(int callTimeout) throws IOException {
         ScanRequest request = RequestConverter.buildScanRequest(getLocation()
             .getRegionInfo().getRegionName(), sc, cacheNum, true);
-        PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+        PayloadCarryingRpcController controller = rpcControllerFactory.newController();
         controller.setPriority(getTableName());
         controller.setCallTimeout(callTimeout);
         try {

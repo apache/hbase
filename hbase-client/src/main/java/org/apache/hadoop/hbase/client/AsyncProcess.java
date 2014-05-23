@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.htrace.Trace;
@@ -120,6 +121,7 @@ class AsyncProcess {
 
   protected final ClusterConnection hConnection;
   protected final RpcRetryingCallerFactory rpcCallerFactory;
+  protected final RpcControllerFactory rpcFactory;
   protected final BatchErrors globalErrors;
   protected final ExecutorService pool;
 
@@ -188,7 +190,7 @@ class AsyncProcess {
   }
 
   public AsyncProcess(ClusterConnection hc, Configuration conf, ExecutorService pool,
-      RpcRetryingCallerFactory rpcCaller, boolean useGlobalErrors) {
+      RpcRetryingCallerFactory rpcCaller, boolean useGlobalErrors, RpcControllerFactory rpcFactory) {
     if (hc == null) {
       throw new IllegalArgumentException("HConnection cannot be null.");
     }
@@ -242,8 +244,8 @@ class AsyncProcess {
       serverTrackerTimeout += ConnectionUtils.getPauseTime(this.pause, i);
     }
 
-
     this.rpcCallerFactory = rpcCaller;
+    this.rpcFactory = rpcFactory;
   }
 
   private ExecutorService getPool(ExecutorService pool) {
@@ -950,7 +952,7 @@ class AsyncProcess {
   @VisibleForTesting
   protected MultiServerCallable<Row> createCallable(final ServerName server,
       TableName tableName, final MultiAction<Row> multi) {
-    return new MultiServerCallable<Row>(hConnection, tableName, server, multi);
+    return new MultiServerCallable<Row>(hConnection, tableName, server, this.rpcFactory, multi);
   }
 
   /**

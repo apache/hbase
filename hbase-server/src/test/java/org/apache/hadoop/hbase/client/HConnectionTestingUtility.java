@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.client.ConnectionManager.HConnectionImplementation;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.mockito.Mockito;
 
 /**
@@ -121,8 +122,9 @@ public class HConnectionTestingUtility {
     }
     NonceGenerator ng = Mockito.mock(NonceGenerator.class);
     Mockito.when(c.getNonceGenerator()).thenReturn(ng);
-    Mockito.when(c.getAsyncProcess()).thenReturn(new AsyncProcess(
-        c, conf, null, RpcRetryingCallerFactory.instantiate(conf), false));
+    Mockito.when(c.getAsyncProcess()).thenReturn(
+      new AsyncProcess(c, conf, null, RpcRetryingCallerFactory.instantiate(conf), false,
+          RpcControllerFactory.instantiate(conf)));
     Mockito.doNothing().when(c).incCount();
     Mockito.doNothing().when(c).decCount();
     return c;

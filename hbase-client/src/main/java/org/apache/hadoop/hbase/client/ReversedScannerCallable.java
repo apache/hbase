@@ -29,7 +29,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.protobuf.RpcController;
 
 /**
  * A reversed ScannerCallable which supports backward scanning.
@@ -45,17 +48,28 @@ public class ReversedScannerCallable extends ScannerCallable {
   protected final byte[] locateStartRow;
 
   /**
-   * 
    * @param connection
    * @param tableName
    * @param scan
    * @param scanMetrics
    * @param locateStartRow The start row for locating regions
+   * @param rpcFactory to create an {@link RpcController} to talk to the regionserver
    */
+  public ReversedScannerCallable(HConnection connection, TableName tableName, Scan scan,
+      ScanMetrics scanMetrics, byte[] locateStartRow, RpcControllerFactory rpcFactory) {
+    super(connection, tableName, scan, scanMetrics, rpcFactory);
+    this.locateStartRow = locateStartRow;
+  }
+
+  /**
+   * @deprecated use
+   *             {@link #ReversedScannerCallable(HConnection, TableName, Scan, ScanMetrics, byte[], RpcControllerFactory)}
+   */
+  @Deprecated
   public ReversedScannerCallable(HConnection connection, TableName tableName,
       Scan scan, ScanMetrics scanMetrics, byte[] locateStartRow) {
-    super(connection, tableName, scan, scanMetrics);
-    this.locateStartRow = locateStartRow;
+    this(connection, tableName, scan, scanMetrics, locateStartRow, RpcControllerFactory
+        .instantiate(connection.getConfiguration()));
   }
 
   /**

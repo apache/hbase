@@ -125,8 +125,9 @@ public class ReversedClientScanner extends ClientScanner {
   protected ScannerCallable getScannerCallable(byte[] localStartKey,
       int nbRows, byte[] locateStartRow) {
     scan.setStartRow(localStartKey);
-    ScannerCallable s = new ReversedScannerCallable(getConnection(),
-        getTable(), scan, this.scanMetrics, locateStartRow);
+    ScannerCallable s =
+        new ReversedScannerCallable(getConnection(), getTable(), scan, this.scanMetrics,
+            locateStartRow, this.rpcControllerFactory);
     s.setCaching(nbRows);
     return s;
   }

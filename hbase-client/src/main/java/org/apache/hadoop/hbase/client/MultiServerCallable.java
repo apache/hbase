@@ -31,14 +31,15 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 
 import com.google.protobuf.ServiceException;
 
@@ -51,10 +52,12 @@ import com.google.protobuf.ServiceException;
 class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
   private final MultiAction<R> multiAction;
   private final boolean cellBlock;
+  private RpcControllerFactory rpcFactory;
 
   MultiServerCallable(final HConnection connection, final TableName tableName,
-      final ServerName location, final MultiAction<R> multi) {
+      final ServerName location, RpcControllerFactory rpcFactory, final MultiAction<R> multi) {
     super(connection, tableName, null);
+    this.rpcFactory = rpcFactory;
     this.multiAction = multi;
     // RegionServerCallable has HRegionLocation field, but this is a multi-region request.
     // Using region info from parent HRegionLocation would be a mistake for this class; so
@@ -115,7 +118,7 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
 
     // Controller optionally carries cell data over the proxy/service boundary and also
     // optionally ferries cell response data back out again.
-    PayloadCarryingRpcController controller = new PayloadCarryingRpcController(cells);
+    PayloadCarryingRpcController controller = rpcFactory.newController(cells);
     controller.setPriority(getTableName());
     controller.setCallTimeout(callTimeout);
     ClientProtos.MultiResponse responseProto;

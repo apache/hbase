@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RegionCoprocessorRpcChannel;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -146,6 +147,7 @@ public class HTable implements HTableInterface {
   /** The Async process for batch */
   protected AsyncProcess multiAp;
   private RpcRetryingCallerFactory rpcCallerFactory;
+  private RpcControllerFactory rpcControllerFactory;
 
   /**
    * Creates an object to access a HBase table.
@@ -362,8 +364,9 @@ public class HTable implements HTableInterface {
         HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
 
     this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(configuration);
+    this.rpcControllerFactory = RpcControllerFactory.instantiate(configuration);
     // puts need to track errors globally due to how the APIs currently work.
-    ap = new AsyncProcess(connection, configuration, pool, rpcCallerFactory, true);
+    ap = new AsyncProcess(connection, configuration, pool, rpcCallerFactory, true, rpcControllerFactory);
     multiAp = this.connection.getAsyncProcess();
 
     this.maxKeyValueSize = this.configuration.getInt(
@@ -725,7 +728,7 @@ public class HTable implements HTableInterface {
      RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
          tableName, row) {
        public Result call(int callTimeout) throws IOException {
-         PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+         PayloadCarryingRpcController controller = rpcControllerFactory.newController();
          controller.setPriority(tableName);
          controller.setCallTimeout(callTimeout);
          ClientProtos.GetRequest request = RequestConverter.buildGetRowOrBeforeRequest(
@@ -763,10 +766,10 @@ public class HTable implements HTableInterface {
 
     if (scan.isSmall()) {
       return new ClientSmallScanner(getConfiguration(), scan, getName(),
-          this.connection, this.rpcCallerFactory);
+          this.connection, this.rpcCallerFactory, this.rpcControllerFactory);
     } else {
-      return new ClientScanner(getConfiguration(), scan,
-          getName(), this.connection);
+      return new ClientScanner(getConfiguration(), scan, getName(), this.connection,
+          this.rpcCallerFactory, this.rpcControllerFactory);
     }
   }
 
@@ -801,7 +804,7 @@ public class HTable implements HTableInterface {
       public Result call(int callTimeout) throws IOException {
         ClientProtos.GetRequest request =
             RequestConverter.buildGetRequest(getLocation().getRegionInfo().getRegionName(), get);
-        PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+        PayloadCarryingRpcController controller = rpcControllerFactory.newController();
         controller.setPriority(tableName);
         controller.setCallTimeout(callTimeout);
         try {
@@ -902,7 +905,7 @@ public class HTable implements HTableInterface {
     RegionServerCallable<Boolean> callable = new RegionServerCallable<Boolean>(connection,
         tableName, delete.getRow()) {
       public Boolean call(int callTimeout) throws IOException {
-        PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+        PayloadCarryingRpcController controller = rpcControllerFactory.newController();
         controller.setPriority(tableName);
         controller.setCallTimeout(callTimeout);
 
@@ -1042,7 +1045,7 @@ public class HTable implements HTableInterface {
     RegionServerCallable<Void> callable =
         new RegionServerCallable<Void>(connection, getName(), rm.getRow()) {
       public Void call(int callTimeout) throws IOException {
-        PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+        PayloadCarryingRpcController controller = rpcControllerFactory.newController();
         controller.setPriority(tableName);
         controller.setCallTimeout(callTimeout);
         try {
@@ -1076,7 +1079,7 @@ public class HTable implements HTableInterface {
     RegionServerCallable<Result> callable =
       new RegionServerCallable<Result>(this.connection, getName(), append.getRow()) {
         public Result call(int callTimeout) throws IOException {
-          PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+          PayloadCarryingRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(getTableName());
           controller.setCallTimeout(callTimeout);
           try {
@@ -1107,7 +1110,7 @@ public class HTable implements HTableInterface {
     RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
         getName(), increment.getRow()) {
       public Result call(int callTimeout) throws IOException {
-        PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+        PayloadCarryingRpcController controller = rpcControllerFactory.newController();
         controller.setPriority(getTableName());
         controller.setCallTimeout(callTimeout);
         try {
@@ -1118,8 +1121,8 @@ public class HTable implements HTableInterface {
         } catch (ServiceException se) {
           throw ProtobufUtil.getRemoteException(se);
         }
-        }
-      };
+      }
+    };
     return rpcCallerFactory.<Result> newCaller().callWithRetries(callable, this.operationTimeout);
   }
 
@@ -1170,7 +1173,7 @@ public class HTable implements HTableInterface {
     RegionServerCallable<Long> callable =
       new RegionServerCallable<Long>(connection, getName(), row) {
         public Long call(int callTimeout) throws IOException {
-          PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+          PayloadCarryingRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(getTableName());
           controller.setCallTimeout(callTimeout);
           try {
@@ -1200,7 +1203,7 @@ public class HTable implements HTableInterface {
     RegionServerCallable<Boolean> callable =
       new RegionServerCallable<Boolean>(connection, getName(), row) {
         public Boolean call(int callTimeout) throws IOException {
-          PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+          PayloadCarryingRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(tableName);
           controller.setCallTimeout(callTimeout);
           try {
@@ -1257,7 +1260,7 @@ public class HTable implements HTableInterface {
     RegionServerCallable<Boolean> callable =
       new RegionServerCallable<Boolean>(connection, getName(), row) {
         public Boolean call(int callTimeout) throws IOException {
-          PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+          PayloadCarryingRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(tableName);
           controller.setCallTimeout(callTimeout);
           try {
@@ -1285,7 +1288,7 @@ public class HTable implements HTableInterface {
     RegionServerCallable<Boolean> callable =
       new RegionServerCallable<Boolean>(connection, getName(), row) {
         public Boolean call(int callTimeout) throws IOException {
-          PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+          PayloadCarryingRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(tableName);
           controller.setCallTimeout(callTimeout);
           try {
@@ -1761,8 +1764,10 @@ public class HTable implements HTableInterface {
     final List<String> callbackErrorServers = new ArrayList<String>();
     Object[] results = new Object[execs.size()];
 
-    AsyncProcess asyncProcess = new AsyncProcess(connection, configuration, pool,
-          RpcRetryingCallerFactory.instantiate(configuration), true);
+    AsyncProcess asyncProcess =
+        new AsyncProcess(connection, configuration, pool,
+            RpcRetryingCallerFactory.instantiate(configuration), true,
+            RpcControllerFactory.instantiate(configuration));
     AsyncRequestFuture future = asyncProcess.submitAll(tableName, execs,
         new Callback<ClientProtos.CoprocessorServiceResult>() {
           @Override

@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNS;
 
+import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import com.google.protobuf.TextFormat;
 
@@ -81,22 +83,25 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   // indicate if it is a remote server call
   protected boolean isRegionServerRemote = true;
   private long nextCallSeq = 0;
+  private RpcControllerFactory rpcFactory;
   
   /**
    * @param connection which connection
    * @param tableName table callable is on
    * @param scan the scan to execute
-   * @param scanMetrics the ScanMetrics to used, if it is null, ScannerCallable
-   * won't collect metrics
+   * @param scanMetrics the ScanMetrics to used, if it is null, ScannerCallable won't collect
+   *          metrics
+   * @param rpcControllerFactory factory to use when creating {@link RpcController}
    */
   public ScannerCallable (HConnection connection, TableName tableName, Scan scan,
-    ScanMetrics scanMetrics) {
+      ScanMetrics scanMetrics, RpcControllerFactory rpcControllerFactory) {
     super(connection, tableName, scan.getStartRow());
     this.scan = scan;
     this.scanMetrics = scanMetrics;
     Configuration conf = connection.getConfiguration();
     logScannerActivity = conf.getBoolean(LOG_SCANNER_ACTIVITY, false);
     logCutOffLatency = conf.getInt(LOG_SCANNER_LATENCY_CUTOFF, 1000);
+    this.rpcFactory = rpcControllerFactory;
   }
 
   /**
@@ -105,7 +110,8 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   @Deprecated
   public ScannerCallable (HConnection connection, final byte [] tableName, Scan scan,
       ScanMetrics scanMetrics) {
-    this(connection, TableName.valueOf(tableName), scan, scanMetrics);
+    this(connection, TableName.valueOf(tableName), scan, scanMetrics, RpcControllerFactory
+        .instantiate(connection.getConfiguration()));
   }
 
   /**
@@ -161,7 +167,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
           incRPCcallsMetrics();
           request = RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq);
           ScanResponse response = null;
-          PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+          PayloadCarryingRpcController controller = rpcFactory.newController();
           controller.setPriority(getTableName());
           controller.setCallTimeout(callTimeout);
           try {
