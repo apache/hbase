@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.SamePrefixComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -74,7 +75,9 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     return internalDecodeKeyValues(source, 0, 0, decodingCtx);
   }
 
-  protected static class SeekerState {
+  protected static class SeekerState implements Cell {
+    protected ByteBuffer currentBuffer;
+    protected TagCompressionContext tagCompressionContext;
     protected int valueOffset = -1;
     protected int keyLength;
     protected int valueLength;
@@ -90,6 +93,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     protected long memstoreTS;
     protected int nextKvOffset;
+    protected KeyValue.KeyOnlyKeyValue currentKey = new KeyValue.KeyOnlyKeyValue();
 
     protected boolean isValid() {
       return valueOffset != -1;
@@ -98,7 +102,9 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     protected void invalidate() {
       valueOffset = -1;
       tagsCompressedLength = 0;
+      currentKey = new KeyValue.KeyOnlyKeyValue();
       uncompressTags = true;
+      currentBuffer = null;
     }
 
     protected void ensureSpaceForKey() {
@@ -127,6 +133,11 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       }
     }
 
+    protected void createKeyOnlyKeyValue(byte[] keyBuffer, long memTS) {
+      currentKey.setKey(keyBuffer, 0, keyLength);
+      memstoreTS = memTS;
+    }
+
     /**
      * Copy the state from the next one into this instance (the previous state
      * placeholder). Used to save the previous state when we are advancing the
@@ -146,6 +157,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
             keyBuffer, nextState.lastCommonPrefix, nextState.keyLength
                 - nextState.lastCommonPrefix);
       }
+      currentKey = nextState.currentKey;
 
       valueOffset = nextState.valueOffset;
       keyLength = nextState.keyLength;
@@ -153,8 +165,330 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       lastCommonPrefix = nextState.lastCommonPrefix;
       nextKvOffset = nextState.nextKvOffset;
       memstoreTS = nextState.memstoreTS;
+      currentBuffer = nextState.currentBuffer;
+      if (nextState.tagCompressionContext != null) {
+        tagCompressionContext = nextState.tagCompressionContext;
+      }
     }
 
+    @Override
+    public byte[] getRowArray() {
+      return currentKey.getRowArray();
+    }
+
+    @Override
+    public int getRowOffset() {
+      return Bytes.SIZEOF_SHORT;
+    }
+
+    @Override
+    public short getRowLength() {
+      return currentKey.getRowLength();
+    }
+
+    @Override
+    public byte[] getFamilyArray() {
+      return currentKey.getFamilyArray();
+    }
+
+    @Override
+    public int getFamilyOffset() {
+      return currentKey.getFamilyOffset();
+    }
+
+    @Override
+    public byte getFamilyLength() {
+      return currentKey.getFamilyLength();
+    }
+
+    @Override
+    public byte[] getQualifierArray() {
+      return currentKey.getQualifierArray();
+    }
+
+    @Override
+    public int getQualifierOffset() {
+      return currentKey.getQualifierOffset();
+    }
+
+    @Override
+    public int getQualifierLength() {
+      return currentKey.getQualifierLength();
+    }
+
+    @Override
+    public long getTimestamp() {
+      return currentKey.getTimestamp();
+    }
+
+    @Override
+    public byte getTypeByte() {
+      return currentKey.getTypeByte();
+    }
+
+    @Override
+    public long getMvccVersion() {
+      return memstoreTS;
+    }
+
+    @Override
+    public byte[] getValueArray() {
+      return currentBuffer.array();
+    }
+
+    @Override
+    public int getValueOffset() {
+      return currentBuffer.arrayOffset() + valueOffset;
+    }
+
+    @Override
+    public int getValueLength() {
+      return valueLength;
+    }
+
+    @Override
+    public byte[] getTagsArray() {
+      if (tagCompressionContext != null) {
+        return tagsBuffer;
+      }
+      return currentBuffer.array();
+    }
+
+    @Override
+    public int getTagsOffset() {
+      if (tagCompressionContext != null) {
+        return 0;
+      }
+      return currentBuffer.arrayOffset() + tagsOffset;
+    }
+
+    @Override
+    public short getTagsLength() {
+      return (short) tagsLength;
+    }
+
+    @Override
+    @Deprecated
+    public byte[] getValue() {
+      throw new UnsupportedOperationException("getValue() not supported");
+    }
+
+    @Override
+    @Deprecated
+    public byte[] getFamily() {
+      throw new UnsupportedOperationException("getFamily() not supported");
+    }
+
+    @Override
+    @Deprecated
+    public byte[] getQualifier() {
+      throw new UnsupportedOperationException("getQualifier() not supported");
+    }
+
+    @Override
+    @Deprecated
+    public byte[] getRow() {
+      throw new UnsupportedOperationException("getRow() not supported");
+    }
+
+    @Override
+    public String toString() {
+      KeyValue kv = KeyValueUtil.copyToNewKeyValue(this);
+      if (kv == null) {
+        return "null";
+      }
+      return kv.toString();
+    }
+
+    public Cell shallowCopy() {
+      return new ClonedSeekerState(currentBuffer, keyBuffer, currentKey.getRowLength(),
+          currentKey.getFamilyOffset(), currentKey.getFamilyLength(), keyLength, 
+          currentKey.getQualifierOffset(), currentKey.getQualifierLength(),
+          currentKey.getTimestamp(), currentKey.getTypeByte(), valueLength, valueOffset,
+          memstoreTS, tagsOffset, tagsLength, tagCompressionContext, tagsBuffer);
+    }
+          
+  }
+
+  /**
+   * Copies only the key part of the keybuffer by doing a deep copy and passes the 
+   * seeker state members for taking a clone.
+   * Note that the value byte[] part is still pointing to the currentBuffer and the 
+   * represented by the valueOffset and valueLength
+   */
+  protected static class ClonedSeekerState implements Cell {
+    private byte[] keyOnlyBuffer;
+    private ByteBuffer currentBuffer;
+    private short rowLength;
+    private int familyOffset;
+    private byte familyLength;
+    private int qualifierOffset;
+    private int qualifierLength;
+    private long timestamp;
+    private byte typeByte;
+    private int valueOffset;
+    private int valueLength;
+    private int tagsLength;
+    private int tagsOffset;
+    private byte[] cloneTagsBuffer;
+    private long memstoreTS;
+    private TagCompressionContext tagCompressionContext;
+    
+    protected ClonedSeekerState(ByteBuffer currentBuffer, byte[] keyBuffer, short rowLength,
+        int familyOffset, byte familyLength, int keyLength, int qualOffset, int qualLength,
+        long timeStamp, byte typeByte, int valueLen, int valueOffset, long memStoreTS,
+        int tagsOffset, int tagsLength, TagCompressionContext tagCompressionContext,
+        byte[] tagsBuffer) {
+      this.currentBuffer = currentBuffer;
+      keyOnlyBuffer = new byte[keyLength];
+      this.tagCompressionContext = tagCompressionContext;
+      this.rowLength = rowLength;
+      this.familyOffset = familyOffset;
+      this.familyLength = familyLength;
+      this.qualifierOffset = qualOffset;
+      this.qualifierLength = qualLength;
+      this.timestamp = timeStamp;
+      this.typeByte = typeByte;
+      this.valueLength = valueLen;
+      this.valueOffset = valueOffset;
+      this.memstoreTS = memStoreTS;
+      this.tagsOffset = tagsOffset;
+      this.tagsLength = tagsLength;
+      System.arraycopy(keyBuffer, 0, keyOnlyBuffer, 0, keyLength);
+      if (tagCompressionContext != null) {
+        this.cloneTagsBuffer = new byte[tagsLength];
+        System.arraycopy(tagsBuffer, 0, this.cloneTagsBuffer, 0, tagsLength);
+      }
+    }
+
+    @Override
+    public byte[] getRowArray() {
+      return keyOnlyBuffer;
+    }
+
+    @Override
+    public byte[] getFamilyArray() {
+      return keyOnlyBuffer;
+    }
+
+    @Override
+    public byte[] getQualifierArray() {
+      return keyOnlyBuffer;
+    }
+
+    @Override
+    public int getRowOffset() {
+      return Bytes.SIZEOF_SHORT;
+    }
+
+    @Override
+    public short getRowLength() {
+      return rowLength;
+    }
+
+    @Override
+    public int getFamilyOffset() {
+      return familyOffset;
+    }
+
+    @Override
+    public byte getFamilyLength() {
+      return familyLength;
+    }
+
+    @Override
+    public int getQualifierOffset() {
+      return qualifierOffset;
+    }
+
+    @Override
+    public int getQualifierLength() {
+      return qualifierLength;
+    }
+
+    @Override
+    public long getTimestamp() {
+      return timestamp;
+    }
+
+    @Override
+    public byte getTypeByte() {
+      return typeByte;
+    }
+
+    @Override
+    public long getMvccVersion() {
+      return memstoreTS;
+    }
+
+    @Override
+    public byte[] getValueArray() {
+      return currentBuffer.array();
+    }
+
+    @Override
+    public int getValueOffset() {
+      return currentBuffer.arrayOffset() + valueOffset;
+    }
+
+    @Override
+    public int getValueLength() {
+      return valueLength;
+    }
+
+    @Override
+    public byte[] getTagsArray() {
+      if (tagCompressionContext != null) {
+        return cloneTagsBuffer;
+      }
+      return currentBuffer.array();
+    }
+
+    @Override
+    public int getTagsOffset() {
+      if (tagCompressionContext != null) {
+        return 0;
+      }
+      return currentBuffer.arrayOffset() + tagsOffset;
+    }
+
+    @Override
+    public short getTagsLength() {
+      return (short) tagsLength;
+    }
+
+    @Override
+    @Deprecated
+    public byte[] getValue() {
+      throw new UnsupportedOperationException("getValue() not supported");
+    }
+
+    @Override
+    @Deprecated
+    public byte[] getFamily() {
+      throw new UnsupportedOperationException("getFamily() not supported");
+    }
+
+    @Override
+    @Deprecated
+    public byte[] getQualifier() {
+      throw new UnsupportedOperationException("getQualifier() not supported");
+    }
+
+    @Override
+    @Deprecated
+    public byte[] getRow() {
+      throw new UnsupportedOperationException("getRow() not supported");
+    }
+
+    @Override
+    public String toString() {
+      KeyValue kv = KeyValueUtil.copyToNewKeyValue(this);
+      if (kv == null) {
+        return "null";
+      }
+      return kv.toString();
+    }
   }
 
   protected abstract static class
@@ -208,7 +542,12 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         this.tagCompressionContext.clear();
       }
       currentBuffer = buffer;
+      current.currentBuffer = currentBuffer;
+      if(tagCompressionContext != null) {
+        current.tagCompressionContext = tagCompressionContext;
+      }
       decodeFirst();
+      current.createKeyOnlyKeyValue(current.keyBuffer, current.memstoreTS);
       previous.invalidate();
     }
 
@@ -260,11 +599,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     @Override
     public Cell getKeyValue() {
-      ByteBuffer kvBuf = getKeyValueBuffer();
-      KeyValue kv = new KeyValue(kvBuf.array(), kvBuf.arrayOffset(), kvBuf.array().length
-          - kvBuf.arrayOffset());
-      kv.setMvccVersion(current.memstoreTS);
-      return kv;
+      return current.shallowCopy();
     }
 
     @Override
@@ -274,6 +609,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         tagCompressionContext.clear();
       }
       decodeFirst();
+      current.createKeyOnlyKeyValue(current.keyBuffer, current.memstoreTS);
       previous.invalidate();
     }
 
@@ -283,6 +619,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         return false;
       }
       decodeNext();
+      current.createKeyOnlyKeyValue(current.keyBuffer, current.memstoreTS);
       previous.invalidate();
       return true;
     }
@@ -416,6 +753,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         if (currentBuffer.hasRemaining()) {
           previous.copyFromNext(current);
           decodeNext();
+          current.createKeyOnlyKeyValue(current.keyBuffer, current.memstoreTS);
         } else {
           break;
         }
