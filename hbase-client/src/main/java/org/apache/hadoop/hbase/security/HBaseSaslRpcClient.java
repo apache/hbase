@@ -57,7 +57,6 @@ public class HBaseSaslRpcClient {
 
   private final SaslClient saslClient;
   private final boolean fallbackAllowed;
-
   /**
    * Create a HBaseSaslRpcClient for an authentication method
    * 
@@ -65,11 +64,37 @@ public class HBaseSaslRpcClient {
    *          the requested authentication method
    * @param token
    *          token to use if needed by the authentication method
+   * @param serverPrincipal
+   *          the server principal that we are trying to set the connection up to
+   * @param fallbackAllowed
+   *          does the client allow fallback to simple authentication
+   * @throws IOException
    */
   public HBaseSaslRpcClient(AuthMethod method,
       Token<? extends TokenIdentifier> token, String serverPrincipal, boolean fallbackAllowed)
       throws IOException {
+    this(method, token, serverPrincipal, fallbackAllowed, "authentication"); 
+  }
+  /**
+   * Create a HBaseSaslRpcClient for an authentication method
+   * 
+   * @param method
+   *          the requested authentication method
+   * @param token
+   *          token to use if needed by the authentication method
+   * @param serverPrincipal
+   *          the server principal that we are trying to set the connection up to
+   * @param fallbackAllowed
+   *          does the client allow fallback to simple authentication
+   * @param rpcProtection
+   *          the protection level ("authentication", "integrity" or "privacy")
+   * @throws IOException
+   */
+  public HBaseSaslRpcClient(AuthMethod method,
+      Token<? extends TokenIdentifier> token, String serverPrincipal, boolean fallbackAllowed,
+      String rpcProtection) throws IOException {
     this.fallbackAllowed = fallbackAllowed;
+    SaslUtil.initSaslProperties(rpcProtection);
     switch (method) {
     case DIGEST:
       if (LOG.isDebugEnabled())

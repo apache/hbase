@@ -110,7 +110,7 @@ public class MiniHBaseCluster extends HBaseCluster {
     private User user = null;
     public static boolean TEST_SKIP_CLOSE = false;
 
-    public MiniHBaseClusterRegionServer(Configuration conf, ConsensusProvider cp)
+    public MiniHBaseClusterRegionServer(Configuration conf, CoordinatedStateManager cp)
         throws IOException, InterruptedException {
       super(conf, cp);
       this.user = User.getCurrent();

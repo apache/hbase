@@ -136,7 +136,7 @@ class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public ConsensusProvider getConsensusProvider() {
+  public CoordinatedStateManager getCoordinatedStateManager() {
     return null;
   }
 

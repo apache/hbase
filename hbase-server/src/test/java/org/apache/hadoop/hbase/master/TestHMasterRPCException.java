@@ -26,8 +26,8 @@ import java.net.SocketTimeoutException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.ConsensusProvider;
-import org.apache.hadoop.hbase.ConsensusProviderFactory;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
@@ -48,7 +48,7 @@ public class TestHMasterRPCException {
     TEST_UTIL.startMiniZKCluster();
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set(HConstants.MASTER_PORT, "0");
-    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(conf);
+    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
     HMaster hm = new HMaster(conf, cp);
     ServerName sm = hm.getServerName();
     RpcClient rpcClient = new RpcClient(conf, HConstants.CLUSTER_ID_DEFAULT);

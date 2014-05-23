@@ -103,7 +103,7 @@ import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
 import org.apache.hadoop.hbase.util.hbck.TableLockChecker;
 import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
-import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
+import org.apache.hadoop.hbase.zookeeper.ZKTableStateClientSideReader;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
@@ -1385,7 +1385,7 @@ public class HBaseFsck extends Configured {
         ZooKeeperWatcher zkw = createZooKeeperWatcher();
         try {
           for (TableName tableName :
-              ZKTableReadOnly.getDisabledOrDisablingTables(zkw)) {
+              ZKTableStateClientSideReader.getDisabledOrDisablingTables(zkw)) {
             disabledTables.add(tableName);
           }
         } catch (KeeperException ke) {

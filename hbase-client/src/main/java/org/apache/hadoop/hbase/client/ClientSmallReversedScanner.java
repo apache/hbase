@@ -109,7 +109,7 @@ public class ClientSmallReversedScanner extends ReversedClientScanner {
     }
 
     smallScanCallable = ClientSmallScanner.getSmallScanCallable(
-        scan, getConnection(), getTable(), localStartKey, cacheNum);
+        scan, getConnection(), getTable(), localStartKey, cacheNum, this.rpcControllerFactory);
 
     if (this.scanMetrics != null && skipRowOfFirstResult == null) {
       this.scanMetrics.countOfRegions.incrementAndGet();

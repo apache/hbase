@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -32,7 +33,6 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.ConsensusProvider;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
@@ -104,7 +104,7 @@ public class TestRSKilledWhenInitializing {
 
   public static class MockedRegionServer extends MiniHBaseCluster.MiniHBaseClusterRegionServer {
 
-    public MockedRegionServer(Configuration conf, ConsensusProvider cp)
+    public MockedRegionServer(Configuration conf, CoordinatedStateManager cp)
       throws IOException, InterruptedException {
       super(conf, cp);
     }

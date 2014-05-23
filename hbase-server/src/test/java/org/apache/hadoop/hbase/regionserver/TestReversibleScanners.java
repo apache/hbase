@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
@@ -88,28 +89,32 @@ public class TestReversibleScanners {
         TEST_UTIL.getDataTestDir("testReversibleStoreFileScanner"),
         "regionname"), "familyname");
     CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
-    HFileContextBuilder hcBuilder = new HFileContextBuilder();
-    hcBuilder.withBlockSize(2 * 1024);
-    HFileContext hFileContext = hcBuilder.build();
-    StoreFile.Writer writer = new StoreFile.WriterBuilder(
-        TEST_UTIL.getConfiguration(), cacheConf, fs).withOutputDir(
-        hfilePath).withFileContext(hFileContext).build();
-    writeStoreFile(writer);
+    for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
+      HFileContextBuilder hcBuilder = new HFileContextBuilder();
+      hcBuilder.withBlockSize(2 * 1024);
+      hcBuilder.withDataBlockEncoding(encoding);
+      HFileContext hFileContext = hcBuilder.build();
+      StoreFile.Writer writer = new StoreFile.WriterBuilder(
+          TEST_UTIL.getConfiguration(), cacheConf, fs).withOutputDir(hfilePath)
+          .withFileContext(hFileContext).build();
+      writeStoreFile(writer);
 
-    StoreFile sf = new StoreFile(fs, writer.getPath(),
-        TEST_UTIL.getConfiguration(), cacheConf, BloomType.NONE);
+      StoreFile sf = new StoreFile(fs, writer.getPath(),
+          TEST_UTIL.getConfiguration(), cacheConf, BloomType.NONE);
 
-    List<StoreFileScanner> scanners = StoreFileScanner
-        .getScannersForStoreFiles(Collections.singletonList(sf), false, true,
-            false, Long.MAX_VALUE);
-    StoreFileScanner scanner = scanners.get(0);
-    seekTestOfReversibleKeyValueScanner(scanner);
-    for (int readPoint = 0; readPoint < MAXMVCC; readPoint++) {
-      LOG.info("Setting read point to " + readPoint);
-      scanners = StoreFileScanner.getScannersForStoreFiles(
-          Collections.singletonList(sf), false, true, false, readPoint);
-      seekTestOfReversibleKeyValueScannerWithMVCC(scanners.get(0), readPoint);
+      List<StoreFileScanner> scanners = StoreFileScanner
+          .getScannersForStoreFiles(Collections.singletonList(sf), false, true,
+              false, Long.MAX_VALUE);
+      StoreFileScanner scanner = scanners.get(0);
+      seekTestOfReversibleKeyValueScanner(scanner);
+      for (int readPoint = 0; readPoint < MAXMVCC; readPoint++) {
+        LOG.info("Setting read point to " + readPoint);
+        scanners = StoreFileScanner.getScannersForStoreFiles(
+            Collections.singletonList(sf), false, true, false, readPoint);
+        seekTestOfReversibleKeyValueScannerWithMVCC(scanners.get(0), readPoint);
+      }
     }
+
   }
 
   @Test

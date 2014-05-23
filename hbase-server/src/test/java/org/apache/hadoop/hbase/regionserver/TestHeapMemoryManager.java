@@ -28,12 +28,12 @@ import java.lang.management.ManagementFactory;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.ConsensusProvider;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
@@ -420,7 +420,7 @@ public class TestHeapMemoryManager {
     }
 
     @Override
-    public ConsensusProvider getConsensusProvider() {
+    public CoordinatedStateManager getCoordinatedStateManager() {
       return null;
     }
 

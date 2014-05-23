@@ -30,14 +30,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.ConsensusProvider;
-import org.apache.hadoop.hbase.ConsensusProviderFactory;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.ServerCommandLine;
@@ -187,8 +187,9 @@ public class HMasterCommandLine extends ServerCommandLine {
         waitOnMasterThreads(cluster);
       } else {
         logProcessInfo(getConf());
-        ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(conf);
-        HMaster master = HMaster.constructMaster(masterClass, conf, cp);
+        CoordinatedStateManager csm =
+          CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
+        HMaster master = HMaster.constructMaster(masterClass, conf, csm);
         if (master.isStopped()) {
           LOG.info("Won't bring the Master up as a shutdown is requested");
           return 1;
@@ -258,9 +259,9 @@ public class HMasterCommandLine extends ServerCommandLine {
   public static class LocalHMaster extends HMaster {
     private MiniZooKeeperCluster zkcluster = null;
 
-    public LocalHMaster(Configuration conf, ConsensusProvider consensusProvider)
+    public LocalHMaster(Configuration conf, CoordinatedStateManager csm)
     throws IOException, KeeperException, InterruptedException {
-      super(conf, consensusProvider);
+      super(conf, csm);
     }
 
     @Override

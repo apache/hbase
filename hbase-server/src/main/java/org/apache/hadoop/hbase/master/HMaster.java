@@ -45,6 +45,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -68,7 +69,7 @@ import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.ConsensusProvider;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
@@ -99,6 +100,7 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
@@ -257,9 +259,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * @throws KeeperException
    * @throws IOException
    */
-  public HMaster(final Configuration conf, ConsensusProvider consensusProvider)
+  public HMaster(final Configuration conf, CoordinatedStateManager csm)
       throws IOException, KeeperException, InterruptedException {
-    super(conf, consensusProvider);
+    super(conf, csm);
     this.rsFatals = new MemoryBoundedLogMessageBuffer(
       conf.getLong("hbase.master.buffer.for.rs.fatals", 1*1024*1024));
 
@@ -397,9 +399,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * Initialize all ZK based system trackers.
    * @throws IOException
    * @throws InterruptedException
+   * @throws KeeperException
+   * @throws CoordinatedStateException
    */
   void initializeZKBasedSystemTrackers() throws IOException,
-      InterruptedException, KeeperException {
+      InterruptedException, KeeperException, CoordinatedStateException {
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
     this.loadBalancerTracker = new LoadBalancerTracker(zooKeeper, this);
     this.loadBalancerTracker.start();
@@ -453,9 +457,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * @throws IOException
    * @throws InterruptedException
    * @throws KeeperException
+   * @throws CoordinatedStateException
    */
   private void finishActiveMasterInitialization(MonitoredTask status)
-      throws IOException, InterruptedException, KeeperException {
+      throws IOException, InterruptedException, KeeperException, CoordinatedStateException {
 
     isActiveMaster = true;
 
@@ -765,7 +770,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   private void enableMeta(TableName metaTableName) {
-    if (!this.assignmentManager.getZKTable().isEnabledTable(metaTableName)) {
+    if (!this.assignmentManager.getTableStateManager().isTableState(metaTableName,
+        ZooKeeperProtos.Table.State.ENABLED)) {
       this.assignmentManager.setEnabledTable(metaTableName);
     }
   }
@@ -1477,8 +1483,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (!MetaReader.tableExists(getCatalogTracker(), tableName)) {
       throw new TableNotFoundException(tableName);
     }
-    if (!getAssignmentManager().getZKTable().
-        isDisabledTable(tableName)) {
+    if (!getAssignmentManager().getTableStateManager().
+        isTableState(tableName, ZooKeeperProtos.Table.State.DISABLED)) {
       throw new TableNotDisabledException(tableName);
     }
   }
@@ -1770,10 +1776,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * @return HMaster instance.
    */
   public static HMaster constructMaster(Class<? extends HMaster> masterClass,
-      final Configuration conf, final ConsensusProvider cp)  {
+      final Configuration conf, final CoordinatedStateManager cp)  {
     try {
       Constructor<? extends HMaster> c =
-        masterClass.getConstructor(Configuration.class, ConsensusProvider.class);
+        masterClass.getConstructor(Configuration.class, CoordinatedStateManager.class);
       return c.newInstance(conf, cp);
     } catch (InvocationTargetException ite) {
       Throwable target = ite.getTargetException() != null?

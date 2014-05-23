@@ -50,7 +50,7 @@ public interface Server extends Abortable, Stoppable {
   ServerName getServerName();
 
   /**
-   * Get ConsensusProvider instance for this server.
+   * Get CoordinatedStateManager instance for this server.
    */
-  ConsensusProvider getConsensusProvider();
+  CoordinatedStateManager getCoordinatedStateManager();
 }

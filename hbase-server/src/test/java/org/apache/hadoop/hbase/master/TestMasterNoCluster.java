@@ -32,6 +32,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.CoordinatedStateException;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -46,8 +49,6 @@ import org.apache.hadoop.hbase.catalog.MetaMockingUtil;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.ConsensusProvider;
-import org.apache.hadoop.hbase.ConsensusProviderFactory;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
@@ -125,7 +126,7 @@ public class TestMasterNoCluster {
   @Test (timeout=30000)
   public void testStopDuringStart()
   throws IOException, KeeperException, InterruptedException {
-    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(
+    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(
       TESTUTIL.getConfiguration());
     HMaster master = new HMaster(TESTUTIL.getConfiguration(), cp);
     master.start();
@@ -177,7 +178,7 @@ public class TestMasterNoCluster {
     // and get notification on transitions.  We need to fake out any rpcs the
     // master does opening/closing regions.  Also need to fake out the address
     // of the 'remote' mocked up regionservers.
-    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(
+    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(
       TESTUTIL.getConfiguration());
     HMaster master = new HMaster(conf, cp) {
       InetAddress getRemoteInetAddress(final int port, final long serverStartCode)
@@ -260,7 +261,7 @@ public class TestMasterNoCluster {
     final ServerName deadServer = ServerName.valueOf("test.sample", 1, 100);
     final MockRegionServer rs0 = new MockRegionServer(conf, newServer);
 
-    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(
+    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(
       TESTUTIL.getConfiguration());
     HMaster master = new HMaster(conf, cp) {
       @Override
@@ -269,7 +270,7 @@ public class TestMasterNoCluster {
 
       @Override
       void initializeZKBasedSystemTrackers() throws IOException,
-      InterruptedException, KeeperException {
+      InterruptedException, KeeperException, CoordinatedStateException {
         super.initializeZKBasedSystemTrackers();
         // Record a newer server in server manager at first
         serverManager.recordNewServerWithLock(newServer, ServerLoad.EMPTY_SERVERLOAD);

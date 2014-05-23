@@ -15,28 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.consensus;
+package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.consensus.ZkCoordinatedStateManager;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
- * ZooKeeper-based implementation of {@link org.apache.hadoop.hbase.ConsensusProvider}.
+ * Creates instance of {@link CoordinatedStateManager}
+ * based on configuration.
  */
 @InterfaceAudience.Private
-public class ZkConsensusProvider extends BaseConsensusProvider {
-  private Server server;
-  private ZooKeeperWatcher watcher;
+public class CoordinatedStateManagerFactory {
 
-  @Override
-  public void initialize(Server server) {
-    this.server = server;
-    this.watcher = server.getZooKeeper();
-  }
-
-  @Override
-  public Server getServer() {
-    return server;
+  /**
+   * Creates consensus provider from the given configuration.
+   * @param conf Configuration
+   * @return Implementation of  {@link CoordinatedStateManager}
+   */
+  public static CoordinatedStateManager getCoordinatedStateManager(Configuration conf) {
+    Class<? extends CoordinatedStateManager> coordinatedStateMgrKlass =
+      conf.getClass(HConstants.HBASE_COORDINATED_STATE_MANAGER_CLASS,
+        ZkCoordinatedStateManager.class, CoordinatedStateManager.class);
+    return ReflectionUtils.newInstance(coordinatedStateMgrKlass, conf);
   }
 }

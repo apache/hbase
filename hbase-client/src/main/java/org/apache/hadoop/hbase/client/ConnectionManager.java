@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -2200,8 +2201,8 @@ class ConnectionManager {
     // For tests to override.
     protected AsyncProcess createAsyncProcess(Configuration conf) {
       // No default pool available.
-      return new AsyncProcess(
-          this, conf, this.batchPool, RpcRetryingCallerFactory.instantiate(conf), false);
+      return new AsyncProcess(this, conf, this.batchPool,
+          RpcRetryingCallerFactory.instantiate(conf), false, RpcControllerFactory.instantiate(conf));
     }
 
     @Override

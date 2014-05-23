@@ -31,6 +31,8 @@ import java.util.List;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -42,8 +44,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.ConsensusProvider;
-import org.apache.hadoop.hbase.ConsensusProviderFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -220,7 +220,7 @@ public class TestRegionMergeTransaction {
 
     // Run the execute. Look at what it returns.
     TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_PORT, 0);
-    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(
+    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(
       TEST_UTIL.getConfiguration());
     Server mockServer = new HRegionServer(TEST_UTIL.getConfiguration(), cp);
     HRegion mergedRegion = mt.execute(mockServer, null);
@@ -269,7 +269,7 @@ public class TestRegionMergeTransaction {
     // Run the execute. Look at what it returns.
     boolean expectedException = false;
     TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_PORT, 0);
-    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(
+    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(
       TEST_UTIL.getConfiguration());
     Server mockServer = new HRegionServer(TEST_UTIL.getConfiguration(), cp);
     try {
@@ -330,7 +330,7 @@ public class TestRegionMergeTransaction {
     // Run the execute. Look at what it returns.
     boolean expectedException = false;
     TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_PORT, 0);
-    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(
+    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(
       TEST_UTIL.getConfiguration());
     Server mockServer = new HRegionServer(TEST_UTIL.getConfiguration(), cp);
     try {

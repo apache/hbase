@@ -23,11 +23,29 @@ import org.apache.commons.codec.binary.Base64;
 import java.util.Map;
 import java.util.TreeMap;
 
+import javax.security.sasl.Sasl;
+
 public class SaslUtil {
   public static final String SASL_DEFAULT_REALM = "default";
   public static final Map<String, String> SASL_PROPS =
       new TreeMap<String, String>();
   public static final int SWITCH_TO_SIMPLE_AUTH = -88;
+
+  public static enum QualityOfProtection {
+    AUTHENTICATION("auth"),
+    INTEGRITY("auth-int"),
+    PRIVACY("auth-conf");
+
+    public final String saslQop;
+
+    private QualityOfProtection(String saslQop) {
+      this.saslQop = saslQop;
+    }
+
+    public String getSaslQop() {
+      return saslQop;
+    }
+  }
 
   /** Splitting fully qualified Kerberos name into parts */
   public static String[] splitKerberosName(String fullName) {
@@ -44,5 +62,19 @@ public class SaslUtil {
 
   static char[] encodePassword(byte[] password) {
     return new String(Base64.encodeBase64(password)).toCharArray();
+  }
+
+  static void initSaslProperties(String rpcProtection) {
+    QualityOfProtection saslQOP = QualityOfProtection.AUTHENTICATION;
+    if (QualityOfProtection.INTEGRITY.name().toLowerCase()
+        .equals(rpcProtection)) {
+      saslQOP = QualityOfProtection.INTEGRITY;
+    } else if (QualityOfProtection.PRIVACY.name().toLowerCase().equals(
+        rpcProtection)) {
+      saslQOP = QualityOfProtection.PRIVACY;
+    }
+
+    SaslUtil.SASL_PROPS.put(Sasl.QOP, saslQOP.getSaslQop());
+    SaslUtil.SASL_PROPS.put(Sasl.SERVER_AUTH, "true");
   }
 }

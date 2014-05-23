@@ -32,6 +32,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.CoordinatedStateException;
+import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -50,8 +52,8 @@ import org.apache.hadoop.hbase.catalog.MetaMockingUtil;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.ConsensusProvider;
-import org.apache.hadoop.hbase.ConsensusProviderFactory;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.consensus.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -116,6 +118,7 @@ public class TestAssignmentManager {
   private Server server;
   private ServerManager serverManager;
   private ZooKeeperWatcher watcher;
+  private CoordinatedStateManager cp;
   private LoadBalancer balancer;
   private HMaster master;
 
@@ -145,6 +148,12 @@ public class TestAssignmentManager {
     Mockito.when(server.getZooKeeper()).thenReturn(this.watcher);
     Mockito.doThrow(new RuntimeException("Aborted")).
       when(server).abort(Mockito.anyString(), (Throwable)Mockito.anyObject());
+
+    cp = new ZkCoordinatedStateManager();
+    cp.initialize(this.server);
+    cp.start();
+
+    Mockito.when(server.getCoordinatedStateManager()).thenReturn(cp);
 
     // Mock a ServerManager.  Say server SERVERNAME_{A,B} are online.  Also
     // make it so if close or open, we return 'success'.
@@ -184,6 +193,7 @@ public class TestAssignmentManager {
       // Clean up all znodes
       ZKAssign.deleteAllNodes(this.watcher);
       this.watcher.close();
+      this.cp.stop();
     }
   }
 
@@ -197,7 +207,8 @@ public class TestAssignmentManager {
    */
   @Test(timeout = 60000)
   public void testBalanceOnMasterFailoverScenarioWithOpenedNode()
-  throws IOException, KeeperException, InterruptedException, ServiceException, DeserializationException {
+      throws IOException, KeeperException, InterruptedException, ServiceException,
+      DeserializationException, CoordinatedStateException {
     AssignmentManagerWithExtrasForTesting am =
       setUpMockedAssignmentManager(this.server, this.serverManager);
     try {
@@ -244,8 +255,9 @@ public class TestAssignmentManager {
   }
 
   @Test(timeout = 60000)
-  public void testBalanceOnMasterFailoverScenarioWithClosedNode()
-  throws IOException, KeeperException, InterruptedException, ServiceException, DeserializationException {
+  public void testBalanceOnMasterFailoverScenarioWithClosedNode() 
+      throws IOException, KeeperException, InterruptedException, ServiceException,
+        DeserializationException, CoordinatedStateException {
     AssignmentManagerWithExtrasForTesting am =
       setUpMockedAssignmentManager(this.server, this.serverManager);
     try {
@@ -294,7 +306,8 @@ public class TestAssignmentManager {
 
   @Test(timeout = 60000)
   public void testBalanceOnMasterFailoverScenarioWithOfflineNode()
-  throws IOException, KeeperException, InterruptedException, ServiceException, DeserializationException {
+      throws IOException, KeeperException, InterruptedException, ServiceException,
+      DeserializationException, CoordinatedStateException {
     AssignmentManagerWithExtrasForTesting am =
       setUpMockedAssignmentManager(this.server, this.serverManager);
     try {
@@ -359,8 +372,8 @@ public class TestAssignmentManager {
    * @throws DeserializationException
    */
   @Test
-  public void testBalance()
-    throws IOException, KeeperException, DeserializationException, InterruptedException {
+  public void testBalance() throws IOException, KeeperException, DeserializationException,
+      InterruptedException, CoordinatedStateException {
     // Create and startup an executor.  This is used by AssignmentManager
     // handling zk callbacks.
     ExecutorService executor = startupMasterExecutor("testBalanceExecutor");
@@ -435,7 +448,7 @@ public class TestAssignmentManager {
    */
   @Test
   public void testShutdownHandler()
-      throws KeeperException, IOException, ServiceException {
+      throws KeeperException, IOException, CoordinatedStateException, ServiceException {
     // Create and startup an executor.  This is used by AssignmentManager
     // handling zk callbacks.
     ExecutorService executor = startupMasterExecutor("testShutdownHandler");
@@ -466,7 +479,7 @@ public class TestAssignmentManager {
    */
   @Test
   public void testSSHWhenDisableTableInProgress() throws KeeperException, IOException,
-      ServiceException {
+    CoordinatedStateException, ServiceException {
     testCaseWithPartiallyDisabledState(Table.State.DISABLING);
     testCaseWithPartiallyDisabledState(Table.State.DISABLED);
   }
@@ -488,7 +501,8 @@ public class TestAssignmentManager {
   }
 
   private void testCaseWithSplitRegionPartial(boolean regionSplitDone) throws KeeperException,
-      IOException, NodeExistsException, InterruptedException, ServiceException {
+      IOException, InterruptedException,
+    CoordinatedStateException, ServiceException {
     // Create and startup an executor. This is used by AssignmentManager
     // handling zk callbacks.
     ExecutorService executor = startupMasterExecutor("testSSHWhenSplitRegionInProgress");
@@ -504,7 +518,8 @@ public class TestAssignmentManager {
     // adding region in pending close.
     am.getRegionStates().updateRegionState(
       REGIONINFO, State.SPLITTING, SERVERNAME_A);
-    am.getZKTable().setEnabledTable(REGIONINFO.getTable());
+    am.getTableStateManager().setTableState(REGIONINFO.getTable(),
+      Table.State.ENABLED);
     RegionTransition data = RegionTransition.createRegionTransition(EventType.RS_ZK_REGION_SPLITTING,
         REGIONINFO.getRegionName(), SERVERNAME_A);
     String node = ZKAssign.getNodeName(this.watcher, REGIONINFO.getEncodedName());
@@ -536,7 +551,7 @@ public class TestAssignmentManager {
   }
 
   private void testCaseWithPartiallyDisabledState(Table.State state) throws KeeperException,
-      IOException, NodeExistsException, ServiceException {
+      IOException, CoordinatedStateException, ServiceException {
     // Create and startup an executor. This is used by AssignmentManager
     // handling zk callbacks.
     ExecutorService executor = startupMasterExecutor("testSSHWhenDisableTableInProgress");
@@ -553,9 +568,11 @@ public class TestAssignmentManager {
     // adding region in pending close.
     am.getRegionStates().updateRegionState(REGIONINFO, State.PENDING_CLOSE);
     if (state == Table.State.DISABLING) {
-      am.getZKTable().setDisablingTable(REGIONINFO.getTable());
+      am.getTableStateManager().setTableState(REGIONINFO.getTable(),
+        Table.State.DISABLING);
     } else {
-      am.getZKTable().setDisabledTable(REGIONINFO.getTable());
+      am.getTableStateManager().setTableState(REGIONINFO.getTable(),
+        Table.State.DISABLED);
     }
     RegionTransition data = RegionTransition.createRegionTransition(EventType.M_ZK_REGION_CLOSING,
         REGIONINFO.getRegionName(), SERVERNAME_A);
@@ -668,7 +685,8 @@ public class TestAssignmentManager {
   }
 
   @Test
-  public void testUnassignWithSplitAtSameTime() throws KeeperException, IOException {
+  public void testUnassignWithSplitAtSameTime() throws KeeperException,
+      IOException, CoordinatedStateException {
     // Region to use in test.
     final HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
     // First amend the servermanager mock so that when we do send close of the
@@ -713,7 +731,8 @@ public class TestAssignmentManager {
    */
   @Test(timeout = 60000)
   public void testProcessDeadServersAndRegionsInTransitionShouldNotFailWithNPE()
-      throws IOException, KeeperException, InterruptedException, ServiceException {
+      throws IOException, KeeperException, CoordinatedStateException,
+      InterruptedException, ServiceException {
     final RecoverableZooKeeper recoverableZk = Mockito
         .mock(RecoverableZooKeeper.class);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
@@ -744,7 +763,7 @@ public class TestAssignmentManager {
    */
   @Test(timeout = 60000)
   public void testRegionPlanIsUpdatedWhenRegionFailsToOpen() throws IOException, KeeperException,
-      ServiceException, InterruptedException {
+      ServiceException, InterruptedException, CoordinatedStateException {
     this.server.getConfiguration().setClass(
       HConstants.HBASE_MASTER_LOADBALANCER_CLASS, MockedLoadBalancer.class,
       LoadBalancer.class);
@@ -842,7 +861,7 @@ public class TestAssignmentManager {
    */
   @Test(timeout = 60000)
   public void testRegionInOpeningStateOnDeadRSWhileMasterFailover() throws IOException,
-      KeeperException, ServiceException, InterruptedException {
+      KeeperException, ServiceException, CoordinatedStateException, InterruptedException {
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
       this.server, this.serverManager);
     ZKAssign.createNodeOffline(this.watcher, REGIONINFO, SERVERNAME_A);
@@ -858,7 +877,8 @@ public class TestAssignmentManager {
     am.gate.set(false);
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     assertFalse(am.processRegionsInTransition(rt, REGIONINFO, version));
-    am.getZKTable().setEnabledTable(REGIONINFO.getTable());
+    am.getTableStateManager().setTableState(REGIONINFO.getTable(),
+      Table.State.ENABLED);
     processServerShutdownHandler(ct, am, false);
     // Waiting for the assignment to get completed.
     while (!am.gate.get()) {
@@ -889,8 +909,9 @@ public class TestAssignmentManager {
     // To avoid cast exception in DisableTableHandler process.
     HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
 
-    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(HTU.getConfiguration());
-    Server server = new HMaster(HTU.getConfiguration(), cp);
+    CoordinatedStateManager csm = CoordinatedStateManagerFactory.getCoordinatedStateManager(
+      HTU.getConfiguration());
+    Server server = new HMaster(HTU.getConfiguration(), csm);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
         this.serverManager);
     AtomicBoolean gate = new AtomicBoolean(false);
@@ -899,7 +920,8 @@ public class TestAssignmentManager {
     }
     try{
       // set table in disabling state.
-      am.getZKTable().setDisablingTable(REGIONINFO.getTable());
+      am.getTableStateManager().setTableState(REGIONINFO.getTable(),
+        Table.State.DISABLING);
       am.joinCluster();
       // should not call retainAssignment if we get empty regions in assignAllUserRegions.
       assertFalse(
@@ -907,12 +929,14 @@ public class TestAssignmentManager {
           gate.get());
       // need to change table state from disabling to disabled.
       assertTrue("Table should be disabled.",
-          am.getZKTable().isDisabledTable(REGIONINFO.getTable()));
+          am.getTableStateManager().isTableState(REGIONINFO.getTable(),
+            Table.State.DISABLED));
     } finally {
       this.server.getConfiguration().setClass(
         HConstants.HBASE_MASTER_LOADBALANCER_CLASS, SimpleLoadBalancer.class,
         LoadBalancer.class);
-      am.getZKTable().setEnabledTable(REGIONINFO.getTable());
+      am.getTableStateManager().setTableState(REGIONINFO.getTable(),
+        Table.State.ENABLED);
       am.shutdown();
     }
   }
@@ -932,24 +956,28 @@ public class TestAssignmentManager {
     Mockito.when(this.serverManager.createDestinationServersList()).thenReturn(destServers);
     Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
     HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
-    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(HTU.getConfiguration());
-    Server server = new HMaster(HTU.getConfiguration(), cp);
+    CoordinatedStateManager csm = CoordinatedStateManagerFactory.getCoordinatedStateManager(
+      HTU.getConfiguration());
+    Server server = new HMaster(HTU.getConfiguration(), csm);
     Whitebox.setInternalState(server, "serverManager", this.serverManager);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
         this.serverManager);
     try {
       // set table in enabling state.
-      am.getZKTable().setEnablingTable(REGIONINFO.getTable());
+      am.getTableStateManager().setTableState(REGIONINFO.getTable(),
+        Table.State.ENABLING);
       new EnableTableHandler(server, REGIONINFO.getTable(),
           am.getCatalogTracker(), am, new NullTableLockManager(), true).prepare()
           .process();
       assertEquals("Number of assignments should be 1.", 1, assignmentCount);
       assertTrue("Table should be enabled.",
-          am.getZKTable().isEnabledTable(REGIONINFO.getTable()));
+          am.getTableStateManager().isTableState(REGIONINFO.getTable(),
+            Table.State.ENABLED));
     } finally {
       enabling = false;
       assignmentCount = 0;
-      am.getZKTable().setEnabledTable(REGIONINFO.getTable());
+      am.getTableStateManager().setTableState(REGIONINFO.getTable(),
+        Table.State.ENABLED);
       am.shutdown();
       ZKAssign.deleteAllNodes(this.watcher);
     }
@@ -964,24 +992,26 @@ public class TestAssignmentManager {
    */
   @Test
   public void testMasterRestartShouldRemoveStaleZnodesOfUnknownTableAsForMeta()
-      throws KeeperException, IOException, Exception {
+      throws Exception {
     List<ServerName> destServers = new ArrayList<ServerName>(1);
     destServers.add(SERVERNAME_A);
     Mockito.when(this.serverManager.createDestinationServersList()).thenReturn(destServers);
     Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(true);
     HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
-    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(HTU.getConfiguration());
-    Server server = new HMaster(HTU.getConfiguration(), cp);
+    CoordinatedStateManager csm = CoordinatedStateManagerFactory.getCoordinatedStateManager(
+      HTU.getConfiguration());
+    Server server = new HMaster(HTU.getConfiguration(), csm);
     Whitebox.setInternalState(server, "serverManager", this.serverManager);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
         this.serverManager);
     try {
       TableName tableName = TableName.valueOf("dummyTable");
       // set table in enabling state.
-      am.getZKTable().setEnablingTable(tableName);
+      am.getTableStateManager().setTableState(tableName,
+        Table.State.ENABLING);
       am.joinCluster();
       assertFalse("Table should not be present in zookeeper.",
-        am.getZKTable().isTablePresent(tableName));
+        am.getTableStateManager().isTablePresent(tableName));
     } finally {
     }
   }
@@ -992,7 +1022,7 @@ public class TestAssignmentManager {
    */
   @Test
   public void testSSHTimesOutOpeningRegionTransition()
-      throws KeeperException, IOException, ServiceException {
+      throws KeeperException, IOException, CoordinatedStateException, ServiceException {
     // We need a mocked catalog tracker.
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     // Create an AM.
@@ -1006,7 +1036,8 @@ public class TestAssignmentManager {
     // adding region plan
     am.regionPlans.put(REGIONINFO.getEncodedName(),
       new RegionPlan(REGIONINFO, SERVERNAME_B, SERVERNAME_A));
-    am.getZKTable().setEnabledTable(REGIONINFO.getTable());
+    am.getTableStateManager().setTableState(REGIONINFO.getTable(),
+      Table.State.ENABLED);
 
     try {
       am.assignInvoked = false;
@@ -1102,7 +1133,8 @@ public class TestAssignmentManager {
    * @throws KeeperException
    */
   private AssignmentManagerWithExtrasForTesting setUpMockedAssignmentManager(final Server server,
-      final ServerManager manager) throws IOException, KeeperException, ServiceException {
+      final ServerManager manager) throws IOException, KeeperException,
+        ServiceException, CoordinatedStateException {
     // We need a mocked catalog tracker. Its used by our AM instance.
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     // Make an RS Interface implementation. Make it so a scanner can go against
@@ -1173,7 +1205,7 @@ public class TestAssignmentManager {
         final Server master, final ServerManager serverManager,
         final CatalogTracker catalogTracker, final LoadBalancer balancer,
         final ExecutorService service, final TableLockManager tableLockManager)
-            throws KeeperException, IOException {
+            throws KeeperException, IOException, CoordinatedStateException {
       super(master, serverManager, catalogTracker, balancer, service, null, tableLockManager);
       this.es = service;
       this.ct = catalogTracker;
@@ -1267,6 +1299,8 @@ public class TestAssignmentManager {
           throw new RuntimeException(e);
         } catch (InterruptedException e) {
           throw new RuntimeException(e);
+        } catch (CoordinatedStateException e) {
+          throw new RuntimeException(e);
         }
       }
     };
@@ -1309,7 +1343,8 @@ public class TestAssignmentManager {
    * assignment). So during master failover, we can ignored such events too.
    */
   @Test
-  public void testAssignmentEventIgnoredIfNotExpected() throws KeeperException, IOException {
+  public void testAssignmentEventIgnoredIfNotExpected() throws KeeperException, IOException,
+      CoordinatedStateException {
     // Region to use in test.
     final HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
     // Need a mocked catalog tracker.

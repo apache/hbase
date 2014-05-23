@@ -47,9 +47,11 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionMergeTransaction;
@@ -63,7 +65,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.hbase.zookeeper.ZKTable;
+import org.apache.hadoop.hbase.zookeeper.ZKTableStateManager;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.data.Stat;
 import org.junit.Test;
@@ -305,8 +307,8 @@ public class TestMasterFailover {
     log("Beginning to mock scenarios");
 
     // Disable the disabledTable in ZK
-    ZKTable zktable = new ZKTable(zkw);
-    zktable.setDisabledTable(disabledTable);
+    TableStateManager zktable = new ZKTableStateManager(zkw);
+    zktable.setTableState(disabledTable, ZooKeeperProtos.Table.State.DISABLED);
 
     /*
      *  ZK = OFFLINE
@@ -620,7 +622,8 @@ public class TestMasterFailover {
     log("Assignment completed");
 
     assertTrue(" Table must be enabled.", master.getAssignmentManager()
-        .getZKTable().isEnabledTable(TableName.valueOf("enabledTable")));
+        .getTableStateManager().isTableState(TableName.valueOf("enabledTable"),
+        ZooKeeperProtos.Table.State.ENABLED));
     // we also need regions assigned out on the dead server
     List<HRegionInfo> enabledAndOnDeadRegions = new ArrayList<HRegionInfo>();
     enabledAndOnDeadRegions.addAll(enabledRegions.subList(0, 6));
@@ -694,11 +697,12 @@ public class TestMasterFailover {
     log("Beginning to mock scenarios");
 
     // Disable the disabledTable in ZK
-    ZKTable zktable = new ZKTable(zkw);
-    zktable.setDisabledTable(disabledTable);
+    TableStateManager zktable = new ZKTableStateManager(zkw);
+    zktable.setTableState(disabledTable, ZooKeeperProtos.Table.State.DISABLED);
 
     assertTrue(" The enabled table should be identified on master fail over.",
-        zktable.isEnabledTable(TableName.valueOf("enabledTable")));
+        zktable.isTableState(TableName.valueOf("enabledTable"),
+          ZooKeeperProtos.Table.State.ENABLED));
 
     /*
      * ZK = CLOSING

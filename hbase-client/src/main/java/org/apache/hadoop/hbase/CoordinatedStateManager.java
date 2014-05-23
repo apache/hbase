@@ -22,37 +22,45 @@ import org.apache.hadoop.classification.InterfaceAudience;
 /**
  * Implementations of this interface will keep and return to clients 
  * implementations of classes providing API to execute
- * coordinated operations. This interface is client-sise, so it does NOT
- * include method to retrieve the particular consensus providers.
+ * coordinated operations. This interface is client-side, so it does NOT
+ * include methods to retrieve the particular interface implementations.
  *
  * For each coarse-grained area of operations there will be a separate
  * interface with implementation, providing API for relevant operations
  * requiring coordination.
  *
- * Property hbase.consensus.provider.class in hbase-site.xml controls
+ * Property hbase.coordinated.state.manager.class in hbase-site.xml controls
  * which provider to use.
  */
 @InterfaceAudience.Private
-public interface ConsensusProvider {
+public interface CoordinatedStateManager {
 
   /**
-   * Initialize consensus service.
+   * Initialize coordinated state management service.
    * @param server server instance to run within.
    */
   void initialize(Server server);
 
   /**
-   * Starts consensus service.
+   * Starts service.
    */
   void start();
 
   /**
-   * Stop consensus provider.
+   * Stops service.
    */
   void stop();
 
   /**
-   * @return instance of Server consensus runs within
+   * @return instance of Server coordinated state manager runs within
    */
   Server getServer();
+
+  /**
+   * Returns implementation of TableStateManager.
+   * @throws InterruptedException if operation is interrupted
+   * @throws CoordinatedStateException if error happens in underlying coordination mechanism
+   */
+  TableStateManager getTableStateManager() throws InterruptedException,
+    CoordinatedStateException;
 }

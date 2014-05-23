@@ -29,12 +29,12 @@ import javax.security.auth.callback.PasswordCallback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.RealmCallback;
-import javax.security.sasl.Sasl;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -46,36 +46,9 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 public class HBaseSaslRpcServer {
   public static final Log LOG = LogFactory.getLog(HBaseSaslRpcServer.class);
 
-  public static enum QualityOfProtection {
-    AUTHENTICATION("auth"),
-    INTEGRITY("auth-int"),
-    PRIVACY("auth-conf");
-
-    public final String saslQop;
-
-    private QualityOfProtection(String saslQop) {
-      this.saslQop = saslQop;
-    }
-
-    public String getSaslQop() {
-      return saslQop;
-    }
-  }
-
   public static void init(Configuration conf) {
-    QualityOfProtection saslQOP = QualityOfProtection.AUTHENTICATION;
-    String rpcProtection = conf.get("hbase.rpc.protection",
-        QualityOfProtection.AUTHENTICATION.name().toLowerCase());
-    if (QualityOfProtection.INTEGRITY.name().toLowerCase()
-        .equals(rpcProtection)) {
-      saslQOP = QualityOfProtection.INTEGRITY;
-    } else if (QualityOfProtection.PRIVACY.name().toLowerCase().equals(
-        rpcProtection)) {
-      saslQOP = QualityOfProtection.PRIVACY;
-    }
-
-    SaslUtil.SASL_PROPS.put(Sasl.QOP, saslQOP.getSaslQop());
-    SaslUtil.SASL_PROPS.put(Sasl.SERVER_AUTH, "true");
+    SaslUtil.initSaslProperties(conf.get("hbase.rpc.protection", 
+          QualityOfProtection.AUTHENTICATION.name().toLowerCase()));
   }
 
   public static <T extends TokenIdentifier> T getIdentifier(String id,

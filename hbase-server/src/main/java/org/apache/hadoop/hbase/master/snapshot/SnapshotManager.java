@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
@@ -556,13 +557,15 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     // if the table is enabled, then have the RS run actually the snapshot work
     TableName snapshotTable = TableName.valueOf(snapshot.getTable());
     AssignmentManager assignmentMgr = master.getAssignmentManager();
-    if (assignmentMgr.getZKTable().isEnabledTable(snapshotTable)) {
+    if (assignmentMgr.getTableStateManager().isTableState(snapshotTable,
+        ZooKeeperProtos.Table.State.ENABLED)) {
       LOG.debug("Table enabled, starting distributed snapshot.");
       snapshotEnabledTable(snapshot);
       LOG.debug("Started snapshot: " + ClientSnapshotDescriptionUtils.toString(snapshot));
     }
     // For disabled table, snapshot is created by the master
-    else if (assignmentMgr.getZKTable().isDisabledTable(snapshotTable)) {
+    else if (assignmentMgr.getTableStateManager().isTableState(snapshotTable,
+        ZooKeeperProtos.Table.State.DISABLED)) {
       LOG.debug("Table is disabled, running snapshot entirely on master.");
       snapshotDisabledTable(snapshot);
       LOG.debug("Started snapshot: " + ClientSnapshotDescriptionUtils.toString(snapshot));
@@ -692,8 +695,8 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     // Execute the restore/clone operation
     if (MetaReader.tableExists(master.getCatalogTracker(), tableName)) {
-      if (master.getAssignmentManager().getZKTable().isEnabledTable(
-          TableName.valueOf(fsSnapshot.getTable()))) {
+      if (master.getAssignmentManager().getTableStateManager().isTableState(
+          TableName.valueOf(fsSnapshot.getTable()), ZooKeeperProtos.Table.State.ENABLED)) {
         throw new UnsupportedOperationException("Table '" +
             TableName.valueOf(fsSnapshot.getTable()) + "' must be disabled in order to " +
             "perform a restore operation" +

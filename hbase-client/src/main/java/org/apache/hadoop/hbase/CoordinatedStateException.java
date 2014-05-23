@@ -1,4 +1,5 @@
 /**
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,26 +19,28 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.consensus.ZkConsensusProvider;
-import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.hbase.exceptions.HBaseException;
 
 /**
- * Creates instance of {@link ConsensusProvider}
- * based on configuration.
+ * Thrown by operations requiring coordination state access or manipulation
+ * when internal error within coordination engine (or other internal implementation) occurs.
  */
 @InterfaceAudience.Private
-public class ConsensusProviderFactory {
+@SuppressWarnings("serial")
+public class CoordinatedStateException extends HBaseException {
+  public CoordinatedStateException() {
+    super();
+  }
 
-  /**
-   * Creates consensus provider from the given configuration.
-   * @param conf Configuration
-   * @return A {@link ConsensusProvider}
-   */
-  public static ConsensusProvider getConsensusProvider(Configuration conf) {
-    Class<? extends ConsensusProvider> consensusKlass =
-      conf.getClass(HConstants.HBASE_CONSENSUS_PROVIDER_CLASS, ZkConsensusProvider.class,
-        ConsensusProvider.class);
-    return ReflectionUtils.newInstance(consensusKlass, conf);
+  public CoordinatedStateException(final String message) {
+    super(message);
+  }
+
+  public CoordinatedStateException(final String message, final Throwable t) {
+    super(message, t);
+  }
+
+  public CoordinatedStateException(final Throwable t) {
+    super(t);
   }
 }

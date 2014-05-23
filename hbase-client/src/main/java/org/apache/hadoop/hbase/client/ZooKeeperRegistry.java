@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
-import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
+import org.apache.hadoop.hbase.zookeeper.ZKTableStateClientSideReader;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.zookeeper.KeeperException;
 
@@ -101,9 +101,9 @@ class ZooKeeperRegistry implements Registry {
     ZooKeeperKeepAliveConnection zkw = hci.getKeepAliveZooKeeperWatcher();
     try {
       if (enabled) {
-        return ZKTableReadOnly.isEnabledTable(zkw, tableName);
+        return ZKTableStateClientSideReader.isEnabledTable(zkw, tableName);
       }
-      return ZKTableReadOnly.isDisabledTable(zkw, tableName);
+      return ZKTableStateClientSideReader.isDisabledTable(zkw, tableName);
     } catch (KeeperException e) {
       throw new IOException("Enable/Disable failed", e);
     } catch (InterruptedException e) {

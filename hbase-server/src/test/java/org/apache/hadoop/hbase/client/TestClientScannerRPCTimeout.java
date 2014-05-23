@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.ConsensusProvider;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
@@ -130,7 +130,7 @@ public class TestClientScannerRPCTimeout {
   }
 
   private static class RegionServerWithScanTimeout extends MiniHBaseClusterRegionServer {
-    public RegionServerWithScanTimeout(Configuration conf, ConsensusProvider cp)
+    public RegionServerWithScanTimeout(Configuration conf, CoordinatedStateManager cp)
         throws IOException, InterruptedException {
       super(conf, cp);
     }

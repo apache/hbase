@@ -17,33 +17,43 @@
  */
 package org.apache.hadoop.hbase.consensus;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.ConsensusProvider;
+import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.TableStateManager;
+import org.apache.hadoop.hbase.zookeeper.ZKTableStateManager;
+import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.zookeeper.KeeperException;
 
 /**
- * Base class for {@link org.apache.hadoop.hbase.ConsensusProvider} implementations.
- * Defines methods to retrieve consensus objects for relevant areas. ConsensusProvider
- * reference returned from Server interface has to be casted to this type to
- * access those methods.
+ * ZooKeeper-based implementation of {@link org.apache.hadoop.hbase.CoordinatedStateManager}.
  */
 @InterfaceAudience.Private
-public abstract class BaseConsensusProvider implements ConsensusProvider {
+public class ZkCoordinatedStateManager extends BaseCoordinatedStateManager {
+  private static final Log LOG = LogFactory.getLog(ZkCoordinatedStateManager.class);
+  private Server server;
+  private ZooKeeperWatcher watcher;
 
   @Override
   public void initialize(Server server) {
-  }
-
-  @Override
-  public void start() {
-  }
-
-  @Override
-  public void stop() {
+    this.server = server;
+    this.watcher = server.getZooKeeper();
   }
 
   @Override
   public Server getServer() {
-    return null;
+    return server;
+  }
+
+  @Override
+  public TableStateManager getTableStateManager() throws InterruptedException,
+      CoordinatedStateException {
+    try {
+      return new ZKTableStateManager(server.getZooKeeper());
+    } catch (KeeperException e) {
+      throw new CoordinatedStateException(e);
+    }
   }
 }

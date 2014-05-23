@@ -65,7 +65,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.ConsensusProvider;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -1298,7 +1298,7 @@ public class TestSplitTransactionOnCluster {
 
   public static class MockMasterWithoutCatalogJanitor extends HMaster {
 
-    public MockMasterWithoutCatalogJanitor(Configuration conf, ConsensusProvider cp)
+    public MockMasterWithoutCatalogJanitor(Configuration conf, CoordinatedStateManager cp)
       throws IOException, KeeperException,
         InterruptedException {
       super(conf, cp);

@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutorService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
@@ -43,7 +44,7 @@ import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
-import org.apache.zookeeper.KeeperException;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.htrace.Trace;
 
 /**
@@ -94,14 +95,15 @@ public class DisableTableHandler extends EventHandler {
       //TODO: reevaluate this since we have table locks now
       if (!skipTableStateCheck) {
         try {
-          if (!this.assignmentManager.getZKTable().checkEnabledAndSetDisablingTable
-            (this.tableName)) {
+          if (!this.assignmentManager.getTableStateManager().setTableStateIfInStates(
+            this.tableName, ZooKeeperProtos.Table.State.DISABLING,
+            ZooKeeperProtos.Table.State.ENABLED)) {
             LOG.info("Table " + tableName + " isn't enabled; skipping disable");
             throw new TableNotEnabledException(this.tableName);
           }
-        } catch (KeeperException e) {
+        } catch (CoordinatedStateException e) {
           throw new IOException("Unable to ensure that the table will be" +
-            " disabling because of a ZooKeeper issue", e);
+            " disabling because of a coordination engine issue", e);
         }
       }
       success = true;
@@ -139,7 +141,7 @@ public class DisableTableHandler extends EventHandler {
       }
     } catch (IOException e) {
       LOG.error("Error trying to disable table " + this.tableName, e);
-    } catch (KeeperException e) {
+    } catch (CoordinatedStateException e) {
       LOG.error("Error trying to disable table " + this.tableName, e);
     } finally {
       releaseTableLock();
@@ -156,9 +158,10 @@ public class DisableTableHandler extends EventHandler {
     }
   }
 
-  private void handleDisableTable() throws IOException, KeeperException {
+  private void handleDisableTable() throws IOException, CoordinatedStateException {
     // Set table disabling flag up in zk.
-    this.assignmentManager.getZKTable().setDisablingTable(this.tableName);
+    this.assignmentManager.getTableStateManager().setTableState(this.tableName,
+      ZooKeeperProtos.Table.State.DISABLING);
     boolean done = false;
     while (true) {
       // Get list of online regions that are of this table.  Regions that are
@@ -186,7 +189,8 @@ public class DisableTableHandler extends EventHandler {
       }
     }
     // Flip the table to disabled if success.
-    if (done) this.assignmentManager.getZKTable().setDisabledTable(this.tableName);
+    if (done) this.assignmentManager.getTableStateManager().setTableState(this.tableName,
+      ZooKeeperProtos.Table.State.DISABLED);
     LOG.info("Disabled table is done=" + done);
   }
 

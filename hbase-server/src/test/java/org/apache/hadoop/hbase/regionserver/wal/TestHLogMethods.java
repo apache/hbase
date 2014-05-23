@@ -112,7 +112,7 @@ public class TestHLogMethods {
   public void testEntrySink() throws Exception {
     Configuration conf = new Configuration();
     HLogSplitter splitter = new HLogSplitter(
-      conf, mock(Path.class), mock(FileSystem.class), null, null);
+      conf, mock(Path.class), mock(FileSystem.class), null, null, null);
 
     EntryBuffers sink = splitter.new EntryBuffers(1*1024*1024);
     for (int i = 0; i < 1000; i++) {

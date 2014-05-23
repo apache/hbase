@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.consensus.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorType;
@@ -107,6 +108,12 @@ public class TestDrainingServer {
     Mockito.when(server.getConfiguration()).thenReturn(conf);
     Mockito.when(server.getServerName()).thenReturn(ServerName.valueOf("masterMock,1,1"));
     Mockito.when(server.getZooKeeper()).thenReturn(zkWatcher);
+
+    CoordinatedStateManager cp = new ZkCoordinatedStateManager();
+    cp.initialize(server);
+    cp.start();
+
+    Mockito.when(server.getCoordinatedStateManager()).thenReturn(cp);
 
     Mockito.when(serverManager.getOnlineServers()).thenReturn(onlineServers);
     Mockito.when(serverManager.getOnlineServersList())
@@ -203,6 +210,12 @@ public class TestDrainingServer {
     Mockito.when(server.getConfiguration()).thenReturn(conf);
     Mockito.when(server.getServerName()).thenReturn(ServerName.valueOf("masterMock,1,1"));
     Mockito.when(server.getZooKeeper()).thenReturn(zkWatcher);
+
+    CoordinatedStateManager cp = new ZkCoordinatedStateManager();
+    cp.initialize(server);
+    cp.start();
+
+    Mockito.when(server.getCoordinatedStateManager()).thenReturn(cp);
 
     Mockito.when(serverManager.getOnlineServers()).thenReturn(onlineServers);
     Mockito.when(serverManager.getOnlineServersList()).thenReturn(

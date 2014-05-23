@@ -33,23 +33,24 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Non-instantiable class that provides helper functions for
- * clients other than AssignmentManager for reading the
- * state of a table in ZK.
+ * Non-instantiable class that provides helper functions to learn
+ * about HBase table state for code running on client side (hence, not having
+ * access to consensus context).
  *
- * <p>Does not cache state like {@link ZKTable}, actually reads from ZK each call.
+ * Doesn't cache any table state, just goes directly to ZooKeeper.
+ * TODO: decouple this class from ZooKeeper.
  */
 @InterfaceAudience.Private
-public class ZKTableReadOnly {
+public class ZKTableStateClientSideReader {
 
-  private ZKTableReadOnly() {}
+  private ZKTableStateClientSideReader() {}
   
   /**
    * Go to zookeeper and see if state of table is {@code ZooKeeperProtos.Table.State#DISABLED}.
    * This method does not use cache.
    * This method is for clients other than AssignmentManager
-   * @param zkw
-   * @param tableName
+   * @param zkw ZooKeeperWatcher instance to use
+   * @param tableName table we're checking
    * @return True if table is enabled.
    * @throws KeeperException
    */
@@ -64,8 +65,8 @@ public class ZKTableReadOnly {
    * Go to zookeeper and see if state of table is {@code ZooKeeperProtos.Table.State#ENABLED}.
    * This method does not use cache.
    * This method is for clients other than AssignmentManager
-   * @param zkw
-   * @param tableName
+   * @param zkw ZooKeeperWatcher instance to use
+   * @param tableName table we're checking
    * @return True if table is enabled.
    * @throws KeeperException
    */
@@ -80,8 +81,8 @@ public class ZKTableReadOnly {
    * of {@code ZooKeeperProtos.Table.State#DISABLED}.
    * This method does not use cache.
    * This method is for clients other than AssignmentManager.
-   * @param zkw
-   * @param tableName
+   * @param zkw ZooKeeperWatcher instance to use
+   * @param tableName table we're checking
    * @return True if table is enabled.
    * @throws KeeperException
    */
@@ -139,8 +140,8 @@ public class ZKTableReadOnly {
   }
 
   /**
-   * @param zkw
-   * @param tableName
+   * @param zkw ZooKeeperWatcher instance to use
+   * @param tableName table we're checking
    * @return Null or {@link ZooKeeperProtos.Table.State} found in znode.
    * @throws KeeperException
    */

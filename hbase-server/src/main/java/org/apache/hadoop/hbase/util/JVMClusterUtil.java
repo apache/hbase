@@ -29,7 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.ConsensusProvider;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -81,14 +81,14 @@ public class JVMClusterUtil {
    * @return Region server added.
    */
   public static JVMClusterUtil.RegionServerThread createRegionServerThread(
-      final Configuration c, ConsensusProvider cp, final Class<? extends HRegionServer> hrsc,
+      final Configuration c, CoordinatedStateManager cp, final Class<? extends HRegionServer> hrsc,
       final int index)
   throws IOException {
     HRegionServer server;
     try {
       
       Constructor<? extends HRegionServer> ctor = hrsc.getConstructor(Configuration.class,
-      ConsensusProvider.class);
+      CoordinatedStateManager.class);
       ctor.setAccessible(true);
       server = ctor.newInstance(c, cp);
     } catch (InvocationTargetException ite) {
@@ -133,12 +133,12 @@ public class JVMClusterUtil {
    * @return Master added.
    */
   public static JVMClusterUtil.MasterThread createMasterThread(
-      final Configuration c, ConsensusProvider cp, final Class<? extends HMaster> hmc,
+      final Configuration c, CoordinatedStateManager cp, final Class<? extends HMaster> hmc,
       final int index)
   throws IOException {
     HMaster server;
     try {
-      server = hmc.getConstructor(Configuration.class, ConsensusProvider.class).
+      server = hmc.getConstructor(Configuration.class, CoordinatedStateManager.class).
         newInstance(c, cp);
     } catch (InvocationTargetException ite) {
       Throwable target = ite.getTargetException();

@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -42,7 +43,6 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.zookeeper.KeeperException;
 
 @InterfaceAudience.Private
 public class DeleteTableHandler extends TableEventHandler {
@@ -62,7 +62,7 @@ public class DeleteTableHandler extends TableEventHandler {
   }
 
   protected void waitRegionInTransition(final List<HRegionInfo> regions)
-      throws IOException, KeeperException {
+      throws IOException, CoordinatedStateException {
     AssignmentManager am = this.masterServices.getAssignmentManager();
     RegionStates states = am.getRegionStates();
     long waitTime = server.getConfiguration().
@@ -93,7 +93,7 @@ public class DeleteTableHandler extends TableEventHandler {
 
   @Override
   protected void handleTableOperation(List<HRegionInfo> regions)
-      throws IOException, KeeperException {
+      throws IOException, CoordinatedStateException {
     MasterCoprocessorHost cpHost = ((HMaster) this.server).getMasterCoprocessorHost();
     if (cpHost != null) {
       cpHost.preDeleteTableHandler(this.tableName);
@@ -118,7 +118,7 @@ public class DeleteTableHandler extends TableEventHandler {
 
       // 5. If entry for this table in zk, and up in AssignmentManager, remove it.
       LOG.debug("Marking '" + tableName + "' as deleted.");
-      am.getZKTable().setDeletedTable(tableName);
+      am.getTableStateManager().setDeletedTable(tableName);
     }
 
     if (cpHost != null) {
@@ -130,7 +130,7 @@ public class DeleteTableHandler extends TableEventHandler {
    * Removes the table from .META. and archives the HDFS files.
    */
   protected void removeTableData(final List<HRegionInfo> regions)
-      throws IOException, KeeperException {
+      throws IOException, CoordinatedStateException {
     // 1. Remove regions from META
     LOG.debug("Deleting regions from META");
     MetaEditor.deleteRegions(this.server.getCatalogTracker(), regions);

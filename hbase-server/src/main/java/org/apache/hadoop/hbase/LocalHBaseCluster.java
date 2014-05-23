@@ -32,7 +32,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 
@@ -174,10 +173,10 @@ public class LocalHBaseCluster {
     // its HConnection instance rather than share (see HBASE_INSTANCES down in
     // the guts of HConnectionManager.
 
-    // Also, create separate ConsensusProvider instance per Server.
-    // This is special case when we have to have more than 1 ConsensusProvider
+    // Also, create separate CoordinatedStateManager instance per Server.
+    // This is special case when we have to have more than 1 CoordinatedStateManager
     // within 1 process.
-    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(conf);
+    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
 
     JVMClusterUtil.RegionServerThread rst =
       JVMClusterUtil.createRegionServerThread(config, cp,
@@ -207,10 +206,10 @@ public class LocalHBaseCluster {
     // its HConnection instance rather than share (see HBASE_INSTANCES down in
     // the guts of HConnectionManager.
 
-    // Also, create separate ConsensusProvider instance per Server.
-    // This is special case when we have to have more than 1 ConsensusProvider
+    // Also, create separate CoordinatedStateManager instance per Server.
+    // This is special case when we have to have more than 1 CoordinatedStateManager
     // within 1 process.
-    ConsensusProvider cp = ConsensusProviderFactory.getConsensusProvider(conf);
+    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
 
     JVMClusterUtil.MasterThread mt = JVMClusterUtil.createMasterThread(c, cp,
         (Class<? extends HMaster>) conf.getClass(HConstants.MASTER_IMPL, this.masterClass), index);

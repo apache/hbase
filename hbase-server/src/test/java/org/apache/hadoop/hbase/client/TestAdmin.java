@@ -60,12 +60,13 @@ import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtilsForTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
+import org.apache.hadoop.hbase.zookeeper.ZKTableStateClientSideReader;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -255,8 +256,8 @@ public class TestAdmin {
 
     this.admin.disableTable(ht.getName());
     assertTrue("Table must be disabled.", TEST_UTIL.getHBaseCluster()
-        .getMaster().getAssignmentManager().getZKTable().isDisabledTable(
-            ht.getName()));
+        .getMaster().getAssignmentManager().getTableStateManager().isTableState(
+        ht.getName(), ZooKeeperProtos.Table.State.DISABLED));
 
     // Test that table is disabled
     get = new Get(row);
@@ -270,8 +271,8 @@ public class TestAdmin {
     assertTrue(ok);
     this.admin.enableTable(table);
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster()
-        .getMaster().getAssignmentManager().getZKTable().isEnabledTable(
-            ht.getName()));
+        .getMaster().getAssignmentManager().getTableStateManager().isTableState(
+        ht.getName(), ZooKeeperProtos.Table.State.ENABLED));
 
     // Test that table is enabled
     try {
@@ -343,8 +344,8 @@ public class TestAdmin {
     tables = this.admin.listTables();
     assertEquals(numTables + 1, tables.length);
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster()
-        .getMaster().getAssignmentManager().getZKTable().isEnabledTable(
-            TableName.valueOf("testCreateTable")));
+        .getMaster().getAssignmentManager().getTableStateManager().isTableState(
+        TableName.valueOf("testCreateTable"), ZooKeeperProtos.Table.State.ENABLED));
   }
 
   @Test (timeout=300000)
@@ -1125,8 +1126,8 @@ public class TestAdmin {
     ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
     TableName tableName = TableName.valueOf("testMasterAdmin");
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
-    while (!ZKTableReadOnly.isEnabledTable(zkw,
-        TableName.valueOf("testMasterAdmin"))) {
+    while (!ZKTableStateClientSideReader.isEnabledTable(zkw,
+      TableName.valueOf("testMasterAdmin"))) {
       Thread.sleep(10);
     }
     this.admin.disableTable(tableName);
