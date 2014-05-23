@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 
@@ -41,6 +42,7 @@ public class ReversedClientScanner extends ClientScanner {
   // A byte array in which all elements are the max byte, and it is used to
   // construct closest front row
   static byte[] MAX_BYTE_ARRAY = Bytes.createMaxByteArray(9);
+
   /**
    * Create a new ReversibleClientScanner for the specified table Note that the
    * passed {@link Scan}'s start row maybe changed.
@@ -125,8 +127,9 @@ public class ReversedClientScanner extends ClientScanner {
   protected ScannerCallable getScannerCallable(byte[] localStartKey,
       int nbRows, byte[] locateStartRow) {
     scan.setStartRow(localStartKey);
-    ScannerCallable s = new ReversedScannerCallable(getConnection(),
-        getTable(), scan, this.scanMetrics, locateStartRow);
+    ScannerCallable s =
+        new ReversedScannerCallable(getConnection(), getTable(), scan, this.scanMetrics,
+            locateStartRow, rpcControllerFactory.newController());
     s.setCaching(nbRows);
     return s;
   }

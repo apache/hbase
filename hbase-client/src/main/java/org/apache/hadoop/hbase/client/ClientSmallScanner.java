@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -82,7 +83,8 @@ public class ClientSmallScanner extends ClientScanner {
    */
   public ClientSmallScanner(final Configuration conf, final Scan scan,
       final TableName tableName, HConnection connection) throws IOException {
-    this(conf, scan, tableName, connection, new RpcRetryingCallerFactory(conf));
+    this(conf, scan, tableName, connection, RpcRetryingCallerFactory.instantiate(conf),
+        RpcControllerFactory.instantiate(conf));
   }
 
   /**
@@ -94,12 +96,13 @@ public class ClientSmallScanner extends ClientScanner {
    * @param tableName The table that we wish to rangeGet
    * @param connection Connection identifying the cluster
    * @param rpcFactory
+   * @param controllerFactory 
    * @throws IOException
    */
-  public ClientSmallScanner(final Configuration conf, final Scan scan,
-      final TableName tableName, HConnection connection,
-      RpcRetryingCallerFactory rpcFactory) throws IOException {
-    super(conf, scan, tableName, connection, rpcFactory);
+  public ClientSmallScanner(final Configuration conf, final Scan scan, final TableName tableName,
+      HConnection connection, RpcRetryingCallerFactory rpcFactory,
+      RpcControllerFactory controllerFactory) throws IOException {
+    super(conf, scan, tableName, connection, rpcFactory, controllerFactory);
   }
 
   @Override
@@ -151,7 +154,7 @@ public class ClientSmallScanner extends ClientScanner {
           + Bytes.toStringBinary(localStartKey) + "'");
     }
     smallScanCallable = getSmallScanCallable(
-        scan, getConnection(), getTable(), localStartKey, cacheNum);
+        scan, getConnection(), getTable(), localStartKey, cacheNum, rpcControllerFactory);
     if (this.scanMetrics != null && skipRowOfFirstResult == null) {
       this.scanMetrics.countOfRegions.incrementAndGet();
     }
@@ -160,7 +163,7 @@ public class ClientSmallScanner extends ClientScanner {
 
   static RegionServerCallable<Result[]> getSmallScanCallable(
       final Scan sc, HConnection connection, TableName table, byte[] localStartKey,
-      final int cacheNum) throws IOException { 
+      final int cacheNum, final RpcControllerFactory rpcControllerFactory) throws IOException { 
     sc.setStartRow(localStartKey);
     RegionServerCallable<Result[]> callable = new RegionServerCallable<Result[]>(
         connection, table, sc.getStartRow()) {
@@ -168,7 +171,7 @@ public class ClientSmallScanner extends ClientScanner {
         ScanRequest request = RequestConverter.buildScanRequest(getLocation()
           .getRegionInfo().getRegionName(), sc, cacheNum, true);
         ScanResponse response = null;
-        PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
+        PayloadCarryingRpcController controller = rpcControllerFactory.newController();
         try {
           controller.setPriority(getTableName());
           response = getStub().scan(controller, request);

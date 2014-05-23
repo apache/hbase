@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -1429,7 +1430,7 @@ public final class ProtobufUtil {
 // Start helpers for Client
 
   /**
-   * A helper to invoke a Get using client protocol.
+   * A helper to invoke a Get using client protocol. Uses the standard (i.e. not configured) {@link PayloadCarryingRpcController} semantics
    *
    * @param client
    * @param regionName
@@ -1439,10 +1440,25 @@ public final class ProtobufUtil {
    */
   public static Result get(final ClientService.BlockingInterface client,
       final byte[] regionName, final Get get) throws IOException {
+    return get(client, regionName, get, null);
+  }
+  
+  /**
+   * A helper to invoke a Get using client protocol.
+   *
+   * @param client
+   * @param regionName
+   * @param get
+   * @param controller to use when writing the rpc
+   * @return the result of the Get
+   * @throws IOException
+   */
+  public static Result get(final ClientService.BlockingInterface client, final byte[] regionName,
+      final Get get, PayloadCarryingRpcController controller) throws IOException {
     GetRequest request =
       RequestConverter.buildGetRequest(regionName, get);
     try {
-      GetResponse response = client.get(null, request);
+      GetResponse response = client.get(controller, request);
       if (response == null) return null;
       return toResult(response.getResult());
     } catch (ServiceException se) {
@@ -1451,8 +1467,8 @@ public final class ProtobufUtil {
   }
 
   /**
-   * A helper to get a row of the closet one before using client protocol.
-   *
+   * A helper to get a row of the closet one before using client protocol without setting any
+   * special (i.e. configured) {@link PayloadCarryingRpcController}
    * @param client
    * @param regionName
    * @param row
@@ -1461,13 +1477,28 @@ public final class ProtobufUtil {
    * @throws IOException
    */
   public static Result getRowOrBefore(final ClientService.BlockingInterface client,
-      final byte[] regionName, final byte[] row,
-      final byte[] family) throws IOException {
+      final byte[] regionName, final byte[] row, final byte[] family) throws IOException {
+    return getRowOrBefore(client, regionName, row, family, null);
+  }
+  
+  /**
+   * A helper to get a row of the closet one before using client protocol.
+   * @param client
+   * @param regionName
+   * @param row
+   * @param family
+   * @param payloadCarryingRpcController
+   * @return the row or the closestRowBefore if it doesn't exist
+   * @throws IOException
+   */
+  public static Result getRowOrBefore(final ClientService.BlockingInterface client,
+      final byte[] regionName, final byte[] row, final byte[] family,
+      PayloadCarryingRpcController payloadCarryingRpcController) throws IOException {
     GetRequest request =
       RequestConverter.buildGetRowOrBeforeRequest(
         regionName, row, family);
     try {
-      GetResponse response = client.get(null, request);
+      GetResponse response = client.get(payloadCarryingRpcController, request);
       if (!response.hasResult()) return null;
       return toResult(response.getResult());
     } catch (ServiceException se) {
@@ -1488,11 +1519,28 @@ public final class ProtobufUtil {
   public static boolean bulkLoadHFile(final ClientService.BlockingInterface client,
       final List<Pair<byte[], String>> familyPaths,
       final byte[] regionName, boolean assignSeqNum) throws IOException {
+    return bulkLoadHFile(client, familyPaths, regionName, assignSeqNum, null);
+  }
+    
+  /**
+   * A helper to bulk load a list of HFiles using client protocol.
+   *
+   * @param client
+   * @param familyPaths
+   * @param regionName
+   * @param assignSeqNum
+   * @param controller
+   * @return true if all are loaded
+   * @throws IOException
+   */
+  public static boolean bulkLoadHFile(final ClientService.BlockingInterface client,
+      final List<Pair<byte[], String>> familyPaths, final byte[] regionName, boolean assignSeqNum,
+      PayloadCarryingRpcController controller) throws IOException {
     BulkLoadHFileRequest request =
       RequestConverter.buildBulkLoadHFileRequest(familyPaths, regionName, assignSeqNum);
     try {
       BulkLoadHFileResponse response =
-        client.bulkLoadHFile(null, request);
+        client.bulkLoadHFile(controller, request);
       return response.getLoaded();
     } catch (ServiceException se) {
       throw getRemoteException(se);
@@ -1501,12 +1549,18 @@ public final class ProtobufUtil {
 
   public static CoprocessorServiceResponse execService(final ClientService.BlockingInterface client,
       final CoprocessorServiceCall call, final byte[] regionName) throws IOException {
+    return execService(client, call, regionName, null);
+  }
+
+  public static CoprocessorServiceResponse execService(
+      final ClientService.BlockingInterface client, final CoprocessorServiceCall call,
+      final byte[] regionName, PayloadCarryingRpcController controller) throws IOException {
     CoprocessorServiceRequest request = CoprocessorServiceRequest.newBuilder()
         .setCall(call).setRegion(
             RequestConverter.buildRegionSpecifier(REGION_NAME, regionName)).build();
     try {
       CoprocessorServiceResponse response =
-          client.execService(null, request);
+          client.execService(controller, request);
       return response;
     } catch (ServiceException se) {
       throw getRemoteException(se);

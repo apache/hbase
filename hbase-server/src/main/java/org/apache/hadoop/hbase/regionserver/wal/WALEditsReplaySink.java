@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
@@ -68,6 +69,7 @@ public class WALEditsReplaySink {
   private final AtomicLong totalReplayedEdits = new AtomicLong();
   private final boolean skipErrors;
   private final int replayTimeout;
+  private RpcControllerFactory rpcControllerFactory;
 
   /**
    * Create a sink for WAL log entries replay
@@ -86,6 +88,7 @@ public class WALEditsReplaySink {
       HConstants.DEFAULT_HREGION_EDITS_REPLAY_SKIP_ERRORS);
     // a single replay operation time out and default is 60 seconds
     this.replayTimeout = conf.getInt("hbase.regionserver.logreplay.timeout", 60000);
+    this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
   }
 
   /**

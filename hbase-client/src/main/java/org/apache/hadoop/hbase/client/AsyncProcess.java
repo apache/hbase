@@ -46,10 +46,13 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.cloudera.htrace.Trace;
+
+import com.google.common.base.Preconditions;
 
 /**
  * This class  allows a continuous flow of requests. It's written to be compatible with a
@@ -127,6 +130,7 @@ class AsyncProcess<CResult> {
   protected int numTries;
   protected int serverTrackerTimeout;
   protected RpcRetryingCallerFactory rpcCallerFactory;
+  private RpcControllerFactory rpcFactory;
 
 
   /**
@@ -198,7 +202,7 @@ class AsyncProcess<CResult> {
 
   public AsyncProcess(HConnection hc, TableName tableName, ExecutorService pool,
       AsyncProcessCallback<CResult> callback, Configuration conf,
-      RpcRetryingCallerFactory rpcCaller) {
+      RpcRetryingCallerFactory rpcCaller, RpcControllerFactory rpcFactory) {
     if (hc == null){
       throw new IllegalArgumentException("HConnection cannot be null.");
     }
@@ -251,8 +255,9 @@ class AsyncProcess<CResult> {
       serverTrackerTimeout += ConnectionUtils.getPauseTime(this.pause, i);
     }
 
-
     this.rpcCallerFactory = rpcCaller;
+    Preconditions.checkNotNull(rpcFactory);
+    this.rpcFactory = rpcFactory;
   }
 
   /**
@@ -576,7 +581,7 @@ class AsyncProcess<CResult> {
    */
   protected MultiServerCallable<Row> createCallable(final HRegionLocation location,
       final MultiAction<Row> multi) {
-    return new MultiServerCallable<Row>(hConnection, tableName, location, multi);
+    return new MultiServerCallable<Row>(hConnection, tableName, location, this.rpcFactory, multi);
   }
 
   /**

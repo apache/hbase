@@ -55,11 +55,15 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
 
   private RpcRetryingCallerFactory rpcFactory;
 
-  public RegionCoprocessorRpcChannel(HConnection conn, TableName table, byte[] row) {
+  private RpcControllerFactory rpcController;
+
+  public RegionCoprocessorRpcChannel(HConnection conn, TableName table, byte[] row,
+      RpcRetryingCallerFactory rpcFactory, RpcControllerFactory rpcControllerFactory) {
     this.connection = conn;
     this.table = table;
     this.row = row;
-    this.rpcFactory = RpcRetryingCallerFactory.instantiate(conn.getConfiguration());
+    this.rpcFactory = rpcFactory;
+    this.rpcController = rpcControllerFactory;// RpcRetryingCallerFactory.instantiate(conn.getConfiguration());
   }
 
   @Override
@@ -80,11 +84,13 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
             .setServiceName(method.getService().getFullName())
             .setMethodName(method.getName())
             .setRequest(request.toByteString()).build();
+    final PayloadCarryingRpcController controller = rpcController.newController();
+    controller.setPriority(table);
     RegionServerCallable<CoprocessorServiceResponse> callable =
         new RegionServerCallable<CoprocessorServiceResponse>(connection, table, row) {
           public CoprocessorServiceResponse call() throws Exception {
             byte[] regionName = getLocation().getRegionInfo().getRegionName();
-            return ProtobufUtil.execService(getStub(), call, regionName);
+            return ProtobufUtil.execService(getStub(), call, regionName, controller);
           }
         };
     CoprocessorServiceResponse result = rpcFactory.<CoprocessorServiceResponse> newCaller()

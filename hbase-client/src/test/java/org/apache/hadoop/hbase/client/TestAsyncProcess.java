@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Assert;
@@ -99,7 +100,7 @@ public class TestAsyncProcess {
                           AtomicInteger nbThreads) {
       super(hc, DUMMY_TABLE, new ThreadPoolExecutor(1, 20, 60, TimeUnit.SECONDS,
         new SynchronousQueue<Runnable>(), new CountingThreadFactory(nbThreads)),
-          callback, conf, new RpcRetryingCallerFactory(conf));
+          callback, conf, new RpcRetryingCallerFactory(conf), new RpcControllerFactory(conf));
     }
 
     @Override

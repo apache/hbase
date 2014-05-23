@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -1233,9 +1234,9 @@ public class HConnectionManager {
           }
 
           // Query the meta region for the location of the meta region
-          regionInfoRow = ProtobufUtil.getRowOrBefore(service,
-              metaLocation.getRegionInfo().getRegionName(), metaKey,
-              HConstants.CATALOG_FAMILY);
+          regionInfoRow =
+              ProtobufUtil.getRowOrBefore(service, metaLocation.getRegionInfo().getRegionName(),
+                metaKey, HConstants.CATALOG_FAMILY);
 
           if (regionInfoRow == null) {
             throw new TableNotFoundException(tableName);
@@ -2376,7 +2377,7 @@ public class HConnectionManager {
     protected <R> AsyncProcess createAsyncProcess(TableName tableName, ExecutorService pool,
            AsyncProcess.AsyncProcessCallback<R> callback, Configuration conf) {
       return new AsyncProcess<R>(this, tableName, pool, callback, conf,
-          RpcRetryingCallerFactory.instantiate(conf));
+          RpcRetryingCallerFactory.instantiate(conf), RpcControllerFactory.instantiate(conf));
     }
 
 

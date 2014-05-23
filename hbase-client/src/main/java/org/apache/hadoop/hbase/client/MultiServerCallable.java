@@ -30,14 +30,15 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 
 import com.google.protobuf.ServiceException;
 
@@ -50,11 +51,14 @@ import com.google.protobuf.ServiceException;
 class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
   private final MultiAction<R> multiAction;
   private final boolean cellBlock;
+  private RpcControllerFactory rpcFactory;
 
   MultiServerCallable(final HConnection connection, final TableName tableName,
-      final HRegionLocation location, final MultiAction<R> multi) {
+      final HRegionLocation location, final RpcControllerFactory rpcFactory,
+      final MultiAction<R> multi) {
     super(connection, tableName, null);
     this.multiAction = multi;
+    this.rpcFactory = rpcFactory;
     setLocation(location);
     this.cellBlock = isCellBlock();
   }
@@ -101,7 +105,7 @@ class MultiServerCallable<R> extends RegionServerCallable<MultiResponse> {
 
     // Controller optionally carries cell data over the proxy/service boundary and also
     // optionally ferries cell response data back out again.
-    PayloadCarryingRpcController controller = new PayloadCarryingRpcController(cells);
+    PayloadCarryingRpcController controller = rpcFactory.newController(cells);
     controller.setPriority(getTableName());
     ClientProtos.MultiResponse responseProto;
     ClientProtos.MultiRequest requestProto = multiRequestBuilder.build();

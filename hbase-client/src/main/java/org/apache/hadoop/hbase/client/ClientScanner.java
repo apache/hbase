@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
@@ -66,6 +67,7 @@ public class ClientScanner extends AbstractClientScanner {
     protected final int scannerTimeout;
     protected boolean scanMetricsPublished = false;
     protected RpcRetryingCaller<Result []> caller;
+    protected RpcControllerFactory rpcControllerFactory;
 
     /**
      * Create a new ClientScanner for the specified table. An HConnection will be
@@ -104,7 +106,8 @@ public class ClientScanner extends AbstractClientScanner {
      */
   public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
       HConnection connection) throws IOException {
-    this(conf, scan, tableName, connection, new RpcRetryingCallerFactory(conf));
+    this(conf, scan, tableName, connection, RpcRetryingCallerFactory.instantiate(conf),
+        RpcControllerFactory.instantiate(conf));
   }
 
   /**
@@ -113,7 +116,20 @@ public class ClientScanner extends AbstractClientScanner {
   @Deprecated
   public ClientScanner(final Configuration conf, final Scan scan, final byte [] tableName,
       HConnection connection) throws IOException {
-    this(conf, scan, TableName.valueOf(tableName), connection, new RpcRetryingCallerFactory(conf));
+    this(conf, scan, TableName.valueOf(tableName), connection, new RpcRetryingCallerFactory(conf),
+        RpcControllerFactory.instantiate(conf));
+  }
+
+  /**
+   * @deprecated Use
+   *             {@link #ClientScanner(Configuration, Scan, TableName, HConnection,
+   *             RpcRetryingCallerFactory, RpcControllerFactory)}
+   *             instead
+   */
+  @Deprecated
+  public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
+      HConnection connection, RpcRetryingCallerFactory rpcFactory) throws IOException {
+    this(conf, scan, tableName, connection, rpcFactory, RpcControllerFactory.instantiate(conf));
   }
 
   /**
@@ -126,7 +142,8 @@ public class ClientScanner extends AbstractClientScanner {
    * @throws IOException
    */
   public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
-      HConnection connection, RpcRetryingCallerFactory rpcFactory) throws IOException {
+      HConnection connection, RpcRetryingCallerFactory rpcFactory,
+      RpcControllerFactory controllerFactory) throws IOException {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Scan table=" + tableName
             + ", startRow=" + Bytes.toStringBinary(scan.getStartRow()));
@@ -159,7 +176,8 @@ public class ClientScanner extends AbstractClientScanner {
             HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
       }
 
-    this.caller = rpcFactory.<Result[]> newCaller();
+      this.caller = rpcFactory.<Result[]> newCaller();
+      this.rpcControllerFactory = controllerFactory;
 
       initializeScannerInConstruction();
     }
@@ -278,7 +296,7 @@ public class ClientScanner extends AbstractClientScanner {
         int nbRows) {
       scan.setStartRow(localStartKey);
       ScannerCallable s = new ScannerCallable(getConnection(),
-        getTable(), scan, this.scanMetrics);
+        getTable(), scan, this.scanMetrics, rpcControllerFactory.newController());
       s.setCaching(nbRows);
       return s;
     }
