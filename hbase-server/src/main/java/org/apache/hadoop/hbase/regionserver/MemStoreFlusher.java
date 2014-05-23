@@ -114,7 +114,7 @@ class MemStoreFlusher implements FlushRequester {
     this.globalMemStoreLimitLowMark = lower;
     this.blockingWaitTime = conf.getInt("hbase.hstore.blockingWaitTime",
       90000);
-    int handlerCount = conf.getInt("hbase.hstore.flusher.count", 1);
+    int handlerCount = conf.getInt("hbase.hstore.flusher.count", 2);
     this.flushHandlers = new FlushHandler[handlerCount];
     LOG.info("globalMemStoreLimit=" +
       StringUtils.humanReadableInt(this.globalMemStoreLimit) +
