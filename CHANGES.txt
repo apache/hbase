@@ -1,4 +1,26 @@
 HBase Change Log
+Release 0.94.20 - 05/22/2014
+Sub-task
+
+    [HBASE-10936] - Add zeroByte encoding test
+
+Bug
+
+    [HBASE-10958] - [dataloss] Bulk loading with seqids can prevent some log entries from being replayed
+    [HBASE-11110] - Ability to load FilterList class is dependent on context classloader
+    [HBASE-11143] - Improve replication metrics
+    [HBASE-11188] - "Inconsistent configuration" for SchemaMetrics is always shown
+    [HBASE-11212] - Fix increment index in KeyValueSortReducer
+    [HBASE-11225] - Backport fix for HBASE-10417 'index is not incremented in PutSortReducer#reduce()'
+
+Improvement
+
+    [HBASE-11008] - Align bulk load, flush, and compact to require Action.CREATE
+    [HBASE-11119] - Update ExportSnapShot to optionally not use a tmp file on external file system
+    [HBASE-11128] - Add -target option to ExportSnapshot to export with a different name
+    [HBASE-11134] - Add a -list-snapshots option to SnapshotInfo
+
+
 Release 0.94.19 - 04/21/2014
 Bug
 
