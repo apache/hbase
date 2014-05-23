@@ -78,19 +78,28 @@ public class TestHBaseSaslRpcClient {
 
   @Test
   public void testSaslQOPNotEmpty() throws Exception {
+    Token<? extends TokenIdentifier> token = createTokenMockWithCredentials(DEFAULT_USER_NAME,
+        DEFAULT_USER_PASSWORD);
     // default QOP is authentication
-    new HBaseSaslRpcClient(AuthMethod.KERBEROS, createTokenMock(), "principal/host@DOMAIN.COM", false);
-    assertTrue(SaslUtil.SASL_PROPS.get(Sasl.QOP).equals(SaslUtil.QualityOfProtection.AUTHENTICATION.getSaslQop()));
+    new HBaseSaslRpcClient(AuthMethod.DIGEST, token, "principal/host@DOMAIN.COM", false);
+    assertTrue(SaslUtil.SASL_PROPS.get(Sasl.QOP).equals(SaslUtil.QualityOfProtection.
+        AUTHENTICATION.getSaslQop()));
 
     // check with specific QOPs
-    new HBaseSaslRpcClient(AuthMethod.KERBEROS, createTokenMock(), "principal/host@DOMAIN.COM", false, "authentication");
-    assertTrue(SaslUtil.SASL_PROPS.get(Sasl.QOP).equals(SaslUtil.QualityOfProtection.AUTHENTICATION.getSaslQop()));
+    new HBaseSaslRpcClient(AuthMethod.DIGEST, token, "principal/host@DOMAIN.COM", false,
+        "authentication");
+    assertTrue(SaslUtil.SASL_PROPS.get(Sasl.QOP).equals(SaslUtil.QualityOfProtection.
+        AUTHENTICATION.getSaslQop()));
 
-    new HBaseSaslRpcClient(AuthMethod.KERBEROS, createTokenMock(), "principal/host@DOMAIN.COM", false, "privacy");
-    assertTrue(SaslUtil.SASL_PROPS.get(Sasl.QOP).equals(SaslUtil.QualityOfProtection.PRIVACY.getSaslQop()));
+    new HBaseSaslRpcClient(AuthMethod.DIGEST, token, "principal/host@DOMAIN.COM", false,
+        "privacy");
+    assertTrue(SaslUtil.SASL_PROPS.get(Sasl.QOP).equals(SaslUtil.QualityOfProtection.
+        PRIVACY.getSaslQop()));
 
-    new HBaseSaslRpcClient(AuthMethod.KERBEROS, createTokenMock(), "principal/host@DOMAIN.COM", false, "integrity");
-    assertTrue(SaslUtil.SASL_PROPS.get(Sasl.QOP).equals(SaslUtil.QualityOfProtection.INTEGRITY.getSaslQop()));
+    new HBaseSaslRpcClient(AuthMethod.DIGEST, token, "principal/host@DOMAIN.COM", false,
+        "integrity");
+    assertTrue(SaslUtil.SASL_PROPS.get(Sasl.QOP).equals(SaslUtil.QualityOfProtection.
+        INTEGRITY.getSaslQop()));
   }
 
   @Test
