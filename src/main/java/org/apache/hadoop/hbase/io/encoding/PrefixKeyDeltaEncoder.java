@@ -154,7 +154,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
     }
     int pos = block.position();
     block.reset();
-    return ByteBuffer.wrap(block.array(), block.arrayOffset() + pos, keyLength).slice();
+    return ByteBuffer.wrap(block.array(), pos, keyLength).slice();
   }
 
   @Override
