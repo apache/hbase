@@ -119,8 +119,13 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
       if (userNames != null && userNames.length > 0) {
         int mod = ((int) keyToRead % userNames.length);
         User user;
+        UserGroupInformation realUserUgi;
         if(!users.containsKey(userNames[mod])) {
-          UserGroupInformation realUserUgi = UserGroupInformation.createRemoteUser(userNames[mod]);
+          if(LoadTestTool.isSecure(conf)) {
+            realUserUgi = LoadTestTool.loginAndReturnUGI(conf, userNames[mod]);
+          } else {
+            realUserUgi = UserGroupInformation.createRemoteUser(userNames[mod]);
+          }
           user = User.create(realUserUgi);
           users.put(userNames[mod], user);
         } else {

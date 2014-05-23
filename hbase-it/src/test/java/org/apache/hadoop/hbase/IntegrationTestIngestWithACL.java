@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.security.access.AccessController;
@@ -45,8 +46,10 @@ public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
   private static final int SPECIAL_PERM_CELL_INSERTION_FACTOR = 100;
   public static final String OPT_SUPERUSER = "superuser";
   public static final String OPT_USERS = "userlist";
+  public static final String OPT_AUTHN = "authinfo";
   private String superUser = "owner";
   private String userNames = "user1,user2,user3,user4"; 
+  private String authnFileName;
   @Override
   public void setUpCluster() throws Exception {
     util = getTestingUtil(null);
@@ -66,6 +69,10 @@ public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
     tmp.add(HYPHEN + LoadTestTool.OPT_GENERATOR);
     StringBuilder sb = new StringBuilder(LoadTestDataGeneratorWithACL.class.getName());
     sb.append(COLON);
+    if (LoadTestTool.isSecure(getConf())) {
+      sb.append(authnFileName);
+      sb.append(COLON);
+    }
     sb.append(superUser);
     sb.append(COLON);
     sb.append(userNames);
@@ -80,7 +87,15 @@ public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
     super.addOptWithArg(OPT_SUPERUSER,
         "Super user name used to add the ACL permissions");
     super.addOptWithArg(OPT_USERS,
-        "List of users to be added with the ACLs.  Should be comma seperated.");
+      "List of users to be added with the ACLs.  Should be comma seperated.");
+    super
+        .addOptWithArg(
+          OPT_AUTHN,
+          "The name of the properties file that contains kerberos key tab file and principal definitions. " +
+          "The principal key in the file should be of the form hbase.<username>.kerberos.principal." +
+          " The keytab key in the file should be of the form hbase.<username>.keytab.file. Example:  " +
+          "hbase.user1.kerberos.principal=user1/fully.qualified.domain.name@YOUR-REALM.COM, " +
+          "hbase.user1.keytab.file=<filelocation>.");
   }
 
   @Override
@@ -91,6 +106,21 @@ public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
     }
     if (cmd.hasOption(OPT_USERS)) {
       userNames = cmd.getOptionValue(OPT_USERS);
+    }
+    if (LoadTestTool.isSecure(getConf())) {
+      boolean authFileNotFound = false;
+      if (cmd.hasOption(OPT_AUTHN)) {
+        authnFileName = cmd.getOptionValue(OPT_AUTHN);
+        if (StringUtils.isEmpty(authnFileName)) {
+          authFileNotFound = true;
+        }
+      } else {
+        authFileNotFound = true;
+      }
+      if (authFileNotFound) {
+        super.printUsage();
+        System.exit(EXIT_FAILURE);
+      }
     }
   }
 
