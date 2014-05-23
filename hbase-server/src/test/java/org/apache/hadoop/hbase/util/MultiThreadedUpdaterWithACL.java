@@ -133,14 +133,19 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
       if (userNames != null && userNames.length > 0) {
         int mod = ((int) rowKeyBase % userNames.length);
         User user;
-        if(!users.containsKey(userNames[mod])) {
-          UserGroupInformation realUserUgi = UserGroupInformation.createRemoteUser(userNames[mod]);
-          user = User.create(realUserUgi);
-          users.put(userNames[mod], user);
-        } else {
-          user = users.get(userNames[mod]);
-        }
+        UserGroupInformation realUserUgi;
         try {
+          if (!users.containsKey(userNames[mod])) {
+            if (LoadTestTool.isSecure(conf)) {
+              realUserUgi = LoadTestTool.loginAndReturnUGI(conf, userNames[mod]);
+            } else {
+              realUserUgi = UserGroupInformation.createRemoteUser(userNames[mod]);
+            }
+            user = User.create(realUserUgi);
+            users.put(userNames[mod], user);
+          } else {
+            user = users.get(userNames[mod]);
+          }
           Result result = (Result) user.runAs(action);
           return result;
         } catch (Exception ie) {

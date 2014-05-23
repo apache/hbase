@@ -19,10 +19,12 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.lang.reflect.Constructor;
+import java.net.InetAddress;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -31,6 +33,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -51,6 +54,8 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGeneratorWithACL;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
@@ -185,6 +190,8 @@ public class LoadTestTool extends AbstractHBaseTool {
   private String superUser;
 
   private String userNames = "user1, user2, user3, user4";
+  //This file is used to read authentication information in secure clusters.
+  private String authnFileName;
 
   // TODO: refactor LoadTestToolImpl somewhere to make the usage from tests less bad,
   //       console tool itself should only be used from console.
@@ -473,14 +480,30 @@ public class LoadTestTool extends AbstractHBaseTool {
     if (cmd.hasOption(OPT_GENERATOR)) {
       String[] clazzAndArgs = cmd.getOptionValue(OPT_GENERATOR).split(COLON);
       dataGen = getLoadGeneratorInstance(clazzAndArgs[0]);
-      String args[];
+      String[] args;
       if (dataGen instanceof LoadTestDataGeneratorWithACL) {
         LOG.info("ACL is on");
-        superUser = clazzAndArgs[1];
-        userNames = clazzAndArgs[2];
-        args = Arrays.copyOfRange(clazzAndArgs, 1,
-            clazzAndArgs.length);
-        userOwner = User.createUserForTesting(conf, superUser, new String[0]);
+        if (isSecure(conf)) {
+          LOG.info("Security is on.");
+          authnFileName = clazzAndArgs[1];
+          superUser = clazzAndArgs[2];
+          userNames = clazzAndArgs[3];
+          args = Arrays.copyOfRange(clazzAndArgs, 2, clazzAndArgs.length);
+          Properties authConfig = new Properties();
+          authConfig.load(this.getClass().getClassLoader().getResourceAsStream(authnFileName));
+          try {
+            addAuthInfoToConf(authConfig, conf, superUser, userNames);
+          } catch (IOException exp) {
+            LOG.error(exp);
+            return EXIT_FAILURE;
+          }
+          userOwner = User.create(loginAndReturnUGI(conf, superUser));
+        } else {
+          superUser = clazzAndArgs[1];
+          userNames = clazzAndArgs[2];
+          args = Arrays.copyOfRange(clazzAndArgs, 1, clazzAndArgs.length);
+          userOwner = User.createUserForTesting(conf, superUser, new String[0]);
+        }
       } else {
         args = clazzAndArgs.length == 1 ? new String[0] : Arrays.copyOfRange(clazzAndArgs, 1,
             clazzAndArgs.length);
@@ -492,9 +515,7 @@ public class LoadTestTool extends AbstractHBaseTool {
           minColsPerKey, maxColsPerKey, COLUMN_FAMILY);
     }
 
-    if(userOwner != null) {
-      conf.set("hadoop.security.authorization", "false");
-      conf.set("hadoop.security.authentication", "simple");
+    if (userOwner != null) {
       LOG.info("Granting permission for the user " + userOwner.getShortName());
       HTable table = new HTable(conf, tableName);
       AccessControlProtos.Permission.Action[] actions = {
@@ -737,5 +758,42 @@ public class LoadTestTool extends AbstractHBaseTool {
         workerThreadError(ex);
       }
     }
+  }
+
+  private void addAuthInfoToConf(Properties authConfig, Configuration conf, String owner,
+      String userList) throws IOException {
+    List<String> users = Arrays.asList(userList.split(","));
+    users.add(owner);
+    for (String user : users) {
+      String keyTabFileConfKey = "hbase." + user + ".keytab.file";
+      String principalConfKey = "hbase." + user + ".kerberos.principal";
+      if (!authConfig.containsKey(keyTabFileConfKey) || !authConfig.containsKey(principalConfKey)) {
+        throw new IOException("Authentication configs missing for user : " + user);
+      }
+    }
+    for (String key : authConfig.stringPropertyNames()) {
+      conf.set(key, authConfig.getProperty(key));
+    }
+    LOG.debug("Added authentication properties to config successfully.");
+  }
+
+  public static UserGroupInformation loginAndReturnUGI(Configuration conf, String username)
+      throws IOException {
+    String hostname = InetAddress.getLocalHost().getHostName();
+    String keyTabFileConfKey = "hbase." + username + ".keytab.file";
+    String keyTabFileLocation = conf.get(keyTabFileConfKey);
+    String principalConfKey = "hbase." + username + ".kerberos.principal";
+    String principal = SecurityUtil.getServerPrincipal(conf.get(principalConfKey), hostname);
+    if (keyTabFileLocation == null || principal == null) {
+      LOG.warn("Principal or key tab file null for : " + principalConfKey + ", "
+          + keyTabFileConfKey);
+    }
+    UserGroupInformation ugi =
+        UserGroupInformation.loginUserFromKeytabAndReturnUGI(principal, keyTabFileLocation);
+    return ugi;
+  }
+
+  public static boolean isSecure(Configuration conf) {
+    return ("kerberos".equalsIgnoreCase(conf.get("hbase.security.authentication")));
   }
 }
