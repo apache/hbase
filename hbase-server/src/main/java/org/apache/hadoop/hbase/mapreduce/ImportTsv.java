@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static java.lang.String.format;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -425,7 +424,7 @@ public class ImportTsv extends Configured implements Tool {
     String columns[] = conf.getStrings(COLUMNS_CONF_KEY);
     if(StringUtils.isNotEmpty(conf.get(CREDENTIALS_LOCATION))) {
       String fileLoc = conf.get(CREDENTIALS_LOCATION);
-      Credentials cred = Credentials.readTokenStorageFile(new File(fileLoc), conf);
+      Credentials cred = Credentials.readTokenStorageFile(new Path(fileLoc), conf);
       job.getCredentials().addAll(cred);
     }
 

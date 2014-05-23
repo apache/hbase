@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
@@ -368,7 +369,7 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
     TableMapReduceUtil.addDependencyJars(job);
     addTestDependencyJars(job.getConfiguration());
     TableMapReduceUtil.initCredentials(job);
-    JobClient jc = new JobClient(job.getConfiguration());
+    JobClient jc = new JobClient(new JobConf(job.getConfiguration()));
     job.getCredentials().addToken(new Text("my_mr_token"),
       jc.getDelegationToken(new Text("renewer")));
 
