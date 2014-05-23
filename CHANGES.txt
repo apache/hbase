@@ -12,6 +12,7 @@ Bug
     [HBASE-11188] - "Inconsistent configuration" for SchemaMetrics is always shown
     [HBASE-11212] - Fix increment index in KeyValueSortReducer
     [HBASE-11225] - Backport fix for HBASE-10417 'index is not incremented in PutSortReducer#reduce()'
+    [HBASE-11234] - FastDiffDeltaEncoder#getFirstKeyInBlock returns wrong result
 
 Improvement
 
