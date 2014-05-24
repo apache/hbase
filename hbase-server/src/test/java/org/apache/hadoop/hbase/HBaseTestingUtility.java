@@ -92,6 +92,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
@@ -1461,6 +1462,44 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(TableName.valueOf(tableName));
     return new HTable(getConfiguration(), tableName);
+  }
+
+  /**
+   * Modify a table, synchronous. Waiting logic similar to that of {@code admin.rb#alter_status}.
+   */
+  public static void modifyTableSync(HBaseAdmin admin, HTableDescriptor desc)
+      throws IOException, InterruptedException {
+    admin.modifyTable(desc.getTableName(), desc);
+    Pair<Integer, Integer> status = new Pair<Integer, Integer>() {{
+      setFirst(0);
+      setSecond(0);
+    }};
+    for (int i = 0; status.getFirst() != 0 && i < 500; i++) { // wait up to 500 seconds
+      status = admin.getAlterStatus(desc.getTableName());
+      if (status.getSecond() != 0) {
+        LOG.debug(status.getSecond() - status.getFirst() + "/" + status.getSecond()
+          + " regions updated.");
+        Thread.sleep(1 * 1000l);
+      } else {
+        LOG.debug("All regions updated.");
+        break;
+      }
+    }
+    if (status.getSecond() != 0) {
+      throw new IOException("Failed to update replica count after 500 seconds.");
+    }
+  }
+
+  /**
+   * Set the number of Region replicas.
+   */
+  public static void setReplicas(HBaseAdmin admin, TableName table, int replicaCount)
+      throws IOException, InterruptedException {
+    admin.disableTable(table);
+    HTableDescriptor desc = admin.getTableDescriptor(table);
+    desc.setRegionReplication(replicaCount);
+    modifyTableSync(admin, desc);
+    admin.enableTable(table);
   }
 
   /**

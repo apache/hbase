@@ -234,6 +234,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
     protected AtomicLong timedOutReads = new AtomicLong();
     protected long runTime;
     protected Thread timeoutThread;
+    protected AtomicLong staleReads = new AtomicLong();
 
     public TimeBoundedMultiThreadedReader(LoadTestDataGenerator dataGen, Configuration conf,
         TableName tableName, double verifyPercent) throws IOException {
@@ -263,6 +264,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
     @Override
     protected String progressInfo() {
       StringBuilder builder = new StringBuilder(super.progressInfo());
+      appendToStatus(builder, "stale_reads", staleReads.get());
       appendToStatus(builder, "get_timeouts", timedOutReads.get());
       return builder.toString();
     }
@@ -327,6 +329,9 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
           Result[] results, HTableInterface table, boolean isNullExpected)
           throws IOException {
         super.verifyResultsAndUpdateMetrics(verify, gets, elapsedNano, results, table, isNullExpected);
+        for (Result r : results) {
+          if (r.isStale()) staleReads.incrementAndGet();
+        }
         // we actually do not timeout and cancel the reads after timeout. We just wait for the RPC
         // to complete, but if the request took longer than timeout, we treat that as error.
         if (elapsedNano > timeoutNano) {

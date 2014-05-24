@@ -152,7 +152,7 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
       if (result) {
         ScanMetrics scanMetrics = delegate.getScanner().getScanMetrics();
         if (scanMetrics != null && context != null) {
-          TableRecordReaderImpl.updateCounters(scanMetrics, 0, getCounter, context);
+          TableRecordReaderImpl.updateCounters(scanMetrics, 0, getCounter, context, 0);
         }
       }
       return result;

@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.chaos.policies.Policy;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.ToolRunner;
@@ -222,42 +221,6 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
     return null;
   }
 
-  /**
-   * Modify a table, synchronous. Waiting logic similar to that of {@code admin.rb#alter_status}.
-   */
-  private static void modifyTableSync(HBaseAdmin admin, HTableDescriptor desc) throws Exception {
-    admin.modifyTable(desc.getTableName(), desc);
-    Pair<Integer, Integer> status = new Pair<Integer, Integer>() {{
-      setFirst(0);
-      setSecond(0);
-    }};
-    for (int i = 0; status.getFirst() != 0 && i < 500; i++) { // wait up to 500 seconds
-      status = admin.getAlterStatus(desc.getTableName());
-      if (status.getSecond() != 0) {
-        LOG.debug(status.getSecond() - status.getFirst() + "/" + status.getSecond()
-          + " regions updated.");
-        Thread.sleep(1 * 1000l);
-      } else {
-        LOG.debug("All regions updated.");
-      }
-    }
-    if (status.getSecond() != 0) {
-      throw new Exception("Failed to update replica count after 500 seconds.");
-    }
-  }
-
-  /**
-   * Set the number of Region replicas.
-   */
-  private static void setReplicas(HBaseAdmin admin, TableName table, int replicaCount)
-      throws Exception {
-    admin.disableTable(table);
-    HTableDescriptor desc = admin.getTableDescriptor(table);
-    desc.setRegionReplication(replicaCount);
-    modifyTableSync(admin, desc);
-    admin.enableTable(table);
-  }
-
   public void test() throws Exception {
     int maxIters = 3;
     String mr = nomapred ? "--nomapred" : "";
@@ -294,7 +257,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
     // disable monkey, enable region replicas, enable monkey
     cleanUpMonkey("Altering table.");
     LOG.debug("Altering " + tableName + " replica count to " + replicaCount);
-    setReplicas(util.getHBaseAdmin(), tableName, replicaCount);
+    util.setReplicas(util.getHBaseAdmin(), tableName, replicaCount);
     setUpMonkey();
     startMonkey();
 

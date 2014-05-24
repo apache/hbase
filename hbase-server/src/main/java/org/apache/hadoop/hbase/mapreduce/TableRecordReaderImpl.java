@@ -65,6 +65,7 @@ public class TableRecordReaderImpl {
   private TaskAttemptContext context = null;
   private Method getCounter = null;
   private long numRestarts = 0;
+  private long numStale = 0;
   private long timestamp;
   private int rowcount;
   private boolean logScannerActivity = false;
@@ -203,6 +204,7 @@ public class TableRecordReaderImpl {
     try {
       try {
         value = this.scanner.next();
+        if (value != null && value.isStale()) numStale++;
         if (logScannerActivity) {
           rowcount ++;
           if (rowcount >= logPerRowCount) {
@@ -230,6 +232,7 @@ public class TableRecordReaderImpl {
           scanner.next();    // skip presumed already mapped row
         }
         value = scanner.next();
+        if (value != null && value.isStale()) numStale++;
         numRestarts++;
       }
       if (value != null && value.size() > 0) {
@@ -270,11 +273,11 @@ public class TableRecordReaderImpl {
 
     ScanMetrics scanMetrics = ProtobufUtil.toScanMetrics(serializedMetrics);
 
-    updateCounters(scanMetrics, numRestarts, getCounter, context);
+    updateCounters(scanMetrics, numRestarts, getCounter, context, numStale);
   }
 
   protected static void updateCounters(ScanMetrics scanMetrics, long numScannerRestarts,
-      Method getCounter, TaskAttemptContext context) {
+      Method getCounter, TaskAttemptContext context, long numStale) {
     // we can get access to counters only if hbase uses new mapreduce APIs
     if (getCounter == null) {
       return;
@@ -289,6 +292,8 @@ public class TableRecordReaderImpl {
       }
       ((Counter) getCounter.invoke(context, HBASE_COUNTER_GROUP_NAME,
           "NUM_SCANNER_RESTARTS")).increment(numScannerRestarts);
+      ((Counter) getCounter.invoke(context, HBASE_COUNTER_GROUP_NAME,
+          "NUM_SCAN_RESULTS_STALE")).increment(numStale);
     } catch (Exception e) {
       LOG.debug("can't update counter." + StringUtils.stringifyException(e));
     }
