@@ -156,7 +156,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     @Override
     public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
         final Scan scan, final RegionScanner s) throws IOException {
-      if (countOfOpen.incrementAndGet() % 4 == 0) { //slowdown openScanner randomly
+      if (countOfOpen.incrementAndGet() == 2) { //slowdown openScanner randomly
         slowdownCode(e);
       }
       return s;
@@ -168,7 +168,8 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
         final int limit, final boolean hasMore) throws IOException {
       //this will slow down a certain next operation if the conditions are met. The slowness
       //will allow the call to go to a replica
-      if (countOfNext.incrementAndGet() % 4 == 0) {
+      countOfNext.incrementAndGet();
+      if (countOfNext.get() == 0 || countOfNext.get() == 4) {
         slowdownCode(e);
       }
       return true;
@@ -654,6 +655,11 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     scan.setMaxVersions(1);
     scan.setCacheBlocks(false);
     scan.setBatch(1000);
+
+    int replicaCount = conf.getInt(NUM_REPLICA_COUNT_KEY, NUM_REPLICA_COUNT_DEFAULT);
+    if (replicaCount != NUM_REPLICA_COUNT_DEFAULT) {
+      scan.setConsistency(Consistency.TIMELINE);
+    }
 
     TableMapReduceUtil.initTableMapperJob(
         Bytes.toBytes(getTablename()),
