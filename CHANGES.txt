@@ -1,5 +1,5 @@
 HBase Change Log
-Release 0.94.20 - 05/22/2014
+Release 0.94.20 - 05/23/2014
 Sub-task
 
     [HBASE-10936] - Add zeroByte encoding test
@@ -12,6 +12,7 @@ Bug
     [HBASE-11188] - "Inconsistent configuration" for SchemaMetrics is always shown
     [HBASE-11212] - Fix increment index in KeyValueSortReducer
     [HBASE-11225] - Backport fix for HBASE-10417 'index is not incremented in PutSortReducer#reduce()'
+    [HBASE-11247] - [0.94] update maven-site-plugin to 3.3
 
 Improvement
 
