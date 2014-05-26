@@ -517,16 +517,35 @@ public class LoadTestTool extends AbstractHBaseTool {
     if (userOwner != null) {
       LOG.info("Granting permission for the user " + userOwner.getShortName());
       AccessControlProtos.Permission.Action[] actions = {
-          AccessControlProtos.Permission.Action.ADMIN,
-          AccessControlProtos.Permission.Action.CREATE, AccessControlProtos.Permission.Action.READ,
-          AccessControlProtos.Permission.Action.WRITE };
+        AccessControlProtos.Permission.Action.ADMIN, AccessControlProtos.Permission.Action.CREATE,
+        AccessControlProtos.Permission.Action.READ, AccessControlProtos.Permission.Action.WRITE };
 
       try {
-        AccessControlClient.grant(conf, tableName, userOwner.getShortName(), COLUMN_FAMILY,
-            null, actions);
+        AccessControlClient.grant(conf, tableName, userOwner.getShortName(), null, null, actions);
       } catch (Throwable e) {
         LOG.fatal("Error in granting permission for the user " + userOwner.getShortName(), e);
         return EXIT_FAILURE;
+      }
+    }
+
+    if (userNames != null) {
+      // This will be comma separated list of expressions.
+      String users[] = userNames.split(",");
+      User user = null;
+      for (String userStr : users) {
+        if (isSecure(conf)) {
+          user = User.create(loginAndReturnUGI(conf, userStr));
+        } else {
+          user = User.createUserForTesting(conf, userStr, new String[0]);
+        }
+        LOG.info("Granting permission for the user " + user.getShortName());
+        AccessControlProtos.Permission.Action[] actions = { AccessControlProtos.Permission.Action.READ };
+        try {
+          AccessControlClient.grant(conf, tableName, user.getShortName(), null, null, actions);
+        } catch (Throwable e) {
+          LOG.fatal("Error in granting permission for the user " + user.getShortName(), e);
+          return EXIT_FAILURE;
+        }
       }
     }
 
