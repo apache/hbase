@@ -123,10 +123,10 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
     util = getTestingUtil(getConf());
     util.initializeCluster(3);
     this.setConf(util.getConfiguration());
+    getConf().setLong(NUM_TO_WRITE_KEY, NUM_TO_WRITE_DEFAULT / 100);
+    getConf().setInt(NUM_MAP_TASKS_KEY, NUM_MAP_TASKS_DEFAULT / 100);
+    getConf().setInt(NUM_REDUCE_TASKS_KEY, NUM_REDUCE_TASKS_DEFAULT / 10);
     if (!util.isDistributedCluster()) {
-      getConf().setLong(NUM_TO_WRITE_KEY, NUM_TO_WRITE_DEFAULT / 100);
-      getConf().setInt(NUM_MAP_TASKS_KEY, NUM_MAP_TASKS_DEFAULT / 100);
-      getConf().setInt(NUM_REDUCE_TASKS_KEY, NUM_REDUCE_TASKS_DEFAULT / 10);
       util.startMiniMapReduceCluster();
     }
   }

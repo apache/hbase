@@ -99,8 +99,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
       numRowsLoadWithExp4;
   private long numRowsReadWithExp1, numRowsReadWithExp2, numRowsReadWithExp3, numRowsReadWithExp4;
 
-  private static User ADMIN;
-  private static User NORMAL_USER;
+  private static User USER1, USER2;
 
   private enum Counters {
     ROWS_VIS_EXP_1, ROWS_VIS_EXP_2, ROWS_VIS_EXP_3, ROWS_VIS_EXP_4;
@@ -113,22 +112,20 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
     conf.set("hbase.coprocessor.master.classes", VisibilityController.class.getName());
     conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());
-    String adminName = User.getCurrent().getName();
-    conf.set("hbase.superuser", adminName);
+    conf.set("hbase.superuser", User.getCurrent().getName());
     super.setUpCluster();
-    ADMIN = User.createUserForTesting(conf, adminName, new String[] { "supergroup" });
-    NORMAL_USER = User.createUserForTesting(conf, "user1", new String[] {});
+    USER1 = User.createUserForTesting(conf, "user1", new String[] {});
+    USER2 = User.createUserForTesting(conf, "user2", new String[] {});
     addLabelsAndAuths();
   }
 
   private void addLabelsAndAuths() throws Exception {
     try {
       VisibilityClient.addLabels(util.getConfiguration(), LABELS);
-      VisibilityClient.setAuths(util.getConfiguration(), LABELS, User.getCurrent().getName());
       VisibilityClient.setAuths(util.getConfiguration(), new String[] { CONFIDENTIAL, TOPSECRET,
-          SECRET, PRIVATE }, ADMIN.getName());
+          SECRET, PRIVATE }, USER1.getName());
       VisibilityClient.setAuths(util.getConfiguration(), new String[] { PUBLIC },
-          NORMAL_USER.getName());
+          USER2.getName());
     } catch (Throwable t) {
       throw new IOException(t);
     }
@@ -254,7 +251,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
         return doVerify(conf, htd, CONFIDENTIAL, TOPSECRET, SECRET, PRIVATE);
       }
     };
-    Job job = ADMIN.runAs(scanAction);
+    Job job = USER1.runAs(scanAction);
     this.numRowsReadWithExp1 = job.getCounters().findCounter(Counters.ROWS_VIS_EXP_1).getValue();
     this.numRowsReadWithExp2 = job.getCounters().findCounter(Counters.ROWS_VIS_EXP_2).getValue();
     this.numRowsReadWithExp3 = job.getCounters().findCounter(Counters.ROWS_VIS_EXP_3).getValue();
@@ -264,7 +261,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     assertEquals(0, this.numRowsReadWithExp3);
     assertEquals(0, this.numRowsReadWithExp4);
 
-    // PUBLIC label auth is not provided for ADMIN user.
+    // PUBLIC label auth is not provided for user1 user.
     System.out.println(String.format("Verifying for auths %s, %s", PRIVATE, PUBLIC));
     scanAction = new PrivilegedExceptionAction<Job>() {
       @Override
@@ -272,7 +269,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
         return doVerify(conf, htd, PRIVATE, PUBLIC);
       }
     };
-    job = ADMIN.runAs(scanAction);
+    job = USER1.runAs(scanAction);
     this.numRowsReadWithExp1 = job.getCounters().findCounter(Counters.ROWS_VIS_EXP_1).getValue();
     this.numRowsReadWithExp2 = job.getCounters().findCounter(Counters.ROWS_VIS_EXP_2).getValue();
     this.numRowsReadWithExp3 = job.getCounters().findCounter(Counters.ROWS_VIS_EXP_3).getValue();
@@ -283,14 +280,14 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     assertEquals(this.numRowsLoadWithExp4, this.numRowsReadWithExp4);
 
     // Normal user only having PUBLIC label auth and can view only those cells.
-    System.out.println(String.format("Verifying for auths %s, %s", SECRET, PUBLIC));
+    System.out.println(String.format("Verifying for auths %s, %s", PRIVATE, PUBLIC));
     scanAction = new PrivilegedExceptionAction<Job>() {
       @Override
       public Job run() throws Exception {
         return doVerify(conf, htd, PRIVATE, PUBLIC);
       }
     };
-    job = NORMAL_USER.runAs(scanAction);
+    job = USER2.runAs(scanAction);
     this.numRowsReadWithExp1 = job.getCounters().findCounter(Counters.ROWS_VIS_EXP_1).getValue();
     this.numRowsReadWithExp2 = job.getCounters().findCounter(Counters.ROWS_VIS_EXP_2).getValue();
     this.numRowsReadWithExp3 = job.getCounters().findCounter(Counters.ROWS_VIS_EXP_3).getValue();
