@@ -121,7 +121,7 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
         User user;
         UserGroupInformation realUserUgi;
         if(!users.containsKey(userNames[mod])) {
-          if(LoadTestTool.isSecure(conf)) {
+          if(User.isHBaseSecurityEnabled(conf)) {
             realUserUgi = LoadTestTool.loginAndReturnUGI(conf, userNames[mod]);
           } else {
             realUserUgi = UserGroupInformation.createRemoteUser(userNames[mod]);

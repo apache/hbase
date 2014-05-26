@@ -25,6 +25,7 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGeneratorWithACL;
@@ -69,7 +70,7 @@ public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
     tmp.add(HYPHEN + LoadTestTool.OPT_GENERATOR);
     StringBuilder sb = new StringBuilder(LoadTestDataGeneratorWithACL.class.getName());
     sb.append(COLON);
-    if (LoadTestTool.isSecure(getConf())) {
+    if (User.isHBaseSecurityEnabled(getConf())) {
       sb.append(authnFileName);
       sb.append(COLON);
     }
@@ -107,7 +108,7 @@ public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
     if (cmd.hasOption(OPT_USERS)) {
       userNames = cmd.getOptionValue(OPT_USERS);
     }
-    if (LoadTestTool.isSecure(getConf())) {
+    if (User.isHBaseSecurityEnabled(getConf())) {
       boolean authFileNotFound = false;
       if (cmd.hasOption(OPT_AUTHN)) {
         authnFileName = cmd.getOptionValue(OPT_AUTHN);

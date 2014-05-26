@@ -481,9 +481,9 @@ public class LoadTestTool extends AbstractHBaseTool {
       dataGen = getLoadGeneratorInstance(clazzAndArgs[0]);
       String[] args;
       if (dataGen instanceof LoadTestDataGeneratorWithACL) {
-        LOG.info("ACL is on");
-        if (isSecure(conf)) {
-          LOG.info("Security is on.");
+        LOG.info("Using LoadTestDataGeneratorWithACL");
+        if (User.isHBaseSecurityEnabled(conf)) {
+          LOG.info("Security is enabled");
           authnFileName = clazzAndArgs[1];
           superUser = clazzAndArgs[2];
           userNames = clazzAndArgs[3];
@@ -514,12 +514,11 @@ public class LoadTestTool extends AbstractHBaseTool {
           minColsPerKey, maxColsPerKey, COLUMN_FAMILY);
     }
 
-    if (userOwner != null) {
-      LOG.info("Granting permission for the user " + userOwner.getShortName());
+    if (User.isHBaseSecurityEnabled(conf) && userOwner != null) {
+      LOG.info("Granting permissions for user " + userOwner.getShortName());
       AccessControlProtos.Permission.Action[] actions = {
         AccessControlProtos.Permission.Action.ADMIN, AccessControlProtos.Permission.Action.CREATE,
         AccessControlProtos.Permission.Action.READ, AccessControlProtos.Permission.Action.WRITE };
-
       try {
         AccessControlClient.grant(conf, tableName, userOwner.getShortName(), null, null, actions);
       } catch (Throwable e) {
@@ -532,19 +531,21 @@ public class LoadTestTool extends AbstractHBaseTool {
       // This will be comma separated list of expressions.
       String users[] = userNames.split(",");
       User user = null;
-      for (String userStr : users) {
-        if (isSecure(conf)) {
+      if (User.isHBaseSecurityEnabled(conf)) {
+        for (String userStr : users) {
           user = User.create(loginAndReturnUGI(conf, userStr));
-        } else {
+          LOG.info("Granting READ permission for the user " + user.getShortName());
+          AccessControlProtos.Permission.Action[] actions = { AccessControlProtos.Permission.Action.READ };
+          try {
+            AccessControlClient.grant(conf, tableName, user.getShortName(), null, null, actions);
+          } catch (Throwable e) {
+            LOG.fatal("Error in granting READ permission for the user " + user.getShortName(), e);
+            return EXIT_FAILURE;
+          }
+	}
+      } else {
+        for (String userStr : users) {
           user = User.createUserForTesting(conf, userStr, new String[0]);
-        }
-        LOG.info("Granting permission for the user " + user.getShortName());
-        AccessControlProtos.Permission.Action[] actions = { AccessControlProtos.Permission.Action.READ };
-        try {
-          AccessControlClient.grant(conf, tableName, user.getShortName(), null, null, actions);
-        } catch (Throwable e) {
-          LOG.fatal("Error in granting permission for the user " + user.getShortName(), e);
-          return EXIT_FAILURE;
         }
       }
     }
@@ -808,9 +809,5 @@ public class LoadTestTool extends AbstractHBaseTool {
     UserGroupInformation ugi =
         UserGroupInformation.loginUserFromKeytabAndReturnUGI(principal, keyTabFileLocation);
     return ugi;
-  }
-
-  public static boolean isSecure(Configuration conf) {
-    return ("kerberos".equalsIgnoreCase(conf.get("hbase.security.authentication")));
   }
 }
