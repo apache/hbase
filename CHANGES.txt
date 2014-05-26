@@ -14,6 +14,7 @@ Release 0.98.3 - 6/1/2014
     * [HBASE-10251] - Restore API Compat for PerformanceEvaluation.generateValue()
     * [HBASE-10417] - index is not incremented in PutSortReducer#reduce()
     * [HBASE-10831] - IntegrationTestIngestWithACL is not setting up LoadTestTool correctly
+    * [HBASE-11096] - stop method of Master and RegionServer coprocessor  is not invoked
     * [HBASE-11117] - [AccessController] checkAndPut/Delete hook should check only Read permission
     * [HBASE-11133] - Add an option to skip snapshot verification after Export
     * [HBASE-11143] - Improve replication metrics
@@ -26,6 +27,8 @@ Release 0.98.3 - 6/1/2014
     * [HBASE-11217] - Race between SplitLogManager task creation + TimeoutMonitor
     * [HBASE-11226] - Document and increase the default value for hbase.hstore.flusher.count
     * [HBASE-11237] - Bulk load initiated by user other than hbase fails
+    * [HBASE-11251] - LoadTestTool should grant READ permission for the users that are given READ access for specific cells
+    * [HBASE-11253] - IntegrationTestWithCellVisibilityLoadAndVerify failing since HBASE-10326
 
 ** Improvement
     * [HBASE-6990] - Pretty print TTL
