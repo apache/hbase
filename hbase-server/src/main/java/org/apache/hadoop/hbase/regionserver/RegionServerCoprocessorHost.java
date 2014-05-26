@@ -72,6 +72,8 @@ public class RegionServerCoprocessorHost extends
           break;
         }
       }
+      // invoke coprocessor stop method
+      shutdown(env);
     }
   }
 

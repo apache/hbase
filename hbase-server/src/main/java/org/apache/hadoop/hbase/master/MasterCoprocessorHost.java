@@ -1263,6 +1263,8 @@ public class MasterCoprocessorHost
           break;
         }
       }
+      // invoke coprocessor stop method
+      shutdown(env);
     }
   }
 
@@ -1285,6 +1287,8 @@ public class MasterCoprocessorHost
           break;
         }
       }
+      // invoke coprocessor stop method
+      shutdown(env);
     }
   }
 
