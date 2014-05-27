@@ -139,7 +139,7 @@
       <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
   </developers>
-  
+
   <profiles>
     <profile>
       <id>default_jdk</id>
@@ -249,7 +249,7 @@
           </properties>
       </profile>
   </profiles>
-  
+
   <repositories>
     <repository>
       <id>mirror.facebook.net</id>
@@ -679,7 +679,21 @@
 
   <dependencyManagement>
     <dependencies>
-
+      <dependency>
+        <groupId>com.facebook.hadoop</groupId>
+        <artifactId>hdfs-configerator-config</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.facebook.hadoop</groupId>
+        <artifactId>hadoop-hdfs-highavailability</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.facebook.hadoop</groupId>
+        <artifactId>hadoop-lzo</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
       <dependency>
         <groupId>com.facebook.hadoop</groupId>
         <artifactId>hadoop-core</artifactId>
@@ -692,6 +706,7 @@
             </exclusion>
         </exclusions>
       </dependency>
+
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
@@ -898,8 +913,10 @@
       <groupId>com.facebook.titan.prometheus</groupId>
       <artifactId>compactionhook</artifactId>
       <version>2014-02-26T19.17.36-bac5a85</version>
+      <scope>runtime</scope>
       <optional>true</optional>
     </dependency>
+
     <dependency>
       <groupId>commons-cli</groupId>
       <artifactId>commons-cli</artifactId>
@@ -948,6 +965,24 @@
     <dependency>
       <groupId>com.facebook.hadoop</groupId>
       <artifactId>hadoop-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.facebook.hadoop</groupId>
+      <artifactId>hdfs-configerator-config</artifactId>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.facebook.hadoop</groupId>
+      <artifactId>hadoop-hdfs-highavailability</artifactId>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>com.facebook.hadoop</groupId>
+      <artifactId>hadoop-lzo</artifactId>
+      <scope>runtime</scope>
+      <optional>true</optional>
     </dependency>
 
     <dependency>
@@ -1059,7 +1094,7 @@
           </reportSet>
         </reportSets>
       </plugin>
-      
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-pmd-plugin</artifactId>
