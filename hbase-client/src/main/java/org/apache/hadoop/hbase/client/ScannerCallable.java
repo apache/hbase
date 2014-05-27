@@ -105,7 +105,8 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   }
 
   /**
-   * @deprecated Use {@link #ScannerCallable(HConnection, TableName, Scan, ScanMetrics)}
+   * @deprecated Use {@link #ScannerCallable(HConnection, TableName, Scan, ScanMetrics,
+   *                 RpcControllerFactory)}
    */
   @Deprecated
   public ScannerCallable (HConnection connection, final byte [] tableName, Scan scan,

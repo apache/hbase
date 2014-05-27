@@ -92,8 +92,8 @@ public class ClientSmallScanner extends ClientScanner {
 
   /**
    * @deprecated use
-   *             {@link #ClientSmallScanner(Configuration, Scan, TableName, HConnection, RpcRetryingCallerFactory, RpcControllerFactory)
-   *             instead
+   *             {@link #ClientSmallScanner(Configuration, Scan, TableName, HConnection,
+   *             RpcRetryingCallerFactory, RpcControllerFactory)} instead
    */
   public ClientSmallScanner(final Configuration conf, final Scan scan, final TableName tableName,
       HConnection connection, RpcRetryingCallerFactory rpcFactory) throws IOException {

@@ -118,8 +118,8 @@ public class ClientScanner extends AbstractClientScanner {
   
   /**
    * @deprecated Use
-   *             {@link #ClientScanner(Configuration, Scan, TableName, HConnection, RpcRetryingCallerFactory, RpcControllerFactory)
-   *             instead.
+   *             {@link #ClientScanner(Configuration, Scan, TableName, HConnection,
+   *             RpcRetryingCallerFactory, RpcControllerFactory)} instead.
    */
   @Deprecated
   public ClientScanner(final Configuration conf, final Scan scan, final TableName tableName,
