@@ -125,7 +125,7 @@ while iter.hasNext
 end
 scanner.close
 # If we're trying to see the status of all HBase tables, we need to include the
-# .META. table, that is not included in our scan
+# hbase:meta table, that is not included in our scan
 if $tablename.nil?
   meta_count += 1
 end

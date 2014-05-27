@@ -70,7 +70,7 @@ public class TruncateTableHandler extends DeleteTableHandler {
     // 1. Wait because of region in transition
     waitRegionInTransition(regions);
 
-    // 2. Remove table from .META. and HDFS
+    // 2. Remove table from hbase:meta and HDFS
     removeTableData(regions);
 
     // -----------------------------------------------------------------------

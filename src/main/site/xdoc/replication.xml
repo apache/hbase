@@ -108,7 +108,7 @@
           In a separate thread, the edit is read from the log (as part of a batch)
           and only the KVs that are replicable are kept (that is, that they are part
           of a family scoped GLOBAL in the family's schema, non-catalog so not
-          .META. or -ROOT-, and did not originate in the target slave cluster - in
+          hbase:meta or -ROOT-, and did not originate in the target slave cluster - in
           case of cyclic replication).
         </p>
         <p>

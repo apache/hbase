@@ -958,7 +958,7 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
         <section xml:id="trouble.rs.runtime.notservingregion">
            <title>NotServingRegionException</title>
            <para>This exception is "normal" when found in the RegionServer logs at DEBUG level.  This exception is returned back to the client
-           and then the client goes back to .META. to find the new location of the moved region.</para>
+           and then the client goes back to hbase:meta to find the new location of the moved region.</para>
            <para>However, if the NotServingRegionException is logged ERROR, then the client ran out of retries and something probably wrong.</para>
         </section>
         <section xml:id="trouble.rs.runtime.double_listed_regions">

@@ -1362,7 +1362,7 @@ hbase> restore_snapshot 'myTableSnapshot-122112'
   <section xml:id="table.rename">
     <title>Table Rename</title>
     <para>In versions 0.90.x of hbase and earlier, we had a simple script that would rename the hdfs
-      table directory and then do an edit of the .META. table replacing all mentions of the old
+      table directory and then do an edit of the hbase:meta table replacing all mentions of the old
       table name with the new. The script was called <command>./bin/rename_table.rb</command>. The
       script was deprecated and removed mostly because it was unmaintained and the operation
       performed by the script was brutal. </para>

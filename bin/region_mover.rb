@@ -80,7 +80,7 @@ def closeTables()
   end
 end
 
-# Returns true if passed region is still on 'original' when we look at .META.
+# Returns true if passed region is still on 'original' when we look at hbase:meta.
 def isSameServer(admin, r, original)
   server = getServerNameForRegion(admin, r)
   return false unless server and original
@@ -94,7 +94,7 @@ class RubyAbortable
   end
 end
 
-# Get servername that is up in .META.; this is hostname + port + startcode comma-delimited.
+# Get servername that is up in hbase:meta; this is hostname + port + startcode comma-delimited.
 # Can return nil
 def getServerNameForRegion(admin, r)
   return nil unless admin.isTableEnabled(r.getTableName)
@@ -270,7 +270,7 @@ end
 # Get configuration instance
 def getConfiguration()
   config = HBaseConfiguration.create()
-  # No prefetching on .META. This is for versions pre 0.99. Newer versions do not prefetch.
+  # No prefetching on hbase:meta This is for versions pre 0.99. Newer versions do not prefetch.
   config.setInt("hbase.client.prefetch.limit", 1)
   # Make a config that retries at short intervals many times
   config.setInt("hbase.client.pause", 500)

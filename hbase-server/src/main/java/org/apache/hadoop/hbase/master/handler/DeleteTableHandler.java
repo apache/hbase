@@ -103,7 +103,7 @@ public class DeleteTableHandler extends TableEventHandler {
     waitRegionInTransition(regions);
 
     try {
-      // 2. Remove table from .META. and HDFS
+      // 2. Remove table from hbase:meta and HDFS
       removeTableData(regions);
     } finally {
       // 3. Update table descriptor cache
@@ -127,7 +127,7 @@ public class DeleteTableHandler extends TableEventHandler {
   }
 
   /**
-   * Removes the table from .META. and archives the HDFS files.
+   * Removes the table from hbase:meta and archives the HDFS files.
    */
   protected void removeTableData(final List<HRegionInfo> regions)
       throws IOException, CoordinatedStateException {
@@ -136,7 +136,7 @@ public class DeleteTableHandler extends TableEventHandler {
     MetaEditor.deleteRegions(this.server.getCatalogTracker(), regions);
 
     // -----------------------------------------------------------------------
-    // NOTE: At this point we still have data on disk, but nothing in .META.
+    // NOTE: At this point we still have data on disk, but nothing in hbase:meta
     //       if the rename below fails, hbck will report an inconsistency.
     // -----------------------------------------------------------------------
 

@@ -1134,12 +1134,12 @@ if (!b) {
 
 	<section xml:id="arch.catalog">
 	 <title>Catalog Tables</title>
-	  <para>The catalog tables -ROOT- and .META. exist as HBase tables.  They are filtered out
+ 	  <para>The catalog table hbase:meta exists as an HBase table and is filtered out
 	  of the HBase shell's <code>list</code> command, but they are in fact tables just like any other.
      </para>
 	  <section xml:id="arch.catalog.root">
 	   <title>ROOT</title>
-	   <para>-ROOT- keeps track of where the .META. table is.  The -ROOT- table structure is as follows:
+ 	   <para><emphasis>-ROOT- was removed in 0.96.0</emphasis> -ROOT- keeps track of where the hbase:meta table is.  The -ROOT- table structure is as follows:
        </para>
        <para>Key:
             <itemizedlist>
@@ -1149,15 +1149,15 @@ if (!b) {
        <para>Values:
             <itemizedlist>
               <listitem><para><code>info:regioninfo</code> (serialized <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HRegionInfo.html">HRegionInfo</link>
-               instance of .META.)</para></listitem>
-              <listitem><para><code>info:server</code> (server:port of the RegionServer holding .META.)</para></listitem>
-              <listitem><para><code>info:serverstartcode</code> (start-time of the RegionServer process holding .META.)</para></listitem>
+               instance of hbase:meta)</para></listitem>
+              <listitem><para><code>info:server</code> (server:port of the RegionServer holding hbase:meta)</para></listitem>
+              <listitem><para><code>info:serverstartcode</code> (start-time of the RegionServer process holding hbase:meta)</para></listitem>
             </itemizedlist>
        </para>
 	   </section>
 	  <section xml:id="arch.catalog.meta">
-	   <title>META</title>
-	   <para>The .META. table keeps a list of all regions in the system. The .META. table structure is as follows:
+	   <title>hbase:meta</title>
+	   <para>The hbase:meta table keeps a list of all regions in the system. The hbase:meta table structure is as follows:
        </para>
        <para>Key:
             <itemizedlist>
@@ -1199,7 +1199,7 @@ if (!b) {
          <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
          is responsible for finding RegionServers that are serving the
          particular row range of interest.  It does this by querying
-         the <code>.META.</code> and <code>-ROOT-</code> catalog tables
+         the <code>hbase:meta</code> and <code>-ROOT-</code> catalog tables
          (TODO: Explain).  After locating the required
          region(s), the client <emphasis>directly</emphasis> contacts
          the RegionServer serving that region (i.e., it does not go
@@ -1542,7 +1542,7 @@ rs.close();
              </para>
          </section>
          <section xml:id="master.processes.catalog"><title>CatalogJanitor</title>
-           <para>Periodically checks and cleans up the .META. table.  See <xref linkend="arch.catalog.meta" /> for more information on META.</para>
+           <para>Periodically checks and cleans up the hbase:meta table.  See <xref linkend="arch.catalog.meta" /> for more information on META.</para>
          </section>
        </section>
 
@@ -1641,7 +1641,7 @@ rs.close();
         <para>Your data isn't the only resident of the block cache, here are others that you may have to take into account:
         </para>
         <itemizedlist>
-            <listitem><para>Catalog tables: The -ROOT- and .META. tables are forced into the block cache and have the in-memory priority which means that they are harder to evict. The former never uses
+            <listitem><para>Catalog tables: The -ROOT- and hbase:meta tables are forced into the block cache and have the in-memory priority which means that they are harder to evict. The former never uses
             more than a few hundreds of bytes while the latter can occupy a few MBs (depending on the number of regions).</para>
             </listitem>
             <listitem><para>HFiles indexes: HFile is the file format that HBase uses to store data in HDFS and it contains a multi-layered index in order seek to the data without having to read the whole file.
@@ -2766,7 +2766,7 @@ major version (0.90.7 uberhbck can repair a 0.90.4). However, versions &lt;=0.90
 These are generally region consistency repairs -- localized single region repairs, that only modify
 in-memory data, ephemeral zookeeper data, or patch holes in the META table.
 Region consistency requires that the HBase instance has the state of the region’s data in HDFS
-(.regioninfo files), the region’s row in the .META. table., and region’s deployment/assignments on
+(.regioninfo files), the region’s row in the hbase:meta table., and region’s deployment/assignments on
 region servers and the master in accordance. Options for repairing region consistency include:
 	<itemizedlist>
 		<listitem><para><code>-fixAssignments</code> (equivalent to the 0.90 <code>-fix</code> option) repairs unassigned, incorrectly
