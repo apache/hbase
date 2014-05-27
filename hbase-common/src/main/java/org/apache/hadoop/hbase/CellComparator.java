@@ -48,8 +48,11 @@ public class CellComparator implements Comparator<Cell>, Serializable{
     return compareStatic(a, b);
   }
 
-
   public static int compareStatic(Cell a, Cell b) {
+    return compareStatic(a, b, false);
+  }
+  
+  public static int compareStatic(Cell a, Cell b, boolean onlyKey) {
     //row
     int c = Bytes.compareTo(
         a.getRowArray(), a.getRowOffset(), a.getRowLength(),
@@ -88,6 +91,8 @@ public class CellComparator implements Comparator<Cell>, Serializable{
     //type
     c = (0xff & b.getTypeByte()) - (0xff & a.getTypeByte());
     if (c != 0) return c;
+
+    if (onlyKey) return c;
 
     //mvccVersion: later sorts first
     return Longs.compare(b.getMvccVersion(), a.getMvccVersion());

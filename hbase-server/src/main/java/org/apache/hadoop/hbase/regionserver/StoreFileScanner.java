@@ -468,8 +468,8 @@ public class StoreFileScanner implements KeyValueScanner {
   public boolean backwardSeek(KeyValue key) throws IOException {
     seek(key);
     if (cur == null
-        || getComparator().compareRows(cur.getBuffer(), cur.getRowOffset(),
-            cur.getRowLength(), key.getBuffer(), key.getRowOffset(),
+        || getComparator().compareRows(cur.getRowArray(), cur.getRowOffset(),
+            cur.getRowLength(), key.getRowArray(), key.getRowOffset(),
             key.getRowLength()) > 0) {
       return seekToPreviousRow(key);
     }
