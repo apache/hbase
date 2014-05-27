@@ -61,8 +61,7 @@ public class TestPut {
     fMap.put(row, createDummyKVs(row));
     long lockId = 5;
     boolean writeToWAL = true;
-    Put put = new Put(row, System.currentTimeMillis(), fMap, lockId,
-        writeToWAL);
+    Put put = new Put(row, fMap, lockId, writeToWAL);
 
     codec.write(put, protocol);
     Put putCopy = codec.read(protocol);
@@ -97,17 +96,15 @@ public class TestPut {
     Map<byte[], List<KeyValue>> familyMap =
       new TreeMap<byte[], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
     familyMap.put(row, createDummyKVs(row));
-    long currentMs = System.currentTimeMillis();
     long lockId = 5;
     boolean writeToWAL = true;
     // Create a Put the standard way
-    Put put1 = new Put(row, currentMs, familyMap, lockId, writeToWAL);
+    Put put1 = new Put(row, familyMap, lockId, writeToWAL);
 
     // Now use a builder to create one, with the same parameters.
     Put put2 = new Put.Builder()
       .setRow(row)
       .setFamilyMap(familyMap)
-      .setTimeStamp(currentMs)
       .setLockId(lockId)
       .setWriteToWAL(writeToWAL)
       .create();
@@ -131,8 +128,7 @@ public class TestPut {
       byte[] rowBytes = Bytes.toBytes(row + i);
       fMap.put(rowBytes, createDummyKVs(rowBytes));
       Put put = new Put.Builder().setRow(rowBytes).setFamilyMap(fMap)
-          .setTimeStamp(System.currentTimeMillis()).setLockId(1)
-          .setWriteToWAL(false).create();
+          .setLockId(1).setWriteToWAL(false).create();
       puts.add(put);
     }
     return puts;
