@@ -23,8 +23,6 @@ import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
 
-import junit.framework.Assert;
-
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
@@ -37,6 +35,7 @@ import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -130,11 +129,12 @@ public class TestHeaderSendReceive {
 
     // test async get
     ht.setProfiling(true);
-    HTableAsync async = new HTableAsync(ht);
-    async.getAsync(get).get();
-    pd = async.getProfilingData();
-    System.out.println("profiling data after get: " + pd);
-    assertNotNull(pd);
+    try (HTableAsync async = new HTableAsync(ht)) {
+      async.getAsync(get).get();
+      pd = async.getProfilingData();
+      System.out.println("profiling data after get: " + pd);
+      assertNotNull(pd);
+    }
     checkProfiling(true, false, pd);
     ht.close();
   }
@@ -155,12 +155,12 @@ public class TestHeaderSendReceive {
         pd.getLong(ProfilingData.CLIENT_NETWORK_LATENCY_MS));
     Assert.assertTrue(ProfilingData.CLIENT_NETWORK_LATENCY_MS
         + " should be greater than zero",
-        pd.getLong(ProfilingData.CLIENT_NETWORK_LATENCY_MS) > 0);
+        pd.getLong(ProfilingData.CLIENT_NETWORK_LATENCY_MS).longValue() > 0L);
     assertNotNull(ProfilingData.TOTAL_SERVER_TIME_MS + " is null",
         pd.getLong(ProfilingData.TOTAL_SERVER_TIME_MS));
     Assert.assertTrue(ProfilingData.TOTAL_SERVER_TIME_MS
         + " should be greater than zero",
-        pd.getLong(ProfilingData.TOTAL_SERVER_TIME_MS) > 0);
+        pd.getLong(ProfilingData.TOTAL_SERVER_TIME_MS).longValue() > 0L);
     if (isPut) {
       assertNotNull(ProfilingData.HLOG_SYNC_TIME_MS + " is null",
           pd.getLong(ProfilingData.HLOG_SYNC_TIME_MS));
@@ -171,19 +171,23 @@ public class TestHeaderSendReceive {
    * Check whether profiling works if it is enabled from the serverside and NOT
    * on the client side
    *
-   * @throws IOException
    */
   @Test
   public void testServerSideEnabledProfiling() throws IOException {
     HRegionServer.enableServerSideProfilingForAllCalls.set(true);
-    HTable ht = new HTable(TEST_UTIL.getConfiguration(), TABLE1);
-    Put p = new Put(r1);
-    p.add(FAMILY, null, value);
-    ht.put(p);
-    ProfilingData pd = ht.getProfilingData();
-    assertNotNull(pd);
-    System.out.println("profiling data: " + pd);
-    ht.close();
+    HTable ht;
+    try {
+      ht = new HTable(TEST_UTIL.getConfiguration(), TABLE1);
+      Put p = new Put(r1);
+      p.add(FAMILY, null, value);
+      ht.put(p);
+      ProfilingData pd = ht.getProfilingData();
+      assertNotNull(pd);
+      System.out.println("profiling data: " + pd);
+      ht.close();
+    } finally {
+      HRegionServer.enableServerSideProfilingForAllCalls.set(false);
+    }
   }
 
 }
