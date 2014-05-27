@@ -419,7 +419,7 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
 
   protected int populateNonRowFieldsAndCompareTo(int cellNum, Cell key) {
     populateNonRowFields(cellNum);
-    return CellComparator.compareStatic(this, key, false);
+    return CellComparator.compareStatic(this, key, true);
   }
 
   protected void populateFirstNonRowFields() {
