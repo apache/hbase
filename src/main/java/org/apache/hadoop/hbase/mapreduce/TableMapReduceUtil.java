@@ -288,6 +288,7 @@ public class TableMapReduceUtil {
     if (addDependencyJars) {
       addDependencyJars(job);
     }
+    initCredentials(job);
   }
 
   /**
