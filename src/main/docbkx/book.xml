@@ -1939,14 +1939,75 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
           <title>Store</title>
           <para>A Store hosts a MemStore and 0 or more StoreFiles (HFiles). A Store corresponds to a column family for a table for a given region.
           </para>
-    <section xml:id="store.memstore">
+      <section
+          xml:id="store.memstore">
       <title>MemStore</title>
-      <para>The MemStore holds in-memory modifications to the Store.  Modifications are KeyValues.
-       When asked to flush, current memstore is moved to snapshot and is cleared.
-       HBase continues to serve edits out of new memstore and backing snapshot until flusher reports in that the
-       flush succeeded. At this point the snapshot is let go.</para>
+          <para>The MemStore holds in-memory modifications to the Store. Modifications are
+            Cells/KeyValues. When a flush is requested, the current memstore is moved to a snapshot and is
+            cleared. HBase continues to serve edits from the new memstore and backing snapshot until
+            the flusher reports that the flush succeeded. At this point, the snapshot is discarded.
+            Note that when the flush happens, Memstores that belong to the same region will all be
+            flushed.</para>
       </section>
-    <section xml:id="hfile">
+        <section>
+          <title>MemStoreFlush</title>
+          <para> A MemStore flush can be triggered under any of the conditions listed below. The
+            minimum flush unit is per region, not at individual MemStore level.</para>
+          <orderedlist>
+            <listitem>
+              <para>When a MemStore reaches the value specified by
+                  <varname>hbase.hregion.memstore.flush.size</varname>, all MemStores that belong to
+                its region will be flushed out to disk.</para>
+            </listitem>
+            <listitem>
+              <para>When overall memstore usage reaches the value specified by
+                  <varname>hbase.regionserver.global.memstore.upperLimit</varname>, MemStores from
+                various regions will be flushed out to disk to reduce overall MemStore usage in a
+                Region Server. The flush order is based on the descending order of a region's
+                MemStore usage. Regions will have their MemStores flushed until the overall MemStore
+                usage drops to or slightly below
+                  <varname>hbase.regionserver.global.memstore.lowerLimit</varname>. </para>
+            </listitem>
+            <listitem>
+              <para>When the number of HLog per region server reaches the value specified in
+                  <varname>hbase.regionserver.max.logs</varname>, MemStores from various regions
+                will be flushed out to disk to reduce HLog count. The flush order is based on time.
+                Regions with the oldest MemStores are flushed first until HLog count drops below
+                  <varname>hbase.regionserver.max.logs</varname>. </para>
+            </listitem>
+          </orderedlist>
+        </section>
+        <section xml:id="hregion.scans">
+          <title>Scans</title>
+          <itemizedlist>
+            <listitem>
+              <para> When a client issues a scan against a table, HBase generates
+                  <code>RegionScanner</code> objects, one per region, to serve the scan request.
+              </para>
+            </listitem>
+            <listitem>
+              <para>The <code>RegionScanner</code> object contains a list of
+                  <code>StoreScanner</code> objects, one per column family. </para>
+            </listitem>
+            <listitem>
+              <para>Each <code>StoreScanner</code> object further contains a list of
+                  <code>StoreFileScanner</code> objects, corresponding to each StoreFile and
+                HFile of the corresponding column family, and a list of
+                  <code>KeyValueScanner</code> objects for the MemStore. </para>
+            </listitem>
+            <listitem>
+              <para>The two lists are merge into one, which is sorted in ascending order with the
+                scan object for the MemStore at the end of the list.</para>
+            </listitem>
+            <listitem>
+              <para>When a <code>StoreFileScanner</code> object is constructed, it is associated
+                with a <code>MultiVersionConsistencyControl</code> read point, which is the
+                current <code>memstoreTS</code>, filtering out any new updates beyond the read
+                point. </para>
+            </listitem>
+          </itemizedlist>
+      </section>
+  <section xml:id="hfile">
       <title>StoreFile (HFile)</title>
       <para>StoreFiles are where your data lives.
       </para>
