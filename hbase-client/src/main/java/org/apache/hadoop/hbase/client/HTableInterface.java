@@ -566,8 +566,11 @@ public interface HTableInterface extends Closeable {
    *          Whether to keep Put failures in the writeBuffer. If autoFlush is true, then
    *          the value of this parameter is ignored and clearBufferOnFail is set to true.
    *          Setting clearBufferOnFail to false is deprecated since 0.96.
+   * @deprecated in 0.99 since setting clearBufferOnFail is deprecated. Use
+   *  {@link #setAutoFlushTo(boolean)}} instead.
    * @see #flushCommits
    */
+  @Deprecated
   void setAutoFlush(boolean autoFlush, boolean clearBufferOnFail);
 
   /**
