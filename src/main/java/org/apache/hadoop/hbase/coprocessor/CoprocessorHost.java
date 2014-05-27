@@ -260,6 +260,9 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
 
   public void shutdown(CoprocessorEnvironment e) {
     if (e instanceof Environment) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Stop coprocessor " + e.getInstance().getClass().getName());
+      }
       ((Environment)e).shutdown();
     } else {
       LOG.warn("Shutdown called on unknown environment: "+

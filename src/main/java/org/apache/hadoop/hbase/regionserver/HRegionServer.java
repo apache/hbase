@@ -1840,16 +1840,18 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
 
   @Override
   public void stop(final String msg) {
-    try {
-      if (this.rsHost != null) {
-        this.rsHost.preStop(msg);
+    if (!this.stopped) {
+      try {
+        if (this.rsHost != null) {
+          this.rsHost.preStop(msg);
+        }
+        this.stopped = true;
+        LOG.info("STOPPED: " + msg);
+        // Wakes run() if it is sleeping
+        sleeper.skipSleepCycle();
+      } catch (IOException exp) {
+        LOG.warn("The region server did not stop", exp);
       }
-      this.stopped = true;
-      LOG.info("STOPPED: " + msg);
-      // Wakes run() if it is sleeping
-      sleeper.skipSleepCycle();
-    } catch (IOException exp) {
-      LOG.warn("The region server did not stop", exp);
     }
   }
 
