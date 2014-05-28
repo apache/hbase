@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -171,6 +172,9 @@ public class ServerManager {
    */
   private Map<ServerName, Boolean> requeuedDeadServers = new HashMap<ServerName, Boolean>();
 
+  /** Listeners that are called on server events. */
+  private List<ServerListener> listeners = new CopyOnWriteArrayList<ServerListener>();
+
   /**
    * Constructor.
    * @param master
@@ -191,6 +195,22 @@ public class ServerManager {
     maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
     warningSkew = c.getLong("hbase.master.warningclockskew", 10000);
     this.connection = connect ? HConnectionManager.getConnection(c) : null;
+  }
+
+  /**
+   * Add the listener to the notification list.
+   * @param listener The ServerListener to register
+   */
+  public void registerListener(final ServerListener listener) {
+    this.listeners.add(listener);
+  }
+
+  /**
+   * Remove the listener from the notification list.
+   * @param listener The ServerListener to unregister
+   */
+  public boolean unregisterListener(final ServerListener listener) {
+    return this.listeners.remove(listener);
   }
 
   /**
@@ -287,6 +307,14 @@ public class ServerManager {
       }
       recordNewServerWithLock(serverName, sl);
     }
+
+    // Tell our listeners that a server was added
+    if (!this.listeners.isEmpty()) {
+      for (ServerListener listener : this.listeners) {
+        listener.serverAdded(serverName);
+      }
+    }
+
     // Note that we assume that same ts means same server, and don't expire in that case.
     //  TODO: ts can theoretically collide due to clock shifts, so this is a bit hacky.
     if (existingServer != null && (existingServer.getStartcode() < serverName.getStartcode())) {
@@ -516,6 +544,13 @@ public class ServerManager {
     }
     LOG.debug("Added=" + serverName +
       " to dead servers, submitted shutdown handler to be executed meta=" + carryingMeta);
+
+    // Tell our listeners that a server was removed
+    if (!this.listeners.isEmpty()) {
+      for (ServerListener listener : this.listeners) {
+        listener.serverRemoved(serverName);
+      }
+    }
   }
 
   public synchronized void processDeadServer(final ServerName serverName) {

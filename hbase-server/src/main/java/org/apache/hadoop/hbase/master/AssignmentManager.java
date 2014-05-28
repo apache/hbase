@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -242,6 +243,9 @@ public class AssignmentManager extends ZooKeeperListener {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="MS_SHOULD_BE_FINAL")
   public static boolean TEST_SKIP_SPLIT_HANDLING = false;
 
+  /** Listeners that are called on assignment events. */
+  private List<AssignmentListener> listeners = new CopyOnWriteArrayList<AssignmentListener>();
+
   /**
    * Constructs a new assignment manager.
    *
@@ -316,6 +320,22 @@ public class AssignmentManager extends ZooKeeperListener {
       Threads.setDaemonThreadRunning(timeoutMonitor.getThread(), server.getServerName()
           + ".timeoutMonitor");
     }
+  }
+
+  /**
+   * Add the listener to the notification list.
+   * @param listener The AssignmentListener to register
+   */
+  public void registerListener(final AssignmentListener listener) {
+    this.listeners.add(listener);
+  }
+
+  /**
+   * Remove the listener from the notification list.
+   * @param listener The AssignmentListener to unregister
+   */
+  public boolean unregisterListener(final AssignmentListener listener) {
+    return this.listeners.remove(listener);
   }
 
   /**
@@ -633,6 +653,7 @@ public class AssignmentManager extends ZooKeeperListener {
         // server. If that server is online, when we reload the meta, the
         // region is put back to online, we need to offline it.
         regionStates.regionOffline(regionInfo);
+        sendRegionClosedNotification(regionInfo);
       }
       // Put it back in transition so that SSH can re-assign it
       regionStates.updateRegionState(regionInfo, State.OFFLINE, sn);
@@ -1278,6 +1299,9 @@ public class AssignmentManager extends ZooKeeperListener {
     // Add the server to serversInUpdatingTimer
     addToServersInUpdatingTimer(sn);
     balancer.regionOnline(regionInfo, sn);
+
+    // Tell our listeners that a region was opened
+    sendRegionOpenedNotification(regionInfo, sn);
   }
 
   /**
@@ -1708,12 +1732,12 @@ public class AssignmentManager extends ZooKeeperListener {
             regionOffline(region);
           }
           return;
-        } else if ((t instanceof FailedServerException) || (state != null && 
+        } else if ((t instanceof FailedServerException) || (state != null &&
             t instanceof RegionAlreadyInTransitionException)) {
           long sleepTime = 0;
           Configuration conf = this.server.getConfiguration();
           if(t instanceof FailedServerException) {
-            sleepTime = 1 + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY, 
+            sleepTime = 1 + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
                   RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
           } else {
             // RS is already processing this region, only need to update the timestamp
@@ -2070,9 +2094,9 @@ public class AssignmentManager extends ZooKeeperListener {
           } else if(plan.getDestination().equals(newPlan.getDestination()) &&
               previousException instanceof FailedServerException) {
             try {
-              LOG.info("Trying to re-assign " + region.getRegionNameAsString() + 
+              LOG.info("Trying to re-assign " + region.getRegionNameAsString() +
                 " to the same failed server.");
-              Thread.sleep(1 + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY, 
+              Thread.sleep(1 + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
                 RpcClient.FAILED_SERVER_EXPIRY_DEFAULT));
             } catch (InterruptedException ie) {
               LOG.warn("Failed to assign "
@@ -3551,6 +3575,26 @@ public class AssignmentManager extends ZooKeeperListener {
     // remove the region plan as well just in case.
     clearRegionPlan(regionInfo);
     balancer.regionOffline(regionInfo);
+
+    // Tell our listeners that a region was closed
+    sendRegionClosedNotification(regionInfo);
+  }
+
+  private void sendRegionOpenedNotification(final HRegionInfo regionInfo,
+      final ServerName serverName) {
+    if (!this.listeners.isEmpty()) {
+      for (AssignmentListener listener : this.listeners) {
+        listener.regionOpened(regionInfo, serverName);
+      }
+    }
+  }
+
+  private void sendRegionClosedNotification(final HRegionInfo regionInfo) {
+    if (!this.listeners.isEmpty()) {
+      for (AssignmentListener listener : this.listeners) {
+        listener.regionClosed(regionInfo);
+      }
+    }
   }
 
   /**
