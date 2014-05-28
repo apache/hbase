@@ -2,10 +2,15 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.apache.hbase</groupId>
+  <groupId>com.facebook.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>jar</packaging>
-  <version>${hbase.version}</version>
+  <!--
+  Always leave this as X.Y.0-SNAPSHOT
+  Automated Jenkins jobs will generate the last digit (patch or fix version),
+  produce the artifacts, and publish them to specified areas.
+  -->
+  <version>3.0.0-SNAPSHOT</version>
   <name>HBase</name>
   <description>
   HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need random, realtime read/write access to your Big Data.
@@ -197,8 +202,8 @@
                     <configuration>
                         <skip>${hbase.skip-jacoco}</skip>
                         <excludes>
-                        <exclude>**/generated/**/*.class</exclude>
-                        <exclude>org/apache/hadoop/hbase/rest/**/*.class</exclude>
+                          <exclude>**/generated/**/*.class</exclude>
+                          <exclude>org/apache/hadoop/hbase/rest/**/*.class</exclude>
                         </excludes>
                     </configuration>
                 </plugin>
@@ -594,6 +599,27 @@
               <sources>
                 <source>${project.build.directory}/generated-sources</source>
               </sources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>attach-distribution</id>
+            <phase>package</phase>
+            <goals>
+              <goal>attach-artifact</goal>
+            </goals>
+            <configuration>
+              <artifacts>
+                <artifact>
+                  <classifier>src</classifier>
+                  <file>target/${project.artifactId}-${project.version}-src.tar.gz</file>
+                  <type>tar.gz</type>
+                </artifact>
+                <artifact>
+                  <classifier>bin</classifier>
+                  <file>target/${project.artifactId}-${project.version}-bin.tar.gz</file>
+                  <type>tar.gz</type>
+                </artifact>
+              </artifacts>
             </configuration>
           </execution>
         </executions>

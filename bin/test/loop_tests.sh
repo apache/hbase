@@ -21,8 +21,7 @@
 # */
 #
 
-
-MVNCMD=mvn
+MVNCMD=${MVNCMD:-mvn}
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 TEST=
 ITERATIONS=25
