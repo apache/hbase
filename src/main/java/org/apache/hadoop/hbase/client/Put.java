@@ -536,8 +536,7 @@ public class Put extends Mutation
       return false;
     }
     Put other = (Put) obj;
-    if (!(ts == other.getTs() &&
-        lockId == other.getLockId() &&
+    if (!(lockId == other.getLockId() &&
         writeToWAL == other.getWriteToWAL() &&
         Arrays.equals(row, other.getRow()))) {
       return false;
