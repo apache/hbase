@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
@@ -170,7 +171,7 @@ public abstract class Benchmark extends AbstractHBaseTool {
    * @throws IOException 
    */
   public HTable createTableAndLoadData(byte[] tableName, int kvSize, 
-      long numKVs, boolean bulkLoad) throws IOException {
+      long numKVs, boolean bulkLoad) throws Exception {
     return createTableAndLoadData(tableName, "cf1", kvSize, 
         numKVs, 1, bulkLoad, null);
   }
@@ -190,7 +191,7 @@ public abstract class Benchmark extends AbstractHBaseTool {
    */
   public HTable createTableAndLoadData(byte[] tableName, String cfNameStr, 
       int kvSize, long numKVs, int numRegionsPerRS, boolean bulkLoad, 
-      List<byte[]> keysWritten) throws IOException {
+      List<byte[]> keysWritten) throws Exception {
     HTable htable = null;
 
     try {
@@ -326,7 +327,8 @@ public abstract class Benchmark extends AbstractHBaseTool {
         "-multiput",
         "-compression", "NONE",
       };
-      LoadTestTool.doMain(loadTestToolArgs);
+      int ret;
+      ret = ToolRunner.run(conf, new LoadTestTool(), loadTestToolArgs);
       LOG.info("Done loading data");
     }
     
@@ -452,7 +454,7 @@ public abstract class Benchmark extends AbstractHBaseTool {
   }
 
   @Override
-  protected void doWork() throws Exception {
-
+  protected int doWork() throws Exception {
+    return 0;
   }
 }

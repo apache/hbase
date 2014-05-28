@@ -22,6 +22,8 @@ import java.util.Arrays;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -31,6 +33,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * A command-line utility that reads, writes, and verifies data. Unlike
@@ -359,7 +362,7 @@ public class LoadTestTool extends AbstractHBaseTool {
   }
 
   @Override
-  protected void doWork() throws IOException {
+  protected int doWork() throws IOException {
     if (cmd.hasOption(OPT_ZK_QUORUM)) {
       conf.set(HConstants.ZOOKEEPER_QUORUM, cmd.getOptionValue(OPT_ZK_QUORUM));
     }
@@ -408,15 +411,12 @@ public class LoadTestTool extends AbstractHBaseTool {
     if (isRead) {
       readerThreads.waitForFinish();
     }
-  }
-  
-  public static int doMain(String[] args) {
-    return new LoadTestTool().doStaticMain(args);
+    return 0;
   }
 
-  public static void main(String[] args) {
-    int ret = doMain(args);
-    System.exit(ret);
+
+  public static void main(String[] args) throws Exception {
+    new LoadTestTool().doStaticMain(args);
   }
 
 }

@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.regionserver.metrics.PercentileMetric;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Histogram;
+import org.apache.hadoop.util.ToolRunner;
 import org.weakref.jmx.com.google.common.base.Preconditions;
 
 import java.io.IOException;
@@ -320,7 +321,7 @@ public class HBaseRPCBenchmarkTool extends AbstractHBaseTool {
    * @throws IOException
    */
   @Override
-  protected void doWork() throws InterruptedException,
+  protected int doWork() throws InterruptedException,
       InstantiationException, IllegalAccessException, IOException {
     // Initializing the required objects.
     BenchmarkFactory factory = (BenchmarkFactory) factoryCls.newInstance();
@@ -371,6 +372,8 @@ public class HBaseRPCBenchmarkTool extends AbstractHBaseTool {
     executor.shutdown();
     executor.awaitTermination(1, TimeUnit.HOURS);
     runtimeMs = System.currentTimeMillis() - runtimeMs;
+
+    return 0;
   }
 
   public static void printStats(String msg, int numOps, long startTime) {
@@ -558,7 +561,14 @@ public class HBaseRPCBenchmarkTool extends AbstractHBaseTool {
 
   public static void main(String[] args) {
     HBaseRPCBenchmarkTool tool = new HBaseRPCBenchmarkTool();
-    int ret = tool.doStaticMain(args);
+    int ret;
+    try {
+      ret = ToolRunner.run(HBaseConfiguration.create(), tool, args);
+    } catch (Exception ex) {
+      LOG.error("Error running command-line tool", ex);
+      ret = EXIT_FAILURE;
+    }
+    System.exit(ret);
     System.out.println("Total throughput : " + tool.getThroughput());
     System.out.println("Latencies in ms --");
     System.out.println("  Avg Latency : " + tool.getAverageLatency() / 1000000.0);

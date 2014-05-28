@@ -141,7 +141,7 @@ public class HBaseAdmin {
    */
   public boolean tableExists(final String tableName)
   throws MasterNotRunningException {
-    return tableExists(Bytes.toBytes(tableName));
+    return tableExists(new StringBytes(tableName));
   }
 
   /**
@@ -151,10 +151,14 @@ public class HBaseAdmin {
    */
   public boolean tableExists(final byte [] tableName)
   throws MasterNotRunningException {
+    return tableExists(new StringBytes(tableName));
+  }
+
+  public boolean tableExists(final StringBytes tableName) throws MasterNotRunningException {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
-    return connection.tableExists(new StringBytes(tableName));
+    return connection.tableExists(tableName);
   }
 
   /**

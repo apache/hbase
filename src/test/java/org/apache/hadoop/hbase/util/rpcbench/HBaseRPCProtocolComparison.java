@@ -41,6 +41,8 @@ import org.apache.hadoop.hbase.regionserver.metrics.PercentileMetric;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Histogram;
+import org.apache.hadoop.util.ToolRunner;
+
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -197,7 +199,7 @@ public class HBaseRPCProtocolComparison extends AbstractHBaseTool {
    * @throws InterruptedException
    */
   @Override
-  protected void doWork() throws InterruptedException {
+  protected int doWork() throws InterruptedException {
     final Map<Class<? extends BenchmarkFactory>, Stats> statsMap =
         new HashMap<Class<? extends BenchmarkFactory>, Stats>();
     for (final Class<? extends BenchmarkFactory> factoryCls : factoryClasses) {
@@ -260,13 +262,13 @@ public class HBaseRPCProtocolComparison extends AbstractHBaseTool {
           entry.getValue().Histogram.getPercentileEstimate(
               PercentileMetric.P95));
     }
+    return 0;
   }
 
   /**
    * @param args
    */
-  public static void main(String[] args) {
-    int ret = new HBaseRPCProtocolComparison().doStaticMain(args);
-    System.exit(ret);
+  public static void main(String[] args) throws Exception {
+    new HBaseRPCProtocolComparison().doStaticMain(args);
   }
 }

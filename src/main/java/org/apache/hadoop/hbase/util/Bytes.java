@@ -1854,6 +1854,8 @@ public class Bytes {
     return tmp;
   }
 
+
+
   /**
    * Returns a byte array next to a given one, i.e. it is the smallest byte
    * array among all byte arrays that is strictly greater than the give array.

@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -27,6 +28,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.util.Tool;
@@ -36,12 +38,14 @@ import org.apache.hadoop.util.ToolRunner;
  * Common base class used for HBase command-line tools. Simplifies workflow and
  * command-line argument parsing.
  */
+@InterfaceAudience.Private
 public abstract class AbstractHBaseTool implements Tool {
 
-  private static final int EXIT_SUCCESS = 0;
-  private static final int EXIT_FAILURE = 1;
+  protected static final int EXIT_SUCCESS = 0;
+  protected static final int EXIT_FAILURE = 1;
 
-  private static final String HELP_OPTION = "help";
+  private static final String SHORT_HELP_OPTION = "h";
+  private static final String LONG_HELP_OPTION = "help";
 
   private static final Log LOG = LogFactory.getLog(AbstractHBaseTool.class);
 
@@ -50,6 +54,8 @@ public abstract class AbstractHBaseTool implements Tool {
   protected Configuration conf = null;
 
   private static final Set<String> requiredOptions = new TreeSet<String>();
+
+  protected String[] cmdLineArgs = null;
 
   /**
    * Override this to add command-line options using {@link #addOptWithArg}
@@ -63,7 +69,7 @@ public abstract class AbstractHBaseTool implements Tool {
   protected abstract void processOptions(CommandLine cmd);
 
   /** The "main function" of the tool */
-  protected abstract void doWork() throws Exception;
+  protected abstract int doWork() throws Exception;
 
   @Override
   public Configuration getConf() {
@@ -76,7 +82,7 @@ public abstract class AbstractHBaseTool implements Tool {
   }
 
   @Override
-  public final int run(String[] args) throws Exception {
+  public final int run(String[] args) throws IOException {
     if (conf == null) {
       LOG.error("Tool configuration is not initialized");
       throw new NullPointerException("conf");
@@ -86,26 +92,29 @@ public abstract class AbstractHBaseTool implements Tool {
     try {
       // parse the command line arguments
       cmd = parseArgs(args);
+      cmdLineArgs = args;
     } catch (ParseException e) {
       LOG.error("Error when parsing command-line arguemnts", e);
       printUsage();
       return EXIT_FAILURE;
     }
 
-    if (cmd.hasOption(HELP_OPTION) || !sanityCheckOptions(cmd)) {
+    if (cmd.hasOption(SHORT_HELP_OPTION) || cmd.hasOption(LONG_HELP_OPTION) ||
+        !sanityCheckOptions(cmd)) {
       printUsage();
       return EXIT_FAILURE;
     }
 
     processOptions(cmd);
 
+    int ret = EXIT_FAILURE;
     try {
-      doWork();
+      ret = doWork();
     } catch (Exception e) {
       LOG.error("Error running command-line tool", e);
       return EXIT_FAILURE;
     }
-    return EXIT_SUCCESS;
+    return ret;
   }
 
   private boolean sanityCheckOptions(CommandLine cmd) {
@@ -119,14 +128,14 @@ public abstract class AbstractHBaseTool implements Tool {
     return success;
   }
 
-  private CommandLine parseArgs(String[] args) throws ParseException {
-    options.addOption(HELP_OPTION, false, "Show usage");
+  protected CommandLine parseArgs(String[] args) throws ParseException {
+    options.addOption(SHORT_HELP_OPTION, LONG_HELP_OPTION, false, "Show usage");
     addOptions();
     CommandLineParser parser = new BasicParser();
     return parser.parse(options, args);
   }
 
-  private void printUsage() {
+  protected void printUsage() {
     HelpFormatter helpFormatter = new HelpFormatter();
     helpFormatter.setWidth(80);
     String usageHeader = "Options:";
@@ -142,12 +151,25 @@ public abstract class AbstractHBaseTool implements Tool {
     addOptWithArg(opt, description);
   }
 
+  protected void addRequiredOptWithArg(String shortOpt, String longOpt, String description) {
+    requiredOptions.add(longOpt);
+    addOptWithArg(shortOpt, longOpt, description);
+  }
+
   protected void addOptNoArg(String opt, String description) {
     options.addOption(opt, false, description);
   }
 
+  protected void addOptNoArg(String shortOpt, String longOpt, String description) {
+    options.addOption(shortOpt, longOpt, false, description);
+  }
+
   protected void addOptWithArg(String opt, String description) {
     options.addOption(opt, true, description);
+  }
+
+  protected void addOptWithArg(String shortOpt, String longOpt, String description) {
+    options.addOption(shortOpt, longOpt, true, description);
   }
 
   /**
@@ -167,7 +189,7 @@ public abstract class AbstractHBaseTool implements Tool {
   }
 
   /** Call this from the concrete tool class's main function. */
-  protected int doStaticMain(String args[]) {
+  protected void doStaticMain(String args[]) {
     int ret;
     try {
       ret = ToolRunner.run(HBaseConfiguration.create(), this, args);
@@ -175,7 +197,7 @@ public abstract class AbstractHBaseTool implements Tool {
       LOG.error("Error running command-line tool", ex);
       ret = EXIT_FAILURE;
     }
-    return ret;
+    System.exit(ret);
   }
 
 }

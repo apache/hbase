@@ -102,7 +102,6 @@ public class HServerInfo implements WritableComparable<HServerInfo> {
    * Constructor that creates a HServerInfo with a generated startcode and an
    * empty load.
    * @param serverAddress An {@link InetSocketAddress} encased in a {@link Writable}
-   * @param infoPort Port the webui runs on.
    * @param hostname Server hostname.
    */
   public HServerInfo(HServerAddress serverAddress, final String hostname) {
