@@ -34,7 +34,8 @@ import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Histogram;
 import org.apache.hadoop.util.ToolRunner;
-import org.weakref.jmx.com.google.common.base.Preconditions;
+
+import com.google.common.base.Preconditions;
 
 import java.io.IOException;
 import java.util.ArrayList;

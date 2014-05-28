@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
-import clover.com.google.common.collect.Lists;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerInfo;
@@ -26,6 +25,8 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
+
+import com.google.common.collect.Lists;
 
 import java.util.Collection;
 import java.util.Collections;

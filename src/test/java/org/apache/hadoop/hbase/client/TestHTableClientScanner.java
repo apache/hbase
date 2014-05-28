@@ -41,7 +41,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.weakref.jmx.com.google.common.collect.Lists;
+
+import com.google.common.collect.Lists;
 
 /**
  * Testcase for HTableClientScanner.

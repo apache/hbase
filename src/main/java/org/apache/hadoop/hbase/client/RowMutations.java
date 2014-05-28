@@ -31,7 +31,8 @@ import java.util.Map;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.HbaseObjectWritable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.weakref.jmx.com.google.common.base.Preconditions;
+
+import com.google.common.base.Preconditions;
 
 /**
  * Performs multiple mutations atomically on a single row.
