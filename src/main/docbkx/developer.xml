@@ -1,13 +1,15 @@
 <?xml version="1.0"?>
-    <chapter xml:id="developer"
-      version="5.0" xmlns="http://docbook.org/ns/docbook"
-      xmlns:xlink="http://www.w3.org/1999/xlink"
-      xmlns:xi="http://www.w3.org/2001/XInclude"
-      xmlns:svg="http://www.w3.org/2000/svg"
-      xmlns:m="http://www.w3.org/1998/Math/MathML"
-      xmlns:html="http://www.w3.org/1999/xhtml"
-      xmlns:db="http://docbook.org/ns/docbook">
-<!--
+<chapter
+    xml:id="developer"
+    version="5.0"
+    xmlns="http://docbook.org/ns/docbook"
+    xmlns:xlink="http://www.w3.org/1999/xlink"
+    xmlns:xi="http://www.w3.org/2001/XInclude"
+    xmlns:svg="http://www.w3.org/2000/svg"
+    xmlns:m="http://www.w3.org/1998/Math/MathML"
+    xmlns:html="http://www.w3.org/1999/xhtml"
+    xmlns:db="http://docbook.org/ns/docbook">
+    <!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -502,7 +504,7 @@ HBase have a character not usually seen in other projects.</para>
 integration with corresponding JUnit <link xlink:href="http://www.junit.org/node/581">categories</link>:
 <classname>SmallTests</classname>, <classname>MediumTests</classname>,
 <classname>LargeTests</classname>, <classname>IntegrationTests</classname>.
-JUnit categories are denoted using java annotations and look like this in your unit test code.
+JUnit categories are denoted using java annotations and look like this in your unit test code.</para>
 <programlisting>...
 @Category(SmallTests.class)
 public class TestHRegionInfo {
@@ -511,360 +513,447 @@ public class TestHRegionInfo {
     // ...
   }
 }</programlisting>
-The above example shows how to mark a unit test as belonging to the small category.
-All unit tests in HBase have a categorization.
-</para>
-<para>
-The first three categories, small, medium, and large are for tests run when
-you type <code>$ mvn test</code>; i.e. these three categorizations are for
-HBase unit tests. The integration category is for not for unit tests but for integration
-tests.  These are run when you invoke <code>$ mvn verify</code>.  Integration tests
-are described in <xref linkend="integration.tests"/> and will not be discussed further
-in this section on HBase unit tests.</para>
-<para>
-Apache HBase uses a patched maven surefire plugin and maven profiles to implement
-its unit test characterizations.
-</para>
-<para>Read the below to figure which annotation of the set small, medium, and large to
-put on your new HBase unit test.
-</para>
+            <para>The above example shows how to mark a unit test as belonging to the small category.
+                All unit tests in HBase have a categorization. </para>
+            <para> The first three categories, small, medium, and large are for tests run when you
+                type <code>$ mvn test</code>; i.e. these three categorizations are for HBase unit
+                tests. The integration category is for not for unit tests but for integration tests.
+                These are run when you invoke <code>$ mvn verify</code>. Integration tests are
+                described in <xref
+                    linkend="integration.tests" /> and will not be discussed further in this section
+                on HBase unit tests.</para>
+            <para> Apache HBase uses a patched maven surefire plugin and maven profiles to implement
+                its unit test characterizations. </para>
+            <para>Read the below to figure which annotation of the set small, medium, and large to
+                put on your new HBase unit test. </para>
 
-<section xml:id="hbase.unittests.small">
-<title>Small Tests<indexterm><primary>SmallTests</primary></indexterm></title>
-<para>
-<emphasis>Small</emphasis> tests are executed in a shared JVM. We put in this category all the tests that can
-be executed quickly in a shared JVM.  The maximum execution time for a small test is 15 seconds,
-and small tests should not use a (mini)cluster.</para>
-</section>
+            <section
+                xml:id="hbase.unittests.small">
+                <title>Small Tests<indexterm><primary>SmallTests</primary></indexterm></title>
+                <para>
+                    <emphasis>Small</emphasis> tests are executed in a shared JVM. We put in this
+                    category all the tests that can be executed quickly in a shared JVM. The maximum
+                    execution time for a small test is 15 seconds, and small tests should not use a
+                    (mini)cluster.</para>
+            </section>
 
-<section xml:id="hbase.unittests.medium">
-<title>Medium Tests<indexterm><primary>MediumTests</primary></indexterm></title>
-<para><emphasis>Medium</emphasis> tests represent tests that must be executed
-before proposing a patch. They are designed to run in less than 30 minutes altogether,
-and are quite stable in their results. They are designed to last less than 50 seconds
-individually. They can use a cluster, and each of them is executed in a separate JVM.
-</para>
-</section>
+            <section
+                xml:id="hbase.unittests.medium">
+                <title>Medium Tests<indexterm><primary>MediumTests</primary></indexterm></title>
+                <para><emphasis>Medium</emphasis> tests represent tests that must be executed before
+                    proposing a patch. They are designed to run in less than 30 minutes altogether,
+                    and are quite stable in their results. They are designed to last less than 50
+                    seconds individually. They can use a cluster, and each of them is executed in a
+                    separate JVM. </para>
+            </section>
 
-<section xml:id="hbase.unittests.large">
-<title>Large Tests<indexterm><primary>LargeTests</primary></indexterm></title>
-<para><emphasis>Large</emphasis> tests are everything else. They are typically large-scale
-tests, regression tests for specific bugs, timeout tests, performance tests.
-They are executed before a commit on the pre-integration machines. They can be run on
-the developer machine as well.
-</para>
-</section>
-<section xml:id="hbase.unittests.integration">
-<title>Integration Tests<indexterm><primary>IntegrationTests</primary></indexterm></title>
-<para><emphasis>Integration</emphasis> tests are system level tests. See
-<xref linkend="integration.tests"/> for more info.
-</para>
-</section>
-</section>
+            <section
+                xml:id="hbase.unittests.large">
+                <title>Large Tests<indexterm><primary>LargeTests</primary></indexterm></title>
+                <para><emphasis>Large</emphasis> tests are everything else. They are typically
+                    large-scale tests, regression tests for specific bugs, timeout tests,
+                    performance tests. They are executed before a commit on the pre-integration
+                    machines. They can be run on the developer machine as well. </para>
+            </section>
+            <section
+                xml:id="hbase.unittests.integration">
+                <title>Integration
+                    Tests<indexterm><primary>IntegrationTests</primary></indexterm></title>
+                <para><emphasis>Integration</emphasis> tests are system level tests. See <xref
+                        linkend="integration.tests" /> for more info. </para>
+            </section>
+        </section>
 
-<section xml:id="hbase.unittests.cmds">
-<title>Running tests</title>
-<para>Below we describe how to run the Apache HBase junit categories.</para>
+        <section
+            xml:id="hbase.unittests.cmds">
+            <title>Running tests</title>
+            <para>Below we describe how to run the Apache HBase junit categories.</para>
 
-<section xml:id="hbase.unittests.cmds.test">
-<title>Default: small and medium category tests
-</title>
-<para>Running <programlisting>mvn test</programlisting> will execute all small tests in a single JVM
-(no fork) and then medium tests in a separate JVM for each test instance.
-Medium tests are NOT executed if there is an error in a small test.
-Large tests are NOT executed.  There is one report for small tests, and one report for
-medium tests if they are executed.
-</para>
-</section>
+            <section
+                xml:id="hbase.unittests.cmds.test">
+                <title>Default: small and medium category tests </title>
+                <para>Running <programlisting>mvn test</programlisting> will execute all small tests
+                    in a single JVM (no fork) and then medium tests in a separate JVM for each test
+                    instance. Medium tests are NOT executed if there is an error in a small test.
+                    Large tests are NOT executed. There is one report for small tests, and one
+                    report for medium tests if they are executed. </para>
+            </section>
 
-<section xml:id="hbase.unittests.cmds.test.runAllTests">
-<title>Running all tests</title>
-<para>Running <programlisting>mvn test -P runAllTests</programlisting>
-will execute small tests in a single JVM then medium and large tests in a separate JVM for each test.
-Medium and large tests are NOT executed if there is an error in a small test.
-Large tests are NOT executed if there is an error in a small or medium test.
-There is one report for small tests, and one report for medium and large tests if they are executed.
-</para>
-</section>
+            <section
+                xml:id="hbase.unittests.cmds.test.runAllTests">
+                <title>Running all tests</title>
+                <para>Running <programlisting>mvn test -P runAllTests</programlisting> will execute
+                    small tests in a single JVM then medium and large tests in a separate JVM for
+                    each test. Medium and large tests are NOT executed if there is an error in a
+                    small test. Large tests are NOT executed if there is an error in a small or
+                    medium test. There is one report for small tests, and one report for medium and
+                    large tests if they are executed. </para>
+            </section>
 
-<section xml:id="hbase.unittests.cmds.test.localtests.mytest">
-<title>Running a single test or all tests in a package</title>
-<para>To run an individual test, e.g. <classname>MyTest</classname>, do
-<programlisting>mvn test -Dtest=MyTest</programlisting>  You can also
-pass multiple, individual tests as a comma-delimited list:
-<programlisting>mvn test -Dtest=MyTest1,MyTest2,MyTest3</programlisting>
-You can also pass a package, which will run all tests under the package:
-<programlisting>mvn test '-Dtest=org.apache.hadoop.hbase.client.*'</programlisting>
-</para>
+            <section
+                xml:id="hbase.unittests.cmds.test.localtests.mytest">
+                <title>Running a single test or all tests in a package</title>
+                <para>To run an individual test, e.g. <classname>MyTest</classname>, do
+                    <programlisting>mvn test -Dtest=MyTest</programlisting> You can also pass
+                    multiple, individual tests as a comma-delimited list:
+                    <programlisting>mvn test -Dtest=MyTest1,MyTest2,MyTest3</programlisting> You can
+                    also pass a package, which will run all tests under the package:
+                    <programlisting>mvn test '-Dtest=org.apache.hadoop.hbase.client.*'</programlisting>
+                </para>
 
-<para>
-When <code>-Dtest</code> is specified, <code>localTests</code> profile will be used. It will use the official release
-of maven surefire, rather than our custom surefire plugin, and the old connector (The HBase build uses a patched
-version of the maven surefire plugin). Each junit tests is executed in a separate JVM (A fork per test class).
-There is no parallelization when tests are running in this mode. You will see a new message at the end of the
--report: "[INFO] Tests are skipped". It's harmless. While you need to make sure the sum of <code>Tests run:</code> in
-the <code>Results :</code> section of test reports matching the number of tests you specified because no
-error will be reported when a non-existent test case is specified.
-</para>
-</section>
+                <para> When <code>-Dtest</code> is specified, <code>localTests</code> profile will
+                    be used. It will use the official release of maven surefire, rather than our
+                    custom surefire plugin, and the old connector (The HBase build uses a patched
+                    version of the maven surefire plugin). Each junit tests is executed in a
+                    separate JVM (A fork per test class). There is no parallelization when tests are
+                    running in this mode. You will see a new message at the end of the -report:
+                    "[INFO] Tests are skipped". It's harmless. While you need to make sure the sum
+                    of <code>Tests run:</code> in the <code>Results :</code> section of test reports
+                    matching the number of tests you specified because no error will be reported
+                    when a non-existent test case is specified. </para>
+            </section>
 
-<section xml:id="hbase.unittests.cmds.test.profiles">
-<title>Other test invocation permutations</title>
-<para>Running <programlisting>mvn test -P runSmallTests</programlisting> will execute "small" tests only, using a single JVM.
-</para>
-<para>Running <programlisting>mvn test -P runMediumTests</programlisting> will execute "medium" tests only, launching a new JVM for each test-class.
-</para>
-<para>Running <programlisting>mvn test -P runLargeTests</programlisting> will execute "large" tests only, launching a new JVM for each test-class.
-</para>
-<para>For convenience, you can run <programlisting>mvn test -P runDevTests</programlisting> to execute both small and medium tests, using a single JVM.
-</para>
-</section>
+            <section
+                xml:id="hbase.unittests.cmds.test.profiles">
+                <title>Other test invocation permutations</title>
+                <para>Running <command>mvn test -P runSmallTests</command> will execute "small"
+                    tests only, using a single JVM. </para>
+                <para>Running <command>mvn test -P runMediumTests</command> will execute "medium"
+                    tests only, launching a new JVM for each test-class. </para>
+                <para>Running <command>mvn test -P runLargeTests</command> will execute "large"
+                    tests only, launching a new JVM for each test-class. </para>
+                <para>For convenience, you can run <command>mvn test -P runDevTests</command> to
+                    execute both small and medium tests, using a single JVM. </para>
+            </section>
 
-<section xml:id="hbase.unittests.test.faster">
-<title>Running tests faster</title>
-<para> By default, <code>$ mvn test -P runAllTests</code> runs 5 tests in parallel. It can be
-                    increased on a developer's machine. Allowing that you can have 2 tests in
-                    parallel per core, and you need about 2Gb of memory per test (at the extreme),
-                    if you have an 8 core, 24Gb box, you can have 16 tests in parallel. but the
-                    memory available limits it to 12 (24/2), To run all tests with 12 tests in
-                    parallel, do this: <command>mvn test -P runAllTests
+            <section
+                xml:id="hbase.unittests.test.faster">
+                <title>Running tests faster</title>
+                <para> By default, <code>$ mvn test -P runAllTests</code> runs 5 tests in parallel.
+                    It can be increased on a developer's machine. Allowing that you can have 2 tests
+                    in parallel per core, and you need about 2Gb of memory per test (at the
+                    extreme), if you have an 8 core, 24Gb box, you can have 16 tests in parallel.
+                    but the memory available limits it to 12 (24/2), To run all tests with 12 tests
+                    in parallel, do this: <command>mvn test -P runAllTests
                         -Dsurefire.secondPartThreadCount=12</command>. To increase the speed, you
                     can as well use a ramdisk. You will need 2Gb of memory to run all tests. You
                     will also need to delete the files between two test run. The typical way to
-                    configure a ramdisk on Linux is:
-                    <programlisting>$ sudo mkdir /ram2G
-sudo mount -t tmpfs -o size=2048M tmpfs /ram2G</programlisting>
-                    You can then use it to run all HBase tests with the command: <command>mvn test
+                    configure a ramdisk on Linux is:</para>
+                <screen>$ sudo mkdir /ram2G
+sudo mount -t tmpfs -o size=2048M tmpfs /ram2G</screen>
+                <para>You can then use it to run all HBase tests with the command: </para>
+                <screen>mvn test
                         -P runAllTests -Dsurefire.secondPartThreadCount=12
-                        -Dtest.build.data.basedirectory=/ram2G</command>
+                        -Dtest.build.data.basedirectory=/ram2G</screen>
+            </section>
+
+            <section
+                xml:id="hbase.unittests.cmds.test.hbasetests">
+                <title><command>hbasetests.sh</command></title>
+                <para>It's also possible to use the script <command>hbasetests.sh</command>. This
+                    script runs the medium and large tests in parallel with two maven instances, and
+                    provides a single report. This script does not use the hbase version of surefire
+                    so no parallelization is being done other than the two maven instances the
+                    script sets up. It must be executed from the directory which contains the
+                        <filename>pom.xml</filename>.</para>
+                <para>For example running <command>./dev-support/hbasetests.sh</command> will
+                    execute small and medium tests. Running <command>./dev-support/hbasetests.sh
+                        runAllTests</command> will execute all tests. Running
+                        <command>./dev-support/hbasetests.sh replayFailed</command> will rerun the
+                    failed tests a second time, in a separate jvm and without parallelisation.
                 </para>
-</section>
+            </section>
+            <section
+                xml:id="hbase.unittests.resource.checker">
+                <title>Test Resource Checker<indexterm><primary>Test Resource
+                        Checker</primary></indexterm></title>
+                <para> A custom Maven SureFire plugin listener checks a number of resources before
+                    and after each HBase unit test runs and logs its findings at the end of the test
+                    output files which can be found in <filename>target/surefire-reports</filename>
+                    per Maven module (Tests write test reports named for the test class into this
+                    directory. Check the <filename>*-out.txt</filename> files). The resources
+                    counted are the number of threads, the number of file descriptors, etc. If the
+                    number has increased, it adds a <emphasis>LEAK?</emphasis> comment in the logs.
+                    As you can have an HBase instance running in the background, some threads can be
+                    deleted/created without any specific action in the test. However, if the test
+                    does not work as expected, or if the test should not impact these resources,
+                    it's worth checking these log lines
+                        <computeroutput>...hbase.ResourceChecker(157): before...</computeroutput>
+                    and <computeroutput>...hbase.ResourceChecker(157): after...</computeroutput>.
+                    For example: </para>
+                <screen>2012-09-26 09:22:15,315 INFO [pool-1-thread-1]
+hbase.ResourceChecker(157): after:
+regionserver.TestColumnSeeking#testReseeking Thread=65 (was 65),
+OpenFileDescriptor=107 (was 107), MaxFileDescriptor=10240 (was 10240),
+ConnectionCount=1 (was 1) </screen>
+            </section>
+        </section>
 
-<section xml:id="hbase.unittests.cmds.test.hbasetests">
-<title><command>hbasetests.sh</command></title>
-<para>It's also possible to use the script <command>hbasetests.sh</command>. This script runs the medium and
-large tests in parallel with two maven instances, and provides a single report.  This script does not use
-the hbase version of surefire so no parallelization is being done other than the two maven instances the
-script sets up.
-It must be executed from the directory which contains the <filename>pom.xml</filename>.</para>
-<para>For example running
-<programlisting>./dev-support/hbasetests.sh</programlisting> will execute small and medium tests.
-Running <programlisting>./dev-support/hbasetests.sh runAllTests</programlisting> will execute all tests.
-Running <programlisting>./dev-support/hbasetests.sh replayFailed</programlisting> will rerun the failed tests a
-second time, in a separate jvm and without parallelisation.
-</para>
-</section>
-<section xml:id="hbase.unittests.resource.checker">
-<title>Test Resource Checker<indexterm><primary>Test Resource Checker</primary></indexterm></title>
-<para>
-A custom Maven SureFire plugin listener checks a  number of resources before
-and after each HBase unit test runs and logs its findings at the end of the test
-output files which can be found in <filename>target/surefire-reports</filename>
-per Maven module (Tests write test reports named for the test class into this directory.
-Check the <filename>*-out.txt</filename> files).  The resources counted are the number
-of threads, the number of file descriptors, etc. If the number has increased, it adds
-a <emphasis>LEAK?</emphasis> comment in the logs. As you can have an HBase instance
-running in the background, some threads can be deleted/created without any specific
-action in the test. However, if the test does not work as expected, or if the test
-should not impact these resources, it's worth checking these log lines
-<computeroutput>...hbase.ResourceChecker(157): before...</computeroutput> and
-<computeroutput>...hbase.ResourceChecker(157): after...</computeroutput>. For example:
-<computeroutput>
-2012-09-26 09:22:15,315 INFO  [pool-1-thread-1] hbase.ResourceChecker(157): after: regionserver.TestColumnSeeking#testReseeking Thread=65 (was 65), OpenFileDescriptor=107 (was 107), MaxFileDescriptor=10240 (was 10240), ConnectionCount=1 (was 1)
-</computeroutput>
-</para>
-</section>
-</section>
+        <section
+            xml:id="hbase.tests.writing">
+            <title>Writing Tests</title>
+            <section
+                xml:id="hbase.tests.rules">
+                <title>General rules</title>
+                <itemizedlist>
+                    <listitem>
+                        <para>As much as possible, tests should be written as category small
+                            tests.</para>
+                    </listitem>
+                    <listitem>
+                        <para>All tests must be written to support parallel execution on the same
+                            machine, hence they should not use shared resources as fixed ports or
+                            fixed file names.</para>
+                    </listitem>
+                    <listitem>
+                        <para>Tests should not overlog. More than 100 lines/second makes the logs
+                            complex to read and use i/o that are hence not available for the other
+                            tests.</para>
+                    </listitem>
+                    <listitem>
+                        <para>Tests can be written with <classname>HBaseTestingUtility</classname>.
+                            This class offers helper functions to create a temp directory and do the
+                            cleanup, or to start a cluster.</para>
+                    </listitem>
+                </itemizedlist>
+            </section>
+            <section
+                xml:id="hbase.tests.categories">
+                <title>Categories and execution time</title>
+                <itemizedlist>
+                    <listitem>
+                        <para>All tests must be categorized, if not they could be skipped.</para>
+                    </listitem>
+                    <listitem>
+                        <para>All tests should be written to be as fast as possible.</para>
+                    </listitem>
+                    <listitem>
+                        <para>Small category tests should last less than 15 seconds, and must not
+                            have any side effect.</para>
+                    </listitem>
+                    <listitem>
+                        <para>Medium category tests should last less than 50 seconds.</para>
+                    </listitem>
+                    <listitem>
+                        <para>Large category tests should last less than 3 minutes. This should
+                            ensure a good parallelization for people using it, and ease the analysis
+                            when the test fails.</para>
+                    </listitem>
+                </itemizedlist>
+            </section>
+            <section
+                xml:id="hbase.tests.sleeps">
+                <title>Sleeps in tests</title>
+                <para>Whenever possible, tests should not use <methodname>Thread.sleep</methodname>,
+                    but rather waiting for the real event they need. This is faster and clearer for
+                    the reader. Tests should not do a <methodname>Thread.sleep</methodname> without
+                    testing an ending condition. This allows understanding what the test is waiting
+                    for. Moreover, the test will work whatever the machine performance is. Sleep
+                    should be minimal to be as fast as possible. Waiting for a variable should be
+                    done in a 40ms sleep loop. Waiting for a socket operation should be done in a
+                    200 ms sleep loop. </para>
+            </section>
 
-<section xml:id="hbase.tests.writing">
-<title>Writing Tests</title>
-<section xml:id="hbase.tests.rules">
-<title>General rules</title>
-<itemizedlist>
-<listitem>
-<para>As much as possible, tests should be written as category small tests.</para>
-</listitem>
-<listitem>
-<para>All tests must be written to support parallel execution on the same machine, hence they should not use shared resources as fixed ports or fixed file names.</para>
-</listitem>
-<listitem>
-<para>Tests should not overlog. More than 100 lines/second makes the logs complex to read and use i/o that are hence not available for the other tests.</para>
-</listitem>
-<listitem>
-<para>Tests can be written with <classname>HBaseTestingUtility</classname>.
-This class offers helper functions to create a temp directory and do the cleanup, or to start a cluster.</para>
-</listitem>
-</itemizedlist>
-</section>
-<section xml:id="hbase.tests.categories">
-<title>Categories and execution time</title>
-<itemizedlist>
-<listitem>
-<para>All tests must be categorized, if not they could be skipped.</para>
-</listitem>
-<listitem>
-<para>All tests should be written to be as fast as possible.</para>
-</listitem>
-<listitem>
-<para>Small category tests should last less than 15 seconds, and must not have any side effect.</para>
-</listitem>
-<listitem>
-<para>Medium category tests should last less than 50 seconds.</para>
-</listitem>
-<listitem>
-<para>Large category tests should last less than 3 minutes.  This should ensure a good parallelization for people using it, and ease the analysis when the test fails.</para>
-</listitem>
-</itemizedlist>
-</section>
-<section xml:id="hbase.tests.sleeps">
-<title>Sleeps in tests</title>
-<para>Whenever possible, tests should not use <methodname>Thread.sleep</methodname>, but rather waiting for the real event they need. This is faster and clearer for the reader.
-Tests should not do a <methodname>Thread.sleep</methodname> without testing an ending condition. This allows understanding what the test is waiting for. Moreover, the test will work whatever the machine performance is.
-Sleep should be minimal to be as fast as possible. Waiting for a variable should be done in a 40ms sleep loop. Waiting for a socket operation should be done in a 200 ms sleep loop.
-</para>
-</section>
+            <section
+                xml:id="hbase.tests.cluster">
+                <title>Tests using a cluster </title>
 
-<section xml:id="hbase.tests.cluster">
-<title>Tests using a cluster
-</title>
+                <para>Tests using a HRegion do not have to start a cluster: A region can use the
+                    local file system. Start/stopping a cluster cost around 10 seconds. They should
+                    not be started per test method but per test class. Started cluster must be
+                    shutdown using <methodname>HBaseTestingUtility#shutdownMiniCluster</methodname>,
+                    which cleans the directories. As most as possible, tests should use the default
+                    settings for the cluster. When they don't, they should document it. This will
+                    allow to share the cluster later. </para>
+            </section>
+        </section>
 
-<para>Tests using a HRegion do not have to start a cluster: A region can use the local file system.
-Start/stopping a cluster cost around 10 seconds. They should not be started per test method but per test class.
-Started cluster must be shutdown using <methodname>HBaseTestingUtility#shutdownMiniCluster</methodname>, which cleans the directories.
-As most as possible, tests should use the default settings for the cluster. When they don't, they should document it. This will allow to share the cluster later.
-</para>
-</section>
-</section>
+        <section
+            xml:id="integration.tests">
+            <title>Integration Tests</title>
+            <para>HBase integration/system tests are tests that are beyond HBase unit tests. They
+                are generally long-lasting, sizeable (the test can be asked to 1M rows or 1B rows),
+                targetable (they can take configuration that will point them at the ready-made
+                cluster they are to run against; integration tests do not include cluster start/stop
+                code), and verifying success, integration tests rely on public APIs only; they do
+                not attempt to examine server internals asserting success/fail. Integration tests
+                are what you would run when you need to more elaborate proofing of a release
+                candidate beyond what unit tests can do. They are not generally run on the Apache
+                Continuous Integration build server, however, some sites opt to run integration
+                tests as a part of their continuous testing on an actual cluster. </para>
+            <para> Integration tests currently live under the <filename>src/test</filename>
+                directory in the hbase-it submodule and will match the regex:
+                    <filename>**/IntegrationTest*.java</filename>. All integration tests are also
+                annotated with <code>@Category(IntegrationTests.class)</code>. </para>
 
-<section xml:id="integration.tests">
-<title>Integration Tests</title>
-<para>HBase integration/system tests are tests that are beyond HBase unit tests.  They
-are generally long-lasting, sizeable (the test can be asked to 1M rows or 1B rows),
-targetable (they can take configuration that will point them at the ready-made cluster
-they are to run against; integration tests do not include cluster start/stop code),
-and verifying success, integration tests rely on public APIs only; they do not
-attempt to examine server internals asserting success/fail. Integration tests
-are what you would run when you need to more elaborate proofing of a release candidate
-beyond what unit tests can do. They are not generally run on the Apache Continuous Integration
-build server, however, some sites opt to run integration tests as a part of their
-continuous testing on an actual cluster.
-</para>
-<para>
-Integration tests currently live under the <filename>src/test</filename> directory
-in the hbase-it submodule and will match the regex: <filename>**/IntegrationTest*.java</filename>.
-All integration tests are also annotated with <code>@Category(IntegrationTests.class)</code>.
-</para>
+            <para> Integration tests can be run in two modes: using a mini cluster, or against an
+                actual distributed cluster. Maven failsafe is used to run the tests using the mini
+                cluster. IntegrationTestsDriver class is used for executing the tests against a
+                distributed cluster. Integration tests SHOULD NOT assume that they are running
+                against a mini cluster, and SHOULD NOT use private API's to access cluster state. To
+                interact with the distributed or mini cluster uniformly,
+                    <code>IntegrationTestingUtility</code>, and <code>HBaseCluster</code> classes,
+                and public client API's can be used. </para>
 
-<para>
-Integration tests can be run in two modes: using a mini cluster, or against an actual distributed cluster.
-Maven failsafe is used to run the tests using the mini cluster. IntegrationTestsDriver class is used for
-executing the tests against a distributed cluster. Integration tests SHOULD NOT assume that they are running against a
-mini cluster, and SHOULD NOT use private API's to access cluster state. To interact with the distributed or mini
-cluster uniformly, <code>IntegrationTestingUtility</code>, and <code>HBaseCluster</code> classes,
-and public client API's can be used.
-</para>
+            <para> On a distributed cluster, integration tests that use ChaosMonkey or otherwise
+                manipulate services thru cluster manager (e.g. restart regionservers) use SSH to do
+                it. To run these, test process should be able to run commands on remote end, so ssh
+                should be configured accordingly (for example, if HBase runs under hbase user in
+                your cluster, you can set up passwordless ssh for that user and run the test also
+                under it). To facilitate that, <code>hbase.it.clustermanager.ssh.user</code>,
+                    <code>hbase.it.clustermanager.ssh.opts</code> and
+                    <code>hbase.it.clustermanager.ssh.cmd</code> configuration settings can be used.
+                "User" is the remote user that cluster manager should use to perform ssh commands.
+                "Opts" contains additional options that are passed to SSH (for example, "-i
+                /tmp/my-key"). Finally, if you have some custom environment setup, "cmd" is the
+                override format for the entire tunnel (ssh) command. The default string is
+                    {<code>/usr/bin/ssh %1$s %2$s%3$s%4$s "%5$s"</code>} and is a good starting
+                point. This is a standard Java format string with 5 arguments that is used to
+                execute the remote command. The argument 1 (%1$s) is SSH options set the via opts
+                setting or via environment variable, 2 is SSH user name, 3 is "@" if username is set
+                or "" otherwise, 4 is the target host name, and 5 is the logical command to execute
+                (that may include single quotes, so don't use them). For example, if you run the
+                tests under non-hbase user and want to ssh as that user and change to hbase on
+                remote machine, you can use {<code>/usr/bin/ssh %1$s %2$s%3$s%4$s "su hbase - -c
+                    \"%5$s\""</code>}. That way, to kill RS (for example) integration tests may run
+                    {<code>/usr/bin/ssh some-hostname "su hbase - -c \"ps aux | ... | kill
+                    ...\""</code>}. The command is logged in the test logs, so you can verify it is
+                correct for your environment. </para>
 
-<para>
-On a distributed cluster, integration tests that use ChaosMonkey or otherwise manipulate services thru cluster manager (e.g. restart regionservers) use SSH to do it.
-To run these, test process should be able to run commands on remote end, so ssh should be configured accordingly (for example, if HBase runs under hbase
-user in your cluster, you can set up passwordless ssh for that user and run the test also under it). To facilitate that, <code>hbase.it.clustermanager.ssh.user</code>,
-<code>hbase.it.clustermanager.ssh.opts</code> and <code>hbase.it.clustermanager.ssh.cmd</code> configuration settings can be used. "User" is the remote user that cluster manager should use to perform ssh commands.
-"Opts" contains additional options that are passed to SSH (for example, "-i /tmp/my-key").
-Finally, if you have some custom environment setup, "cmd" is the override format for the entire tunnel (ssh) command. The default string is {<code>/usr/bin/ssh %1$s %2$s%3$s%4$s "%5$s"</code>} and is a good starting point. This is a standard Java format string with 5 arguments that is used to execute the remote command. The argument 1 (%1$s) is SSH options set the via opts setting or via environment variable, 2 is SSH user name, 3 is "@" if username is set or "" otherwise, 4 is the target host name, and 5 is the logical command to execute (that may include single quotes, so don't use them). For example, if you run the tests under non-hbase user and want to ssh as that user and change to hbase on remote machine, you can use {<code>/usr/bin/ssh %1$s %2$s%3$s%4$s "su hbase - -c \"%5$s\""</code>}. That way, to kill RS (for example) integration tests may run {<code>/usr/bin/ssh some-hostname "su hbase - -c \"ps aux | ... | kill ...\""</code>}.
-The command is logged in the test logs, so you can verify it is correct for your environment.
-</para>
-
-<section xml:id="maven.build.commands.integration.tests.mini">
-<title>Running integration tests against mini cluster</title>
-<para>HBase 0.92 added a <varname>verify</varname> maven target.
-Invoking it, for example by doing <code>mvn verify</code>, will
-run all the phases up to and including the verify phase via the
-maven <link xlink:href="http://maven.apache.org/plugins/maven-failsafe-plugin/">failsafe plugin</link>,
-running all the above mentioned HBase unit tests as well as tests that are in the HBase integration test group.
-After you have completed
-          <programlisting>mvn install -DskipTests</programlisting>
-You can run just the integration tests by invoking:
-          <programlisting>
+            <section
+                xml:id="maven.build.commands.integration.tests.mini">
+                <title>Running integration tests against mini cluster</title>
+                <para>HBase 0.92 added a <varname>verify</varname> maven target. Invoking it, for
+                    example by doing <code>mvn verify</code>, will run all the phases up to and
+                    including the verify phase via the maven <link
+                        xlink:href="http://maven.apache.org/plugins/maven-failsafe-plugin/">failsafe
+                        plugin</link>, running all the above mentioned HBase unit tests as well as
+                    tests that are in the HBase integration test group. After you have completed
+                        <command>mvn install -DskipTests</command> You can run just the integration
+                    tests by invoking:</para>
+                <programlisting>
 cd hbase-it
 mvn verify</programlisting>
+                <para>If you just want to run the integration tests in top-level, you need to run
+                    two commands. First: <command>mvn failsafe:integration-test</command> This
+                    actually runs ALL the integration tests. </para>
+                <note>
+                    <para>This command will always output <code>BUILD SUCCESS</code> even if there
+                        are test failures. </para>
+                </note>
+                <para>At this point, you could grep the output by hand looking for failed tests.
+                    However, maven will do this for us; just use: <command>mvn
+                        failsafe:verify</command> The above command basically looks at all the test
+                    results (so don't remove the 'target' directory) for test failures and reports
+                    the results.</para>
 
-If you just want to run the integration tests in top-level, you need to run two commands. First:
-          <programlisting>mvn failsafe:integration-test</programlisting>
-This actually runs ALL the integration tests.
-          <note><para>This command will always output <code>BUILD SUCCESS</code> even if there are test failures.
-          </para></note>
-          At this point, you could grep the output by hand looking for failed tests. However, maven will do this for us; just use:
-          <programlisting>mvn failsafe:verify</programlisting>
-          The above command basically looks at all the test results (so don't remove the 'target' directory) for test failures and reports the results.</para>
+                <section
+                    xml:id="maven.build.commands.integration.tests2">
+                    <title>Running a subset of Integration tests</title>
+                    <para>This is very similar to how you specify running a subset of unit tests
+                        (see above), but use the property <code>it.test</code> instead of
+                            <code>test</code>. To just run
+                            <classname>IntegrationTestClassXYZ.java</classname>, use: <command>mvn
+                            failsafe:integration-test -Dit.test=IntegrationTestClassXYZ</command>
+                        The next thing you might want to do is run groups of integration tests, say
+                        all integration tests that are named IntegrationTestClassX*.java:
+                            <command>mvn failsafe:integration-test -Dit.test=*ClassX*</command> This
+                        runs everything that is an integration test that matches *ClassX*. This
+                        means anything matching: "**/IntegrationTest*ClassX*". You can also run
+                        multiple groups of integration tests using comma-delimited lists (similar to
+                        unit tests). Using a list of matches still supports full regex matching for
+                        each of the groups.This would look something like: <command>mvn
+                            failsafe:integration-test -Dit.test=*ClassX*, *ClassY</command>
+                    </para>
+                </section>
+            </section>
+            <section
+                xml:id="maven.build.commands.integration.tests.distributed">
+                <title>Running integration tests against distributed cluster</title>
+                <para> If you have an already-setup HBase cluster, you can launch the integration
+                    tests by invoking the class <code>IntegrationTestsDriver</code>. You may have to
+                    run test-compile first. The configuration will be picked by the bin/hbase
+                    script. <programlisting>mvn test-compile</programlisting> Then launch the tests
+                    with:</para>
+                <programlisting>bin/hbase [--config config_dir] org.apache.hadoop.hbase.IntegrationTestsDriver</programlisting>
+                <para>Pass <code>-h</code> to get usage on this sweet tool. Running the
+                    IntegrationTestsDriver without any argument will launch tests found under
+                        <code>hbase-it/src/test</code>, having
+                        <code>@Category(IntegrationTests.class)</code> annotation, and a name
+                    starting with <code>IntegrationTests</code>. See the usage, by passing -h, to
+                    see how to filter test classes. You can pass a regex which is checked against
+                    the full class name; so, part of class name can be used. IntegrationTestsDriver
+                    uses Junit to run the tests. Currently there is no support for running
+                    integration tests against a distributed cluster using maven (see <link
+                        xlink:href="https://issues.apache.org/jira/browse/HBASE-6201">HBASE-6201</link>). </para>
 
-      <section xml:id="maven.build.commands.integration.tests2">
-          <title>Running a subset of Integration tests</title>
-          <para>This is very similar to how you specify running a subset of unit tests (see above), but use the property
-	      <code>it.test</code> instead of <code>test</code>.
-To just run <classname>IntegrationTestClassXYZ.java</classname>, use:
-          <programlisting>mvn failsafe:integration-test -Dit.test=IntegrationTestClassXYZ</programlisting>
-          The next thing you might want to do is run groups of integration tests, say all integration tests that are named IntegrationTestClassX*.java:
-          <programlisting>mvn failsafe:integration-test -Dit.test=*ClassX*</programlisting>
-          This runs everything that is an integration test that matches *ClassX*. This means anything matching: "**/IntegrationTest*ClassX*".
-          You can also run multiple groups of integration tests using comma-delimited lists (similar to unit tests). Using a list of matches still supports full regex matching for each of the groups.This would look something like:
-          <programlisting>mvn failsafe:integration-test -Dit.test=*ClassX*, *ClassY</programlisting>
-          </para>
-      </section>
-</section>
-<section xml:id="maven.build.commands.integration.tests.distributed">
-<title>Running integration tests against distributed cluster</title>
-<para>
-If you have an already-setup HBase cluster, you can launch the integration tests by invoking the class <code>IntegrationTestsDriver</code>. You may have to
-run test-compile first. The configuration will be picked by the bin/hbase script.
-<programlisting>mvn test-compile</programlisting>
-Then launch the tests with:
-<programlisting>bin/hbase [--config config_dir] org.apache.hadoop.hbase.IntegrationTestsDriver</programlisting>
-Pass <code>-h</code> to get usage on this sweet tool.  Running the IntegrationTestsDriver without any argument will launch tests found under <code>hbase-it/src/test</code>, having <code>@Category(IntegrationTests.class)</code> annotation,
-and a name starting with <code>IntegrationTests</code>.  See the usage, by passing -h, to see how to filter test classes.
-You can pass a regex which is checked against the full class name; so, part of class name can be used.
-IntegrationTestsDriver uses Junit to run the tests. Currently there is no support for running integration tests against a distributed cluster using maven (see <link xlink:href="https://issues.apache.org/jira/browse/HBASE-6201">HBASE-6201</link>).
-</para>
+                <para> The tests interact with the distributed cluster by using the methods in the
+                        <code>DistributedHBaseCluster</code> (implementing
+                    <code>HBaseCluster</code>) class, which in turn uses a pluggable
+                        <code>ClusterManager</code>. Concrete implementations provide actual
+                    functionality for carrying out deployment-specific and environment-dependent
+                    tasks (SSH, etc). The default <code>ClusterManager</code> is
+                        <code>HBaseClusterManager</code>, which uses SSH to remotely execute
+                    start/stop/kill/signal commands, and assumes some posix commands (ps, etc). Also
+                    assumes the user running the test has enough "power" to start/stop servers on
+                    the remote machines. By default, it picks up <code>HBASE_SSH_OPTS, HBASE_HOME,
+                        HBASE_CONF_DIR</code> from the env, and uses
+                        <code>bin/hbase-daemon.sh</code> to carry out the actions. Currently tarball
+                    deployments, deployments which uses hbase-daemons.sh, and <link
+                        xlink:href="http://incubator.apache.org/ambari/">Apache Ambari</link>
+                    deployments are supported. /etc/init.d/ scripts are not supported for now, but
+                    it can be easily added. For other deployment options, a ClusterManager can be
+                    implemented and plugged in. </para>
+            </section>
 
-<para>
-The tests interact with the distributed cluster by using the methods in the <code>DistributedHBaseCluster</code> (implementing <code>HBaseCluster</code>) class, which in turn uses a pluggable <code>ClusterManager</code>. Concrete implementations provide actual functionality for carrying out deployment-specific and environment-dependent tasks (SSH, etc). The default <code>ClusterManager</code> is <code>HBaseClusterManager</code>, which uses SSH to remotely execute start/stop/kill/signal commands, and assumes some posix commands (ps, etc). Also assumes the user running the test has enough "power" to start/stop servers on the remote machines. By default, it picks up <code>HBASE_SSH_OPTS, HBASE_HOME, HBASE_CONF_DIR</code> from the env, and uses <code>bin/hbase-daemon.sh</code> to carry out the actions. Currently tarball deployments, deployments which uses hbase-daemons.sh, and <link xlink:href="http://incubator.apache.org/ambari/">Apache Ambari</link> deployments are supported. /etc/init.d/ scripts are not supported for now, but it can be easily added. For other deployment options, a ClusterManager can be implemented and plugged in.
-</para>
-</section>
+            <section
+                xml:id="maven.build.commands.integration.tests.destructive">
+                <title>Destructive integration / system tests</title>
+                <para> In 0.96, a tool named <code>ChaosMonkey</code> has been introduced. It is
+                    modeled after the <link
+                        xlink:href="http://techblog.netflix.com/2012/07/chaos-monkey-released-into-wild.html">same-named
+                        tool by Netflix</link>. Some of the tests use ChaosMonkey to simulate faults
+                    in the running cluster in the way of killing random servers, disconnecting
+                    servers, etc. ChaosMonkey can also be used as a stand-alone tool to run a
+                    (misbehaving) policy while you are running other tests. </para>
 
-<section xml:id="maven.build.commands.integration.tests.destructive">
-<title>Destructive integration / system tests</title>
-<para>
-	In 0.96, a tool named <code>ChaosMonkey</code> has been introduced. It is modeled after the <link xlink:href="http://techblog.netflix.com/2012/07/chaos-monkey-released-into-wild.html">same-named tool by Netflix</link>.
-Some of the tests use ChaosMonkey to simulate faults in the running cluster in the way of killing random servers,
-disconnecting servers, etc. ChaosMonkey can also be used as a stand-alone tool to run a (misbehaving) policy while you
-are running other tests.
-</para>
+                <para> ChaosMonkey defines Action's and Policy's. Actions are sequences of events.
+                    We have at least the following actions:</para>
+                <itemizedlist>
+                    <listitem>
+                        <para>Restart active master (sleep 5 sec)</para>
+                    </listitem>
+                    <listitem>
+                        <para>Restart random regionserver (sleep 5 sec)</para>
+                    </listitem>
+                    <listitem>
+                        <para>Restart random regionserver (sleep 60 sec)</para>
+                    </listitem>
+                    <listitem>
+                        <para>Restart META regionserver (sleep 5 sec)</para>
+                    </listitem>
+                    <listitem>
+                        <para>Restart ROOT regionserver (sleep 5 sec)</para>
+                    </listitem>
+                    <listitem>
+                        <para>Batch restart of 50% of regionservers (sleep 5 sec)</para>
+                    </listitem>
+                    <listitem>
+                        <para>Rolling restart of 100% of regionservers (sleep 5 sec)</para>
+                    </listitem>
+                </itemizedlist>
+                <para> Policies on the other hand are responsible for executing the actions based on
+                    a strategy. The default policy is to execute a random action every minute based
+                    on predefined action weights. ChaosMonkey executes predefined named policies
+                    until it is stopped. More than one policy can be active at any time. </para>
 
-<para>
-ChaosMonkey defines Action's and Policy's. Actions are sequences of events. We have at least the following actions:</para>
-<itemizedlist>
-<listitem><para>Restart active master (sleep 5 sec)</para></listitem>
-<listitem><para>Restart random regionserver (sleep 5 sec)</para></listitem>
-<listitem><para>Restart random regionserver (sleep 60 sec)</para></listitem>
-<listitem><para>Restart META regionserver (sleep 5 sec)</para></listitem>
-<listitem><para>Restart ROOT regionserver (sleep 5 sec)</para></listitem>
-<listitem><para>Batch restart of 50% of regionservers (sleep 5 sec)</para></listitem>
-<listitem><para>Rolling restart of 100% of regionservers (sleep 5 sec)</para></listitem>
-</itemizedlist>
-<para>
-Policies on the other hand are responsible for executing the actions based on a strategy.
-The default policy is to execute a random action every minute based on predefined action
-weights. ChaosMonkey executes predefined named policies until it is stopped. More than one
-policy can be active at any time.
-</para>
-
-<para>
-  To run ChaosMonkey as a standalone tool deploy your HBase cluster as usual. ChaosMonkey uses the configuration
-from the bin/hbase script, thus no extra configuration needs to be done. You can invoke the ChaosMonkey by running:</para>
-<programlisting>bin/hbase org.apache.hadoop.hbase.util.ChaosMonkey</programlisting>
-<para>
-This will output smt like:
-</para>
-<screen>
+                <para> To run ChaosMonkey as a standalone tool deploy your HBase cluster as usual.
+                    ChaosMonkey uses the configuration from the bin/hbase script, thus no extra
+                    configuration needs to be done. You can invoke the ChaosMonkey by
+                    running:</para>
+                <programlisting>bin/hbase org.apache.hadoop.hbase.util.ChaosMonkey</programlisting>
+                <para> This will output smt like: </para>
+                <screen>
 12/11/19 23:21:57 INFO util.ChaosMonkey: Using ChaosMonkey Policy: class org.apache.hadoop.hbase.util.ChaosMonkey$PeriodicRandomActionPolicy, period:60000
 12/11/19 23:21:57 INFO util.ChaosMonkey: Sleeping for 26953 to add jitter
 12/11/19 23:22:24 INFO util.ChaosMonkey: Performing action: Restart active master
@@ -1293,7 +1382,8 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
 
           <section xml:id="common.patch.feedback.javadoc.defaults">
             <title>Javadoc - Useless Defaults</title>
-            <para>Don't just leave the @param arguments the way your IDE generated them.  Don't do this...
+            <para>Don't just leave the @param arguments the way your IDE generated them.  Don't do
+                this...</para>
 <programlisting>
   /**
    *
@@ -1302,31 +1392,32 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
    */
   public Foo getFoo(Bar bar);
 </programlisting>
-            ... either add something descriptive to the @param and @return lines, or just remove them.
-            But the preference is to add something descriptive and useful.
-            </para>
-          </section>
-          <section xml:id="common.patch.feedback.onething">
-            <title>One Thing At A Time, Folks</title>
-            <para>If you submit a patch for one thing, don't do auto-reformatting or unrelated reformatting of code on a completely
-            different area of code.
-            </para>
-            <para>Likewise, don't add unrelated cleanup or refactorings outside the scope of your Jira.
-            </para>
-          </section>
-          <section xml:id="common.patch.feedback.tests">
-            <title>Ambigious Unit Tests</title>
-            <para>Make sure that you're clear about what you are testing in your unit tests and why.
-            </para>
-          </section>
+                <para>... either add something descriptive to the @param and @return lines, or just
+                    remove them. But the preference is to add something descriptive and
+                    useful.</para>
+            </section>
+            <section
+                xml:id="common.patch.feedback.onething">
+                <title>One Thing At A Time, Folks</title>
+                <para>If you submit a patch for one thing, don't do auto-reformatting or unrelated
+                    reformatting of code on a completely different area of code. </para>
+                <para>Likewise, don't add unrelated cleanup or refactorings outside the scope of
+                    your Jira. </para>
+            </section>
+            <section
+                xml:id="common.patch.feedback.tests">
+                <title>Ambigious Unit Tests</title>
+                <para>Make sure that you're clear about what you are testing in your unit tests and
+                    why. </para>
+            </section>
 
-        </section>   <!--  patch feedback -->
+        </section>
+        <!--  patch feedback -->
 
         <section>
             <title>Submitting a patch again</title>
-            <para>
-                Sometimes committers ask for changes for a patch.  After incorporating the suggested/requested changes, follow the following process to submit the patch again.
-            </para>
+            <para> Sometimes committers ask for changes for a patch. After incorporating the
+                suggested/requested changes, follow the following process to submit the patch again. </para>
             <itemizedlist>
                 <listitem>
                     <para>Do not delete the old patch file</para>
@@ -1341,20 +1432,22 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
                     <para>'Cancel Patch' on JIRA.. bug status will change back to Open</para>
                 </listitem>
                 <listitem>
-                    <para>Attach new patch file (e.g. HBASE_XXXX-v2.patch) using 'Files --> Attach'</para>
+                    <para>Attach new patch file (e.g. HBASE_XXXX-v2.patch) using 'Files -->
+                        Attach'</para>
                 </listitem>
                 <listitem>
-                    <para>Click on 'Submit Patch'.  Now the bug status will say 'Patch Available'.</para>
+                    <para>Click on 'Submit Patch'. Now the bug status will say 'Patch
+                        Available'.</para>
                 </listitem>
             </itemizedlist>
-            <para>Committers will review the patch.  Rinse and repeat as many times as needed :-)</para>
+            <para>Committers will review the patch. Rinse and repeat as many times as needed
+                :-)</para>
         </section>
 
         <section>
             <title>Submitting incremental patches</title>
-            <para>
-                At times you may want to break a big change into mulitple patches.  Here is a sample work-flow using git
-                <itemizedlist>
+            <para> At times you may want to break a big change into mulitple patches. Here is a
+                sample work-flow using git <itemizedlist>
                     <listitem>
                         <para>patch 1:</para>
                         <itemizedlist>
@@ -1374,7 +1467,8 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
                                 <para>save your work</para>
                                 <screen>$ git add file1 file2 </screen>
                                 <screen>$ git commit -am 'saved after HBASE_XXXX-1.patch'</screen>
-                                <para>now you have your own branch, that is different from remote master branch</para>
+                                <para>now you have your own branch, that is different from remote
+                                    master branch</para>
                             </listitem>
                             <listitem>
                                 <para>make more changes...</para>

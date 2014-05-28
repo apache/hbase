@@ -19,38 +19,45 @@
  * limitations under the License.
  */
 -->
-<book version="5.0" xmlns="http://docbook.org/ns/docbook"
-      xmlns:xlink="http://www.w3.org/1999/xlink"
-      xmlns:xi="http://www.w3.org/2001/XInclude"
-      xmlns:svg="http://www.w3.org/2000/svg"
-      xmlns:m="http://www.w3.org/1998/Math/MathML"
-      xmlns:html="http://www.w3.org/1999/xhtml"
-      xmlns:db="http://docbook.org/ns/docbook" xml:id="book">
+<book
+  version="5.0"
+  xmlns="http://docbook.org/ns/docbook"
+  xmlns:xlink="http://www.w3.org/1999/xlink"
+  xmlns:xi="http://www.w3.org/2001/XInclude"
+  xmlns:svg="http://www.w3.org/2000/svg"
+  xmlns:m="http://www.w3.org/1998/Math/MathML"
+  xmlns:html="http://www.w3.org/1999/xhtml"
+  xmlns:db="http://docbook.org/ns/docbook"
+  xml:id="book">
   <info>
 
-    <title><link xlink:href="http://www.hbase.org">
-    The Apache HBase&#153; Reference Guide
-    </link></title>
-    <subtitle><link xlink:href="http://www.hbase.org">
-           <inlinemediaobject>
-               <imageobject>
-                   <imagedata align="center" valign="middle" fileref="hbase_logo.png" />
-               </imageobject>
-           </inlinemediaobject>
-       </link>
+    <title><link
+        xlink:href="http://www.hbase.org"> The Apache HBase&#153; Reference Guide </link></title>
+    <subtitle><link
+        xlink:href="http://www.hbase.org">
+        <inlinemediaobject>
+          <imageobject>
+            <imagedata
+              align="center"
+              valign="middle"
+              fileref="hbase_logo.png" />
+          </imageobject>
+        </inlinemediaobject>
+      </link>
     </subtitle>
-    <copyright><year>2014</year><holder>Apache Software Foundation.
-        All Rights Reserved.  Apache Hadoop, Hadoop, MapReduce, HDFS, Zookeeper, HBase, and the HBase project logo are trademarks of the Apache Software Foundation.
-        </holder>
+    <copyright>
+      <year>2014</year>
+      <holder>Apache Software Foundation. All Rights Reserved. Apache Hadoop, Hadoop, MapReduce,
+        HDFS, Zookeeper, HBase, and the HBase project logo are trademarks of the Apache Software
+        Foundation. </holder>
     </copyright>
-      <abstract>
-    <para>This is the official reference guide of
-    <link xlink:href="http://www.hbase.org">Apache HBase&#153;</link>,
-    a distributed, versioned, big data store built on top of
-    <link xlink:href="http://hadoop.apache.org/">Apache Hadoop&#153;</link> and
-    <link xlink:href="http://zookeeper.apache.org/">Apache ZooKeeper&#153;</link>.
-      </para>
-      </abstract>
+    <abstract>
+      <para>This is the official reference guide of <link
+          xlink:href="http://www.hbase.org">Apache HBase&#153;</link>, a distributed, versioned, big
+        data store built on top of <link
+          xlink:href="http://hadoop.apache.org/">Apache Hadoop&#153;</link> and <link
+          xlink:href="http://zookeeper.apache.org/">Apache ZooKeeper&#153;</link>. </para>
+    </abstract>
 
     <revhistory>
       <revision>
@@ -65,151 +72,241 @@
   </info>
 
   <!--XInclude some chapters-->
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="preface.xml" />
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="getting_started.xml" />
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="configuration.xml" />
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="upgrading.xml"/>
-  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="shell.xml"/>
+  <xi:include
+    xmlns:xi="http://www.w3.org/2001/XInclude"
+    href="preface.xml" />
+  <xi:include
+    xmlns:xi="http://www.w3.org/2001/XInclude"
+    href="getting_started.xml" />
+  <xi:include
+    xmlns:xi="http://www.w3.org/2001/XInclude"
+    href="configuration.xml" />
+  <xi:include
+    xmlns:xi="http://www.w3.org/2001/XInclude"
+    href="upgrading.xml" />
+  <xi:include
+    xmlns:xi="http://www.w3.org/2001/XInclude"
+    href="shell.xml" />
 
-  <chapter xml:id="datamodel">
+  <chapter
+    xml:id="datamodel">
     <title>Data Model</title>
-    <para>In short, applications store data into an HBase table.
-        Tables are made of rows and columns.
-      All columns in HBase belong to a particular column family.
-      Table cells -- the intersection of row and column
-      coordinates -- are versioned.
-      A cell’s content is an uninterpreted array of bytes.
-  </para>
-      <para>Table row keys are also byte arrays so almost anything can
-      serve as a row key from strings to binary representations of longs or
-      even serialized data structures. Rows in HBase tables
-      are sorted by row key. The sort is byte-ordered. All table accesses are
-      via the table row key -- its primary key.
-</para>
+    <para>In short, applications store data into an HBase table. Tables are made of rows and
+      columns. All columns in HBase belong to a particular column family. Table cells -- the
+      intersection of row and column coordinates -- are versioned. A cell’s content is an
+      uninterpreted array of bytes. </para>
+    <para>Table row keys are also byte arrays so almost anything can serve as a row key from strings
+      to binary representations of longs or even serialized data structures. Rows in HBase tables
+      are sorted by row key. The sort is byte-ordered. All table accesses are via the table row key
+      -- its primary key. </para>
 
-    <section xml:id="conceptual.view"><title>Conceptual View</title>
-	<para>
-        The following example is a slightly modified form of the one on page
-        2 of the <link xlink:href="http://research.google.com/archive/bigtable.html">BigTable</link> paper.
-    There is a table called <varname>webtable</varname> that contains two column families named
-    <varname>contents</varname> and <varname>anchor</varname>.
-    In this example, <varname>anchor</varname> contains two
-    columns (<varname>anchor:cssnsi.com</varname>, <varname>anchor:my.look.ca</varname>)
-    and <varname>contents</varname> contains one column (<varname>contents:html</varname>).
-    <note>
-        <title>Column Names</title>
-      <para>
-      By convention, a column name is made of its column family prefix and a
-      <emphasis>qualifier</emphasis>. For example, the
-      column
-      <emphasis>contents:html</emphasis> is made up of the column family <varname>contents</varname>
-      and <varname>html</varname> qualifier.
-          The colon character (<literal>:</literal>) delimits the column family from the
-          column family <emphasis>qualifier</emphasis>.
-    </para>
-    </note>
-    <table frame='all'><title>Table <varname>webtable</varname></title>
-	<tgroup cols='4' align='left' colsep='1' rowsep='1'>
-	<colspec colname='c1'/>
-	<colspec colname='c2'/>
-	<colspec colname='c3'/>
-	<colspec colname='c4'/>
-	<thead>
-        <row><entry>Row Key</entry><entry>Time Stamp</entry><entry>ColumnFamily <varname>contents</varname></entry><entry>ColumnFamily <varname>anchor</varname></entry></row>
-	</thead>
-	<tbody>
-        <row><entry>"com.cnn.www"</entry><entry>t9</entry><entry></entry><entry><varname>anchor:cnnsi.com</varname> = "CNN"</entry></row>
-        <row><entry>"com.cnn.www"</entry><entry>t8</entry><entry></entry><entry><varname>anchor:my.look.ca</varname> = "CNN.com"</entry></row>
-        <row><entry>"com.cnn.www"</entry><entry>t6</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry><entry></entry></row>
-        <row><entry>"com.cnn.www"</entry><entry>t5</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry><entry></entry></row>
-        <row><entry>"com.cnn.www"</entry><entry>t3</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry><entry></entry></row>
-	</tbody>
-	</tgroup>
-	</table>
-	</para>
-	</section>
-    <section xml:id="physical.view"><title>Physical View</title>
-	<para>
-        Although at a conceptual level tables may be viewed as a sparse set of rows.
-        Physically they are stored on a per-column family basis.  New columns
-        (i.e., <varname>columnfamily:column</varname>) can be added to any
-        column family without pre-announcing them.
-        <table frame='all'><title>ColumnFamily <varname>anchor</varname></title>
-	<tgroup cols='3' align='left' colsep='1' rowsep='1'>
-	<colspec colname='c1'/>
-	<colspec colname='c2'/>
-	<colspec colname='c3'/>
-	<thead>
-        <row><entry>Row Key</entry><entry>Time Stamp</entry><entry>Column Family <varname>anchor</varname></entry></row>
-	</thead>
-	<tbody>
-        <row><entry>"com.cnn.www"</entry><entry>t9</entry><entry><varname>anchor:cnnsi.com</varname> = "CNN"</entry></row>
-        <row><entry>"com.cnn.www"</entry><entry>t8</entry><entry><varname>anchor:my.look.ca</varname> = "CNN.com"</entry></row>
-	</tbody>
-	</tgroup>
-	</table>
-    <table frame='all'><title>ColumnFamily <varname>contents</varname></title>
-	<tgroup cols='3' align='left' colsep='1' rowsep='1'>
-	<colspec colname='c1'/>
-	<colspec colname='c2'/>
-	<colspec colname='c3'/>
-	<thead>
-	<row><entry>Row Key</entry><entry>Time Stamp</entry><entry>ColumnFamily "contents:"</entry></row>
-	</thead>
-	<tbody>
-        <row><entry>"com.cnn.www"</entry><entry>t6</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry></row>
-        <row><entry>"com.cnn.www"</entry><entry>t5</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry></row>
-        <row><entry>"com.cnn.www"</entry><entry>t3</entry><entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry></row>
-	</tbody>
-	</tgroup>
-	</table>
-    It is important to note in the diagram above that the empty cells shown in the
-    conceptual view are not stored since they need not be in a column-oriented
-    storage format. Thus a request for the value of the <varname>contents:html</varname>
-    column at time stamp <literal>t8</literal> would return no value. Similarly, a
-    request for an <varname>anchor:my.look.ca</varname> value at time stamp
-    <literal>t9</literal> would return no value.  However, if no timestamp is
-    supplied, the most recent value for a particular column would be returned
-    and would also be the first one found since timestamps are stored in
-    descending order. Thus a request for the values of all columns in the row
-    <varname>com.cnn.www</varname> if no timestamp is specified would be:
-    the value of <varname>contents:html</varname> from time stamp
-    <literal>t6</literal>, the value of <varname>anchor:cnnsi.com</varname>
-    from time stamp <literal>t9</literal>, the value of
-    <varname>anchor:my.look.ca</varname> from time stamp <literal>t8</literal>.
-	</para>
-	<para>For more information about the internals of how Apache HBase stores data, see <xref linkend="regions.arch" />.
-	</para>
-	</section>
+    <section
+      xml:id="conceptual.view">
+      <title>Conceptual View</title>
+      <para> The following example is a slightly modified form of the one on page 2 of the <link
+          xlink:href="http://research.google.com/archive/bigtable.html">BigTable</link> paper. There
+        is a table called <varname>webtable</varname> that contains two column families named
+          <varname>contents</varname> and <varname>anchor</varname>. In this example,
+          <varname>anchor</varname> contains two columns (<varname>anchor:cssnsi.com</varname>,
+          <varname>anchor:my.look.ca</varname>) and <varname>contents</varname> contains one column
+          (<varname>contents:html</varname>). <note>
+          <title>Column Names</title>
+          <para> By convention, a column name is made of its column family prefix and a
+              <emphasis>qualifier</emphasis>. For example, the column
+              <emphasis>contents:html</emphasis> is made up of the column family
+              <varname>contents</varname> and <varname>html</varname> qualifier. The colon character
+              (<literal>:</literal>) delimits the column family from the column family
+              <emphasis>qualifier</emphasis>. </para>
+        </note>
+        <table
+          frame="all">
+          <title>Table <varname>webtable</varname></title>
+          <tgroup
+            cols="4"
+            align="left"
+            colsep="1"
+            rowsep="1">
+            <colspec
+              colname="c1" />
+            <colspec
+              colname="c2" />
+            <colspec
+              colname="c3" />
+            <colspec
+              colname="c4" />
+            <thead>
+              <row>
+                <entry>Row Key</entry>
+                <entry>Time Stamp</entry>
+                <entry>ColumnFamily <varname>contents</varname></entry>
+                <entry>ColumnFamily <varname>anchor</varname></entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry>"com.cnn.www"</entry>
+                <entry>t9</entry>
+                <entry />
+                <entry><varname>anchor:cnnsi.com</varname> = "CNN"</entry>
+              </row>
+              <row>
+                <entry>"com.cnn.www"</entry>
+                <entry>t8</entry>
+                <entry />
+                <entry><varname>anchor:my.look.ca</varname> = "CNN.com"</entry>
+              </row>
+              <row>
+                <entry>"com.cnn.www"</entry>
+                <entry>t6</entry>
+                <entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry>
+                <entry />
+              </row>
+              <row>
+                <entry>"com.cnn.www"</entry>
+                <entry>t5</entry>
+                <entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry>
+                <entry />
+              </row>
+              <row>
+                <entry>"com.cnn.www"</entry>
+                <entry>t3</entry>
+                <entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry>
+                <entry />
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+      </para>
+    </section>
+    <section
+      xml:id="physical.view">
+      <title>Physical View</title>
+      <para> Although at a conceptual level tables may be viewed as a sparse set of rows. Physically
+        they are stored on a per-column family basis. New columns (i.e.,
+          <varname>columnfamily:column</varname>) can be added to any column family without
+        pre-announcing them. <table
+          frame="all">
+          <title>ColumnFamily <varname>anchor</varname></title>
+          <tgroup
+            cols="3"
+            align="left"
+            colsep="1"
+            rowsep="1">
+            <colspec
+              colname="c1" />
+            <colspec
+              colname="c2" />
+            <colspec
+              colname="c3" />
+            <thead>
+              <row>
+                <entry>Row Key</entry>
+                <entry>Time Stamp</entry>
+                <entry>Column Family <varname>anchor</varname></entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry>"com.cnn.www"</entry>
+                <entry>t9</entry>
+                <entry><varname>anchor:cnnsi.com</varname> = "CNN"</entry>
+              </row>
+              <row>
+                <entry>"com.cnn.www"</entry>
+                <entry>t8</entry>
+                <entry><varname>anchor:my.look.ca</varname> = "CNN.com"</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table>
+        <table
+          frame="all">
+          <title>ColumnFamily <varname>contents</varname></title>
+          <tgroup
+            cols="3"
+            align="left"
+            colsep="1"
+            rowsep="1">
+            <colspec
+              colname="c1" />
+            <colspec
+              colname="c2" />
+            <colspec
+              colname="c3" />
+            <thead>
+              <row>
+                <entry>Row Key</entry>
+                <entry>Time Stamp</entry>
+                <entry>ColumnFamily "contents:"</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry>"com.cnn.www"</entry>
+                <entry>t6</entry>
+                <entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry>
+              </row>
+              <row>
+                <entry>"com.cnn.www"</entry>
+                <entry>t5</entry>
+                <entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry>
+              </row>
+              <row>
+                <entry>"com.cnn.www"</entry>
+                <entry>t3</entry>
+                <entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </table> It is important to note in the diagram above that the empty cells shown in the
+        conceptual view are not stored since they need not be in a column-oriented storage format.
+        Thus a request for the value of the <varname>contents:html</varname> column at time stamp
+          <literal>t8</literal> would return no value. Similarly, a request for an
+          <varname>anchor:my.look.ca</varname> value at time stamp <literal>t9</literal> would
+        return no value. However, if no timestamp is supplied, the most recent value for a
+        particular column would be returned and would also be the first one found since timestamps
+        are stored in descending order. Thus a request for the values of all columns in the row
+          <varname>com.cnn.www</varname> if no timestamp is specified would be: the value of
+          <varname>contents:html</varname> from time stamp <literal>t6</literal>, the value of
+          <varname>anchor:cnnsi.com</varname> from time stamp <literal>t9</literal>, the value of
+          <varname>anchor:my.look.ca</varname> from time stamp <literal>t8</literal>. </para>
+      <para>For more information about the internals of how Apache HBase stores data, see <xref
+          linkend="regions.arch" />. </para>
+    </section>
 
-    <section xml:id="namespace">
+    <section
+      xml:id="namespace">
       <title>Namespace</title>
-      <para>
-      A namespace is a logical grouping of tables analogous to a database in relation database
-        systems. This abstraction lays the groundwork for upcoming multi-tenancy related features:
-        <itemizedlist>
-          <listitem><para>Quota Management (HBASE-8410) - Restrict the amount of resources (ie
-            regions, tables) a namespace can consume.</para></listitem>
-          <listitem><para>Namespace Security Administration (HBASE-9206) - provide another
-            level of security administration for tenants.</para></listitem>
-          <listitem><para>Region server groups (HBASE-6721) - A namespace/table can be
-            pinned onto a subset of regionservers thus guaranteeing a course level of
-            isolation.</para></listitem>
+      <para> A namespace is a logical grouping of tables analogous to a database in relation
+        database systems. This abstraction lays the groundwork for upcoming multi-tenancy related
+        features: <itemizedlist>
+          <listitem>
+            <para>Quota Management (HBASE-8410) - Restrict the amount of resources (ie regions,
+              tables) a namespace can consume.</para>
+          </listitem>
+          <listitem>
+            <para>Namespace Security Administration (HBASE-9206) - provide another level of security
+              administration for tenants.</para>
+          </listitem>
+          <listitem>
+            <para>Region server groups (HBASE-6721) - A namespace/table can be pinned onto a subset
+              of regionservers thus guaranteeing a course level of isolation.</para>
+          </listitem>
         </itemizedlist>
       </para>
-      <section xml:id="namespace_creation">
+      <section
+        xml:id="namespace_creation">
         <title>Namespace management</title>
-        <para>
-        A namespace can be created, removed or altered. Namespace membership is determined during
-          table creation by specifying a fully-qualified table name of the form:</para>
-  
-            <programlisting>&lt;table namespace&gt;:&lt;table qualifier&gt;</programlisting>
-          
+        <para> A namespace can be created, removed or altered. Namespace membership is determined
+          during table creation by specifying a fully-qualified table name of the form:</para>
+
+        <programlisting><![CDATA[<table namespace>:<table qualifier>]]></programlisting>
+
 
         <example>
           <title>Examples</title>
 
-            <programlisting>
+          <programlisting>
 #Create a namespace
 create_namespace 'my_ns'
             </programlisting>
@@ -227,20 +324,23 @@ alter_namespace 'my_ns', {METHOD => 'set', 'PROPERTY_NAME' => 'PROPERTY_VALUE'}
         </programlisting>
         </example>
       </section>
-      <section xml:id="namespace_special">
+      <section
+        xml:id="namespace_special">
         <title>Predefined namespaces</title>
-        <para>
-          There are two predefined special namespaces:
-          <itemizedlist>
-            <listitem><para>hbase - system namespace, used to contain hbase internal tables</para></listitem>
-            <listitem><para>default - tables with no explicit specified namespace will automatically
-              fall into this namespace.</para></listitem>
-          </itemizedlist>
-        </para>
-<example>
-  <title>Examples</title>
+        <para> There are two predefined special namespaces: </para>
+        <itemizedlist>
+          <listitem>
+            <para>hbase - system namespace, used to contain hbase internal tables</para>
+          </listitem>
+          <listitem>
+            <para>default - tables with no explicit specified namespace will automatically fall into
+              this namespace.</para>
+          </listitem>
+        </itemizedlist>
+        <example>
+          <title>Examples</title>
 
-<programlisting>
+          <programlisting>
 #namespace=foo and table qualifier=bar
 create 'foo:bar', 'fam'
 
@@ -251,85 +351,85 @@ create 'bar', 'fam'
       </section>
     </section>
 
-    <section xml:id="table">
+    <section
+      xml:id="table">
       <title>Table</title>
-      <para>
-      Tables are declared up front at schema definition time.
-      </para>
+      <para> Tables are declared up front at schema definition time. </para>
     </section>
 
-    <section xml:id="row">
+    <section
+      xml:id="row">
       <title>Row</title>
-      <para>Row keys are uninterrpreted bytes. Rows are
-      lexicographically sorted with the lowest order appearing first
-      in a table.  The empty byte array is used to denote both the
-      start and end of a tables' namespace.</para>
+      <para>Row keys are uninterrpreted bytes. Rows are lexicographically sorted with the lowest
+        order appearing first in a table. The empty byte array is used to denote both the start and
+        end of a tables' namespace.</para>
     </section>
 
-    <section xml:id="columnfamily">
+    <section
+      xml:id="columnfamily">
       <title>Column Family<indexterm><primary>Column Family</primary></indexterm></title>
-        <para>
-      Columns in Apache HBase are grouped into <emphasis>column families</emphasis>.
-      All column members of a column family have the same prefix.  For example, the
-      columns <emphasis>courses:history</emphasis> and
-      <emphasis>courses:math</emphasis> are both members of the
-      <emphasis>courses</emphasis> column family.
-          The colon character (<literal
-          >:</literal>) delimits the column family from the
-          <indexterm><primary>column family qualifier</primary><secondary>Column Family Qualifier</secondary></indexterm>.
-        The column family prefix must be composed of
-      <emphasis>printable</emphasis> characters. The qualifying tail, the
-      column family <emphasis>qualifier</emphasis>, can be made of any
-      arbitrary bytes. Column families must be declared up front
-      at schema definition time whereas columns do not need to be
-      defined at schema time but can be conjured on the fly while
-      the table is up an running.</para>
-      <para>Physically, all column family members are stored together on the
-      filesystem.  Because tunings and
-      storage specifications are done at the column family level, it is
-      advised that all column family members have the same general access
-      pattern and size characteristics.</para>
+      <para> Columns in Apache HBase are grouped into <emphasis>column families</emphasis>. All
+        column members of a column family have the same prefix. For example, the columns
+          <emphasis>courses:history</emphasis> and <emphasis>courses:math</emphasis> are both
+        members of the <emphasis>courses</emphasis> column family. The colon character
+          (<literal>:</literal>) delimits the column family from the <indexterm><primary>column
+            family qualifier</primary><secondary>Column Family Qualifier</secondary></indexterm>.
+        The column family prefix must be composed of <emphasis>printable</emphasis> characters. The
+        qualifying tail, the column family <emphasis>qualifier</emphasis>, can be made of any
+        arbitrary bytes. Column families must be declared up front at schema definition time whereas
+        columns do not need to be defined at schema time but can be conjured on the fly while the
+        table is up an running.</para>
+      <para>Physically, all column family members are stored together on the filesystem. Because
+        tunings and storage specifications are done at the column family level, it is advised that
+        all column family members have the same general access pattern and size
+        characteristics.</para>
 
-      <para></para>
     </section>
-    <section xml:id="cells">
+    <section
+      xml:id="cells">
       <title>Cells<indexterm><primary>Cells</primary></indexterm></title>
-      <para>A <emphasis>{row, column, version} </emphasis>tuple exactly
-      specifies a <literal>cell</literal> in HBase.
-      Cell content is uninterrpreted bytes</para>
+      <para>A <emphasis>{row, column, version} </emphasis>tuple exactly specifies a
+          <literal>cell</literal> in HBase. Cell content is uninterrpreted bytes</para>
     </section>
-    <section xml:id="data_model_operations">
-       <title>Data Model Operations</title>
-       <para>The four primary data model operations are Get, Put, Scan, and Delete.  Operations are applied via
-       <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link> instances.
-       </para>
-      <section xml:id="get">
+    <section
+      xml:id="data_model_operations">
+      <title>Data Model Operations</title>
+      <para>The four primary data model operations are Get, Put, Scan, and Delete. Operations are
+        applied via <link
+          xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
+        instances. </para>
+      <section
+        xml:id="get">
         <title>Get</title>
-        <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html">Get</link> returns
-        attributes for a specified row.  Gets are executed via
-        <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#get%28org.apache.hadoop.hbase.client.Get%29">
-        HTable.get</link>.
-        </para>
+        <para><link
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html">Get</link>
+          returns attributes for a specified row. Gets are executed via <link
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#get%28org.apache.hadoop.hbase.client.Get%29">
+            HTable.get</link>. </para>
       </section>
-      <section xml:id="put">
+      <section
+        xml:id="put">
         <title>Put</title>
-        <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html">Put</link> either
-        adds new rows to a table (if the key is new) or can update existing rows (if the key already exists).  Puts are executed via
-        <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#put%28org.apache.hadoop.hbase.client.Put%29">
-        HTable.put</link> (writeBuffer) or <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#batch%28java.util.List%29">
-        HTable.batch</link> (non-writeBuffer).
-        </para>
+        <para><link
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Put.html">Put</link>
+          either adds new rows to a table (if the key is new) or can update existing rows (if the
+          key already exists). Puts are executed via <link
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#put%28org.apache.hadoop.hbase.client.Put%29">
+            HTable.put</link> (writeBuffer) or <link
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#batch%28java.util.List%29">
+            HTable.batch</link> (non-writeBuffer). </para>
       </section>
-      <section xml:id="scan">
-          <title>Scans</title>
-          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link> allow
-          iteration over multiple rows for specified attributes.
-          </para>
-          <para>The following is an example of a
-           on an HTable table instance.  Assume that a table is populated with rows with keys "row1", "row2", "row3",
-           and then another set of rows with the keys "abc1", "abc2", and "abc3".  The following example shows how startRow and stopRow
-           can be applied to a Scan instance to return the rows beginning with "row".
-<programlisting>
+      <section
+        xml:id="scan">
+        <title>Scans</title>
+        <para><link
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link>
+          allow iteration over multiple rows for specified attributes. </para>
+        <para>The following is an example of a on an HTable table instance. Assume that a table is
+          populated with rows with keys "row1", "row2", "row3", and then another set of rows with
+          the keys "abc1", "abc2", and "abc3". The following example shows how startRow and stopRow
+          can be applied to a Scan instance to return the rows beginning with "row".</para>
+        <programlisting>
 public static final byte[] CF = "cf".getBytes();
 public static final byte[] ATTR = "attr".getBytes();
 ...
@@ -348,122 +448,121 @@ try {
   rs.close();  // always close the ResultScanner!
 }
 </programlisting>
-         </para>
-         <para>Note that generally the easiest way to specify a specific stop point for a scan is by using the <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/InclusiveStopFilter.html">InclusiveStopFilter</link> class.
-         </para>
-        </section>
-      <section xml:id="delete">
+        <para>Note that generally the easiest way to specify a specific stop point for a scan is by
+          using the <link
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/InclusiveStopFilter.html">InclusiveStopFilter</link>
+          class. </para>
+      </section>
+      <section
+        xml:id="delete">
         <title>Delete</title>
-        <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Delete.html">Delete</link> removes
-        a row from a table.  Deletes are executed via
-        <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#delete%28org.apache.hadoop.hbase.client.Delete%29">
-        HTable.delete</link>.
-        </para>
-        <para>HBase does not modify data in place, and so deletes are handled by creating new markers called <emphasis>tombstones</emphasis>.
-        These tombstones, along with the dead values, are cleaned up on major compactions.
-        </para>
-        <para>See <xref linkend="version.delete"/> for more information on deleting versions of columns, and see
-        <xref linkend="compaction"/> for more information on compactions.
-        </para>
+        <para><link
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Delete.html">Delete</link>
+          removes a row from a table. Deletes are executed via <link
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#delete%28org.apache.hadoop.hbase.client.Delete%29">
+            HTable.delete</link>. </para>
+        <para>HBase does not modify data in place, and so deletes are handled by creating new
+          markers called <emphasis>tombstones</emphasis>. These tombstones, along with the dead
+          values, are cleaned up on major compactions. </para>
+        <para>See <xref
+            linkend="version.delete" /> for more information on deleting versions of columns, and
+          see <xref
+            linkend="compaction" /> for more information on compactions. </para>
 
       </section>
 
     </section>
 
 
-    <section xml:id="versions">
+    <section
+      xml:id="versions">
       <title>Versions<indexterm><primary>Versions</primary></indexterm></title>
 
-      <para>A <emphasis>{row, column, version} </emphasis>tuple exactly
-      specifies a <literal>cell</literal> in HBase. It's possible to have an
-      unbounded number of cells where the row and column are the same but the
-      cell address differs only in its version dimension.</para>
+      <para>A <emphasis>{row, column, version} </emphasis>tuple exactly specifies a
+          <literal>cell</literal> in HBase. It's possible to have an unbounded number of cells where
+        the row and column are the same but the cell address differs only in its version
+        dimension.</para>
 
-      <para>While rows and column keys are expressed as bytes, the version is
-      specified using a long integer. Typically this long contains time
-      instances such as those returned by
-      <code>java.util.Date.getTime()</code> or
-      <code>System.currentTimeMillis()</code>, that is: <quote>the difference,
-      measured in milliseconds, between the current time and midnight, January
-      1, 1970 UTC</quote>.</para>
+      <para>While rows and column keys are expressed as bytes, the version is specified using a long
+        integer. Typically this long contains time instances such as those returned by
+          <code>java.util.Date.getTime()</code> or <code>System.currentTimeMillis()</code>, that is:
+          <quote>the difference, measured in milliseconds, between the current time and midnight,
+          January 1, 1970 UTC</quote>.</para>
 
-      <para>The HBase version dimension is stored in decreasing order, so that
-      when reading from a store file, the most recent values are found
-      first.</para>
+      <para>The HBase version dimension is stored in decreasing order, so that when reading from a
+        store file, the most recent values are found first.</para>
 
-      <para>There is a lot of confusion over the semantics of
-      <literal>cell</literal> versions, in HBase. In particular, a couple
-      questions that often come up are:<itemizedlist>
-          <listitem>
-            <para>If multiple writes to a cell have the same version, are all
-            versions maintained or just the last?<footnote>
-                <para>Currently, only the last written is fetchable.</para>
-              </footnote></para>
-          </listitem>
+      <para>There is a lot of confusion over the semantics of <literal>cell</literal> versions, in
+        HBase. In particular, a couple questions that often come up are:</para>
+      <itemizedlist>
+        <listitem>
+          <para>If multiple writes to a cell have the same version, are all versions maintained or
+            just the last?<footnote>
+              <para>Currently, only the last written is fetchable.</para>
+            </footnote></para>
+        </listitem>
 
-          <listitem>
-            <para>Is it OK to write cells in a non-increasing version
-            order?<footnote>
-                <para>Yes</para>
-              </footnote></para>
-          </listitem>
-        </itemizedlist></para>
+        <listitem>
+          <para>Is it OK to write cells in a non-increasing version order?<footnote>
+              <para>Yes</para>
+            </footnote></para>
+        </listitem>
+      </itemizedlist>
 
-      <para>Below we describe how the version dimension in HBase currently
-      works<footnote>
+      <para>Below we describe how the version dimension in HBase currently works<footnote>
           <para>See <link
-          xlink:href="https://issues.apache.org/jira/browse/HBASE-2406">HBASE-2406</link>
-          for discussion of HBase versions. <link
-          xlink:href="http://outerthought.org/blog/417-ot.html">Bending time
-          in HBase</link> makes for a good read on the version, or time,
-          dimension in HBase. It has more detail on versioning than is
-          provided here. As of this writing, the limiitation
-          <emphasis>Overwriting values at existing timestamps</emphasis>
-          mentioned in the article no longer holds in HBase. This section is
-          basically a synopsis of this article by Bruno Dumon.</para>
+              xlink:href="https://issues.apache.org/jira/browse/HBASE-2406">HBASE-2406</link> for
+            discussion of HBase versions. <link
+              xlink:href="http://outerthought.org/blog/417-ot.html">Bending time in HBase</link>
+            makes for a good read on the version, or time, dimension in HBase. It has more detail on
+            versioning than is provided here. As of this writing, the limiitation
+              <emphasis>Overwriting values at existing timestamps</emphasis> mentioned in the
+            article no longer holds in HBase. This section is basically a synopsis of this article
+            by Bruno Dumon.</para>
         </footnote>.</para>
 
-      <section xml:id="versions.ops">
+      <section
+        xml:id="versions.ops">
         <title>Versions and HBase Operations</title>
 
-        <para>In this section we look at the behavior of the version dimension
-        for each of the core HBase operations.</para>
+        <para>In this section we look at the behavior of the version dimension for each of the core
+          HBase operations.</para>
 
         <section>
           <title>Get/Scan</title>
 
-          <para>Gets are implemented on top of Scans. The below discussion of
-            <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html">Get</link> applies equally to <link
-            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scans</link>.</para>
+          <para>Gets are implemented on top of Scans. The below discussion of <link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html">Get</link>
+            applies equally to <link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scans</link>.</para>
 
-          <para>By default, i.e. if you specify no explicit version, when
-          doing a <literal>get</literal>, the cell whose version has the
-          largest value is returned (which may or may not be the latest one
-          written, see later). The default behavior can be modified in the
-          following ways:</para>
+          <para>By default, i.e. if you specify no explicit version, when doing a
+              <literal>get</literal>, the cell whose version has the largest value is returned
+            (which may or may not be the latest one written, see later). The default behavior can be
+            modified in the following ways:</para>
 
           <itemizedlist>
             <listitem>
               <para>to return more than one version, see <link
-              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html#setMaxVersions()">Get.setMaxVersions()</link></para>
+                  xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html#setMaxVersions()">Get.setMaxVersions()</link></para>
             </listitem>
 
             <listitem>
               <para>to return versions other than the latest, see <link
-              xlink:href="???">Get.setTimeRange()</link></para>
+                  xlink:href="???">Get.setTimeRange()</link></para>
 
-              <para>To retrieve the latest version that is less than or equal
-              to a given value, thus giving the 'latest' state of the record
-              at a certain point in time, just use a range from 0 to the
-              desired version and set the max versions to 1.</para>
+              <para>To retrieve the latest version that is less than or equal to a given value, thus
+                giving the 'latest' state of the record at a certain point in time, just use a range
+                from 0 to the desired version and set the max versions to 1.</para>
             </listitem>
           </itemizedlist>
 
         </section>
-        <section xml:id="default_get_example">
-        <title>Default Get Example</title>
-        <para>The following Get will only retrieve the current version of the row
-<programlisting>
+        <section
+          xml:id="default_get_example">
+          <title>Default Get Example</title>
+          <para>The following Get will only retrieve the current version of the row</para>
+          <programlisting>
 public static final byte[] CF = "cf".getBytes();
 public static final byte[] ATTR = "attr".getBytes();
 ...
@@ -471,12 +570,12 @@ Get get = new Get(Bytes.toBytes("row1"));
 Result r = htable.get(get);
 byte[] b = r.getValue(CF, ATTR);  // returns current version of value
 </programlisting>
-        </para>
         </section>
-        <section xml:id="versioned_get_example">
-        <title>Versioned Get Example</title>
-        <para>The following Get will return the last 3 versions of the row.
-<programlisting>
+        <section
+          xml:id="versioned_get_example">
+          <title>Versioned Get Example</title>
+          <para>The following Get will return the last 3 versions of the row.</para>
+          <programlisting>
 public static final byte[] CF = "cf".getBytes();
 public static final byte[] ATTR = "attr".getBytes();
 ...
@@ -486,26 +585,25 @@ Result r = htable.get(get);
 byte[] b = r.getValue(CF, ATTR);  // returns current version of value
 List&lt;KeyValue&gt; kv = r.getColumn(CF, ATTR);  // returns all versions of this column
 </programlisting>
-        </para>
         </section>
 
         <section>
           <title>Put</title>
 
-          <para>Doing a put always creates a new version of a
-          <literal>cell</literal>, at a certain timestamp. By default the
-          system uses the server's <literal>currentTimeMillis</literal>, but
-          you can specify the version (= the long integer) yourself, on a
-          per-column level. This means you could assign a time in the past or
-          the future, or use the long value for non-time purposes.</para>
+          <para>Doing a put always creates a new version of a <literal>cell</literal>, at a certain
+            timestamp. By default the system uses the server's <literal>currentTimeMillis</literal>,
+            but you can specify the version (= the long integer) yourself, on a per-column level.
+            This means you could assign a time in the past or the future, or use the long value for
+            non-time purposes.</para>
 
-          <para>To overwrite an existing value, do a put at exactly the same
-          row, column, and version as that of the cell you would
-          overshadow.</para>
-          <section xml:id="implicit_version_example">
-          <title>Implicit Version Example</title>
-          <para>The following Put will be implicitly versioned by HBase with the current time.
-<programlisting>
+          <para>To overwrite an existing value, do a put at exactly the same row, column, and
+            version as that of the cell you would overshadow.</para>
+          <section
+            xml:id="implicit_version_example">
+            <title>Implicit Version Example</title>
+            <para>The following Put will be implicitly versioned by HBase with the current
+              time.</para>
+            <programlisting>
 public static final byte[] CF = "cf".getBytes();
 public static final byte[] ATTR = "attr".getBytes();
 ...
@@ -513,12 +611,12 @@ Put put = new Put(Bytes.toBytes(row));
 put.add(CF, ATTR, Bytes.toBytes( data));
 htable.put(put);
 </programlisting>
-          </para>
           </section>
-          <section xml:id="explicit_version_example">
-          <title>Explicit Version Example</title>
-          <para>The following Put has the version timestamp explicitly set.
-<programlisting>
+          <section
+            xml:id="explicit_version_example">
+            <title>Explicit Version Example</title>
+            <para>The following Put has the version timestamp explicitly set.</para>
+            <programlisting>
 public static final byte[] CF = "cf".getBytes();
 public static final byte[] ATTR = "attr".getBytes();
 ...
@@ -527,62 +625,63 @@ long explicitTimeInMs = 555;  // just an example
 put.add(CF, ATTR, explicitTimeInMs, Bytes.toBytes(data));
 htable.put(put);
 </programlisting>
-          Caution:  the version timestamp is internally by HBase for things like time-to-live calculations.
-          It's usually best to avoid setting this timestamp yourself.  Prefer using a separate
-          timestamp attribute of the row, or have the timestamp a part of the rowkey, or both.
-          </para>
+            <para>Caution: the version timestamp is internally by HBase for things like time-to-live
+              calculations. It's usually best to avoid setting this timestamp yourself. Prefer using
+              a separate timestamp attribute of the row, or have the timestamp a part of the rowkey,
+              or both. </para>
           </section>
 
         </section>
 
-        <section xml:id="version.delete">
+        <section
+          xml:id="version.delete">
           <title>Delete</title>
 
-          <para>There are three different types of internal delete markers
-            <footnote><para>See Lars Hofhansl's blog for discussion of his attempt
-            adding another, <link xlink:href="http://hadoop-hbase.blogspot.com/2012/01/scanning-in-hbase.html">Scanning in HBase: Prefix Delete Marker</link></para></footnote>:
-            <itemizedlist>
-            <listitem><para>Delete:  for a specific version of a column.</para>
+          <para>There are three different types of internal delete markers <footnote>
+              <para>See Lars Hofhansl's blog for discussion of his attempt adding another, <link
+                  xlink:href="http://hadoop-hbase.blogspot.com/2012/01/scanning-in-hbase.html">Scanning
+                  in HBase: Prefix Delete Marker</link></para>
+            </footnote>: </para>
+          <itemizedlist>
+            <listitem>
+              <para>Delete: for a specific version of a column.</para>
             </listitem>
-            <listitem><para>Delete column:  for all versions of a column.</para>
+            <listitem>
+              <para>Delete column: for all versions of a column.</para>
             </listitem>
-            <listitem><para>Delete family:  for all columns of a particular ColumnFamily</para>
+            <listitem>
+              <para>Delete family: for all columns of a particular ColumnFamily</para>
             </listitem>
           </itemizedlist>
-          When deleting an entire row, HBase will internally create a tombstone for each ColumnFamily (i.e., not each individual column).
-         </para>
-          <para>Deletes work by creating <emphasis>tombstone</emphasis>
-          markers. For example, let's suppose we want to delete a row. For
-          this you can specify a version, or else by default the
-          <literal>currentTimeMillis</literal> is used. What this means is
-          <quote>delete all cells where the version is less than or equal to
-          this version</quote>. HBase never modifies data in place, so for
-          example a delete will not immediately delete (or mark as deleted)
-          the entries in the storage file that correspond to the delete
-          condition. Rather, a so-called <emphasis>tombstone</emphasis> is
-          written, which will mask the deleted values<footnote>
-              <para>When HBase does a major compaction, the tombstones are
-              processed to actually remove the dead values, together with the
-              tombstones themselves.</para>
-            </footnote>. If the version you specified when deleting a row is
-          larger than the version of any value in the row, then you can
-          consider the complete row to be deleted.</para>
-          <para>For an informative discussion on how deletes and versioning interact, see
-          the thread <link xlink:href="http://comments.gmane.org/gmane.comp.java.hadoop.hbase.user/28421">Put w/ timestamp -> Deleteall -> Put w/ timestamp fails</link>
-          up on the user mailing list.</para>
-          <para>Also see <xref linkend="keyvalue"/> for more information on the internal KeyValue format.
-          </para>
-          <para>Delete markers are purged during the major compaction of store, 
-          unless the KEEP_DELETED_CELLS is set in the column family. In some 
-          scenarios, users want to keep the deletes for a time and you can set the 
-          delete TTL: hbase.hstore.time.to.purge.deletes in the configuration. 
-          If this delete TTL is not set, or set to 0, all delete markers including those 
-          with future timestamp are purged during the later major compaction. 
-          Otherwise, a delete marker is kept until the major compaction after 
-          marker's timestamp + delete TTL. 
-          </para>
+          <para>When deleting an entire row, HBase will internally create a tombstone for each
+            ColumnFamily (i.e., not each individual column). </para>
+          <para>Deletes work by creating <emphasis>tombstone</emphasis> markers. For example, let's
+            suppose we want to delete a row. For this you can specify a version, or else by default
+            the <literal>currentTimeMillis</literal> is used. What this means is <quote>delete all
+              cells where the version is less than or equal to this version</quote>. HBase never
+            modifies data in place, so for example a delete will not immediately delete (or mark as
+            deleted) the entries in the storage file that correspond to the delete condition.
+            Rather, a so-called <emphasis>tombstone</emphasis> is written, which will mask the
+            deleted values<footnote>
+              <para>When HBase does a major compaction, the tombstones are processed to actually
+                remove the dead values, together with the tombstones themselves.</para>
+            </footnote>. If the version you specified when deleting a row is larger than the version
+            of any value in the row, then you can consider the complete row to be deleted.</para>
+          <para>For an informative discussion on how deletes and versioning interact, see the thread <link
+              xlink:href="http://comments.gmane.org/gmane.comp.java.hadoop.hbase.user/28421">Put w/
+              timestamp -> Deleteall -> Put w/ timestamp fails</link> up on the user mailing
+            list.</para>
+          <para>Also see <xref
+              linkend="keyvalue" /> for more information on the internal KeyValue format. </para>
+          <para>Delete markers are purged during the major compaction of store, unless the
+            KEEP_DELETED_CELLS is set in the column family. In some scenarios, users want to keep
+            the deletes for a time and you can set the delete TTL:
+            hbase.hstore.time.to.purge.deletes in the configuration. If this delete TTL is not set,
+            or set to 0, all delete markers including those with future timestamp are purged during
+            the later major compaction. Otherwise, a delete marker is kept until the major
+            compaction after marker's timestamp + delete TTL. </para>
         </section>
-       </section>
+      </section>
 
       <section>
         <title>Current Limitations</title>
@@ -608,18 +707,18 @@ htable.put(put);
           within the same millisecond.</para>
         </section>
 
-        <section>
+        <section
+          xml:id="major.compactions.change.query.results">
           <title>Major compactions change query results</title>
-
-          <para><quote>...create three cell versions at t1, t2 and t3, with a
-          maximum-versions setting of 2. So when getting all versions, only
-          the values at t2 and t3 will be returned. But if you delete the
-          version at t2 or t3, the one at t1 will appear again. Obviously,
-          once a major compaction has run, such behavior will not be the case
-          anymore...<footnote>
+          
+          <para><quote>...create three cell versions at t1, t2 and t3, with a maximum-versions
+            setting of 2. So when getting all versions, only the values at t2 and t3 will be
+            returned. But if you delete the version at t2 or t3, the one at t1 will appear again.
+            Obviously, once a major compaction has run, such behavior will not be the case anymore...<footnote>
               <para>See <emphasis>Garbage Collection</emphasis> in <link
-              xlink:href="http://outerthought.org/blog/417-ot.html">Bending
-              time in HBase</link> </para>
+                xlink:href="http://outerthought.org/blog/417-ot.html">Bending time in
+                HBase</link>
+              </para>
             </footnote></quote></para>
         </section>
       </section>
@@ -1452,7 +1551,7 @@ connection.close();</programlisting>
           <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FilterList.html">FilterList</link>
           represents a list of Filters with a relationship of <code>FilterList.Operator.MUST_PASS_ALL</code> or
           <code>FilterList.Operator.MUST_PASS_ONE</code> between the Filters.  The following example shows an 'or' between two
-          Filters (checking for either 'my value' or 'my other value' on the same attribute).
+          Filters (checking for either 'my value' or 'my other value' on the same attribute).</para>
 <programlisting>
 FilterList list = new FilterList(FilterList.Operator.MUST_PASS_ONE);
 SingleColumnValueFilter filter1 = new SingleColumnValueFilter(
@@ -1471,21 +1570,22 @@ SingleColumnValueFilter filter2 = new SingleColumnValueFilter(
 list.add(filter2);
 scan.setFilter(list);
 </programlisting>
-          </para>
         </section>
       </section>
-      <section xml:id="client.filter.cv"><title>Column Value</title>
-        <section xml:id="client.filter.cv.scvf"><title>SingleColumnValueFilter</title>
+      <section
+        xml:id="client.filter.cv">
+        <title>Column Value</title>
+        <section
+          xml:id="client.filter.cv.scvf">
+          <title>SingleColumnValueFilter</title>
           <para><link
-              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SingleColumnValueFilter.html"
-              >SingleColumnValueFilter</link> can be used to test column values for equivalence
-                (<code><link
-                xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/CompareFilter.CompareOp.html"
-                >CompareOp.EQUAL</link>
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SingleColumnValueFilter.html">SingleColumnValueFilter</link>
+            can be used to test column values for equivalence (<code><link
+                xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/CompareFilter.CompareOp.html">CompareOp.EQUAL</link>
             </code>), inequality (<code>CompareOp.NOT_EQUAL</code>), or ranges (e.g.,
               <code>CompareOp.GREATER</code>). The following is example of testing equivalence a
-            column to a String value "my value"...
-            <programlisting>
+            column to a String value "my value"...</para>
+          <programlisting>
 SingleColumnValueFilter filter = new SingleColumnValueFilter(
 	cf,
 	column,
@@ -1494,17 +1594,21 @@ SingleColumnValueFilter filter = new SingleColumnValueFilter(
 	);
 scan.setFilter(filter);
 </programlisting>
-          </para>
         </section>
       </section>
-      <section xml:id="client.filter.cvp"><title>Column Value Comparators</title>
-        <para>There are several Comparator classes in the Filter package that deserve special mention.
-        These Comparators are used in concert with other Filters, such as  <xref linkend="client.filter.cv.scvf" />.
-        </para>
-        <section xml:id="client.filter.cvp.rcs"><title>RegexStringComparator</title>
-          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/RegexStringComparator.html">RegexStringComparator</link>
-          supports regular expressions for value comparisons.
-<programlisting>
+      <section
+        xml:id="client.filter.cvp">
+        <title>Column Value Comparators</title>
+        <para>There are several Comparator classes in the Filter package that deserve special
+          mention. These Comparators are used in concert with other Filters, such as <xref
+            linkend="client.filter.cv.scvf" />. </para>
+        <section
+          xml:id="client.filter.cvp.rcs">
+          <title>RegexStringComparator</title>
+          <para><link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/RegexStringComparator.html">RegexStringComparator</link>
+            supports regular expressions for value comparisons.</para>
+          <programlisting>
 RegexStringComparator comp = new RegexStringComparator("my.");   // any value that starts with 'my'
 SingleColumnValueFilter filter = new SingleColumnValueFilter(
 	cf,
@@ -1514,14 +1618,18 @@ SingleColumnValueFilter filter = new SingleColumnValueFilter(
 	);
 scan.setFilter(filter);
 </programlisting>
-          See the Oracle JavaDoc for <link xlink:href="http://download.oracle.com/javase/6/docs/api/java/util/regex/Pattern.html">supported RegEx patterns in Java</link>.
-          </para>
+          <para>See the Oracle JavaDoc for <link
+              xlink:href="http://download.oracle.com/javase/6/docs/api/java/util/regex/Pattern.html">supported
+              RegEx patterns in Java</link>. </para>
         </section>
-        <section xml:id="client.filter.cvp.SubStringComparator"><title>SubstringComparator</title>
-          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SubstringComparator.html">SubstringComparator</link>
-          can be used to determine if a given substring exists in a value.  The comparison is case-insensitive.
-          </para>
-<programlisting>
+        <section
+          xml:id="client.filter.cvp.SubStringComparator">
+          <title>SubstringComparator</title>
+          <para><link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SubstringComparator.html">SubstringComparator</link>
+            can be used to determine if a given substring exists in a value. The comparison is
+            case-insensitive. </para>
+          <programlisting>
 SubstringComparator comp = new SubstringComparator("y val");   // looking for 'my value'
 SingleColumnValueFilter filter = new SingleColumnValueFilter(
 	cf,
@@ -1532,37 +1640,53 @@ SingleColumnValueFilter filter = new SingleColumnValueFilter(
 scan.setFilter(filter);
 </programlisting>
         </section>
-        <section xml:id="client.filter.cvp.bfp"><title>BinaryPrefixComparator</title>
-          <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryPrefixComparator.html">BinaryPrefixComparator</link>.</para>
+        <section
+          xml:id="client.filter.cvp.bfp">
+          <title>BinaryPrefixComparator</title>
+          <para>See <link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryPrefixComparator.html">BinaryPrefixComparator</link>.</para>
         </section>
-        <section xml:id="client.filter.cvp.bc"><title>BinaryComparator</title>
-          <para>See <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryComparator.html">BinaryComparator</link>.</para>
+        <section
+          xml:id="client.filter.cvp.bc">
+          <title>BinaryComparator</title>
+          <para>See <link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/BinaryComparator.html">BinaryComparator</link>.</para>
         </section>
       </section>
-      <section xml:id="client.filter.kvm"><title>KeyValue Metadata</title>
-        <para>As HBase stores data internally as KeyValue pairs, KeyValue Metadata Filters evaluate the existence of keys (i.e., ColumnFamily:Column qualifiers)
-        for a row, as opposed to values the previous section.
-        </para>
-        <section xml:id="client.filter.kvm.ff"><title>FamilyFilter</title>
-          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FamilyFilter.html">FamilyFilter</link> can be used
-          to filter on the ColumnFamily.  It is generally a better idea to select ColumnFamilies in the Scan than to do it with a Filter.</para>
+      <section
+        xml:id="client.filter.kvm">
+        <title>KeyValue Metadata</title>
+        <para>As HBase stores data internally as KeyValue pairs, KeyValue Metadata Filters evaluate
+          the existence of keys (i.e., ColumnFamily:Column qualifiers) for a row, as opposed to
+          values the previous section. </para>
+        <section
+          xml:id="client.filter.kvm.ff">
+          <title>FamilyFilter</title>
+          <para><link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/FamilyFilter.html">FamilyFilter</link>
+            can be used to filter on the ColumnFamily. It is generally a better idea to select
+            ColumnFamilies in the Scan than to do it with a Filter.</para>
         </section>
-        <section xml:id="client.filter.kvm.qf"><title>QualifierFilter</title>
-          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/QualifierFilter.html">QualifierFilter</link> can be used
-          to filter based on Column (aka Qualifier) name.
-          </para>
+        <section
+          xml:id="client.filter.kvm.qf">
+          <title>QualifierFilter</title>
+          <para><link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/QualifierFilter.html">QualifierFilter</link>
+            can be used to filter based on Column (aka Qualifier) name. </para>
         </section>
-        <section xml:id="client.filter.kvm.cpf"><title>ColumnPrefixFilter</title>
-          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/ColumnPrefixFilter.html">ColumnPrefixFilter</link> can be used
-          to filter based on the lead portion of Column (aka Qualifier) names.
-          </para>
-	 	  <para>A ColumnPrefixFilter seeks ahead to the first column matching the prefix in each row and for each involved column family. It can be used to efficiently
-	 	  get a subset of the columns in very wide rows.
-	      </para>
-          <para>Note: The same column qualifier can be used in different column families. This filter returns all matching columns.
-          </para>
-          <para>Example: Find all columns in a row and family that start with "abc"
-<programlisting>
+        <section
+          xml:id="client.filter.kvm.cpf">
+          <title>ColumnPrefixFilter</title>
+          <para><link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/ColumnPrefixFilter.html">ColumnPrefixFilter</link>
+            can be used to filter based on the lead portion of Column (aka Qualifier) names. </para>
+          <para>A ColumnPrefixFilter seeks ahead to the first column matching the prefix in each row
+            and for each involved column family. It can be used to efficiently get a subset of the
+            columns in very wide rows. </para>
+          <para>Note: The same column qualifier can be used in different column families. This
+            filter returns all matching columns. </para>
+          <para>Example: Find all columns in a row and family that start with "abc"</para>
+          <programlisting>
 HTableInterface t = ...;
 byte[] row = ...;
 byte[] family = ...;
@@ -1580,17 +1704,19 @@ for (Result r = rs.next(); r != null; r = rs.next()) {
 }
 rs.close();
 </programlisting>
-</para>
         </section>
-        <section xml:id="client.filter.kvm.mcpf"><title>MultipleColumnPrefixFilter</title>
-          <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/MultipleColumnPrefixFilter.html">MultipleColumnPrefixFilter</link> behaves like ColumnPrefixFilter
-          but allows specifying multiple prefixes.
-          </para>
-	      <para>Like ColumnPrefixFilter, MultipleColumnPrefixFilter efficiently seeks ahead to the first column matching the lowest prefix and also seeks past ranges of columns between prefixes.
-	      It can be used to efficiently get discontinuous sets of columns from very wide rows.
-		  </para>
-          <para>Example: Find all columns in a row and family that start with "abc" or "xyz"
-<programlisting>
+        <section
+          xml:id="client.filter.kvm.mcpf">
+          <title>MultipleColumnPrefixFilter</title>
+          <para><link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/MultipleColumnPrefixFilter.html">MultipleColumnPrefixFilter</link>
+            behaves like ColumnPrefixFilter but allows specifying multiple prefixes. </para>
+          <para>Like ColumnPrefixFilter, MultipleColumnPrefixFilter efficiently seeks ahead to the
+            first column matching the lowest prefix and also seeks past ranges of columns between
+            prefixes. It can be used to efficiently get discontinuous sets of columns from very wide
+            rows. </para>
+          <para>Example: Find all columns in a row and family that start with "abc" or "xyz"</para>
+          <programlisting>
 HTableInterface t = ...;
 byte[] row = ...;
 byte[] family = ...;
@@ -1608,19 +1734,22 @@ for (Result r = rs.next(); r != null; r = rs.next()) {
 }
 rs.close();
 </programlisting>
-</para>
         </section>
-        <section xml:id="client.filter.kvm.crf "><title>ColumnRangeFilter</title>
-			<para>A <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/ColumnRangeFilter.html">ColumnRangeFilter</link> allows efficient intra row scanning.
-            </para>
-			<para>A ColumnRangeFilter can seek ahead to the first matching column for each involved column family. It can be used to efficiently
-			get a 'slice' of the columns of a very wide row.
-			 i.e. you have a million columns in a row but you only want to look at columns bbbb-bbdd.
-            </para>
-            <para>Note: The same column qualifier can be used in different column families. This filter returns all matching columns.
-            </para>
-            <para>Example: Find all columns in a row and family between "bbbb" (inclusive) and "bbdd" (inclusive)
-<programlisting>
+        <section
+          xml:id="client.filter.kvm.crf ">
+          <title>ColumnRangeFilter</title>
+          <para>A <link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/ColumnRangeFilter.html">ColumnRangeFilter</link>
+            allows efficient intra row scanning. </para>
+          <para>A ColumnRangeFilter can seek ahead to the first matching column for each involved
+            column family. It can be used to efficiently get a 'slice' of the columns of a very wide
+            row. i.e. you have a million columns in a row but you only want to look at columns
+            bbbb-bbdd. </para>
+          <para>Note: The same column qualifier can be used in different column families. This
+            filter returns all matching columns. </para>
+          <para>Example: Find all columns in a row and family between "bbbb" (inclusive) and "bbdd"
+            (inclusive)</para>
+          <programlisting>
 HTableInterface t = ...;
 byte[] row = ...;
 byte[] family = ...;
@@ -1639,7 +1768,6 @@ for (Result r = rs.next(); r != null; r = rs.next()) {
 }
 rs.close();
 </programlisting>
-</para>
             <para>Note:  Introduced in HBase 0.92</para>
         </section>
       </section>
@@ -2279,18 +2407,297 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
         </section>
 
       </section>
-      <section xml:id="compaction">
-        <title>Compaction</title>
-        <para>There are two types of compactions:  minor and major.  Minor compactions will usually pick up a couple of the smaller adjacent
-         StoreFiles and rewrite them as one.  Minors do not drop deletes or expired cells, only major compactions do this.  Sometimes a minor compaction
-         will pick up all the StoreFiles in the Store and in this case it actually promotes itself to being a major compaction.
-         </para>
-         <para>After a major compaction runs there will be a single StoreFile per Store, and this will help performance usually.  Caution:  major compactions rewrite all of the Stores data and on a loaded system, this may not be tenable;
-             major compactions will usually have to be done manually on large systems.  See <xref linkend="managed.compactions" />.
-        </para>
-        <para>Compactions will <emphasis>not</emphasis> perform region merges.  See <xref linkend="ops.regionmgt.merge"/> for more information on region merging.
-        </para>
-        <section xml:id="compaction.file.selection">
+        <section
+          xml:id="compaction">
+          <title>Compaction</title>
+          <para><firstterm>Compaction</firstterm> is an operation which reduces the number of
+            StoreFiles, by merging them together, in order to increase performance on read
+            operations. Compactions can be resource-intensive to perform, and can either help or
+            hinder performance depending on many factors. </para>
+          <para>Compactions fall into two categories: minor and major.</para>
+          <para><firstterm>Minor compactions</firstterm> usually pick up a small number of small,
+            adjacent <systemitem>StoreFiles</systemitem> and rewrite them as a single
+            <systemitem>StoreFile</systemitem>. Minor compactions do not drop deletes or expired
+            cells. If a minor compaction picks up all the <systemitem>StoreFiles</systemitem> in a
+            <systemitem>Store</systemitem>, it promotes itself from a minor to a major compaction.
+            If there are a lot of small files to be compacted, the algorithm tends to favor minor
+            compactions to "clean up" those small files.</para>
+          <para>The goal of a <firstterm>major compaction</firstterm> is to end up with a single
+            StoreFile per store. Major compactions also process delete markers and max versions.
+            Attempting to process these during a minor compaction could cause side effects. </para>
+          
+          <formalpara>
+            <title>Compaction and Deletions</title>
+            <para> When an explicit deletion occurs in HBase, the data is not actually deleted.
+              Instead, a <firstterm>tombstone</firstterm> marker is written. The tombstone marker
+              prevents the data from being returned with queries. During a major compaction, the
+              data is actually deleted, and the tombstone marker is removed from the StoreFile. If
+              the deletion happens because of an expired TTL, no tombstone is created. Instead, the 
+            expired data is filtered out and is not written back to the compacted StoreFile.</para>
+          </formalpara>
+          
+          <formalpara>
+            <title>Compaction and Versions</title>
+            <para> When you create a column family, you can specify the maximum number of versions
+              to keep, by specifying <varname>HColumnDescriptor.setMaxVersions(int
+                versions)</varname>. The default value is <literal>3</literal>. If more versions
+              than the specified maximum exist, the excess versions are filtered out and not written
+            back to the compacted StoreFile.</para>
+          </formalpara>
+          
+          <note>
+            <title>Major Compactions Can Impact Query Results</title>
+            <para> In some situations, older versions can be inadvertently 
+              resurrected if a newer version is explicitly deleted. See <xref
+                linkend="major.compactions.change.query.results" /> for a more in-depth explanation. This
+              situation is only possible before the compaction finishes.
+            </para>
+          </note>
+          
+          <para>In theory, major compactions improve performance. However, on a highly loaded
+            system, major compactions can require an inappropriate number of resources and adversely
+            affect performance. In a default configuration, major compactions are scheduled
+            automatically to run once in a 7-day period. This is usually inappropriate for systems
+            in production. You can manage major compactions manually. See <xref
+              linkend="managed.compactions" />. </para>
+          <para>Compactions do not perform region merges. See <xref
+            linkend="ops.regionmgt.merge" /> for more information on region merging. </para>
+          <section
+            xml:id="compaction.file.selection">
+            <title>Algorithm for Compaction File Selection - HBase 0.96.x and newer</title>
+            <para>The compaction algorithms used by HBase have evolved over time. HBase 0.96
+              introduced new algorithms for compaction file selection. To find out about the old
+              algorithms, see <xref
+                linkend="compaction" />. The rest of this section describes the new algorithm. File
+              selection happens in several phases and is controlled by several configurable
+              parameters. These parameters will be explained in context, and then will be given in a
+              table which shows their descriptions, defaults, and implications of changing
+              them.</para>
+            
+            <formalpara>
+              <title>The<link
+                xlink:href="https://issues.apache.org/jira/browse/HBASE-7842">Exploring Compaction Policy</link></title>
+              <para><link
+                xlink:href="https://issues.apache.org/jira/browse/HBASE-7842">HBASE-7842</link>
+                was introduced in HBase 0.96 and represents a major change in the algorithms for
+                file selection for compactions. Its goal is to do the most impactful compaction with
+                the lowest cost, in situations where a lot of files need compaction. In such a
+                situation, the list of all eligible files is "explored", and files are grouped by
+                size before any ratio-based algorithms are run. This favors clean-up of large
+                numbers of small files before larger files are considered. For more details, refer
+                to the link to the JIRA. Most of the code for this change can be reviewed in
+                <filename>hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/compactions/ExploringCompactionPolicy.java</filename>.</para>
+            </formalpara>
+            
+            <variablelist>
+              <title>Algorithms for Determining File List and Compaction Type</title>
+              <varlistentry>
+                <term>Create a list of all files which can possibly be compacted, ordered by
+                  sequence ID.</term>
+                <listitem>
+                  <para>The first phase is to create a list of all candidates for compaction. A list
+                    is created of all StoreFiles not already in the compaction queue, and all files
+                    newer than the newest file that is currently being compacted. This list of files
+                    is ordered by the sequence ID. The sequence ID is generated when a Put is
+                    appended to the write-ahead log (WAL), and is stored in the metadata of the
+                    StoreFile.</para>
+                </listitem>
+              </varlistentry>
+              <varlistentry>
+                <term>Check to see if major compaction is required because there are too many
+                  StoreFiles and the memstore is too large.</term>
+                <listitem>
+                  <para>A store can only <varname>have hbase.hstore.blockingStoreFiles</varname>. If
+                    the store has too many files, you cannot flush data. In addition, you cannot
+                    perform an insert if the memstore is over
+                    <varname>hbase.hregion.memstore.flush.size</varname>. Normally, minor
+                    compactions will alleviate this situation. However, if the normal compaction
+                    algorithm do not find any normally-eligible StoreFiles, a major compaction is
+                    the only way to get out of this situation, and is forced. This is also called a
+                    size-based or size-triggered major compaction.</para>
+                </listitem>
+              </varlistentry>
+              <varlistentry>
+                <term>If this compaction was user-requested, do a major compaction.</term>
+                <listitem>
+                  <para>Compactions can run on a schedule or can be initiated manually. If a
+                    compaction is requested manually, it is always a major compaction. If the
+                    compaction is user-requested, the major compaction still happens even if the are
+                    more than <varname>hbase.hstore.compaction.max</varname> files that need
+                    compaction.</para>
+                </listitem>
+              </varlistentry>
+              <varlistentry>
+                <term>Exclude files which are too large.</term>
+                <listitem>
+                  <para>The purpose of compaction is to merge small files together, and it is
+                    counterproductive to compact files which are too large. Files larger than
+                    <varname>hbase.hstore.compaction.max.size</varname> are excluded from
+                    consideration.</para>
+                </listitem>
+              </varlistentry>
+              <varlistentry>
+                <term>If configured, exclude bulk-loaded files.</term>
+                <listitem>
+                  <para>You may decide to exclude bulk-loaded files from compaction, in the bulk
+                    load operation, by specifying the
+                    <varname>hbase.mapreduce.hfileoutputformat.compaction.exclude
+                      parameter.</varname> If a bulk-loaded file was excluded, it is removed from
+                    consideration at this point.</para>
+                </listitem>
+              </varlistentry>
+              <varlistentry>
+                <term>If there are too many files to compact, do a minor compaction.</term>
+                <listitem>
+                  <para>The maximum number of files allowed in a major compaction is controlled by
+                    the <varname>hbase.hstore.compaction.max</varname> parameter. If the list
+                    contains more than this number of files, a compaction that would otherwise be a
+                    major compaction is downgraded to a minor compaction. However, a user-requested
+                    major compaction still occurs even if there are more than
+                    <varname>hbase.hstore.compaction.max</varname> files to compact.</para>
+                </listitem>
+              </varlistentry>
+              <varlistentry>
+                <term>Only run the compaction if enough files need to be compacted.</term>
+                <listitem>
+                  <para>If the list contains fewer than
+                    <varname>hbase.hstore.compaction.min</varname> files to compact, compaction is
+                    aborted.</para>
+                </listitem>
+              </varlistentry>
+              <varlistentry>
+                <term>If this is a minor compaction, determine which files are eligible, based upon
+                  the <varname>hbase.store.compaction.ratio</varname>.</term>
+                <listitem>
+                  <para>The value of the <varname>hbase.store.compaction.ratio</varname> parameter
+                    is multiplied by the sum of files smaller than a given file, to determine
+                    whether that file is selected for compaction during a minor compaction. For
+                    instance, if hbase.store.compaction.ratio is 1.2, FileX is 5 mb, FileY is 2 mb,
+                    and FileZ is 3 mb:</para>
+                  <screen>5 &lt;= 1.2 x (2 + 3)            or          5 &lt;= 6</screen>
+                  <para>In this scenario, FileX is eligible for minor compaction. If FileX were 7
+                    mb, it would not be eligible for minor compaction. This ratio favors smaller
+                    files. You can configure a different ratio for use in off-peak hours, using the
+                    parameter <varname>hbase.hstore.compaction.ratio.offpeak</varname>, if you also
+                    configure <varname>hbase.offpeak.start.hour</varname> and
+                    <varname>hbase.offpeak.end.hour</varname>.</para>
+                </listitem>
+              </varlistentry>
+              <varlistentry>
+                <term>If major compactions are not managed manually, and it has been too long since
+                  the last major compaction, run a major compaction anyway.</term>
+                <listitem>
+                  <para>If the last major compaction was too long ago and there is more than one
+                    file to be compacted, a major compaction is run, even if it would otherwise have
+                    been minor. By default, the maximum time between major compactions is 7 days,
+                    plus or minus a 4.8 hour period, and determined randomly within those
+                    parameters. Prior to HBase 0.96, the major compaction period was 24 hours. This
+                    is also referred to as a time-based or time-triggered major compaction. See
+                    <varname>hbase.hregion.majorcompaction</varname> in the table below to tune or
+                    disable time-based major compactions.</para>
+                </listitem>
+              </varlistentry>
+            </variablelist>
+            <table>
+              <title>Parameters Used by Compaction Algorithm</title>
+              <textobject>
+                <para>This table contains the main configuration parameters for compaction. This
+                  list is not exhaustive. To tune these parameters from the defaults, edit the
+                  <filename>hbase-default.xml</filename> file. For a full list of all
+                  configuration parameters available, see <xref
+                    linkend="config.files" />.</para>
+              </textobject>
+              <tgroup
+                cols="3">
+                <thead>
+                  <row>
+                    <entry>Parameter</entry>
+                    <entry>Description</entry>
+                    <entry>Default</entry>
+                  </row>
+                </thead>
+                <tbody>
+                  <row>
+                    <entry>hbase.hstore.compaction.min</entry>
+                    <entry>The minimum number of files which must be eligible for compaction before
+                      compaction can run.</entry>
+                    <entry>3</entry>
+                  </row>
+                  <row>
+                    <entry>hbase.hstore.compaction.max</entry>
+                    <entry>The maximum number of files which will be selected for a single minor
+                      compaction, regardless of the number of eligible files.</entry>
+                    <entry>10</entry>
+                  </row>
+                  <row>
+                    <entry>hbase.hstore.compaction.min.size</entry>
+                    <entry>A StoreFile smaller than this size (in bytes) will always be eligible for
+                      minor compaction.</entry>
+                    <entry>10</entry>
+                  </row>
+                  <row>
+                    <entry>hbase.hstore.compaction.max.size</entry>
+                    <entry>A StoreFile larger than this size (in bytes) will be excluded from minor
+                      compaction.</entry>
+                    <entry>1000</entry>
+                  </row>
+                  <row>
+                    <entry>hbase.store.compaction.ratio</entry>
+                    <entry>For minor compaction, this ratio is used to determine whether a given
+                      file is eligible for compaction. Its effect is to limit compaction of large
+                      files. Expressed as a floating-point decimal.</entry>
+                    <entry>1.2F</entry>
+                  </row>
+                  <row>
+                    <entry>hbase.hstore.compaction.ratio.offpeak</entry>
+                    <entry>The compaction ratio used during off-peak compactions, if off-peak is
+                      enabled. Expressed as a floating-point decimal. This allows for more
+                      aggressive compaction, because in theory, the cluster is under less load.
+                      Ignored if off-peak is disabled (default).</entry>
+                    <entry>5.0F</entry>
+                  </row>
+                  <row>
+                    <entry>hbase.offpeak.start.hour</entry>
+                    <entry>The start of off-peak hours, expressed as an integer between 0 and 23,
+                      inclusive. Set to <literal>-1</literal> to disable off-peak.</entry>
+                    <entry>-1 (disabled)</entry>
+                  </row>
+                  <row>
+                    <entry>hbase.offpeak.end.hour</entry>
+                    <entry>The end of off-peak hours, expressed as an integer between 0 and 23,
+                      inclusive. Set to <literal>-1</literal> to disable off-peak.</entry>
+                    <entry>-1 (disabled)</entry>
+                  </row>
+                  <row>
+                    <entry>hbase.regionserver.thread.compaction.throttle</entry>
+                    <entry>Throttles compaction if too much of a backlog of compaction work
+                      exists.</entry>
+                    <entry>2 x hbase.hstore.compaction.max x hbase.hregion.memstore.flush.size
+                      (which defaults to 128)</entry>
+                  </row>
+                  <row>
+                    <entry>hbase.hregion.majorcompaction</entry>
+                    <entry>Time between major compactions, expressed in milliseconds. Set to 0 to
+                      disable time-based automatic major compactions. User-requested and size-based
+                      major compactions will still run.</entry>
+                    <entry>7 days (604800000 milliseconds)</entry>
+                  </row>
+                  <row>
+                    <entry>hbase.hregion.majorcompaction.jitter</entry>
+                    <entry>A multiplier applied to majorCompactionPeriod to cause compaction to
+                      occur a given amount of time either side of majorCompactionPeriod. The smaller
+                      the number, the closer the compactions will happen to the
+                      <varname>hbase.hregion.majorcompaction</varname> interval. Expressed as a
+                      floating-point decimal.</entry>
+                    <entry>.50F</entry>
+                  </row>
+                </tbody>
+              </tgroup>
+            </table>
+          </section>
+          
+          <section
+            xml:id="compaction.file.selection.old">
           <title>Compaction File Selection</title>
           <para>To understand the core algorithm for StoreFile selection, there is some ASCII-art in the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/regionserver/Store.html#836">Store source code</link> that
           will serve as useful reference.  It has been copied below:
