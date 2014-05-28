@@ -65,9 +65,9 @@ public class TestOfflineMetaRebuildBase extends OfflineMetaRebuildTestCore {
     assertTrue(fsck.rebuildMeta(false));
 
     // bring up the minicluster
-    TEST_UTIL.startMiniZKCluster(); // tables seem enabled by default
+    TEST_UTIL.startMiniZKCluster();
     TEST_UTIL.restartHBaseCluster(3);
-    
+    TEST_UTIL.getHBaseAdmin().enableTable(table);
     ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
     
     LOG.info("Waiting for no more RIT");

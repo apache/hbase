@@ -96,8 +96,7 @@ public class TestOfflineMetaRebuildHole extends OfflineMetaRebuildTestCore {
     assertErrors(doFsck(conf, false), new ERROR_CODE[] {
         ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
         ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
-        ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
-        ERROR_CODE.HOLE_IN_REGION_CHAIN});
+        ERROR_CODE.NOT_IN_META_OR_DEPLOYED});
   }
 
 }

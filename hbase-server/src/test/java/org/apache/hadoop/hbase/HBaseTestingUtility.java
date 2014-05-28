@@ -952,6 +952,20 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     miniClusterRunning = false;
     LOG.info("Minicluster is down");
   }
+  
+  /**
+   * @return True if we removed the test dirs
+   * @throws IOException
+   */
+  @Override
+  public boolean cleanupTestDir() throws IOException {
+    boolean ret = super.cleanupTestDir();
+    if (deleteDir(this.clusterTestDir)) {
+      this.clusterTestDir = null;
+      return ret & true;
+    }
+    return false;
+  }
 
   /**
    * Shutdown HBase mini cluster.  Does not shutdown zk or dfs if running.
