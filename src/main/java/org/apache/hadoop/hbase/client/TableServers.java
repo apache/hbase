@@ -563,19 +563,19 @@ public class TableServers implements ServerConnection {
       getRegionServerWithRetries(s);
       do {
         currentRegion = s.getHRegionInfo();
-        Result r;
         Result[] rrs;
         while ((rrs = getRegionServerWithRetries(s)) != null
             && rrs.length > 0) {
-          r = rrs[0];
-          byte[] value = r.getValue(HConstants.CATALOG_FAMILY,
-              HConstants.REGIONINFO_QUALIFIER);
-          if (value != null) {
-            HRegionInfo info = Writables.getHRegionInfoOrNull(value);
-            if (info != null) {
-              if (tableName.equalBytes(info.getTableDesc().getName())) {
-                rowsScanned += 1;
-                rowsOffline += info.isOffline() ? 1 : 0;
+          for (Result r : rrs) {
+            byte[] value = r.getValue(HConstants.CATALOG_FAMILY,
+                HConstants.REGIONINFO_QUALIFIER);
+            if (value != null) {
+              HRegionInfo info = Writables.getHRegionInfoOrNull(value);
+              if (info != null) {
+                if (tableName.equalBytes(info.getTableDesc().getName())) {
+                  rowsScanned += 1;
+                  rowsOffline += info.isOffline() ? 1 : 0;
+                }
               }
             }
           }
