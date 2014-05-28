@@ -2741,8 +2741,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
       if (this.b == null || this.b.length == 0) {
         return "empty";
       }
-      return keyToString(this.b, this.offset + ROW_OFFSET, getKeyLength()) + "/vlen="
-          + getValueLength() + "/mvcc=" + 0;
+      return keyToString(this.b, this.offset, getKeyLength()) + "/vlen=0/mvcc=0";
     }
 
     @Override
