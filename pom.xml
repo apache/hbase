@@ -36,7 +36,7 @@
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>jar</packaging>
-  <version>0.94.20</version>
+  <version>0.94.20-SNAPSHOT</version>
   <name>HBase</name>
   <description>
     HBase is the &amp;lt;a href="http://hadoop.apache.org"&amp;rt;Hadoop&lt;/a&amp;rt; database. Use it when you need
@@ -47,9 +47,9 @@
   <url>http://hbase.apache.org</url>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/trunk</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/hbase/trunk</developerConnection>
-    <url>http://svn.apache.org/viewvc/hbase/trunk</url>
+    <connection>scm:git:git://git.apache.org/hbase.git</connection>
+    <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/hbase.git</developerConnection>
+    <url>https://git-wip-us.apache.org/repos/asf?p=hbase.git</url>
   </scm>
 
   <issueManagement>
