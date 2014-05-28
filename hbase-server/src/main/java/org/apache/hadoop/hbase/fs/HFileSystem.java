@@ -81,6 +81,13 @@ public class HFileSystem extends FilterFileSystem {
     this.useHBaseChecksum = useHBaseChecksum;
     
     fs.initialize(getDefaultUri(conf), conf);
+    
+    // disable checksum verification for local fileSystem, see HBASE-11218
+    if (fs instanceof LocalFileSystem) {
+      fs.setWriteChecksum(false);
+      fs.setVerifyChecksum(false);
+    }
+
     addLocationsOrderInterceptor(conf);
 
     // If hbase checksum verification is switched on, then create a new

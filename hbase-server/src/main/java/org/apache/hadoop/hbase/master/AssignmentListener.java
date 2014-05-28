@@ -39,7 +39,6 @@ public interface AssignmentListener {
   /**
    * The region was closed on the region server.
    * @param regionInfo The closed region.
-   * @param serverName The remote servers name.
    */
   void regionClosed(final HRegionInfo regionInfo);
 }
