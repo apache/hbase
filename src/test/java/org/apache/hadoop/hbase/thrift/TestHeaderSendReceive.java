@@ -155,12 +155,12 @@ public class TestHeaderSendReceive {
         pd.getLong(ProfilingData.CLIENT_NETWORK_LATENCY_MS));
     Assert.assertTrue(ProfilingData.CLIENT_NETWORK_LATENCY_MS
         + " should be greater than zero",
-        pd.getLong(ProfilingData.CLIENT_NETWORK_LATENCY_MS).longValue() > 0L);
+        pd.getLong(ProfilingData.CLIENT_NETWORK_LATENCY_MS).longValue() >= 0L);
     assertNotNull(ProfilingData.TOTAL_SERVER_TIME_MS + " is null",
         pd.getLong(ProfilingData.TOTAL_SERVER_TIME_MS));
     Assert.assertTrue(ProfilingData.TOTAL_SERVER_TIME_MS
         + " should be greater than zero",
-        pd.getLong(ProfilingData.TOTAL_SERVER_TIME_MS).longValue() > 0L);
+        pd.getLong(ProfilingData.TOTAL_SERVER_TIME_MS).longValue() >= 0L);
     if (isPut) {
       assertNotNull(ProfilingData.HLOG_SYNC_TIME_MS + " is null",
           pd.getLong(ProfilingData.HLOG_SYNC_TIME_MS));
