@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Map;
 
@@ -36,9 +35,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.codehaus.jackson.map.ObjectMapper;
 
 /**
  * The administration program for coprocessor.
@@ -72,28 +71,20 @@ public class CoprocessorAdmin {
     System.out.println("Uploading coprocessor in " + localRoot + " to HDFS "
         + "rooted at " + root);
 
-    String name = null;
-    int version = -1;
-    ArrayList<String> loadedClasses = null;
-
     Path pJson = new Path(localRoot, CoprocessorHost.CONFIG_JSON);
     LocalFileSystem lfs = FileSystem.getLocal(conf);
-    try (InputStream is = lfs.open(pJson)) {
-      ObjectMapper mapper = new ObjectMapper();
-      Map<String, Object> jConf =
-          (Map<String, Object>) mapper.readValue(is, Map.class);
+    Map<String, Object> jConf = FSUtils.readJSONFromFile(lfs, pJson);
 
-      name = (String) jConf.get(CoprocessorHost.COPROCESSOR_JSON_NAME_FIELD);
-      version = (int) jConf.get(CoprocessorHost.COPROCESSOR_JSON_VERSION_FIELD);
-      loadedClasses =
-          (ArrayList<String>) jConf.get(CoprocessorHost.COPROCESSOR_JSON_LOADED_CLASSES_FIELD);
+    String name = (String) jConf.get(CoprocessorHost.COPROCESSOR_JSON_NAME_FIELD);
+    int version = (int) jConf.get(CoprocessorHost.COPROCESSOR_JSON_VERSION_FIELD);
+    ArrayList<String> loadedClasses = (ArrayList<String>) jConf.get(
+        CoprocessorHost.COPROCESSOR_JSON_LOADED_CLASSES_FIELD);
 
-      System.out.println("Name: " + name);
-      System.out.println("Version: " + version);
-      System.out.println("Loaded classes: " + loadedClasses);
+    System.out.println("Name: " + name);
+    System.out.println("Version: " + version);
+    System.out.println("Loaded classes: " + loadedClasses);
 
-      checkClasses(localRoot, loadedClasses);
-    }
+    checkClasses(localRoot, loadedClasses);
 
     if (name == null || version < 0 || loadedClasses == null
         || loadedClasses.size() < 1) {

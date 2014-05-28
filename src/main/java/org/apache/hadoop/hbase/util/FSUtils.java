@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -46,10 +47,10 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.SequenceFile;
+import org.codehaus.jackson.map.ObjectMapper;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -115,7 +116,7 @@ public class FSUtils {
 
   /**
    * Checks to see if the specified file system is available
-   * 
+   *
    * @param fs
    *          filesystem
    * @param shutdown
@@ -613,7 +614,7 @@ public class FSUtils {
 
 
   /**
-   * 
+   *
    * @param fs
    * @param p
    * @param conf
@@ -662,8 +663,8 @@ public class FSUtils {
 
 
   /**
-   * Runs through the HBase rootdir and creates a reverse lookup map for 
-   * table StoreFile names to the full Path. 
+   * Runs through the HBase rootdir and creates a reverse lookup map for
+   * table StoreFile names to the full Path.
    * <br>
    * Example...<br>
    * Key = 3944417774205889744  <br>
@@ -678,17 +679,17 @@ public class FSUtils {
     final FileSystem fs, final Path hbaseRootDir)
   throws IOException {
     Map<String, Path> map = new HashMap<String, Path>();
-    
-    // if this method looks similar to 'getTableFragmentation' that is because 
+
+    // if this method looks similar to 'getTableFragmentation' that is because
     // it was borrowed from it.
-    
+
     DirFilter df = new DirFilter(fs);
     // presumes any directory under hbase.rootdir is a table
     FileStatus [] tableDirs = fs.listStatus(hbaseRootDir, df);
     for (FileStatus tableDir : tableDirs) {
       // Skip the .log directory.  All others should be tables.  Inside a table,
       // there are compaction.dir directories to skip.  Otherwise, all else
-      // should be regions. 
+      // should be regions.
       Path d = tableDir.getPath();
       if (d.getName().equals(HConstants.HREGION_LOGDIR_NAME)) {
         continue;
@@ -710,7 +711,7 @@ public class FSUtils {
             Path sf = sfStatus.getPath();
             map.put( sf.getName(), sf);
           }
-          
+
         }
       }
     }
@@ -720,7 +721,7 @@ public class FSUtils {
   /**
    * This function is to scan the root path of the file system to get the
    * mapping between the region name and its best locality region server
-   * 
+   *
    * @param fs
    *          the file system to use
    * @param rootPath
@@ -743,7 +744,7 @@ public class FSUtils {
   /**
    * This function is to scan the root path of the file system to get the
    * mapping between the region name and its best locality region server
-   * 
+   *
    * @param fs
    *          the file system to use
    * @param rootPath
@@ -785,7 +786,7 @@ public class FSUtils {
     return getRegionDegreeLocalityMappingFromFS(
         conf, null,
         conf.getInt("hbase.client.localityCheck.threadPoolSize", 2));
-     
+
   }
 
   /**
@@ -807,7 +808,7 @@ public class FSUtils {
     return getRegionDegreeLocalityMappingFromFS(
         conf, tableName,
         conf.getInt("hbase.client.localityCheck.threadPoolSize", 2));
-     
+
   }
 
   /**
@@ -959,12 +960,23 @@ public class FSUtils {
         throw new IOException(e);
       }
     }
-    
+
     long overhead = System.currentTimeMillis() - startTime;
     String overheadMsg = "Scan DFS for locality info takes " + overhead + " ms";
 
     LOG.info(overheadMsg);
   }
 
+  /**
+   * Reads a JSON file as a map from string to object.
+   */
+  @SuppressWarnings("unchecked")
+  public static Map<String, Object> readJSONFromFile(FileSystem fs, Path pJson)
+      throws IOException {
+    try (InputStream is = fs.open(pJson)) {
+      ObjectMapper mapper = new ObjectMapper();
+      return (Map<String, Object>) mapper.readValue(is, Map.class);
+    }
+  }
 }
 

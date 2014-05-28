@@ -21,6 +21,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
@@ -160,8 +161,12 @@ public class ClassLoaderTestHelper {
     String jarFileName = className + ".jar";
     File jarFile = new File(folder, jarFileName);
     jarFile.getParentFile().mkdirs();
-    if (!createJarArchive(jarFile,
-        new File[]{new File(srcDir.toString(), className + ".class")})){
+    if (!createJarArchive(jarFile, srcDirPath.listFiles(new FileFilter() {
+          @Override
+          public boolean accept(File pathname) {
+            return pathname.getName().endsWith(".class");
+          }
+        }))) {
       assertTrue("Build jar file failed.", false);
     }
     return jarFile;

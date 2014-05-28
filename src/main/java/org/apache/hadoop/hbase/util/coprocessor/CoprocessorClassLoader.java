@@ -170,7 +170,7 @@ public class CoprocessorClassLoader extends URLClassLoader {
     FileSystem fs = path.getFileSystem(conf);
     File dst = new File(parentDirStr, "." + pathPrefix + "." + path.getName()
         + "." + System.currentTimeMillis() + ".jar");
-    fs.copyToLocalFile(path, new Path(dst.toString()));
+    fs.copyToLocalFile(false, false, path, new Path(dst.toString()));
     dst.deleteOnExit();
 
     addURL(dst.getCanonicalFile().toURI().toURL());
@@ -388,6 +388,7 @@ public class CoprocessorClassLoader extends URLClassLoader {
   /**
    * Returns the lock object for class loading operations.
    */
+  @Override
   protected Object getClassLoadingLock(String className) {
     Object lock = parallelLockMap.get(className);
     if (lock != null) {
