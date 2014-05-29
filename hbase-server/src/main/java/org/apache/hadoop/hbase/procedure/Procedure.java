@@ -339,12 +339,23 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
    * Waits until the entire procedure has globally completed, or has been aborted.  If an
    * exception is thrown the procedure may or not have run cleanup to trigger the completion latch
    * yet.
+   * @throws ForeignException
+   * @throws InterruptedException
+   */
+  public void waitForCompleted() throws ForeignException, InterruptedException {
+    waitForLatch(completedLatch, monitor, wakeFrequency, procName + " completed");
+  }
+
+  /**
+   * Waits until the entire procedure has globally completed, or has been aborted.  If an
+   * exception is thrown the procedure may or not have run cleanup to trigger the completion latch
+   * yet.
    * @return data returned from procedure members upon successfully completing subprocedure.
    * @throws ForeignException
    * @throws InterruptedException
    */
-  public HashMap<String, byte[]> waitForCompleted() throws ForeignException, InterruptedException {
-    waitForLatch(completedLatch, monitor, wakeFrequency, procName + " completed");
+  public HashMap<String, byte[]> waitForCompletedWithRet() throws ForeignException, InterruptedException {
+    waitForCompleted();
     return dataFromFinishedMembers;
   }
 
