@@ -179,12 +179,12 @@ abstract public class Subprocedure implements Callable<Void> {
       // semantics.
 
       LOG.debug("Subprocedure '" + barrierName + "' received 'reached' from coordinator.");
-      byte[] dataToCoordinator = insideBarrier();
+      insideBarrier();
       LOG.debug("Subprocedure '" + barrierName + "' locally completed");
       rethrowException();
 
       // Ack that the member has executed and released local barrier
-      rpcs.sendMemberCompleted(this, dataToCoordinator);
+      rpcs.sendMemberCompleted(this);
       LOG.debug("Subprocedure '" + barrierName + "' has notified controller of completion");
 
       // make sure we didn't get an external exception
@@ -244,13 +244,12 @@ abstract public class Subprocedure implements Callable<Void> {
    * has been satisfied.  Continuing the previous example, a condition could be that all RS's
    * globally have been quiesced, and procedures that require this precondition could be
    * implemented here.
-   * The implementation should also collect the result of the subprocedure as data to be returned
-   * to the coordinator upon successful completion.
-   * Users should override this method.
-   * @return the data the subprocedure wants to return to coordinator side.
+   *
+   * Users should override this method.  If quiescense is not required, this can be a no-op
+   *
    * @throws ForeignException
    */
-  abstract public byte[] insideBarrier() throws ForeignException;
+  abstract public void insideBarrier() throws ForeignException;
 
   /**
    * Users should override this method. This implementation of this method should rollback and
@@ -326,9 +325,7 @@ abstract public class Subprocedure implements Callable<Void> {
     public void acquireBarrier() throws ForeignException {}
 
     @Override
-    public byte[] insideBarrier() throws ForeignException {
-      return new byte[0];
-    }
+    public void insideBarrier() throws ForeignException {}
 
     @Override
     public void cleanup(Exception e) {}

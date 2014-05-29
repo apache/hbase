@@ -146,7 +146,7 @@ public class TestProcedureMember {
     order.verify(spy).acquireBarrier();
     order.verify(mockMemberComms).sendMemberAcquired(eq(spy));
     order.verify(spy).insideBarrier();
-    order.verify(mockMemberComms).sendMemberCompleted(eq(spy), eq(data));
+    order.verify(mockMemberComms).sendMemberCompleted(eq(spy));
     order.verify(mockMemberComms, never()).sendMemberAborted(eq(spy),
         any(ForeignException.class));
   }
@@ -181,7 +181,7 @@ public class TestProcedureMember {
     // Later phases not run
     order.verify(mockMemberComms, never()).sendMemberAcquired(eq(spySub));
     order.verify(spySub, never()).insideBarrier();
-    order.verify(mockMemberComms, never()).sendMemberCompleted(eq(spySub), eq(data));
+    order.verify(mockMemberComms, never()).sendMemberCompleted(eq(spySub));
     // error recovery path exercised
     order.verify(spySub).cancel(anyString(), any(Exception.class));
     order.verify(spySub).cleanup(any(Exception.class));
@@ -217,7 +217,7 @@ public class TestProcedureMember {
 
     // Later phases not run
     order.verify(spySub, never()).insideBarrier();
-    order.verify(mockMemberComms, never()).sendMemberCompleted(eq(spySub), eq(data));
+    order.verify(mockMemberComms, never()).sendMemberCompleted(eq(spySub));
     // error recovery path exercised
     order.verify(spySub).cancel(anyString(), any(Exception.class));
     order.verify(spySub).cleanup(any(Exception.class));
@@ -260,7 +260,7 @@ public class TestProcedureMember {
     order.verify(mockMemberComms).sendMemberAcquired(eq(spySub));
     // Later phases not run
     order.verify(spySub, never()).insideBarrier();
-    order.verify(mockMemberComms, never()).sendMemberCompleted(eq(spySub), eq(data));
+    order.verify(mockMemberComms, never()).sendMemberCompleted(eq(spySub));
     // error recovery path exercised
     order.verify(spySub).cancel(anyString(), any(Exception.class));
     order.verify(spySub).cleanup(any(Exception.class));
@@ -301,7 +301,7 @@ public class TestProcedureMember {
     order.verify(spySub).insideBarrier();
 
     // Later phases not run
-    order.verify(mockMemberComms, never()).sendMemberCompleted(eq(spySub), eq(data));
+    order.verify(mockMemberComms, never()).sendMemberCompleted(eq(spySub));
     // error recovery path exercised
     order.verify(spySub).cancel(anyString(), any(Exception.class));
     order.verify(spySub).cleanup(any(Exception.class));
@@ -329,7 +329,7 @@ public class TestProcedureMember {
             Thread.sleep(WAKE_FREQUENCY);
             return null;
           }
-        }).when(mockMemberComms).sendMemberCompleted(any(Subprocedure.class), eq(data));
+        }).when(mockMemberComms).sendMemberCompleted(any(Subprocedure.class));
 
     // run the operation
     // build a new operation
@@ -343,7 +343,7 @@ public class TestProcedureMember {
     order.verify(spySub).acquireBarrier();
     order.verify(mockMemberComms).sendMemberAcquired(eq(spySub));
     order.verify(spySub).insideBarrier();
-    order.verify(mockMemberComms).sendMemberCompleted(eq(spySub), eq(data));
+    order.verify(mockMemberComms).sendMemberCompleted(eq(spySub));
     // error recovery path exercised
     order.verify(spySub).cancel(anyString(), any(Exception.class));
     order.verify(spySub).cleanup(any(Exception.class));

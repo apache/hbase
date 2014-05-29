@@ -247,9 +247,8 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
      * do a log roll.
      */
     @Override
-    public byte[] insideBarrier() throws ForeignException {
+    public void insideBarrier() throws ForeignException {
       execute();
-      return new byte[0];
     }
 
     /**

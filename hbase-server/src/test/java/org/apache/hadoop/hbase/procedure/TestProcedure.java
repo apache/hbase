@@ -117,7 +117,7 @@ public class TestProcedure {
     // or was not called here.
 
     // member: trigger global barrier release
-    proc.barrierReleasedByMember(members.get(0), new byte[0]);
+    proc.barrierReleasedByMember(members.get(0));
 
     // coordinator: wait for procedure to be completed
     proc.completedProcedure.await();
@@ -168,8 +168,8 @@ public class TestProcedure {
     verify(procspy).sendGlobalBarrierStart(); // old news
 
     // member 1, 2: trigger global barrier release
-    procspy.barrierReleasedByMember(members.get(0), new byte[0]);
-    procspy.barrierReleasedByMember(members.get(1), new byte[0]);
+    procspy.barrierReleasedByMember(members.get(0));
+    procspy.barrierReleasedByMember(members.get(1));
 
     // coordinator wait for procedure to be completed
     procspy.completedProcedure.await();

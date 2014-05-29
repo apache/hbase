@@ -284,15 +284,14 @@ public class ProcedureCoordinator {
    * via {@link Subprocedure#insideBarrier()}.
    * @param procName name of the subprocedure that finished
    * @param member name of the member that executed and released its barrier
-   * @param dataFromMember the data that the member returned along with the notification
    */
-  void memberFinishedBarrier(String procName, final String member, byte[] dataFromMember) {
+  void memberFinishedBarrier(String procName, final String member) {
     Procedure proc = procedures.get(procName);
     if (proc == null) {
       LOG.warn("Member '"+ member +"' is trying to release an unknown procedure '"+ procName +"'");
       return;
     }
-    proc.barrierReleasedByMember(member, dataFromMember);
+    proc.barrierReleasedByMember(member);
   }
 
   /**

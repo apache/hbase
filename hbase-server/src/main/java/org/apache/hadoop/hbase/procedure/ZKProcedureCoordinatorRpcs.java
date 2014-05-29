@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.procedure;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -121,23 +120,11 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
       for (String node : nodeNames) {
         String znode = ZKUtil.joinZNode(reachedNode, node);
         if (ZKUtil.watchAndCheckExists(zkProc.getWatcher(), znode)) {
-          byte[] dataFromMember = ZKUtil.getData(zkProc.getWatcher(), znode);
-          // ProtobufUtil.isPBMagicPrefix will check null
-          if (!ProtobufUtil.isPBMagicPrefix(dataFromMember)) {
-            throw new IOException(
-                "Failed to get data from finished node or data is illegally formatted: "
-                + znode);
-          } else {
-            dataFromMember = Arrays.copyOfRange(dataFromMember, ProtobufUtil.lengthOfPBMagic(),
-              dataFromMember.length);
-            coordinator.memberFinishedBarrier(procName, node, dataFromMember);
-          }
+          coordinator.memberFinishedBarrier(procName, node);
         }
       }
     } catch (KeeperException e) {
       throw new IOException("Failed while creating reached node:" + reachedNode, e);
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException("Interrupted while creating reached node:" + reachedNode);
     }
   }
 
@@ -190,31 +177,8 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
             // node was absent when we created the watch so zk event triggers the finished barrier.
 
             // TODO Nothing enforces that acquire and reached znodes from showing up in wrong order.
-            String procName = ZKUtil.getNodeName(ZKUtil.getParent(path));
-            String member = ZKUtil.getNodeName(path);
-            // get the data from the procedure member
-            try {
-              byte[] dataFromMember = ZKUtil.getData(watcher, path);
-              // ProtobufUtil.isPBMagicPrefix will check null
-              if (!ProtobufUtil.isPBMagicPrefix(dataFromMember)) {
-                ForeignException ee = new ForeignException(coordName,
-                  "Failed to get data from finished node or data is illegally formatted:"
-                      + path);
-                coordinator.abortProcedure(procName, ee);
-              } else {
-                dataFromMember = Arrays.copyOfRange(dataFromMember, ProtobufUtil.lengthOfPBMagic(),
-                  dataFromMember.length);
-                LOG.debug("Finished data from procedure '" + procName
-                  + "' member '" + member + "': " + new String(dataFromMember));
-                coordinator.memberFinishedBarrier(procName, member, dataFromMember);
-              }
-            } catch (KeeperException e) {
-              ForeignException ee = new ForeignException(coordName, e);
-              coordinator.abortProcedure(procName, ee);
-            } catch (InterruptedException e) {
-              ForeignException ee = new ForeignException(coordName, e);
-              coordinator.abortProcedure(procName, ee);
-            }
+            coordinator.memberFinishedBarrier(ZKUtil.getNodeName(ZKUtil.getParent(path)),
+              ZKUtil.getNodeName(path));
           } else if (isAbortPathNode(path)) {
             abort(path);
           } else {

@@ -114,9 +114,8 @@ public class FlushTableSubprocedure extends Subprocedure {
   }
 
   @Override
-  public byte[] insideBarrier() throws ForeignException {
+  public void insideBarrier() throws ForeignException {
     // No-Op
-    return new byte[0];
   }
 
   /**
