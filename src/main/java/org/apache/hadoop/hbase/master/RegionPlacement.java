@@ -710,7 +710,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
 
   /**
    * Returns the average number of regions per regionserver
-   * 
+   *
    * @param mapServerToRegions
    * @return
    */
@@ -1395,7 +1395,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
       assignmentPlan.updateAssignmentPlan(entry.getKey(), entry.getValue());
     }
   }
-  
+
   /**
    * Same as {@link #calculateAvgRegionsPerRS(Map)} but works with Set as value
    * and returns ceil instead of floor
@@ -1612,8 +1612,8 @@ public class RegionPlacement implements RegionPlacementPolicy{
       assignmentMap.entrySet()) {
       String serverList = RegionPlacement.getFavoredNodes(entry.getValue());
       String regionName = entry.getKey().getRegionNameAsString();
-      LOG.info("Region: " + regionName );
-      LOG.info("Its favored nodes: " + serverList);
+      System.out.println("Region: " + regionName);
+      System.out.println("Its favored nodes: " + serverList);
     }
     LOG.info("========== Finish to print the assignment plan ================");
   }
