@@ -2193,19 +2193,31 @@ rs.close();
           </para>
         </section>
 
-        <section xml:id="regions.arch.assignment.failover">
+        <section
+          xml:id="regions.arch.assignment.failover">
           <title>Failover</title>
-          <para>When a RegionServer fails (short version):
-            <orderedlist>
-              <listitem><para>The regions immediately become unavailable because the RegionServer is down.</para>
+          <para>When a RegionServer fails: <orderedlist>
+              <listitem>
+                <para>The regions immediately become unavailable because the RegionServer is
+                  down.</para>
               </listitem>
-              <listitem><para>The Master will detect that the RegionServer has failed.</para>
+              <listitem>
+                <para>The Master will detect that the RegionServer has failed.</para>
               </listitem>
-              <listitem><para>The region assignments will be considered invalid and will be re-assigned just
-                like the startup sequence.</para>
+              <listitem>
+                <para>The region assignments will be considered invalid and will be re-assigned just
+                  like the startup sequence.</para>
+              </listitem>
+              <listitem>
+                <para>In-flight queries are re-tried, and not lost.</para>
+              </listitem>
+              <listitem>
+                <para>Operations are switched to a new RegionServer within the following amount of
+                  time:</para>
+                <programlisting>ZooKeeper session timeout + split time + assignment/replay time</programlisting>
               </listitem>
             </orderedlist>
-           </para>
+          </para>
         </section>
 
         <section xml:id="regions.arch.balancer">
