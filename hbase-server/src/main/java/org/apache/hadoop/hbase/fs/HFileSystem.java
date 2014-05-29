@@ -81,6 +81,13 @@ public class HFileSystem extends FilterFileSystem {
     this.useHBaseChecksum = useHBaseChecksum;
     
     fs.initialize(getDefaultUri(conf), conf);
+
+    // disable checksum verification for local fileSystem, see HBASE-11218
+    if (fs instanceof LocalFileSystem) {
+      setWriteChecksum(fs, false);
+      setVerifyChecksum(fs, false);
+    }
+
     addLocationsOrderInterceptor(conf);
 
     // If hbase checksum verification is switched on, then create a new
@@ -99,6 +106,21 @@ public class HFileSystem extends FilterFileSystem {
     } else {
       this.noChecksumFs = fs;
     }
+  }
+
+  private static void setWriteChecksum(FileSystem fs, boolean writeChecksum) throws IOException {
+    // Some Hadoop versions will not have this method available
+    try {
+      FileSystem.class.getMethod("setWriteChecksum", boolean.class).invoke(fs, writeChecksum);
+    } catch (NoSuchMethodException e) {
+      LOG.debug("FileSystem does not support setWriteChecksum, ignoring");
+    } catch (Throwable t) {
+      throw new IOException("setWriteChecksum failed", t);
+    }
+  }
+
+  private static void setVerifyChecksum(FileSystem fs, boolean verifyChecksum) throws IOException {
+    fs.setVerifyChecksum(verifyChecksum);
   }
 
   /**

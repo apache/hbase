@@ -152,7 +152,7 @@ public class MiniZooKeeperCluster {
     // running all the ZK servers
     for (int i = 0; i < numZooKeeperServers; i++) {
       File dir = new File(baseDir, "zookeeper_"+i).getAbsoluteFile();
-      recreateDir(dir);
+      createDir(dir);
       int tickTimeToUse;
       if (this.tickTime > 0) {
         tickTimeToUse = this.tickTime;
@@ -202,14 +202,11 @@ public class MiniZooKeeperCluster {
     return clientPort;
   }
 
-  private void recreateDir(File dir) throws IOException {
-    if (dir.exists()) {
-      if(!FileUtil.fullyDelete(dir)) {
-        throw new IOException("Could not delete zk base directory: " + dir);
-      }
-    }
+  private void createDir(File dir) throws IOException {
     try {
-      dir.mkdirs();
+      if (!dir.exists()) {
+        dir.mkdirs();
+      }
     } catch (SecurityException e) {
       throw new IOException("creating dir: " + dir, e);
     }
