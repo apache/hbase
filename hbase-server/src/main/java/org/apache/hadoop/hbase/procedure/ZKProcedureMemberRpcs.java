@@ -257,16 +257,21 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
   }
 
   /**
-   * This acts as the ack for a completed snapshot
+   * This acts as the ack for a completed procedure
    */
   @Override
-  public void sendMemberCompleted(Subprocedure sub) throws IOException {
+  public void sendMemberCompleted(Subprocedure sub, byte[] data) throws IOException {
     String procName = sub.getName();
     LOG.debug("Marking procedure  '" + procName + "' completed for member '" + memberName
         + "' in zk");
     String joinPath = ZKUtil.joinZNode(zkController.getReachedBarrierNode(procName), memberName);
+    // ProtobufUtil.prependPBMagic does not take care of null
+    if (data == null) {
+      data = new byte[0];
+    }
     try {
-      ZKUtil.createAndFailSilent(zkController.getWatcher(), joinPath);
+      ZKUtil.createAndFailSilent(zkController.getWatcher(), joinPath,
+        ProtobufUtil.prependPBMagic(data));
     } catch (KeeperException e) {
       member.controllerConnectionFailure("Failed to post zk node:" + joinPath
           + " to join procedure barrier.", new IOException(e));

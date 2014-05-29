@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.procedure;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -105,6 +106,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
   private Object joinBarrierLock = new Object();
   private final List<String> acquiringMembers;
   private final List<String> inBarrierMembers;
+  private final HashMap<String, byte[]> dataFromFinishedMembers;
   private ProcedureCoordinator coord;
 
   /**
@@ -125,6 +127,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
     this.coord = coord;
     this.acquiringMembers = new ArrayList<String>(expectedMembers);
     this.inBarrierMembers = new ArrayList<String>(acquiringMembers.size());
+    this.dataFromFinishedMembers = new HashMap<String, byte[]>();
     this.procName = procName;
     this.args = args;
     this.monitor = monitor;
@@ -311,8 +314,9 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
    * Call back triggered by a individual member upon successful local in-barrier execution and
    * release
    * @param member
+   * @param dataFromMember
    */
-  public void barrierReleasedByMember(String member) {
+  public void barrierReleasedByMember(String member, byte[] dataFromMember) {
     boolean removed = false;
     synchronized (joinBarrierLock) {
       removed = this.inBarrierMembers.remove(member);
@@ -328,6 +332,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
       LOG.warn("Member: '" + member + "' released barrier for procedure'" + procName
           + "', but we weren't waiting on it to release!");
     }
+    dataFromFinishedMembers.put(member, dataFromMember);
   }
 
   /**
@@ -339,6 +344,19 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
    */
   public void waitForCompleted() throws ForeignException, InterruptedException {
     waitForLatch(completedLatch, monitor, wakeFrequency, procName + " completed");
+  }
+
+  /**
+   * Waits until the entire procedure has globally completed, or has been aborted.  If an
+   * exception is thrown the procedure may or not have run cleanup to trigger the completion latch
+   * yet.
+   * @return data returned from procedure members upon successfully completing subprocedure.
+   * @throws ForeignException
+   * @throws InterruptedException
+   */
+  public HashMap<String, byte[]> waitForCompletedWithRet() throws ForeignException, InterruptedException {
+    waitForCompleted();
+    return dataFromFinishedMembers;
   }
 
   /**
