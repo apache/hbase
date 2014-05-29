@@ -71,7 +71,7 @@ def get_svn_version():
     """
     svn_info = check_output(["svn", "info"])
     rev_line = [line.strip() for line in svn_info.splitlines(True)
-                if line.strip.startswith("Last Changed Rev")][0]
+                if line.strip().startswith("Last Changed Rev")][0]
     rev = rev_line.split()[-1]
     return rev
 
