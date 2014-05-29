@@ -138,9 +138,9 @@
 					<%	
 					} 
 					%>
-					<td><input type="text" size="40" name="primaryRS" value="<%=favoredNodeList.get(AssignmentPlan.POSITION.PRIMARY.ordinal()).getHostNameWithPort()%>"</td>
-					<td><input type="text" size="40" name="secondaryRS" value="<%=favoredNodeList.get(AssignmentPlan.POSITION.SECONDARY.ordinal()).getHostNameWithPort()%>"</td>
-					<td><input type="text" size="40" name="tertiaryRS" value="<%=favoredNodeList.get(AssignmentPlan.POSITION.TERTIARY.ordinal()).getHostNameWithPort()%>"</td>
+					<td><input type="text" size="40" name="primaryRS" value="<%=favoredNodeList == null ? "" : favoredNodeList.get(AssignmentPlan.POSITION.PRIMARY.ordinal()).getHostNameWithPort()%>"</td>
+					<td><input type="text" size="40" name="secondaryRS" value="<%=favoredNodeList == null ? "" : favoredNodeList.get(AssignmentPlan.POSITION.SECONDARY.ordinal()).getHostNameWithPort()%>"</td>
+					<td><input type="text" size="40" name="tertiaryRS" value="<%=favoredNodeList == null ? "" : favoredNodeList.get(AssignmentPlan.POSITION.TERTIARY.ordinal()).getHostNameWithPort()%>"</td>
 					<td><input type="submit" size="5" value="Update"></td>
 				</form>
 			</tr>
