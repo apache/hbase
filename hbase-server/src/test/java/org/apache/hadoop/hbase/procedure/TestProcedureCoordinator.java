@@ -218,12 +218,12 @@ public class TestProcedureCoordinator {
         // then do some fun where we commit before all nodes have prepared
         // "one" commits before anyone else is done
         ref.memberAcquiredBarrier(this.opName, this.cohort[0]);
-        ref.memberFinishedBarrier(this.opName, this.cohort[0]);
+        ref.memberFinishedBarrier(this.opName, this.cohort[0], new byte[0]);
         // but "two" takes a while
         ref.memberAcquiredBarrier(this.opName, this.cohort[1]);
         // "three"jumps ahead
         ref.memberAcquiredBarrier(this.opName, this.cohort[2]);
-        ref.memberFinishedBarrier(this.opName, this.cohort[2]);
+        ref.memberFinishedBarrier(this.opName, this.cohort[2], new byte[0]);
         // and "four" takes a while
         ref.memberAcquiredBarrier(this.opName, this.cohort[3]);
       }
@@ -232,8 +232,8 @@ public class TestProcedureCoordinator {
     BarrierAnswer commit = new BarrierAnswer(procName, cohort) {
       @Override
       public void doWork() {
-        ref.memberFinishedBarrier(opName, this.cohort[1]);
-        ref.memberFinishedBarrier(opName, this.cohort[3]);
+        ref.memberFinishedBarrier(opName, this.cohort[1], new byte[0]);
+        ref.memberFinishedBarrier(opName, this.cohort[3], new byte[0]);
       }
     };
     runCoordinatedOperation(spy, prepare, commit, cohort);
@@ -343,7 +343,8 @@ public class TestProcedureCoordinator {
     public void doWork() {
       if (cohort == null) return;
       for (String member : cohort) {
-        TestProcedureCoordinator.this.coordinator.memberFinishedBarrier(opName, member);
+        TestProcedureCoordinator.this.coordinator.memberFinishedBarrier(opName, member,
+          new byte[0]);
       }
     }
   }

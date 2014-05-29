@@ -133,8 +133,9 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
    * do a flush snapshot of every region on this rs from the target table.
    */
   @Override
-  public void insideBarrier() throws ForeignException {
+  public byte[] insideBarrier() throws ForeignException {
     flushSnapshot();
+    return new byte[0];
   }
 
   /**

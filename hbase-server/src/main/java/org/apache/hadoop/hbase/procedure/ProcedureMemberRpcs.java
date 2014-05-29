@@ -66,7 +66,8 @@ public interface ProcedureMemberRpcs extends Closeable {
    * needed to be done under the global barrier.
    *
    * @param sub the specified {@link Subprocedure}
+   * @param data the data the member returns to the coordinator along with the notification
    * @throws IOException if we can't reach the coordinator
    */
-  void sendMemberCompleted(Subprocedure sub) throws IOException;
+  void sendMemberCompleted(Subprocedure sub, byte[] data) throws IOException;
 }

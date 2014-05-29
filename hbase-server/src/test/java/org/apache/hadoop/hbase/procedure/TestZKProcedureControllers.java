@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.procedure;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -59,6 +60,8 @@ public class TestZKProcedureControllers {
   private static final String COHORT_NODE_NAME = "expected";
   private static final String CONTROLLER_NODE_NAME = "controller";
   private static final VerificationMode once = Mockito.times(1);
+
+  private final byte[] memberData = new String("data from member").getBytes();
 
   @BeforeClass
   public static void setupTest() throws Exception {
@@ -105,7 +108,7 @@ public class TestZKProcedureControllers {
     Mockito.doAnswer(new Answer<Void>() {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
-        controller.sendMemberCompleted(sub);
+        controller.sendMemberCompleted(sub, memberData);
         committed.countDown();
         return null;
       }
@@ -176,9 +179,11 @@ public class TestZKProcedureControllers {
 
     CountDownLatch prepared = new CountDownLatch(expected.size());
     CountDownLatch committed = new CountDownLatch(expected.size());
+    ArrayList<byte[]> dataFromMembers = new ArrayList<byte[]>();
+
     // mock out coordinator so we can keep track of zk progress
     ProcedureCoordinator coordinator = setupMockCoordinator(operationName,
-      prepared, committed);
+      prepared, committed, dataFromMembers);
 
     ProcedureMember member = Mockito.mock(ProcedureMember.class);
 
@@ -208,14 +213,20 @@ public class TestZKProcedureControllers {
 
     // post the committed node for each expected node
     for (ZKProcedureMemberRpcs cc : cohortControllers) {
-      cc.sendMemberCompleted(sub);
+      cc.sendMemberCompleted(sub, memberData);
     }
 
     // wait for all commit notifications to reach the coordinator
     committed.await();
     // make sure we got the all the nodes and no more
     Mockito.verify(coordinator, times(expected.size())).memberFinishedBarrier(Mockito.eq(operationName),
-      Mockito.anyString());
+      Mockito.anyString(), Mockito.eq(memberData));
+
+    assertEquals("Incorrect number of members returnd data", expected.size(),
+      dataFromMembers.size());
+    for (byte[] result : dataFromMembers) {
+      assertArrayEquals("Incorrect data from member", memberData, result);
+    }
 
     controller.resetMembers(p);
 
@@ -244,9 +255,11 @@ public class TestZKProcedureControllers {
 
     final CountDownLatch prepared = new CountDownLatch(expected.size());
     final CountDownLatch committed = new CountDownLatch(expected.size());
+    ArrayList<byte[]> dataFromMembers = new ArrayList<byte[]>();
+
     // mock out coordinator so we can keep track of zk progress
     ProcedureCoordinator coordinator = setupMockCoordinator(operationName,
-      prepared, committed);
+      prepared, committed, dataFromMembers);
 
     ProcedureMember member = Mockito.mock(ProcedureMember.class);
     Procedure p = Mockito.mock(Procedure.class);
@@ -281,14 +294,14 @@ public class TestZKProcedureControllers {
 
     // post the committed node for each expected node
     for (ZKProcedureMemberRpcs cc : cohortControllers) {
-      cc.sendMemberCompleted(sub);
+      cc.sendMemberCompleted(sub, memberData);
     }
 
     // wait for all commit notifications to reach the coordiantor
     committed.await();
     // make sure we got the all the nodes and no more
     Mockito.verify(coordinator, times(expected.size())).memberFinishedBarrier(Mockito.eq(operationName),
-      Mockito.anyString());
+      Mockito.anyString(), Mockito.eq(memberData));
 
     controller.resetMembers(p);
 
@@ -299,11 +312,13 @@ public class TestZKProcedureControllers {
   }
 
   /**
+   * @param dataFromMembers
    * @return a mock {@link ProcedureCoordinator} that just counts down the
    *         prepared and committed latch for called to the respective method
    */
   private ProcedureCoordinator setupMockCoordinator(String operationName,
-      final CountDownLatch prepared, final CountDownLatch committed) {
+      final CountDownLatch prepared, final CountDownLatch committed,
+      final ArrayList<byte[]> dataFromMembers) {
     ProcedureCoordinator coordinator = Mockito
         .mock(ProcedureCoordinator.class);
     Mockito.mock(ProcedureCoordinator.class);
@@ -317,10 +332,12 @@ public class TestZKProcedureControllers {
     Mockito.doAnswer(new Answer<Void>() {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
+        dataFromMembers.add(memberData);
         committed.countDown();
         return null;
       }
-    }).when(coordinator).memberFinishedBarrier(Mockito.eq(operationName), Mockito.anyString());
+    }).when(coordinator).memberFinishedBarrier(Mockito.eq(operationName), Mockito.anyString(),
+      Mockito.eq(memberData));
     return coordinator;
   }
 
@@ -356,7 +373,7 @@ public class TestZKProcedureControllers {
     // verify that we got all the expected nodes
     for (String node : expected) {
       verify(coordinator, once).memberAcquiredBarrier(operationName, node);
-      verify(coordinator, once).memberFinishedBarrier(operationName, node);
+      verify(coordinator, once).memberFinishedBarrier(operationName, node, memberData);
     }
   }
 
