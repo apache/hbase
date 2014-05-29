@@ -1394,149 +1394,189 @@ if (!b) {
       </section>
 	</section>
 
-	<section xml:id="arch.catalog">
-	 <title>Catalog Tables</title>
- 	  <para>The catalog table hbase:meta exists as an HBase table and is filtered out
-	  of the HBase shell's <code>list</code> command, but they are in fact tables just like any other.
-     </para>
-	  <section xml:id="arch.catalog.root">
-	   <title>ROOT</title>
- 	   <para><emphasis>-ROOT- was removed in 0.96.0</emphasis> -ROOT- keeps track of where the hbase:meta table is.  The -ROOT- table structure is as follows:
-       </para>
-       <para>Key:
-            <itemizedlist>
-              <listitem><para>.META. region key (<code>.META.,,1</code>)</para></listitem>
-            </itemizedlist>
-       </para>
-       <para>Values:
-            <itemizedlist>
-              <listitem><para><code>info:regioninfo</code> (serialized <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HRegionInfo.html">HRegionInfo</link>
-               instance of hbase:meta)</para></listitem>
-              <listitem><para><code>info:server</code> (server:port of the RegionServer holding hbase:meta)</para></listitem>
-              <listitem><para><code>info:serverstartcode</code> (start-time of the RegionServer process holding hbase:meta)</para></listitem>
-            </itemizedlist>
-       </para>
-	   </section>
-	  <section xml:id="arch.catalog.meta">
-	   <title>hbase:meta</title>
-	   <para>The hbase:meta table keeps a list of all regions in the system. The hbase:meta table structure is as follows:
-       </para>
-       <para>Key:
-            <itemizedlist>
-              <listitem><para>Region key of the format (<code>[table],[region start key],[region id]</code>)</para></listitem>
-            </itemizedlist>
-       </para>
-       <para>Values:
-            <itemizedlist>
-              <listitem><para><code>info:regioninfo</code> (serialized <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HRegionInfo.html">
-              HRegionInfo</link> instance for this region)</para>
-              </listitem>
-              <listitem><para><code>info:server</code> (server:port of the RegionServer containing this region)</para></listitem>
-              <listitem><para><code>info:serverstartcode</code> (start-time of the RegionServer process containing this region)</para></listitem>
-            </itemizedlist>
-       </para>
-       <para>When a table is in the process of splitting two other columns will be created, <code>info:splitA</code> and <code>info:splitB</code>
-       which represent the two daughter regions.  The values for these columns are also serialized HRegionInfo instances.
-       After the region has been split eventually this row will be deleted.
-       </para>
-       <para>Notes on HRegionInfo:  the empty key is used to denote table start and table end.  A region with an empty start key
-       is the first region in a table.  If region has both an empty start and an empty end key, it's the only region in the table
-       </para>
-       <para>In the (hopefully unlikely) event that programmatic processing of catalog metadata is required, see the
-         <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/util/Writables.html#getHRegionInfo%28byte[]%29">Writables</link> utility.
-       </para>
-	   </section>
-	   <section xml:id="arch.catalog.startup">
-	    <title>Startup Sequencing</title>
-	    <para>The META location is set in ROOT first.  Then META is updated with server and startcode values.
-	    </para>
-	    <para>For information on region-RegionServer assignment, see <xref linkend="regions.arch.assignment"/>.
-	    </para>
-	    </section>
-     </section>  <!--  catalog -->
+    <section
+      xml:id="arch.catalog">
+      <title>Catalog Tables</title>
+      <para>The catalog table <code>hbase:meta</code> exists as an HBase table and is filtered out of the HBase
+        shell's <code>list</code> command, but is in fact a table just like any other. </para>
+      <section
+        xml:id="arch.catalog.root">
+        <title>-ROOT-</title>
+        <note>
+          <para>The <code>-ROOT-</code> table was removed in HBase 0.96.0. Information here should
+            be considered historical.</para>
+        </note>
+        <para>The <code>-ROOT-</code> table kept track of the location of the
+            <code>.META</code> table (the previous name for the table now called <code>hbase:meta</code>) prior to HBase
+          0.96. The <code>-ROOT-</code> table structure was as follows: </para>
+        <itemizedlist>
+          <title>Key</title>
+          <listitem>
+            <para>.META. region key (<code>.META.,,1</code>)</para>
+          </listitem>
+        </itemizedlist>
 
-	<section xml:id="client">
-	 <title>Client</title>
-     <para>The HBase client
-         <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
-         is responsible for finding RegionServers that are serving the
-         particular row range of interest.  It does this by querying
-         the <code>hbase:meta</code> and <code>-ROOT-</code> catalog tables
-         (TODO: Explain).  After locating the required
-         region(s), the client <emphasis>directly</emphasis> contacts
-         the RegionServer serving that region (i.e., it does not go
-         through the master) and issues the read or write request.
-         This information is cached in the client so that subsequent requests
-         need not go through the lookup process.  Should a region be reassigned
-         either by the master load balancer or because a RegionServer has died,
-         the client will requery the catalog tables to determine the new
-         location of the user region.
-    </para>
-    <para>See <xref linkend="master.runtime"/> for more information about the impact of the Master on HBase Client
-    communication.
-    </para>
-    <para>Administrative functions are handled through <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html">HBaseAdmin</link>
-    </para>
-	   <section xml:id="client.connections"><title>Connections</title>
-           <para>For connection configuration information, see <xref linkend="client_dependencies" />.
-         </para>
-         <para><emphasis><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
-                 instances are not thread-safe</emphasis>.  Only one thread use an instance of HTable at any given
-             time.  When creating HTable instances, it is advisable to use the same <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration">HBaseConfiguration</link>
-instance.  This will ensure sharing of ZooKeeper and socket instances to the RegionServers
-which is usually what you want.  For example, this is preferred:
-		<programlisting>HBaseConfiguration conf = HBaseConfiguration.create();
+        <itemizedlist>
+          <title>Values</title>
+          <listitem>
+            <para><code>info:regioninfo</code> (serialized <link
+                xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HRegionInfo.html">HRegionInfo</link>
+              instance of hbase:meta)</para>
+          </listitem>
+          <listitem>
+            <para><code>info:server</code> (server:port of the RegionServer holding
+              hbase:meta)</para>
+          </listitem>
+          <listitem>
+            <para><code>info:serverstartcode</code> (start-time of the RegionServer process holding
+              hbase:meta)</para>
+          </listitem>
+        </itemizedlist>
+      </section>
+      <section
+        xml:id="arch.catalog.meta">
+        <title>hbase:meta</title>
+        <para>The <code>hbase:meta</code> table (previously called <code>.META.</code>) keeps a list
+          of all regions in the system. The location of <code>hbase:meta</code> was previously
+          tracked within the <code>-ROOT-</code> table, but is now stored in Zookeeper.</para>
+        <para>The <code>hbase:meta</code> table structure is as follows: </para>
+        <itemizedlist>
+          <title>Key</title>
+          <listitem>
+            <para>Region key of the format (<code>[table],[region start key],[region
+              id]</code>)</para>
+          </listitem>
+        </itemizedlist>
+        <itemizedlist>
+          <title>Values</title>
+          <listitem>
+            <para><code>info:regioninfo</code> (serialized <link
+                xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HRegionInfo.html">
+                HRegionInfo</link> instance for this region)</para>
+          </listitem>
+          <listitem>
+            <para><code>info:server</code> (server:port of the RegionServer containing this
+              region)</para>
+          </listitem>
+          <listitem>
+            <para><code>info:serverstartcode</code> (start-time of the RegionServer process
+              containing this region)</para>
+          </listitem>
+        </itemizedlist>
+        <para>When a table is in the process of splitting, two other columns will be created, called
+            <code>info:splitA</code> and <code>info:splitB</code>. These columns represent the two
+          daughter regions. The values for these columns are also serialized HRegionInfo instances.
+          After the region has been split, eventually this row will be deleted. </para>
+        <note>
+          <title>Note on HRegionInfo</title>
+          <para>The empty key is used to denote table start and table end. A region with an empty
+            start key is the first region in a table. If a region has both an empty start and an
+            empty end key, it is the only region in the table </para>
+        </note>
+        <para>In the (hopefully unlikely) event that programmatic processing of catalog metadata is
+          required, see the <link
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/util/Writables.html#getHRegionInfo%28byte[]%29">Writables</link>
+          utility. </para>
+      </section>
+      <section
+        xml:id="arch.catalog.startup">
+        <title>Startup Sequencing</title>
+        <para>First, the location of <code>hbase:meta</code> is looked up in Zookeeper. Next,
+          <code>hbase:meta</code> is updated with server and startcode values.</para>  
+        <para>For information on region-RegionServer assignment, see <xref
+            linkend="regions.arch.assignment" />. </para>
+      </section>
+    </section>  <!--  catalog -->
+
+    <section
+      xml:id="client">
+      <title>Client</title>
+      <para>The HBase client <link
+          xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
+        is responsible for finding RegionServers that are serving the particular row range of
+        interest. It does this by querying the <code>hbase:meta</code> table. See <xref
+          linkend="arch.catalog.meta" /> for details. After locating the required region(s), the
+        client contacts the RegionServer serving that region, rather than going through the master,
+        and issues the read or write request. This information is cached in the client so that
+        subsequent requests need not go through the lookup process. Should a region be reassigned
+        either by the master load balancer or because a RegionServer has died, the client will
+        requery the catalog tables to determine the new location of the user region. </para>
+      <para>See <xref
+          linkend="master.runtime" /> for more information about the impact of the Master on HBase
+        Client communication. </para>
+      <para>Administrative functions are handled through <link
+          xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html">HBaseAdmin</link>
+      </para>
+      <section
+        xml:id="client.connections">
+        <title>Connections</title>
+        <para>For connection configuration information, see <xref
+            linkend="client_dependencies" />. </para>
+        <para><emphasis><link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>
+            instances are not thread-safe</emphasis>. Only one thread use an instance of HTable at
+          any given time. When creating HTable instances, it is advisable to use the same <link
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration">HBaseConfiguration</link>
+          instance. This will ensure sharing of ZooKeeper and socket instances to the RegionServers
+          which is usually what you want. For example, this is preferred:
+          <programlisting>HBaseConfiguration conf = HBaseConfiguration.create();
 HTable table1 = new HTable(conf, "myTable");
 HTable table2 = new HTable(conf, "myTable");</programlisting>
-		as opposed to this:
-        <programlisting>HBaseConfiguration conf1 = HBaseConfiguration.create();
+          as opposed to this:
+          <programlisting>HBaseConfiguration conf1 = HBaseConfiguration.create();
 HTable table1 = new HTable(conf1, "myTable");
 HBaseConfiguration conf2 = HBaseConfiguration.create();
 HTable table2 = new HTable(conf2, "myTable");</programlisting>
-        For more information about how connections are handled in the HBase client,
-        see <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HConnectionManager.html">HConnectionManager</link>.
-          </para>
-          <section xml:id="client.connection.pooling"><title>Connection Pooling</title>
-            <para>For applications which require high-end multithreaded access (e.g., web-servers or application servers that may serve many application threads
-            in a single JVM), one solution is <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTablePool.html">HTablePool</link>.
-            But as written currently, it is difficult to control client resource consumption when using HTablePool.
-            </para>
-            <para>
-                Another solution is to precreate an <classname>HConnection</classname> using
-                <programlisting>// Create a connection to the cluster.
+          For more information about how connections are handled in the HBase client, see <link
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HConnectionManager.html">HConnectionManager</link>. </para>
+        <section
+          xml:id="client.connection.pooling">
+          <title>Connection Pooling</title>
+          <para>For applications which require high-end multithreaded access (e.g., web-servers or
+            application servers that may serve many application threads in a single JVM), one
+            solution is <link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTablePool.html">HTablePool</link>.
+            But as written currently, it is difficult to control client resource consumption when
+            using HTablePool. </para>
+          <para> Another solution is to precreate an <classname>HConnection</classname> using
+            <programlisting>// Create a connection to the cluster.
 HConnection connection = HConnectionManager.createConnection(Configuration);
 HTableInterface table = connection.getTable("myTable");
 // use table as needed, the table returned is lightweight
 table.close();
 // use the connection for other access to the cluster
 connection.close();</programlisting>
-                Constructing HTableInterface implementation is very lightweight and resources are controlled/shared if you go this route.
-            </para>
-          </section>
-   	  </section>
-	   <section xml:id="client.writebuffer"><title>WriteBuffer and Batch Methods</title>
-           <para>If <xref linkend="perf.hbase.client.autoflush" /> is turned off on
-               <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>,
-               <classname>Put</classname>s are sent to RegionServers when the writebuffer
-               is filled.  The writebuffer is 2MB by default.  Before an HTable instance is
-               discarded, either <methodname>close()</methodname> or
-               <methodname>flushCommits()</methodname> should be invoked so Puts
-               will not be lost.
-	      </para>
-	      <para>Note: <code>htable.delete(Delete);</code> does not go in the writebuffer!  This only applies to Puts.
-	      </para>
-	      <para>For additional information on write durability, review the <link xlink:href="../acid-semantics.html">ACID semantics</link> page.
-	      </para>
-       <para>For fine-grained control of batching of
-           <classname>Put</classname>s or <classname>Delete</classname>s,
-           see the <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#batch%28java.util.List%29">batch</link> methods on HTable.
-	   </para>
-	   </section>
-	   <section xml:id="client.external"><title>External Clients</title>
-           <para>Information on non-Java clients and custom protocols is covered in <xref linkend="external_apis" />
-           </para>
-		</section>
-	</section>
+            Constructing HTableInterface implementation is very lightweight and resources are
+            controlled/shared if you go this route. </para>
+        </section>
+      </section>
+      <section
+        xml:id="client.writebuffer">
+        <title>WriteBuffer and Batch Methods</title>
+        <para>If <xref
+            linkend="perf.hbase.client.autoflush" /> is turned off on <link
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>,
+            <classname>Put</classname>s are sent to RegionServers when the writebuffer is filled.
+          The writebuffer is 2MB by default. Before an HTable instance is discarded, either
+            <methodname>close()</methodname> or <methodname>flushCommits()</methodname> should be
+          invoked so Puts will not be lost. </para>
+        <para>Note: <code>htable.delete(Delete);</code> does not go in the writebuffer! This only
+          applies to Puts. </para>
+        <para>For additional information on write durability, review the <link
+            xlink:href="../acid-semantics.html">ACID semantics</link> page. </para>
+        <para>For fine-grained control of batching of <classname>Put</classname>s or
+            <classname>Delete</classname>s, see the <link
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#batch%28java.util.List%29">batch</link>
+          methods on HTable. </para>
+      </section>
+      <section
+        xml:id="client.external">
+        <title>External Clients</title>
+        <para>Information on non-Java clients and custom protocols is covered in <xref
+            linkend="external_apis" />
+        </para>
+      </section>
+    </section>
 
     <section xml:id="client.filter"><title>Client Request Filters</title>
       <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html">Get</link> and <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link> instances can be
@@ -1800,15 +1840,18 @@ rs.close();
          take over the Master role.
          </para>
        </section>
-       <section xml:id="master.runtime"><title>Runtime Impact</title>
-         <para>A common dist-list question is what happens to an HBase cluster when the Master goes down.  Because the
-         HBase client talks directly to the RegionServers, the cluster can still function in a "steady
-         state."  Additionally, per <xref linkend="arch.catalog"/> ROOT and META exist as HBase tables (i.e., are
-         not resident in the Master).  However, the Master controls critical functions such as RegionServer failover and
-         completing region splits.  So while the cluster can still run <emphasis>for a time</emphasis> without the Master,
-         the Master should be restarted as soon as possible.
-         </para>
-       </section>
+      <section
+        xml:id="master.runtime">
+        <title>Runtime Impact</title>
+        <para>A common dist-list question involves what happens to an HBase cluster when the Master
+          goes down. Because the HBase client talks directly to the RegionServers, the cluster can
+          still function in a "steady state." Additionally, per <xref
+            linkend="arch.catalog" />, <code>hbase:meta</code> exists as an HBase table and is not
+          resident in the Master. However, the Master controls critical functions such as
+          RegionServer failover and completing region splits. So while the cluster can still run for
+          a short time without the Master, the Master should be restarted as soon as possible.
+        </para>
+      </section>
        <section xml:id="master.api"><title>Interface</title>
          <para>The methods exposed by <code>HMasterInterface</code> are primarily metadata-oriented methods:
          <itemizedlist>
@@ -1931,20 +1974,45 @@ rs.close();
         </itemizedlist>
         <para>Your data isn't the only resident of the block cache, here are others that you may have to take into account:
         </para>
-        <itemizedlist>
-            <listitem><para>Catalog tables: The -ROOT- and hbase:meta tables are forced into the block cache and have the in-memory priority which means that they are harder to evict. The former never uses
-            more than a few hundreds of bytes while the latter can occupy a few MBs (depending on the number of regions).</para>
-            </listitem>
-            <listitem><para>HFiles indexes: HFile is the file format that HBase uses to store data in HDFS and it contains a multi-layered index in order seek to the data without having to read the whole file.
-            The size of those indexes is a factor of the block size (64KB by default), the size of your keys and the amount of data you are storing. For big data sets it's not unusual to see numbers around
-            1GB per region server, although not all of it will be in cache because the LRU will evict indexes that aren't used.</para>
-            </listitem>
-            <listitem><para>Keys: Taking into account only the values that are being stored is missing half the picture since every value is stored along with its keys
-            (row key, family, qualifier, and timestamp). See <xref linkend="keysize"/>.</para>
-            </listitem>
-            <listitem><para>Bloom filters: Just like the HFile indexes, those data structures (when enabled) are stored in the LRU.</para>
-            </listitem>
-            </itemizedlist>
+          <variablelist>
+            <varlistentry>
+              <term>Catalog Tables</term>
+              <listitem>
+                <para>The <code>-ROOT-</code> (prior to HBase 0.96. See <xref
+                    linkend="arch.catalog.root" />) and <code>hbase:meta</code> tables are forced
+                  into the block cache and have the in-memory priority which means that they are
+                  harder to evict. The former never uses more than a few hundreds of bytes while the
+                  latter can occupy a few MBs (depending on the number of regions).</para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>HFiles Indexes</term>
+              <listitem>
+                <para>HFile is the file format that HBase uses to store data in HDFS and it contains
+                  a multi-layered index in order seek to the data without having to read the whole
+                  file. The size of those indexes is a factor of the block size (64KB by default),
+                  the size of your keys and the amount of data you are storing. For big data sets
+                  it's not unusual to see numbers around 1GB per region server, although not all of
+                  it will be in cache because the LRU will evict indexes that aren't used.</para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Keys</term>
+              <listitem>
+                <para>Taking into account only the values that are being stored is missing half the
+                  picture since every value is stored along with its keys (row key, family,
+                  qualifier, and timestamp). See <xref
+                    linkend="keysize" />.</para>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Bloom Filters</term>
+              <listitem>
+                <para>Just like the HFile indexes, those data structures (when enabled) are stored
+                  in the LRU.</para>
+              </listitem>
+            </varlistentry>
+          </variablelist>
         <para>Currently the recommended way to measure HFile indexes and bloom filters sizes is to look at the region server web UI and checkout the relevant metrics. For keys,
         sampling can be done by using the HFile command line tool and look for the average key size metric.
         </para>
