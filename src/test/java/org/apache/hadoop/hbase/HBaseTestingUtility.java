@@ -909,7 +909,7 @@ public class HBaseTestingUtility {
 
   public byte[][] getTmpKeys() {
     byte[][] KEYS = {
-        HConstants.EMPTY_BYTE_ARRAY, Bytes.toBytes("bbb"),
+        Bytes.toBytes("aaa"), Bytes.toBytes("bbb"),
         Bytes.toBytes("ccc"), Bytes.toBytes("ddd"), Bytes.toBytes("eee"),
         Bytes.toBytes("fff"), Bytes.toBytes("ggg"), Bytes.toBytes("hhh"),
         Bytes.toBytes("iii"), Bytes.toBytes("jjj"), Bytes.toBytes("kkk"),

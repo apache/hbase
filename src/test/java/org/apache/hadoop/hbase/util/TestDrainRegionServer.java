@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.RegionMovementTestHelper;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -48,7 +47,8 @@ import static org.junit.Assert.fail;
 @Category(MediumTests.class)
 public class TestDrainRegionServer {
 
-  private final static RegionMovementTestHelper TEST_UTIL = new RegionMovementTestHelper();
+  private final static RegionMovementTestHelper TEST_UTIL =
+      new RegionMovementTestHelper();
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
 
   private static final int REGION_SERVERS = 5;
@@ -62,11 +62,10 @@ public class TestDrainRegionServer {
 
   @Test
   public void testDrainAndUndrain() throws Exception {
-
     byte[] tableName = Bytes.toBytes("testBlacklistRegionServerWithoutTimeout");
 
-    HTable table = TEST_UTIL.createTable(
-        new StringBytes(tableName), new byte[][] { FAM_NAM } , 1, TEST_UTIL.getTmpKeys());
+    HTable table = TEST_UTIL.createTable(new StringBytes(tableName),
+        new byte[][] { FAM_NAM } , 1, TEST_UTIL.getTmpKeys());
     table.close();
 
     List<JVMClusterUtil.RegionServerThread> servers =
@@ -74,7 +73,8 @@ public class TestDrainRegionServer {
 
     AssignmentPlan ap = TEST_UTIL.getHBaseCluster().
       getMaster().regionPlacement.getNewAssignmentPlan();
-    TEST_UTIL.getHBaseCluster().getMaster().regionPlacement.updateAssignmentPlan(ap);
+    TEST_UTIL.getHBaseCluster().getMaster()
+      .regionPlacement.updateAssignmentPlan(ap);
 
     // Wait for rebalance to to complete
     TEST_UTIL.waitOnStableRegionMovement();
@@ -107,19 +107,22 @@ public class TestDrainRegionServer {
 
     int regionsCount = server.getOnlineRegions().size();
 
-    assertTrue("Server to be drained has to have more than 0 regions", regionsCount > 0);
+    assertTrue("Server to be drained has to have more than 0 regions",
+        regionsCount > 0);
 
     rollingRestart.drainServer(drainFile);
 
     TEST_UTIL.waitOnStableRegionMovement();
 
-    assertEquals("Drained server expected to have 0 online regions", 0, server.getOnlineRegions().size());
+    assertEquals("Drained server expected to have 0 online regions", 0,
+        server.getOnlineRegions().size());
 
     rollingRestart.undrainServer(drainFile);
 
     TEST_UTIL.waitOnStableRegionMovement();
 
-    assertEquals("Undrained server expected to have same number of online regions as before",
+    assertEquals("Undrained server expected to have" +
+      "same number of online regions as before",
       regionsCount, server.getOnlineRegions().size());
   }
 

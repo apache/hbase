@@ -122,10 +122,9 @@ public class MetaScanner {
    * will be set to default value <code>Integer.MAX_VALUE</code>.
    * @throws IOException e
    */
-  public static void metaScan(Configuration configuration, MetaScannerVisitor visitor,
-      StringBytes metaTableName, StringBytes tableName, byte[] row,
-      int rowLimit)
-  throws IOException {
+  public static void metaScan(Configuration configuration,
+      MetaScannerVisitor visitor, StringBytes metaTableName,
+      StringBytes tableName, byte[] row, int rowLimit) throws IOException {
     int rowUpperLimit = rowLimit > 0 ? rowLimit: Integer.MAX_VALUE;
 
     HConnection connection = HConnectionManager.getConnection(configuration);
@@ -142,9 +141,10 @@ public class MetaScanner {
       HTable metaTable = new HTable(configuration, metaTableName.getString());
       Result startRowResult = metaTable.getRowOrBefore(searchRow,
           HConstants.CATALOG_FAMILY);
+      metaTable.close();
       if (startRowResult == null) {
-        throw new TableNotFoundException("Cannot find row in .META. for table: "
- + tableName + ", row="
+        throw new TableNotFoundException(
+            "Cannot find row in .META. for table: " + tableName + ", row="
                 + Bytes.toStringBinary(searchRow));
       }
       byte[] value = startRowResult.getValue(HConstants.CATALOG_FAMILY,
