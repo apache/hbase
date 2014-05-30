@@ -1124,27 +1124,98 @@ pecularity that is probably fixable but we've not spent the time trying to figur
          </section>
         </section>   <!--  unit tests  -->
 
-          <section xml:id="code.standards">
-           <title>Code Standards</title>
-           <para>See <xref linkend="eclipse.code.formatting"/> and <xref linkend="common.patch.feedback"/>.
-           </para>
-           <para>Also, please pay attention to the interface stability/audience classifications that you
-           will see all over our code base.   They look like this at the head of the class:
-           <programlisting>@InterfaceAudience.Public
-@InterfaceStability.Stable</programlisting>
-           </para>
-           <para>If the <classname>InterfaceAudience</classname> is <varname>Private</varname>,
-           we can change the class (and we do not need to include a <classname>InterfaceStability</classname> mark).
-           If a class is marked <varname>Public</varname> but its <classname>InterfaceStability</classname>
-           is marked <varname>Unstable</varname>, we can change it. If it's
-           marked <varname>Public</varname>/<varname>Evolving</varname>, we're allowed to change it
-           but should try not to. If it's <varname>Public</varname> and <varname>Stable</varname>
-           we can't change it without a deprecation path or with a really GREAT reason.</para>
-           <para>When you add new classes, mark them with the annotations above if publically accessible.
-           If you are not cleared on how to mark your additions, ask up on the dev list.
-           </para>
-           <para>This convention comes from our parent project Hadoop.</para>
-           </section> <!-- code.standards -->
+        <section
+            xml:id="code.standards">
+            <title>Code Standards</title>
+            <para>See <xref
+                    linkend="eclipse.code.formatting" /> and <xref
+                    linkend="common.patch.feedback" />. </para>
+            <section>
+                <title>Interface Classifications</title>
+                <para> Interfaces are classified both by audience and by stability level. These
+                    labels appear at the head of a class. The conventions followed by HBase are
+                    inherited by its parent project, Hadoop. </para>
+                <para>The following interface classifications are commonly used: </para>
+                <variablelist>
+                    <title>@InterfaceAudience</title>
+                    <varlistentry>
+                        <term><code>@InterfaceAudience.Public</code></term>
+                        <listitem>
+                            <para>APIs for users and HBase applications. These APIs will be
+                                deprecated through major versions of HBase.</para>
+                        </listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><code>@InterfaceAudience.Private</code></term>
+                        <listitem>
+                            <para>APIs for HBase internals developers. No guarantees on
+                                compatibility or availability in future versions. Private interfaces
+                                do not need an <code>@InterfaceStability</code>
+                                classification.</para>
+                        </listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><code>@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)</code></term>
+                        <listitem>
+                            <para>APIs for HBase coprocessor writers. As of HBase
+                                0.92/0.94/0.96/0.98 this api is still unstable. No guarantees on
+                                compatibility with future versions.</para>
+                        </listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term>No <code>@InterfaceAudience</code> Classification</term>
+                        <listitem>
+                            <para>Packages without an <code>@InterfaceAudience</code> label are
+                                considered private. Mark your new packages if publicly
+                                accessible.</para>
+                        </listitem>
+                    </varlistentry>
+                </variablelist>
+                <note>
+                    <title>Excluding Non-Public Interfaces from API Documentation</title>
+                    <para> Only interfaces classified <code>@InterfaceAudience.Public</code> should
+                        be included in API documentation (Javadoc). Committers must add new package
+                        excludes <code>ExcludePackageNames</code> section of the
+                            <filename>pom.xml</filename> for new packages which do not contain
+                        public classes. </para>
+                </note>
+                <variablelist>
+                    <title>@InterfaceStability</title>
+                    <para><code>@InterfaceStability</code> is important for packages marked
+                            <code>@InterfaceAudience.Public</code>.</para>
+                    <varlistentry>
+                        <term><code>@InterfaceStability.Stable</code></term>
+                        <listitem>
+                            <para>Public packages marked as stable cannot be changed without a
+                                deprecation path or a very good reason.</para>
+                        </listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><code>@InterfaceStability.Unstable</code></term>
+                        <listitem>
+                            <para>Public packages marked as unstable can be changed without a
+                                deprecation path.</para>
+                        </listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><code>@InterfaceStability.Evolving</code></term>
+                        <listitem>
+                            <para>Public packages marked as evolving may be changed, but it is
+                                discouraged.</para>
+                        </listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term>No <code>@InterfaceStability</code> Label</term>
+                        <listitem>
+                            <para>Public classes with no <code>@InterfaceStability</code> label are
+                                discouraged, and should be considered implicitly unstable.</para>
+                        </listitem>
+                    </varlistentry>
+                </variablelist>
+                <para> If you are unclear about how to mark packages, ask on the development list.
+                </para>
+            </section>
+        </section> <!-- code.standards -->
 
           <section xml:id="design.invariants">
            <title>Invariants</title>
