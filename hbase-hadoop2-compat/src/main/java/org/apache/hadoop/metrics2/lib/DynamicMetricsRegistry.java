@@ -99,7 +99,7 @@ public class DynamicMetricsRegistry {
    * @return a new counter object
    */
   public MutableCounterInt newCounter(String name, String desc, int iVal) {
-    return newCounter(Interns.info(name, desc), iVal);
+    return newCounter(new MetricsInfoImpl(name, desc), iVal);
   }
 
   /**
@@ -121,7 +121,7 @@ public class DynamicMetricsRegistry {
    * @return a new counter object
    */
   public MutableCounterLong newCounter(String name, String desc, long iVal) {
-    return newCounter(Interns.info(name, desc), iVal);
+    return newCounter(new MetricsInfoImpl(name, desc), iVal);
   }
 
   /**
@@ -143,7 +143,7 @@ public class DynamicMetricsRegistry {
    * @return a new gauge object
    */
   public MutableGaugeInt newGauge(String name, String desc, int iVal) {
-    return newGauge(Interns.info(name, desc), iVal);
+    return newGauge(new MetricsInfoImpl(name, desc), iVal);
   }
   /**
    * Create a mutable integer gauge
@@ -164,7 +164,7 @@ public class DynamicMetricsRegistry {
    * @return a new gauge object
    */
   public MutableGaugeLong newGauge(String name, String desc, long iVal) {
-    return newGauge(Interns.info(name, desc), iVal);
+    return newGauge(new MetricsInfoImpl(name, desc), iVal);
   }
 
   /**
@@ -342,7 +342,7 @@ public class DynamicMetricsRegistry {
    */
   public DynamicMetricsRegistry tag(String name, String description, String value,
                              boolean override) {
-    return tag(Interns.info(name, description), value, override);
+    return tag(new MetricsInfoImpl(name, description), value, override);
   }
 
   /**
@@ -422,7 +422,7 @@ public class DynamicMetricsRegistry {
     if (metric == null) {
 
       //Create the potential new gauge.
-      MutableGaugeLong newGauge = new MutableGaugeLong(Interns.info(gaugeName, ""),
+      MutableGaugeLong newGauge = new MutableGaugeLong(new MetricsInfoImpl(gaugeName, ""),
               potentialStartingValue);
 
       // Try and put the gauge in.  This is atomic.
@@ -454,7 +454,7 @@ public class DynamicMetricsRegistry {
     MutableMetric counter = metricsMap.get(counterName);
     if (counter == null) {
       MutableCounterLong newCounter =
-              new MutableCounterLong(Interns.info(counterName, ""), potentialStartingValue);
+              new MutableCounterLong(new MetricsInfoImpl(counterName, ""), potentialStartingValue);
       counter = metricsMap.putIfAbsent(counterName, newCounter);
       if (counter == null) {
         return newCounter;
@@ -475,7 +475,7 @@ public class DynamicMetricsRegistry {
     MutableMetric histo = metricsMap.get(histoName);
     if (histo == null) {
       MutableHistogram newCounter =
-          new MutableHistogram(Interns.info(histoName, ""));
+          new MutableHistogram(new MetricsInfoImpl(histoName, ""));
       histo = metricsMap.putIfAbsent(histoName, newCounter);
       if (histo == null) {
         return newCounter;
