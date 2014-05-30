@@ -123,8 +123,7 @@ public final class Compression {
       private CompressionCodec buildCodec(Configuration conf) {
         try {
           Class<?> externalCodec =
-              ClassLoader.getSystemClassLoader()
-                  .loadClass("com.hadoop.compression.lzo.LzoCodec");
+              getClassLoaderForCodec().loadClass("com.hadoop.compression.lzo.LzoCodec");
           return (CompressionCodec) ReflectionUtils.newInstance(externalCodec,
               new Configuration(conf));
         } catch (ClassNotFoundException e) {
@@ -208,8 +207,7 @@ public final class Compression {
       private CompressionCodec buildCodec(Configuration conf) {
         try {
           Class<?> externalCodec =
-              ClassLoader.getSystemClassLoader()
-                  .loadClass("org.apache.hadoop.io.compress.SnappyCodec");
+              getClassLoaderForCodec().loadClass("org.apache.hadoop.io.compress.SnappyCodec");
           return (CompressionCodec) ReflectionUtils.newInstance(externalCodec,
               conf);
         } catch (ClassNotFoundException e) {
