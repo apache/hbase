@@ -1518,65 +1518,67 @@ if (!b) {
           any given time. When creating HTable instances, it is advisable to use the same <link
             xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration">HBaseConfiguration</link>
           instance. This will ensure sharing of ZooKeeper and socket instances to the RegionServers
-          which is usually what you want. For example, this is preferred:
+          which is usually what you want. For example, this is preferred:</para>
           <programlisting>HBaseConfiguration conf = HBaseConfiguration.create();
 HTable table1 = new HTable(conf, "myTable");
 HTable table2 = new HTable(conf, "myTable");</programlisting>
-          as opposed to this:
+          <para>as opposed to this:</para>
           <programlisting>HBaseConfiguration conf1 = HBaseConfiguration.create();
 HTable table1 = new HTable(conf1, "myTable");
 HBaseConfiguration conf2 = HBaseConfiguration.create();
 HTable table2 = new HTable(conf2, "myTable");</programlisting>
-          For more information about how connections are handled in the HBase client, see <link
-            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HConnectionManager.html">HConnectionManager</link>. </para>
-        <section
-          xml:id="client.connection.pooling">
-          <title>Connection Pooling</title>
-          <para>For applications which require high-end multithreaded access (e.g., web-servers or
-            application servers that may serve many application threads in a single JVM), one
-            solution is <link
-              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTablePool.html">HTablePool</link>.
-            But as written currently, it is difficult to control client resource consumption when
-            using HTablePool. </para>
-          <para> Another solution is to precreate an <classname>HConnection</classname> using
-            <programlisting>// Create a connection to the cluster.
+
+        <para>For more information about how connections are handled in the HBase client,
+        see <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HConnectionManager.html">HConnectionManager</link>.
+          </para>
+          <section xml:id="client.connection.pooling"><title>Connection Pooling</title>
+            <para>For applications which require high-end multithreaded access (e.g., web-servers or application servers that may serve many application threads
+            in a single JVM), you can pre-create an <classname>HConnection</classname>, as shown in
+              the following example:</para>
+            <example>
+              <title>Pre-Creating a <code>HConnection</code></title>
+              <programlisting>// Create a connection to the cluster.
 HConnection connection = HConnectionManager.createConnection(Configuration);
 HTableInterface table = connection.getTable("myTable");
 // use table as needed, the table returned is lightweight
 table.close();
 // use the connection for other access to the cluster
 connection.close();</programlisting>
-            Constructing HTableInterface implementation is very lightweight and resources are
-            controlled/shared if you go this route. </para>
-        </section>
-      </section>
-      <section
-        xml:id="client.writebuffer">
-        <title>WriteBuffer and Batch Methods</title>
-        <para>If <xref
-            linkend="perf.hbase.client.autoflush" /> is turned off on <link
-            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>,
-            <classname>Put</classname>s are sent to RegionServers when the writebuffer is filled.
-          The writebuffer is 2MB by default. Before an HTable instance is discarded, either
-            <methodname>close()</methodname> or <methodname>flushCommits()</methodname> should be
-          invoked so Puts will not be lost. </para>
-        <para>Note: <code>htable.delete(Delete);</code> does not go in the writebuffer! This only
-          applies to Puts. </para>
-        <para>For additional information on write durability, review the <link
-            xlink:href="../acid-semantics.html">ACID semantics</link> page. </para>
-        <para>For fine-grained control of batching of <classname>Put</classname>s or
-            <classname>Delete</classname>s, see the <link
-            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#batch%28java.util.List%29">batch</link>
-          methods on HTable. </para>
-      </section>
-      <section
-        xml:id="client.external">
-        <title>External Clients</title>
-        <para>Information on non-Java clients and custom protocols is covered in <xref
-            linkend="external_apis" />
-        </para>
-      </section>
-    </section>
+            </example>
+          <para>Constructing HTableInterface implementation is very lightweight and resources are
+            controlled.</para>
+            <warning>
+              <title><code>HTablePool</code> is Deprecated</title>
+              <para>Previous versions of this guide discussed <code>HTablePool</code>, which was
+                deprecated in HBase 0.94, 0.95, and 0.96, and removed in 0.98.1, by <link
+                  xlink:href="https://issues.apache.org/jira/browse/HBASE-6580">HBASE-6500</link>.
+                Please use <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HConnection.html"><code>HConnection</code></link> instead.</para>
+            </warning>
+          </section>
+   	  </section>
+	   <section xml:id="client.writebuffer"><title>WriteBuffer and Batch Methods</title>
+           <para>If <xref linkend="perf.hbase.client.autoflush" /> is turned off on
+               <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html">HTable</link>,
+               <classname>Put</classname>s are sent to RegionServers when the writebuffer
+               is filled.  The writebuffer is 2MB by default.  Before an HTable instance is
+               discarded, either <methodname>close()</methodname> or
+               <methodname>flushCommits()</methodname> should be invoked so Puts
+               will not be lost.
+	      </para>
+	      <para>Note: <code>htable.delete(Delete);</code> does not go in the writebuffer!  This only applies to Puts.
+	      </para>
+	      <para>For additional information on write durability, review the <link xlink:href="../acid-semantics.html">ACID semantics</link> page.
+	      </para>
+       <para>For fine-grained control of batching of
+           <classname>Put</classname>s or <classname>Delete</classname>s,
+           see the <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HTable.html#batch%28java.util.List%29">batch</link> methods on HTable.
+	   </para>
+	   </section>
+	   <section xml:id="client.external"><title>External Clients</title>
+           <para>Information on non-Java clients and custom protocols is covered in <xref linkend="external_apis" />
+           </para>
+		</section>
+	</section>
 
     <section xml:id="client.filter"><title>Client Request Filters</title>
       <para><link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html">Get</link> and <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link> instances can be
