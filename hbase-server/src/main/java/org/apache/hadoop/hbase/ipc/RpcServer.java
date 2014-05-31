@@ -1506,8 +1506,8 @@ public class RpcServer implements RpcServerInterface {
           if (!headerRead) {
             continue;
           }
-        } else {
-          // More to read still; go around again.
+        } else if (count > 0) {
+          // We got some data and there is more to read still; go around again.
           if (LOG.isTraceEnabled()) LOG.trace("Continue to read rest of data " + data.remaining());
           continue;
         }
