@@ -833,6 +833,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    // We depend on there being only one instance of this executor running
    // at a time.  To do concurrency, would need fencing of enable/disable of
    // tables.
+   // Any time changing this maxThreads to > 1, pls see the comment at
+   // AccessController#postCreateTableHandler
    this.service.startExecutorService(ExecutorType.MASTER_TABLE_OPERATIONS, 1);
 
    // Start log cleaner thread

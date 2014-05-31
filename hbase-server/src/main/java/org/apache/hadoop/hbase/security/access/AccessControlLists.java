@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -135,9 +134,7 @@ public class AccessControlLists {
    * @param master reference to HMaster
    */
   static void init(MasterServices master) throws IOException {
-    if (!MetaReader.tableExists(master.getCatalogTracker(), ACL_TABLE_NAME)) {
-      master.createTable(ACL_TABLEDESC, null);
-    }
+    master.createTable(ACL_TABLEDESC, null);
   }
 
   /**
