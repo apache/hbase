@@ -291,7 +291,7 @@ Successfully completed Log splitting
                             regions.</para>
                     </listitem>
                     <listitem>
-                        <para> Distributed splitting is on by defaul. It should make region server
+                        <para> Distributed Log Splitting is on by default. It should make region server
                             failover faster. </para>
                     </listitem>
                     <listitem>
@@ -335,11 +335,13 @@ Successfully completed Log splitting
             </para>
         </section>
 
-        <section>
-            <title>Distributed splitting is on by default </title>
+        <section xml:id="dls">
+            <title>Distributed Log Splitting is on by default </title>
             <para>Previous, WAL logs on crash were split by the Master alone. In 0.92.0, log
                 splitting is done by the cluster (See See “HBASE-1364 [performance] Distributed
-                splitting of regionserver commit logs”). This should cut down significantly on the
+                splitting of regionserver commit logs” or see the blog post
+                <link xlink:href="http://blog.cloudera.com/blog/2012/07/hbase-log-splitting/">Apache HBase Log Splitting</link>).
+                This should cut down significantly on the
                 amount of time it takes splitting logs and getting regions back online again.
             </para>
         </section>
