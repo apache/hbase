@@ -1374,14 +1374,14 @@ index e70ebc6..96f8c27 100644
            <para>See <xref linkend="master.processes.loadbalancer" /> for more information on the LoadBalancer.
            </para>
          </section>
-         <section xml:id="disabling.blockcache"><title>Disabling Blockcache</title>
-           <para>Do not turn off block cache (You'd do it by setting <varname>hbase.block.cache.size</varname> to zero).
-           Currently we do not do well if you do this because the regionserver will spend all its time loading hfile
-           indices over and over again.  In fact, in later versions of HBase, it is not possible to disable the
-           block cache completely.
-           HBase will cache meta blocks -- the INDEX and BLOOM blocks -- even if the block cache 
-           is disabled.</para>
-         </section>
+        <section xml:id="disabling.blockcache"><title>Disabling Blockcache</title>
+          <para>Do not turn off block cache (You'd do it by setting <varname>hbase.block.cache.size</varname> to zero).
+          Currently we do not do well if you do this because the regionserver will spend all its time loading hfile
+          indices over and over again.  If your working set it such that block cache does you no good, at least
+          size the block cache such that hfile indices will stay up in the cache (you can get a rough idea
+          on the size you need by surveying regionserver UIs; you'll see index block size accounted near the
+          top of the webpage).</para>
+        </section>
     <section xml:id="nagles">
       <title><link xlink:href="http://en.wikipedia.org/wiki/Nagle's_algorithm">Nagle's</link> or the small package problem</title>
       <para>If a big 40ms or so occasional delay is seen in operations against HBase,
