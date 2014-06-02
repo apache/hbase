@@ -1194,7 +1194,7 @@ index e70ebc6..96f8c27 100644
         xml:id="recommended_configurations.zk">
         <title>ZooKeeper Configuration</title>
         <section
-          xml:id="zookeeper.session.timeout">
+          xml:id="sect.zookeeper.session.timeout">
           <title><varname>zookeeper.session.timeout</varname></title>
           <para>The default timeout is three minutes (specified in milliseconds). This means that if
             a server crashes, it will be three minutes before the Master notices the crash and
@@ -1295,41 +1295,52 @@ index e70ebc6..96f8c27 100644
       <section
         xml:id="disable.splitting">
         <title>Managed Splitting</title>
-        <para> Rather than let HBase auto-split your Regions, manage the splitting manually <footnote>
-            <para>What follows is taken from the javadoc at the head of the
-                <classname>org.apache.hadoop.hbase.util.RegionSplitter</classname> tool added to
-              HBase post-0.90.0 release. </para>
-          </footnote>. With growing amounts of data, splits will continually be needed. Since you
-          always know exactly what regions you have, long-term debugging and profiling is much
-          easier with manual splits. It is hard to trace the logs to understand region level
-          problems if it keeps splitting and getting renamed. Data offlining bugs + unknown number
-          of split regions == oh crap! If an <classname>HLog</classname> or
-            <classname>StoreFile</classname> was mistakenly unprocessed by HBase due to a weird bug
-          and you notice it a day or so later, you can be assured that the regions specified in
-          these files are the same as the current regions and you have less headaches trying to
-          restore/replay your data. You can finely tune your compaction algorithm. With roughly
-          uniform data growth, it's easy to cause split / compaction storms as the regions all
-          roughly hit the same data size at the same time. With manual splits, you can let
-          staggered, time-based major compactions spread out your network IO load. </para>
-        <para> How do I turn off automatic splitting? Automatic splitting is determined by the
-          configuration value <code>hbase.hregion.max.filesize</code>. It is not recommended that
-          you set this to <varname>Long.MAX_VALUE</varname> in case you forget about manual splits.
-          A suggested setting is 100GB, which would result in > 1hr major compactions if reached. </para>
-        <para>What's the optimal number of pre-split regions to create? Mileage will vary depending
-          upon your application. You could start low with 10 pre-split regions / server and watch as
-          data grows over time. It's better to err on the side of too little regions and rolling
-          split later. A more complicated answer is that this depends upon the largest storefile in
-          your region. With a growing data size, this will get larger over time. You want the
-          largest region to be just big enough that the <classname>Store</classname> compact
-          selection algorithm only compacts it due to a timed major. If you don't, your cluster can
-          be prone to compaction storms as the algorithm decides to run major compactions on a large
-          series of regions all at once. Note that compaction storms are due to the uniform data
-          growth, not the manual split decision. </para>
-        <para> If you pre-split your regions too thin, you can increase the major compaction
-          interval by configuring <varname>HConstants.MAJOR_COMPACTION_PERIOD</varname>. If your
-          data size grows too large, use the (post-0.90.0 HBase)
-            <classname>org.apache.hadoop.hbase.util.RegionSplitter</classname> script to perform a
-          network IO safe rolling split of all regions. </para>
+        <para>HBase generally handles splitting your regions, based upon the settings in your
+            <filename>hbase-default.xml</filename> and <filename>hbase-site.xml</filename>
+          configuration files. Important settings include
+            <varname>hbase.regionserver.region.split.policy</varname>,
+            <varname>hbase.hregion.max.filesize</varname>,
+            <varname>hbase.regionserver.regionSplitLimit</varname>. A simplistic view of splitting
+          is that when a region grows to <varname>hbase.hregion.max.filesize</varname>, it is split.
+          For most use patterns, most of the time, you should use automatic splitting.</para>
+        <para>Instead of allowing HBase to split your regions automatically, you can choose to
+          manage the splitting yourself. This feature was added in HBase 0.90.0. Manually managing
+          splits works if you know your keyspace well, otherwise let HBase figure where to split for you.
+          Manual splitting can mitigate region creation and movement under load. It also makes it so
+          region boundaries are known and invariant (if you disable region splitting). If you use manual
+          splits, it is easier doing staggered, time-based major compactions spread out your network IO
+          load.</para>
+
+        <formalpara>
+          <title>Disable Automatic Splitting</title>
+          <para>To disable automatic splitting, set <varname>hbase.hregion.max.filesize</varname> to
+            a very large value, such as <literal>100 GB</literal> It is not recommended to set it to
+            its absolute maximum value of <literal>Long.MAX_VALUE</literal>.</para>
+        </formalpara>
+        <note>
+          <title>Automatic Splitting Is Recommended</title>
+          <para>If you disable automatic splits to diagnose a problem or during a period of fast
+            data growth, it is recommended to re-enable them when your situation becomes more
+            stable. The potential benefits of managing region splits yourself are not
+            undisputed.</para>
+        </note>
+        <formalpara>
+          <title>Determine the Optimal Number of Pre-Split Regions</title>
+          <para>The optimal number of pre-split regions depends on your application and environment.
+            A good rule of thumb is to start with 10 pre-split regions per server and watch as data
+            grows over time. It is better to err on the side of too few regions and perform rolling
+            splits later. The optimal number of regions depends upon the largest StoreFile in your
+            region. The size of the largest StoreFile will increase with time if the amount of data
+            grows. The goal is for the largest region to be just large enough that the compaction
+            selection algorithm only compacts it during a timed major compaction. Otherwise, the
+            cluster can be prone to compaction storms where a large number of regions under
+            compaction at the same time. It is important to understand that the data growth causes
+            compaction storms, and not the manual split decision.</para>
+        </formalpara>
+        <para>If the regions are split into too many large regions, you can increase the major
+          compaction interval by configuring <varname>HConstants.MAJOR_COMPACTION_PERIOD</varname>.
+          HBase 0.90 introduced <classname>org.apache.hadoop.hbase.util.RegionSplitter</classname>,
+          which provides a network-IO-safe rolling split of all regions.</para>
       </section>
       <section
         xml:id="managed.compactions">
@@ -1356,62 +1367,44 @@ index e70ebc6..96f8c27 100644
             <varname>mapreduce.reduce.speculative</varname> to false. </para>
       </section>
     </section>
-
-    <section
-      xml:id="other_configuration">
-      <title>Other Configurations</title>
-      <section
-        xml:id="balancer_config">
-        <title>Balancer</title>
-        <para>The balancer is a periodic operation which is run on the master to redistribute
-          regions on the cluster. It is configured via <varname>hbase.balancer.period</varname> and
-          defaults to 300000 (5 minutes). </para>
-        <para>See <xref
-            linkend="master.processes.loadbalancer" /> for more information on the LoadBalancer.
-        </para>
-      </section>
-      <section
-        xml:id="disabling.blockcache">
-        <title>Disabling Blockcache</title>
-        <para>Do not turn off block cache (You'd do it by setting
-            <varname>hbase.block.cache.size</varname> to zero). Currently we do not do well if you
-          do this because the regionserver will spend all its time loading hfile indices over and
-          over again. If your working set it such that block cache does you no good, at least size
-          the block cache such that hfile indices will stay up in the cache (you can get a rough
-          idea on the size you need by surveying regionserver UIs; you'll see index block size
-          accounted near the top of the webpage).</para>
-      </section>
-      <section
-        xml:id="nagles">
-        <title><link
-            xlink:href="http://en.wikipedia.org/wiki/Nagle's_algorithm">Nagle's</link> or the small
-          package problem</title>
-        <para>If a big 40ms or so occasional delay is seen in operations against HBase, try the
-          Nagles' setting. For example, see the user mailing list thread, <link
-            xlink:href="http://search-hadoop.com/m/pduLg2fydtE/Inconsistent+scan+performance+with+caching+set+&amp;subj=Re+Inconsistent+scan+performance+with+caching+set+to+1">Inconsistent
-            scan performance with caching set to 1</link> and the issue cited therein where setting
-          notcpdelay improved scan speeds. You might also see the graphs on the tail of <link
-            xlink:href="https://issues.apache.org/jira/browse/HBASE-7008">HBASE-7008 Set scanner
-            caching to a better default</link> where our Lars Hofhansl tries various data sizes w/
-          Nagle's on and off measuring the effect.</para>
-      </section>
-      <section
-        xml:id="mttr">
-        <title>Better Mean Time to Recover (MTTR)</title>
-        <para>This section is about configurations that will make servers come back faster after a
-          fail. See the Deveraj Das an Nicolas Liochon blog post <link
-            xlink:href="http://hortonworks.com/blog/introduction-to-hbase-mean-time-to-recover-mttr/">Introduction
-            to HBase Mean Time to Recover (MTTR)</link> for a brief introduction.</para>
-        <para>The issue <link
-            xlink:href="https://issues.apache.org/jira/browse/HBASE-8389">HBASE-8354 forces Namenode
-            into loop with lease recovery requests</link> is messy but has a bunch of good
-          discussion toward the end on low timeouts and how to effect faster recovery including
-          citation of fixes added to HDFS. Read the Varun Sharma comments. The below suggested
-          configurations are Varun's suggestions distilled and tested. Make sure you are running on
-          a late-version HDFS so you have the fixes he refers too and himself adds to HDFS that help
-          HBase MTTR (e.g. HDFS-3703, HDFS-3712, and HDFS-4791 -- hadoop 2 for sure has them and
-          late hadoop 1 has some). Set the following in the RegionServer. </para>
-        <programlisting><![CDATA[
+      <section xml:id="other_configuration"><title>Other Configurations</title>
+         <section xml:id="balancer_config"><title>Balancer</title>
+           <para>The balancer is a periodic operation which is run on the master to redistribute regions on the cluster.  It is configured via
+           <varname>hbase.balancer.period</varname> and defaults to 300000 (5 minutes). </para>
+           <para>See <xref linkend="master.processes.loadbalancer" /> for more information on the LoadBalancer.
+           </para>
+         </section>
+         <section xml:id="disabling.blockcache"><title>Disabling Blockcache</title>
+           <para>Do not turn off block cache (You'd do it by setting <varname>hbase.block.cache.size</varname> to zero).
+           Currently we do not do well if you do this because the regionserver will spend all its time loading hfile
+           indices over and over again.  In fact, in later versions of HBase, it is not possible to disable the
+           block cache completely.
+           HBase will cache meta blocks -- the INDEX and BLOOM blocks -- even if the block cache 
+           is disabled.</para>
+         </section>
+    <section xml:id="nagles">
+      <title><link xlink:href="http://en.wikipedia.org/wiki/Nagle's_algorithm">Nagle's</link> or the small package problem</title>
+      <para>If a big 40ms or so occasional delay is seen in operations against HBase,
+      try the Nagles' setting.  For example, see the user mailing list thread,
+      <link xlink:href="http://search-hadoop.com/m/pduLg2fydtE/Inconsistent+scan+performance+with+caching+set+&amp;subj=Re+Inconsistent+scan+performance+with+caching+set+to+1">Inconsistent scan performance with caching set to 1</link>
+      and the issue cited therein where setting notcpdelay improved scan speeds.  You might also
+      see the graphs on the tail of <link xlink:href="https://issues.apache.org/jira/browse/HBASE-7008">HBASE-7008 Set scanner caching to a better default</link>
+      where our Lars Hofhansl tries various data sizes w/ Nagle's on and off measuring the effect.</para>
+    </section>
+    <section xml:id="mttr">
+      <title>Better Mean Time to Recover (MTTR)</title>
+      <para>This section is about configurations that will make servers come back faster after a fail.
+          See the Deveraj Das an Nicolas Liochon blog post
+          <link xlink:href="http://hortonworks.com/blog/introduction-to-hbase-mean-time-to-recover-mttr/">Introduction to HBase Mean Time to Recover (MTTR)</link>
+          for a brief introduction.</para>
+      <para>The issue <link xlink:href="https://issues.apache.org/jira/browse/HBASE-8389">HBASE-8354 forces Namenode into loop with lease recovery requests</link>
+          is messy but has a bunch of good discussion toward the end on low timeouts and how to effect faster recovery including citation of fixes
+          added to HDFS.  Read the Varun Sharma comments.  The below suggested configurations are Varun's suggestions distilled and tested.  Make sure you are
+          running on a late-version HDFS so you have the fixes he refers too and himself adds to HDFS that help HBase MTTR
+          (e.g. HDFS-3703, HDFS-3712, and HDFS-4791 -- hadoop 2 for sure has them and late hadoop 1 has some).
+          Set the following in the RegionServer.</para>
+      <programlisting>
+<![CDATA[<property>
 <property>
     <name>hbase.lease.recovery.dfs.timeout</name>
     <value>23000</value>
