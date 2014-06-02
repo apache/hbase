@@ -175,6 +175,49 @@ public class TestFlushSnapshotFromClient {
         admin, fs);
   }
 
+   /**
+   * Test snapshotting a table that is online without flushing
+   * @throws Exception
+   */
+  @Test(timeout=30000)
+  public void testSkipFlushTableSnapshot() throws Exception {
+    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    // make sure we don't fail on listing snapshots
+    SnapshotTestingUtils.assertNoSnapshots(admin);
+
+    // put some stuff in the table
+    HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
+    UTIL.loadTable(table, TEST_FAM);
+
+    LOG.debug("FS state before snapshot:");
+    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+        FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+
+    // take a snapshot of the enabled table
+    String snapshotString = "skipFlushTableSnapshot";
+    byte[] snapshot = Bytes.toBytes(snapshotString);
+    admin.snapshot(snapshotString, STRING_TABLE_NAME, SnapshotDescription.Type.SKIPFLUSH);
+    LOG.debug("Snapshot completed.");
+
+    // make sure we have the snapshot
+    List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertOneSnapshotThatMatches(admin,
+        snapshot, TABLE_NAME);
+
+    // make sure its a valid snapshot
+    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
+    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    LOG.debug("FS state after snapshot:");
+    FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
+        FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
+
+    SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, TEST_FAM, rootDir,
+        admin, fs);
+
+    admin.deleteSnapshot(snapshot);
+    snapshots = admin.listSnapshots();
+    SnapshotTestingUtils.assertNoSnapshots(admin);
+  }
+
 
   /**
    * Test simple flush snapshotting a table that is online

@@ -186,6 +186,19 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
         new SnapshotSubprocedurePool(rss.getServerName().toString(), conf);
       return new FlushSnapshotSubprocedure(member, exnDispatcher, wakeMillis,
           timeoutMillis, involvedRegions, snapshot, taskManager);
+    case SKIPFLUSH:
+        /*
+         * This is to take an online-snapshot without force a coordinated flush to prevent pause
+         * The snapshot type is defined inside the snapshot description. FlushSnapshotSubprocedure
+         * should be renamed to distributedSnapshotSubprocedure, and the flush() behavior can be
+         * turned on/off based on the flush type.
+         * To minimized the code change, class name is not changed.
+         */
+        SnapshotSubprocedurePool taskManager2 =
+            new SnapshotSubprocedurePool(rss.getServerName().toString(), conf);
+        return new FlushSnapshotSubprocedure(member, exnDispatcher, wakeMillis,
+            timeoutMillis, involvedRegions, snapshot, taskManager2);
+
     default:
       throw new UnsupportedOperationException("Unrecognized snapshot type:" + snapshot.getType());
     }

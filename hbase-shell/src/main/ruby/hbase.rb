@@ -61,6 +61,7 @@ module HBaseConstants
   ATTRIBUTES="ATTRIBUTES"
   VISIBILITY="VISIBILITY"
   AUTHORIZATIONS = "AUTHORIZATIONS"
+  SKIP_FLUSH = 'SKIP_FLUSH'
 
   # Load constants from hbase java API
   def self.promote_constants(constants)

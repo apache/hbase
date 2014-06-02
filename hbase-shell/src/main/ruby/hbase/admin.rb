@@ -22,6 +22,7 @@ java_import java.util.Arrays
 java_import org.apache.hadoop.hbase.util.Pair
 java_import org.apache.hadoop.hbase.util.RegionSplitter
 java_import org.apache.hadoop.hbase.util.Bytes
+java_import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos::SnapshotDescription
 
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
@@ -718,8 +719,18 @@ module Hbase
     
     #----------------------------------------------------------------------------------------------
     # Take a snapshot of specified table
-    def snapshot(table, snapshot_name)
-      @admin.snapshot(snapshot_name.to_java_bytes, table.to_java_bytes)
+    def snapshot(table, snapshot_name, *args)
+      if args.empty?
+         @admin.snapshot(snapshot_name.to_java_bytes, table.to_java_bytes)
+      else
+         args.each do |arg|
+            if arg[SKIP_FLUSH] == true
+              @admin.snapshot(snapshot_name.to_java_bytes, table.to_java_bytes, SnapshotDescription::Type::SKIPFLUSH)
+            else
+               @admin.snapshot(snapshot_name.to_java_bytes, table.to_java_bytes)
+            end
+         end
+      end
     end
 
     #----------------------------------------------------------------------------------------------

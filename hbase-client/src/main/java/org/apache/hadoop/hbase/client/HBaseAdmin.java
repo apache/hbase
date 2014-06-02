@@ -2627,6 +2627,26 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
+   * Create snapshot for the given table of given flush type.
+   * <p>
+   * Snapshots are considered unique based on <b>the name of the snapshot</b>. Attempts to take a
+   * snapshot with the same name (even a different type or with different parameters) will fail with
+   * a {@link SnapshotCreationException} indicating the duplicate naming.
+   * <p>
+   * Snapshot names follow the same naming constraints as tables in HBase.
+   * @param snapshotName name of the snapshot to be created
+   * @param tableName name of the table for which snapshot is created
+   * @param flushType if the snapshot should be taken without flush memstore first
+   * @throws IOException if a remote or network exception occurs
+   * @throws SnapshotCreationException if snapshot creation failed
+   * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
+   */
+   public void snapshot(final byte[] snapshotName, final byte[] tableName,
+                       final SnapshotDescription.Type flushType) throws
+      IOException, SnapshotCreationException, IllegalArgumentException {
+      snapshot(Bytes.toString(snapshotName), Bytes.toString(tableName), flushType);
+  }
+  /**
    public void snapshot(final String snapshotName,
     * Create a timestamp consistent snapshot for the given table.
                         final byte[] tableName) throws IOException,

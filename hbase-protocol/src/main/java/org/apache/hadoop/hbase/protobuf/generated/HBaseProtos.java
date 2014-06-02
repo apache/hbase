@@ -10476,6 +10476,10 @@ public final class HBaseProtos {
        * <code>FLUSH = 1;</code>
        */
       FLUSH(1, 1),
+      /**
+       * <code>SKIPFLUSH = 2;</code>
+       */
+      SKIPFLUSH(2, 2),
       ;
 
       /**
@@ -10486,6 +10490,10 @@ public final class HBaseProtos {
        * <code>FLUSH = 1;</code>
        */
       public static final int FLUSH_VALUE = 1;
+      /**
+       * <code>SKIPFLUSH = 2;</code>
+       */
+      public static final int SKIPFLUSH_VALUE = 2;
 
 
       public final int getNumber() { return value; }
@@ -10494,6 +10502,7 @@ public final class HBaseProtos {
         switch (value) {
           case 0: return DISABLED;
           case 1: return FLUSH;
+          case 2: return SKIPFLUSH;
           default: return null;
         }
       }
@@ -16241,26 +16250,27 @@ public final class HBaseProtos {
       ",\n\rNameBytesPair\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030" +
       "\002 \001(\014\"/\n\016BytesBytesPair\022\r\n\005first\030\001 \002(\014\022\016" +
       "\n\006second\030\002 \002(\014\",\n\rNameInt64Pair\022\014\n\004name\030" +
-      "\001 \001(\t\022\r\n\005value\030\002 \001(\003\"\256\001\n\023SnapshotDescrip" +
+      "\001 \001(\t\022\r\n\005value\030\002 \001(\003\"\275\001\n\023SnapshotDescrip" +
       "tion\022\014\n\004name\030\001 \002(\t\022\r\n\005table\030\002 \001(\t\022\030\n\rcre" +
       "ation_time\030\003 \001(\003:\0010\022.\n\004type\030\004 \001(\0162\031.Snap" +
       "shotDescription.Type:\005FLUSH\022\017\n\007version\030\005" +
-      " \001(\005\"\037\n\004Type\022\014\n\010DISABLED\020\000\022\t\n\005FLUSH\020\001\"}\n",
-      "\024ProcedureDescription\022\021\n\tsignature\030\001 \002(\t" +
-      "\022\020\n\010instance\030\002 \001(\t\022\030\n\rcreation_time\030\003 \001(" +
-      "\003:\0010\022&\n\rconfiguration\030\004 \003(\0132\017.NameString" +
-      "Pair\"\n\n\010EmptyMsg\"\033\n\007LongMsg\022\020\n\010long_msg\030" +
-      "\001 \002(\003\"\037\n\tDoubleMsg\022\022\n\ndouble_msg\030\001 \002(\001\"\'" +
-      "\n\rBigDecimalMsg\022\026\n\016bigdecimal_msg\030\001 \002(\014\"" +
-      "5\n\004UUID\022\026\n\016least_sig_bits\030\001 \002(\004\022\025\n\rmost_" +
-      "sig_bits\030\002 \002(\004\"K\n\023NamespaceDescriptor\022\014\n" +
-      "\004name\030\001 \002(\014\022&\n\rconfiguration\030\002 \003(\0132\017.Nam" +
-      "eStringPair\"$\n\020RegionServerInfo\022\020\n\010infoP",
-      "ort\030\001 \001(\005*r\n\013CompareType\022\010\n\004LESS\020\000\022\021\n\rLE" +
-      "SS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022" +
-      "\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO" +
-      "_OP\020\006B>\n*org.apache.hadoop.hbase.protobu" +
-      "f.generatedB\013HBaseProtosH\001\240\001\001"
+      " \001(\005\".\n\004Type\022\014\n\010DISABLED\020\000\022\t\n\005FLUSH\020\001\022\r\n",
+      "\tSKIPFLUSH\020\002\"}\n\024ProcedureDescription\022\021\n\t" +
+      "signature\030\001 \002(\t\022\020\n\010instance\030\002 \001(\t\022\030\n\rcre" +
+      "ation_time\030\003 \001(\003:\0010\022&\n\rconfiguration\030\004 \003" +
+      "(\0132\017.NameStringPair\"\n\n\010EmptyMsg\"\033\n\007LongM" +
+      "sg\022\020\n\010long_msg\030\001 \002(\003\"\037\n\tDoubleMsg\022\022\n\ndou" +
+      "ble_msg\030\001 \002(\001\"\'\n\rBigDecimalMsg\022\026\n\016bigdec" +
+      "imal_msg\030\001 \002(\014\"5\n\004UUID\022\026\n\016least_sig_bits" +
+      "\030\001 \002(\004\022\025\n\rmost_sig_bits\030\002 \002(\004\"K\n\023Namespa" +
+      "ceDescriptor\022\014\n\004name\030\001 \002(\014\022&\n\rconfigurat" +
+      "ion\030\002 \003(\0132\017.NameStringPair\"$\n\020RegionServ",
+      "erInfo\022\020\n\010infoPort\030\001 \001(\005*r\n\013CompareType\022" +
+      "\010\n\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022" +
+      "\r\n\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007" +
+      "GREATER\020\005\022\t\n\005NO_OP\020\006B>\n*org.apache.hadoo" +
+      "p.hbase.protobuf.generatedB\013HBaseProtosH" +
+      "\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

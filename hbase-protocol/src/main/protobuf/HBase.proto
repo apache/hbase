@@ -159,6 +159,7 @@ message SnapshotDescription {
   enum Type {
     DISABLED = 0;
     FLUSH = 1;
+    SKIPFLUSH = 2;
   }
   optional Type type = 4 [default = FLUSH];
   optional int32 version = 5;

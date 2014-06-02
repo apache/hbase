@@ -24,13 +24,13 @@ module Shell
 Take a snapshot of specified table. Examples:
 
   hbase> snapshot 'sourceTable', 'snapshotName'
-  hbase> snapshot 'namespace:sourceTable', 'snapshotName'
+  hbase> snapshot 'namespace:sourceTable', 'snapshotName', {SKIP_FLUSH => true}
 EOF
       end
 
-      def command(table, snapshot_name)
+      def command(table, snapshot_name, *args)
         format_simple_command do
-          admin.snapshot(table, snapshot_name)
+          admin.snapshot(table, snapshot_name, *args)
         end
       end
     end
