@@ -46,6 +46,13 @@
         called 'Stargate').  There are also a nice set of blogs on <link xlink:href="http://blog.cloudera.com/blog/2013/03/how-to-use-the-apache-hbase-rest-interface-part-1/">How-to: Use the Apache HBase REST Interface</link>
         by Jesse Anderson.
     </para>
+    <para>
+    To run your REST server under SSL, enable the following configs when you launch the REST server:
+<programlisting>hbase.rest.ssl.enabled
+hbase.rest.ssl.keystore.store
+hbase.rest.ssl.keystore.password
+hbase.rest.ssl.keystore.keypassword</programlisting>
+    </para>
   </section>   <!-- rest -->
 
   <section>
