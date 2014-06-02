@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.consensus;
+package org.apache.hadoop.hbase.coordination;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,13 +33,16 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public class ZkCoordinatedStateManager extends BaseCoordinatedStateManager {
   private static final Log LOG = LogFactory.getLog(ZkCoordinatedStateManager.class);
-  private Server server;
-  private ZooKeeperWatcher watcher;
+  protected Server server;
+  protected ZooKeeperWatcher watcher;
+  protected SplitTransactionCoordination splitTransactionCoordination;
 
   @Override
   public void initialize(Server server) {
     this.server = server;
     this.watcher = server.getZooKeeper();
+
+    splitTransactionCoordination = new ZKSplitTransactionCoordination(this, watcher);
   }
 
   @Override
@@ -55,5 +58,10 @@ public class ZkCoordinatedStateManager extends BaseCoordinatedStateManager {
     } catch (KeeperException e) {
       throw new CoordinatedStateException(e);
     }
+  }
+
+  @Override
+  public SplitTransactionCoordination getSplitTransactionCoordination() {
+    return splitTransactionCoordination;
   }
 }

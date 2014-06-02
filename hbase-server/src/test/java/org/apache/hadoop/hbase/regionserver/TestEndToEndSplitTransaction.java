@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -139,8 +140,9 @@ public class TestEndToEndSplitTransaction {
     assertTrue(test(con, tableName, lastRow, server));
 
     // 4. phase III
-    split.transitionZKNode(server, server, regions.getFirst(),
-        regions.getSecond());
+    ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
+        .getSplitTransactionCoordination().completeSplitTransaction(server, regions.getFirst(),
+          regions.getSecond(), split.std, region);
     assertTrue(test(con, tableName, firstRow, server));
     assertTrue(test(con, tableName, lastRow, server));
   }

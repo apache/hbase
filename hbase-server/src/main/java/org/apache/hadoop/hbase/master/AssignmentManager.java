@@ -58,6 +58,8 @@ import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
+import org.apache.hadoop.hbase.coordination.SplitTransactionCoordination.SplitTransactionDetails;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
@@ -77,7 +79,6 @@ import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionMergeTransaction;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-import org.apache.hadoop.hbase.regionserver.SplitTransaction;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
@@ -3225,25 +3226,26 @@ public class AssignmentManager extends ZooKeeperListener {
     EventType et = rt.getEventType();
     if (et == EventType.RS_ZK_REQUEST_REGION_SPLIT) {
       try {
-        if (SplitTransaction.transitionSplittingNode(watcher, p,
-            hri_a, hri_b, sn, -1, EventType.RS_ZK_REQUEST_REGION_SPLIT,
-            EventType.RS_ZK_REGION_SPLITTING) == -1) {
+        SplitTransactionDetails std =
+            ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
+                .getSplitTransactionCoordination().getDefaultDetails();
+        if (((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
+            .getSplitTransactionCoordination().processTransition(p, hri_a, hri_b, sn, std) == -1) {
           byte[] data = ZKAssign.getData(watcher, encodedName);
           EventType currentType = null;
           if (data != null) {
             RegionTransition newRt = RegionTransition.parseFrom(data);
             currentType = newRt.getEventType();
           }
-          if (currentType == null || (currentType != EventType.RS_ZK_REGION_SPLIT
-              && currentType != EventType.RS_ZK_REGION_SPLITTING)) {
-            LOG.warn("Failed to transition pending_split node "
-              + encodedName + " to splitting, it's now " + currentType);
+          if (currentType == null
+              || (currentType != EventType.RS_ZK_REGION_SPLIT && currentType != EventType.RS_ZK_REGION_SPLITTING)) {
+            LOG.warn("Failed to transition pending_split node " + encodedName
+                + " to splitting, it's now " + currentType);
             return false;
           }
         }
       } catch (Exception e) {
-        LOG.warn("Failed to transition pending_split node "
-          + encodedName + " to splitting", e);
+        LOG.warn("Failed to transition pending_split node " + encodedName + " to splitting", e);
         return false;
       }
     }

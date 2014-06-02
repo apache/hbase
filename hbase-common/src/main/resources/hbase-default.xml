@@ -1198,7 +1198,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.coordinated.state.manager.class</name>
-    <value>org.apache.hadoop.hbase.consensus.ZkCoordinatedStateManager</value>
+    <value>org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager</value>
     <description>Fully qualified name of class implementing coordinated state manager.</description>
   </property>
 </configuration>

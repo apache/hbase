@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.consensus;
+package org.apache.hadoop.hbase.coordination;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CoordinatedStateException;
@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.TableStateManager;
 
 /**
  * Base class for {@link org.apache.hadoop.hbase.CoordinatedStateManager} implementations.
- * Defines methods to retrieve consensus objects for relevant areas. CoordinatedStateManager
+ * Defines methods to retrieve coordination objects for relevant areas. CoordinatedStateManager
  * reference returned from Server interface has to be casted to this type to
  * access those methods.
  */
@@ -52,4 +52,8 @@ public abstract class BaseCoordinatedStateManager implements CoordinatedStateMan
   @Override
   public abstract TableStateManager getTableStateManager() throws InterruptedException,
     CoordinatedStateException;
+  /**
+   * Method to retrieve coordination for split transaction
+   */
+  abstract public SplitTransactionCoordination getSplitTransactionCoordination();
 }

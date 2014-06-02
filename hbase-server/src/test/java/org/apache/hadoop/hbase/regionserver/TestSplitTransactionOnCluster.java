@@ -66,6 +66,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.coordination.ZKSplitTransactionCoordination;
+import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -190,6 +192,10 @@ public class TestSplitTransactionOnCluster {
       // find a splittable region
       final HRegion region = findSplittableRegion(regions);
       assertTrue("not able to find a splittable region", region != null);
+      MockedCoordinatedStateManager cp = new MockedCoordinatedStateManager();
+      cp.initialize(regionServer, region);
+      cp.start();
+      regionServer.csm = cp;
 
       new Thread() {
         @Override
@@ -1083,18 +1089,52 @@ public class TestSplitTransactionOnCluster {
       TESTING_UTIL.deleteTable(tableName);
     }
   }
+    public static class MockedCoordinatedStateManager extends ZkCoordinatedStateManager {
 
-  public static class MockedSplitTransaction extends SplitTransaction {
+        public void initialize(Server server, HRegion region) {
+          this.server = server;
+          this.watcher = server.getZooKeeper();
+          splitTransactionCoordination = new MockedSplitTransactionCoordination(this, watcher, region);
+
+        }
+      }
+
+      public static class MockedSplitTransaction extends SplitTransaction {
+
+        private HRegion currentRegion;
+        public MockedSplitTransaction(HRegion region, byte[] splitrow) {
+          super(region, splitrow);
+          this.currentRegion = region;
+        }
+        @Override
+        public boolean rollback(Server server, RegionServerServices services) throws IOException {
+          if (this.currentRegion.getRegionInfo().getTable().getNameAsString()
+              .equals("testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack")) {
+            if(secondSplit){
+              super.rollback(server, services);
+              latch.countDown();
+              return true;
+            }
+          }
+          return super.rollback(server, services);
+        }
+
+
+      }
+
+  public static class MockedSplitTransactionCoordination extends ZKSplitTransactionCoordination {
 
     private HRegion currentRegion;
-    public MockedSplitTransaction(HRegion r, byte[] splitrow) {
-      super(r, splitrow);
-      this.currentRegion = r;
+
+    public MockedSplitTransactionCoordination(CoordinatedStateManager coordinationProvider,
+        ZooKeeperWatcher watcher, HRegion region) {
+      super(coordinationProvider, watcher);
+      currentRegion = region;
     }
 
     @Override
-    void transitionZKNode(Server server, RegionServerServices services, HRegion a, HRegion b)
-        throws IOException {
+    public void completeSplitTransaction(RegionServerServices services, HRegion a, HRegion b,
+        SplitTransactionDetails std, HRegion parent) throws IOException {
       if (this.currentRegion.getRegionInfo().getTable().getNameAsString()
           .equals("testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack")) {
         try {
@@ -1106,25 +1146,12 @@ public class TestSplitTransactionOnCluster {
         }
 
       }
-      super.transitionZKNode(server, services, a, b);
+      super.completeSplitTransaction(services, a, b, std, parent);
       if (this.currentRegion.getRegionInfo().getTable().getNameAsString()
           .equals("testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack")) {
         firstSplitCompleted = true;
       }
     }
-    @Override
-    public boolean rollback(Server server, RegionServerServices services) throws IOException {
-      if (this.currentRegion.getRegionInfo().getTable().getNameAsString()
-          .equals("testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack")) {
-        if(secondSplit){
-          super.rollback(server, services);
-          latch.countDown();
-          return true;
-        }
-      }
-      return super.rollback(server, services);
-    }
-
   }
 
   private HRegion findSplittableRegion(final List<HRegion> regions) throws InterruptedException {
