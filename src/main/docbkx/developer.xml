@@ -473,8 +473,10 @@ $ rsync -av 0.96.0RC0 people.apache.org:public_html
       package onto their own hardware, compile it as provided, and test the resulting executable on their
       own platform, along with also validating cryptographic signatures and verifying that the package
       meets the requirements of the ASF policy on releases.</quote>
-      Regards the latter, suggest running <command>mvn apache-rat:check</command> to verify all files
-      are suitably licensed.
+      Regards the latter, run <command>mvn apache-rat:check</command> to verify all files
+      are suitably licensed. See
+      <link xlink:href="http://search-hadoop.com/m/DHED4dhFaU">HBase, mail # dev - On recent discussion clarifying ASF release policy</link>.
+      for how we arrived at this process.
       </para>
       </section>
     </section>
