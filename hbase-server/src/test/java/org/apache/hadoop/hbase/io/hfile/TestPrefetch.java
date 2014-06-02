@@ -57,6 +57,7 @@ public class TestPrefetch {
     conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
     conf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
     fs = HFileSystem.get(conf);
+    CacheConfig.blockCacheDisabled = false;
     cacheConf = new CacheConfig(conf);
   }
 
