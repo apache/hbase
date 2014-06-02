@@ -462,6 +462,21 @@ $ rsync -av 0.96.0RC0 people.apache.org:public_html
           </programlisting>
       </para>
       </section>
+      <section xml:id="hbase.rc.voting">
+      <title>Voting on Release Candidates</title>
+      <para>
+      Everyone is encouraged to try and vote on HBase release candidates.
+      Only the votes of PMC members are binding.
+      PMC members, please read this WIP doc on policy voting for a release candidate,
+      <link xlink:href="https://github.com/rectang/asfrelease/blob/master/release.md">Release Policy</link>.
+      <quote>Before casting +1 binding votes, individuals are required to download the signed source code
+      package onto their own hardware, compile it as provided, and test the resulting executable on their
+      own platform, along with also validating cryptographic signatures and verifying that the package
+      meets the requirements of the ASF policy on releases.</quote>
+      Regards the latter, suggest running <command>mvn apache-rat:check</command> to verify all files
+      are suitably licensed.
+      </para>
+      </section>
     </section>
     <section xml:id="hbase.tests">
     <title>Tests</title>
