@@ -1883,98 +1883,161 @@ rs.close();
        </section>
 
      </section>
-     <section xml:id="regionserver.arch"><title>RegionServer</title>
-       <para><code>HRegionServer</code> is the RegionServer implementation.  It is responsible for serving and managing regions.
-       In a distributed cluster, a RegionServer runs on a <xref linkend="arch.hdfs.dn" />.
-       </para>
-       <section xml:id="regionserver.arch.api"><title>Interface</title>
-         <para>The methods exposed by <code>HRegionRegionInterface</code> contain both data-oriented and region-maintenance methods:
-         <itemizedlist>
-            <listitem><para>Data (get, put, delete, next, etc.)</para>
+    <section
+      xml:id="regionserver.arch">
+      <title>RegionServer</title>
+      <para><code>HRegionServer</code> is the RegionServer implementation. It is responsible for
+        serving and managing regions. In a distributed cluster, a RegionServer runs on a <xref
+          linkend="arch.hdfs.dn" />. </para>
+      <section
+        xml:id="regionserver.arch.api">
+        <title>Interface</title>
+        <para>The methods exposed by <code>HRegionRegionInterface</code> contain both data-oriented
+          and region-maintenance methods: <itemizedlist>
+            <listitem>
+              <para>Data (get, put, delete, next, etc.)</para>
             </listitem>
-            <listitem><para>Region (splitRegion, compactRegion, etc.)</para>
+            <listitem>
+              <para>Region (splitRegion, compactRegion, etc.)</para>
             </listitem>
-         </itemizedlist>
-         For example, when the <code>HBaseAdmin</code> method <code>majorCompact</code> is invoked on a table, the client is actually iterating through
-         all regions for the specified table and requesting a major compaction directly to each region.
-         </para>
-       </section>
-       <section xml:id="regionserver.arch.processes"><title>Processes</title>
-         <para>The RegionServer runs a variety of background threads:</para>
-         <section xml:id="regionserver.arch.processes.compactsplit"><title>CompactSplitThread</title>
-           <para>Checks for splits and handle minor compactions.</para>
-         </section>
-         <section xml:id="regionserver.arch.processes.majorcompact"><title>MajorCompactionChecker</title>
-           <para>Checks for major compactions.</para>
-         </section>
-         <section xml:id="regionserver.arch.processes.memstore"><title>MemStoreFlusher</title>
-           <para>Periodically flushes in-memory writes in the MemStore to StoreFiles.</para>
-         </section>
-         <section xml:id="regionserver.arch.processes.log"><title>LogRoller</title>
-           <para>Periodically checks the RegionServer's HLog.</para>
-         </section>
-       </section>
+          </itemizedlist> For example, when the <code>HBaseAdmin</code> method
+            <code>majorCompact</code> is invoked on a table, the client is actually iterating
+          through all regions for the specified table and requesting a major compaction directly to
+          each region. </para>
+      </section>
+      <section
+        xml:id="regionserver.arch.processes">
+        <title>Processes</title>
+        <para>The RegionServer runs a variety of background threads:</para>
+        <section
+          xml:id="regionserver.arch.processes.compactsplit">
+          <title>CompactSplitThread</title>
+          <para>Checks for splits and handle minor compactions.</para>
+        </section>
+        <section
+          xml:id="regionserver.arch.processes.majorcompact">
+          <title>MajorCompactionChecker</title>
+          <para>Checks for major compactions.</para>
+        </section>
+        <section
+          xml:id="regionserver.arch.processes.memstore">
+          <title>MemStoreFlusher</title>
+          <para>Periodically flushes in-memory writes in the MemStore to StoreFiles.</para>
+        </section>
+        <section
+          xml:id="regionserver.arch.processes.log">
+          <title>LogRoller</title>
+          <para>Periodically checks the RegionServer's HLog.</para>
+        </section>
+      </section>
 
-       <section xml:id="coprocessors"><title>Coprocessors</title>
-         <para>Coprocessors were added in 0.92.  There is a thorough <link xlink:href="https://blogs.apache.org/hbase/entry/coprocessor_introduction">Blog Overview of CoProcessors</link>
-         posted.  Documentation will eventually move to this reference guide, but the blog is the most current information available at this time.
-         </para>
-       </section>
+      <section
+        xml:id="coprocessors">
+        <title>Coprocessors</title>
+        <para>Coprocessors were added in 0.92. There is a thorough <link
+            xlink:href="https://blogs.apache.org/hbase/entry/coprocessor_introduction">Blog Overview
+            of CoProcessors</link> posted. Documentation will eventually move to this reference
+          guide, but the blog is the most current information available at this time. </para>
+      </section>
 
-     <section xml:id="block.cache">
-       <title>Block Cache</title>
-       <para>Below we describe the default block cache implementation, the LRUBlockCache.
-       Read for an understanding of how it works and an overview of the facility it provides.
-       Other, off-heap options have since been added.  These are described in the
-       javadoc <link xlink:href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/package-summary.html#package_description">org.apache.hadoop.hbase.io.hfile package description</link>.
-       After reading the below,
-       be sure to visit the blog series <link xlink:href="http://www.n10k.com/blog/blockcache-101/">BlockCache 101</link> by Nick Dimiduk
-       where other Block Cache implementations are described.
-       </para>
-       <section xml:id="block.cache.design">
-        <title>Design</title>
-        <para>The Block Cache is an LRU cache that contains three levels of block priority to allow for scan-resistance and in-memory ColumnFamilies:
-        </para>
-        <itemizedlist>
-            <listitem><para>Single access priority: The first time a block is loaded from HDFS it normally has this priority and it will be part of the first group to be considered
-            during evictions. The advantage is that scanned blocks are more likely to get evicted than blocks that are getting more usage.</para>
+      <section
+        xml:id="block.cache">
+        <title>Block Cache</title>
+
+        <para>HBase provides three different BlockCache implementations: the default onheap
+          LruBlockCache, and BucketCache, and SlabCache, which are both offheap. This section
+          discusses benefits and drawbacks of each implementation, how to choose the appropriate
+          option, and configuration options for each.</para>
+        <section>
+          <title>Cache Choices</title>
+          <para>LruBlockCache is the original implementation, and is entirely within the Java heap.
+            SlabCache and BucketCache are mainly intended for keeping blockcache data offheap,
+            although BucketCache can also keep data onheap and in files.</para>
+          <para> BucketCache has seen more production deploys and has more deploy options. Fetching
+            will always be slower when fetching from BucketCache or SlabCache, as compared with the
+            native onheap LruBlockCache. However, latencies tend to be less erratic over time,
+            because there is less garbage collection.</para>
+          <para>Anecdotal evidence indicates that BucketCache requires less garbage collection than
+            SlabCache so should be even less erratic (than SlabCache or LruBlockCache).</para>
+          <para>SlabCache tends to do more garbage collections, because blocks are always moved
+            between L1 and L2, at least given the way DoubleBlockCache currently works. Because the
+            hosting class for each implementation (DoubleBlockCache vs CombinedBlockCache) works so
+            differently, it is difficult to do a fair comparison between BucketCache and SlabCache.
+            See Nick Dimiduk's <link
+              xlink:href="http://www.n10k.com/blog/blockcache-101/">BlockCache 101</link> for some
+            numbers. See also the description of <link
+              xlink:href="https://issues.apache.org/jira/browse/HBASE-7404">HBASE-7404</link> where
+            Chunhui Shen lists issues he found with BlockCache, such as inefficient use of memory
+            and garbage-collection overhead.</para>
+          <para>For more information about the off heap cache options, see <xref
+              linkend="offheap.blockcache" />.</para>
+        </section>
+
+        <section
+          xml:id="block.cache.design">
+          <title>LruBlockCache Design</title>
+          <para>The LruBlockCache is an LRU cache that contains three levels of block priority to
+            allow for scan-resistance and in-memory ColumnFamilies: </para>
+          <itemizedlist>
+            <listitem>
+              <para>Single access priority: The first time a block is loaded from HDFS it normally
+                has this priority and it will be part of the first group to be considered during
+                evictions. The advantage is that scanned blocks are more likely to get evicted than
+                blocks that are getting more usage.</para>
             </listitem>
-            <listitem><para>Mutli access priority: If a block in the previous priority group is accessed again, it upgrades to this priority. It is thus part of the second group
-            considered during evictions.</para>
+            <listitem>
+              <para>Mutli access priority: If a block in the previous priority group is accessed
+                again, it upgrades to this priority. It is thus part of the second group considered
+                during evictions.</para>
             </listitem>
-            <listitem><para>In-memory access priority: If the block's family was configured to be "in-memory", it will be part of this priority disregarding the number of times it
-            was accessed. Catalog tables are configured like this. This group is the last one considered during evictions.</para>
+            <listitem>
+              <para>In-memory access priority: If the block's family was configured to be
+                "in-memory", it will be part of this priority disregarding the number of times it
+                was accessed. Catalog tables are configured like this. This group is the last one
+                considered during evictions.</para>
             </listitem>
-        </itemizedlist>
-        <para>
-        For more information, see the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/LruBlockCache.html">LruBlockCache source</link>
-        </para>
-       </section>
-     <section xml:id="block.cache.usage">
-        <title>Usage</title>
-        <para>Block caching is enabled by default for all the user tables which means that any read operation will load the LRU cache. This might be good for a large number of use cases,
-        but further tunings are usually required in order to achieve better performance. An important concept is the
-        <link xlink:href="http://en.wikipedia.org/wiki/Working_set_size">working set size</link>, or WSS, which is: "the amount of memory needed to compute the answer to a problem".
-        For a website, this would be the data that's needed to answer the queries over a short amount of time.
-        </para>
-        <para>The way to calculate how much memory is available in HBase for caching is:
-        </para>
-        <programlisting>
+          </itemizedlist>
+          <para> For more information, see the <link
+              xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/io/hfile/LruBlockCache.html">LruBlockCache
+              source</link>
+          </para>
+        </section>
+        <section
+          xml:id="block.cache.usage">
+          <title>LruBlockCache Usage</title>
+          <para>Block caching is enabled by default for all the user tables which means that any
+            read operation will load the LRU cache. This might be good for a large number of use
+            cases, but further tunings are usually required in order to achieve better performance.
+            An important concept is the <link
+              xlink:href="http://en.wikipedia.org/wiki/Working_set_size">working set size</link>, or
+            WSS, which is: "the amount of memory needed to compute the answer to a problem". For a
+            website, this would be the data that's needed to answer the queries over a short amount
+            of time. </para>
+          <para>The way to calculate how much memory is available in HBase for caching is: </para>
+          <programlisting>
             number of region servers * heap size * hfile.block.cache.size * 0.85
         </programlisting>
-        <para>The default value for the block cache is 0.25 which represents 25% of the available heap. The last value (85%) is the default acceptable loading factor in the LRU cache after
-        which eviction is started. The reason it is included in this equation is that it would be unrealistic to say that it is possible to use 100% of the available memory since this would
-        make the process blocking from the point where it loads new blocks. Here are some examples:
-        </para>
-        <itemizedlist>
-            <listitem><para>One region server with the default heap size (1GB) and the default block cache size will have 217MB of block cache available.</para>
+          <para>The default value for the block cache is 0.25 which represents 25% of the available
+            heap. The last value (85%) is the default acceptable loading factor in the LRU cache
+            after which eviction is started. The reason it is included in this equation is that it
+            would be unrealistic to say that it is possible to use 100% of the available memory
+            since this would make the process blocking from the point where it loads new blocks.
+            Here are some examples: </para>
+          <itemizedlist>
+            <listitem>
+              <para>One region server with the default heap size (1GB) and the default block cache
+                size will have 217MB of block cache available.</para>
             </listitem>
-            <listitem><para>20 region servers with the heap size set to 8GB and a default block cache size will have 34GB of block cache.</para>
+            <listitem>
+              <para>20 region servers with the heap size set to 8GB and a default block cache size
+                will have 34GB of block cache.</para>
             </listitem>
-            <listitem><para>100 region servers with the heap size set to 24GB and a block cache size of 0.5 will have about 1TB of block cache.</para>
+            <listitem>
+              <para>100 region servers with the heap size set to 24GB and a block cache size of 0.5
+                will have about 1TB of block cache.</para>
             </listitem>
         </itemizedlist>
-        <para>Your data isn't the only resident of the block cache, here are others that you may have to take into account:
+        <para>Your data is not the only resident of the block cache. Here are others that you may have to take into account:
         </para>
           <variablelist>
             <varlistentry>
@@ -1990,20 +2053,20 @@ rs.close();
             <varlistentry>
               <term>HFiles Indexes</term>
               <listitem>
-                <para>HFile is the file format that HBase uses to store data in HDFS and it contains
-                  a multi-layered index in order seek to the data without having to read the whole
-                  file. The size of those indexes is a factor of the block size (64KB by default),
-                  the size of your keys and the amount of data you are storing. For big data sets
-                  it's not unusual to see numbers around 1GB per region server, although not all of
-                  it will be in cache because the LRU will evict indexes that aren't used.</para>
+                <para>An <firstterm>hfile</firstterm> is the file format that HBase uses to store
+                  data in HDFS. It contains a multi-layered index which allows HBase to seek to the
+                  data without having to read the whole file. The size of those indexes is a factor
+                  of the block size (64KB by default), the size of your keys and the amount of data
+                  you are storing. For big data sets it's not unusual to see numbers around 1GB per
+                  region server, although not all of it will be in cache because the LRU will evict
+                  indexes that aren't used.</para>
               </listitem>
             </varlistentry>
             <varlistentry>
               <term>Keys</term>
               <listitem>
-                <para>Taking into account only the values that are being stored is missing half the
-                  picture since every value is stored along with its keys (row key, family,
-                  qualifier, and timestamp). See <xref
+                <para>The values that are stored are only half the picture, since each value is
+                  stored along with its keys (row key, family qualifier, and timestamp). See <xref
                     linkend="keysize" />.</para>
               </listitem>
             </varlistentry>
@@ -2015,95 +2078,188 @@ rs.close();
               </listitem>
             </varlistentry>
           </variablelist>
-        <para>Currently the recommended way to measure HFile indexes and bloom filters sizes is to look at the region server web UI and checkout the relevant metrics. For keys,
-        sampling can be done by using the HFile command line tool and look for the average key size metric.
-        </para>
-        <para>It's generally bad to use block caching when the WSS doesn't fit in memory. This is the case when you have for example 40GB available across all your region servers' block caches
-        but you need to process 1TB of data. One of the reasons is that the churn generated by the evictions will trigger more garbage collections unnecessarily. Here are two use cases:
-        </para>
+          <para>Currently the recommended way to measure HFile indexes and bloom filters sizes is to
+            look at the region server web UI and checkout the relevant metrics. For keys, sampling
+            can be done by using the HFile command line tool and look for the average key size
+            metric. </para>
+          <para>It's generally bad to use block caching when the WSS doesn't fit in memory. This is
+            the case when you have for example 40GB available across all your region servers' block
+            caches but you need to process 1TB of data. One of the reasons is that the churn
+            generated by the evictions will trigger more garbage collections unnecessarily. Here are
+            two use cases: </para>
         <itemizedlist>
-            <listitem><para>Fully random reading pattern: This is a case where you almost never access the same row twice within a short amount of time such that the chance of hitting a cached block is close
-            to 0. Setting block caching on such a table is a waste of memory and CPU cycles, more so that it will generate more garbage to pick up by the JVM. For more information on monitoring GC,
-            see <xref linkend="trouble.log.gc"/>.</para>
+            <listitem>
+              <para>Fully random reading pattern: This is a case where you almost never access the
+                same row twice within a short amount of time such that the chance of hitting a
+                cached block is close to 0. Setting block caching on such a table is a waste of
+                memory and CPU cycles, more so that it will generate more garbage to pick up by the
+                JVM. For more information on monitoring GC, see <xref
+                  linkend="trouble.log.gc" />.</para>
             </listitem>
-            <listitem><para>Mapping a table: In a typical MapReduce job that takes a table in input, every row will be read only once so there's no need to put them into the block cache. The Scan object has
-            the option of turning this off via the setCaching method (set it to false). You can still keep block caching turned on on this table if you need fast random read access. An example would be
-            counting the number of rows in a table that serves live traffic, caching every block of that table would create massive churn and would surely evict data that's currently in use.
-            </para></listitem>
-        </itemizedlist>
-      </section>
-      <section xml:id="offheap.blockcache"><title>Offheap Block Cache</title>
-      <para>There are a few options for configuring an off-heap cache for blocks read from HDFS.
-      The options and their setup are described in a javadoc package doc.  See
-      <link xlink:href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/package-summary.html#package_description">org.apache.hadoop.hbase.io.hfile package description</link>.
-      </para>
-      </section>
+            <listitem>
+              <para>Mapping a table: In a typical MapReduce job that takes a table in input, every
+                row will be read only once so there's no need to put them into the block cache. The
+                Scan object has the option of turning this off via the setCaching method (set it to
+                false). You can still keep block caching turned on on this table if you need fast
+                random read access. An example would be counting the number of rows in a table that
+                serves live traffic, caching every block of that table would create massive churn
+                and would surely evict data that's currently in use. </para>
+            </listitem>
+          </itemizedlist>
+        </section>
+        <section
+          xml:id="offheap.blockcache">
+          <title>Offheap Block Cache</title>
+          <section>
+            <title>Enable SlabCache</title>
+            <para> SlabCache is originally described in <link
+                xlink:href="http://blog.cloudera.com/blog/2012/01/caching-in-hbase-slabcache/">Caching
+                in Apache HBase: SlabCache</link>. Quoting from the API documentation for <link
+                xlink:href="http://hbase.apache.org/0.94/apidocs/org/apache/hadoop/hbase/io/hfile/DoubleBlockCache.html">DoubleBlockCache</link>,
+              it is an abstraction layer that combines two caches, the smaller onHeapCache and the
+              larger offHeapCache. CacheBlock attempts to cache the block in both caches, while
+              readblock reads first from the faster on heap cache before looking for the block in
+              the off heap cache. Metrics are the combined size and hits and misses of both
+              caches.</para>
+            <para>To enable SlabCache, set the float
+                <varname>hbase.offheapcache.percentage</varname> to some value between 0 and 1 in
+              the <filename>hbase-site.xml</filename> file on the RegionServer. The value will be multiplied by the
+              setting for <varname>-XX:MaxDirectMemorySize</varname> in the RegionServer's
+                <filename>hbase-env.sh</filename> configuration file and the result is used by
+              SlabCache as its offheap store. The onheap store will be the value of the float
+                <varname>HConstants.HFILE_BLOCK_CACHE_SIZE_KEY</varname> setting (some value between
+              0 and 1) multiplied by the size of the allocated Java heap.</para>
+            <para>Restart (or rolling restart) your cluster for the configurations to take effect.
+              Check logs for errors or unexpected behavior.</para>
+          </section>
+          <section>
+            <title>Enable BucketCache</title>
+            <para> To enable BucketCache, set the value of
+                <varname>hbase.offheapcache.percentage</varname> to 0 in the RegionServer's
+                <filename>hbase-site.xml</filename> file. This disables SlabCache. Next, set the
+              various options for BucketCache to values appropriate to your situation. You can find
+              more information about all of the (more than 26) options at <link
+                xlink:href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html" />.
+              After setting the options, restart or rolling restart your cluster for the
+              configuration to take effect. Check logs for errors or unexpected behavior.</para>
+            <para>The offheap and onheap caches are managed by <link
+                xlink:href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CombinedBlockCache.html">CombinedBlockCache</link>
+              by default. The link describes the mechanism of CombinedBlockCache. To disable
+              CombinedBlockCache, and use the BucketCache as a strict L2 cache to the L1
+              LruBlockCache, set <varname>CacheConfig.BUCKET_CACHE_COMBINED_KEY</varname> to
+                <literal>false</literal>. In this mode, on eviction from L1, blocks go to L2.</para>
+            <para> By default, <varname>CacheConfig.BUCKET_CACHE_COMBINED_PERCENTAGE_KEY</varname>
+              defaults to <literal>0.9</literal>. This means that whatever size you set for the
+              bucket cache with <varname>CacheConfig.BUCKET_CACHE_SIZE_KEY</varname>, 90% will be
+              used for offheap and 10% will be used by the onheap LruBlockCache. </para>
+            <procedure>
+              <title>BucketCache Example Configuration</title>
+              <para> This sample provides a configuration for a 4 GB offheap BucketCache with a 1 GB
+                onheap cache. Configuration is performed on the RegionServer.</para>
+              <step>
+                <para>First, edit the RegionServer's <filename>hbase-env.sh</filename> and set
+                  -XX:MaxDirectMemorySize to the total size of the desired onheap plus offheap, in
+                  this case, 5 GB (but expressed as 5G).</para>
+                <programlisting>-XX:MaxDirectMemorySize=5G</programlisting>
+              </step>
+              <step>
+                <para>Next, add the following configuration to the RegionServer's
+                    <filename>hbase-site.xml</filename>. This configuration uses 80% of the
+                  -XX:MaxDirectMemorySize (4 GB) for offheap, and the remainder (1 GB) for
+                  onheap.</para>
+                <programlisting>
+<![CDATA[<property>
+  <name>hbase.bucketcache.ioengine</name>
+  <value>offheap</value>
+</property>
+<property>
+  <name>hbase.bucketcache.percentage.in.combinedcache</name>
+  <value>0.8</value>
+</property>
+<property>
+  <name>hbase.bucketcache.size</name>
+  <value>5120</value>
+</property>]]>
+          </programlisting>
+              </step>
+              <step>
+                <para>Restart or rolling restart your cluster, and check the logs for any
+                  issues.</para>
+              </step>
+            </procedure>
+          </section>
+        </section>
       </section>
 
-      <section xml:id="wal">
-       <title >Write Ahead Log (WAL)</title>
+      <section
+        xml:id="wal">
+        <title>Write Ahead Log (WAL)</title>
 
-       <section xml:id="purpose.wal">
-         <title>Purpose</title>
+        <section
+          xml:id="purpose.wal">
+          <title>Purpose</title>
 
-        <para>Each RegionServer adds updates (Puts, Deletes) to its write-ahead log (WAL)
-            first, and then to the <xref linkend="store.memstore"/> for the affected <xref linkend="store" />.
-        This ensures that HBase has durable writes. Without WAL, there is the possibility of data loss in the case of a RegionServer failure
-        before each MemStore is flushed and new StoreFiles are written.  <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/wal/HLog.html">HLog</link>
-        is the HBase WAL implementation, and there is one HLog instance per RegionServer.
-       </para><para>The WAL is in HDFS in <filename>/hbase/.logs/</filename> with subdirectories per region.</para>
-       <para>
-        For more general information about the concept of write ahead logs, see the Wikipedia
-        <link xlink:href="http://en.wikipedia.org/wiki/Write-ahead_logging">Write-Ahead Log</link> article.
-       </para>
-       </section>
-       <section xml:id="wal_flush">
-        <title>WAL Flushing</title>
-          <para>TODO (describe).
-          </para>
+          <para>Each RegionServer adds updates (Puts, Deletes) to its write-ahead log (WAL) first,
+            and then to the <xref
+              linkend="store.memstore" /> for the affected <xref
+              linkend="store" />. This ensures that HBase has durable writes. Without WAL, there is
+            the possibility of data loss in the case of a RegionServer failure before each MemStore
+            is flushed and new StoreFiles are written. <link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/wal/HLog.html">HLog</link>
+            is the HBase WAL implementation, and there is one HLog instance per RegionServer. </para>
+          <para>The WAL is in HDFS in <filename>/hbase/.logs/</filename> with subdirectories per
+            region.</para>
+          <para> For more general information about the concept of write ahead logs, see the
+            Wikipedia <link
+              xlink:href="http://en.wikipedia.org/wiki/Write-ahead_logging">Write-Ahead Log</link>
+            article. </para>
+        </section>
+        <section
+          xml:id="wal_flush">
+          <title>WAL Flushing</title>
+          <para>TODO (describe). </para>
         </section>
 
-        <section xml:id="wal_splitting">
-         <title>WAL Splitting</title>
+        <section
+          xml:id="wal_splitting">
+          <title>WAL Splitting</title>
 
-        <section><title>How edits are recovered from a crashed RegionServer</title>
-         <para>When a RegionServer crashes, it will lose its ephemeral lease in
-         ZooKeeper...TODO</para>
-		 </section>
-         <section>
-         <title><varname>hbase.hlog.split.skip.errors</varname></title>
+          <section>
+            <title>How edits are recovered from a crashed RegionServer</title>
+            <para>When a RegionServer crashes, it will lose its ephemeral lease in
+              ZooKeeper...TODO</para>
+          </section>
+          <section>
+            <title><varname>hbase.hlog.split.skip.errors</varname></title>
 
-        <para>When set to <constant>true</constant>, any error
-        encountered splitting will be logged, the problematic WAL will be
-        moved into the <filename>.corrupt</filename> directory under the hbase
-        <varname>rootdir</varname>, and processing will continue. If set to
-        <constant>false</constant>, the default, the exception will be propagated and the
-        split logged as failed.<footnote>
-            <para>See <link
-            xlink:href="https://issues.apache.org/jira/browse/HBASE-2958">HBASE-2958
-            When hbase.hlog.split.skip.errors is set to false, we fail the
-            split but thats it</link>. We need to do more than just fail split
-            if this flag is set.</para>
-          </footnote></para>
+            <para>When set to <constant>true</constant>, any error encountered splitting will be
+              logged, the problematic WAL will be moved into the <filename>.corrupt</filename>
+              directory under the hbase <varname>rootdir</varname>, and processing will continue. If
+              set to <constant>false</constant>, the default, the exception will be propagated and
+              the split logged as failed.<footnote>
+                <para>See <link
+                    xlink:href="https://issues.apache.org/jira/browse/HBASE-2958">HBASE-2958 When
+                    hbase.hlog.split.skip.errors is set to false, we fail the split but thats
+                    it</link>. We need to do more than just fail split if this flag is set.</para>
+              </footnote></para>
+          </section>
+
+          <section>
+            <title>How EOFExceptions are treated when splitting a crashed RegionServers'
+              WALs</title>
+
+            <para>If we get an EOF while splitting logs, we proceed with the split even when
+                <varname>hbase.hlog.split.skip.errors</varname> == <constant>false</constant>. An
+              EOF while reading the last log in the set of files to split is near-guaranteed since
+              the RegionServer likely crashed mid-write of a record. But we'll continue even if we
+              got an EOF reading other than the last file in the set.<footnote>
+                <para>For background, see <link
+                    xlink:href="https://issues.apache.org/jira/browse/HBASE-2643">HBASE-2643 Figure
+                    how to deal with eof splitting logs</link></para>
+              </footnote></para>
+          </section>
+        </section>
       </section>
-
-      <section>
-        <title>How EOFExceptions are treated when splitting a crashed
-        RegionServers' WALs</title>
-
-        <para>If we get an EOF while splitting logs, we proceed with the split
-        even when <varname>hbase.hlog.split.skip.errors</varname> ==
-        <constant>false</constant>. An EOF while reading the last log in the
-        set of files to split is near-guaranteed since the RegionServer likely
-        crashed mid-write of a record. But we'll continue even if we got an
-        EOF reading other than the last file in the set.<footnote>
-            <para>For background, see <link
-            xlink:href="https://issues.apache.org/jira/browse/HBASE-2643">HBASE-2643
-            Figure how to deal with eof splitting logs</link></para>
-          </footnote></para>
-      </section>
-     </section>
-     </section>
 
     </section>  <!--  regionserver -->
 

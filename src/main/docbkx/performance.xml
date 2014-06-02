@@ -199,63 +199,58 @@
       <title>Managing Compactions</title>
 
       <para>For larger systems, managing <link
-          linkend="disable.splitting">compactions and splits</link> may be something you want to
-        consider.</para>
+      linkend="disable.splitting">compactions and splits</link> may be
+      something you want to consider.</para>
     </section>
 
-    <section
-      xml:id="perf.handlers">
-      <title><varname>hbase.regionserver.handler.count</varname></title>
-      <para>See <xref
-          linkend="hbase.regionserver.handler.count" />. </para>
+    <section xml:id="perf.handlers">
+        <title><varname>hbase.regionserver.handler.count</varname></title>
+        <para>See <xref linkend="hbase.regionserver.handler.count"/>.
+	    </para>
     </section>
-    <section
-      xml:id="perf.hfile.block.cache.size">
-      <title><varname>hfile.block.cache.size</varname></title>
-      <para>See <xref
-          linkend="hfile.block.cache.size" />. A memory setting for the RegionServer process.
-      </para>
-    </section>
-    <section
-      xml:id="perf.rs.memstore.size">
-      <title><varname>hbase.regionserver.global.memstore.size</varname></title>
-      <para>See <xref
-          linkend="hbase.regionserver.global.memstore.size" />. This memory setting is often
-        adjusted for the RegionServer process depending on needs. </para>
-    </section>
-    <section
-      xml:id="perf.rs.memstore.size.lower.limit">
-      <title><varname>hbase.regionserver.global.memstore.size.lower.limit</varname></title>
-      <para>See <xref
-          linkend="hbase.regionserver.global.memstore.size.lower.limit" />. This memory setting is
-        often adjusted for the RegionServer process depending on needs. </para>
-    </section>
-    <section
-      xml:id="perf.hstore.blockingstorefiles">
-      <title><varname>hbase.hstore.blockingStoreFiles</varname></title>
-      <para>See <xref
-          linkend="hbase.hstore.blockingStoreFiles" />. If there is blocking in the RegionServer
-        logs, increasing this can help. </para>
-    </section>
-    <section
-      xml:id="perf.hregion.memstore.block.multiplier">
-      <title><varname>hbase.hregion.memstore.block.multiplier</varname></title>
-      <para>See <xref
-          linkend="hbase.hregion.memstore.block.multiplier" />. If there is enough RAM, increasing
-        this can help. </para>
-    </section>
-    <section
-      xml:id="hbase.regionserver.checksum.verify">
-      <title><varname>hbase.regionserver.checksum.verify</varname></title>
-      <para>Have HBase write the checksum into the datablock and save having to do the checksum seek
-        whenever you read.</para>
+    
 
-      <para>See <xref
-          linkend="hbase.regionserver.checksum.verify" />, <xref
-          linkend="hbase.hstore.bytes.per.checksum" /> and <xref
-          linkend="hbase.hstore.checksum.algorithm" /> For more information see the release note on <link
-          xlink:href="https://issues.apache.org/jira/browse/HBASE-5074">HBASE-5074 support checksums
-          in HBase block cache</link>. </para>
+
+    <section xml:id="perf.hfile.block.cache.size">
+        <title><varname>hfile.block.cache.size</varname></title>
+        <para>See <xref linkend="hfile.block.cache.size"/>.
+        A memory setting for the RegionServer process.
+        </para>
+    </section>
+    <section xml:id="perf.rs.memstore.size">
+        <title><varname>hbase.regionserver.global.memstore.size</varname></title>
+        <para>See <xref linkend="hbase.regionserver.global.memstore.size"/>.
+        This memory setting is often adjusted for the RegionServer process depending on needs.
+        </para>
+    </section>
+    <section xml:id="perf.rs.memstore.size.lower.limit">
+        <title><varname>hbase.regionserver.global.memstore.size.lower.limit</varname></title>
+        <para>See <xref linkend="hbase.regionserver.global.memstore.size.lower.limit"/>.
+        This memory setting is often adjusted for the RegionServer process depending on needs.
+        </para>
+    </section>
+    <section xml:id="perf.hstore.blockingstorefiles">
+        <title><varname>hbase.hstore.blockingStoreFiles</varname></title>
+        <para>See <xref linkend="hbase.hstore.blockingStoreFiles"/>.
+        If there is blocking in the RegionServer logs, increasing this can help.
+        </para>
+    </section>
+    <section xml:id="perf.hregion.memstore.block.multiplier">
+        <title><varname>hbase.hregion.memstore.block.multiplier</varname></title>
+        <para>See <xref linkend="hbase.hregion.memstore.block.multiplier"/>.
+        If there is enough RAM, increasing this can help.
+        </para>
+    </section>
+    <section xml:id="hbase.regionserver.checksum.verify">
+        <title><varname>hbase.regionserver.checksum.verify</varname></title>
+        <para>Have HBase write the checksum into the datablock and save
+        having to do the checksum seek whenever you read.</para>
+
+        <para>See <xref linkend="hbase.regionserver.checksum.verify"/>,
+        <xref linkend="hbase.hstore.bytes.per.checksum"/> and <xref linkend="hbase.hstore.checksum.algorithm"/>
+        For more information see the
+        release note on <link xlink:href="https://issues.apache.org/jira/browse/HBASE-5074">HBASE-5074 support checksums in HBase block cache</link>.
+        </para>
     </section>
 
   </section>
