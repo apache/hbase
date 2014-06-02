@@ -221,10 +221,10 @@ public class Store extends SchemaConfigured implements HeapSize,
       if (region != null) {
         LOG.info("Creating one");
         if (!this.fs.mkdirs(this.homedir))
-          throw new IOException("Failed create of: " + this.homedir.toString());
+          throw new IOException("Failed create of: " + this.homedir);
       } else {
-        throw new IOException("Failed create a read only store. " +
-            "Possibly an inconsistent region");
+        throw new IOException("Failed create a read only store on dir "
+            + this.homedir + " . Possibly an inconsistent region." );
       }
     }
     this.family = family;
