@@ -1411,7 +1411,8 @@ index e70ebc6..96f8c27 100644
           a late-version HDFS so you have the fixes he refers too and himself adds to HDFS that help
           HBase MTTR (e.g. HDFS-3703, HDFS-3712, and HDFS-4791 -- hadoop 2 for sure has them and
           late hadoop 1 has some). Set the following in the RegionServer. </para>
-        <programlisting><![CDATA[<property>
+        <programlisting><![CDATA[
+<property>
     <name>hbase.lease.recovery.dfs.timeout</name>
     <value>23000</value>
     <description>How much time we allow elapse between calls to recover lease.
@@ -1421,12 +1422,13 @@ index e70ebc6..96f8c27 100644
     <name>dfs.client.socket-timeout</name>
     <value>10000</value>
     <description>Down the DFS timeout from 60 to 10 seconds.</description>
-</property>]]>
-        </programlisting>
+</property>
+]]></programlisting>
 
         <para>And on the namenode/datanode side, set the following to enable 'staleness' introduced
           in HDFS-3703, HDFS-3912. </para>
-        <programlisting><![CDATA[<property>
+        <programlisting><![CDATA[
+<property>
     <name>dfs.client.socket-timeout</name>
     <value>10000</value>
     <description>Down the DFS timeout from 60 to 10 seconds.</description>
@@ -1460,11 +1462,104 @@ index e70ebc6..96f8c27 100644
     <name>dfs.namenode.avoid.write.stale.datanode</name>
     <value>true</value>
     <description>Enable stale state in hdfs</description>
-</property>]]>
-        </programlisting>
+</property>
+]]></programlisting>
       </section>
 
+      <section
+        xml:id="JMX_config">
+        <title>JMX</title>
+        <para>JMX(Java Management Extensions) provides built-in instrumentation that enables you
+          to monitor and manage the Java VM. To enable monitoring and management from remote
+          systems, you need to set system property com.sun.management.jmxremote.port(the port
+          number through which you want to enable JMX RMI connections) when you start the Java VM.
+          See <link
+            xlink:href="http://docs.oracle.com/javase/6/docs/technotes/guides/management/agent.html">
+          official document</link> for more information. Historically, besides above port mentioned,
+          JMX opens 2 additional random TCP listening ports, which could lead to port conflict
+          problem.(See <link
+            xlink:href="https://issues.apache.org/jira/browse/HBASE-10289">HBASE-10289</link>
+          for details)
+        </para>
+        <para>As an alternative, You can use the coprocessor-based JMX implementation provided
+          by HBase. To enable it, add below property in <filename>hbase-site.xml</filename>:
+        <programlisting><![CDATA[
+<property>
+    <name>hbase.coprocessor.regionserver.classes</name>
+    <value>org.apache.hadoop.hbase.JMXListener</value>
+</property>
+]]></programlisting>
+          NOTE: DO NOT set com.sun.management.jmxremote.port for Java VM at the same time.
+        </para>
+        <para>Currently it supports Master and RegionServer Java VM. The reason why you only
+          configure coprocessor for 'regionserver' is that, starting from HBase 0.99,
+          a Master IS also a RegionServer. (See <link
+            xlink:href="https://issues.apache.org/jira/browse/HBASE-10569">HBASE-10569</link>
+          for more information.)
+          By default, the JMX listens on TCP port 10102, you can further configure the port
+          using below properties:
+
+        <programlisting><![CDATA[
+<property>
+    <name>regionserver.rmi.registry.port</name>
+    <value>61130</value>
+</property>
+<property>
+    <name>regionserver.rmi.connector.port</name>
+    <value>61140</value>
+</property>
+]]></programlisting>
+          The registry port can be shared with connector port in most cases, so you only
+          need to configure regionserver.rmi.registry.port. However if you want to use SSL
+          communication, the 2 ports must be configured to different values.
+        </para>
+
+        <para>By default the password authentication and SSL communication is disabled.
+          To enable password authentication, you need to update <filename>hbase-env.sh</filename>
+          like below:
+      <screen>
+export HBASE_JMX_BASE="-Dcom.sun.management.jmxremote.authenticate=true                  \
+                       -Dcom.sun.management.jmxremote.password.file=your_password_file   \
+                       -Dcom.sun.management.jmxremote.access.file=your_access_file"
+
+export HBASE_MASTER_OPTS="$HBASE_MASTER_OPTS $HBASE_JMX_BASE "
+export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS $HBASE_JMX_BASE "
+      </screen>
+          See example password/access file under $JRE_HOME/lib/management.
+        </para>
+
+        <para>To enable SSL communication with password authentication, follow below steps:
+      <screen>
+#1. generate a key pair, stored in myKeyStore
+keytool -genkey -alias jconsole -keystore myKeyStore
+
+#2. export it to file jconsole.cert
+keytool -export -alias jconsole -keystore myKeyStore -file jconsole.cert
+
+#3. copy jconsole.cert to jconsole client machine, import it to jconsoleKeyStore
+keytool -import -alias jconsole -keystore jconsoleKeyStore -file jconsole.cert
+      </screen>
+          And then update <filename>hbase-env.sh</filename> like below:
+      <screen>
+export HBASE_JMX_BASE="-Dcom.sun.management.jmxremote.ssl=true                         \
+                       -Djavax.net.ssl.keyStore=/home/tianq/myKeyStore                 \
+                       -Djavax.net.ssl.keyStorePassword=your_password_in_step_#1       \
+                       -Dcom.sun.management.jmxremote.authenticate=true                \
+                       -Dcom.sun.management.jmxremote.password.file=your_password file \
+                       -Dcom.sun.management.jmxremote.access.file=your_access_file"
+
+export HBASE_MASTER_OPTS="$HBASE_MASTER_OPTS $HBASE_JMX_BASE "
+export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS $HBASE_JMX_BASE "
+      </screen>
+
+          Finally start jconsole on client using the key store:
+      <screen>
+jconsole -J-Djavax.net.ssl.trustStore=/home/tianq/jconsoleKeyStore
+      </screen>
+        </para>
     </section>
+
+   </section>
 
   </section>
   <!--  important config -->
