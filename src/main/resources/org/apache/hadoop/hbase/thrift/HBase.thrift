@@ -17,10 +17,9 @@ struct KeyValue {
 
 struct Put {
   1: binary row;
-  2: i64 ts;
-  3: map<binary, list<KeyValue>> familyMap;
-  4: i64 lockId;
-  5: bool writeToWAL;
+  2: map<binary, list<KeyValue>> familyMap;
+  3: i64 lockId;
+  4: bool writeToWAL;
 }
 
 struct TimeRange {
@@ -211,39 +210,34 @@ service ThriftHRegionInterface {
   bool checkAndPut(1: binary regionName, 2: binary row, 3: binary family, 4: binary qualifier, 5: binary value, 6: Put put) throws (1: ThriftHBaseException ex1);
   void close(1: i64 scannerId) throws (1: ThriftHBaseException ex1);
   void closeRegion(1: HRegionInfo hri, 2: bool reportWhenCompleted) throws (1: ThriftHBaseException ex1);
-  void deleteAsync(1: binary regionName, 2: Delete deleteArg) throws (1: ThriftHBaseException ex1);
   bool exists(1: binary regionName, 2: Get get) throws (1: ThriftHBaseException ex1);
   void flushRegion(1: binary regionName) throws (1: ThriftHBaseException ex1);
   void flushRegionIfOlderThanTS(1: binary regionName, 2: i64 ifOlderThanTS) throws (1: ThriftHBaseException ex1);
-  Result getAsync(1: binary regionName, 2: Get get) throws (1: ThriftHBaseException ex1);
   Result getClosestRowBefore(1: binary regionName, 2: binary row, 3: binary family) throws (1: ThriftHBaseException ex1);
-  Result getClosestRowBeforeAsync(1: binary regionName, 2: binary row, 3: binary family) throws (1: ThriftHBaseException ex1);
-  string getConfProperty(1: string arg0) throws (1: ThriftHBaseException ex1);
-  i64 getCurrentTimeMillis();
+  string getConfProperty(1: string paramName) throws (1: ThriftHBaseException ex1);
+  i64 getCurrentTimeMillis() throws (1: ThriftHBaseException ex1);
   list<string> getHLogsList(1: bool rollCurrentHLog) throws (1: ThriftHBaseException ex1);
   HServerInfo getHServerInfo() throws (1: ThriftHBaseException ex1);
-  list<Bucket> getHistogram(1: binary arg0) throws (1: ThriftHBaseException ex1);
-  list<Bucket> getHistogramForStore(1: binary arg0, 2: binary arg1) throws (1: ThriftHBaseException ex1);
-  list<list<Bucket>> getHistograms(1: list<binary> arg0) throws (1: ThriftHBaseException ex1);
-  i64 getLastFlushTime(1: binary regionName);
-  map<binary, i64> getLastFlushTimes();
+  list<Bucket> getHistogram(1: binary regionName) throws (1: ThriftHBaseException ex1);
+  list<Bucket> getHistogramForStore(1: binary regionName, 2: binary family) throws (1: ThriftHBaseException ex1);
+  list<list<Bucket>> getHistograms(1: list<binary> regionNames) throws (1: ThriftHBaseException ex1);
+  i64 getLastFlushTime(1: binary regionName) throws (1: ThriftHBaseException ex1);
+  map<binary, i64> getLastFlushTimes() throws (1: ThriftHBaseException ex1);
   HRegionLocation getLocation(1: binary tableName, 2: binary row, 3: bool reload) throws (1: ThriftHBaseException ex1);
   HRegionInfo getRegionInfo(1: binary regionName) throws (1: ThriftHBaseException ex1);
   list<HRegionInfo> getRegionsAssignment() throws (1: ThriftHBaseException ex1);
   list<Result> getRows(1: binary regionName, 2: list<Get> gets) throws (1: ThriftHBaseException ex1);
-  i64 getStartCode();
-  string getStopReason();
+  i64 getStartCode() throws (1: ThriftHBaseException ex1);
+  string getStopReason() throws (1: ThriftHBaseException ex1);
   list<string> getStoreFileList(1: binary regionName, 2: binary columnFamily) throws (1: ThriftHBaseException ex1);
   list<string> getStoreFileListForAllColumnFamilies(1: binary regionName) throws (1: ThriftHBaseException ex1);
   list<string> getStoreFileListForColumnFamilies(1: binary regionName, 2: list<binary> columnFamilies) throws (1: ThriftHBaseException ex1);
   i64 incrementColumnValue(1: binary regionName, 2: binary row, 3: binary family, 4: binary qualifier, 5: i64 amount, 6: bool writeToWAL) throws (1: ThriftHBaseException ex1);
-  bool isStopped();
-  i64 lockRow(1: binary regionName, 2: binary row) throws (1: ThriftHBaseException ex1);
-  RowLock lockRowAsync(1: binary regionName, 2: binary row) throws (1: ThriftHBaseException ex1);
+  bool isStopped() throws (1: ThriftHBaseException ex1);
+  RowLock lockRow(1: binary regionName, 2: binary row) throws (1: ThriftHBaseException ex1);
   TMultiResponse multiAction(1: MultiAction multi) throws (1: ThriftHBaseException ex1);
   MultiPutResponse multiPut(1: MultiPut puts) throws (1: ThriftHBaseException ex1);
   void mutateRow(1: binary regionName, 2: TRowMutations arm) throws (1: ThriftHBaseException ex1);
-  void mutateRowAsync(1: binary regionName, 2: TRowMutations arm) throws (1: ThriftHBaseException ex1);
   void mutateRows(1: binary regionName, 2: list<TRowMutations> armList) throws (1: ThriftHBaseException ex1);
   Result next(1: i64 scannerId) throws (1: ThriftHBaseException ex1);
   list<Result> nextRows(1: i64 scannerId, 2: i32 numberOfRows) throws (1: ThriftHBaseException ex1);
@@ -256,12 +250,11 @@ service ThriftHRegionInterface {
   bool scanClose(1: i64 id) throws (1: ThriftHBaseException ex1);
   ScannerResult scanNext(1: i64 id, 2: i32 numberOfRows) throws (1: ThriftHBaseException ex1);
   ScannerResult scanOpen(1: binary regionName, 2: Scan scan, 3: i32 numberOfRows) throws (1: ThriftHBaseException ex1);
-  void setHDFSQuorumReadTimeoutMillis(1: i64 timeoutMillis);
-  void setNumHDFSQuorumReadThreads(1: i32 maxThreads);
-  void stop(1: string why);
-  void stopForRestart();
+  void setHDFSQuorumReadTimeoutMillis(1: i64 timeoutMillis) throws (1: ThriftHBaseException ex1);
+  void setNumHDFSQuorumReadThreads(1: i32 maxThreads) throws (1: ThriftHBaseException ex1);
+  void stop(1: string why) throws (1: ThriftHBaseException ex1);
+  void stopForRestart() throws (1: ThriftHBaseException ex1);
   void unlockRow(1: binary regionName, 2: i64 lockId) throws (1: ThriftHBaseException ex1);
-  void unlockRowAsync(1: binary regionName, 2: i64 lockId) throws (1: ThriftHBaseException ex1);
   void updateConfiguration() throws (1: ThriftHBaseException ex1);
   i32 updateFavoredNodes(1: AssignmentPlan plan) throws (1: ThriftHBaseException ex1);
 }
