@@ -49,12 +49,18 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
   private final SnapshotDescription snapshot;
   private final SnapshotSubprocedurePool taskManager;
 
+  private boolean snapshotSkipFlush = false;
+
   public FlushSnapshotSubprocedure(ProcedureMember member,
       ForeignExceptionDispatcher errorListener, long wakeFrequency, long timeout,
       List<HRegion> regions, SnapshotDescription snapshot,
       SnapshotSubprocedurePool taskManager) {
     super(member, snapshot.getName(), errorListener, wakeFrequency, timeout);
     this.snapshot = snapshot;
+    if (this.snapshot.getType() == SnapshotDescription.Type.SKIPFLUSH) {
+      snapshotSkipFlush = true;
+    }
+
     this.regions = regions;
     this.taskManager = taskManager;
   }
@@ -78,10 +84,25 @@ public class FlushSnapshotSubprocedure extends Subprocedure {
       LOG.debug("Starting region operation on " + region);
       region.startRegionOperation();
       try {
-        LOG.debug("Flush Snapshotting region " + region.toString() + " started...");
-        region.flushcache();
+        if (snapshotSkipFlush) {
+        /*
+         * This is to take an online-snapshot without force a coordinated flush to prevent pause
+         * The snapshot type is defined inside the snapshot description. FlushSnapshotSubprocedure
+         * should be renamed to distributedSnapshotSubprocedure, and the flush() behavior can be
+         * turned on/off based on the flush type.
+         * To minimized the code change, class name is not changed.
+         */
+          LOG.debug("take snapshot without flush memstore first");
+        } else {
+          LOG.debug("Flush Snapshotting region " + region.toString() + " started...");
+          region.flushcache();
+        }
         region.addRegionToSnapshot(snapshot, monitor);
-        LOG.debug("... Flush Snapshotting region " + region.toString() + " completed.");
+        if (snapshotSkipFlush) {
+          LOG.debug("... SkipFlush Snapshotting region " + region.toString() + " completed.");
+        } else {
+          LOG.debug("... Flush Snapshotting region " + region.toString() + " completed.");
+        }
       } finally {
         LOG.debug("Closing region operation on " + region);
         region.closeRegionOperation();

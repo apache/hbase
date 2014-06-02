@@ -57,6 +57,7 @@ module HBaseConstants
   SPLITS_FILE = 'SPLITS_FILE'
   SPLITALGO = 'SPLITALGO'
   NUMREGIONS = 'NUMREGIONS'
+  SKIP_FLUSH = 'SKIP_FLUSH'
 
   # Load constants from hbase java API
   def self.promote_constants(constants)

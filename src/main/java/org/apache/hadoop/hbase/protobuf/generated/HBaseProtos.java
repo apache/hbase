@@ -63,10 +63,12 @@ public final class HBaseProtos {
         implements com.google.protobuf.ProtocolMessageEnum {
       DISABLED(0, 0),
       FLUSH(1, 1),
+      SKIPFLUSH(2, 2),
       ;
       
       public static final int DISABLED_VALUE = 0;
       public static final int FLUSH_VALUE = 1;
+      public static final int SKIPFLUSH_VALUE = 2;
       
       
       public final int getNumber() { return value; }
@@ -75,6 +77,7 @@ public final class HBaseProtos {
         switch (value) {
           case 0: return DISABLED;
           case 1: return FLUSH;
+          case 2: return SKIPFLUSH;
           default: return null;
         }
       }
@@ -105,7 +108,7 @@ public final class HBaseProtos {
       }
       
       private static final Type[] VALUES = {
-        DISABLED, FLUSH, 
+        DISABLED, FLUSH, SKIPFLUSH, 
       };
       
       public static Type valueOf(
@@ -1193,14 +1196,14 @@ public final class HBaseProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\013hbase.proto\"\255\001\n\023SnapshotDescription\022\014\n" +
+      "\n\013hbase.proto\"\274\001\n\023SnapshotDescription\022\014\n" +
       "\004name\030\001 \002(\t\022\r\n\005table\030\002 \001(\t\022\027\n\014creationTi" +
       "me\030\003 \001(\003:\0010\022.\n\004type\030\004 \001(\0162\031.SnapshotDesc" +
-      "ription.Type:\005FLUSH\022\017\n\007version\030\005 \001(\005\"\037\n\004" +
-      "Type\022\014\n\010DISABLED\020\000\022\t\n\005FLUSH\020\001\"$\n\020RegionS" +
-      "erverInfo\022\020\n\010infoPort\030\001 \001(\005B>\n*org.apach" +
-      "e.hadoop.hbase.protobuf.generatedB\013HBase" +
-      "ProtosH\001\240\001\001"
+      "ription.Type:\005FLUSH\022\017\n\007version\030\005 \001(\005\".\n\004" +
+      "Type\022\014\n\010DISABLED\020\000\022\t\n\005FLUSH\020\001\022\r\n\tSKIPFLU" +
+      "SH\020\002\"$\n\020RegionServerInfo\022\020\n\010infoPort\030\001 \001" +
+      "(\005B>\n*org.apache.hadoop.hbase.protobuf.g" +
+      "eneratedB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
