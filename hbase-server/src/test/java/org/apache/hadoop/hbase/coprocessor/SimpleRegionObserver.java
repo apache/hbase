@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -48,6 +49,8 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.ByteArrayComparable;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -96,11 +99,22 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   final AtomicInteger ctPrePut = new AtomicInteger(0);
   final AtomicInteger ctPostPut = new AtomicInteger(0);
   final AtomicInteger ctPreDeleted = new AtomicInteger(0);
+  final AtomicInteger ctPrePrepareDeleteTS = new AtomicInteger(0);
   final AtomicInteger ctPostDeleted = new AtomicInteger(0);
   final AtomicInteger ctPreGetClosestRowBefore = new AtomicInteger(0);
   final AtomicInteger ctPostGetClosestRowBefore = new AtomicInteger(0);
   final AtomicInteger ctPreIncrement = new AtomicInteger(0);
+  final AtomicInteger ctPreIncrementAfterRowLock = new AtomicInteger(0);
+  final AtomicInteger ctPreAppend = new AtomicInteger(0);
+  final AtomicInteger ctPreAppendAfterRowLock = new AtomicInteger(0);
   final AtomicInteger ctPostIncrement = new AtomicInteger(0);
+  final AtomicInteger ctPostAppend = new AtomicInteger(0);
+  final AtomicInteger ctPreCheckAndPut = new AtomicInteger(0);
+  final AtomicInteger ctPreCheckAndPutAfterRowLock = new AtomicInteger(0);
+  final AtomicInteger ctPostCheckAndPut = new AtomicInteger(0);
+  final AtomicInteger ctPreCheckAndDelete = new AtomicInteger(0);
+  final AtomicInteger ctPreCheckAndDeleteAfterRowLock = new AtomicInteger(0);
+  final AtomicInteger ctPostCheckAndDelete = new AtomicInteger(0);
   final AtomicInteger ctPreWALRestored = new AtomicInteger(0);
   final AtomicInteger ctPostWALRestored = new AtomicInteger(0);
   final AtomicInteger ctPreScannerNext = new AtomicInteger(0);
@@ -435,6 +449,12 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
+  public void prePrepareTimeStampForDeleteVersion(ObserverContext<RegionCoprocessorEnvironment> e,
+      Mutation delete, Cell cell, byte[] byteNow, Get get) throws IOException {
+    ctPrePrepareDeleteTS.incrementAndGet();
+  }
+
+  @Override
   public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c, 
       final Delete delete, final WALEdit edit,
       final Durability durability) throws IOException {
@@ -521,10 +541,86 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
+  public Result preIncrementAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> e,
+      Increment increment) throws IOException {
+    ctPreIncrementAfterRowLock.incrementAndGet();
+    return null;
+  }
+
+  @Override
   public Result postIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Increment increment, final Result result) throws IOException {
     ctPostIncrement.incrementAndGet();
     return result;
+  }
+
+  @Override
+  public boolean preCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> e, byte[] row,
+      byte[] family, byte[] qualifier, CompareOp compareOp, ByteArrayComparable comparator,
+      Put put, boolean result) throws IOException {
+    ctPreCheckAndPut.incrementAndGet();
+    return true;
+  }
+
+  @Override
+  public boolean preCheckAndPutAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> e,
+      byte[] row, byte[] family, byte[] qualifier, CompareOp compareOp,
+      ByteArrayComparable comparator, Put put, boolean result) throws IOException {
+    ctPreCheckAndPutAfterRowLock.incrementAndGet();
+    return true;
+  }
+
+  @Override
+  public boolean postCheckAndPut(ObserverContext<RegionCoprocessorEnvironment> e, byte[] row,
+      byte[] family, byte[] qualifier, CompareOp compareOp, ByteArrayComparable comparator,
+      Put put, boolean result) throws IOException {
+    ctPostCheckAndPut.incrementAndGet();
+    return true;
+  }
+
+  @Override
+  public boolean preCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> e, byte[] row,
+      byte[] family, byte[] qualifier, CompareOp compareOp, ByteArrayComparable comparator,
+      Delete delete, boolean result) throws IOException {
+    ctPreCheckAndDelete.incrementAndGet();
+    return true;
+  }
+
+  @Override
+  public boolean preCheckAndDeleteAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> e,
+      byte[] row, byte[] family, byte[] qualifier, CompareOp compareOp,
+      ByteArrayComparable comparator, Delete delete, boolean result) throws IOException {
+    ctPreCheckAndDeleteAfterRowLock.incrementAndGet();
+    return true;
+  }
+
+  @Override
+  public boolean postCheckAndDelete(ObserverContext<RegionCoprocessorEnvironment> e, byte[] row,
+      byte[] family, byte[] qualifier, CompareOp compareOp, ByteArrayComparable comparator,
+      Delete delete, boolean result) throws IOException {
+    ctPostCheckAndDelete.incrementAndGet();
+    return true;
+  }
+
+  @Override
+  public Result preAppendAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> e, 
+      Append append) throws IOException {
+    ctPreAppendAfterRowLock.incrementAndGet();
+    return null;
+  }
+
+  @Override
+  public Result preAppend(ObserverContext<RegionCoprocessorEnvironment> e, Append append)
+      throws IOException {
+    ctPreAppend.incrementAndGet();
+    return null;
+  }
+
+  @Override
+  public Result postAppend(ObserverContext<RegionCoprocessorEnvironment> e, Append append,
+      Result result) throws IOException {
+    ctPostAppend.incrementAndGet();
+    return null;
   }
 
   @Override
@@ -646,14 +742,58 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     return ctPostCloseRegionOperation.get();
   }
 
+  public boolean hadPreCheckAndPut() {
+    return ctPreCheckAndPut.get() > 0;
+  }
+
+  public boolean hadPreCheckAndPutAfterRowLock() {
+    return ctPreCheckAndPutAfterRowLock.get() > 0;
+  }
+
+  public boolean hadPostCheckAndPut() {
+    return ctPostCheckAndPut.get() > 0;
+  }
+
+  public boolean hadPreCheckAndDelete() {
+    return ctPreCheckAndDelete.get() > 0;
+  }
+
+  public boolean hadPreCheckAndDeleteAfterRowLock() {
+    return ctPreCheckAndDeleteAfterRowLock.get() > 0;
+  }
+
+  public boolean hadPostCheckAndDelete() {
+    return ctPostCheckAndDelete.get() > 0;
+  }
+
   public boolean hadPreIncrement() {
     return ctPreIncrement.get() > 0;
+  }
+  
+  public boolean hadPreIncrementAfterRowLock() {
+    return ctPreIncrementAfterRowLock.get() > 0;
   }
 
   public boolean hadPostIncrement() {
     return ctPostIncrement.get() > 0;
   }
 
+  public boolean hadPreAppend() {
+    return ctPreAppend.get() > 0;
+  }
+
+  public boolean hadPreAppendAfterRowLock() {
+    return ctPreAppendAfterRowLock.get() > 0;
+  }
+
+  public boolean hadPostAppend() {
+    return ctPostAppend.get() > 0;
+  }
+
+  public boolean hadPrePreparedDeleteTS() {
+    return ctPrePrepareDeleteTS.get() > 0;
+  }
+  
   public boolean hadPreWALRestored() {
     return ctPreWALRestored.get() > 0;
   }

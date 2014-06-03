@@ -311,6 +311,12 @@ public abstract class BaseRegionObserver implements RegionObserver {
   }
 
   @Override
+  public void prePrepareTimeStampForDeleteVersion(
+      final ObserverContext<RegionCoprocessorEnvironment> e, final Mutation delete,
+      final Cell cell, final byte[] byteNow, final Get get) throws IOException {
+  }
+
+  @Override
   public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Delete delete, final WALEdit edit, final Durability durability)
       throws IOException {
@@ -340,6 +346,15 @@ public abstract class BaseRegionObserver implements RegionObserver {
   }
 
   @Override
+  public boolean preCheckAndPutAfterRowLock(
+      final ObserverContext<RegionCoprocessorEnvironment> e,
+      final byte[] row, final byte[] family, final byte[] qualifier, final CompareOp compareOp,
+      final ByteArrayComparable comparator, final Put put,
+      final boolean result) throws IOException {
+    return result;
+  }
+
+  @Override
   public boolean postCheckAndPut(final ObserverContext<RegionCoprocessorEnvironment> e,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final ByteArrayComparable comparator,
@@ -356,6 +371,15 @@ public abstract class BaseRegionObserver implements RegionObserver {
   }
 
   @Override
+  public boolean preCheckAndDeleteAfterRowLock(
+      final ObserverContext<RegionCoprocessorEnvironment> e,
+      final byte[] row, final byte[] family, final byte[] qualifier, final CompareOp compareOp,
+      final ByteArrayComparable comparator, final Delete delete,
+      final boolean result) throws IOException {
+    return result;
+  }
+
+  @Override
   public boolean postCheckAndDelete(final ObserverContext<RegionCoprocessorEnvironment> e,
       final byte [] row, final byte [] family, final byte [] qualifier,
       final CompareOp compareOp, final ByteArrayComparable comparator,
@@ -365,6 +389,12 @@ public abstract class BaseRegionObserver implements RegionObserver {
 
   @Override
   public Result preAppend(final ObserverContext<RegionCoprocessorEnvironment> e,
+      final Append append) throws IOException {
+    return null;
+  }
+
+  @Override
+  public Result preAppendAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Append append) throws IOException {
     return null;
   }
@@ -392,6 +422,12 @@ public abstract class BaseRegionObserver implements RegionObserver {
 
   @Override
   public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> e,
+      final Increment increment) throws IOException {
+    return null;
+  }
+
+  @Override
+  public Result preIncrementAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Increment increment) throws IOException {
     return null;
   }

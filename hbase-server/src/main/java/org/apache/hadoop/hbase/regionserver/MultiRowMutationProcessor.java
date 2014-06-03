@@ -27,9 +27,9 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationProcessorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRowMutationProcessorResponse;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -80,7 +80,7 @@ MultiRowMutationProcessorResponse> {
       } else if (m instanceof Delete) {
         Delete d = (Delete) m;
         region.prepareDelete(d);
-        region.prepareDeleteTimestamps(d.getFamilyCellMap(), byteNow);
+        region.prepareDeleteTimestamps(d, d.getFamilyCellMap(), byteNow);
       } else {
         throw new DoNotRetryIOException(
             "Action must be Put or Delete. But was: "

@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -145,9 +146,9 @@ public class TestRegionObserverInterface {
 
       verifyMethodResult(SimpleRegionObserver.class,
           new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
-      "hadDelete"},
+      "hadDelete", "hadPrePreparedDeleteTS"},
       tableName,
-      new Boolean[] {true, true, true, true, false}
+      new Boolean[] {true, true, true, true, false, false}
           );
 
       Delete delete = new Delete(ROW);
@@ -158,9 +159,9 @@ public class TestRegionObserverInterface {
 
       verifyMethodResult(SimpleRegionObserver.class,
           new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
-        "hadPreBatchMutate", "hadPostBatchMutate", "hadDelete"},
+        "hadPreBatchMutate", "hadPostBatchMutate", "hadDelete", "hadPrePreparedDeleteTS"},
         tableName,
-        new Boolean[] {true, true, true, true, true, true, true}
+        new Boolean[] {true, true, true, true, true, true, true, true}
           );
     } finally {
       util.deleteTable(tableName);
@@ -218,17 +219,106 @@ public class TestRegionObserverInterface {
       inc.addColumn(A, A, 1);
 
       verifyMethodResult(SimpleRegionObserver.class,
-          new String[] {"hadPreIncrement", "hadPostIncrement"},
+          new String[] {"hadPreIncrement", "hadPostIncrement", "hadPreIncrementAfterRowLock"},
           tableName,
-          new Boolean[] {false, false}
+          new Boolean[] {false, false, false}
           );
 
       table.increment(inc);
 
       verifyMethodResult(SimpleRegionObserver.class,
-          new String[] {"hadPreIncrement", "hadPostIncrement"},
+          new String[] {"hadPreIncrement", "hadPostIncrement", "hadPreIncrementAfterRowLock"},
           tableName,
-          new Boolean[] {true, true}
+          new Boolean[] {true, true, true}
+          );
+    } finally {
+      util.deleteTable(tableName);
+      table.close();
+    }
+  }
+
+  @Test
+  public void testCheckAndPutHooks() throws IOException {
+    TableName tableName = 
+        TableName.valueOf(TEST_TABLE.getNameAsString() + ".testCheckAndPutHooks");
+    HTable table = util.createTable(tableName, new byte[][] {A, B, C});
+    try {
+      Put p = new Put(Bytes.toBytes(0));
+      p.add(A, A, A);
+      table.put(p);
+      table.flushCommits();
+      p = new Put(Bytes.toBytes(0));
+      p.add(A, A, A);
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"hadPreCheckAndPut", 
+              "hadPreCheckAndPutAfterRowLock", "hadPostCheckAndPut"},
+          tableName,
+          new Boolean[] {false, false, false}
+          );
+      table.checkAndPut(Bytes.toBytes(0), A, A, A, p);
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"hadPreCheckAndPut", 
+              "hadPreCheckAndPutAfterRowLock", "hadPostCheckAndPut"},
+          tableName,
+          new Boolean[] {true, true, true}
+          );
+    } finally {
+      util.deleteTable(tableName);
+      table.close();
+    }
+  }
+
+  @Test
+  public void testCheckAndDeleteHooks() throws IOException {
+    TableName tableName = 
+        TableName.valueOf(TEST_TABLE.getNameAsString() + ".testCheckAndDeleteHooks");
+    HTable table = util.createTable(tableName, new byte[][] {A, B, C});
+    try {
+      Put p = new Put(Bytes.toBytes(0));
+      p.add(A, A, A);
+      table.put(p);
+      table.flushCommits();
+      Delete d = new Delete(Bytes.toBytes(0));
+      table.delete(d);
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"hadPreCheckAndDelete", 
+              "hadPreCheckAndDeleteAfterRowLock", "hadPostCheckAndDelete"},
+          tableName,
+          new Boolean[] {false, false, false}
+          );
+      table.checkAndDelete(Bytes.toBytes(0), A, A, A, d);
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"hadPreCheckAndDelete", 
+              "hadPreCheckAndDeleteAfterRowLock", "hadPostCheckAndDelete"},
+          tableName,
+          new Boolean[] {true, true, true}
+          );
+    } finally {
+      util.deleteTable(tableName);
+      table.close();
+    }
+  }
+
+  @Test
+  public void testAppendHook() throws IOException {
+    TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".testAppendHook");
+    HTable table = util.createTable(tableName, new byte[][] {A, B, C});
+    try {
+      Append app = new Append(Bytes.toBytes(0));
+      app.add(A, A, A);
+
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"hadPreAppend", "hadPostAppend", "hadPreAppendAfterRowLock"},
+          tableName,
+          new Boolean[] {false, false, false}
+          );
+
+      table.append(app);
+
+      verifyMethodResult(SimpleRegionObserver.class,
+          new String[] {"hadPreAppend", "hadPostAppend", "hadPreAppendAfterRowLock"},
+          tableName,
+          new Boolean[] {true, true, true}
           );
     } finally {
       util.deleteTable(tableName);
