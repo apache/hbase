@@ -123,13 +123,17 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
         if (ZKUtil.watchAndCheckExists(zkProc.getWatcher(), znode)) {
           byte[] dataFromMember = ZKUtil.getData(zkProc.getWatcher(), znode);
           // ProtobufUtil.isPBMagicPrefix will check null
-          if (!ProtobufUtil.isPBMagicPrefix(dataFromMember)) {
-            throw new IOException(
+          if (dataFromMember != null && dataFromMember.length > 0) {
+            if (!ProtobufUtil.isPBMagicPrefix(dataFromMember)) {
+              throw new IOException(
                 "Failed to get data from finished node or data is illegally formatted: "
-                + znode);
+                    + znode);
+            } else {
+              dataFromMember = Arrays.copyOfRange(dataFromMember, ProtobufUtil.lengthOfPBMagic(),
+                dataFromMember.length);
+              coordinator.memberFinishedBarrier(procName, node, dataFromMember);
+            }
           } else {
-            dataFromMember = Arrays.copyOfRange(dataFromMember, ProtobufUtil.lengthOfPBMagic(),
-              dataFromMember.length);
             coordinator.memberFinishedBarrier(procName, node, dataFromMember);
           }
         }
@@ -196,16 +200,20 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
             try {
               byte[] dataFromMember = ZKUtil.getData(watcher, path);
               // ProtobufUtil.isPBMagicPrefix will check null
-              if (!ProtobufUtil.isPBMagicPrefix(dataFromMember)) {
-                ForeignException ee = new ForeignException(coordName,
-                  "Failed to get data from finished node or data is illegally formatted:"
-                      + path);
-                coordinator.abortProcedure(procName, ee);
+              if (dataFromMember != null && dataFromMember.length > 0) {
+                if (!ProtobufUtil.isPBMagicPrefix(dataFromMember)) {
+                  ForeignException ee = new ForeignException(coordName,
+                    "Failed to get data from finished node or data is illegally formatted:"
+                        + path);
+                  coordinator.abortProcedure(procName, ee);
+                } else {
+                  dataFromMember = Arrays.copyOfRange(dataFromMember, ProtobufUtil.lengthOfPBMagic(),
+                    dataFromMember.length);
+                  LOG.debug("Finished data from procedure '" + procName
+                    + "' member '" + member + "': " + new String(dataFromMember));
+                  coordinator.memberFinishedBarrier(procName, member, dataFromMember);
+                }
               } else {
-                dataFromMember = Arrays.copyOfRange(dataFromMember, ProtobufUtil.lengthOfPBMagic(),
-                  dataFromMember.length);
-                LOG.debug("Finished data from procedure '" + procName
-                  + "' member '" + member + "': " + new String(dataFromMember));
                 coordinator.memberFinishedBarrier(procName, member, dataFromMember);
               }
             } catch (KeeperException e) {
