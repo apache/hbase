@@ -1135,6 +1135,44 @@ public class RegionCoprocessorHost
   }
 
   /**
+   * @param mutation - the current mutation
+   * @param kv - the current cell
+   * @param byteNow - current timestamp in bytes
+   * @param get - the get that could be used
+   * Note that the get only does not specify the family and qualifier that should be used
+   * @return true if default processing should be bypassed
+   * @exception IOException
+   *              Exception
+   */
+  public boolean prePrepareTimeStampForDeleteVersion(Mutation mutation,
+      Cell kv, byte[] byteNow, Get get) throws IOException {
+    boolean bypass = false;
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
+        try {
+          currentThread.setContextClassLoader(env.getClassLoader());
+          ((RegionObserver) env.getInstance())
+              .prePrepareTimeStampForDeleteVersion(ctx, mutation, kv,
+                  byteNow, get);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
+        }
+        bypass |= ctx.shouldBypass();
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return bypass;
+  }
+
+  /**
    * @param put The Put object
    * @param edit The WALEdit object.
    * @param durability The durability used
@@ -1356,6 +1394,46 @@ public class RegionCoprocessorHost
    * @param compareOp the comparison operation
    * @param comparator the comparator
    * @param put data to put if check succeeds
+   * @return true or false to return to client if default processing should
+   * be bypassed, or null otherwise
+   * @throws IOException e
+   */
+  public Boolean preCheckAndPutAfterRowLock(final byte[] row, final byte[] family,
+      final byte[] qualifier, final CompareOp compareOp, final ByteArrayComparable comparator,
+      final Put put) throws IOException {
+    boolean bypass = false;
+    boolean result = false;
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
+        try {
+          currentThread.setContextClassLoader(env.getClassLoader());
+          result = ((RegionObserver) env.getInstance()).preCheckAndPutAfterRowLock(ctx, row,
+              family, qualifier, compareOp, comparator, put, result);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
+        }
+        bypass |= ctx.shouldBypass();
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return bypass ? result : null;
+  }
+
+  /**
+   * @param row row to check
+   * @param family column family
+   * @param qualifier column qualifier
+   * @param compareOp the comparison operation
+   * @param comparator the comparator
+   * @param put data to put if check succeeds
    * @throws IOException e
    */
   public boolean postCheckAndPut(final byte [] row, final byte [] family,
@@ -1413,6 +1491,46 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(env.getClassLoader());
           result = ((RegionObserver)env.getInstance()).preCheckAndDelete(ctx, row, family,
             qualifier, compareOp, comparator, delete, result);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
+        }
+        bypass |= ctx.shouldBypass();
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return bypass ? result : null;
+  }
+
+  /**
+   * @param row row to check
+   * @param family column family
+   * @param qualifier column qualifier
+   * @param compareOp the comparison operation
+   * @param comparator the comparator
+   * @param delete delete to commit if check succeeds
+   * @return true or false to return to client if default processing should
+   * be bypassed, or null otherwise
+   * @throws IOException e
+   */
+  public Boolean preCheckAndDeleteAfterRowLock(final byte[] row, final byte[] family,
+      final byte[] qualifier, final CompareOp compareOp, final ByteArrayComparable comparator,
+      final Delete delete) throws IOException {
+    boolean bypass = false;
+    boolean result = false;
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
+        try {
+          currentThread.setContextClassLoader(env.getClassLoader());
+          result = ((RegionObserver) env.getInstance()).preCheckAndDeleteAfterRowLock(ctx, row,
+              family, qualifier, compareOp, comparator, delete, result);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         } finally {
@@ -1496,6 +1614,38 @@ public class RegionCoprocessorHost
   }
 
   /**
+   * @param append append object
+   * @return result to return to client if default operation should be
+   * bypassed, null otherwise
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  public Result preAppendAfterRowLock(final Append append) throws IOException {
+    boolean bypass = false;
+    Result result = null;
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
+        try {
+          currentThread.setContextClassLoader(env.getClassLoader());
+          result = ((RegionObserver) env.getInstance()).preAppendAfterRowLock(ctx, append);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
+        }
+        bypass |= ctx.shouldBypass();
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return bypass ? result : null;
+  }
+
+  /**
    * @param increment increment object
    * @return result to return to client if default operation should be
    * bypassed, null otherwise
@@ -1513,6 +1663,38 @@ public class RegionCoprocessorHost
         try {
           currentThread.setContextClassLoader(env.getClassLoader());
           result = ((RegionObserver)env.getInstance()).preIncrement(ctx, increment);
+        } catch (Throwable e) {
+          handleCoprocessorThrowable(env, e);
+        } finally {
+          currentThread.setContextClassLoader(cl);
+        }
+        bypass |= ctx.shouldBypass();
+        if (ctx.shouldComplete()) {
+          break;
+        }
+      }
+    }
+    return bypass ? result : null;
+  }
+
+  /**
+   * @param increment increment object
+   * @return result to return to client if default operation should be
+   * bypassed, null otherwise
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  public Result preIncrementAfterRowLock(final Increment increment) throws IOException {
+    boolean bypass = false;
+    Result result = null;
+    ObserverContext<RegionCoprocessorEnvironment> ctx = null;
+    for (RegionEnvironment env : coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        ctx = ObserverContext.createAndPrepare(env, ctx);
+        Thread currentThread = Thread.currentThread();
+        ClassLoader cl = currentThread.getContextClassLoader();
+        try {
+          currentThread.setContextClassLoader(env.getClassLoader());
+          result = ((RegionObserver) env.getInstance()).preIncrementAfterRowLock(ctx, increment);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         } finally {

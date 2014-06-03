@@ -587,6 +587,24 @@ public interface RegionObserver extends Coprocessor {
   void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c, 
       final Delete delete, final WALEdit edit, final Durability durability)
     throws IOException;
+/**
+ * Called before the server updates the timestamp for version delete with latest timestamp.
+ * <p>
+ * Call CoprocessorEnvironment#bypass to skip default actions
+ * <p>
+ * Call CoprocessorEnvironment#complete to skip any subsequent chained
+ * coprocessors
+ * @param c the environment provided by the region server
+ * @param mutation - the parent mutation associated with this delete cell
+ * @param cell - The deleteColumn with latest version cell
+ * @param byteNow - timestamp bytes
+ * @param get - the get formed using the current cell's row.
+ * Note that the get does not specify the family and qualifier
+ * @throws IOException
+ */
+  void prePrepareTimeStampForDeleteVersion(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Mutation mutation, final Cell cell, final byte[] byteNow,
+      final Get get) throws IOException;
 
   /**
    * Called after the client deletes a value.
@@ -657,7 +675,7 @@ public interface RegionObserver extends Coprocessor {
       MiniBatchOperationInProgress<Mutation> miniBatchOp, final boolean success) throws IOException;
 
   /**
-   * Called before checkAndPut
+   * Called before checkAndPut.
    * <p>
    * Call CoprocessorEnvironment#bypass to skip default actions
    * <p>
@@ -682,6 +700,34 @@ public interface RegionObserver extends Coprocessor {
     throws IOException;
 
   /**
+   * Called before checkAndPut but after acquiring rowlock.
+   * <p>
+   * <b>Note:</b> Caution to be taken for not doing any long time operation in this hook. 
+   * Row will be locked for longer time. Trying to acquire lock on another row, within this, 
+   * can lead to potential deadlock.
+   * <p>
+   * Call CoprocessorEnvironment#bypass to skip default actions
+   * <p>
+   * Call CoprocessorEnvironment#complete to skip any subsequent chained
+   * coprocessors
+   * @param c the environment provided by the region server
+   * @param row row to check
+   * @param family column family
+   * @param qualifier column qualifier
+   * @param compareOp the comparison operation
+   * @param comparator the comparator
+   * @param put data to put if check succeeds
+   * @param result 
+   * @return the return value to return to client if bypassing default
+   * processing
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  boolean preCheckAndPutAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final byte[] row, final byte[] family, final byte[] qualifier, final CompareOp compareOp,
+      final ByteArrayComparable comparator, final Put put, 
+      final boolean result) throws IOException;
+
+  /**
    * Called after checkAndPut
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
@@ -704,7 +750,7 @@ public interface RegionObserver extends Coprocessor {
     throws IOException;
 
   /**
-   * Called before checkAndDelete
+   * Called before checkAndDelete.
    * <p>
    * Call CoprocessorEnvironment#bypass to skip default actions
    * <p>
@@ -726,6 +772,33 @@ public interface RegionObserver extends Coprocessor {
       final CompareOp compareOp, final ByteArrayComparable comparator,
       final Delete delete, final boolean result)
     throws IOException;
+
+  /**
+   * Called before checkAndDelete but after acquiring rowock.
+   * <p>
+   * <b>Note:</b> Caution to be taken for not doing any long time operation in this hook. 
+   * Row will be locked for longer time. Trying to acquire lock on another row, within this, 
+   * can lead to potential deadlock.
+   * <p>
+   * Call CoprocessorEnvironment#bypass to skip default actions
+   * <p>
+   * Call CoprocessorEnvironment#complete to skip any subsequent chained
+   * coprocessors
+   * @param c the environment provided by the region server
+   * @param row row to check
+   * @param family column family
+   * @param qualifier column qualifier
+   * @param compareOp the comparison operation
+   * @param comparator the comparator
+   * @param delete delete to commit if check succeeds
+   * @param result 
+   * @return the value to return to client if bypassing default processing
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  boolean preCheckAndDeleteAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final byte[] row, final byte[] family, final byte[] qualifier, final CompareOp compareOp,
+      final ByteArrayComparable comparator, final Delete delete,
+      final boolean result) throws IOException;
 
   /**
    * Called after checkAndDelete
@@ -795,7 +868,7 @@ public interface RegionObserver extends Coprocessor {
     throws IOException;
 
   /**
-   * Called before Append
+   * Called before Append.
    * <p>
    * Call CoprocessorEnvironment#bypass to skip default actions
    * <p>
@@ -809,6 +882,25 @@ public interface RegionObserver extends Coprocessor {
   Result preAppend(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Append append)
     throws IOException;
+
+  /**
+   * Called before Append but after acquiring rowlock.
+   * <p>
+   * <b>Note:</b> Caution to be taken for not doing any long time operation in this hook. 
+   * Row will be locked for longer time. Trying to acquire lock on another row, within this, 
+   * can lead to potential deadlock.
+   * <p>
+   * Call CoprocessorEnvironment#bypass to skip default actions
+   * <p>
+   * Call CoprocessorEnvironment#complete to skip any subsequent chained
+   * coprocessors
+   * @param c the environment provided by the region server
+   * @param append Append object
+   * @return result to return to the client if bypassing default processing
+   * @throws IOException if an error occurred on the coprocessor
+   */
+  Result preAppendAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Append append) throws IOException;
 
   /**
    * Called after Append
@@ -826,7 +918,7 @@ public interface RegionObserver extends Coprocessor {
     throws IOException;
 
   /**
-   * Called before Increment
+   * Called before Increment.
    * <p>
    * Call CoprocessorEnvironment#bypass to skip default actions
    * <p>
@@ -840,6 +932,28 @@ public interface RegionObserver extends Coprocessor {
   Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Increment increment)
     throws IOException;
+
+  /**
+   * Called before Increment but after acquiring rowlock.
+   * <p>
+   * <b>Note:</b> Caution to be taken for not doing any long time operation in this hook. 
+   * Row will be locked for longer time. Trying to acquire lock on another row, within this, 
+   * can lead to potential deadlock.
+   * <p>
+   * Call CoprocessorEnvironment#bypass to skip default actions
+   * <p>
+   * Call CoprocessorEnvironment#complete to skip any subsequent chained coprocessors
+   * 
+   * @param c
+   *          the environment provided by the region server
+   * @param increment
+   *          increment object
+   * @return result to return to the client if bypassing default processing
+   * @throws IOException
+   *           if an error occurred on the coprocessor
+   */
+  Result preIncrementAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final Increment increment) throws IOException;
 
   /**
    * Called after increment

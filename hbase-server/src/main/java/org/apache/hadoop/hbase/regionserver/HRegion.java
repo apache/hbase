@@ -2012,12 +2012,13 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * Setup correct timestamps in the KVs in Delete object.
    * Caller should have the row and region locks.
+   * @param mutation
    * @param familyMap
    * @param byteNow
    * @throws IOException
    */
-  void prepareDeleteTimestamps(Map<byte[], List<Cell>> familyMap, byte[] byteNow)
-      throws IOException {
+  void prepareDeleteTimestamps(Mutation mutation, Map<byte[], List<Cell>> familyMap,
+      byte[] byteNow) throws IOException {
     for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
 
       byte[] family = e.getKey();
@@ -2043,25 +2044,36 @@ public class HRegion implements HeapSize { // , Writable{
           Get get = new Get(kv.getRow());
           get.setMaxVersions(count);
           get.addColumn(family, qual);
-
-          List<Cell> result = get(get, false);
-
-          if (result.size() < count) {
-            // Nothing to delete
-            kv.updateLatestStamp(byteNow);
-            continue;
+          if (coprocessorHost != null) {
+            if (!coprocessorHost.prePrepareTimeStampForDeleteVersion(mutation, cell, byteNow,
+                get)) {
+              updateDeleteLatestVersionTimeStamp(kv, get, count, byteNow);
+            }
+          } else {
+            updateDeleteLatestVersionTimeStamp(kv, get, count, byteNow);
           }
-          if (result.size() > count) {
-            throw new RuntimeException("Unexpected size: " + result.size());
-          }
-          KeyValue getkv = KeyValueUtil.ensureKeyValue(result.get(count - 1));
-          Bytes.putBytes(kv.getBuffer(), kv.getTimestampOffset(),
-              getkv.getBuffer(), getkv.getTimestampOffset(), Bytes.SIZEOF_LONG);
         } else {
           kv.updateLatestStamp(byteNow);
         }
       }
     }
+  }
+
+  void updateDeleteLatestVersionTimeStamp(KeyValue kv, Get get, int count, byte[] byteNow)
+      throws IOException {
+    List<Cell> result = get(get, false);
+
+    if (result.size() < count) {
+      // Nothing to delete
+      kv.updateLatestStamp(byteNow);
+      return;
+    }
+    if (result.size() > count) {
+      throw new RuntimeException("Unexpected size: " + result.size());
+    }
+    KeyValue getkv = KeyValueUtil.ensureKeyValue(result.get(count - 1));
+    Bytes.putBytes(kv.getBuffer(), kv.getTimestampOffset(), getkv.getBuffer(),
+        getkv.getTimestampOffset(), Bytes.SIZEOF_LONG);
   }
 
   /**
@@ -2437,7 +2449,9 @@ public class HRegion implements HeapSize { // , Writable{
           updateKVTimestamps(familyMaps[i].values(), byteNow);
           noOfPuts++;
         } else {
-          prepareDeleteTimestamps(familyMaps[i], byteNow);
+          if (!isInReplay) {
+            prepareDeleteTimestamps(mutation, familyMaps[i], byteNow);
+          }
           noOfDeletes++;
         }
       }
@@ -2700,9 +2714,21 @@ public class HRegion implements HeapSize { // , Writable{
       RowLock rowLock = getRowLock(get.getRow());
       // wait for all previous transactions to complete (with lock held)
       mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
-      List<Cell> result;
       try {
-        result = get(get, false);
+        if (this.getCoprocessorHost() != null) {
+          Boolean processed = null;
+          if (w instanceof Put) {
+            processed = this.getCoprocessorHost().preCheckAndPutAfterRowLock(row, family, 
+                qualifier, compareOp, comparator, (Put) w);
+          } else if (w instanceof Delete) {
+            processed = this.getCoprocessorHost().preCheckAndDeleteAfterRowLock(row, family,
+                qualifier, compareOp, comparator, (Delete) w);
+          }
+          if (processed != null) {
+            return processed;
+          }
+        }
+        List<Cell> result = get(get, false);
 
         boolean valueIsNull = comparator.getValue() == null ||
           comparator.getValue().length == 0;
@@ -5091,12 +5117,18 @@ public class HRegion implements HeapSize { // , Writable{
       rowLock = getRowLock(row);
       try {
         lock(this.updatesLock.readLock());
-        // wait for all prior MVCC transactions to finish - while we hold the row lock
-        // (so that we are guaranteed to see the latest state)
-        mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
-        // now start my own transaction
-        w = mvcc.beginMemstoreInsert();
         try {
+          // wait for all prior MVCC transactions to finish - while we hold the row lock
+          // (so that we are guaranteed to see the latest state)
+          mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
+          if (this.coprocessorHost != null) {
+            Result r = this.coprocessorHost.preAppendAfterRowLock(append);
+            if(r!= null) {
+              return r;
+            }
+          }
+          // now start my own transaction
+          w = mvcc.beginMemstoreInsert();
           long now = EnvironmentEdgeManager.currentTimeMillis();
           // Process each family
           for (Map.Entry<byte[], List<Cell>> family : append.getFamilyCellMap().entrySet()) {
@@ -5281,12 +5313,18 @@ public class HRegion implements HeapSize { // , Writable{
       RowLock rowLock = getRowLock(row);
       try {
         lock(this.updatesLock.readLock());
-        // wait for all prior MVCC transactions to finish - while we hold the row lock
-        // (so that we are guaranteed to see the latest state)
-        mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
-        // now start my own transaction
-        w = mvcc.beginMemstoreInsert();
         try {
+          // wait for all prior MVCC transactions to finish - while we hold the row lock
+          // (so that we are guaranteed to see the latest state)
+          mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
+          if (this.coprocessorHost != null) {
+            Result r = this.coprocessorHost.preIncrementAfterRowLock(increment);
+            if (r != null) {
+              return r;
+            }
+          }
+          // now start my own transaction
+          w = mvcc.beginMemstoreInsert();
           long now = EnvironmentEdgeManager.currentTimeMillis();
           // Process each family
           for (Map.Entry<byte [], List<Cell>> family:
