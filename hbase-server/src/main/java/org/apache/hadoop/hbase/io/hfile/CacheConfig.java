@@ -423,8 +423,7 @@ public class CacheConfig {
   static BlockCache GLOBAL_BLOCK_CACHE_INSTANCE;
 
   /** Boolean whether we have disabled the block cache entirely. */
-  @VisibleForTesting
-  static boolean blockCacheDisabled = false;
+  private static boolean blockCacheDisabled = false;
 
   /**
    * Returns the block cache or <code>null</code> in case none should be used.
@@ -438,7 +437,7 @@ public class CacheConfig {
 
     float cachePercentage = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
       HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
-    if (cachePercentage <= 0.0001f) {
+    if (cachePercentage == 0L) {
       blockCacheDisabled = true;
       return null;
     }
