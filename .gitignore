@@ -4,7 +4,8 @@
 /.project
 /.settings
 /build
-/lib/native/Linux-amd64-64/libgpl*
+/lib/native/
+/lib/hadoop-lzo-0.4.1.jar
 /.idea/
 /logs
 /target

@@ -152,6 +152,34 @@ add_maven_test_classes_to_classpath() {
   fi
 }
 
+expand_native_jars() {
+    native_dir=$HBASE_HOME/lib/native/
+    if [ -d ${native_dir} ]; then
+        return;
+    fi
+
+    mkdir -p "${native_dir}"
+
+    while read -d: jarname; do
+        if [[ ${jarname} == *-native*.jar ]] && [ -f ${jarname} ]; then
+            expand_single_native_jar ${jarname} ${native_dir}
+        fi
+    done <<< $1
+}
+
+expand_single_native_jar() {
+    jar=$1
+    target=$2
+    TEMPDIR=`mktemp --directory -t hbase-native.XXXXXXX 2>/dev/null || mktemp -d -t 'hbase-native'`
+    pushd $TEMPDIR
+    unzip $jar
+    for nd in $(find . -name "native" -type d); do
+        cp -r ${nd}/* ${target}
+    done
+    popd
+    rm -rf $TEMPDIR
+}
+
 # Add maven target directory
 if $in_sources_dir; then
   add_maven_deps_to_classpath
@@ -226,6 +254,8 @@ fi
  
 # restore ordinary behaviour
 unset IFS
+
+expand_native_jars $CLASSPATH
 
 # figure out which class to run
 if [ "$COMMAND" = "shell" ] ; then
