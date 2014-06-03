@@ -17,9 +17,9 @@ struct KeyValue {
 
 struct Put {
   1: binary row;
-  2: map<binary, list<KeyValue>> familyMap;
-  3: i64 lockId;
-  4: bool writeToWAL;
+  3: map<binary, list<KeyValue>> familyMap;
+  4: i64 lockId;
+  5: bool writeToWAL;
 }
 
 struct TimeRange {

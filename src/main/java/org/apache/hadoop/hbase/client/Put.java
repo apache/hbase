@@ -102,9 +102,9 @@ public class Put extends Mutation
    */
   @ThriftConstructor
   public Put(@ThriftField(1) final byte[] row,
-      @ThriftField(2) Map<byte[], List<KeyValue>> familyMap,
-      @ThriftField(3) final long lockId,
-      @ThriftField(4) final boolean writeToWAL) {
+      @ThriftField(3) Map<byte[], List<KeyValue>> familyMap,
+      @ThriftField(4) final long lockId,
+      @ThriftField(5) final boolean writeToWAL) {
     this(row, null);
     this.familyMap.putAll(familyMap);
     this.lockId = lockId;
@@ -122,7 +122,7 @@ public class Put extends Mutation
   }
 
   @Override
-  @ThriftField(2)
+  @ThriftField(3)
   public Map<byte[], List<KeyValue>> getFamilyMap() {
     return familyMap;
   }
@@ -131,7 +131,7 @@ public class Put extends Mutation
    * {@inheritDoc}
    */
   @Override
-  @ThriftField(3)
+  @ThriftField(4)
   public long getLockId() {
     return this.lockId;
   }
@@ -140,7 +140,7 @@ public class Put extends Mutation
    * {@inheritDoc}
    */
   @Override
-  @ThriftField(4)
+  @ThriftField(5)
   public boolean getWriteToWAL() {
     return this.writeToWAL;
   }
