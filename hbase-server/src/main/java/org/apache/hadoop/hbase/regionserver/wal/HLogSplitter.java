@@ -269,10 +269,10 @@ public class HLogSplitter {
     int editsCount = 0;
     int editsSkipped = 0;
 
+    status =
+        TaskMonitor.get().createStatus(
+          "Splitting log file " + logfile.getPath() + "into a temporary staging area.");
     try {
-      status = TaskMonitor.get().createStatus(
-        "Splitting log file " + logfile.getPath() +
-        "into a temporary staging area.");
       long logLength = logfile.getLen();
       LOG.info("Splitting hlog: " + logPath + ", length=" + logLength);
       LOG.info("DistributedLogReplay = " + this.distributedLogReplay);
@@ -290,7 +290,6 @@ public class HLogSplitter {
         isCorrupted = true;
       }
       if (in == null) {
-        status.markComplete("Was nothing to split in log file");
         LOG.warn("Nothing to split in log file " + logPath);
         return true;
       }
@@ -364,14 +363,21 @@ public class HLogSplitter {
       throw e;
     } finally {
       LOG.debug("Finishing writing output logs and closing down.");
-      if (outputSinkStarted) {
-        progress_failed = outputSink.finishWritingAndClose() == null;
+      try {
+        if (outputSinkStarted) {
+          // Set progress_failed to true as the immediate following statement will reset its value
+          // when finishWritingAndClose() throws exception, progress_failed has the right value
+          progress_failed = true;
+          progress_failed = outputSink.finishWritingAndClose() == null;
+        }
+      } finally {
+        String msg =
+            "Processed " + editsCount + " edits across " + outputSink.getNumberOfRecoveredRegions()
+                + " regions; log file=" + logPath + " is corrupted = " + isCorrupted
+                + " progress failed = " + progress_failed;
+        LOG.info(msg);
+        status.markComplete(msg);
       }
-      String msg = "Processed " + editsCount + " edits across "
-          + outputSink.getNumberOfRecoveredRegions() + " regions; log file=" + logPath
-          + " is corrupted = " + isCorrupted + " progress failed = " + progress_failed;
-      LOG.info(msg);
-      status.markComplete(msg);
     }
     return !progress_failed;
   }
