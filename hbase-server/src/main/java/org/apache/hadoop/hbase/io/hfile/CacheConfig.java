@@ -88,6 +88,12 @@ public class CacheConfig {
   public static final String BUCKET_CACHE_WRITER_THREADS_KEY = "hbase.bucketcache.writer.threads";
   public static final String BUCKET_CACHE_WRITER_QUEUE_KEY = 
       "hbase.bucketcache.writer.queuelength";
+
+  /**
+   * A comma-delimited array of values for use as bucket sizes.
+   */
+  public static final String BUCKET_CACHE_BUCKETS_KEY = "hbase.bucketcache.bucket.sizes";
+
   /**
    * Defaults for Bucket cache
    */
@@ -415,6 +421,14 @@ public class CacheConfig {
         float combinedPercentage = conf.getFloat(
             BUCKET_CACHE_COMBINED_PERCENTAGE_KEY,
             DEFAULT_BUCKET_CACHE_COMBINED_PERCENTAGE);
+        String[] configuredBucketSizes = conf.getStrings(BUCKET_CACHE_BUCKETS_KEY);
+        int[] bucketSizes = null;
+        if (configuredBucketSizes != null) {
+          bucketSizes = new int[configuredBucketSizes.length];
+          for (int i = 0; i < configuredBucketSizes.length; i++) {
+            bucketSizes[i] = Integer.parseInt(configuredBucketSizes[i]);
+          }
+        }
         if (combinedWithLru) {
           lruCacheSize = (long) ((1 - combinedPercentage) * bucketCacheSize);
           bucketCacheSize = (long) (combinedPercentage * bucketCacheSize);
@@ -424,7 +438,7 @@ public class CacheConfig {
               "hbase.bucketcache.ioengine.errors.tolerated.duration",
               BucketCache.DEFAULT_ERROR_TOLERATION_DURATION);
           bucketCache = new BucketCache(bucketCacheIOEngineName,
-              bucketCacheSize, blockSize, writerThreads, writerQueueLen, persistentPath,
+              bucketCacheSize, blockSize, bucketSizes, writerThreads, writerQueueLen, persistentPath,
               ioErrorsTolerationDuration);
         } catch (IOException ioex) {
           LOG.error("Can't instantiate bucket cache", ioex);

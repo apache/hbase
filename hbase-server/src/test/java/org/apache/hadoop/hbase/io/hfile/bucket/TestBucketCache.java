@@ -18,14 +18,15 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
@@ -36,6 +37,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Basic test of BucketCache.Puts and gets.
@@ -43,9 +46,29 @@ import org.junit.experimental.categories.Category;
  * Tests will ensure that blocks' data correctness under several threads
  * concurrency
  */
+@RunWith(Parameterized.class)
 @Category(SmallTests.class)
 public class TestBucketCache {
-  static final Log LOG = LogFactory.getLog(TestBucketCache.class);
+
+  private static final Random RAND = new Random();
+
+  @Parameterized.Parameters(name="{index}: blockSize={0}, bucketSizes={1}")
+  public static Iterable<Object[]> data() {
+    return Arrays.asList(new Object[][] {
+      { 8192, null }, // TODO: why is 8k the default blocksize for these tests?
+      { 16 * 1024, new int[] {
+        2 * 1024 + 1024, 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024,
+        28 * 1024 + 1024, 32 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024,
+        128 * 1024 + 1024 } }
+    });
+  }
+
+  @Parameterized.Parameter(0)
+  public int constructedBlockSize;
+
+  @Parameterized.Parameter(1)
+  public int[] constructedBlockSizes;
+
   BucketCache cache;
   final int CACHE_SIZE = 1000000;
   final int NUM_BLOCKS = 100;
@@ -61,11 +84,11 @@ public class TestBucketCache {
 
   private class MockedBucketCache extends BucketCache {
 
-    public MockedBucketCache(String ioEngineName, long capacity,
-        int writerThreads,
-        int writerQLen, String persistencePath) throws FileNotFoundException,
-        IOException {
-      super(ioEngineName, capacity, 8192, writerThreads, writerQLen, persistencePath);
+    public MockedBucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
+      int writerThreads, int writerQLen, String persistencePath)
+        throws FileNotFoundException, IOException {
+      super(ioEngineName, capacity, blockSize, bucketSizes, writerThreads, writerQLen,
+        persistencePath);
       super.wait_when_cache = true;
     }
 
@@ -89,13 +112,20 @@ public class TestBucketCache {
 
   @Before
   public void setup() throws FileNotFoundException, IOException {
-    cache = new MockedBucketCache(ioEngineName, capacitySize, writeThreads,
-        writerQLen, persistencePath);
+    cache = new MockedBucketCache(ioEngineName, capacitySize, constructedBlockSize,
+      constructedBlockSizes, writeThreads, writerQLen, persistencePath);
   }
 
   @After
   public void tearDown() {
     cache.shutdown();
+  }
+
+  /**
+   * Return a random element from {@code a}.
+   */
+  private static <T> T randFrom(List<T> a) {
+    return a.get(RAND.nextInt(a.size()));
   }
 
   @Test
@@ -104,35 +134,36 @@ public class TestBucketCache {
     /*
      * Test the allocator first
      */
-    int[] blockSizes = new int[2];
-    blockSizes[0] = 4 * 1024;
-    blockSizes[1] = 8 * 1024;
+    final List<Integer> BLOCKSIZES = Arrays.asList(4 * 1024, 8 * 1024, 64 * 1024, 96 * 1024);
+
     boolean full = false;
-    int i = 0;
     ArrayList<Long> allocations = new ArrayList<Long>();
-    // Fill the allocated extents
-    while (!full) {
+    // Fill the allocated extents by choosing a random blocksize. Continues selecting blocks until
+    // the cache is completely filled.
+    List<Integer> tmp = new ArrayList<Integer>(BLOCKSIZES);
+    for (int i = 0; !full; i++) {
+      Integer blockSize = null;
       try {
-        allocations.add(new Long(mAllocator.allocateBlock(blockSizes[i
-            % blockSizes.length])));
-        ++i;
+        blockSize = randFrom(tmp);
+        allocations.add(mAllocator.allocateBlock(blockSize));
       } catch (CacheFullException cfe) {
-        full = true;
+        tmp.remove(blockSize);
+        if (tmp.isEmpty()) full = true;
       }
     }
 
-    for (i = 0; i < blockSizes.length; i++) {
-      BucketSizeInfo bucketSizeInfo = mAllocator
-          .roundUpToBucketSizeInfo(blockSizes[0]);
+    for (Integer blockSize : BLOCKSIZES) {
+      BucketSizeInfo bucketSizeInfo = mAllocator.roundUpToBucketSizeInfo(blockSize);
       IndexStatistics indexStatistics = bucketSizeInfo.statistics();
-      assertTrue(indexStatistics.freeCount() == 0);
+      assertEquals(
+        "unexpected freeCount for " + bucketSizeInfo,
+        0, indexStatistics.freeCount());
     }
 
     for (long offset : allocations) {
-      assertTrue(mAllocator.sizeOfAllocation(offset) == mAllocator
-          .freeBlock(offset));
+      assertEquals(mAllocator.sizeOfAllocation(offset), mAllocator.freeBlock(offset));
     }
-    assertTrue(mAllocator.getUsedSize() == 0);
+    assertEquals(0, mAllocator.getUsedSize());
   }
 
   @Test
