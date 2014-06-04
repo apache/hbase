@@ -1306,5 +1306,29 @@ security.provider.1=sun.security.pkcs11.SunPKCS11 ${java.home}/lib/security/nss.
       <para> Then renumber the remaining providers accordingly. </para>
     </section>
   </section>
+  
+  <section>
+    <title>Operating System Specific Issues</title>
+    <section>
+      <title>Page Allocation Failure</title>
+      <note><para>This issue is known to affect CentOS 6.2 and possibly CentOS 6.5. It may also affect
+        some versions of Red Hat Enterprise Linux, according to <link
+          xlink:href="https://bugzilla.redhat.com/show_bug.cgi?id=770545" />.</para></note>
+      <para>Some users have reported seeing the following error:</para>
+      <screen>kernel: java: page allocation failure. order:4, mode:0x20</screen>
+      <para>Raising the value of <code>min_free_kbytes</code> was reported to fix this problem. This
+      parameter is set to a percentage of the amount of RAM on your system, and is described in more
+      detail at <link
+        xlink:href="http://www.centos.org/docs/5/html/5.1/Deployment_Guide/s3-proc-sys-vm.html" />. </para>
+      <para>To find the current value on your system, run the following command:</para>
+      <screen>[user@host]# <userinput>cat /proc/sys/vm/min_free_kbytes</userinput></screen>
+      <para>Next, raise the value. Try doubling, then quadrupling the value. Note that setting the
+        value too low or too high could have detrimental effects on your system. Consult your
+        operating system vendor for specific recommendations.</para>
+      <para>Use the following command to modify the value of <code>min_free_kbytes</code>,
+        substituting <replaceable>&lt;value&gt;</replaceable> with your intended value:</para>
+      <screen>[user@host]# <userinput>echo &lt;value&gt; > /proc/sys/vm/min_free_kbytes</userinput></screen>
+    </section>
+  </section>
 
 </chapter>
