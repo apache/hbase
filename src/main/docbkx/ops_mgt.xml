@@ -1273,6 +1273,13 @@ hbase> restore_snapshot 'myTableSnapshot-122112'
       <para>To copy a snapshot called MySnapshot to an HBase cluster srv2 (hdfs:///srv2:8082/hbase)
         using 16 mappers:</para>
       <programlisting>$ bin/hbase class org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16</programlisting>
+      <formalpara>
+        <title>Limiting Bandwidth Consumption</title>
+        <para>You can limit the bandwidth consumption when exporting a snapshot, by specifying the
+            <code>-bandwidth</code> parameter, which expects an integer representing megabytes per
+          second. The following example limits the above example to 200 MB/sec.</para>
+      </formalpara>
+        <programlisting>$ bin/hbase class org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16 -bandwidth 200</programlisting>
     </section>
   </section>
   <!--  snapshots -->

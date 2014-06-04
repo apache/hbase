@@ -888,6 +888,7 @@ public final class ExportSnapshot extends Configured implements Tool {
         "to the specified one.");
     System.err.println("  -mappers                Number of mappers to use during the " +
         "copy (mapreduce.job.maps).");
+    System.err.println("  -bandwidth              Limit bandwidth to this value in MB/second.");
     System.err.println();
     System.err.println("Examples:");
     System.err.println("  hbase " + getClass().getName() + " \\");
