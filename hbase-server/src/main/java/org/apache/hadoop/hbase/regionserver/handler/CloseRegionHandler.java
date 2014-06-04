@@ -26,12 +26,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.coordination.CloseRegionCoordination;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Handles closing of a region on a region server.
@@ -45,29 +44,15 @@ public class CloseRegionHandler extends EventHandler {
   // have a running queue of user regions to close?
   private static final Log LOG = LogFactory.getLog(CloseRegionHandler.class);
 
-  private final int FAILED = -1;
-  int expectedVersion = FAILED;
-
   private final RegionServerServices rsServices;
-
   private final HRegionInfo regionInfo;
 
   // If true, the hosting server is aborting.  Region close process is different
   // when we are aborting.
   private final boolean abort;
-
-  // Update zk on closing transitions. Usually true.  Its false if cluster
-  // is going down.  In this case, its the rs that initiates the region
-  // close -- not the master process so state up in zk will unlikely be
-  // CLOSING.
-  private final boolean zk;
   private ServerName destination;
-
-  // This is executed after receiving an CLOSE RPC from the master.
-  public CloseRegionHandler(final Server server,
-      final RegionServerServices rsServices, HRegionInfo regionInfo) {
-    this(server, rsServices, regionInfo, false, true, -1, EventType.M_RS_CLOSE_REGION, null);
-  }
+  private CloseRegionCoordination closeRegionCoordination;
+  private CloseRegionCoordination.CloseRegionDetails closeRegionDetails;
 
   /**
    * This method used internally by the RegionServer to close out regions.
@@ -75,43 +60,48 @@ public class CloseRegionHandler extends EventHandler {
    * @param rsServices
    * @param regionInfo
    * @param abort If the regionserver is aborting.
-   * @param zk If the close should be noted out in zookeeper.
+   * @param closeRegionCoordination consensus for closing regions
+   * @param crd object carrying details about region close task.
    */
   public CloseRegionHandler(final Server server,
       final RegionServerServices rsServices,
-      final HRegionInfo regionInfo, final boolean abort, final boolean zk,
-      final int versionOfClosingNode) {
-    this(server, rsServices,  regionInfo, abort, zk, versionOfClosingNode,
+      final HRegionInfo regionInfo, final boolean abort,
+      CloseRegionCoordination closeRegionCoordination,
+      CloseRegionCoordination.CloseRegionDetails crd) {
+    this(server, rsServices,  regionInfo, abort, closeRegionCoordination, crd,
       EventType.M_RS_CLOSE_REGION, null);
   }
 
   public CloseRegionHandler(final Server server,
       final RegionServerServices rsServices,
-      final HRegionInfo regionInfo, final boolean abort, final boolean zk,
-      final int versionOfClosingNode, ServerName destination) {
-    this(server, rsServices, regionInfo, abort, zk, versionOfClosingNode,
+      final HRegionInfo regionInfo, final boolean abort,
+      CloseRegionCoordination closeRegionCoordination,
+      CloseRegionCoordination.CloseRegionDetails crd,
+      ServerName destination) {
+    this(server, rsServices, regionInfo, abort, closeRegionCoordination, crd,
       EventType.M_RS_CLOSE_REGION, destination);
   }
 
   public CloseRegionHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo,
-      boolean abort, final boolean zk, final int versionOfClosingNode,
-      EventType eventType) {
-    this(server, rsServices, regionInfo, abort, zk, versionOfClosingNode, eventType, null);
+      boolean abort, CloseRegionCoordination closeRegionCoordination,
+      CloseRegionCoordination.CloseRegionDetails crd, EventType eventType) {
+    this(server, rsServices, regionInfo, abort, closeRegionCoordination, crd, eventType, null);
   }
 
     protected CloseRegionHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo,
-      boolean abort, final boolean zk, final int versionOfClosingNode,
+      boolean abort, CloseRegionCoordination closeRegionCoordination,
+      CloseRegionCoordination.CloseRegionDetails crd,
       EventType eventType, ServerName destination) {
     super(server, eventType);
     this.server = server;
     this.rsServices = rsServices;
     this.regionInfo = regionInfo;
     this.abort = abort;
-    this.zk = zk;
-    this.expectedVersion = versionOfClosingNode;
     this.destination = destination;
+    this.closeRegionCoordination = closeRegionCoordination;
+    this.closeRegionDetails = crd;
   }
 
   public HRegionInfo getRegionInfo() {
@@ -128,18 +118,14 @@ public class CloseRegionHandler extends EventHandler {
       HRegion region = this.rsServices.getFromOnlineRegions(encodedRegionName);
       if (region == null) {
         LOG.warn("Received CLOSE for region " + name + " but currently not serving - ignoring");
-        if (zk){
-          LOG.error("The znode is not modified as we are not serving " + name);
-        }
         // TODO: do better than a simple warning
         return;
       }
 
       // Close the region
       try {
-        if (zk && !ZKAssign.checkClosingState(server.getZooKeeper(), regionInfo, expectedVersion)){
-          // bad znode state
-          return; // We're node deleting the znode, but it's not ours...
+        if (closeRegionCoordination.checkClosingState(regionInfo, closeRegionDetails)) {
+          return;
         }
 
         // TODO: If we need to keep updating CLOSING stamp to prevent against
@@ -152,10 +138,6 @@ public class CloseRegionHandler extends EventHandler {
             regionInfo.getRegionNameAsString());
           return;
         }
-      } catch (KeeperException ke) {
-          server.abort("Unrecoverable exception while checking state with zk " +
-            regionInfo.getRegionNameAsString() + ", still finishing close", ke);
-        throw new RuntimeException(ke);
       } catch (IOException ioe) {
         // An IOException here indicates that we couldn't successfully flush the
         // memstore before closing. So, we need to abort the server and allow
@@ -166,15 +148,8 @@ public class CloseRegionHandler extends EventHandler {
       }
 
       this.rsServices.removeFromOnlineRegions(region, destination);
-
-      if (this.zk) {
-        if (setClosedState(this.expectedVersion, region)) {
-          LOG.debug("Set closed state in zk for " + name + " on " + this.server.getServerName());
-        } else {
-          LOG.debug("Set closed state in zk UNSUCCESSFUL for " + name + " on " +
-            this.server.getServerName());
-        }
-      }
+      closeRegionCoordination.setClosedState(region, this.server.getServerName(),
+        closeRegionDetails);
 
       // Done!  Region is closed on this RS
       LOG.debug("Closed " + region.getRegionNameAsString());
@@ -182,34 +157,5 @@ public class CloseRegionHandler extends EventHandler {
       this.rsServices.getRegionsInTransitionInRS().
           remove(this.regionInfo.getEncodedNameAsBytes());
     }
-  }
-
-  /**
-   * Transition ZK node to CLOSED
-   * @param expectedVersion
-   * @return If the state is set successfully
-   */
-  private boolean setClosedState(final int expectedVersion, final HRegion region) {
-    try {
-      if (ZKAssign.transitionNodeClosed(server.getZooKeeper(), regionInfo,
-          server.getServerName(), expectedVersion) == FAILED) {
-        LOG.warn("Completed the CLOSE of a region but when transitioning from " +
-            " CLOSING to CLOSED got a version mismatch, someone else clashed " +
-            "so now unassigning");
-        region.close();
-        return false;
-      }
-    } catch (NullPointerException e) {
-      // I've seen NPE when table was deleted while close was running in unit tests.
-      LOG.warn("NPE during close -- catching and continuing...", e);
-      return false;
-    } catch (KeeperException e) {
-      LOG.error("Failed transitioning node from CLOSING to CLOSED", e);
-      return false;
-    } catch (IOException e) {
-      LOG.error("Failed to close region after failing to transition", e);
-      return false;
-    }
-    return true;
   }
 }

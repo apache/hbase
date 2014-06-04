@@ -23,24 +23,21 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.coordination.CloseRegionCoordination;
 
 /**
  * Handles closing of the root region on a region server.
  */
 @InterfaceAudience.Private
 public class CloseMetaHandler extends CloseRegionHandler {
-  // Called when master tells us shutdown a region via close rpc
-  public CloseMetaHandler(final Server server,
-      final RegionServerServices rsServices, final HRegionInfo regionInfo) {
-    this(server, rsServices, regionInfo, false, true, -1);
-  }
 
   // Called when regionserver determines its to go down; not master orchestrated
   public CloseMetaHandler(final Server server,
       final RegionServerServices rsServices,
       final HRegionInfo regionInfo,
-      final boolean abort, final boolean zk, final int versionOfClosingNode) {
-    super(server, rsServices, regionInfo, abort, zk, versionOfClosingNode,
-      EventType.M_RS_CLOSE_META);
+      final boolean abort, CloseRegionCoordination closeRegionCoordination,
+      CloseRegionCoordination.CloseRegionDetails crd) {
+    super(server, rsServices, regionInfo, abort, closeRegionCoordination,
+      crd, EventType.M_RS_CLOSE_META);
   }
 }

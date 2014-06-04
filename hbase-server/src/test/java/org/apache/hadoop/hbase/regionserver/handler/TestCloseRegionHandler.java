@@ -33,10 +33,12 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.coordination.ZkCloseRegionCoordination;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -110,8 +112,18 @@ public class TestCloseRegionHandler {
       rss.addToOnlineRegions(spy);
       // Assert the Server is NOT stopped before we call close region.
       assertFalse(server.isStopped());
-      CloseRegionHandler handler =
-          new CloseRegionHandler(server, rss, hri, false, false, -1);
+
+      ZkCoordinatedStateManager consensusProvider = new ZkCoordinatedStateManager();
+      consensusProvider.initialize(server);
+      consensusProvider.start();
+
+      ZkCloseRegionCoordination.ZkCloseRegionDetails zkCrd =
+        new ZkCloseRegionCoordination.ZkCloseRegionDetails();
+      zkCrd.setPublishStatusInZk(false);
+      zkCrd.setExpectedVersion(-1);
+
+      CloseRegionHandler handler = new CloseRegionHandler(server, rss, hri, false,
+            consensusProvider.getCloseRegionCoordination(), zkCrd);
       boolean throwable = false;
       try {
         handler.process();
@@ -153,9 +165,18 @@ public class TestCloseRegionHandler {
        // The CloseRegionHandler will validate the expected version
        // Given it is set to invalid versionOfClosingNode+1,
        // CloseRegionHandler should be M_ZK_REGION_CLOSING
-       CloseRegionHandler handler =
-         new CloseRegionHandler(server, rss, hri, false, true,
-         versionOfClosingNode+1);
+
+       ZkCoordinatedStateManager consensusProvider = new ZkCoordinatedStateManager();
+       consensusProvider.initialize(server);
+       consensusProvider.start();
+
+       ZkCloseRegionCoordination.ZkCloseRegionDetails zkCrd =
+         new ZkCloseRegionCoordination.ZkCloseRegionDetails();
+       zkCrd.setPublishStatusInZk(true);
+       zkCrd.setExpectedVersion(versionOfClosingNode+1);
+
+       CloseRegionHandler handler = new CloseRegionHandler(server, rss, hri, false,
+         consensusProvider.getCloseRegionCoordination(), zkCrd);
        handler.process();
    
        // Handler should remain in M_ZK_REGION_CLOSING
@@ -190,9 +211,18 @@ public class TestCloseRegionHandler {
        // The CloseRegionHandler will validate the expected version
        // Given it is set to correct versionOfClosingNode,
        // CloseRegionHandlerit should be RS_ZK_REGION_CLOSED
-       CloseRegionHandler handler =
-         new CloseRegionHandler(server, rss, hri, false, true,
-         versionOfClosingNode);
+
+       ZkCoordinatedStateManager consensusProvider = new ZkCoordinatedStateManager();
+       consensusProvider.initialize(server);
+       consensusProvider.start();
+
+       ZkCloseRegionCoordination.ZkCloseRegionDetails zkCrd =
+         new ZkCloseRegionCoordination.ZkCloseRegionDetails();
+       zkCrd.setPublishStatusInZk(true);
+       zkCrd.setExpectedVersion(versionOfClosingNode);
+
+       CloseRegionHandler handler = new CloseRegionHandler(server, rss, hri, false,
+         consensusProvider.getCloseRegionCoordination(), zkCrd);
        handler.process();
        // Handler should have transitioned it to RS_ZK_REGION_CLOSED
        RegionTransition rt = RegionTransition.parseFrom(

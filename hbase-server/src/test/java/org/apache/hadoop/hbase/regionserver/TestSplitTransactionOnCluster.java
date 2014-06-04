@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.ZKSplitTransactionCoordination;
+import org.apache.hadoop.hbase.coordination.ZkCloseRegionCoordination;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -1095,7 +1096,7 @@ public class TestSplitTransactionOnCluster {
           this.server = server;
           this.watcher = server.getZooKeeper();
           splitTransactionCoordination = new MockedSplitTransactionCoordination(this, watcher, region);
-
+          closeRegionCoordination = new ZkCloseRegionCoordination(this, watcher);
         }
       }
 

@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.coordination.CloseRegionCoordination;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
@@ -883,11 +884,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @QosPriority(priority=HConstants.HIGH_QOS)
   public CloseRegionResponse closeRegion(final RpcController controller,
       final CloseRegionRequest request) throws ServiceException {
-    int versionOfClosingNode = -1;
-    if (request.hasVersionOfClosingNode()) {
-      versionOfClosingNode = request.getVersionOfClosingNode();
-    }
-    boolean zk = request.getTransitionInZK();
     final ServerName sn = (request.hasDestinationServer() ?
       ProtobufUtil.toServerName(request.getDestinationServer()) : null);
 
@@ -911,10 +907,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
 
       requestCount.increment();
-      LOG.info("Close " + encodedRegionName + ", via zk=" + (zk ? "yes" : "no")
-        + ", znode version=" + versionOfClosingNode + ", on " + sn);
+      LOG.info("Close " + encodedRegionName + ", on " + sn);
+      CloseRegionCoordination.CloseRegionDetails crd = regionServer.getCoordinatedStateManager()
+        .getCloseRegionCoordination().parseFromProtoRequest(request);
 
-      boolean closed = regionServer.closeRegion(encodedRegionName, false, zk, versionOfClosingNode, sn);
+      boolean closed = regionServer.closeRegion(encodedRegionName, false, crd, sn);
       CloseRegionResponse.Builder builder = CloseRegionResponse.newBuilder().setClosed(closed);
       return builder.build();
     } catch (IOException ie) {

@@ -77,6 +77,8 @@ import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
+import org.apache.hadoop.hbase.coordination.CloseRegionCoordination;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
@@ -392,7 +394,7 @@ public class HRegionServer extends HasThread implements
 
   protected final RSRpcServices rpcServices;
 
-  protected CoordinatedStateManager csm;
+  protected BaseCoordinatedStateManager csm;
 
   /**
    * Starts a HRegionServer at the default location.
@@ -483,7 +485,7 @@ public class HRegionServer extends HasThread implements
       zooKeeper = new ZooKeeperWatcher(conf, getProcessName() + ":" +
         rpcServices.isa.getPort(), this, canCreateBaseZNode());
 
-      this.csm = csm;
+      this.csm = (BaseCoordinatedStateManager) csm;
       this.csm.initialize(this);
       this.csm.start();
 
@@ -2157,7 +2159,7 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public CoordinatedStateManager getCoordinatedStateManager() {
+  public BaseCoordinatedStateManager getCoordinatedStateManager() {
     return csm;
   }
 
@@ -2320,7 +2322,9 @@ public class HRegionServer extends HasThread implements
    */
   private void closeRegionIgnoreErrors(HRegionInfo region, final boolean abort) {
     try {
-      if (!closeRegion(region.getEncodedName(), abort, false, -1, null)) {
+      CloseRegionCoordination.CloseRegionDetails details =
+        csm.getCloseRegionCoordination().getDetaultDetails();
+      if (!closeRegion(region.getEncodedName(), abort, details, null)) {
         LOG.warn("Failed to close " + region.getRegionNameAsString() +
             " - ignoring and continuing");
       }
@@ -2345,17 +2349,13 @@ public class HRegionServer extends HasThread implements
    *
    * @param encodedName Region to close
    * @param abort True if we are aborting
-   * @param zk True if we are to update zk about the region close; if the close
-   * was orchestrated by master, then update zk.  If the close is being run by
-   * the regionserver because its going down, don't update zk.
-   * @param versionOfClosingNode the version of znode to compare when RS transitions the znode from
-   *   CLOSING state.
+   * @param crd details about closing region coordination-coordinated task
    * @return True if closed a region.
    * @throws NotServingRegionException if the region is not online
    * @throws RegionAlreadyInTransitionException if the region is already closing
    */
   protected boolean closeRegion(String encodedName, final boolean abort,
-      final boolean zk, final int versionOfClosingNode, final ServerName sn)
+      CloseRegionCoordination.CloseRegionDetails crd, final ServerName sn)
       throws NotServingRegionException, RegionAlreadyInTransitionException {
     //Check for permissions to close.
     HRegion actualRegion = this.getFromOnlineRegions(encodedName);
@@ -2379,7 +2379,7 @@ public class HRegionServer extends HasThread implements
         // We're going to try to do a standard close then.
         LOG.warn("The opening for region " + encodedName + " was done before we could cancel it." +
             " Doing a standard close now");
-        return closeRegion(encodedName, abort, zk, versionOfClosingNode, sn);
+        return closeRegion(encodedName, abort, crd, sn);
       }
       // Let's get the region from the online region list again
       actualRegion = this.getFromOnlineRegions(encodedName);
@@ -2413,9 +2413,11 @@ public class HRegionServer extends HasThread implements
     CloseRegionHandler crh;
     final HRegionInfo hri = actualRegion.getRegionInfo();
     if (hri.isMetaRegion()) {
-      crh = new CloseMetaHandler(this, this, hri, abort, zk, versionOfClosingNode);
+      crh = new CloseMetaHandler(this, this, hri, abort,
+        csm.getCloseRegionCoordination(), crd);
     } else {
-      crh = new CloseRegionHandler(this, this, hri, abort, zk, versionOfClosingNode, sn);
+      crh = new CloseRegionHandler(this, this, hri, abort,
+        csm.getCloseRegionCoordination(), crd, sn);
     }
     this.service.submit(crh);
     return true;
