@@ -634,17 +634,17 @@ public class HTableMultiplexer {
      * when it is going to be tried again will increase.
      */
     private boolean resubmitFailedPut(PutStatus failedPutStatus, HServerAddress oldLoc) throws IOException{
-      Put failedPut = failedPutStatus.getPut();
+      final Put failedPut = failedPutStatus.getPut();
       // The currentPut is failed. So get the table name for the currentPut.
-      byte[] tableName = failedPutStatus.getRegionInfo().getTableDesc().getName();
+      final byte[] tableName = failedPutStatus.getRegionInfo().getTableDesc().getName();
       // Decrease the retry count
-      int retryCount = failedPutStatus.getMaxRetryCount() - 1;
+      final int retryCount = failedPutStatus.getMaxRetryCount() - 1;
 
       if (retryCount <= 0) {
         // Update the failed counter and no retry any more.
         return false;
       } else {
-        HBaseRPCOptions options = failedPutStatus.getOptions();
+        final HBaseRPCOptions options = failedPutStatus.getOptions();
         // schedule the retry of the failed put
         int currPuts = retriedPutsInQueue.incrementAndGet();
         // only schedule the put if we are below limit of allowed scheduled-retriable puts
