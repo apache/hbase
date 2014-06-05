@@ -792,7 +792,6 @@
           <htmlCustomization>${basedir}/src/main/docbkx/customization.xsl</htmlCustomization>
           <tocMaxDepth>2</tocMaxDepth>
           <insertXrefPageNumber>yes</insertXrefPageNumber>
-          <targetDirectory>${basedir}/target/docbkx</targetDirectory>
           <chunkerOutputEncoding>UTF-8</chunkerOutputEncoding>
         </configuration>
         <executions>
@@ -807,6 +806,7 @@
               <chunkedOutput>true</chunkedOutput>
               <imgSrcPath>../images/</imgSrcPath>
               <htmlStylesheet>../css/freebsd_docbook.css</htmlStylesheet>
+              <targetDirectory>${basedir}/target/docbkx/book</targetDirectory>
             </configuration>
           </execution>
           <execution>
@@ -818,6 +818,7 @@
             <configuration>
               <imgSrcPath>images/</imgSrcPath>
               <htmlStylesheet>css/freebsd_docbook.css</htmlStylesheet>
+              <targetDirectory>${basedir}/target/docbkx/</targetDirectory>
             </configuration>
           </execution>
         </executions>
