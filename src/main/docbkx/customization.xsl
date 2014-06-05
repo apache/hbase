@@ -25,15 +25,15 @@
   <xsl:output method="html" encoding="UTF-8" indent="no"/>
 
   <xsl:template name="user.header.content">
+    <script type="text/javascript">
+    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
+    var disqus_url = 'http://hbase.apache.org/book/<xsl:value-of select="@xml:id" />.html';
+    <!--var disqus_identifier = '<xsl:value-of select="@xml:id" />';--></script>
   </xsl:template>
 
   <xsl:template name="user.footer.content">
 <div id="disqus_thread"></div>
 <script type="text/javascript">
-    var disqus_shortname = 'hbase'; // required: replace example with your forum shortname
-    var disqus_url = 'http://hbase.apache.org/book';
-    var disqus_identifier = '<xsl:value-of select="@xml:id" />';
-
     /* * * DON'T EDIT BELOW THIS LINE * * */
     (function() {
         var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
