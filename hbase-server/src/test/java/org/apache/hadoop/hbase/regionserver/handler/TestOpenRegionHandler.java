@@ -25,6 +25,8 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
+import org.apache.hadoop.hbase.coordination.ZkOpenRegionCoordination;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -96,7 +98,16 @@ public class TestOpenRegionHandler {
             .getConfiguration(), htd);
     assertNotNull(region);
     try {
-      OpenRegionHandler handler = new OpenRegionHandler(server, rss, hri, htd) {
+      ZkCoordinatedStateManager csm = new ZkCoordinatedStateManager();
+      csm.initialize(server);
+      csm.start();
+
+      ZkOpenRegionCoordination.ZkOpenRegionDetails zkCrd =
+        new ZkOpenRegionCoordination.ZkOpenRegionDetails();
+      zkCrd.setServerName(server.getServerName());
+
+      OpenRegionHandler handler = new OpenRegionHandler(server, rss, hri,
+        htd, csm.getOpenRegionCoordination(), zkCrd) {
         HRegion openRegion() {
           // Open region first, then remove znode as though it'd been hijacked.
           HRegion region = super.openRegion();
@@ -150,10 +161,22 @@ public class TestOpenRegionHandler {
             .getConfiguration(), htd);
     assertNotNull(region);
     try {
-      OpenRegionHandler handler = new OpenRegionHandler(server, rss, hri, htd) {
-        boolean transitionToOpened(final HRegion r) throws IOException {
+
+      ZkCoordinatedStateManager csm = new ZkCoordinatedStateManager();
+      csm.initialize(server);
+      csm.start();
+
+      ZkOpenRegionCoordination.ZkOpenRegionDetails zkCrd =
+        new ZkOpenRegionCoordination.ZkOpenRegionDetails();
+      zkCrd.setServerName(server.getServerName());
+
+      ZkOpenRegionCoordination openRegionCoordination =
+        new ZkOpenRegionCoordination(csm, server.getZooKeeper()) {
+        @Override
+        public boolean transitionToOpened(final HRegion r, OpenRegionDetails ord)
+            throws IOException {
           // remove znode simulating intermittent zookeeper connection issue
-          ZooKeeperWatcher zkw = this.server.getZooKeeper();
+          ZooKeeperWatcher zkw = server.getZooKeeper();
           String node = ZKAssign.getNodeName(zkw, hri.getEncodedName());
           try {
             ZKUtil.deleteNodeFailSilent(zkw, node);
@@ -161,9 +184,12 @@ public class TestOpenRegionHandler {
             throw new RuntimeException("Ugh failed delete of " + node, e);
           }
           // then try to transition to OPENED
-          return super.transitionToOpened(r);
+          return super.transitionToOpened(r, ord);
         }
       };
+
+      OpenRegionHandler handler = new OpenRegionHandler(server, rss, hri, htd,
+        openRegionCoordination, zkCrd);
       rss.getRegionsInTransitionInRS().put(
         hri.getEncodedNameAsBytes(), Boolean.TRUE);
       // Call process without first creating OFFLINE region in zk, see if
@@ -182,7 +208,7 @@ public class TestOpenRegionHandler {
     // Region server is expected to abort due to OpenRegionHandler perceiving transitioning
     // to OPENED as failed
     // This was corresponding to the second handler.process() call above.
-    assertTrue("region server should have aborted", rss.isAborted());
+    assertTrue("region server should have aborted", server.isAborted());
   }
   
   @Test
@@ -193,9 +219,18 @@ public class TestOpenRegionHandler {
     // Create it OFFLINE, which is what it expects
     ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());
 
+    ZkCoordinatedStateManager csm = new ZkCoordinatedStateManager();
+    csm.initialize(server);
+    csm.start();
+
+    ZkOpenRegionCoordination.ZkOpenRegionDetails zkCrd =
+      new ZkOpenRegionCoordination.ZkOpenRegionDetails();
+    zkCrd.setServerName(server.getServerName());
+
     // Create the handler
     OpenRegionHandler handler =
-      new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD) {
+      new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD,
+        csm.getOpenRegionCoordination(), zkCrd) {
         @Override
         HRegion openRegion() {
           // Fake failure of opening a region due to an IOE, which is caught
@@ -221,8 +256,16 @@ public class TestOpenRegionHandler {
     ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());
 
     // Create the handler
-    OpenRegionHandler handler =
-      new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD) {
+    ZkCoordinatedStateManager csm = new ZkCoordinatedStateManager();
+    csm.initialize(server);
+    csm.start();
+
+    ZkOpenRegionCoordination.ZkOpenRegionDetails zkCrd =
+      new ZkOpenRegionCoordination.ZkOpenRegionDetails();
+    zkCrd.setServerName(server.getServerName());
+
+    OpenRegionHandler handler = new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD,
+      csm.getOpenRegionCoordination(), zkCrd) {
         @Override
         boolean updateMeta(final HRegion r) {
           // Fake failure of updating META
@@ -246,7 +289,16 @@ public class TestOpenRegionHandler {
     // Create it OFFLINE, which is what it expects
     ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());
     // Create the handler
-    OpenRegionHandler handler = new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD) {
+    ZkCoordinatedStateManager csm = new ZkCoordinatedStateManager();
+    csm.initialize(server);
+    csm.start();
+
+    ZkOpenRegionCoordination.ZkOpenRegionDetails zkCrd =
+      new ZkOpenRegionCoordination.ZkOpenRegionDetails();
+    zkCrd.setServerName(server.getServerName());
+
+    OpenRegionHandler handler = new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD,
+      csm.getOpenRegionCoordination(), zkCrd) {
       @Override
       boolean updateMeta(HRegion r) {
         return false;
@@ -275,13 +327,25 @@ public class TestOpenRegionHandler {
     // Create it OFFLINE, which is what it expects
     ZKAssign.createNodeOffline(server.getZooKeeper(), TEST_HRI, server.getServerName());
     // Create the handler
-    OpenRegionHandler handler = new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD) {
+    ZkCoordinatedStateManager csm = new ZkCoordinatedStateManager();
+    csm.initialize(server);
+    csm.start();
 
+    ZkOpenRegionCoordination.ZkOpenRegionDetails zkCrd =
+      new ZkOpenRegionCoordination.ZkOpenRegionDetails();
+    zkCrd.setServerName(server.getServerName());
+
+    ZkOpenRegionCoordination openRegionCoordination =
+      new ZkOpenRegionCoordination(csm, server.getZooKeeper()) {
       @Override
-      boolean transitionZookeeperOfflineToOpening(String encodedName, int versionOfOfflineNode) {
+      public boolean transitionFromOfflineToOpening(HRegionInfo regionInfo,
+                                                    OpenRegionDetails ord) {
         return false;
       }
     };
+
+    OpenRegionHandler handler = new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD,
+      openRegionCoordination, zkCrd);
     rsServices.getRegionsInTransitionInRS().put(TEST_HRI.getEncodedNameAsBytes(), Boolean.TRUE);
 
     handler.process();

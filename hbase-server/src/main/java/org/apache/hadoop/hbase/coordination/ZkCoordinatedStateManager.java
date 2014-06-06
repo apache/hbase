@@ -37,6 +37,7 @@ public class ZkCoordinatedStateManager extends BaseCoordinatedStateManager {
   protected ZooKeeperWatcher watcher;
   protected SplitTransactionCoordination splitTransactionCoordination;
   protected CloseRegionCoordination closeRegionCoordination;
+  protected OpenRegionCoordination openRegionCoordination;
 
   @Override
   public void initialize(Server server) {
@@ -45,6 +46,7 @@ public class ZkCoordinatedStateManager extends BaseCoordinatedStateManager {
 
     splitTransactionCoordination = new ZKSplitTransactionCoordination(this, watcher);
     closeRegionCoordination = new ZkCloseRegionCoordination(this, watcher);
+    openRegionCoordination = new ZkOpenRegionCoordination(this, watcher);
   }
 
   @Override
@@ -70,5 +72,10 @@ public class ZkCoordinatedStateManager extends BaseCoordinatedStateManager {
   @Override
   public CloseRegionCoordination getCloseRegionCoordination() {
     return closeRegionCoordination;
+  }
+
+  @Override
+  public OpenRegionCoordination getOpenRegionCoordination() {
+    return openRegionCoordination;
   }
 }

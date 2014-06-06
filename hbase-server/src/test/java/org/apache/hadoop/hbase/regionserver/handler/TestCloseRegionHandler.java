@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.EventType;
@@ -138,13 +139,13 @@ public class TestCloseRegionHandler {
       HRegion.closeHRegion(region);
     }
   }
-  
+
      /**
       * Test if close region can handle ZK closing node version mismatch
       * @throws IOException
       * @throws NodeExistsException
       * @throws KeeperException
-     * @throws DeserializationException 
+     * @throws DeserializationException
       */
      @Test public void testZKClosingNodeVersionMismatch()
      throws IOException, NodeExistsException, KeeperException, DeserializationException {
@@ -153,22 +154,22 @@ public class TestCloseRegionHandler {
 
        HTableDescriptor htd = TEST_HTD;
        final HRegionInfo hri = TEST_HRI;
-   
+
+       ZkCoordinatedStateManager coordinationProvider = new ZkCoordinatedStateManager();
+       coordinationProvider.initialize(server);
+       coordinationProvider.start();
+
        // open a region first so that it can be closed later
-       OpenRegion(server, rss, htd, hri);
-   
+       OpenRegion(server, rss, htd, hri, coordinationProvider.getOpenRegionCoordination());
+
        // close the region
        // Create it CLOSING, which is what Master set before sending CLOSE RPC
        int versionOfClosingNode = ZKAssign.createNodeClosing(server.getZooKeeper(),
          hri, server.getServerName());
-   
+
        // The CloseRegionHandler will validate the expected version
        // Given it is set to invalid versionOfClosingNode+1,
        // CloseRegionHandler should be M_ZK_REGION_CLOSING
-
-       ZkCoordinatedStateManager consensusProvider = new ZkCoordinatedStateManager();
-       consensusProvider.initialize(server);
-       consensusProvider.start();
 
        ZkCloseRegionCoordination.ZkCloseRegionDetails zkCrd =
          new ZkCloseRegionCoordination.ZkCloseRegionDetails();
@@ -176,15 +177,15 @@ public class TestCloseRegionHandler {
        zkCrd.setExpectedVersion(versionOfClosingNode+1);
 
        CloseRegionHandler handler = new CloseRegionHandler(server, rss, hri, false,
-         consensusProvider.getCloseRegionCoordination(), zkCrd);
+         coordinationProvider.getCloseRegionCoordination(), zkCrd);
        handler.process();
-   
+
        // Handler should remain in M_ZK_REGION_CLOSING
        RegionTransition rt =
          RegionTransition.parseFrom(ZKAssign.getData(server.getZooKeeper(), hri.getEncodedName()));
        assertTrue(rt.getEventType().equals(EventType.M_ZK_REGION_CLOSING ));
      }
-  
+
      /**
       * Test if the region can be closed properly
       * @throws IOException
@@ -196,25 +197,25 @@ public class TestCloseRegionHandler {
      throws IOException, NodeExistsException, KeeperException, DeserializationException {
        final Server server = new MockServer(HTU);
        final RegionServerServices rss = HTU.createMockRegionServerService();
-   
+
        HTableDescriptor htd = TEST_HTD;
        HRegionInfo hri = TEST_HRI;
-   
+
+       ZkCoordinatedStateManager coordinationProvider = new ZkCoordinatedStateManager();
+       coordinationProvider.initialize(server);
+       coordinationProvider.start();
+
        // open a region first so that it can be closed later
-       OpenRegion(server, rss, htd, hri);
-   
+       OpenRegion(server, rss, htd, hri, coordinationProvider.getOpenRegionCoordination());
+
        // close the region
        // Create it CLOSING, which is what Master set before sending CLOSE RPC
        int versionOfClosingNode = ZKAssign.createNodeClosing(server.getZooKeeper(),
          hri, server.getServerName());
-   
+
        // The CloseRegionHandler will validate the expected version
        // Given it is set to correct versionOfClosingNode,
        // CloseRegionHandlerit should be RS_ZK_REGION_CLOSED
-
-       ZkCoordinatedStateManager consensusProvider = new ZkCoordinatedStateManager();
-       consensusProvider.initialize(server);
-       consensusProvider.start();
 
        ZkCloseRegionCoordination.ZkCloseRegionDetails zkCrd =
          new ZkCloseRegionCoordination.ZkCloseRegionDetails();
@@ -222,7 +223,7 @@ public class TestCloseRegionHandler {
        zkCrd.setExpectedVersion(versionOfClosingNode);
 
        CloseRegionHandler handler = new CloseRegionHandler(server, rss, hri, false,
-         consensusProvider.getCloseRegionCoordination(), zkCrd);
+         coordinationProvider.getCloseRegionCoordination(), zkCrd);
        handler.process();
        // Handler should have transitioned it to RS_ZK_REGION_CLOSED
        RegionTransition rt = RegionTransition.parseFrom(
@@ -231,11 +232,15 @@ public class TestCloseRegionHandler {
      }
 
      private void OpenRegion(Server server, RegionServerServices rss,
-         HTableDescriptor htd, HRegionInfo hri)
+         HTableDescriptor htd, HRegionInfo hri, OpenRegionCoordination coordination)
      throws IOException, NodeExistsException, KeeperException, DeserializationException {
        // Create it OFFLINE node, which is what Master set before sending OPEN RPC
        ZKAssign.createNodeOffline(server.getZooKeeper(), hri, server.getServerName());
-       OpenRegionHandler openHandler = new OpenRegionHandler(server, rss, hri, htd);
+
+       OpenRegionCoordination.OpenRegionDetails ord =
+         coordination.getDetailsForNonCoordinatedOpening();
+       OpenRegionHandler openHandler =
+         new OpenRegionHandler(server, rss, hri, htd, coordination, ord);
        rss.getRegionsInTransitionInRS().put(hri.getEncodedNameAsBytes(), Boolean.TRUE);
        openHandler.process();
        // This parse is not used?

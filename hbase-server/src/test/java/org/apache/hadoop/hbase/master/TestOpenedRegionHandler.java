@@ -31,6 +31,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
+import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
+import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
+import org.apache.hadoop.hbase.coordination.ZkOpenRegionCoordination;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -137,8 +141,17 @@ public class TestOpenedRegionHandler {
       ZKUtil.getDataAndWatch(zkw, nodeName, stat);
 
       // use the version for the OpenedRegionHandler
+      BaseCoordinatedStateManager csm = new ZkCoordinatedStateManager();
+      csm.initialize(server);
+      csm.start();
+
+      OpenRegionCoordination orc = csm.getOpenRegionCoordination();
+      ZkOpenRegionCoordination.ZkOpenRegionDetails zkOrd =
+        new ZkOpenRegionCoordination.ZkOpenRegionDetails();
+      zkOrd.setServerName(server.getServerName());
+      zkOrd.setVersion(stat.getVersion());
       OpenedRegionHandler handler = new OpenedRegionHandler(server, am, region
-          .getRegionInfo(), server.getServerName(), stat.getVersion());
+          .getRegionInfo(), orc, zkOrd);
       // Once again overwrite the same znode so that the version changes.
       ZKAssign.transitionNode(zkw, region.getRegionInfo(), server
           .getServerName(), EventType.RS_ZK_REGION_OPENED,

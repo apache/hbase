@@ -31,6 +31,9 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
+import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
+import org.apache.hadoop.hbase.coordination.ZkOpenRegionCoordination;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -341,7 +344,18 @@ public class TestRegionServerNoMaster {
 
     // Let's start the open handler
     HTableDescriptor htd = getRS().tableDescriptors.get(hri.getTable());
-    getRS().service.submit(new OpenRegionHandler(getRS(), getRS(), hri, htd, 0));
+
+    BaseCoordinatedStateManager csm = new ZkCoordinatedStateManager();
+    csm.initialize(getRS());
+    csm.start();
+
+    ZkOpenRegionCoordination.ZkOpenRegionDetails zkCrd =
+      new ZkOpenRegionCoordination.ZkOpenRegionDetails();
+    zkCrd.setServerName(getRS().getServerName());
+    zkCrd.setVersionOfOfflineNode(0);
+
+    getRS().service.submit(new OpenRegionHandler(getRS(), getRS(), hri, htd,
+      csm.getOpenRegionCoordination(), zkCrd));
 
     // The open handler should have removed the region from RIT but kept the region closed
     checkRegionIsClosed();
@@ -395,7 +409,18 @@ public class TestRegionServerNoMaster {
     //  2) The region in RIT was changed.
     // The order is more or less implementation dependant.
     HTableDescriptor htd = getRS().tableDescriptors.get(hri.getTable());
-    getRS().service.submit(new OpenRegionHandler(getRS(), getRS(), hri, htd, 0));
+
+    BaseCoordinatedStateManager csm = new ZkCoordinatedStateManager();
+    csm.initialize(getRS());
+    csm.start();
+
+    ZkOpenRegionCoordination.ZkOpenRegionDetails zkCrd =
+      new ZkOpenRegionCoordination.ZkOpenRegionDetails();
+    zkCrd.setServerName(getRS().getServerName());
+    zkCrd.setVersionOfOfflineNode(0);
+
+    getRS().service.submit(new OpenRegionHandler(getRS(), getRS(), hri, htd,
+      csm.getOpenRegionCoordination(), zkCrd));
 
     // The open handler should have removed the region from RIT but kept the region closed
     checkRegionIsClosed();

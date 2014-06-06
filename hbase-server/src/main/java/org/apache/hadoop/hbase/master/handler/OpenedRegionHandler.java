@@ -18,21 +18,16 @@
  */
 package org.apache.hadoop.hbase.master.handler;
 
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Handles OPENED region event on Master.
@@ -42,9 +37,10 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
   private static final Log LOG = LogFactory.getLog(OpenedRegionHandler.class);
   private final AssignmentManager assignmentManager;
   private final HRegionInfo regionInfo;
-  private final ServerName sn;
   private final OpenedPriority priority;
-  private final int expectedVersion;
+
+  private OpenRegionCoordination coordination;
+  private OpenRegionCoordination.OpenRegionDetails ord;
 
   private enum OpenedPriority {
     META (1),
@@ -62,12 +58,13 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
 
   public OpenedRegionHandler(Server server,
       AssignmentManager assignmentManager, HRegionInfo regionInfo,
-      ServerName sn, int expectedVersion) {
+      OpenRegionCoordination coordination,
+      OpenRegionCoordination.OpenRegionDetails ord) {
     super(server, EventType.RS_ZK_REGION_OPENED);
     this.assignmentManager = assignmentManager;
     this.regionInfo = regionInfo;
-    this.sn = sn;
-    this.expectedVersion = expectedVersion;
+    this.coordination = coordination;
+    this.ord = ord;
     if(regionInfo.isMetaRegion()) {
       priority = OpenedPriority.META;
     } else if(regionInfo.getTable()
@@ -99,56 +96,8 @@ public class OpenedRegionHandler extends EventHandler implements TotesHRegionInf
 
   @Override
   public void process() {
-    // Code to defend against case where we get SPLIT before region open
-    // processing completes; temporary till we make SPLITs go via zk -- 0.92.
-    RegionState regionState = this.assignmentManager.getRegionStates()
-      .getRegionTransitionState(regionInfo.getEncodedName());
-    boolean openedNodeDeleted = false;
-    if (regionState != null && regionState.isOpened()) {
-      openedNodeDeleted = deleteOpenedNode(expectedVersion);
-      if (!openedNodeDeleted) {
-        LOG.error("Znode of region " + regionInfo.getShortNameToLog() + " could not be deleted.");
-      }
-    } else {
-      LOG.warn("Skipping the onlining of " + regionInfo.getShortNameToLog() +
-        " because regions is NOT in RIT -- presuming this is because it SPLIT");
-    }
-    if (!openedNodeDeleted) {
-      if (this.assignmentManager.getTableStateManager().isTableState(regionInfo.getTable(),
-        ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
-        debugLog(regionInfo, "Opened region "
-            + regionInfo.getShortNameToLog() + " but "
-            + "this table is disabled, triggering close of region");
+    if (!coordination.commitOpenOnMasterSide(assignmentManager,regionInfo, ord)) {
         assignmentManager.unassign(regionInfo);
-      }
-    }
-  }
-
-  private boolean deleteOpenedNode(int expectedVersion) {
-    debugLog(regionInfo, "Handling OPENED of " +
-      this.regionInfo.getShortNameToLog() + " from " + this.sn.toString() +
-      "; deleting unassigned node");
-    try {
-      // delete the opened znode only if the version matches.
-      return ZKAssign.deleteNode(server.getZooKeeper(),
-          regionInfo.getEncodedName(), EventType.RS_ZK_REGION_OPENED, expectedVersion);
-    } catch(KeeperException.NoNodeException e){
-      // Getting no node exception here means that already the region has been opened.
-      LOG.warn("The znode of the region " + regionInfo.getShortNameToLog() +
-        " would have already been deleted");
-      return false;
-    } catch (KeeperException e) {
-      server.abort("Error deleting OPENED node in ZK (" +
-        regionInfo.getRegionNameAsString() + ")", e);
-    }
-    return false;
-  }
-
-  private void debugLog(HRegionInfo region, String string) {
-    if (region.isMetaTable()) {
-      LOG.info(string);
-    } else {
-      LOG.debug(string);
     }
   }
 }

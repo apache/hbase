@@ -58,6 +58,8 @@ import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
+import org.apache.hadoop.hbase.coordination.ZkOpenRegionCoordination;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitTransactionCoordination.SplitTransactionDetails;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -75,6 +77,7 @@ import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionMergeTransaction;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
@@ -577,8 +580,20 @@ public class AssignmentManager extends ZooKeeperListener {
           return false;
         }
       }
+
+      // TODO: This code is tied to ZK anyway, so for now leaving it as is,
+      // will refactor when whole region assignment will be abstracted from ZK
+      BaseCoordinatedStateManager cp =
+        (BaseCoordinatedStateManager) this.server.getCoordinatedStateManager();
+      OpenRegionCoordination openRegionCoordination = cp.getOpenRegionCoordination();
+
+      ZkOpenRegionCoordination.ZkOpenRegionDetails zkOrd =
+        new ZkOpenRegionCoordination.ZkOpenRegionDetails();
+      zkOrd.setVersion(stat.getVersion());
+      zkOrd.setServerName(cp.getServer().getServerName());
+
       return processRegionsInTransition(
-        rt, hri, stat.getVersion());
+        rt, hri, openRegionCoordination, zkOrd);
     } finally {
       lock.unlock();
     }
@@ -594,7 +609,8 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   boolean processRegionsInTransition(
       final RegionTransition rt, final HRegionInfo regionInfo,
-      final int expectedVersion) throws KeeperException {
+      OpenRegionCoordination coordination,
+      final OpenRegionCoordination.OpenRegionDetails ord) throws KeeperException {
     EventType et = rt.getEventType();
     // Get ServerName.  Could not be null.
     final ServerName sn = rt.getServerName();
@@ -652,6 +668,8 @@ public class AssignmentManager extends ZooKeeperListener {
             public void process() throws IOException {
               ReentrantLock lock = locker.acquireLock(regionInfo.getEncodedName());
               try {
+                final int expectedVersion = ((ZkOpenRegionCoordination.ZkOpenRegionDetails) ord)
+                  .getVersion();
                 unassign(regionInfo, rsClosing, expectedVersion, null, true, null);
                 if (regionStates.isRegionOffline(regionInfo)) {
                   assign(regionInfo, true);
@@ -699,7 +717,7 @@ public class AssignmentManager extends ZooKeeperListener {
         // This could be done asynchronously, we would need then to acquire the lock in the
         //  handler.
         regionStates.updateRegionState(rt, State.OPEN);
-        new OpenedRegionHandler(server, this, regionInfo, sn, expectedVersion).process();
+        new OpenedRegionHandler(server, this, regionInfo, coordination, ord).process();
         break;
       case RS_ZK_REQUEST_REGION_SPLIT:
       case RS_ZK_REGION_SPLITTING:
@@ -748,10 +766,12 @@ public class AssignmentManager extends ZooKeeperListener {
    * <p>
    * This deals with skipped transitions (we got a CLOSED but didn't see CLOSING
    * yet).
-   * @param rt
-   * @param expectedVersion
+   * @param rt region transition
+   * @param coordination coordination for opening region
+   * @param ord details about opening region
    */
-  void handleRegion(final RegionTransition rt, int expectedVersion) {
+  void handleRegion(final RegionTransition rt, OpenRegionCoordination coordination,
+                    OpenRegionCoordination.OpenRegionDetails ord) {
     if (rt == null) {
       LOG.warn("Unexpected NULL input for RegionTransition rt");
       return;
@@ -931,7 +951,7 @@ public class AssignmentManager extends ZooKeeperListener {
           if (regionState != null) {
             failedOpenTracker.remove(encodedName); // reset the count, if any
             new OpenedRegionHandler(
-              server, this, regionState.getRegion(), sn, expectedVersion).process();
+              server, this, regionState.getRegion(), coordination, ord).process();
             updateOpenedRegionHandlerTracker(regionState.getRegion());
           }
           break;
@@ -1299,7 +1319,19 @@ public class AssignmentManager extends ZooKeeperListener {
             if (data == null) return;
 
             RegionTransition rt = RegionTransition.parseFrom(data);
-            handleRegion(rt, stat.getVersion());
+
+            // TODO: This code is tied to ZK anyway, so for now leaving it as is,
+            // will refactor when whole region assignment will be abstracted from ZK
+            BaseCoordinatedStateManager csm =
+              (BaseCoordinatedStateManager) server.getCoordinatedStateManager();
+            OpenRegionCoordination openRegionCoordination = csm.getOpenRegionCoordination();
+
+            ZkOpenRegionCoordination.ZkOpenRegionDetails zkOrd =
+              new ZkOpenRegionCoordination.ZkOpenRegionDetails();
+            zkOrd.setVersion(stat.getVersion());
+            zkOrd.setServerName(csm.getServer().getServerName());
+
+            handleRegion(rt, openRegionCoordination, zkOrd);
           } catch (KeeperException e) {
             server.abort("Unexpected ZK exception reading unassigned node data", e);
           } catch (DeserializationException e) {

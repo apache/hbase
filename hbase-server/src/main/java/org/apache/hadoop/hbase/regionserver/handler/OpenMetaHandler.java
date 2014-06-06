@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
 
 /**
  * Handles opening of a meta region on a region server.
@@ -34,13 +35,9 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 public class OpenMetaHandler extends OpenRegionHandler {
   public OpenMetaHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo,
-      final HTableDescriptor htd) {
-    this(server, rsServices, regionInfo, htd, -1);
-  }
-  public OpenMetaHandler(final Server server,
-      final RegionServerServices rsServices, HRegionInfo regionInfo,
-      final HTableDescriptor htd, int versionOfOfflineNode) {
+      final HTableDescriptor htd, OpenRegionCoordination coordination,
+      OpenRegionCoordination.OpenRegionDetails ord) {
     super(server, rsServices, regionInfo, htd, EventType.M_RS_OPEN_META,
-        versionOfOfflineNode);
+        coordination, ord);
   }
 }

@@ -141,6 +141,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Re
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
+import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -1188,11 +1189,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     final boolean isBulkAssign = regionCount > 1;
     for (RegionOpenInfo regionOpenInfo : request.getOpenInfoList()) {
       final HRegionInfo region = HRegionInfo.convert(regionOpenInfo.getRegion());
+      OpenRegionCoordination coordination = regionServer.getCoordinatedStateManager().
+        getOpenRegionCoordination();
+      OpenRegionCoordination.OpenRegionDetails ord =
+        coordination.parseFromProtoRequest(regionOpenInfo);
 
-      int versionOfOfflineNode = -1;
-      if (regionOpenInfo.hasVersionOfOfflineNode()) {
-        versionOfOfflineNode = regionOpenInfo.getVersionOfOfflineNode();
-      }
       HTableDescriptor htd;
       try {
         final HRegion onlineRegion = regionServer.getFromOnlineRegions(region.getEncodedName());
@@ -1237,8 +1238,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
         if (Boolean.FALSE.equals(previous)) {
           // There is a close in progress. We need to mark this open as failed in ZK.
-          OpenRegionHandler.
-            tryTransitionFromOfflineToFailedOpen(regionServer, region, versionOfOfflineNode);
+
+          coordination.tryTransitionFromOfflineToFailedOpen(regionServer, region, ord);
 
           throw new RegionAlreadyInTransitionException("Received OPEN for the region:"
             + region.getRegionNameAsString() + " , which we are already trying to CLOSE ");
@@ -1266,12 +1267,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // Need to pass the expected version in the constructor.
           if (region.isMetaRegion()) {
             regionServer.service.submit(new OpenMetaHandler(
-              regionServer, regionServer, region, htd, versionOfOfflineNode));
+              regionServer, regionServer, region, htd, coordination, ord));
           } else {
             regionServer.updateRegionFavoredNodesMapping(region.getEncodedName(),
               regionOpenInfo.getFavoredNodesList());
             regionServer.service.submit(new OpenRegionHandler(
-              regionServer, regionServer, region, htd, versionOfOfflineNode));
+              regionServer, regionServer, region, htd, coordination, ord));
           }
         }
 

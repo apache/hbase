@@ -54,6 +54,9 @@ import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
+import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
+import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
+import org.apache.hadoop.hbase.coordination.ZkOpenRegionCoordination;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -255,7 +258,7 @@ public class TestAssignmentManager {
   }
 
   @Test(timeout = 60000)
-  public void testBalanceOnMasterFailoverScenarioWithClosedNode() 
+  public void testBalanceOnMasterFailoverScenarioWithClosedNode()
       throws IOException, KeeperException, InterruptedException, ServiceException,
         DeserializationException, CoordinatedStateException {
     AssignmentManagerWithExtrasForTesting am =
@@ -876,9 +879,19 @@ public class TestAssignmentManager {
     am.getRegionStates().createRegionState(REGIONINFO);
     am.gate.set(false);
     CatalogTracker ct = Mockito.mock(CatalogTracker.class);
-    assertFalse(am.processRegionsInTransition(rt, REGIONINFO, version));
-    am.getTableStateManager().setTableState(REGIONINFO.getTable(),
-      Table.State.ENABLED);
+
+    BaseCoordinatedStateManager cp = new ZkCoordinatedStateManager();
+    cp.initialize(server);
+    cp.start();
+
+    OpenRegionCoordination orc = cp.getOpenRegionCoordination();
+    ZkOpenRegionCoordination.ZkOpenRegionDetails zkOrd =
+      new ZkOpenRegionCoordination.ZkOpenRegionDetails();
+    zkOrd.setServerName(server.getServerName());
+    zkOrd.setVersion(version);
+
+    assertFalse(am.processRegionsInTransition(rt, REGIONINFO, orc, zkOrd));
+    am.getTableStateManager().setTableState(REGIONINFO.getTable(), Table.State.ENABLED);
     processServerShutdownHandler(ct, am, false);
     // Waiting for the assignment to get completed.
     while (!am.gate.get()) {
@@ -1357,8 +1370,9 @@ public class TestAssignmentManager {
       this.serverManager, ct, balancer, null, null, master.getTableLockManager()) {
 
       @Override
-      void handleRegion(final RegionTransition rt, int expectedVersion) {
-        super.handleRegion(rt, expectedVersion);
+      void handleRegion(final RegionTransition rt, OpenRegionCoordination coordination,
+                        OpenRegionCoordination.OpenRegionDetails ord) {
+        super.handleRegion(rt, coordination, ord);
         if (rt != null && Bytes.equals(hri.getRegionName(),
           rt.getRegionName()) && rt.getEventType() == EventType.RS_ZK_REGION_OPENING) {
           zkEventProcessed.set(true);
