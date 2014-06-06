@@ -19,7 +19,21 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
@@ -32,20 +46,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 @Category(LargeTests.class)
 public class TestRegionPlacement extends RegionPlacementTestBase {
@@ -339,5 +343,108 @@ public class TestRegionPlacement extends RegionPlacementTestBase {
     assertEquals("Loaded plan should be the same with current plan", currentPlan, loadedPlan);
 
   }
+
+  /**
+   * First create a table on pinned servers. Then change the table descriptor
+   * such that the table is not pinned anymore and can be assigned on all
+   * machines in the cluster. Then we call expandOnHosts passing the empty
+   * regionserver and in the end we verify that he received avg number of
+   * tertiaries
+   *
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  @Test
+  public void testExpandOnHosts() throws IOException, InterruptedException {
+    String tableName = "testExpandHosts";
+    // let's have more region for this test case
+    REGION_NUM = 20;
+
+    TEST_UTIL.resetLastOpenedRegionCount();
+    resetLastRegionOnPrimary();
+
+    try {
+      MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+      HTableDescriptor htd = new HTableDescriptor(tableName);
+      htd.addFamily(new HColumnDescriptor("d"));
+
+      assertTrue("number of slaves is smaller then 3", SLAVES >= 3);
+      Set<HServerAddress> servers = new HashSet<>(3);
+      HRegionServer unusedServer = cluster.getRegionServer(3);
+
+      for (int i = 0; i < 3; i++) {
+        servers.add(cluster.getRegionServer(i).getServerInfo()
+            .getServerAddress());
+      }
+
+      htd.setServers(servers);
+      admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+      admin.createTable(htd, Bytes.toBytes("aaaa"), Bytes.toBytes("zzzz"),
+          REGION_NUM);
+
+      // Wait for things to stabilize
+      TEST_UTIL.waitOnTable(tableName);
+      TEST_UTIL.waitOnStableRegionMovement();
+
+      // Reset all of the counters.
+      resetLastRegionOnPrimary();
+      TEST_UTIL.resetLastOpenedRegionCount();
+
+      verifyRegionAssignment(rp.getExistingAssignmentPlan(), 0, REGION_NUM);
+      assertPinned(tableName, cluster, servers, unusedServer);
+
+      // change the table descriptor now
+      htd.setServers(null);
+      admin.disableTable(tableName);
+      admin.modifyTable(Bytes.toBytes(tableName), htd);
+      admin.enableTable(tableName);
+
+      // Wait for things to stabilize
+      TEST_UTIL.waitOnTable(tableName);
+      TEST_UTIL.waitOnStableRegionMovement();
+
+      // Reset all of the counters.
+      resetLastRegionOnPrimary();
+      TEST_UTIL.resetLastOpenedRegionCount();
+
+      //verify there are no primaries on the last hosts from the existing table
+      HServerAddress newHost = cluster.getRegionServer(3).getServerInfo()
+          .getServerAddress();
+      Map<HRegionInfo, List<HServerAddress>> currentMap = rp.getExistingAssignmentPlan().getAssignmentMap();
+      for (List<HServerAddress> val : currentMap.values()) {
+        if (val.contains(newHost)) {
+          Assert.fail("new regionserver is contained in existing assignment");
+        }
+      }
+
+      List<HServerAddress> newHosts = new ArrayList<>();
+      newHosts.add(newHost);
+      AssignmentPlan newPlan = rp.expandRegionsToNewHosts(newHosts, rp.getRegionAssignmentSnapshot());
+      rp.updateAssignmentPlan(newPlan);
+
+      // verify there are tertiaries on the new host
+      Map<HRegionInfo, List<HServerAddress>> assignMap = newPlan.getAssignmentMap();
+      int regionsOnNewHost = 0;
+      for (List<HServerAddress> serversFromAssignment : assignMap.values()) {
+        //verify it is the tertiary
+        if (serversFromAssignment.get(AssignmentPlan.POSITION.TERTIARY.ordinal()).equals(newHost)) {
+          regionsOnNewHost++;
+        }
+      }
+      // we expect an average number of regions to move to the new host
+      assertEquals("avg number of regions to the new host: ", (int) REGION_NUM
+          / SLAVES, regionsOnNewHost);
+    } catch (Exception e) {
+      Assert.fail(e.getMessage());
+    } finally {
+      if (admin != null) {
+        admin.disableTable(tableName);
+        admin.deleteTable(tableName);
+        admin.close();
+        admin = null;
+      }
+    }
+  }
+
 }
 

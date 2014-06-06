@@ -31,6 +31,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.PriorityQueue;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
@@ -640,6 +641,107 @@ public class RegionPlacement implements RegionPlacementPolicy{
   }
 
   /**
+   * Used to expand cluster by adding more hosts. You don't need to use this
+   * when you are adding just a few hosts, but when you add a bunch of them
+   * (let's say >5 at once)
+   *
+   * We are iterating through each table and we are moving one region at a time
+   * starting from the hosts which contain largest number of regions. Note that
+   * only the tertiary will be updated, you will still need to update the
+   * assignment plan after a few days after locality builds up.
+   *
+   * @param newHosts
+   *          - new hosts where we expand the cluster
+   * @param assignmentSnapshot
+   *          - current assignment snapshot
+   * @throws IOException
+   */
+  public AssignmentPlan expandRegionsToNewHosts(List<HServerAddress> newHosts,
+      RegionAssignmentSnapshot assignmentSnapshot) throws IOException {
+
+    AssignmentPlan plan = assignmentSnapshot.getExistingAssignmentPlan();
+
+    Set<String> allTables = assignmentSnapshot.getTableSet();
+    for (String t : allTables) {
+      int totalRegionsPerTable = 0;
+      PriorityQueue<Pair<HServerAddress, List<HRegionInfo>>> pqueue = new PriorityQueue<>(
+          200, new Comparator<Pair<HServerAddress, List<HRegionInfo>>>() {
+
+            @Override
+            public int compare(Pair<HServerAddress, List<HRegionInfo>> p1,
+                Pair<HServerAddress, List<HRegionInfo>> p2) {
+              return -Integer.compare(p1.getSecond().size(), p2.getSecond()
+                  .size());
+            }
+          });
+      Map<HServerAddress, List<HRegionInfo>> rsToRegionsPerTable = assignmentSnapshot
+          .getRegionServerToRegionsPerTable().get(t);
+      for (Entry<HServerAddress, List<HRegionInfo>> entry : rsToRegionsPerTable.entrySet()) {
+        System.out.println("server: " + entry.getKey() + " regions" + entry.getValue().size());
+        totalRegionsPerTable +=entry.getValue().size();
+      }
+      for (Entry<HServerAddress, List<HRegionInfo>> entry : rsToRegionsPerTable
+          .entrySet()) {
+        pqueue.add(new Pair<HServerAddress, List<HRegionInfo>>(entry.getKey(),
+            entry.getValue()));
+      }
+
+      // for each of the new machines - calculate how many regions of this table
+      // should be placed
+
+      // calculate overall avg of regions per host (including new hosts as well)
+      AssignmentDomain domain = assignmentSnapshot.getGlobalAssignmentDomain();
+      System.out.println("rs: " + domain.getAllServers().size());
+      double avgPerHosts = (double) totalRegionsPerTable
+          / domain.getAllServers().size();
+      int avgPerHostFloor = (int) Math.floor(avgPerHosts);
+      Random rand = new Random();
+      for (HServerAddress server : newHosts) {
+        int neededRegionsOnNewHost = avgPerHostFloor
+            + (rand.nextDouble() < (avgPerHosts - avgPerHostFloor) ? 1 : 0);
+        // now start taking regions from the existing hosts (they are sorted by
+        // number of regions in descending order)
+        int placedRegionOnNew = 0;
+        while (placedRegionOnNew < neededRegionsOnNewHost) {
+          Pair<HServerAddress, List<HRegionInfo>> onOld = pqueue.poll();
+          HRegionInfo regionToMove = onOld.getSecond().remove(0);
+          // now return back the modified pair in the priority queue
+          pqueue.add(onOld);
+          placedRegionOnNew++;
+          // move the tertiary of the region to the new server
+          List<HServerAddress> favoredNodes = plan.getAssignment(regionToMove);
+          AssignmentPlan.replaceFavoredNodesServerWithNew(favoredNodes,
+              AssignmentPlan.POSITION.TERTIARY, server);
+          plan.updateAssignmentPlan(regionToMove, favoredNodes);
+        }
+        System.out.println("Server: " + server + " will get "
+            + placedRegionOnNew + " tertiary assignments for table " + t);
+      }
+    }
+    return plan;
+  }
+
+  /**
+   * @param plan
+   * @throws IOException
+   */
+  private void userUpdatePlan(AssignmentPlan plan) throws IOException {
+    System.out
+        .println("Do you want to update the assignment plan with this changes (y/n): ");
+    Scanner s = new Scanner(System.in);
+    String input = s.nextLine().trim();
+    s.close();
+    if (input.toLowerCase().equals("y")) {
+      System.out.println("Updating assignment plan...");
+      updateAssignmentPlanToMeta(plan);
+      updateAssignmentPlanToRegionServers(plan);
+    } else {
+      System.out.println("exiting without updating the assignment plan");
+    }
+  }
+
+
+  /**
    * This method will pick regions from a given rack, such that these regions
    * are going to be moved to the new rack later. The logic behind is: we move
    * the regions' tertiaries into a new rack
@@ -702,11 +804,13 @@ public class RegionPlacement implements RegionPlacementPolicy{
       serverIndex++;
     }
     System.out.println("Total number of regions: " + totalMovedPerRack
-        + " in rack " + currentRack + " will move its tertiary to a new rack: "
+        + " in rack " + currentRack + " will move its tertiary to the new : "
         + newRack);
     System.out.println("------------------------------------------");
     return regionsToMove;
   }
+
+
 
   /**
    * Returns the average number of regions per regionserver
@@ -730,11 +834,15 @@ public class RegionPlacement implements RegionPlacementPolicy{
    * Move the regions to the new rack, such that each server will get equal
    * number of regions
    *
-   * @param plan - the current assignment plan
-   * @param domain - the assignment domain
-   * @param regionsToMove - the regions that would be moved to the new rack
-   * regionserver per rack are picked to be moved in the new rack
-   * @param newRack - the new rack
+   * @param plan
+   *          - the current assignment plan
+   * @param domain
+   *          - the assignment domain
+   * @param regionsToMove
+   *          - the regions that would be moved to the new rack regionserver per
+   *          rack are picked to be moved in the new rack
+   * @param newRack
+   *          - the new rack
    * @throws IOException
    */
   private void moveRegionsToNewRack(AssignmentPlan plan,
@@ -742,7 +850,8 @@ public class RegionPlacement implements RegionPlacementPolicy{
       throws IOException {
     System.out.println("------------------------------------------");
     System.out
-        .println("Printing how many regions are planned to be assigned per region server in the new rack (" + newRack + ")");
+        .println("Printing how many regions are planned to be assigned per region server in the new rack ("
+            + newRack + ")");
     List<HServerAddress> serversFromNewRack = domain
         .getServersFromRack(newRack);
     int totalNumRSNewRack = serversFromNewRack.size();
@@ -761,19 +870,9 @@ public class RegionPlacement implements RegionPlacementPolicy{
       System.out.println("RS: " + serversFromNewRack.get(j).getHostname()
           + " got " + regionsPerRs + "tertiary regions");
     }
-    System.out
-        .println("Do you want to update the assignment plan with this changes (y/n): ");
-    Scanner s = new Scanner(System.in);
-    String input = s.nextLine().trim();
-    s.close();
-    if (input.toLowerCase().equals("y")) {
-      System.out.println("Updating assignment plan...");
-      updateAssignmentPlanToMeta(plan);
-      updateAssignmentPlanToRegionServers(plan);
-    } else {
-      System.out.println("exiting without updating the assignment plan");
-    }
+    userUpdatePlan(plan);
   }
+
   /**
    * Generate the assignment plan for the existing table
    *
@@ -1657,6 +1756,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
         "use munkres to place secondaries and tertiaries");
     opt.addOption("ld", "locality-dispersion", false, "print locality and dispersion information for current plan");
     opt.addOption("exprack", "expand-with-rack", false, "expand the regions to a new rack");
+    opt.addOption("expHosts", false, "expand the regions to a new rack");
     opt.addOption("rnum", false, "print number of primaries per RS");
     opt.addOption("bp", "balance-primary", false, "balance the primaries across all regionservers in the cluster");
     try {
@@ -1733,14 +1833,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
             .getRegionDegreeLocalityMappingFromFS(conf);
         Map<String, Integer> movesPerTable = rp.getRegionsMovement(newPlan);
         rp.checkDifferencesWithOldPlan(movesPerTable, locality, newPlan);
-        System.out.println("Do you want to update the assignment plan? [y/n]");
-        Scanner s = new Scanner(System.in);
-        String input = s.nextLine().trim();
-        if (input.equals("y")) {
-          System.out.println("Updating assignment plan...");
-          rp.updateAssignmentPlan(newPlan);
-        }
-        s.close();
+        rp.userUpdatePlan(newPlan);
       }
       // Read all the modes
       else if (cmd.hasOption("v") || cmd.hasOption("verify")) {
@@ -1773,14 +1866,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
         System.out.println("Printing how will distribution of primaries look like");
         rp.printDistributionOfPrimariesPerTable(rp.getRegionAssignmentSnapshot(), newPlan);
         rp.printDistributionOfPrimariesPerCell(rp.getExistingAssignmentPlan(), newPlan);
-        System.out.println("Do you want to update the assignment plan? [y/n]");
-        Scanner s = new Scanner(System.in);
-        String input = s.nextLine().trim();
-        if (input.equals("y")) {
-          System.out.println("Updating assignment plan...");
-          rp.updateAssignmentPlan(newPlan);
-        }
-        s.close();
+        rp.userUpdatePlan(newPlan);
       } else if (cmd.hasOption("ld")) {
         Map<String, Map<String, Float>> locality = FSUtils
             .getRegionDegreeLocalityMappingFromFS(conf);
@@ -1831,6 +1917,8 @@ public class RegionPlacement implements RegionPlacementPolicy{
         String newRack = s.nextLine().trim();
         s.close();
         rp.expandRegionsToNewRack(newRack, snapshot);
+      } else if (cmd.hasOption("expHosts")) {
+        expandClusterWithNewHosts(rp);
       } else if (cmd.hasOption("upload")) {
         String fileName = cmd.getOptionValue("upload");
         try {
@@ -1840,14 +1928,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
               .getRegionDegreeLocalityMappingFromFS(conf);
           Map<String, Integer> movesPerTable = rp.getRegionsMovement(newPlan);
           rp.checkDifferencesWithOldPlan(movesPerTable, locality, newPlan);
-          System.out.println("Do you want to update the assignment plan? [y/n]");
-          Scanner s = new Scanner(System.in);
-          String input = s.nextLine().trim();
-          if (input.equals("y")) {
-            System.out.println("Updating assignment plan...");
-            rp.updateAssignmentPlan(newPlan);
-          }
-          s.close();
+          rp.userUpdatePlan(newPlan);
         } catch (JsonParseException je) {
           LOG.error("Unable to parse json file", je);
         } catch (IOException e) {
@@ -1872,6 +1953,65 @@ public class RegionPlacement implements RegionPlacementPolicy{
     } catch (ParseException e) {
       printHelp(opt);
     }
+  }
+
+  /**
+   * Entry-point when expanding a cluster with a number of hosts
+   *
+   * @param rp
+   *          - regionPlacement object
+   * @throws IOException
+   */
+  private static void expandClusterWithNewHosts(RegionPlacement rp)
+      throws IOException {
+    RegionAssignmentSnapshot snapshot = rp.getRegionAssignmentSnapshot();
+    System.out.println("List of all hosts with #regions assigned: ");
+    Map<HServerAddress, List<HRegionInfo>> serverToRegions = snapshot
+        .getRegionServerToRegionMap();
+    // these are potential hosts - to which we want to expand
+    List<HServerAddress> emptyHosts = new ArrayList<>();
+    for (Entry<HServerAddress, List<HRegionInfo>> entry : serverToRegions
+        .entrySet()) {
+      System.out.println(entry.getKey().getHostname() + "\t:\t"
+          + entry.getValue().size());
+      if (entry.getValue().size() == 0) {
+        emptyHosts.add(entry.getKey());
+      }
+    }
+    System.out
+        .println("Guessing with which hosts you want to expand the cluster");
+    StringBuilder sb = new StringBuilder();
+    for (HServerAddress server : emptyHosts) {
+      sb.append(server.getHostname());
+      sb.append(",");
+    }
+    // remove the last comma
+    sb.deleteCharAt(sb.length() - 1);
+    System.out.println("If all the hosts are correct just press Y, otherwise "
+        + "specify the list of the hosts in one line (comma separated)");
+    System.out.println("Example:");
+    System.out.println();
+    System.out.println("hbase123.xyz, hbase456.xyz, hbase789.xyz");
+    Scanner s = new Scanner(System.in);
+    String answer = s.nextLine().trim();
+    s.close();
+    List<HServerAddress> specifiedHosts = null;
+    if (!answer.equalsIgnoreCase("Y")) {
+      Set<String> specifiedStrings = new HashSet<String>();
+      String[] hosts = answer.split(",");
+      for (String host : hosts) {
+        specifiedStrings.add(host.trim());
+      }
+      specifiedHosts = snapshot.getGlobalAssignmentDomain()
+          .getHServerAddressFromHostname(specifiedStrings);
+      if (specifiedHosts == null) {
+        System.out.println("One or more of the specified hosts were not recognized, ABORTING");
+        return;
+      }
+    }
+    AssignmentPlan newPlan = rp.expandRegionsToNewHosts(
+        specifiedHosts == null ? emptyHosts : specifiedHosts, snapshot);
+    rp.userUpdatePlan(newPlan);
   }
 
   private static void printHelp(Options opt) {

@@ -30,13 +30,14 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
+
+import com.google.common.collect.Lists;
 
 public class AssignmentDomain {
   protected static final Log LOG =
@@ -230,5 +231,33 @@ public class AssignmentDomain {
     if (serverSize < HConstants.FAVORED_NODES_NUM)
       return false;
     return true;
+  }
+
+  /**
+   * Given list of hostnames (Set of strings) you will get list of
+   * HServerAddress. The order will be perserved i.e if you passed in the set
+   * (h1, 2, 3) you will get (HServerAddres1, 2, 3)
+   *
+   * @param hostnames
+   *          - Set of String
+   * @return - List of corresponding HServerAddress
+   */
+  public List<HServerAddress> getHServerAddressFromHostname(
+      Set<String> hostnames) {
+    List<HServerAddress> serversToReturn = new ArrayList<HServerAddress>();
+    Set<HServerAddress> servers = regionServerToRackMap.keySet();
+    Map<String, HServerAddress> allServerNameToAddress = new HashMap<>();
+    for (HServerAddress address : servers) {
+      allServerNameToAddress.put(address.getHostname(), address);
+    }
+    for (String host : hostnames) {
+      HServerAddress hostAddress = allServerNameToAddress.get(host);
+      if (hostAddress == null) {
+        LOG.error("Host: " + hostAddress + " is not recognized!!!");
+      } else {
+        serversToReturn.add(hostAddress);
+      }
+    }
+    return serversToReturn;
   }
 }

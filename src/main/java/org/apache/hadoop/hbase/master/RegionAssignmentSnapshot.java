@@ -54,6 +54,7 @@ public class RegionAssignmentSnapshot {
   /** the region name to region info map */
   private final Map<String, HRegionInfo> regionNameToRegionInfoMap;
   
+  private final Map<String, Map<HServerAddress, List<HRegionInfo>>> rsToRegionsPerTable;
   /** the regionServer to region map */
   private final Map<HServerAddress, List<HRegionInfo>> regionServerToRegionMap;
   /** the existing assignment plan in the META region */
@@ -67,6 +68,7 @@ public class RegionAssignmentSnapshot {
     regionToRegionServerMap = new HashMap<HRegionInfo, HServerAddress>();
     regionServerToRegionMap = new HashMap<HServerAddress, List<HRegionInfo>>();
     regionNameToRegionInfoMap = new TreeMap<String, HRegionInfo>();
+    rsToRegionsPerTable = new HashMap<>();
     exsitingAssignmentPlan = new AssignmentPlan();
     globalAssignmentDomain = new AssignmentDomain(conf);
   }
@@ -77,7 +79,7 @@ public class RegionAssignmentSnapshot {
    */
   public void initialize() throws IOException {
     LOG.info("Start to scan the META for the current region assignment " +
-    		"snappshot");
+        "snapshot");
     
     // Add all the online region servers
     HBaseAdmin admin  = new HBaseAdmin(conf);
@@ -160,6 +162,20 @@ public class RegionAssignmentSnapshot {
       }
       regionList.add(regionInfo);
       regionServerToRegionMap.put(server, regionList);
+
+      // update rsToRegionsPerTable accordingly
+      String tblName = regionInfo.getTableDesc().getNameAsString();
+      Map<HServerAddress, List<HRegionInfo>> assignment = rsToRegionsPerTable.get(tblName);
+      if (assignment== null){
+        assignment = new HashMap<>();
+        rsToRegionsPerTable.put(tblName, assignment);
+      }
+      List<HRegionInfo> regions = assignment.get(server);
+      if (regions == null) {
+        regions = new ArrayList<>();
+        assignment.put(server, regions);
+      }
+      regions.add(regionInfo);
     } 
   }
 
@@ -189,5 +205,13 @@ public class RegionAssignmentSnapshot {
   
   public Set<String> getTableSet() {
     return this.tableToRegionMap.keySet();
+  }
+
+  /**
+   * Returns assignment regionserver->regions per table
+   *
+   */
+  public Map<String, Map<HServerAddress, List<HRegionInfo>>> getRegionServerToRegionsPerTable() {
+    return this.rsToRegionsPerTable;
   }
 }
