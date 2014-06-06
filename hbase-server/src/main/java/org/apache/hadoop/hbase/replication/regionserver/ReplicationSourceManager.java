@@ -34,6 +34,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -113,13 +114,15 @@ public class ReplicationSourceManager implements ReplicationListener {
       final ReplicationPeers replicationPeers, final ReplicationTracker replicationTracker,
       final Configuration conf, final Stoppable stopper, final FileSystem fs, final Path logDir,
       final Path oldLogDir, final UUID clusterId) {
-    this.sources = new ArrayList<ReplicationSourceInterface>();
+    //CopyOnWriteArrayList is thread-safe.
+    //Generally, reading is more than modifying. 
+    this.sources = new CopyOnWriteArrayList<ReplicationSourceInterface>();
     this.replicationQueues = replicationQueues;
     this.replicationPeers = replicationPeers;
     this.replicationTracker = replicationTracker;
     this.stopper = stopper;
     this.hlogsById = new HashMap<String, SortedSet<String>>();
-    this.oldsources = new ArrayList<ReplicationSourceInterface>();
+    this.oldsources = new CopyOnWriteArrayList<ReplicationSourceInterface>();
     this.conf = conf;
     this.fs = fs;
     this.logDir = logDir;
