@@ -1606,6 +1606,20 @@ If a committer wishes to improve an unacceptable patch, then it should first be 
 Be sure to get the issue id right, as this causes Jira to link to the change in Subversion (use the issue's &quot;All&quot; tab to see these). </para></listitem>
 <listitem><para>Resolve the issue as fixed, thanking the contributor.
 Always set the &quot;Fix Version&quot; at this point, but please only set a single fix version, the earliest release in which the change will appear. </para></listitem></orderedlist><para><anchor id="Documentation"/> </para>
+
+          <section xml:id="committer.amending.author">
+              <title>Add Amending-Author when a conflict cherrypick backporting</title>
+          <para>
+              We've established the practice of committing to trunk and then
+              cherry picking back to branches whenever possible. When there is a minor
+              conflict we can fix it up and just proceed with the commit. The resulting commit
+              retains the original author. When the amending author is different from the
+              original committer, add notice of this at the end of the commit message as:
+              <varname>Amending-Author: Author &lt;committer&amp;apache&gt;</varname>
+              See discussion at <link xlink:href="http://search-hadoop.com/m/DHED4wHGYS">HBase, mail # dev - [DISCUSSION] Best practice when amending commits cherry picked from master to branch</link>.
+            </para>
+          </section>
+
           <section xml:id="committer.tests">
               <title>Committers are responsible for making sure commits do not break the build or tests</title>
           <para>
