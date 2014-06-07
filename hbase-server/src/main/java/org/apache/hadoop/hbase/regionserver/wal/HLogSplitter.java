@@ -1972,8 +1972,8 @@ public class HLogSplitter {
         clusterIds.add(new UUID(uuid.getMostSigBits(), uuid.getLeastSigBits()));
       }
       key = new HLogKey(walKey.getEncodedRegionName().toByteArray(), TableName.valueOf(walKey
-              .getTableName().toByteArray()), walKey.getLogSequenceNumber(), walKey.getWriteTime(),
-              clusterIds, walKey.getNonceGroup(), walKey.getNonce());
+              .getTableName().toByteArray()), walKey.getLogSequenceNumber(), 
+              walKey.getWriteTime(), clusterIds, walKey.getNonceGroup(), walKey.getNonce());
       logEntry.setFirst(key);
       logEntry.setSecond(val);
     }

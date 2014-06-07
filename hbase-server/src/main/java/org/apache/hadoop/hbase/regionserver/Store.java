@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Interface for objects that hold a column family in a Region. Its a memstore and a set of zero or
@@ -122,9 +123,9 @@ public interface Store extends HeapSize, StoreConfigInformation {
   /**
    * Adds a value to the memstore
    * @param kv
-   * @return memstore size delta
+   * @return memstore size delta & newly added KV which maybe different than the passed in KV
    */
-  long add(KeyValue kv);
+  Pair<Long, Cell> add(KeyValue kv);
 
   /**
    * When was the last edit done in the memstore

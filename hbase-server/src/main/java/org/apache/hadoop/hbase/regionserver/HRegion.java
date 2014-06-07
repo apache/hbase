@@ -824,10 +824,11 @@ public class HRegion implements HeapSize { // , Writable{
         }
       }
     }
-    mvcc.initialize(maxMemstoreTS + 1);
     // Recover any edits if available.
     maxSeqId = Math.max(maxSeqId, replayRecoveredEditsIfAny(
         this.fs.getRegionDir(), maxSeqIdInStores, reporter, status));
+    maxSeqId = Math.max(maxSeqId, maxMemstoreTS + 1);
+    mvcc.initialize(maxSeqId);
     return maxSeqId;
   }
 
@@ -1684,7 +1685,7 @@ public class HRegion implements HeapSize { // , Writable{
           // wal can be null replaying edits.
           return wal != null?
             new FlushResult(FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY,
-              getNextSequenceId(wal, startTime), "Nothing to flush"):
+              getNextSequenceId(wal), "Nothing to flush"):
             new FlushResult(FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY, "Nothing to flush");
         }
       } finally {
@@ -1714,58 +1715,64 @@ public class HRegion implements HeapSize { // , Writable{
       getRegionInfo().getEncodedName());
     List<StoreFlushContext> storeFlushCtxs = new ArrayList<StoreFlushContext>(stores.size());
     long flushSeqId = -1L;
+
     try {
-      // Record the mvcc for all transactions in progress.
-      w = mvcc.beginMemstoreInsert();
-      mvcc.advanceMemstore(w);
-      if (wal != null) {
-        if (!wal.startCacheFlush(this.getRegionInfo().getEncodedNameAsBytes())) {
-          // This should never happen.
-          String msg = "Flush will not be started for ["
-              + this.getRegionInfo().getEncodedName() + "] - because the WAL is closing.";
-          status.setStatus(msg);
-          return new FlushResult(FlushResult.Result.CANNOT_FLUSH, msg);
+      try {
+        w = mvcc.beginMemstoreInsert();
+        if (wal != null) {
+          if (!wal.startCacheFlush(this.getRegionInfo().getEncodedNameAsBytes())) {
+            // This should never happen.
+            String msg = "Flush will not be started for ["
+                + this.getRegionInfo().getEncodedName() + "] - because the WAL is closing.";
+            status.setStatus(msg);
+            return new FlushResult(FlushResult.Result.CANNOT_FLUSH, msg);
+          }
+          // Get a sequence id that we can use to denote the flush. It will be one beyond the last
+          // edit that made it into the hfile (the below does not add an edit, it just asks the
+          // WAL system to return next sequence edit).
+          flushSeqId = getNextSequenceId(wal);
+        } else {
+          // use the provided sequence Id as WAL is not being used for this flush.
+          flushSeqId = myseqid;
         }
-        // Get a sequence id that we can use to denote the flush.  It will be one beyond the last
-        // edit that made it into the hfile (the below does not add an edit, it just asks the
-        // WAL system to return next sequence edit).
-        flushSeqId = getNextSequenceId(wal, startTime);
-      } else {
-        // use the provided sequence Id as WAL is not being used for this flush.
-        flushSeqId = myseqid;
-      }
 
-      for (Store s : stores.values()) {
-        totalFlushableSize += s.getFlushableSize();
-        storeFlushCtxs.add(s.createFlushContext(flushSeqId));
-      }
+        for (Store s : stores.values()) {
+          totalFlushableSize += s.getFlushableSize();
+          storeFlushCtxs.add(s.createFlushContext(flushSeqId));
+        }
 
-      // Prepare flush (take a snapshot)
-      for (StoreFlushContext flush : storeFlushCtxs) {
-        flush.prepare();
+        // Prepare flush (take a snapshot)
+        for (StoreFlushContext flush : storeFlushCtxs) {
+          flush.prepare();
+        }
+      } finally {
+        this.updatesLock.writeLock().unlock();
       }
+      String s = "Finished memstore snapshotting " + this +
+        ", syncing WAL and waiting on mvcc, flushsize=" + totalFlushableSize;
+      status.setStatus(s);
+      if (LOG.isTraceEnabled()) LOG.trace(s);
+      // sync unflushed WAL changes when deferred log sync is enabled
+      // see HBASE-8208 for details
+      if (wal != null && !shouldSyncLog()) wal.sync();
+
+      // wait for all in-progress transactions to commit to HLog before
+      // we can start the flush. This prevents
+      // uncommitted transactions from being written into HFiles.
+      // We have to block before we start the flush, otherwise keys that
+      // were removed via a rollbackMemstore could be written to Hfiles.
+      mvcc.waitForPreviousTransactionsComplete(w);
+      // set w to null to prevent mvcc.advanceMemstore from being called again inside finally block
+      w = null;
+      s = "Flushing stores of " + this;
+      status.setStatus(s);
+      if (LOG.isTraceEnabled()) LOG.trace(s);
     } finally {
-      this.updatesLock.writeLock().unlock();
+      if (w != null) {
+        // in case of failure just mark current w as complete
+        mvcc.advanceMemstore(w);
+      }
     }
-    String s = "Finished memstore snapshotting " + this +
-      ", syncing WAL and waiting on mvcc, flushSize=" + totalFlushableSize;
-    status.setStatus(s);
-    if (LOG.isTraceEnabled()) LOG.trace(s);
-
-    // sync unflushed WAL changes when deferred log sync is enabled
-    // see HBASE-8208 for details
-    if (wal != null && !shouldSyncLog()) wal.sync();
-
-    // wait for all in-progress transactions to commit to HLog before
-    // we can start the flush. This prevents
-    // uncommitted transactions from being written into HFiles.
-    // We have to block before we start the flush, otherwise keys that
-    // were removed via a rollbackMemstore could be written to Hfiles.
-    mvcc.waitForRead(w);
-
-    s = "Flushing stores of " + this;
-    status.setStatus(s);
-    if (LOG.isTraceEnabled()) LOG.trace(s);
 
     // Any failure from here on out will be catastrophic requiring server
     // restart so hlog content can be replayed and put back into the memstore.
@@ -1849,13 +1856,9 @@ public class HRegion implements HeapSize { // , Writable{
    * @return Next sequence number unassociated with any actual edit.
    * @throws IOException
    */
-  private long getNextSequenceId(final HLog wal, final long now) throws IOException {
-    HLogKey key = new HLogKey(getRegionInfo().getEncodedNameAsBytes(), getRegionInfo().getTable());
-    // Call append but with an empty WALEdit.  The returned sequence id will not be associated
-    // with any edit and we can be sure it went in after all outstanding appends.
-    wal.appendNoSync(getTableDesc(), getRegionInfo(), key,
-      WALEdit.EMPTY_WALEDIT, this.sequenceId, false);
-    return key.getLogSeqNum();
+  private long getNextSequenceId(final HLog wal) throws IOException {
+    HLogKey key = this.appendNoSyncNoAppend(wal, null);
+    return key.getSequenceNumber();
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -2349,11 +2352,14 @@ public class HRegion implements HeapSize { // , Writable{
     List<RowLock> acquiredRowLocks = Lists.newArrayListWithCapacity(batchOp.operations.length);
     // reference family maps directly so coprocessors can mutate them if desired
     Map<byte[], List<Cell>>[] familyMaps = new Map[batchOp.operations.length];
+    List<KeyValue> memstoreCells = new ArrayList<KeyValue>();
     // We try to set up a batch in the range [firstIndex,lastIndexExclusive)
     int firstIndex = batchOp.nextIndexToProcess;
     int lastIndexExclusive = firstIndex;
     boolean success = false;
     int noOfPuts = 0, noOfDeletes = 0;
+    HLogKey walKey = null;
+    long mvccNum = 0;
     try {
       // ------------------------------------
       // STEP 1. Try to acquire as many locks as we can, and ensure
@@ -2475,13 +2481,13 @@ public class HRegion implements HeapSize { // , Writable{
 
       lock(this.updatesLock.readLock(), numReadyToWrite);
       locked = true;
-
+      mvccNum = MultiVersionConsistencyControl.getPreAssignedWriteNumber(this.sequenceId);
       //
       // ------------------------------------
       // Acquire the latest mvcc number
       // ----------------------------------
-      w = mvcc.beginMemstoreInsert();
-
+      w = mvcc.beginMemstoreInsertWithSeqNum(mvccNum);
+      
       // calling the pre CP hook for batch mutation
       if (!isInReplay && coprocessorHost != null) {
         MiniBatchOperationInProgress<Mutation> miniBatchOp =
@@ -2506,13 +2512,12 @@ public class HRegion implements HeapSize { // , Writable{
           continue;
         }
         doRollBackMemstore = true; // If we have a failure, we need to clean what we wrote
-        addedSize += applyFamilyMapToMemstore(familyMaps[i], w);
+        addedSize += applyFamilyMapToMemstore(familyMaps[i], mvccNum, memstoreCells);
       }
 
       // ------------------------------------
       // STEP 4. Build WAL edit
       // ----------------------------------
-      boolean hasWalAppends = false;
       Durability durability = Durability.USE_DEFAULT;
       for (int i = firstIndex; i < lastIndexExclusive; i++) {
         // Skip puts that were determined to be invalid during preprocessing
@@ -2543,13 +2548,13 @@ public class HRegion implements HeapSize { // , Writable{
               throw new IOException("Multiple nonces per batch and not in replay");
             }
             // txid should always increase, so having the one from the last call is ok.
-            HLogKey key = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
-              this.htableDescriptor.getTableName(), now, m.getClusterIds(), currentNonceGroup,
-              currentNonce);
-            txid = this.log.appendNoSync(this.htableDescriptor,  this.getRegionInfo(),  key,
-              walEdit, getSequenceId(), true);
-            hasWalAppends = true;
+            walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
+              this.htableDescriptor.getTableName(), now, m.getClusterIds(), 
+              currentNonceGroup, currentNonce);
+            txid = this.log.appendNoSync(this.htableDescriptor,  this.getRegionInfo(),  walKey,
+              walEdit, getSequenceId(), true, null);
             walEdit = new WALEdit(isInReplay);
+            walKey = null;
           }
           currentNonceGroup = nonceGroup;
           currentNonce = nonce;
@@ -2570,12 +2575,15 @@ public class HRegion implements HeapSize { // , Writable{
       // -------------------------
       Mutation mutation = batchOp.getMutation(firstIndex);
       if (walEdit.size() > 0) {
-        HLogKey key = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
-            this.htableDescriptor.getTableName(), now, mutation.getClusterIds(),
-            currentNonceGroup, currentNonce);
-        txid = this.log.appendNoSync(this.htableDescriptor, this.getRegionInfo(), key, walEdit,
-          getSequenceId(), true);
-        hasWalAppends = true;
+        walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
+            this.htableDescriptor.getTableName(), HLog.NO_SEQUENCE_ID, now, 
+            mutation.getClusterIds(), currentNonceGroup, currentNonce);
+        txid = this.log.appendNoSync(this.htableDescriptor, this.getRegionInfo(), walKey, walEdit,
+          getSequenceId(), true, memstoreCells);
+      }
+      if(walKey == null){
+        // Append a faked WALEdit in order for SKIP_WAL updates to get mvcc assigned
+        walKey = this.appendNoSyncNoAppend(this.log, memstoreCells);
       }
 
       // -------------------------------
@@ -2590,9 +2598,10 @@ public class HRegion implements HeapSize { // , Writable{
       // -------------------------
       // STEP 7. Sync wal.
       // -------------------------
-      if (hasWalAppends) {
+      if (txid != 0) {
         syncOrDefer(txid, durability);
       }
+      
       doRollBackMemstore = false;
       // calling the post CP hook for batch mutation
       if (!isInReplay && coprocessorHost != null) {
@@ -2606,7 +2615,7 @@ public class HRegion implements HeapSize { // , Writable{
       // STEP 8. Advance mvcc. This will make this put visible to scanners and getters.
       // ------------------------------------------------------------------
       if (w != null) {
-        mvcc.completeMemstoreInsert(w);
+        mvcc.completeMemstoreInsertWithSeqNum(w, walKey);
         w = null;
       }
 
@@ -2636,9 +2645,11 @@ public class HRegion implements HeapSize { // , Writable{
 
       // if the wal sync was unsuccessful, remove keys from memstore
       if (doRollBackMemstore) {
-        rollbackMemstore(batchOp, familyMaps, firstIndex, lastIndexExclusive);
+        rollbackMemstore(memstoreCells);
       }
-      if (w != null) mvcc.completeMemstoreInsert(w);
+      if (w != null) {
+        mvcc.completeMemstoreInsertWithSeqNum(w, walKey);
+      }
 
       if (locked) {
         this.updatesLock.readLock().unlock();
@@ -2727,7 +2738,7 @@ public class HRegion implements HeapSize { // , Writable{
       // Lock row - note that doBatchMutate will relock this row if called
       RowLock rowLock = getRowLock(get.getRow());
       // wait for all previous transactions to complete (with lock held)
-      mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
+      mvcc.waitForPreviousTransactionsComplete();
       try {
         if (this.getCoprocessorHost() != null) {
           Boolean processed = null;
@@ -2903,34 +2914,25 @@ public class HRegion implements HeapSize { // , Writable{
    * @param familyMap Map of kvs per family
    * @param localizedWriteEntry The WriteEntry of the MVCC for this transaction.
    *        If null, then this method internally creates a mvcc transaction.
+   * @param output newly added KVs into memstore
    * @return the additional memory usage of the memstore caused by the
    * new entries.
    */
   private long applyFamilyMapToMemstore(Map<byte[], List<Cell>> familyMap,
-    MultiVersionConsistencyControl.WriteEntry localizedWriteEntry) {
+    long mvccNum, List<KeyValue> memstoreCells) {
     long size = 0;
-    boolean freemvcc = false;
 
-    try {
-      if (localizedWriteEntry == null) {
-        localizedWriteEntry = mvcc.beginMemstoreInsert();
-        freemvcc = true;
-      }
+    for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
+      byte[] family = e.getKey();
+      List<Cell> cells = e.getValue();
 
-      for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
-        byte[] family = e.getKey();
-        List<Cell> cells = e.getValue();
-
-        Store store = getStore(family);
-        for (Cell cell: cells) {
-          KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-          kv.setMvccVersion(localizedWriteEntry.getWriteNumber());
-          size += store.add(kv);
-        }
-      }
-    } finally {
-      if (freemvcc) {
-        mvcc.completeMemstoreInsert(localizedWriteEntry);
+      Store store = getStore(family);
+      for (Cell cell: cells) {
+        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+        kv.setMvccVersion(mvccNum);
+        Pair<Long, Cell> ret = store.add(kv);
+        size += ret.getFirst();
+        memstoreCells.add(KeyValueUtil.ensureKeyValue(ret.getSecond()));
       }
     }
 
@@ -2942,35 +2944,16 @@ public class HRegion implements HeapSize { // , Writable{
    * called when a Put/Delete has updated memstore but subsequently fails to update
    * the wal. This method is then invoked to rollback the memstore.
    */
-  private void rollbackMemstore(BatchOperationInProgress<?> batchOp,
-                                Map<byte[], List<Cell>>[] familyMaps,
-                                int start, int end) {
+  private void rollbackMemstore(List<KeyValue> memstoreCells) {
     int kvsRolledback = 0;
-    for (int i = start; i < end; i++) {
-      // skip over request that never succeeded in the first place.
-      if (batchOp.retCodeDetails[i].getOperationStatusCode()
-            != OperationStatusCode.SUCCESS) {
-        continue;
-      }
-
-      // Rollback all the kvs for this row.
-      Map<byte[], List<Cell>> familyMap  = familyMaps[i];
-      for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
-        byte[] family = e.getKey();
-        List<Cell> cells = e.getValue();
-
-        // Remove those keys from the memstore that matches our
-        // key's (row, cf, cq, timestamp, memstoreTS). The interesting part is
-        // that even the memstoreTS has to match for keys that will be rolled-back.
-        Store store = getStore(family);
-        for (Cell cell: cells) {
-          store.rollback(KeyValueUtil.ensureKeyValue(cell));
-          kvsRolledback++;
-        }
-      }
+    
+    for (KeyValue kv : memstoreCells) {
+      byte[] family = kv.getFamily();
+      Store store = getStore(family);
+      store.rollback(kv);
+      kvsRolledback++;
     }
-    LOG.debug("rollbackMemstore rolled back " + kvsRolledback +
-        " keyvalues from start:" + start + " to end:" + end);
+    LOG.debug("rollbackMemstore rolled back " + kvsRolledback);
   }
 
   /**
@@ -3378,7 +3361,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @return True if we should flush.
    */
   protected boolean restoreEdit(final Store s, final KeyValue kv) {
-    long kvSize = s.add(kv);
+    long kvSize = s.add(kv).getFirst();
     if (this.rsAccounting != null) {
       rsAccounting.addAndGetRegionReplayEditsSize(this.getRegionName(), kvSize);
     }
@@ -4883,7 +4866,10 @@ public class HRegion implements HeapSize { // , Writable{
     List<RowLock> acquiredRowLocks;
     long addedSize = 0;
     List<KeyValue> mutations = new ArrayList<KeyValue>();
+    List<KeyValue> memstoreCells = new ArrayList<KeyValue>();
     Collection<byte[]> rowsToLock = processor.getRowsToLock();
+    long mvccNum = 0;
+    HLogKey walKey = null;
     try {
       // 2. Acquire the row lock(s)
       acquiredRowLocks = new ArrayList<RowLock>(rowsToLock.size());
@@ -4894,6 +4880,7 @@ public class HRegion implements HeapSize { // , Writable{
       // 3. Region lock
       lock(this.updatesLock.readLock(), acquiredRowLocks.size());
       locked = true;
+      mvccNum = MultiVersionConsistencyControl.getPreAssignedWriteNumber(this.sequenceId);
 
       long now = EnvironmentEdgeManager.currentTimeMillis();
       try {
@@ -4904,27 +4891,35 @@ public class HRegion implements HeapSize { // , Writable{
 
         if (!mutations.isEmpty()) {
           // 5. Get a mvcc write number
-          writeEntry = mvcc.beginMemstoreInsert();
+          writeEntry = mvcc.beginMemstoreInsertWithSeqNum(mvccNum);
           // 6. Apply to memstore
           for (KeyValue kv : mutations) {
-            kv.setMvccVersion(writeEntry.getWriteNumber());
+            kv.setMvccVersion(mvccNum);
             Store store = getStore(kv);
             if (store == null) {
               checkFamily(CellUtil.cloneFamily(kv));
               // unreachable
             }
-            addedSize += store.add(kv);
+            Pair<Long, Cell> ret = store.add(kv);
+            addedSize += ret.getFirst();
+            memstoreCells.add(KeyValueUtil.ensureKeyValue(ret.getSecond()));
           }
 
           long txid = 0;
           // 7. Append no sync
           if (!walEdit.isEmpty()) {
-            HLogKey key = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
-              this.htableDescriptor.getTableName(), now, processor.getClusterIds(), nonceGroup,
-              nonce);
+            walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
+              this.htableDescriptor.getTableName(), HLog.NO_SEQUENCE_ID, now, 
+              processor.getClusterIds(), nonceGroup, nonce);
             txid = this.log.appendNoSync(this.htableDescriptor, this.getRegionInfo(),
-              key, walEdit, getSequenceId(), true);
+              walKey, walEdit, getSequenceId(), true, memstoreCells);
           }
+          if(walKey == null){
+            // since we use log sequence Id as mvcc, for SKIP_WAL changes we need a "faked" WALEdit
+            // to get a sequence id assigned which is done by FSWALEntry#stampRegionSequenceId
+            walKey = this.appendNoSyncNoAppend(this.log, memstoreCells);
+          }
+
           // 8. Release region lock
           if (locked) {
             this.updatesLock.readLock().unlock();
@@ -4951,7 +4946,7 @@ public class HRegion implements HeapSize { // , Writable{
         }
         // 11. Roll mvcc forward
         if (writeEntry != null) {
-          mvcc.completeMemstoreInsert(writeEntry);
+          mvcc.completeMemstoreInsertWithSeqNum(writeEntry, walKey);
         }
         if (locked) {
           this.updatesLock.readLock().unlock();
@@ -5055,8 +5050,12 @@ public class HRegion implements HeapSize { // , Writable{
     // Lock row
     startRegionOperation(Operation.APPEND);
     this.writeRequestsCount.increment();
+    long mvccNum = 0;
     WriteEntry w = null;
-    RowLock rowLock;
+    HLogKey walKey = null;
+    RowLock rowLock = null;
+    List<KeyValue> memstoreCells = new ArrayList<KeyValue>();
+    boolean doRollBackMemstore = false;
     try {
       rowLock = getRowLock(row);
       try {
@@ -5064,7 +5063,7 @@ public class HRegion implements HeapSize { // , Writable{
         try {
           // wait for all prior MVCC transactions to finish - while we hold the row lock
           // (so that we are guaranteed to see the latest state)
-          mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
+          mvcc.waitForPreviousTransactionsComplete();
           if (this.coprocessorHost != null) {
             Result r = this.coprocessorHost.preAppendAfterRowLock(append);
             if(r!= null) {
@@ -5072,7 +5071,8 @@ public class HRegion implements HeapSize { // , Writable{
             }
           }
           // now start my own transaction
-          w = mvcc.beginMemstoreInsert();
+          mvccNum = MultiVersionConsistencyControl.getPreAssignedWriteNumber(this.sequenceId);
+          w = mvcc.beginMemstoreInsertWithSeqNum(mvccNum);
           long now = EnvironmentEdgeManager.currentTimeMillis();
           // Process each family
           for (Map.Entry<byte[], List<Cell>> family : append.getFamilyCellMap().entrySet()) {
@@ -5140,7 +5140,7 @@ public class HRegion implements HeapSize { // , Writable{
                 // so only need to update the timestamp to 'now'
                 newKV.updateLatestStamp(Bytes.toBytes(now));
              }
-              newKV.setMvccVersion(w.getWriteNumber());
+              newKV.setMvccVersion(mvccNum);
               // Give coprocessors a chance to update the new cell
               if (coprocessorHost != null) {
                 newKV = KeyValueUtil.ensureKeyValue(coprocessorHost.postMutationBeforeWAL(
@@ -5161,34 +5161,43 @@ public class HRegion implements HeapSize { // , Writable{
             tempMemstore.put(store, kvs);
           }
 
-          // Actually write to WAL now
-          if (writeToWAL) {
-            // Using default cluster id, as this can only happen in the originating
-            // cluster. A slave cluster receives the final value (not the delta)
-            // as a Put.
-            HLogKey key = new HLogKey(getRegionInfo().getEncodedNameAsBytes(),
-              this.htableDescriptor.getTableName(), nonceGroup, nonce);
-            txid = this.log.appendNoSync(this.htableDescriptor, getRegionInfo(), key, walEdits,
-              this.sequenceId, true);
-          } else {
-            recordMutationWithoutWal(append.getFamilyCellMap());
-          }
-
           //Actually write to Memstore now
           for (Map.Entry<Store, List<Cell>> entry : tempMemstore.entrySet()) {
             Store store = entry.getKey();
             if (store.getFamily().getMaxVersions() == 1) {
               // upsert if VERSIONS for this CF == 1
               size += store.upsert(entry.getValue(), getSmallestReadPoint());
+              memstoreCells.addAll(KeyValueUtil.ensureKeyValues(entry.getValue()));
             } else {
               // otherwise keep older versions around
               for (Cell cell: entry.getValue()) {
                 KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-                size += store.add(kv);
+                Pair<Long, Cell> ret = store.add(kv);
+                size += ret.getFirst();
+                memstoreCells.add(KeyValueUtil.ensureKeyValue(ret.getSecond()));
+                doRollBackMemstore = true;
               }
             }
             allKVs.addAll(entry.getValue());
           }
+          
+          // Actually write to WAL now
+          if (writeToWAL) {
+            // Using default cluster id, as this can only happen in the originating
+            // cluster. A slave cluster receives the final value (not the delta)
+            // as a Put.
+            walKey = new HLogKey(getRegionInfo().getEncodedNameAsBytes(),
+              this.htableDescriptor.getTableName(), HLog.NO_SEQUENCE_ID, nonceGroup, nonce);
+            txid = this.log.appendNoSync(this.htableDescriptor, getRegionInfo(), walKey, walEdits,
+              this.sequenceId, true, memstoreCells);
+          } else {
+            recordMutationWithoutWal(append.getFamilyCellMap());
+          }
+          if(walKey == null){
+            // Append a faked WALEdit in order for SKIP_WAL updates to get mvcc assigned
+            walKey = this.appendNoSyncNoAppend(this.log, memstoreCells);
+          }
+          
           size = this.addAndGetGlobalMemstoreSize(size);
           flush = isFlushSize(size);
         } finally {
@@ -5196,14 +5205,23 @@ public class HRegion implements HeapSize { // , Writable{
         }
       } finally {
         rowLock.release();
+        rowLock = null;
       }
-      if (writeToWAL) {
-        // sync the transaction log outside the rowlock
+      // sync the transaction log outside the rowlock
+      if(txid != 0){
         syncOrDefer(txid, durability);
       }
+      doRollBackMemstore = false;
     } finally {
+      if (rowLock != null) {
+        rowLock.release();
+      }
+      // if the wal sync was unsuccessful, remove keys from memstore
+      if (doRollBackMemstore) {
+        rollbackMemstore(memstoreCells);
+      }
       if (w != null) {
-        mvcc.completeMemstoreInsert(w);
+        mvcc.completeMemstoreInsertWithSeqNum(w, walKey);
       }
       closeRegionOperation(Operation.APPEND);
     }
@@ -5250,15 +5268,20 @@ public class HRegion implements HeapSize { // , Writable{
     // Lock row
     startRegionOperation(Operation.INCREMENT);
     this.writeRequestsCount.increment();
+    RowLock rowLock = null;
     WriteEntry w = null;
+    HLogKey walKey = null;
+    long mvccNum = 0;
+    List<KeyValue> memstoreCells = new ArrayList<KeyValue>();
+    boolean doRollBackMemstore = false;
     try {
-      RowLock rowLock = getRowLock(row);
+      rowLock = getRowLock(row);
       try {
         lock(this.updatesLock.readLock());
         try {
           // wait for all prior MVCC transactions to finish - while we hold the row lock
           // (so that we are guaranteed to see the latest state)
-          mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
+          mvcc.waitForPreviousTransactionsComplete();
           if (this.coprocessorHost != null) {
             Result r = this.coprocessorHost.preIncrementAfterRowLock(increment);
             if (r != null) {
@@ -5266,7 +5289,8 @@ public class HRegion implements HeapSize { // , Writable{
             }
           }
           // now start my own transaction
-          w = mvcc.beginMemstoreInsert();
+          mvccNum = MultiVersionConsistencyControl.getPreAssignedWriteNumber(this.sequenceId);
+          w = mvcc.beginMemstoreInsertWithSeqNum(mvccNum);
           long now = EnvironmentEdgeManager.currentTimeMillis();
           // Process each family
           for (Map.Entry<byte [], List<Cell>> family:
@@ -5330,7 +5354,7 @@ public class HRegion implements HeapSize { // , Writable{
                 System.arraycopy(kv.getTagsArray(), kv.getTagsOffset(), newKV.getTagsArray(),
                     newKV.getTagsOffset() + oldCellTagsLen, incCellTagsLen);
               }
-              newKV.setMvccVersion(w.getWriteNumber());
+              newKV.setMvccVersion(mvccNum);
               // Give coprocessors a chance to update the new cell
               if (coprocessorHost != null) {
                 newKV = KeyValueUtil.ensureKeyValue(coprocessorHost.postMutationBeforeWAL(
@@ -5357,20 +5381,6 @@ public class HRegion implements HeapSize { // , Writable{
             }
           }
 
-          // Actually write to WAL now
-          if (walEdits != null && !walEdits.isEmpty()) {
-            if (writeToWAL) {
-              // Using default cluster id, as this can only happen in the originating
-              // cluster. A slave cluster receives the final value (not the delta)
-              // as a Put.
-              HLogKey key = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
-                this.htableDescriptor.getTableName(), nonceGroup, nonce);
-              txid = this.log.appendNoSync(this.htableDescriptor, this.getRegionInfo(),
-                  key, walEdits, getSequenceId(), true);
-            } else {
-              recordMutationWithoutWal(increment.getFamilyCellMap());
-            }
-          }
           //Actually write to Memstore now
           if (!tempMemstore.isEmpty()) {
             for (Map.Entry<Store, List<Cell>> entry : tempMemstore.entrySet()) {
@@ -5378,30 +5388,62 @@ public class HRegion implements HeapSize { // , Writable{
               if (store.getFamily().getMaxVersions() == 1) {
                 // upsert if VERSIONS for this CF == 1
                 size += store.upsert(entry.getValue(), getSmallestReadPoint());
+                memstoreCells.addAll(KeyValueUtil.ensureKeyValues(entry.getValue()));
               } else {
                 // otherwise keep older versions around
                 for (Cell cell : entry.getValue()) {
                   KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-                  size += store.add(kv);
+                  Pair<Long, Cell> ret = store.add(kv);
+                  size += ret.getFirst();
+                  memstoreCells.add(KeyValueUtil.ensureKeyValue(ret.getSecond()));
+                  doRollBackMemstore = true;
                 }
               }
             }
             size = this.addAndGetGlobalMemstoreSize(size);
             flush = isFlushSize(size);
           }
+          
+          // Actually write to WAL now
+          if (walEdits != null && !walEdits.isEmpty()) {
+            if (writeToWAL) {
+              // Using default cluster id, as this can only happen in the originating
+              // cluster. A slave cluster receives the final value (not the delta)
+              // as a Put.
+              walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
+                this.htableDescriptor.getTableName(), HLog.NO_SEQUENCE_ID, nonceGroup, nonce);
+              txid = this.log.appendNoSync(this.htableDescriptor, this.getRegionInfo(),
+                walKey, walEdits, getSequenceId(), true, memstoreCells);
+            } else {
+              recordMutationWithoutWal(increment.getFamilyCellMap());
+            }
+          }
+          if(walKey == null){
+            // Append a faked WALEdit in order for SKIP_WAL updates to get mvccNum assigned
+            walKey = this.appendNoSyncNoAppend(this.log, memstoreCells);
+          }
         } finally {
           this.updatesLock.readLock().unlock();
         }
       } finally {
         rowLock.release();
+        rowLock = null;
       }
-      if (writeToWAL && (walEdits != null) && !walEdits.isEmpty()) {
-        // sync the transaction log outside the rowlock
+      // sync the transaction log outside the rowlock
+      if(txid != 0){
         syncOrDefer(txid, durability);
       }
+      doRollBackMemstore = false;
     } finally {
+      if (rowLock != null) {
+        rowLock.release();
+      }
+      // if the wal sync was unsuccessful, remove keys from memstore
+      if (doRollBackMemstore) {
+        rollbackMemstore(memstoreCells);
+      }
       if (w != null) {
-        mvcc.completeMemstoreInsert(w);
+        mvcc.completeMemstoreInsertWithSeqNum(w, walKey);
       }
       closeRegionOperation(Operation.INCREMENT);
       if (this.metricsRegion != null) {
@@ -6129,5 +6171,24 @@ public class HRegion implements HeapSize { // , Writable{
         released = true;
       }
     }
+  }
+  
+  /**
+   * Append a faked WALEdit in order to get a long sequence number and log syncer will just ignore
+   * the WALEdit append later.
+   * @param wal
+   * @param cells list of KeyValues inserted into memstore. Those KeyValues are passed in order to
+   *        be updated with right mvcc values(their log sequence nu
+   * @return
+   * @throws IOException
+   */
+  private HLogKey appendNoSyncNoAppend(final HLog wal, List<KeyValue> cells) throws IOException {
+    HLogKey key = new HLogKey(getRegionInfo().getEncodedNameAsBytes(), getRegionInfo().getTable(),
+      HLog.NO_SEQUENCE_ID, 0, null, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    // Call append but with an empty WALEdit.  The returned seqeunce id will not be associated
+    // with any edit and we can be sure it went in after all outstanding appends.
+    wal.appendNoSync(getTableDesc(), getRegionInfo(), key,
+      WALEdit.EMPTY_WALEDIT, this.sequenceId, false, cells);
+    return key;
   }
 }

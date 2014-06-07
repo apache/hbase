@@ -22,6 +22,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,6 +32,10 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+
+
+import com.google.protobuf.HBaseZeroCopyByteString;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,6 +47,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey;
+import org.apache.hadoop.hbase.regionserver.SequenceNumber;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.WritableComparable;
@@ -49,7 +55,6 @@ import org.apache.hadoop.io.WritableUtils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.HBaseZeroCopyByteString;
 
 /**
  * A Key for an entry in the change log.
@@ -64,7 +69,7 @@ import com.google.protobuf.HBaseZeroCopyByteString;
 // TODO: Key and WALEdit are never used separately, or in one-to-many relation, for practical
 //       purposes. They need to be merged into HLogEntry.
 @InterfaceAudience.Private
-public class HLogKey implements WritableComparable<HLogKey> {
+public class HLogKey implements WritableComparable<HLogKey>, SequenceNumber {
   public static final Log LOG = LogFactory.getLog(HLogKey.class);
 
   // should be < 0 (@see #readFields(DataInput))
@@ -114,6 +119,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
   private byte [] encodedRegionName;
   private TableName tablename;
   private long logSeqNum;
+  private CountDownLatch seqNumAssignedLatch = new CountDownLatch(1);
   // Time at which this edit was written.
   private long writeTime;
 
@@ -184,7 +190,8 @@ public class HLogKey implements WritableComparable<HLogKey> {
    */
   public HLogKey(final byte [] encodedRegionName, final TableName tablename,
       final long now, List<UUID> clusterIds, long nonceGroup, long nonce) {
-    init(encodedRegionName, tablename, HLog.NO_SEQUENCE_ID, now, clusterIds, nonceGroup, nonce);
+    init(encodedRegionName, tablename, HLog.NO_SEQUENCE_ID, now, clusterIds, 
+      nonceGroup, nonce);
   }
 
   /**
@@ -195,13 +202,14 @@ public class HLogKey implements WritableComparable<HLogKey> {
    * @param encodedRegionName Encoded name of the region as returned by
    * <code>HRegionInfo#getEncodedNameAsBytes()</code>.
    * @param tablename
+   * @param logSeqNum
    * @param nonceGroup
    * @param nonce
    */
-  public HLogKey(final byte [] encodedRegionName, final TableName tablename, long nonceGroup,
-      long nonce) {
-    init(encodedRegionName, tablename, HLog.NO_SEQUENCE_ID,
-        EnvironmentEdgeManager.currentTimeMillis(), EMPTY_UUIDS, nonceGroup, nonce);
+  public HLogKey(final byte [] encodedRegionName, final TableName tablename, long logSeqNum,
+      long nonceGroup, long nonce) {
+    init(encodedRegionName, tablename, logSeqNum, EnvironmentEdgeManager.currentTimeMillis(), 
+      EMPTY_UUIDS, nonceGroup, nonce);
   }
 
   protected void init(final byte [] encodedRegionName, final TableName tablename,
@@ -238,11 +246,30 @@ public class HLogKey implements WritableComparable<HLogKey> {
   }
 
   /**
-   * Allow that the log sequence id to be set post-construction.
+   * Allow that the log sequence id to be set post-construction and release all waiters on assigned
+   * sequence number.
    * @param sequence
    */
   void setLogSeqNum(final long sequence) {
     this.logSeqNum = sequence;
+    this.seqNumAssignedLatch.countDown();
+  }
+  
+  /**
+   * Wait for sequence number is assigned & return the assigned value
+   * @return long the new assigned sequence number
+   * @throws InterruptedException
+   */
+  public long getSequenceNumber() throws IOException {
+    try {
+      this.seqNumAssignedLatch.await();
+    } catch (InterruptedException ie) {
+      LOG.warn("Thread interrupted waiting for next log sequence number");
+      InterruptedIOException iie = new InterruptedIOException();
+      iie.initCause(ie);
+      throw iie;
+    }
+    return this.logSeqNum;
   }
 
   /**
@@ -358,7 +385,7 @@ public class HLogKey implements WritableComparable<HLogKey> {
     if (result == 0) {
       if (this.logSeqNum < o.logSeqNum) {
         result = -1;
-      } else if (this.logSeqNum  > o.logSeqNum ) {
+      } else if (this.logSeqNum  > o.logSeqNum) {
         result = 1;
       }
       if (result == 0) {

@@ -249,7 +249,7 @@ public class WALEdit implements Writable, HeapSize {
     sb.append(">]");
     return sb.toString();
   }
-
+  
   /**
    * Create a compacion WALEdit
    * @param c

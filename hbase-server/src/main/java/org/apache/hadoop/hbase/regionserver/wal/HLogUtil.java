@@ -262,7 +262,7 @@ public class HLogUtil {
       final CompactionDescriptor c, AtomicLong sequenceId) throws IOException {
     TableName tn = TableName.valueOf(c.getTableName().toByteArray());
     HLogKey key = new HLogKey(info.getEncodedNameAsBytes(), tn);
-    log.appendNoSync(htd, info, key, WALEdit.createCompaction(c), sequenceId, false);
+    log.appendNoSync(htd, info, key, WALEdit.createCompaction(c), sequenceId, false, null);
     log.sync();
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended compaction marker " + TextFormat.shortDebugString(c));

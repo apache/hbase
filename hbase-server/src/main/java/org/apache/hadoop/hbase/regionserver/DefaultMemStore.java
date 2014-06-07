@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
@@ -210,12 +211,13 @@ public class DefaultMemStore implements MemStore {
   /**
    * Write an update
    * @param cell
-   * @return approximate size of the passed key and value.
+   * @return approximate size of the passed KV & newly added KV which maybe different than the
+   *         passed-in KV
    */
   @Override
-  public long add(Cell cell) {
+  public Pair<Long, Cell> add(Cell cell) {
     KeyValue toAdd = maybeCloneWithAllocator(KeyValueUtil.ensureKeyValue(cell));
-    return internalAdd(toAdd);
+    return new Pair<Long, Cell>(internalAdd(toAdd), toAdd);
   }
 
   @Override
@@ -1051,18 +1053,21 @@ public class DefaultMemStore implements MemStore {
     byte [] empty = new byte[0];
     for (int i = 0; i < count; i++) {
       // Give each its own ts
-      size += memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty));
+      Pair<Long, Cell> ret = memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty));
+      size += ret.getFirst();
     }
     LOG.info("memstore1 estimated size=" + size);
     for (int i = 0; i < count; i++) {
-      size += memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty));
+      Pair<Long, Cell> ret = memstore1.add(new KeyValue(Bytes.toBytes(i), fam, qf, i, empty));
+      size += ret.getFirst();
     }
     LOG.info("memstore1 estimated size (2nd loading of same data)=" + size);
     // Make a variably sized memstore.
     DefaultMemStore memstore2 = new DefaultMemStore();
     for (int i = 0; i < count; i++) {
-      size += memstore2.add(new KeyValue(Bytes.toBytes(i), fam, qf, i,
+      Pair<Long, Cell> ret = memstore2.add(new KeyValue(Bytes.toBytes(i), fam, qf, i,
         new byte[i]));
+      size += ret.getFirst();
     }
     LOG.info("memstore2 estimated size=" + size);
     final int seconds = 30;

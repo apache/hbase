@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicLong;
 
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 
 /**
  * A WAL Entry for {@link FSHLog} implementation.  Immutable.
@@ -41,19 +43,18 @@ class FSWALEntry extends HLog.Entry {
   private final transient boolean inMemstore;
   private final transient HTableDescriptor htd;
   private final transient HRegionInfo hri;
-  // Latch that is set on creation and then is undone on the other side of the ring buffer by the
-  // consumer thread just after it sets the region edit/sequence id in here.
-  private final transient CountDownLatch latch = new CountDownLatch(1);
+  private final transient List<KeyValue> memstoreKVs;
 
   FSWALEntry(final long sequence, final HLogKey key, final WALEdit edit,
       final AtomicLong referenceToRegionSequenceId, final boolean inMemstore,
-      final HTableDescriptor htd, final HRegionInfo hri) {
+      final HTableDescriptor htd, final HRegionInfo hri, List<KeyValue> memstoreKVs) {
     super(key, edit);
     this.regionSequenceIdReference = referenceToRegionSequenceId;
     this.inMemstore = inMemstore;
     this.htd = htd;
     this.hri = hri;
     this.sequence = sequence;
+    this.memstoreKVs = memstoreKVs;
   }
 
   public String toString() {
@@ -90,15 +91,13 @@ class FSWALEntry extends HLog.Entry {
    */
   long stampRegionSequenceId() {
     long regionSequenceId = this.regionSequenceIdReference.incrementAndGet();
-    getKey().setLogSeqNum(regionSequenceId);
-    // On creation, a latch was set.  Count it down when sequence id is set.  This will free
-    // up anyone blocked on {@link #getRegionSequenceId()}
-    this.latch.countDown();
+    if(memstoreKVs != null && !memstoreKVs.isEmpty()) {
+      for(KeyValue kv : this.memstoreKVs){
+        kv.setMvccVersion(regionSequenceId);
+      }
+    }
+    HLogKey key = getKey();
+    key.setLogSeqNum(regionSequenceId);
     return regionSequenceId;
-  }
-
-  long getRegionSequenceId() throws InterruptedException {
-    this.latch.await();
-    return getKey().getLogSeqNum();
   }
 }

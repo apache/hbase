@@ -18,7 +18,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.IOException;
 import java.util.LinkedList;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -32,20 +34,18 @@ import org.apache.hadoop.hbase.util.ClassSize;
  */
 @InterfaceAudience.Private
 public class MultiVersionConsistencyControl {
-  private volatile long memstoreRead = 0;
-  private volatile long memstoreWrite = 0;
-
+  private static final long NO_WRITE_NUMBER = 0;
+  private volatile long memstoreRead = 0; 
   private final Object readWaiters = new Object();
 
   // This is the pending queue of writes.
   private final LinkedList<WriteEntry> writeQueue =
       new LinkedList<WriteEntry>();
-
+  
   /**
    * Default constructor. Initializes the memstoreRead/Write points to 0.
    */
   public MultiVersionConsistencyControl() {
-    this.memstoreRead = this.memstoreWrite = 0;
   }
 
   /**
@@ -54,37 +54,86 @@ public class MultiVersionConsistencyControl {
    */
   public void initialize(long startPoint) {
     synchronized (writeQueue) {
-      if (this.memstoreWrite != this.memstoreRead) {
-        throw new RuntimeException("Already used this mvcc. Too late to initialize");
-      }
-
-      this.memstoreRead = this.memstoreWrite = startPoint;
+      writeQueue.clear();
+      memstoreRead = startPoint;
     }
   }
 
   /**
-   * Generate and return a {@link WriteEntry} with a new write number.
-   * To complete the WriteEntry and wait for it to be visible,
-   * call {@link #completeMemstoreInsert(WriteEntry)}.
+   * 
+   * @param initVal The value we used initially and expected it'll be reset later
+   * @return
    */
-  public WriteEntry beginMemstoreInsert() {
+  WriteEntry beginMemstoreInsert() {
+    return beginMemstoreInsertWithSeqNum(NO_WRITE_NUMBER);
+  }
+  
+  /**
+   * Get a mvcc write number before an actual one(its log sequence Id) being assigned
+   * @param sequenceId
+   * @return long a faked write number which is bigger enough not to be seen by others before a real
+   *         one is assigned
+   */
+  public static long getPreAssignedWriteNumber(AtomicLong sequenceId) {
+    // the 1 billion is just an arbitrary big number to guard no scanner will reach it before
+    // current MVCC completes. Theoretically the bump only needs to be 2 * the number of handlers
+    // because each handler could increment sequence num twice and max concurrent in-flight
+    // transactions is the number of RPC handlers.
+    // we can't use Long.MAX_VALUE because we still want to maintain the ordering when multiple
+    // changes touch same row key
+    // If for any reason, the bumped value isn't reset due to failure situations, we'll reset
+    // curSeqNum to NO_WRITE_NUMBER in order NOT to advance memstore read point at all
+    return sequenceId.incrementAndGet() + 1000000000;  
+  }
+  
+  /**
+   * This function starts a MVCC transaction with current region's log change sequence number. Since
+   * we set change sequence number when flushing current change to WAL(late binding), the flush
+   * order may differ from the order to start a MVCC transaction. For example, a change begins a
+   * MVCC firstly may complete later than a change which starts MVCC at a later time. Therefore, we
+   * add a safe bumper to the passed in sequence number to start a MVCC so that no other concurrent
+   * transactions will reuse the number till current MVCC completes(success or fail). The "faked"
+   * big number is safe because we only need it to prevent current change being seen and the number
+   * will be reset to real sequence number(set in log sync) right before we complete a MVCC in order
+   * for MVCC to align with flush sequence.
+   * @param curSeqNum
+   * @return WriteEntry a WriteEntry instance with the passed in curSeqNum
+   */
+  public WriteEntry beginMemstoreInsertWithSeqNum(long curSeqNum) {
+    WriteEntry e = new WriteEntry(curSeqNum);
     synchronized (writeQueue) {
-      long nextWriteNumber = ++memstoreWrite;
-      WriteEntry e = new WriteEntry(nextWriteNumber);
       writeQueue.add(e);
       return e;
     }
   }
 
   /**
-   * Complete a {@link WriteEntry} that was created by {@link #beginMemstoreInsert()}.
-   *
-   * At the end of this call, the global read point is at least as large as the write point
-   * of the passed in WriteEntry.  Thus, the write is visible to MVCC readers.
+   * Complete a {@link WriteEntry} that was created by
+   * {@link #beginMemstoreInsertWithSeqNum(long)}. At the end of this call, the global read
+   * point is at least as large as the write point of the passed in WriteEntry. Thus, the write is
+   * visible to MVCC readers.
+   * @throws IOException
+   */
+  public void completeMemstoreInsertWithSeqNum(WriteEntry e, SequenceNumber seqNum)
+      throws IOException {
+    if(e == null) return;
+    if (seqNum != null) {
+      e.setWriteNumber(seqNum.getSequenceNumber());
+    } else {
+      // set the value to NO_WRITE_NUMBER in order NOT to advance memstore readpoint inside
+      // function beginMemstoreInsertWithSeqNum in case of failures
+      e.setWriteNumber(NO_WRITE_NUMBER);
+    }
+    waitForPreviousTransactionsComplete(e);
+  }
+  
+  /**
+   * Complete a {@link WriteEntry} that was created by {@link #beginMemstoreInsert()}. At the
+   * end of this call, the global read point is at least as large as the write point of the passed
+   * in WriteEntry. Thus, the write is visible to MVCC readers.
    */
   public void completeMemstoreInsert(WriteEntry e) {
-    advanceMemstore(e);
-    waitForRead(e);
+    waitForPreviousTransactionsComplete(e);
   }
 
   /**
@@ -99,75 +148,94 @@ public class MultiVersionConsistencyControl {
    * @return true if e is visible to MVCC readers (that is, readpoint >= e.writeNumber)
    */
   boolean advanceMemstore(WriteEntry e) {
+    long nextReadValue = -1;
     synchronized (writeQueue) {
       e.markCompleted();
 
-      long nextReadValue = -1;
-      boolean ranOnce=false;
       while (!writeQueue.isEmpty()) {
-        ranOnce=true;
         WriteEntry queueFirst = writeQueue.getFirst();
-
-        if (nextReadValue > 0) {
-          if (nextReadValue+1 != queueFirst.getWriteNumber()) {
-            throw new RuntimeException("invariant in completeMemstoreInsert violated, prev: "
-                + nextReadValue + " next: " + queueFirst.getWriteNumber());
-          }
-        }
-
         if (queueFirst.isCompleted()) {
-          nextReadValue = queueFirst.getWriteNumber();
+          // Using Max because Edit complete in WAL sync order not arriving order
+          nextReadValue = Math.max(nextReadValue, queueFirst.getWriteNumber());
           writeQueue.removeFirst();
         } else {
           break;
         }
       }
 
-      if (!ranOnce) {
-        throw new RuntimeException("never was a first");
+      if (nextReadValue > memstoreRead) {
+        memstoreRead = nextReadValue;
       }
 
-      if (nextReadValue > 0) {
-        synchronized (readWaiters) {
-          memstoreRead = nextReadValue;
-          readWaiters.notifyAll();
-        }
-      }
-      if (memstoreRead >= e.getWriteNumber()) {
-        return true;
-      }
-      return false;
+      // notify waiters on writeQueue before return
+      writeQueue.notifyAll();
     }
+
+    if (nextReadValue > 0) {
+      synchronized (readWaiters) {
+        readWaiters.notifyAll();
+      }
+    }
+
+    if (memstoreRead >= e.getWriteNumber()) {
+      return true;
+    }
+    return false;
   }
 
   /**
-   * Wait for the global readPoint to advance upto
-   * the specified transaction number.
+   * Wait for all previous MVCC transactions complete
    */
-  public void waitForRead(WriteEntry e) {
+  public void waitForPreviousTransactionsComplete() {
+    WriteEntry w = beginMemstoreInsert();
+    waitForPreviousTransactionsComplete(w);
+  }
+  
+  public void waitForPreviousTransactionsComplete(WriteEntry waitedEntry) {
     boolean interrupted = false;
-    synchronized (readWaiters) {
-      while (memstoreRead < e.getWriteNumber()) {
-        try {
-          readWaiters.wait(0);
-        } catch (InterruptedException ie) {
-          // We were interrupted... finish the loop -- i.e. cleanup --and then
-          // on our way out, reset the interrupt flag.
-          interrupted = true;
+    WriteEntry w = waitedEntry;
+
+    try {
+      WriteEntry firstEntry = null;
+      do {
+        synchronized (writeQueue) {
+          // writeQueue won't be empty at this point, the following is just a safety check
+          if (writeQueue.isEmpty()) {
+            break;
+          }
+          firstEntry = writeQueue.getFirst();
+          if (firstEntry == w) {
+            // all previous in-flight transactions are done
+            break;
+          }
+          try {
+            writeQueue.wait(0);
+          } catch (InterruptedException ie) {
+            // We were interrupted... finish the loop -- i.e. cleanup --and then
+            // on our way out, reset the interrupt flag.
+            interrupted = true;
+            break;
+          }
         }
+      } while (firstEntry != null);
+    } finally {
+      if (w != null) {
+        advanceMemstore(w);
       }
     }
-    if (interrupted) Thread.currentThread().interrupt();
+    if (interrupted) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   public long memstoreReadPoint() {
     return memstoreRead;
   }
 
-
   public static class WriteEntry {
     private long writeNumber;
     private boolean completed = false;
+
     WriteEntry(long writeNumber) {
       this.writeNumber = writeNumber;
     }
@@ -179,6 +247,9 @@ public class MultiVersionConsistencyControl {
     }
     long getWriteNumber() {
       return this.writeNumber;
+    }
+    void setWriteNumber(long val){
+      this.writeNumber = val;
     }
   }
 

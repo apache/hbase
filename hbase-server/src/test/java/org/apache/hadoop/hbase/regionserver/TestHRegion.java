@@ -4152,15 +4152,16 @@ public class TestHRegion {
     durabilityTest(method, Durability.ASYNC_WAL, Durability.USE_DEFAULT, 5000, true, false, true);
 
     // expect skip wal cases
-    durabilityTest(method, Durability.SYNC_WAL, Durability.SKIP_WAL, 0, false, false, false);
-    durabilityTest(method, Durability.FSYNC_WAL, Durability.SKIP_WAL, 0, false, false, false);
-    durabilityTest(method, Durability.ASYNC_WAL, Durability.SKIP_WAL, 0, false, false, false);
-    durabilityTest(method, Durability.SKIP_WAL, Durability.SKIP_WAL, 0, false, false, false);
-    durabilityTest(method, Durability.USE_DEFAULT, Durability.SKIP_WAL, 0, false, false, false);
-    durabilityTest(method, Durability.SKIP_WAL, Durability.USE_DEFAULT, 0, false, false, false);
+    durabilityTest(method, Durability.SYNC_WAL, Durability.SKIP_WAL, 0, true, false, false);
+    durabilityTest(method, Durability.FSYNC_WAL, Durability.SKIP_WAL, 0, true, false, false);
+    durabilityTest(method, Durability.ASYNC_WAL, Durability.SKIP_WAL, 0, true, false, false);
+    durabilityTest(method, Durability.SKIP_WAL, Durability.SKIP_WAL, 0, true, false, false);
+    durabilityTest(method, Durability.USE_DEFAULT, Durability.SKIP_WAL, 0, true, false, false);
+    durabilityTest(method, Durability.SKIP_WAL, Durability.USE_DEFAULT, 0, true, false, false);
 
   }
 
+  @SuppressWarnings("unchecked")
   private void durabilityTest(String method, Durability tableDurability,
       Durability mutationDurability, long timeout, boolean expectAppend, final boolean expectSync,
       final boolean expectSyncFromLogSyncer) throws Exception {
@@ -4183,7 +4184,7 @@ public class TestHRegion {
     //verify append called or not
     verify(log, expectAppend ? times(1) : never())
       .appendNoSync((HTableDescriptor)any(), (HRegionInfo)any(), (HLogKey)any(),
-          (WALEdit)any(), (AtomicLong)any(), Mockito.anyBoolean());
+          (WALEdit)any(), (AtomicLong)any(), Mockito.anyBoolean(), (List<KeyValue>)any());
 
     // verify sync called or not
     if (expectSync || expectSyncFromLogSyncer) {
@@ -4202,7 +4203,7 @@ public class TestHRegion {
         }
       });
     } else {
-      verify(log, never()).sync(anyLong());
+      //verify(log, never()).sync(anyLong());
       verify(log, never()).sync();
     }
 

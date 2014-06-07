@@ -1064,13 +1064,26 @@ class FSHLog implements HLog, Syncable {
     }
   }
 
+  /**
+   * @param now
+   * @param encodedRegionName Encoded name of the region as returned by
+   * <code>HRegionInfo#getEncodedNameAsBytes()</code>.
+   * @param tableName
+   * @param clusterIds that have consumed the change
+   * @return New log key.
+   */
+  protected HLogKey makeKey(byte[] encodedRegionName, TableName tableName, long seqnum,
+      long now, List<UUID> clusterIds, long nonceGroup, long nonce) {
+    return new HLogKey(encodedRegionName, tableName, seqnum, now, clusterIds, nonceGroup, nonce);
+  }
+  
   @Override
   @VisibleForTesting
   public void append(HRegionInfo info, TableName tableName, WALEdit edits,
     final long now, HTableDescriptor htd, AtomicLong sequenceId)
   throws IOException {
     HLogKey logKey = new HLogKey(info.getEncodedNameAsBytes(), tableName, now);
-    append(htd, info, logKey, edits, sequenceId, true, true);
+    append(htd, info, logKey, edits, sequenceId, true, true, null);
   }
 
   @Override
@@ -1079,14 +1092,15 @@ class FSHLog implements HLog, Syncable {
       boolean inMemstore, long nonceGroup, long nonce) throws IOException {
     HLogKey logKey =
       new HLogKey(info.getEncodedNameAsBytes(), tableName, now, clusterIds, nonceGroup, nonce);
-    return append(htd, info, logKey, edits, sequenceId, false, inMemstore);
+    return append(htd, info, logKey, edits, sequenceId, false, inMemstore, null);
   }
 
   @Override
   public long appendNoSync(final HTableDescriptor htd, final HRegionInfo info, final HLogKey key,
-      final WALEdit edits, final AtomicLong sequenceId, final boolean inMemstore)
+      final WALEdit edits, final AtomicLong sequenceId, final boolean inMemstore, 
+      final List<KeyValue> memstoreKVs)
   throws IOException {
-    return append(htd, info, key, edits, sequenceId, false, inMemstore);
+    return append(htd, info, key, edits, sequenceId, false, inMemstore, memstoreKVs);
   }
 
   /**
@@ -1101,19 +1115,22 @@ class FSHLog implements HLog, Syncable {
    * @param sync shall we sync after we call the append?
    * @param inMemstore
    * @param sequenceId The region sequence id reference.
+   * @param memstoreKVs
    * @return txid of this transaction or if nothing to do, the last txid
    * @throws IOException
    */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH_EXCEPTION",
       justification="Will never be null")
   private long append(HTableDescriptor htd, final HRegionInfo hri, final HLogKey key,
-      WALEdit edits, AtomicLong sequenceId, boolean sync, boolean inMemstore)
+      WALEdit edits, AtomicLong sequenceId, boolean sync, boolean inMemstore, 
+      List<KeyValue> memstoreKVs)
   throws IOException {
     if (!this.enabled) return this.highestUnsyncedSequence;
     if (this.closed) throw new IOException("Cannot append; log is closed");
     // Make a trace scope for the append.  It is closed on other side of the ring buffer by the
     // single consuming thread.  Don't have to worry about it.
     TraceScope scope = Trace.startSpan("FSHLog.append");
+
     // This is crazy how much it takes to make an edit.  Do we need all this stuff!!!!????  We need
     // all this to make a key and then below to append the edit, we need to carry htd, info,
     // etc. all over the ring buffer.
@@ -1124,19 +1141,10 @@ class FSHLog implements HLog, Syncable {
       // Construction of FSWALEntry sets a latch.  The latch is thrown just after we stamp the
       // edit with its edit/sequence id.  The below entry.getRegionSequenceId will wait on the
       // latch to be thrown.  TODO: reuse FSWALEntry as we do SyncFuture rather create per append.
-      entry = new FSWALEntry(sequence, key, edits, sequenceId, inMemstore, htd, hri);
+      entry = new FSWALEntry(sequence, key, edits, sequenceId, inMemstore, htd, hri, memstoreKVs);
       truck.loadPayload(entry, scope.detach());
     } finally {
       this.disruptor.getRingBuffer().publish(sequence);
-      // Now wait until the region edit/sequence id is available.  The 'entry' has an internal
-      // latch that is thrown when the region edit/sequence id is set.  Calling
-      // entry.getRegionSequenceId will cause us block until the latch is thrown.  The return is
-      // the region edit/sequence id, not the ring buffer txid.
-      try {
-        entry.getRegionSequenceId();
-      } catch (InterruptedException e) {
-        throw convertInterruptedExceptionToIOException(e);
-      }
     }
     // doSync is set in tests.  Usually we arrive in here via appendNoSync w/ the sync called after
     // all edits on a handler have been added.
@@ -1894,6 +1902,14 @@ class FSHLog implements HLog, Syncable {
         // here inside this single appending/writing thread.  Events are ordered on the ringbuffer
         // so region sequenceids will also be in order.
         regionSequenceId = entry.stampRegionSequenceId();
+        
+        // Edits are empty, there is nothing to append.  Maybe empty when we are looking for a 
+        // region sequence id only, a region edit/sequence id that is not associated with an actual 
+        // edit. It has to go through all the rigmarole to be sure we have the right ordering.
+        if (entry.getEdit().isEmpty()) {
+          return;
+        }
+        
         // Coprocessor hook.
         if (!coprocessorHost.preWALWrite(entry.getHRegionInfo(), entry.getKey(),
             entry.getEdit())) {
@@ -1909,19 +1925,16 @@ class FSHLog implements HLog, Syncable {
               entry.getEdit());
           }
         }
-        // If empty, there is nothing to append.  Maybe empty when we are looking for a region
-        // sequence id only, a region edit/sequence id that is not associated with an actual edit.
-        // It has to go through all the rigmarole to be sure we have the right ordering.
-        if (!entry.getEdit().isEmpty()) {
-          writer.append(entry);
-          assert highestUnsyncedSequence < entry.getSequence();
-          highestUnsyncedSequence = entry.getSequence();
-          Long lRegionSequenceId = Long.valueOf(regionSequenceId);
-          highestRegionSequenceIds.put(encodedRegionName, lRegionSequenceId);
-          if (entry.isInMemstore()) {
-            oldestUnflushedRegionSequenceIds.putIfAbsent(encodedRegionName, lRegionSequenceId);
-          }
+
+        writer.append(entry);
+        assert highestUnsyncedSequence < entry.getSequence();
+        highestUnsyncedSequence = entry.getSequence();
+        Long lRegionSequenceId = Long.valueOf(regionSequenceId);
+        highestRegionSequenceIds.put(encodedRegionName, lRegionSequenceId);
+        if (entry.isInMemstore()) {
+          oldestUnflushedRegionSequenceIds.putIfAbsent(encodedRegionName, lRegionSequenceId);
         }
+        
         coprocessorHost.postWALWrite(entry.getHRegionInfo(), entry.getKey(), entry.getEdit());
         // Update metrics.
         postAppend(entry, EnvironmentEdgeManager.currentTimeMillis() - start);

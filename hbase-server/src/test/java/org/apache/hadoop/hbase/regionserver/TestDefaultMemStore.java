@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import junit.framework.TestCase;
@@ -61,6 +62,7 @@ public class TestDefaultMemStore extends TestCase {
   private static final int QUALIFIER_COUNT = ROW_COUNT;
   private static final byte [] FAMILY = Bytes.toBytes("column");
   private MultiVersionConsistencyControl mvcc;
+  private AtomicLong startSeqNum = new AtomicLong(0); 
 
   @Override
   public void setUp() throws Exception {
@@ -236,7 +238,7 @@ public class TestDefaultMemStore extends TestCase {
     final byte[] v = Bytes.toBytes("value");
 
     MultiVersionConsistencyControl.WriteEntry w =
-        mvcc.beginMemstoreInsert();
+        mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
 
     KeyValue kv1 = new KeyValue(row, f, q1, v);
     kv1.setMvccVersion(w.getWriteNumber());
@@ -250,7 +252,7 @@ public class TestDefaultMemStore extends TestCase {
     s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv1});
 
-    w = mvcc.beginMemstoreInsert();
+    w = mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
     KeyValue kv2 = new KeyValue(row, f, q2, v);
     kv2.setMvccVersion(w.getWriteNumber());
     memstore.add(kv2);
@@ -280,7 +282,7 @@ public class TestDefaultMemStore extends TestCase {
 
     // INSERT 1: Write both columns val1
     MultiVersionConsistencyControl.WriteEntry w =
-        mvcc.beginMemstoreInsert();
+        mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
 
     KeyValue kv11 = new KeyValue(row, f, q1, v1);
     kv11.setMvccVersion(w.getWriteNumber());
@@ -296,7 +298,7 @@ public class TestDefaultMemStore extends TestCase {
     assertScannerResults(s, new KeyValue[]{kv11, kv12});
 
     // START INSERT 2: Write both columns val2
-    w = mvcc.beginMemstoreInsert();
+    w = mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
     KeyValue kv21 = new KeyValue(row, f, q1, v2);
     kv21.setMvccVersion(w.getWriteNumber());
     memstore.add(kv21);
@@ -332,7 +334,7 @@ public class TestDefaultMemStore extends TestCase {
     final byte[] v1 = Bytes.toBytes("value1");
     // INSERT 1: Write both columns val1
     MultiVersionConsistencyControl.WriteEntry w =
-        mvcc.beginMemstoreInsert();
+        mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
 
     KeyValue kv11 = new KeyValue(row, f, q1, v1);
     kv11.setMvccVersion(w.getWriteNumber());
@@ -348,7 +350,7 @@ public class TestDefaultMemStore extends TestCase {
     assertScannerResults(s, new KeyValue[]{kv11, kv12});
 
     // START DELETE: Insert delete for one of the columns
-    w = mvcc.beginMemstoreInsert();
+    w = mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
     KeyValue kvDel = new KeyValue(row, f, q2, kv11.getTimestamp(),
         KeyValue.Type.DeleteColumn);
     kvDel.setMvccVersion(w.getWriteNumber());
@@ -377,6 +379,7 @@ public class TestDefaultMemStore extends TestCase {
 
     final MultiVersionConsistencyControl mvcc;
     final MemStore memstore;
+    final AtomicLong startSeqNum;
 
     AtomicReference<Throwable> caughtException;
 
@@ -384,12 +387,14 @@ public class TestDefaultMemStore extends TestCase {
     public ReadOwnWritesTester(int id,
                                MemStore memstore,
                                MultiVersionConsistencyControl mvcc,
-                               AtomicReference<Throwable> caughtException)
+                               AtomicReference<Throwable> caughtException,
+                               AtomicLong startSeqNum)
     {
       this.mvcc = mvcc;
       this.memstore = memstore;
       this.caughtException = caughtException;
       row = Bytes.toBytes(id);
+      this.startSeqNum = startSeqNum;
     }
 
     public void run() {
@@ -403,7 +408,7 @@ public class TestDefaultMemStore extends TestCase {
     private void internalRun() throws IOException {
       for (long i = 0; i < NUM_TRIES && caughtException.get() == null; i++) {
         MultiVersionConsistencyControl.WriteEntry w =
-          mvcc.beginMemstoreInsert();
+            mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
 
         // Insert the sequence value (i)
         byte[] v = Bytes.toBytes(i);
@@ -433,7 +438,7 @@ public class TestDefaultMemStore extends TestCase {
     AtomicReference<Throwable> caught = new AtomicReference<Throwable>();
 
     for (int i = 0; i < NUM_THREADS; i++) {
-      threads[i] = new ReadOwnWritesTester(i, memstore, mvcc, caught);
+      threads[i] = new ReadOwnWritesTester(i, memstore, mvcc, caught, this.startSeqNum);
       threads[i].start();
     }
 

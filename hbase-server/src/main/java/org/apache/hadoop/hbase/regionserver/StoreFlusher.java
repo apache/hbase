@@ -121,12 +121,6 @@ abstract class StoreFlusher {
           // set its memstoreTS to 0. This will help us save space when writing to
           // disk.
           KeyValue kv = KeyValueUtil.ensureKeyValue(c);
-          if (kv.getMvccVersion() <= smallestReadPoint) {
-            // let us not change the original KV. It could be in the memstore
-            // changing its memstoreTS could affect other threads/scanners.
-            kv = kv.shallowCopy();
-            kv.setMvccVersion(0);
-          }
           sink.append(kv);
         }
         kvs.clear();
