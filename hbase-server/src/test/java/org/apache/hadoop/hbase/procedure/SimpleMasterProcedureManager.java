@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.procedure;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -27,22 +28,20 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
-import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MetricsMaster;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
-import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
 import org.apache.zookeeper.KeeperException;
 
 public class SimpleMasterProcedureManager extends MasterProcedureManager {
 
   public static final String SIMPLE_SIGNATURE = "simle_test";
+  public static final String SIMPLE_DATA = "simple_test_data";
 
   private static final Log LOG = LogFactory.getLog(SimpleMasterProcedureManager.class);
 
   private MasterServices master;
   private ProcedureCoordinator coordinator;
-  private ExecutorService executorService;
 
   private boolean done;
 
@@ -69,7 +68,6 @@ public class SimpleMasterProcedureManager extends MasterProcedureManager {
         master.getZooKeeper(), getProcedureSignature(), name);
 
     this.coordinator = new ProcedureCoordinator(comms, tpool);
-    this.executorService = master.getExecutorService();
   }
 
   @Override
@@ -78,7 +76,7 @@ public class SimpleMasterProcedureManager extends MasterProcedureManager {
   }
 
   @Override
-  public void execProcedure(ProcedureDescription desc) throws IOException {
+  public byte[] execProcedureWithRet(ProcedureDescription desc) throws IOException {
     this.done = false;
     // start the process on the RS
     ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(desc.getInstance());
@@ -93,13 +91,14 @@ public class SimpleMasterProcedureManager extends MasterProcedureManager {
       String msg = "Failed to submit distributed procedure for '"
           + getProcedureSignature() + "'";
       LOG.error(msg);
-      throw new HBaseSnapshotException(msg);
+      throw new IOException(msg);
     }
 
+    HashMap<String, byte[]> returnData = null;
     try {
       // wait for the procedure to complete.  A timer thread is kicked off that should cancel this
       // if it takes too long.
-      proc.waitForCompleted();
+      returnData = proc.waitForCompletedWithRet();
       LOG.info("Done waiting - exec procedure for " + desc.getInstance());
       this.done = true;
     } catch (InterruptedException e) {
@@ -110,6 +109,8 @@ public class SimpleMasterProcedureManager extends MasterProcedureManager {
     } catch (ForeignException e) {
       monitor.receive(e);
     }
+    // return the first value for testing
+    return returnData.values().iterator().next();
   }
 
   @Override

@@ -345,7 +345,8 @@ message ExecProcedureRequest {
 }
 
 message ExecProcedureResponse {
-        required int64 expected_timeout = 1;
+        optional int64 expected_timeout = 1;
+        optional bytes return_data = 2;
 }
 
 message IsProcedureDoneRequest {
@@ -523,6 +524,11 @@ service MasterService {
    * Execute a distributed procedure.
    */
   rpc ExecProcedure(ExecProcedureRequest) returns(ExecProcedureResponse);
+
+  /**
+   * Execute a distributed procedure with return data.
+   */
+  rpc ExecProcedureWithRet(ExecProcedureRequest) returns(ExecProcedureResponse);
 
   /**
    * Determine if the procedure is done yet.

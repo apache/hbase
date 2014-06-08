@@ -249,7 +249,7 @@ public class SimpleRSProcedureManager extends RegionServerProcedureManager {
     @Override
     public byte[] insideBarrier() throws ForeignException {
       execute();
-      return new byte[0];
+      return SimpleMasterProcedureManager.SIMPLE_DATA.getBytes();
     }
 
     /**

@@ -74,7 +74,21 @@ public abstract class MasterProcedureManager extends ProcedureManager implements
    * @param desc Procedure description
    * @throws IOException
    */
-  public abstract void execProcedure(ProcedureDescription desc) throws IOException;
+  public void execProcedure(ProcedureDescription desc) throws IOException {
+
+  }
+
+  /**
+   * Execute a distributed procedure on cluster with return data.
+   *
+   * @param desc Procedure description
+   * @return data returned from the procedure execution, null if no data
+   * @throws IOException
+   */
+  public byte[] execProcedureWithRet(ProcedureDescription desc)
+      throws IOException {
+    return null;
+  }
 
   /**
    * Check if the procedure is finished successfully

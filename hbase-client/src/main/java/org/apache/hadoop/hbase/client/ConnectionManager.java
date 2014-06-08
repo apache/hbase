@@ -1889,6 +1889,13 @@ class ConnectionManager {
         }
 
         @Override
+        public ExecProcedureResponse execProcedureWithRet(
+            RpcController controller, ExecProcedureRequest request)
+            throws ServiceException {
+          return stub.execProcedureWithRet(controller, request);
+        }
+
+        @Override
         public IsProcedureDoneResponse isProcedureDone(RpcController controller,
             IsProcedureDoneRequest request) throws ServiceException {
           return stub.isProcedureDone(controller, request);

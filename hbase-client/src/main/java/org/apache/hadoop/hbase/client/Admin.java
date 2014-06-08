@@ -1108,8 +1108,23 @@ public interface Admin extends Abortable, Closeable {
    * @param instance The instance name of the procedure. For some procedures, this parameter is
    * optional.
    * @param props Property/Value pairs of properties passing to the procedure
+   * @throws IOException
    */
   void execProcedure(String signature, String instance, Map<String, String> props)
+      throws IOException;
+
+  /**
+   * Execute a distributed procedure on a cluster.
+   *
+   * @param signature A distributed procedure is uniquely identified by its signature (default the
+   * root ZK node name of the procedure).
+   * @param instance The instance name of the procedure. For some procedures, this parameter is
+   * optional.
+   * @param props Property/Value pairs of properties passing to the procedure
+   * @return data returned after procedure execution. null if no return data.
+   * @throws IOException
+   */
+  byte[] execProcedureWithRet(String signature, String instance, Map<String, String> props)
       throws IOException;
 
   /**

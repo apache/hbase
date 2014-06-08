@@ -3055,6 +3055,40 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
+   * Execute a distributed procedure on a cluster synchronously with return data
+   *
+   * @param signature A distributed procedure is uniquely identified
+   * by its signature (default the root ZK node name of the procedure).
+   * @param instance The instance name of the procedure. For some procedures, this parameter is
+   * optional.
+   * @param props Property/Value pairs of properties passing to the procedure
+   * @return data returned after procedure execution. null if no return data.
+   * @throws IOException
+   */
+  public byte[] execProcedureWithRet(String signature, String instance,
+      Map<String, String> props) throws IOException {
+    ProcedureDescription.Builder builder = ProcedureDescription.newBuilder();
+    builder.setSignature(signature).setInstance(instance);
+    for (Entry<String, String> entry : props.entrySet()) {
+      NameStringPair pair = NameStringPair.newBuilder().setName(entry.getKey())
+          .setValue(entry.getValue()).build();
+      builder.addConfiguration(pair);
+    }
+
+    final ExecProcedureRequest request = ExecProcedureRequest.newBuilder()
+        .setProcedure(builder.build()).build();
+    // run the procedure on the master
+    ExecProcedureResponse response = executeCallable(new MasterCallable<ExecProcedureResponse>(
+        getConnection()) {
+      @Override
+      public ExecProcedureResponse call(int callTimeout) throws ServiceException {
+        return master.execProcedureWithRet(null, request);
+      }
+    });
+
+    return response.hasReturnData() ? response.getReturnData().toByteArray() : null;
+  }
+  /**
    * Execute a distributed procedure on a cluster.
    *
    * @param signature A distributed procedure is uniquely identified
@@ -3062,6 +3096,7 @@ public class HBaseAdmin implements Admin {
    * @param instance The instance name of the procedure. For some procedures, this parameter is
    * optional.
    * @param props Property/Value pairs of properties passing to the procedure
+   * @throws IOException
    */
   public void execProcedure(String signature, String instance,
       Map<String, String> props) throws IOException {

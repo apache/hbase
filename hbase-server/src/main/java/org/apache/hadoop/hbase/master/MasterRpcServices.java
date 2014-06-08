@@ -152,6 +152,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
 
+import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
@@ -641,6 +642,40 @@ public class MasterRpcServices extends RSRpcServices
       long waitTime = SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME;
       return ExecProcedureResponse.newBuilder().setExpectedTimeout(
         waitTime).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  /**
+   * Triggers a synchronous attempt to run a distributed procedure and sets
+   * return data in response.
+   * {@inheritDoc}
+   */
+  @Override
+  public ExecProcedureResponse execProcedureWithRet(RpcController controller,
+      ExecProcedureRequest request) throws ServiceException {
+    try {
+      master.checkInitialized();
+      ProcedureDescription desc = request.getProcedure();
+      MasterProcedureManager mpm = master.mpmHost.getProcedureManager(
+        desc.getSignature());
+      if (mpm == null) {
+        throw new ServiceException("The procedure is not registered: "
+          + desc.getSignature());
+      }
+
+      LOG.info(master.getClientIdAuditPrefix() + " procedure request for: "
+        + desc.getSignature());
+
+      byte[] data = mpm.execProcedureWithRet(desc);
+
+      ExecProcedureResponse.Builder builder = ExecProcedureResponse.newBuilder();
+      // set return data if available
+      if (data != null) {
+        builder.setReturnData(ByteString.copyFrom(data));
+      }
+      return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

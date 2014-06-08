@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.junit.AfterClass;
+import static org.junit.Assert.assertArrayEquals;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -60,7 +61,9 @@ public class TestProcedureManager {
   public void testSimpleProcedureManager() throws IOException {
     HBaseAdmin admin = util.getHBaseAdmin();
 
-    admin.execProcedure(SimpleMasterProcedureManager.SIMPLE_SIGNATURE,
+    byte[] result = admin.execProcedureWithRet(SimpleMasterProcedureManager.SIMPLE_SIGNATURE,
         "mytest", new HashMap<String, String>());
+    assertArrayEquals("Incorrect return data from execProcedure",
+      SimpleMasterProcedureManager.SIMPLE_DATA.getBytes(), result);
   }
 }
