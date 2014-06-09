@@ -51,11 +51,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListenableFutureTask;
-import com.google.common.util.concurrent.ListeningExecutorService;
+import javax.annotation.Nullable;
+
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -97,8 +94,11 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.thrift.transport.TTransportException;
 
 import com.google.common.base.Preconditions;
-
-import javax.annotation.Nullable;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListenableFutureTask;
+import com.google.common.util.concurrent.ListeningExecutorService;
 
 /* Encapsulates finding the servers for an HBase instance */
 public class TableServers implements ServerConnection {
@@ -1079,8 +1079,6 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
             parentTable, row);
           metaCache.add(tableName, location);
         }
-      } catch (Throwable t) {
-        throw t;
       } finally {
         HBaseThriftRPC.isMeta.get().pop();
       }
@@ -1094,6 +1092,10 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
       // already processed this. Don't process this again.
       throw e;
     } catch (IOException e) {
+        if (e instanceof NotServingRegionException) {
+          this.rootRegionLocation = null;
+        }
+
       if (e instanceof RemoteException) {
         e = RemoteExceptionHandler
           .decodeRemoteException((RemoteException) e);

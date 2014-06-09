@@ -30,13 +30,17 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.TableServers;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.StringBytes;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -48,7 +52,7 @@ public class TestGetRegionLocation {
   private static final Log LOG = LogFactory.getLog(TestGetRegionLocation.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static Configuration CONF = TEST_UTIL.getConfiguration();
-  private final static byte[] TABLE = Bytes.toBytes("table");
+  private final static StringBytes TABLE = new StringBytes("table");
   private final static byte[] FAMILY = Bytes.toBytes("family");
   private final static byte[][] FAMILIES = { FAMILY };
   private final static byte[] START_KEY = Bytes.toBytes("aaa");
@@ -58,15 +62,76 @@ public class TestGetRegionLocation {
 
   @Before
   public void setUp() throws IOException, InterruptedException {
+    TEST_UTIL.getConfiguration().setInt(HConstants.CLIENT_RETRY_NUM_STRING, 5);
+
     // Use assignment plan so that regions are not moved unexpectedly.
     TEST_UTIL.useAssignmentLoadBalancer();
     TEST_UTIL.startMiniCluster(NUM_SLAVES);
-    TEST_UTIL.createTable(TABLE, FAMILIES, 1, START_KEY, END_KEY, NUM_REGIONS);
+    TEST_UTIL.createTable(TABLE, FAMILIES, 1, START_KEY, END_KEY, NUM_REGIONS)
+        .close();
   }
 
   @After
   public void tearDown() throws IOException, InterruptedException {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Test(timeout = 150000)
+  public void testMetaRootRegionRelocation() throws Exception {
+    Assert.assertTrue("We should have more than one region servers",
+        NUM_SLAVES >= 3);
+
+    try (TableServers connection = new TableServers(CONF)) {
+      HRegionLocation location =
+          connection.getRegionLocation(TABLE, HConstants.EMPTY_START_ROW, true);
+      Assert.assertNotNull("Cannot get location", location);
+
+      HRegion rootRegion = TEST_UTIL.getRootRegion();
+      Assert.assertNotNull("Cannot find ROOT region", rootRegion);
+      HRegionServer rootServer =
+          TEST_UTIL.getRSWithRegion(rootRegion.getRegionName());
+
+      HRegion metaRegion = TEST_UTIL.getMetaRegion();
+      Assert.assertNotNull("Cannot find META region", metaRegion);
+      HRegionServer metaServer =
+          TEST_UTIL.getRSWithRegion(metaRegion.getRegionName());
+
+      TEST_UTIL.getMiniHBaseCluster().getMaster()
+          .addServerToBlacklist(rootServer.getServerInfo().getHostnamePort());
+      TEST_UTIL.getMiniHBaseCluster().getMaster()
+          .addServerToBlacklist(metaServer.getServerInfo().getHostnamePort());
+
+      rootServer.closeRegion(rootRegion.getRegionInfo(), true);
+
+      metaServer.closeRegion(metaRegion.getRegionInfo(), true);
+
+      try {
+        rootServer.getRegion(rootRegion.getRegionName());
+        Assert.fail("Should throw NotServingRegionException");
+      } catch (NotServingRegionException e) {
+        // good
+      }
+      try {
+        metaServer.getRegion(metaRegion.getRegionName());
+        Assert.fail("Should throw NotServingRegionException");
+      } catch (NotServingRegionException e) {
+        // good
+      }
+
+      try {
+        connection.listTables();
+      } catch (RetriesExhaustedException e) {
+        e.printStackTrace();
+        Assert.fail("listTable failed: " + e);
+      }
+
+      try {
+        connection.listTables();
+      } catch (NotServingRegionException e) {
+        e.printStackTrace();
+        Assert.fail("listTable failed: " + e);
+      }
+    }
   }
 
   /**

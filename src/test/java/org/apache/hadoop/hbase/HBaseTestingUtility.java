@@ -1561,6 +1561,37 @@ public class HBaseTestingUtility {
     return list;
   }
 
+  /**
+   * @return the only HRegion for ROOT table. Returns a null if not found.
+   *         It loops over all regions to find it, could be slow.
+   */
+  public HRegion getRootRegion() {
+    for (HRegionServer rs : getOnlineRegionServers()) {
+      for (HRegion region : rs.getOnlineRegions()) {
+        if (region.getRegionInfo().isRootRegion()) {
+          return region;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * @return one of HRegion for META table. Returns a null if not found.
+   *         It loops over all regions to find it, could be slow.
+   */
+  public HRegion getMetaRegion() {
+    for (HRegionServer rs : getOnlineRegionServers()) {
+      for (HRegion region : rs.getOnlineRegions()) {
+        if (region.getRegionInfo().isMetaTable()) {
+          return region;
+        }
+      }
+    }
+
+    return null;
+  }
 
   /**
    * Wait until <code>countOfRegion</code> in .META. have a non-empty

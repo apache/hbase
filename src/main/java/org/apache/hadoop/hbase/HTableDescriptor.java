@@ -35,7 +35,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import com.google.common.collect.ImmutableSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -47,6 +46,7 @@ import org.apache.hadoop.io.WritableComparable;
 import com.facebook.swift.codec.ThriftConstructor;
 import com.facebook.swift.codec.ThriftField;
 import com.facebook.swift.codec.ThriftStruct;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * HTableDescriptor contains the name of an HTable, and its
@@ -324,7 +324,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     values.put(IS_META_KEY, isMeta? TRUE: FALSE);
   }
 
-  /** @return true if table is the meta table */
+  /** @return true if table is the META table */
   public boolean isMetaTable() {
     return isMetaRegion() && !isRootRegion();
   }

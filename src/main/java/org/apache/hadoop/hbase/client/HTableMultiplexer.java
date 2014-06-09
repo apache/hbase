@@ -57,13 +57,13 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * Each put will be sharded into different buffer queues based on its destination region server.
  * So each region server buffer queue will only have the puts which share the same destination.
  * And each queue will have a flush worker thread to flush the puts request to the region server.
- * If any queue is full, the HTableMultiplexer starts to drop the Put requests for that 
+ * If any queue is full, the HTableMultiplexer starts to drop the Put requests for that
  * particular queue.
- * 
+ *
  * Also all the puts will be retried as a configuration number before dropping.
  * And the HTableMultiplexer can report the number of buffered requests and the number of the
  * failed (dropped) requests in total or on per region server basis.
- * 
+ *
  * This class is thread safe.
  */
 public class HTableMultiplexer {
@@ -87,11 +87,11 @@ public class HTableMultiplexer {
   private final long frequency;
   //initial number of threads in the pool
   public static final int INITIAL_NUM_THREADS = 10;
-  
+
   /**
-   * 
+   *
    * @param conf The HBaseConfiguration
-   * @param perRegionServerBufferQueueSize determines the max number of the buffered Put ops 
+   * @param perRegionServerBufferQueueSize determines the max number of the buffered Put ops
    *         for each region server before dropping the request.
    */
   public HTableMultiplexer(Configuration conf, int perRegionServerBufferQueueSize) {
@@ -102,7 +102,7 @@ public class HTableMultiplexer {
     this.serverToFlushWorkerMap = new ConcurrentHashMap<HServerAddress, HTableFlushWorker>();
     this.tableNameToHTableMap = new ConcurrentSkipListMap<byte[], HTable>(
             Bytes.BYTES_COMPARATOR);
-    this.retryNum = conf.getInt("hbase.client.retries.number", 10);
+    this.retryNum = conf.getInt(HConstants.CLIENT_RETRY_NUM_STRING, 10);
     this.retriedInQueueMax = conf.getInt("hbase.client.retried.inQueue", 10000);
     this.perRegionServerBufferQueueSize = perRegionServerBufferQueueSize;
     this.frequency = conf.getLong("hbase.htablemultiplexer.flush.frequency.ms",
@@ -127,7 +127,7 @@ public class HTableMultiplexer {
   }
 
   /**
-   * The puts request will be buffered by their corresponding buffer queue. 
+   * The puts request will be buffered by their corresponding buffer queue.
    * Return the list of puts which could not be queued.
    * @param table
    * @param put
@@ -138,13 +138,13 @@ public class HTableMultiplexer {
       HBaseRPCOptions options) throws IOException {
     if (puts == null)
       return null;
-    
+
     List <Put> failedPuts = null;
     boolean result;
     for (Put put : puts) {
       result = put(table, put, this.retryNum, options);
       if (result == false) {
-        
+
         // Create the failed puts list if necessary
         if (failedPuts == null) {
           failedPuts = new ArrayList<Put>();
@@ -183,7 +183,7 @@ public class HTableMultiplexer {
         LinkedBlockingQueue<PutStatus> queue = getBufferedQueue(addr);
         // Generate a MultiPutStatus obj and offer it into the queue
         PutStatus s = new PutStatus(loc.getRegionInfo(), put, retry, options);
-        
+
         return queue.offer(s);
       }
     } catch (Exception e) {
@@ -480,7 +480,7 @@ public class HTableMultiplexer {
       return this.tableNameToHTableMap.size();
     }
   }
-  
+
   private static class PutStatus {
     private final HRegionInfo regionInfo;
     private final Put put;
