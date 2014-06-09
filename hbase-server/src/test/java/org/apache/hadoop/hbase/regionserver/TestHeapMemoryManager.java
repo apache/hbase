@@ -23,9 +23,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.IOException;
 import java.lang.management.ManagementFactory;
-import java.util.List;
+import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
@@ -34,10 +33,11 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerContext;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerResult;
@@ -322,24 +322,23 @@ public class TestHeapMemoryManager {
     }
 
     @Override
-    public long getEvictedCount() {
-      return 0;
-    }
-
-    @Override
     public long getBlockCount() {
       return 0;
     }
 
     @Override
-    public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries(Configuration conf)
-        throws IOException {
+    public void setMaxSize(long size) {
+      this.maxSize = size;
+    }
+
+    @Override
+    public Iterator<CachedBlock> iterator() {
       return null;
     }
 
     @Override
-    public void setMaxSize(long size) {
-      this.maxSize = size;
+    public BlockCache[] getBlockCaches() {
+      return null;
     }
   }
 

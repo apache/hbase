@@ -458,6 +458,8 @@ public class CacheConfig {
     long lruCacheSize = (long) (mu.getMax() * cachePercentage);
     int blockSize = conf.getInt("hbase.offheapcache.minblocksize", HConstants.DEFAULT_BLOCKSIZE);
     long slabCacheOffHeapCacheSize =
+      conf.getFloat(SLAB_CACHE_OFFHEAP_PERCENTAGE_KEY, 0) == 0?
+      0:
       (long) (conf.getFloat(SLAB_CACHE_OFFHEAP_PERCENTAGE_KEY, (float) 0) *
           DirectMemoryUtils.getDirectMemorySize());
     if (slabCacheOffHeapCacheSize <= 0) {

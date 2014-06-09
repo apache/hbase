@@ -18,11 +18,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.io.IOException;
-import java.util.List;
+import java.util.Iterator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
@@ -119,19 +117,8 @@ public class CombinedBlockCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public long getEvictedCount() {
-    return lruCache.getEvictedCount() + bucketCache.getEvictedCount();
-  }
-
-  @Override
   public long getBlockCount() {
     return lruCache.getBlockCount() + bucketCache.getBlockCount();
-  }
-
-  @Override
-  public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries(
-      Configuration conf) throws IOException {
-    throw new UnsupportedOperationException();
   }
 
   private static class CombinedCacheStats extends CacheStats {
@@ -207,5 +194,15 @@ public class CombinedBlockCache implements BlockCache, HeapSize {
           .getSumRequestCachingCountsPastNPeriods()));
       return Double.isNaN(ratio) ? 0 : ratio;
     }
+  }
+
+  @Override
+  public Iterator<CachedBlock> iterator() {
+    return new BlockCachesIterator(getBlockCaches());
+  }
+
+  @Override
+  public BlockCache[] getBlockCaches() {
+    return new BlockCache [] {this.lruCache, this.bucketCache};
   }
 }

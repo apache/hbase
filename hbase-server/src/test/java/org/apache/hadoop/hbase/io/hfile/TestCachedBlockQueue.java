@@ -40,7 +40,7 @@ public class TestCachedBlockQueue extends TestCase {
     CachedBlock cb9 = new CachedBlock(1000, "cb9", 9);
     CachedBlock cb10 = new CachedBlock(1500, "cb10", 10);
 
-    CachedBlockQueue queue = new CachedBlockQueue(10000,1000);
+    LruCachedBlockQueue queue = new LruCachedBlockQueue(10000,1000);
 
     queue.add(cb1);
     queue.add(cb2);
@@ -78,7 +78,7 @@ public class TestCachedBlockQueue extends TestCase {
     CachedBlock cb9 = new CachedBlock(1000, "cb9", 9);
     CachedBlock cb10 = new CachedBlock(1500, "cb10", 10);
 
-    CachedBlockQueue queue = new CachedBlockQueue(10000,1000);
+    LruCachedBlockQueue queue = new LruCachedBlockQueue(10000,1000);
 
     queue.add(cb1);
     queue.add(cb2);
@@ -110,7 +110,7 @@ public class TestCachedBlockQueue extends TestCase {
     }
   }
 
-  private static class CachedBlock extends org.apache.hadoop.hbase.io.hfile.CachedBlock
+  private static class CachedBlock extends org.apache.hadoop.hbase.io.hfile.LruCachedBlock
   {
     public CachedBlock(final long heapSize, String name, long accessTime) {
       super(new BlockCacheKey(name, 0),

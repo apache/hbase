@@ -18,13 +18,10 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.EnumMap;
-import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -41,18 +38,16 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.CachedBlock.BlockPriority;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.util.StringUtils;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -94,6 +89,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * to the relative sizes and usage.
  */
 @InterfaceAudience.Private
+@JsonIgnoreProperties({"encodingCountsForTest"})
 public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
   static final Log LOG = LogFactory.getLog(LruBlockCache.class);
@@ -132,7 +128,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   static final int statThreadPeriod = 60 * 5;
 
   /** Concurrent map (the cache) */
-  private final Map<BlockCacheKey,CachedBlock> map;
+  private final Map<BlockCacheKey,LruCachedBlock> map;
 
   /** Eviction lock (locked when eviction in process) */
   private final ReentrantLock evictionLock = new ReentrantLock(true);
@@ -272,7 +268,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     this.maxSize = maxSize;
     this.blockSize = blockSize;
     this.forceInMemory = forceInMemory;
-    map = new ConcurrentHashMap<BlockCacheKey,CachedBlock>(mapInitialSize,
+    map = new ConcurrentHashMap<BlockCacheKey,LruCachedBlock>(mapInitialSize,
         mapLoadFactor, mapConcurrencyLevel);
     this.minFactor = minFactor;
     this.acceptableFactor = acceptableFactor;
@@ -315,7 +311,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    */
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
-    CachedBlock cb = map.get(cacheKey);
+    LruCachedBlock cb = map.get(cacheKey);
     if(cb != null) {
       // compare the contents, if they are not equal, we are in big trouble
       if (compare(buf, cb.getBuffer()) != 0) {
@@ -327,7 +323,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       LOG.warn(msg);
       return;
     }
-    cb = new CachedBlock(cacheKey, buf, count.incrementAndGet(), inMemory);
+    cb = new LruCachedBlock(cacheKey, buf, count.incrementAndGet(), inMemory);
     long newSize = updateSizeMetrics(cb, false);
     map.put(cacheKey, cb);
     elements.incrementAndGet();
@@ -358,12 +354,12 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   /**
    * Helper function that updates the local size counter and also updates any
    * per-cf or per-blocktype metrics it can discern from given
-   * {@link CachedBlock}
+   * {@link LruCachedBlock}
    *
    * @param cb
    * @param evict
    */
-  protected long updateSizeMetrics(CachedBlock cb, boolean evict) {
+  protected long updateSizeMetrics(LruCachedBlock cb, boolean evict) {
     long heapsize = cb.heapSize();
     if (evict) {
       heapsize *= -1;
@@ -383,7 +379,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
       boolean updateCacheMetrics) {
-    CachedBlock cb = map.get(cacheKey);
+    LruCachedBlock cb = map.get(cacheKey);
     if (cb == null) {
       if (!repeat && updateCacheMetrics) stats.miss(caching);
       if (victimHandler != null) {
@@ -407,7 +403,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public boolean evictBlock(BlockCacheKey cacheKey) {
-    CachedBlock cb = map.get(cacheKey);
+    LruCachedBlock cb = map.get(cacheKey);
     if (cb == null) return false;
     evictBlock(cb, false);
     return true;
@@ -446,7 +442,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    *          EvictionThread
    * @return the heap size of evicted block
    */
-  protected long evictBlock(CachedBlock block, boolean evictedByEvictionProcess) {
+  protected long evictBlock(LruCachedBlock block, boolean evictedByEvictionProcess) {
     map.remove(block.getCacheKey());
     updateSizeMetrics(block, true);
     elements.decrementAndGet();
@@ -501,7 +497,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
           memorySize());
 
       // Scan entire map putting into appropriate buckets
-      for(CachedBlock cachedBlock : map.values()) {
+      for(LruCachedBlock cachedBlock : map.values()) {
         switch(cachedBlock.getPriority()) {
           case SINGLE: {
             bucketSingle.add(cachedBlock);
@@ -597,23 +593,23 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    */
   private class BlockBucket implements Comparable<BlockBucket> {
 
-    private CachedBlockQueue queue;
+    private LruCachedBlockQueue queue;
     private long totalSize = 0;
     private long bucketSize;
 
     public BlockBucket(long bytesToFree, long blockSize, long bucketSize) {
       this.bucketSize = bucketSize;
-      queue = new CachedBlockQueue(bytesToFree, blockSize);
+      queue = new LruCachedBlockQueue(bytesToFree, blockSize);
       totalSize = 0;
     }
 
-    public void add(CachedBlock block) {
+    public void add(LruCachedBlock block) {
       totalSize += block.heapSize();
       queue.add(block);
     }
 
     public long free(long toFree) {
-      CachedBlock cb;
+      LruCachedBlock cb;
       long freedBytes = 0;
       while ((cb = queue.pollLast()) != null) {
         freedBytes += evictBlock(cb, true);
@@ -668,24 +664,12 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
   @Override
   public long size() {
-    return this.elements.get();
+    return getMaxSize();
   }
 
   @Override
   public long getBlockCount() {
     return this.elements.get();
-  }
-
-  /**
-   * Get the number of eviction runs that have occurred
-   */
-  public long getEvictionCount() {
-    return this.stats.getEvictionCount();
-  }
-
-  @Override
-  public long getEvictedCount() {
-    return this.stats.getEvictedCount();
   }
 
   EvictionThread getEvictionThread() {
@@ -812,36 +796,68 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
-  public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries(Configuration conf) throws IOException {
+  public Iterator<CachedBlock> iterator() {
+    final Iterator<LruCachedBlock> iterator = map.values().iterator();
 
-    Map<String, Path> sfMap = FSUtils.getTableStoreFilePathMap(
-        FileSystem.get(conf),
-        FSUtils.getRootDir(conf));
+    return new Iterator<CachedBlock>() {
+      private final long now = System.nanoTime();
 
-    // quirky, but it's a compound key and this is a shortcut taken instead of
-    // creating a class that would represent only a key.
-    Map<BlockCacheColumnFamilySummary, BlockCacheColumnFamilySummary> bcs =
-      new HashMap<BlockCacheColumnFamilySummary, BlockCacheColumnFamilySummary>();
-
-    for (CachedBlock cb : map.values()) {
-      String sf = cb.getCacheKey().getHfileName();
-      Path path = sfMap.get(sf);
-      if ( path != null) {
-        BlockCacheColumnFamilySummary lookup =
-          BlockCacheColumnFamilySummary.createFromStoreFilePath(path);
-        BlockCacheColumnFamilySummary bcse = bcs.get(lookup);
-        if (bcse == null) {
-          bcse = BlockCacheColumnFamilySummary.create(lookup);
-          bcs.put(lookup,bcse);
-        }
-        bcse.incrementBlocks();
-        bcse.incrementHeapSize(cb.heapSize());
+      @Override
+      public boolean hasNext() {
+        return iterator.hasNext();
       }
-    }
-    List<BlockCacheColumnFamilySummary> list =
-        new ArrayList<BlockCacheColumnFamilySummary>(bcs.values());
-    Collections.sort( list );
-    return list;
+
+      @Override
+      public CachedBlock next() {
+        final LruCachedBlock b = iterator.next();
+        return new CachedBlock() {
+          @Override
+          public String toString() {
+            return BlockCacheUtil.toString(this, now);
+          }
+
+          @Override
+          public BlockPriority getBlockPriority() {
+            return b.getPriority();
+          }
+
+          @Override
+          public BlockType getBlockType() {
+            return b.getBuffer().getBlockType();
+          }
+
+          @Override
+          public long getOffset() {
+            return b.getCacheKey().getOffset();
+          }
+
+          @Override
+          public long getSize() {
+            return b.getBuffer().heapSize();
+          }
+
+          @Override
+          public long getCachedTime() {
+            return b.getCachedTime();
+          }
+
+          @Override
+          public String getFilename() {
+            return b.getCacheKey().getHfileName();
+          }
+
+          @Override
+          public int compareTo(CachedBlock other) {
+            return (int)(other.getOffset() - this.getOffset());
+          }
+        };
+      }
+
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+    };
   }
 
   // Simple calculators of sizes given factors and maxSize
@@ -902,10 +918,11 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     return fileNames;
   }
 
+  @VisibleForTesting
   Map<BlockType, Integer> getBlockTypeCountsForTest() {
     Map<BlockType, Integer> counts =
         new EnumMap<BlockType, Integer>(BlockType.class);
-    for (CachedBlock cb : map.values()) {
+    for (LruCachedBlock cb : map.values()) {
       BlockType blockType = ((HFileBlock) cb.getBuffer()).getBlockType();
       Integer count = counts.get(blockType);
       counts.put(blockType, (count == null ? 0 : count) + 1);
@@ -916,7 +933,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   public Map<DataBlockEncoding, Integer> getEncodingCountsForTest() {
     Map<DataBlockEncoding, Integer> counts =
         new EnumMap<DataBlockEncoding, Integer>(DataBlockEncoding.class);
-    for (CachedBlock block : map.values()) {
+    for (LruCachedBlock block : map.values()) {
       DataBlockEncoding encoding =
               ((HFileBlock) block.getBuffer()).getDataBlockEncoding();
       Integer count = counts.get(encoding);
@@ -928,5 +945,10 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   public void setVictimCache(BucketCache handler) {
     assert victimHandler == null;
     victimHandler = handler;
+  }
+
+  @Override
+  public BlockCache[] getBlockCaches() {
+    return null;
   }
 }

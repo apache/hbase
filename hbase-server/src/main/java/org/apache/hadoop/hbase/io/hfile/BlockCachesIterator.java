@@ -1,4 +1,6 @@
 /**
+ * Copyright The Apache Software Foundation
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,14 +19,40 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.util.Iterator;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 
+/**
+ * Iterator over an array of BlockCache CachedBlocks.
+ */
 @InterfaceAudience.Private
-public interface CachedBlock extends Comparable<CachedBlock> {
-  BlockPriority getBlockPriority();
-  BlockType getBlockType();
-  long getOffset();
-  long getSize();
-  long getCachedTime();
-  String getFilename();
+class BlockCachesIterator implements Iterator<CachedBlock> {
+  int index = 0;
+  final BlockCache [] bcs;
+  Iterator<CachedBlock> current;
+
+  BlockCachesIterator(final BlockCache [] blockCaches) {
+    this.bcs = blockCaches;
+    this.current = this.bcs[this.index].iterator();
+  }
+
+  @Override
+  public boolean hasNext() {
+    if (current.hasNext()) return true;
+    this.index++;
+    if (this.index >= this.bcs.length) return false;
+    this.current = this.bcs[this.index].iterator();
+    return hasNext();
+  }
+
+  @Override
+  public CachedBlock next() {
+    return this.current.next();
+  }
+
+  @Override
+  public void remove() {
+    throw new UnsupportedOperationException();
+  }
 }

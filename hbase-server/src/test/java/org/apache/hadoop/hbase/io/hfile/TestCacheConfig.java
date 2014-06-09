@@ -24,6 +24,8 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.SmallTests;
@@ -31,38 +33,65 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mortbay.log.Log;
 
 /**
  * Tests that {@link CacheConfig} does as expected.
  */
 @Category(SmallTests.class)
 public class TestCacheConfig {
+  private static final Log LOG = LogFactory.getLog(TestCacheConfig.class);
   private Configuration conf;
+
+  static class Deserializer implements CacheableDeserializer<Cacheable> {
+    private final Cacheable cacheable;
+ 
+    Deserializer(final Cacheable c) {
+      this.cacheable = c;
+    }
+
+    @Override
+    public int getDeserialiserIdentifier() {
+      return 0;
+    }
+
+    @Override
+    public Cacheable deserialize(ByteBuffer b, boolean reuse) throws IOException {
+      LOG.info("Deserialized " + b + ", reuse=" + reuse);
+      return cacheable;
+    }
+
+    @Override
+    public Cacheable deserialize(ByteBuffer b) throws IOException {
+      LOG.info("Deserialized " + b);
+      return cacheable;
+    }
+  };
+
+  static class IndexCacheEntry extends DataCacheEntry {
+    private static IndexCacheEntry SINGLETON = new IndexCacheEntry();
+
+    public IndexCacheEntry() {
+      super(SINGLETON);
+    }
+
+    @Override
+    public BlockType getBlockType() {
+      return BlockType.ROOT_INDEX;
+    }
+  }
 
   static class DataCacheEntry implements Cacheable {
     private static final int SIZE = 1;
     private static DataCacheEntry SINGLETON = new DataCacheEntry();
+    final CacheableDeserializer<Cacheable> deserializer;
 
-    private final CacheableDeserializer<Cacheable> deserializer =
-        new CacheableDeserializer<Cacheable>() {
-      @Override
-      public int getDeserialiserIdentifier() {
-        return 0;
-      }
-      
-      @Override
-      public Cacheable deserialize(ByteBuffer b, boolean reuse) throws IOException {
-        Log.info("Deserialized " + b + ", reuse=" + reuse);
-        return SINGLETON;
-      }
-      
-      @Override
-      public Cacheable deserialize(ByteBuffer b) throws IOException {
-        Log.info("Deserialized " + b);
-        return SINGLETON;
-      }
-    };
+    DataCacheEntry() {
+      this(SINGLETON);
+    }
+
+    DataCacheEntry(final Cacheable c) {
+      this.deserializer = new Deserializer(c);
+    }
 
     public String toString() {
       return "size=" + SIZE + ", type=" + getBlockType();
@@ -80,7 +109,7 @@ public class TestCacheConfig {
 
     @Override
     public void serialize(ByteBuffer destination) {
-      Log.info("Serialized " + this + " to " + destination);
+      LOG.info("Serialized " + this + " to " + destination);
     }
 
     @Override
@@ -119,7 +148,7 @@ public class TestCacheConfig {
    * to onheap and offheap caches.
    * @param sizing True if we should run sizing test (doesn't always apply).
    */
-  private void basicBlockCacheOps(final CacheConfig cc, final boolean doubling,
+  void basicBlockCacheOps(final CacheConfig cc, final boolean doubling,
       final boolean sizing) {
     assertTrue(cc.isBlockCacheEnabled());
     assertTrue(CacheConfig.DEFAULT_IN_MEMORY == cc.isInMemory());

@@ -2494,10 +2494,10 @@ public class HRegionServer extends HasThread implements
       String regionNameStr = regionName == null?
         encodedRegionName: Bytes.toStringBinary(regionName);
       if (isOpening != null && isOpening.booleanValue()) {
-        throw new RegionOpeningException("Region " + regionNameStr + 
+        throw new RegionOpeningException("Region " + regionNameStr +
           " is opening on " + this.serverName);
       }
-      throw new NotServingRegionException("Region " + regionNameStr + 
+      throw new NotServingRegionException("Region " + regionNameStr +
         " is not online on " + this.serverName);
     }
     return region;
@@ -2799,5 +2799,12 @@ public class HRegionServer extends HasThread implements
       }
     }
     return result;
+  }
+
+  /**
+   * @return The cache config instance used by the regionserver.
+   */
+  public CacheConfig getCacheConfig() {
+    return this.cacheConfig;
   }
 }

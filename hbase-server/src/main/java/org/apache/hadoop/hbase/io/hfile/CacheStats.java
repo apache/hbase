@@ -27,7 +27,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class CacheStats {
-
   /** Sliding window statistics. The number of metric periods to include in
    * sliding window hit ratio calculations.
    */
@@ -35,6 +34,7 @@ public class CacheStats {
 
   /** The number of getBlock requests that were cache hits */
   private final AtomicLong hitCount = new AtomicLong(0);
+
   /**
    * The number of getBlock requests that were cache hits, but only from
    * requests that were set to use the block cache.  This is because all reads
@@ -42,15 +42,19 @@ public class CacheStats {
    * into the block cache.  See HBASE-2253 for more information.
    */
   private final AtomicLong hitCachingCount = new AtomicLong(0);
+
   /** The number of getBlock requests that were cache misses */
   private final AtomicLong missCount = new AtomicLong(0);
+
   /**
    * The number of getBlock requests that were cache misses, but only from
    * requests that were set to use the block cache.
    */
   private final AtomicLong missCachingCount = new AtomicLong(0);
+
   /** The number of times an eviction has occurred */
   private final AtomicLong evictionCount = new AtomicLong(0);
+
   /** The total number of blocks that have been evicted */
   private final AtomicLong evictedBlockCount = new AtomicLong(0);
 
@@ -89,8 +93,10 @@ public class CacheStats {
 
   @Override
   public String toString() {
-    return "hitCount=" + this.hitCount + ", hitCachingCount=" + this.hitCachingCount +
-      ", missCount=" + this.missCount;
+    return "hitCount=" + getHitCount() + ", hitCachingCount=" + getHitCachingCount() +
+      ", missCount=" + getMissCount() + ", missCachingCount=" + getMissCachingCount() +
+      ", evictionCount=" + getEvictionCount() +
+      ", evictedBlockCount=" + getEvictedCount();
   }
 
   public void miss(boolean caching) {

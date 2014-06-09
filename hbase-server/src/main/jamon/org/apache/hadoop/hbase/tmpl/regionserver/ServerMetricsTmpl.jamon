@@ -44,7 +44,6 @@ java.lang.management.ManagementFactory;
         <li class=""><a href="#tab_hlogStats" data-toggle="tab">hlogs</a></li>
         <li class=""><a href="#tab_storeStats" data-toggle="tab">Storefiles</a></li>
         <li class=""><a href="#tab_queueStats" data-toggle="tab">Queues</a></li>
-        <li class=""><a href="#tab_blockCacheStats" data-toggle="tab">Block Cache</a></li>
     </ul>
     <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
         <div class="tab-pane active" id="tab_baseStats">
@@ -64,9 +63,6 @@ java.lang.management.ManagementFactory;
         </div>
         <div class="tab-pane" id="tab_queueStats">
             <& queueStats; mWrap = mWrap  &>
-        </div>
-        <div class="tab-pane" id="tab_blockCacheStats">
-            <& blockCacheStats; mWrap = mWrap &>
         </div>
     </div>
 </div>
@@ -197,34 +193,6 @@ MetricsRegionServerWrapper mWrap;
 <tr>
     <td><% mWrap.getCompactionQueueSize() %></td>
     <td><% mWrap.getFlushQueueSize() %></td>
-</tr>
-</table>
-</%def>
-
-
-<%def blockCacheStats>
-<%args>
-MetricsRegionServerWrapper mWrap;
-</%args>
-<table class="table table-striped">
-<tr>
-    <th>Cache Size (bytes)</th>
-    <th>Cache Free (bytes)</th>
-    <th>Cache Count (blocks)</th>
-    <th>Cache Hit Count</th>
-    <th>Cache Miss Count</th>
-    <th>Cache Hit Ratio</th>
-    <th>Cache Eviction Count</th>
-
-</tr>
-<tr>
-    <td><% StringUtils.humanReadableInt(mWrap.getBlockCacheSize()) %></td>
-    <td><% StringUtils.humanReadableInt(mWrap.getBlockCacheFreeSize()) %></td>
-    <td><% StringUtils.humanReadableInt(mWrap.getBlockCacheCount()) %></td>
-    <td><% StringUtils.humanReadableInt(mWrap.getBlockCacheHitCount()) %></td>
-    <td><% StringUtils.humanReadableInt(mWrap.getBlockCacheMissCount()) %></td>
-    <td><% mWrap.getBlockCacheHitPercent() %>%</td>
-    <td><% StringUtils.humanReadableInt(mWrap.getBlockCacheEvictedCount()) %></td>
 </tr>
 </table>
 </%def>
