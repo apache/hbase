@@ -250,6 +250,10 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
             Configuration conf = env.getConfiguration();
             fs = FileSystem.get(conf);
             for(Pair<byte[], String> el: familyPaths) {
+              Path p = new Path(el.getSecond());
+              LOG.trace("Setting permission for: " + p);
+              fs.setPermission(p, PERM_ALL_ACCESS);
+
               Path stageFamily = new Path(bulkToken, Bytes.toString(el.getFirst()));
               if(!fs.exists(stageFamily)) {
                 fs.mkdirs(stageFamily);
