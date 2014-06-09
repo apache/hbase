@@ -50,6 +50,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -489,6 +490,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     Path topOut = new Path(tmpDir, uniqueName + ".top");
     splitStoreFile(getConf(), hfilePath, familyDesc, splitKey,
         botOut, topOut);
+
+    FileSystem fs = tmpDir.getFileSystem(getConf());
+    fs.setPermission(tmpDir, FsPermission.valueOf("-rwxrwxrwx"));
+    fs.setPermission(botOut, FsPermission.valueOf("-rwxrwxrwx"));
 
     // Add these back at the *front* of the queue, so there's a lower
     // chance that the region will just split again before we get there.
