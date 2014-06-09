@@ -40,24 +40,40 @@
     <para>This describes how to set up Apache HBase and clients for connection to secure HBase
       resources.</para>
 
-    <section>
+    <section xml:id="security.prerequisites">
       <title>Prerequisites</title>
-      <para> You need to have a working Kerberos KDC. </para>
-      <para> A HBase configured for secure client access is expected to be running on top of a
-        secured HDFS cluster. HBase must be able to authenticate to HDFS services. HBase needs
-        Kerberos credentials to interact with the Kerberos-enabled HDFS daemons. Authenticating a
-        service should be done using a keytab file. The procedure for creating keytabs for HBase
-        service is the same as for creating keytabs for Hadoop. Those steps are omitted here. Copy
-        the resulting keytab files to wherever HBase Master and RegionServer processes are deployed
-        and make them readable only to the user account under which the HBase daemons will run. </para>
-      <para> A Kerberos principal has three parts, with the form
-          <code>username/fully.qualified.domain.name@YOUR-REALM.COM</code>. We recommend using
-          <code>hbase</code> as the username portion. </para>
-      <para> The following is an example of the configuration properties for Kerberos operation that
-        must be added to the <code>hbase-site.xml</code> file on every server machine in the
-        cluster. Required for even the most basic interactions with a secure Hadoop configuration,
-        independent of HBase security. </para>
-      <programlisting><![CDATA[
+      <variablelist>
+        <varlistentry>
+          <term>Hadoop Authentication Configuration</term>
+          <listitem>
+            <para>To run HBase RPC with strong authentication, you must set
+                <code>hbase.security.authentication</code> to <literal>true</literal>. In this case,
+              you must also set <code>hadoop.security.authentication</code> to
+                <literal>true</literal>. Otherwise, you would be using strong authentication for
+              HBase but not for the underlying HDFS, which would cancel out any benefit.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>Kerberos KDC</term>
+          <listitem>
+            <para> You need to have a working Kerberos KDC. </para>
+            <para> A HBase configured for secure client access is expected to be running on top of a
+              secured HDFS cluster. HBase must be able to authenticate to HDFS services. HBase needs
+              Kerberos credentials to interact with the Kerberos-enabled HDFS daemons.
+              Authenticating a service should be done using a keytab file. The procedure for
+              creating keytabs for HBase service is the same as for creating keytabs for Hadoop.
+              Those steps are omitted here. Copy the resulting keytab files to wherever HBase Master
+              and RegionServer processes are deployed and make them readable only to the user
+              account under which the HBase daemons will run. </para>
+            <para> A Kerberos principal has three parts, with the form
+                <code>username/fully.qualified.domain.name@YOUR-REALM.COM</code>. We recommend using
+                <code>hbase</code> as the username portion. </para>
+            <para> The following is an example of the configuration properties for Kerberos
+              operation that must be added to the <code>hbase-site.xml</code> file on every server
+              machine in the cluster. Required for even the most basic interactions with a secure
+              Hadoop configuration, independent of HBase security. </para>
+            <programlisting><![CDATA[
 <property>
   <name>hbase.regionserver.kerberos.principal</name>
   <value>hbase/_HOST@YOUR-REALM.COM</value>
@@ -75,23 +91,30 @@
   <value>/etc/hbase/conf/keytab.krb5</value>
 </property>
     ]]></programlisting>
-      <para> Each HBase client user should also be given a Kerberos principal. This principal should
-        have a password assigned to it (as opposed to a keytab file). The client principal's
-          <code>maxrenewlife</code> should be set so that it can be renewed enough times for the
-        HBase client process to complete. For example, if a user runs a long-running HBase client
-        process that takes at most 3 days, we might create this user's principal within
-          <code>kadmin</code> with: <code>addprinc -maxrenewlife 3days</code>
-      </para>
-      <para> Long running daemons with indefinite lifetimes that require client access to HBase can
-        instead be configured to log in from a keytab. For each host running such daemons, create a
-        keytab with <code>kadmin</code> or <code>kadmin.local</code>. The procedure for creating
-        keytabs for HBase service is the same as for creating keytabs for Hadoop. Those steps are
-        omitted here. Copy the resulting keytab files to where the client daemon will execute and
-        make them readable only to the user account under which the daemon will run. </para>
+            <para> Each HBase client user should also be given a Kerberos principal. This principal
+              should have a password assigned to it (as opposed to a keytab file). The client
+              principal's <code>maxrenewlife</code> should be set so that it can be renewed enough
+              times for the HBase client process to complete. For example, if a user runs a
+              long-running HBase client process that takes at most 3 days, we might create this
+              user's principal within <code>kadmin</code> with: <code>addprinc -maxrenewlife
+                3days</code>
+            </para>
+            <para> Long running daemons with indefinite lifetimes that require client access to
+              HBase can instead be configured to log in from a keytab. For each host running such
+              daemons, create a keytab with <code>kadmin</code> or <code>kadmin.local</code>. The
+              procedure for creating keytabs for HBase service is the same as for creating keytabs
+              for Hadoop. Those steps are omitted here. Copy the resulting keytab files to where the
+              client daemon will execute and make them readable only to the user account under which
+              the daemon will run. </para>
+          </listitem>
+        </varlistentry>
+      </variablelist>
     </section>
 
     <section>
       <title>Server-side Configuration for Secure Operation</title>
+      <para>First, refer to <xref linkend="security.prerequisites" /> and ensure that your
+        underlying HDFS configuration is secure.</para>
       <para> Add the following to the <code>hbase-site.xml</code> file on every server machine in
         the cluster: </para>
       <programlisting><![CDATA[
@@ -114,6 +137,8 @@
 
     <section>
       <title>Client-side Configuration for Secure Operation</title>
+      <para>First, refer to <xref linkend="security.prerequisites" /> and ensure that your
+        underlying HDFS configuration is secure.</para>
       <para> Add the following to the <code>hbase-site.xml</code> file on every client: </para>
       <programlisting><![CDATA[
 <property>
