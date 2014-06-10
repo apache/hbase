@@ -64,8 +64,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
-import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
@@ -279,7 +277,7 @@ public class TestStore {
     // Enable the expired store file deletion
     conf.setBoolean("hbase.store.delete.expired.storefile", true);
     // Set the compaction threshold higher to avoid normal compactions.
-    conf.setInt(CompactionConfiguration.MIN_KEY, 5);
+    conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY, 5);
 
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     hcd.setTimeToLive(ttl);

@@ -34,7 +34,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -115,7 +114,7 @@ public class TestStripeCompactionPolicy {
   public void testSingleStripeCompaction() throws Exception {
     // Create a special policy that only compacts single stripes, using standard methods.
     Configuration conf = HBaseConfiguration.create();
-    conf.setFloat(CompactionConfiguration.RATIO_KEY, 1.0F);
+    conf.setFloat(CompactionConfiguration.HBASE_HSTORE_COMPACTION_RATIO_KEY, 1.0F);
     conf.setInt(StripeStoreConfig.MIN_FILES_KEY, 3);
     conf.setInt(StripeStoreConfig.MAX_FILES_KEY, 4);
     conf.setLong(StripeStoreConfig.SIZE_TO_SPLIT_KEY, 1000); // make sure the are no splits
@@ -245,7 +244,7 @@ public class TestStripeCompactionPolicy {
         createStripesWithSizes(0, 0, new Long[] { defaultSplitSize - 2, 2L });
     assertNull(createPolicy(conf).selectCompaction(si, al(), false));
     // Make sure everything is eligible.
-    conf.setFloat(CompactionConfiguration.RATIO_KEY, 500f);
+    conf.setFloat(CompactionConfiguration.HBASE_HSTORE_COMPACTION_RATIO_KEY, 500f);
     StripeCompactionPolicy policy = createPolicy(conf);
     verifyWholeStripesCompaction(policy, si, 0, 0, null, 2, splitTargetSize);
     // Add some extra stripes...

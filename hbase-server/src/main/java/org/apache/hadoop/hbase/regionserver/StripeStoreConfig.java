@@ -82,10 +82,10 @@ public class StripeStoreConfig {
     this.level0CompactMinFiles = config.getInt(MIN_FILES_L0_KEY, 4);
     this.flushIntoL0 = config.getBoolean(FLUSH_TO_L0_KEY, false);
     int minMinFiles = flushIntoL0 ? 3 : 4; // make sure not to compact tiny files too often.
-    int minFiles = config.getInt(CompactionConfiguration.MIN_KEY, -1);
+    int minFiles = config.getInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY, -1);
     this.stripeCompactMinFiles = config.getInt(MIN_FILES_KEY, Math.max(minMinFiles, minFiles));
     this.stripeCompactMaxFiles = config.getInt(MAX_FILES_KEY,
-        config.getInt(CompactionConfiguration.MAX_KEY, 10));
+        config.getInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY, 10));
     this.maxRegionSplitImbalance = getFloat(config, MAX_REGION_SPLIT_IMBALANCE_KEY, 1.5f, true);
 
     float splitPartCount = getFloat(config, SPLIT_PARTS_KEY, 2f, true);
