@@ -140,12 +140,8 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   private final EvictionThread evictionThread;
 
   /** Statistics thread schedule pool (for heavy debugging, could remove) */
-  private final ScheduledExecutorService scheduleThreadPool =
-    Executors.newScheduledThreadPool(1,
-      new ThreadFactoryBuilder()
-        .setNameFormat("LruStats #%d")
-        .setDaemon(true)
-        .build());
+  private final ScheduledExecutorService scheduleThreadPool = Executors.newScheduledThreadPool(1,
+    new ThreadFactoryBuilder().setNameFormat("LruBlockCacheStatsExecutor").setDaemon(true).build());
 
   /** Current size of cache */
   private final AtomicLong size;
@@ -286,6 +282,8 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     } else {
       this.evictionThread = null;
     }
+    // TODO: Add means of turning this off.  Bit obnoxious running thread just to make a log
+    // every five minutes.
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this),
         statThreadPeriod, statThreadPeriod, TimeUnit.SECONDS);
   }
@@ -732,13 +730,14 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    * Statistics thread.  Periodically prints the cache statistics to the log.
    */
   static class StatisticsThread extends Thread {
-    LruBlockCache lru;
+    private final LruBlockCache lru;
 
     public StatisticsThread(LruBlockCache lru) {
-      super("LruBlockCache.StatisticsThread");
+      super("LruBlockCacheStats");
       setDaemon(true);
       this.lru = lru;
     }
+
     @Override
     public void run() {
       lru.logStats();
@@ -746,22 +745,20 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   public void logStats() {
-    if (!LOG.isDebugEnabled()) return;
     // Log size
     long totalSize = heapSize();
     long freeSize = maxSize - totalSize;
-    LruBlockCache.LOG.debug("Total=" + StringUtils.byteDesc(totalSize) + ", " +
-        "free=" + StringUtils.byteDesc(freeSize) + ", " +
+    LruBlockCache.LOG.info("totalSize=" + StringUtils.byteDesc(totalSize) + ", " +
+        "freeSize=" + StringUtils.byteDesc(freeSize) + ", " +
         "max=" + StringUtils.byteDesc(this.maxSize) + ", " +
-        "blocks=" + size() +", " +
         "accesses=" + stats.getRequestCount() + ", " +
         "hits=" + stats.getHitCount() + ", " +
-        "hitRatio=" +
-          (stats.getHitCount() == 0 ? "0" : (StringUtils.formatPercent(stats.getHitRatio(), 2)+ ", ")) + ", " +
+        "hitRatio=" + (stats.getHitCount() == 0 ?
+          "0" : (StringUtils.formatPercent(stats.getHitRatio(), 2)+ ", ")) + ", " +
         "cachingAccesses=" + stats.getRequestCachingCount() + ", " +
         "cachingHits=" + stats.getHitCachingCount() + ", " +
-        "cachingHitsRatio=" +
-          (stats.getHitCachingCount() == 0 ? "0,": (StringUtils.formatPercent(stats.getHitCachingRatio(), 2) + ", ")) +
+        "cachingHitsRatio=" + (stats.getHitCachingCount() == 0 ?
+          "0,": (StringUtils.formatPercent(stats.getHitCachingRatio(), 2) + ", ")) +
         "evictions=" + stats.getEvictionCount() + ", " +
         "evicted=" + stats.getEvictedCount() + ", " +
         "evictedPerRun=" + stats.evictedPerEviction());
@@ -782,7 +779,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       (5 * Bytes.SIZEOF_FLOAT) + Bytes.SIZEOF_BOOLEAN
       + ClassSize.OBJECT);
 
-  // HeapSize implementation
+  @Override
   public long heapSize() {
     return getCurrentSize();
   }

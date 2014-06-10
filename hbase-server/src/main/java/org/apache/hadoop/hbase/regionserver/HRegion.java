@@ -6179,7 +6179,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param wal
    * @param cells list of KeyValues inserted into memstore. Those KeyValues are passed in order to
    *        be updated with right mvcc values(their log sequence nu
-   * @return
+   * @return Return the key used appending with no sync and no append.
    * @throws IOException
    */
   private HLogKey appendNoSyncNoAppend(final HLog wal, List<KeyValue> cells) throws IOException {

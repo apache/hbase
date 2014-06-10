@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -512,21 +513,7 @@ public final class BucketAllocator {
     return this.buckets;
   }
 
-  public void dumpToLog() {
-    logStatistics();
-    StringBuilder sb = new StringBuilder();
-    for (Bucket b : buckets) {
-      sb.append("Bucket:").append(b.baseOffset).append('\n');
-      sb.append("  Size index: " + b.sizeIndex() + "; Free:" + b.freeCount
-          + "; used:" + b.usedCount + "; freelist\n");
-      for (int i = 0; i < b.freeCount(); ++i)
-        sb.append(b.freeList[i]).append(',');
-      sb.append('\n');
-    }
-    LOG.info(sb);
-  }
-
-  public void logStatistics() {
+  void logStatistics() {
     IndexStatistics total = new IndexStatistics();
     IndexStatistics[] stats = getIndexStatistics(total);
     LOG.info("Bucket allocator statistics follow:\n");
@@ -538,7 +525,7 @@ public final class BucketAllocator {
     }
   }
 
-  public IndexStatistics[] getIndexStatistics(IndexStatistics grandTotal) {
+  IndexStatistics[] getIndexStatistics(IndexStatistics grandTotal) {
     IndexStatistics[] stats = getIndexStatistics();
     long totalfree = 0, totalused = 0;
     for (IndexStatistics stat : stats) {
@@ -549,7 +536,7 @@ public final class BucketAllocator {
     return stats;
   }
 
-  public IndexStatistics[] getIndexStatistics() {
+  IndexStatistics[] getIndexStatistics() {
     IndexStatistics[] stats = new IndexStatistics[bucketSizes.length];
     for (int i = 0; i < stats.length; ++i)
       stats[i] = bucketSizeInfos[i].statistics();

@@ -103,7 +103,7 @@ public class BucketCache implements BlockCache, HeapSize {
   private static final float DEFAULT_MIN_FACTOR = 0.85f;
 
   /** Statistics thread */
-  private static final int statThreadPeriod = 3 * 60;
+  private static final int statThreadPeriod = 5 * 60;
 
   final static int DEFAULT_WRITER_THREADS = 3;
   final static int DEFAULT_WRITER_QUEUE_ITEMS = 64;
@@ -188,12 +188,8 @@ public class BucketCache implements BlockCache, HeapSize {
       });
 
   /** Statistics thread schedule pool (for heavy debugging, could remove) */
-  private final ScheduledExecutorService scheduleThreadPool =
-    Executors.newScheduledThreadPool(1,
-      new ThreadFactoryBuilder()
-        .setNameFormat("BucketCache Statistics #%d")
-        .setDaemon(true)
-        .build());
+  private final ScheduledExecutorService scheduleThreadPool = Executors.newScheduledThreadPool(1,
+    new ThreadFactoryBuilder().setNameFormat("BucketCacheStatsExecutor").setDaemon(true).build());
 
   // Allocate or free space for the block
   private BucketAllocator bucketAllocator;
@@ -252,6 +248,8 @@ public class BucketCache implements BlockCache, HeapSize {
       writerThreads[i].start();
     }
     // Run the statistics thread periodically to print the cache statistics log
+    // TODO: Add means of turning this off.  Bit obnoxious running thread just to make a log
+    // every five minutes.
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this),
         statThreadPeriod, statThreadPeriod, TimeUnit.SECONDS);
     LOG.info("Started bucket cache; ioengine=" + ioEngineName +
@@ -445,16 +443,15 @@ public class BucketCache implements BlockCache, HeapSize {
   /*
    * Statistics thread.  Periodically output cache statistics to the log.
    */
-  // TODO: Fix.  We run a thread to log at DEBUG.  If no DEBUG level, we still run the thread!
-  // A thread just to log is OTT.  FIX.
   private static class StatisticsThread extends Thread {
-    BucketCache bucketCache;
+    private final BucketCache bucketCache;
 
     public StatisticsThread(BucketCache bucketCache) {
-      super("BucketCache.StatisticsThread");
+      super("BucketCacheStatsThread");
       setDaemon(true);
       this.bucketCache = bucketCache;
     }
+
     @Override
     public void run() {
       bucketCache.logStats();
@@ -462,16 +459,13 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   public void logStats() {
-    if (!LOG.isDebugEnabled()) return;
-    // Log size
     long totalSize = bucketAllocator.getTotalSize();
     long usedSize = bucketAllocator.getUsedSize();
     long freeSize = totalSize - usedSize;
-    long cacheSize = this.realCacheSize.get();
-    LOG.debug("BucketCache Stats: " +
-        "failedBlockAdditions=" + this.failedBlockAdditions.get() + ", " +
-        "total=" + StringUtils.byteDesc(totalSize) + ", " +
-        "free=" + StringUtils.byteDesc(freeSize) + ", " +
+    long cacheSize = getRealCacheSize();
+    LOG.info("failedBlockAdditions=" + getFailedBlockAdditions() + ", " +
+        "totalSize=" + StringUtils.byteDesc(totalSize) + ", " +
+        "freeSize=" + StringUtils.byteDesc(freeSize) + ", " +
         "usedSize=" + StringUtils.byteDesc(usedSize) +", " +
         "cacheSize=" + StringUtils.byteDesc(cacheSize) +", " +
         "accesses=" + cacheStats.getRequestCount() + ", " +
@@ -488,6 +482,14 @@ public class BucketCache implements BlockCache, HeapSize {
         "evicted=" + cacheStats.getEvictedCount() + ", " +
         "evictedPerRun=" + cacheStats.evictedPerEviction());
     cacheStats.reset();
+  }
+
+  public long getFailedBlockAdditions() {
+    return this.failedBlockAdditions.get();
+  }
+
+  public long getRealCacheSize() {
+    return this.realCacheSize.get();
   }
 
   private long acceptableSize() {

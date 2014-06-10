@@ -62,7 +62,7 @@ public class MultiVersionConsistencyControl {
   /**
    * 
    * @param initVal The value we used initially and expected it'll be reset later
-   * @return
+   * @return WriteEntry instance.
    */
   WriteEntry beginMemstoreInsert() {
     return beginMemstoreInsertWithSeqNum(NO_WRITE_NUMBER);

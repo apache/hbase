@@ -229,7 +229,7 @@ public class BlockCacheUtil {
   /**
    * Use one of these to keep a running account of cached blocks by file.  Throw it away when done.
    * This is different than metrics in that it is stats on current state of a cache.
-   * @see getLoadedCachedBlocksByFile
+   * See getLoadedCachedBlocksByFile
    */
   @JsonIgnoreProperties({"cachedBlockStatsByFile"})
   public static class CachedBlocksByFile {
