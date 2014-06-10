@@ -834,10 +834,17 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         numRetainedAssigments++;
       } else {
         // multiple new servers in the cluster on this same host
-        int size = localServers.size();
-        ServerName target =
-            localServers.contains(oldServerName) ? oldServerName : localServers.get(RANDOM
-                .nextInt(size));
+        ServerName target = null;
+        for (ServerName tmp: localServers) {
+          if (tmp.getPort() == oldServerName.getPort()) {
+            target = tmp;
+            break;
+          }
+        }
+        if (target == null) {
+          int size = localServers.size();
+          target = localServers.get(RANDOM.nextInt(size));
+        }
         assignments.get(target).add(region);
         numRetainedAssigments++;
       }

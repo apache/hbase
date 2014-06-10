@@ -63,7 +63,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -926,8 +925,8 @@ public class ServerManager {
     int oldCount = 0;
     ServerName masterSn = master.getServerName();
     boolean selfCheckedIn = isServerOnline(masterSn);
-    while (!this.master.isStopped() && !selfCheckedIn && count < maxToStart
-        && (lastCountChange+interval > now || timeout > slept || count < minToStart)) {
+    while (!this.master.isStopped() && (!selfCheckedIn || (count < maxToStart
+        && (lastCountChange+interval > now || timeout > slept || count < minToStart)))) {
       // Log some info at every interval time or if there is a change
       if (oldCount != count || lastLogTime+interval < now){
         lastLogTime = now;
@@ -935,7 +934,8 @@ public class ServerManager {
           "Waiting for region servers count to settle; currently"+
             " checked in " + count + ", slept for " + slept + " ms," +
             " expecting minimum of " + minToStart + ", maximum of "+ maxToStart+
-            ", timeout of "+timeout+" ms, interval of "+interval+" ms.";
+            ", timeout of "+timeout+" ms, interval of "+interval+" ms," +
+            " selfCheckedIn " + selfCheckedIn;
         LOG.info(msg);
         status.setStatus(msg);
       }
@@ -958,7 +958,8 @@ public class ServerManager {
     LOG.info("Finished waiting for region servers count to settle;" +
       " checked in " + count + ", slept for " + slept + " ms," +
       " expecting minimum of " + minToStart + ", maximum of "+ maxToStart+","+
-      " master is "+ (this.master.isStopped() ? "stopped.": "running.")
+      " master is "+ (this.master.isStopped() ? "stopped.": "running," +
+      " selfCheckedIn " + selfCheckedIn)
     );
   }
 

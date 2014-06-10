@@ -651,7 +651,12 @@ public class RegionStates {
     lastAssignments.put(encodedName, serverName);
   }
 
-  synchronized void closeAllUserRegions(Set<TableName> excludedTables) {
+  /**
+   * At cluster clean re/start, mark all user regions closed except those of tables
+   * that are excluded, such as disabled/disabling/enabling tables. All user regions
+   * and their previous locations are returned.
+   */
+  synchronized Map<HRegionInfo, ServerName> closeAllUserRegions(Set<TableName> excludedTables) {
     boolean noExcludeTables = excludedTables == null || excludedTables.isEmpty();
     Set<HRegionInfo> toBeClosed = new HashSet<HRegionInfo>(regionStates.size());
     for(RegionState state: regionStates.values()) {
@@ -662,9 +667,13 @@ public class RegionStates {
         toBeClosed.add(hri);
       }
     }
+    Map<HRegionInfo, ServerName> allUserRegions =
+      new HashMap<HRegionInfo, ServerName>(toBeClosed.size());
     for (HRegionInfo hri: toBeClosed) {
-      updateRegionState(hri, State.CLOSED);
+      RegionState regionState = updateRegionState(hri, State.CLOSED);
+      allUserRegions.put(hri, regionState.getServerName());
     }
+    return allUserRegions;
   }
 
   /**

@@ -572,6 +572,7 @@ public class AssignmentManager extends ZooKeeperListener {
     }
 
     Set<TableName> disabledOrDisablingOrEnabling = null;
+    Map<HRegionInfo, ServerName> allRegions = null;
 
     if (!failover) {
       disabledOrDisablingOrEnabling = tableStateManager.getTablesInStates(
@@ -579,7 +580,8 @@ public class AssignmentManager extends ZooKeeperListener {
         ZooKeeperProtos.Table.State.ENABLING);
 
       // Clean re/start, mark all user regions closed before reassignment
-      regionStates.closeAllUserRegions(disabledOrDisablingOrEnabling);
+      allRegions = regionStates.closeAllUserRegions(
+        disabledOrDisablingOrEnabling);
     }
 
     // Now region states are restored
@@ -608,7 +610,7 @@ public class AssignmentManager extends ZooKeeperListener {
     if (!failover) {
       // Fresh cluster startup.
       LOG.info("Clean cluster startup. Assigning user regions");
-      assignAllUserRegions(disabledOrDisablingOrEnabling);
+      assignAllUserRegions(allRegions);
     }
     return failover;
   }
@@ -2648,22 +2650,10 @@ public class AssignmentManager extends ZooKeeperListener {
    * should be shutdown.
    * @throws InterruptedException
    * @throws IOException
-   * @throws KeeperException
    */
-  private void assignAllUserRegions(Set<TableName> disabledOrDisablingOrEnabling)
-      throws IOException, InterruptedException, KeeperException, CoordinatedStateException {
-    // Skip assignment for regions of tables in DISABLING state because during clean cluster startup
-    // no RS is alive and regions map also doesn't have any information about the regions.
-    // See HBASE-6281.
-    // Scan hbase:meta for all user regions, skipping any disabled tables
-    Map<HRegionInfo, ServerName> allRegions;
-    SnapshotOfRegionAssignmentFromMeta snapshotOfRegionAssignment =
-       new SnapshotOfRegionAssignmentFromMeta(catalogTracker, disabledOrDisablingOrEnabling, true);
-    snapshotOfRegionAssignment.initialize();
-    allRegions = snapshotOfRegionAssignment.getRegionToRegionServerMap();
-    if (allRegions == null || allRegions.isEmpty()) {
-      return;
-    }
+  private void assignAllUserRegions(Map<HRegionInfo, ServerName> allRegions)
+      throws IOException, InterruptedException {
+    if (allRegions == null || allRegions.isEmpty()) return;
 
     // Determine what type of assignment to do on startup
     boolean retainAssignment = server.getConfiguration().

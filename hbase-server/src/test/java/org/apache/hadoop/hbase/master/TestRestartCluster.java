@@ -19,17 +19,21 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -126,6 +130,114 @@ public class TestRestartCluster {
         LOG.info("Table already exists as expected");
       }
       UTIL.waitTableAvailable(TABLE);
+    }
+  }
+
+  /**
+   * This tests retaining assignments on a cluster restart
+   */
+  @Test (timeout=300000)
+  public void testRetainAssignmentOnRestart() throws Exception {
+    UTIL.startMiniCluster(2);
+    while (!UTIL.getMiniHBaseCluster().getMaster().isInitialized()) {
+      Threads.sleep(1);
+    }
+    // Turn off balancer
+    UTIL.getMiniHBaseCluster().getMaster().
+      getMasterRpcServices().synchronousBalanceSwitch(false);
+    LOG.info("\n\nCreating tables");
+    for(byte [] TABLE : TABLES) {
+      UTIL.createTable(TABLE, FAMILY);
+    }
+    for(byte [] TABLE : TABLES) {
+      UTIL.waitTableEnabled(TABLE);
+    }
+
+    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
+    AssignmentManager am = master.getAssignmentManager();
+    am.waitUntilNoRegionsInTransition(120000);
+
+    // We don't have to use SnapshotOfRegionAssignmentFromMeta.
+    // We use it here because AM used to use it to load all user region placements
+    CatalogTracker ct = new CatalogTracker(UTIL.getConfiguration());
+    SnapshotOfRegionAssignmentFromMeta snapshot = new SnapshotOfRegionAssignmentFromMeta(ct);
+    snapshot.initialize();
+    Map<HRegionInfo, ServerName> regionToRegionServerMap
+      = snapshot.getRegionToRegionServerMap();
+
+    MiniHBaseCluster cluster = UTIL.getHBaseCluster();
+    List<JVMClusterUtil.RegionServerThread> threads = cluster.getLiveRegionServerThreads();
+    assertEquals(2, threads.size());
+    int[] rsPorts = new int[3];
+    for (int i = 0; i < 2; i++) {
+      rsPorts[i] = threads.get(i).getRegionServer().getServerName().getPort();
+    }
+    rsPorts[2] = cluster.getMaster().getServerName().getPort();
+    for (ServerName serverName: regionToRegionServerMap.values()) {
+      boolean found = false; // Test only, no need to optimize
+      for (int k = 0; k < 3 && !found; k++) {
+        found = serverName.getPort() == rsPorts[k];
+      }
+      assertTrue(found);
+    }
+
+    LOG.info("\n\nShutting down HBase cluster");
+    cluster.shutdown();
+    cluster.waitUntilShutDown();
+
+    LOG.info("\n\nSleeping a bit");
+    Thread.sleep(2000);
+
+    LOG.info("\n\nStarting cluster the second time with the same ports");
+    try {
+      cluster.getConf().setInt(
+        ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 4);
+      master = cluster.startMaster().getMaster();
+      for (int i = 0; i < 3; i++) {
+        cluster.getConf().setInt(HConstants.REGIONSERVER_PORT, rsPorts[i]);
+        cluster.startRegionServer();
+      }
+    } finally {
+      // Reset region server port so as not to conflict with other tests
+      cluster.getConf().setInt(HConstants.REGIONSERVER_PORT, 0);
+      cluster.getConf().setInt(
+        ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 2);
+    }
+
+    // Make sure live regionservers are on the same host/port
+    List<ServerName> localServers = master.getServerManager().getOnlineServersList();
+    assertEquals(4, localServers.size());
+    for (int i = 0; i < 3; i++) {
+      boolean found = false;
+      for (ServerName serverName: localServers) {
+        if (serverName.getPort() == rsPorts[i]) {
+          found = true;
+          break;
+        }
+      }
+      assertTrue(found);
+    }
+
+    // Wait till master is initialized and all regions are assigned
+    RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+    int expectedRegions = regionToRegionServerMap.size() + 1;
+    while (!master.isInitialized()
+        || regionStates.getRegionAssignments().size() != expectedRegions) {
+      Threads.sleep(100);
+    }
+
+    ct = new CatalogTracker(UTIL.getConfiguration());
+    snapshot =new SnapshotOfRegionAssignmentFromMeta(ct);
+    snapshot.initialize();
+    Map<HRegionInfo, ServerName> newRegionToRegionServerMap =
+      snapshot.getRegionToRegionServerMap();
+    assertEquals(regionToRegionServerMap.size(), newRegionToRegionServerMap.size());
+    for (Map.Entry<HRegionInfo, ServerName> entry: newRegionToRegionServerMap.entrySet()) {
+      if (TableName.NAMESPACE_TABLE_NAME.equals(entry.getKey().getTable())) continue;
+      ServerName oldServer = regionToRegionServerMap.get(entry.getKey());
+      ServerName currentServer = entry.getValue();
+      assertEquals(oldServer.getHostAndPort(), currentServer.getHostAndPort());
+      assertNotEquals(oldServer.getStartcode(), currentServer.getStartcode());
     }
   }
 }

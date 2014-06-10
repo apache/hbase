@@ -102,6 +102,7 @@ public class TestMasterShutdown {
     // Create config to use for this cluster
     Configuration conf = HBaseConfiguration.create();
     conf.setInt("hbase.ipc.client.failed.servers.expiry", 200);
+    conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
 
     // Start the cluster
     final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
