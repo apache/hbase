@@ -2645,7 +2645,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
         </section>
 
       </section>
-        <section
+               <section
           xml:id="compaction">
           <title>Compaction</title>
           <para><firstterm>Compaction</firstterm> is an operation which reduces the number of
@@ -2712,9 +2712,9 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
               table which shows their descriptions, defaults, and implications of changing
               them.</para>
             
-            <formalpara>
+            <formalpara xml:id="exploringcompaction.policy">
               <title>The<link
-                xlink:href="https://issues.apache.org/jira/browse/HBASE-7842">Exploring Compaction Policy</link></title>
+                xlink:href="https://issues.apache.org/jira/browse/HBASE-7842">ExploringCompaction Policy</link></title>
               <para><link
                 xlink:href="https://issues.apache.org/jira/browse/HBASE-7842">HBASE-7842</link>
                 was introduced in HBase 0.96 and represents a major change in the algorithms for
@@ -2751,16 +2751,18 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
                     <varname>hbase.hregion.memstore.flush.size</varname>. Normally, minor
                     compactions will alleviate this situation. However, if the normal compaction
                     algorithm do not find any normally-eligible StoreFiles, a major compaction is
-                    the only way to get out of this situation, and is forced. This is also called a
-                    size-based or size-triggered major compaction.</para>
+                    the only way to get out of this situation, and is forced.</para>
+                  <para>If you are using the ExploringCompaction policy, the set of files to
+                    compact is always selected, and will not trigger a major compaction. See <xref
+                      linkend="exploringcompaction.policy" />.</para>
                 </listitem>
               </varlistentry>
               <varlistentry>
-                <term>If this compaction was user-requested, do a major compaction.</term>
+                <term>If this compaction was user-requested, perform the requested type of compaction.</term>
                 <listitem>
                   <para>Compactions can run on a schedule or can be initiated manually. If a
-                    compaction is requested manually, it is always a major compaction. If the
-                    compaction is user-requested, the major compaction still happens even if the are
+                    compaction is requested manually, HBase always runs that type of compaction. If the
+                    user requests a major compaction, the major compaction still runs even if the are
                     more than <varname>hbase.hstore.compaction.max</varname> files that need
                     compaction.</para>
                 </listitem>
@@ -2841,9 +2843,9 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
               <textobject>
                 <para>This table contains the main configuration parameters for compaction. This
                   list is not exhaustive. To tune these parameters from the defaults, edit the
-                  <filename>hbase-default.xml</filename> file. For a full list of all
+                    <filename>hbase-default.xml</filename> file. For a full list of all
                   configuration parameters available, see <xref
-                    linkend="config.files" />.</para>
+                    linkend="config.files" /></para>
               </textobject>
               <tgroup
                 cols="3">
@@ -2857,8 +2859,12 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
                 <tbody>
                   <row>
                     <entry>hbase.hstore.compaction.min</entry>
-                    <entry>The minimum number of files which must be eligible for compaction before
-                      compaction can run.</entry>
+                    <entry><para>The minimum number of files which must be eligible for compaction
+                        before compaction can run.</para>
+                      <para>In previous versions, the parameter
+                          <code>hbase.hstore.compaction.min</code> was called
+                          <code>hbase.hstore.compactionThreshold</code>.</para>
+                    </entry>
                     <entry>3</entry>
                   </row>
                   <row>
@@ -2871,13 +2877,13 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
                     <entry>hbase.hstore.compaction.min.size</entry>
                     <entry>A StoreFile smaller than this size (in bytes) will always be eligible for
                       minor compaction.</entry>
-                    <entry>10</entry>
+                    <entry>128 MB</entry>
                   </row>
                   <row>
                     <entry>hbase.hstore.compaction.max.size</entry>
                     <entry>A StoreFile larger than this size (in bytes) will be excluded from minor
                       compaction.</entry>
-                    <entry>1000</entry>
+                    <entry>Long.MAX_VALUE</entry>
                   </row>
                   <row>
                     <entry>hbase.store.compaction.ratio</entry>

@@ -46,10 +46,15 @@ public class CompactionConfiguration {
 
   static final Log LOG = LogFactory.getLog(CompactionConfiguration.class);
 
-  private static final String CONFIG_PREFIX = "hbase.hstore.compaction.";
-  public static final String RATIO_KEY = CONFIG_PREFIX + "ratio";
-  public static final String MIN_KEY = CONFIG_PREFIX + "min";
-  public static final String MAX_KEY = CONFIG_PREFIX + "max";
+  public static final String HBASE_HSTORE_COMPACTION_RATIO_KEY = "hbase.hstore.compaction.ratio";
+  public static final String HBASE_HSTORE_COMPACTION_RATIO_OFFPEAK_KEY =
+    "hbase.hstore.compaction.ratio.offpeak";
+  public static final String HBASE_HSTORE_COMPACTION_MIN_KEY = "hbase.hstore.compaction.min";
+  public static final String HBASE_HSTORE_COMPACTION_MIN_SIZE_KEY =
+    "hbase.hstore.compaction.min.size";
+  public static final String HBASE_HSTORE_COMPACTION_MAX_KEY = "hbase.hstore.compaction.max";
+  public static final String HBASE_HSTORE_COMPACTION_MAX_SIZE_KEY =
+    "hbase.hstore.compaction.max.size";
 
   Configuration conf;
   StoreConfigInformation storeConfigInfo;
@@ -68,14 +73,14 @@ public class CompactionConfiguration {
     this.conf = conf;
     this.storeConfigInfo = storeConfigInfo;
 
-    maxCompactSize = conf.getLong(CONFIG_PREFIX + "max.size", Long.MAX_VALUE);
-    minCompactSize = conf.getLong(CONFIG_PREFIX + "min.size",
+    maxCompactSize = conf.getLong(HBASE_HSTORE_COMPACTION_MAX_SIZE_KEY, Long.MAX_VALUE);
+    minCompactSize = conf.getLong(HBASE_HSTORE_COMPACTION_MIN_SIZE_KEY,
         storeConfigInfo.getMemstoreFlushSize());
-    minFilesToCompact = Math.max(2, conf.getInt(MIN_KEY,
+    minFilesToCompact = Math.max(2, conf.getInt(HBASE_HSTORE_COMPACTION_MIN_KEY,
           /*old name*/ conf.getInt("hbase.hstore.compactionThreshold", 3)));
-    maxFilesToCompact = conf.getInt(MAX_KEY, 10);
-    compactionRatio = conf.getFloat(RATIO_KEY, 1.2F);
-    offPeekCompactionRatio = conf.getFloat(CONFIG_PREFIX + "ratio.offpeak", 5.0F);
+    maxFilesToCompact = conf.getInt(HBASE_HSTORE_COMPACTION_MAX_KEY, 10);
+    compactionRatio = conf.getFloat(HBASE_HSTORE_COMPACTION_RATIO_KEY, 1.2F);
+    offPeekCompactionRatio = conf.getFloat(HBASE_HSTORE_COMPACTION_RATIO_OFFPEAK_KEY, 5.0F);
 
     throttlePoint =  conf.getLong("hbase.regionserver.thread.compaction.throttle",
           2 * maxFilesToCompact * storeConfigInfo.getMemstoreFlushSize());
