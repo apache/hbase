@@ -1599,8 +1599,17 @@ If a committer wishes to improve an unacceptable patch, then it should first be 
 
 <section xml:id="committing.patches">
 <title>Commit</title>
-<para>Committers commit patches.
+<para>Committers commit patches to the Apache HBase GIT repository.
 </para>
+<note>
+    <title>Before you commit!!!!</title>
+    <para>Make sure your local configuration is correct.  In particular, your identity
+        and email.  Do <command>$ git config --list</command>.  Check what shows as your
+        <property>user.email</property> and <property>user.name</property>. 
+        See this GitHub article, <link xlink:href="https://help.github.com/articles/set-up-git">Set Up Git</link>
+        if you need pointers.
+    </para>
+</note>
 <para>When you commit a patch, please: </para><orderedlist numeration="arabic">
 <listitem><para>Include the Jira issue id in the commit message, along with a short description of the change and the name of the contributor if it is not you.
 Be sure to get the issue id right, as this causes Jira to link to the change in Subversion (use the issue's &quot;All&quot; tab to see these). </para></listitem>
