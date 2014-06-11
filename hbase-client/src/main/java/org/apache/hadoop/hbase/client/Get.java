@@ -90,6 +90,26 @@ public class Get extends Query
     this.row = row;
   }
 
+  /**
+   * Copy-constructor
+   *
+   * @param get
+   */
+  public Get(Get get) {
+    this.filter = get.getFilter();
+    this.cacheBlocks = get.getCacheBlocks();
+    this.maxVersions = get.getMaxVersions();
+    this.storeLimit = get.getMaxResultsPerColumnFamily();
+    this.storeOffset = get.getRowOffsetPerColumnFamily();
+    this.tr = get.getTimeRange();
+    this.checkExistenceOnly = get.isCheckExistenceOnly();
+    this.closestRowBefore = get.isClosestRowBefore();
+    this.familyMap = get.getFamilyMap();
+    for (Map.Entry<String, byte[]> attr : get.getAttributesMap().entrySet()) {
+      setAttribute(attr.getKey(), attr.getValue());
+    }
+  }
+
   public boolean isCheckExistenceOnly() {
     return checkExistenceOnly;
   }

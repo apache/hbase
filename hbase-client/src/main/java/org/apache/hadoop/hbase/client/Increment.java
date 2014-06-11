@@ -72,6 +72,19 @@ public class Increment extends Mutation implements Comparable<Row> {
     checkRow(row, offset, length);
     this.row = Bytes.copy(row, offset, length);
   }
+  /**
+   * Copy constructor
+   * @param i
+   */
+  public Increment(Increment i) {
+    this.row = i.getRow();
+    this.ts = i.getTimeStamp();
+    this.tr = i.getTimeRange();
+    this.familyMap.putAll(i.getFamilyCellMap());
+    for (Map.Entry<String, byte[]> entry : i.getAttributesMap().entrySet()) {
+      this.setAttribute(entry.getKey(), entry.getValue());
+    }
+  }
 
   /**
    * Add the specified KeyValue to this operation.
