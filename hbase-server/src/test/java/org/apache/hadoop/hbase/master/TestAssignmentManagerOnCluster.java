@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -48,7 +49,6 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -243,14 +244,18 @@ public class TestAssignmentManagerOnCluster {
     try {
       HRegionInfo hri = createTableAndGetOneRegion(table);
 
-      RegionStates regionStates = TEST_UTIL.getHBaseCluster().
-        getMaster().getAssignmentManager().getRegionStates();
+      HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+      RegionStates regionStates = master.getAssignmentManager().getRegionStates();
       ServerName serverName = regionStates.getRegionServerOfRegion(hri);
+      ServerManager serverManager = master.getServerManager();
       ServerName destServerName = null;
-      for (int i = 0; i < 3; i++) {
-        HRegionServer destServer = TEST_UTIL.getHBaseCluster().getRegionServer(i);
-        if (!destServer.getServerName().equals(serverName)) {
-          destServerName = destServer.getServerName();
+      List<JVMClusterUtil.RegionServerThread> regionServers =
+        TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads();
+      for (JVMClusterUtil.RegionServerThread regionServer: regionServers) {
+        HRegionServer destServer = regionServer.getRegionServer();
+        destServerName = destServer.getServerName();
+        if (!destServerName.equals(serverName)
+            && serverManager.isServerOnline(destServerName)) {
           break;
         }
       }

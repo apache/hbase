@@ -908,7 +908,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
 
       requestCount.increment();
-      LOG.info("Close " + encodedRegionName + ", on " + sn);
+      LOG.info("Close " + encodedRegionName + ", moving to " + sn);
       CloseRegionCoordination.CloseRegionDetails crd = regionServer.getCoordinatedStateManager()
         .getCloseRegionCoordination().parseFromProtoRequest(request);
 
