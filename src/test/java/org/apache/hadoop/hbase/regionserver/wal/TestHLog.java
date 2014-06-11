@@ -28,6 +28,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -47,6 +48,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.UnstableTests;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ExceptionUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -99,7 +101,10 @@ public class TestHLog  {
 
   @After
   public void tearDown() throws Exception {
+    HLog.logReaderClass = null;
+    HLog.logWriterClass = null;
   }
+
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // Make block sizes small.
@@ -118,19 +123,16 @@ public class TestHLog  {
     TEST_UTIL.getConfiguration().setInt(
         "dfs.client.block.recovery.retries", 1);
     TEST_UTIL.getConfiguration().setBoolean(HConstants.HLOG_FORMAT_BACKWARD_COMPATIBILITY, false);
-    TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniDFSCluster(3);
 
     conf = TEST_UTIL.getConfiguration();
     cluster = TEST_UTIL.getDFSCluster();
     fs = cluster.getFileSystem();
 
-    hbaseDir = new Path(TEST_UTIL.getConfiguration().get("hbase.rootdir"));
+    hbaseDir = new Path(fs.getWorkingDirectory(), "hbase");
+    conf.set(HConstants.HBASE_DIR, hbaseDir.toString());
     oldLogDir = new Path(hbaseDir, ".oldlogs");
-    dir = new Path(hbaseDir, getName());
-  }
-  private static String getName() {
-    // TODO Auto-generated method stub
-    return "TestHLog";
+    dir = new Path(hbaseDir, TestHLog.class.getSimpleName());
   }
 
   /**
@@ -141,7 +143,7 @@ public class TestHLog  {
   @Test
   public void testSplit() throws IOException {
 
-    final byte [] tableName = Bytes.toBytes(getName());
+    final byte [] tableName = Bytes.toBytes(TestHLog.class.getSimpleName());
     final byte [] rowName = tableName;
     Path logdir = new Path(dir, HConstants.HREGION_LOGDIR_NAME);
     HLog log = new HLog(fs, logdir, oldLogDir, conf, null);
@@ -191,9 +193,9 @@ public class TestHLog  {
   @Category(UnstableTests.class)
   @Test
   public void testSync() throws Exception {
-    byte [] bytes = Bytes.toBytes(getName());
+    byte [] bytes = Bytes.toBytes(TestHLog.class.getSimpleName());
     // First verify that using streams all works.
-    Path p = new Path(dir, getName() + ".fsdos");
+    Path p = new Path(dir, TestHLog.class.getSimpleName() + ".fsdos");
     FSDataOutputStream out = fs.create(p);
     out.write(bytes);
     out.sync();
@@ -337,7 +339,7 @@ public class TestHLog  {
   // 3. HDFS-142 (on restart, maintain pendingCreates)
   @Test
   public void testAppendClose() throws Exception {
-    byte [] tableName = Bytes.toBytes(getName());
+    byte [] tableName = Bytes.toBytes(TestHLog.class.getSimpleName());
     HRegionInfo regioninfo = new HRegionInfo(new HTableDescriptor(tableName),
         HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false);
     Path subdir = new Path(dir, "hlogdir");
@@ -503,6 +505,40 @@ public class TestHLog  {
     }
   }
 
+  @Test
+  public void testSlowRoll() throws Exception {
+    // Make a copy of the conf so that things don't pollute other tests
+    Configuration c = new Configuration(TEST_UTIL.getConfiguration());
+    c.setClass("hbase.regionserver.hlog.writer.impl",
+                  SlowSequenceFileLogWriter.class,
+                  HLog.Writer.class);
+
+    int syncs = conf.getInt("hbase.hlog.slow.sync.before.roll", 5) * 2;
+
+    final AtomicInteger rollsRequests = new AtomicInteger(0);
+    HLog log = new HLog(fs, dir, oldLogDir, c, new LogRollListener() {
+      @Override public void logRollRequested() {
+        rollsRequests.incrementAndGet();
+      }
+    });
+
+    byte[] table = Bytes.toBytes("table");
+    byte[] cf = Bytes.toBytes("cf");
+    byte[] qual = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("val");
+
+    HRegionInfo info = new HRegionInfo(new HTableDescriptor(table),
+        null,null, false);
+
+    for (int i = 0; i < syncs; i++) {
+      WALEdit kvs = new WALEdit();
+      kvs.add(new KeyValue(Bytes.toBytes(i), cf, qual, HConstants.LATEST_TIMESTAMP, val));
+      log.append(info, table, kvs, System.currentTimeMillis());
+      log.sync(true);
+    }
+    assertEquals("Should request 2 rolls", 2, rollsRequests.get());
+  }
+
   /**
    * @throws IOException
    */
@@ -612,6 +648,19 @@ public class TestHLog  {
       WALEdit cols = new WALEdit();
       cols.add(new KeyValue(row, row, row, timestamp, row));
       log.append(hri, tableName, cols, timestamp);
+    }
+  }
+
+
+  public static class SlowSequenceFileLogWriter extends SequenceFileLogWriter implements HLog.Writer {
+    @Override
+    public void sync() throws IOException {
+      try {
+        Thread.sleep(1100);
+      } catch (InterruptedException e) {
+        ExceptionUtils.toIOException(e);
+      }
+      super.sync();
     }
   }
 

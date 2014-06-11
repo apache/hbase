@@ -158,6 +158,7 @@ public class HLog implements Syncable {
 
   /** We include all timestamps by default */
   public static final long DEFAULT_LATEST_TS_TO_INCLUDE = Long.MAX_VALUE;
+  public static final long SECOND_IN_NS = TimeUnit.SECONDS.toNanos(1);
 
   // If enabled, old logs will be archived into hourly sub-directories instead of
   // server address sub-directories.
@@ -173,13 +174,15 @@ public class HLog implements Syncable {
   private final String prefix;
   private final AtomicLong unflushedEntries = new AtomicLong(0);
   private final Path oldLogDir;
+  private final int slowBeforeRoll;
+  private final AtomicLong slowSyncs = new AtomicLong(0);
   private volatile long syncTillHere = 0;
   private final List<LogActionsListener> actionListeners =
       Collections.synchronizedList(new ArrayList<LogActionsListener>());
 
 
-  private static Class<? extends Writer> logWriterClass;
-  private static Class<? extends Reader> logReaderClass;
+  static Class<? extends Writer> logWriterClass;
+  static Class<? extends Reader> logReaderClass;
 
   private OutputStream hdfs_out;     // OutputStream associated with the current SequenceFile.writer
   private int initialReplication;    // initial replication factor of SequenceFile.writer
@@ -458,6 +461,8 @@ public class HLog implements Syncable {
     this.optionalFlushInterval =
       conf.getLong("hbase.regionserver.optionallogflushinterval", 1 * 1000);
 
+    this.slowBeforeRoll = conf.getInt("hbase.hlog.slow.sync.before.roll", 5);
+
     if (!fs.exists(oldLogDir)) {
       fs.mkdirs(oldLogDir);
     }
@@ -606,6 +611,7 @@ public class HLog implements Syncable {
         newWriter.append(new HLog.Entry(key, edit));
         syncWriter(newWriter);
       }
+      this.slowSyncs.set(0);
     } catch (IOException ioe) {
       // If we fail to create a new writer, let us clean up the file.
       // Do not worry if the delete fails.
@@ -1091,11 +1097,17 @@ public class HLog implements Syncable {
     long end = System.nanoTime();
     long syncTime = end - start;
     gsyncTime.inc(syncTime);
-    if (syncTime > 1000000000) {
+    if (syncTime > SECOND_IN_NS) {
       LOG.warn(String.format(
-        "%s took %d ms appending an edit to hlog; editcount=%d, len~=%s",
+        "%s took %d ns appending an edit to hlog; editcount=%d, len~=%s",
         Thread.currentThread().getName(), syncTime, this.numEntries.get(),
         StringUtils.humanReadableInt(len)));
+      slowSyncs.incrementAndGet();
+    }
+
+    if (slowSyncs.get() >= slowBeforeRoll) {
+      this.requestLogRoll();
+      this.slowSyncs.set(0);
     }
 
     // Update the per-request profiling data

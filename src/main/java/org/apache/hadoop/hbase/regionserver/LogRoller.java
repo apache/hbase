@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.hbase.util.HasThread;
@@ -42,14 +43,25 @@ import org.apache.hadoop.hbase.util.HasThread;
  */
 public class LogRoller extends HasThread implements LogRollListener {
   static final Log LOG = LogFactory.getLog(LogRoller.class);
+
+  /**
+   * The minimum time in between requested log rolls.
+   * In MS.
+   */
+  public static final String LOG_ROLL_REQUEST_PERIOD_KEY =
+      "hbase.regionserver.logroll.request.period";
+  public static final long LOG_ROLL_REQUEST_PERIOD_DEFAULT = TimeUnit.SECONDS.toMillis(60);
+
   private final ReentrantLock rollLock = new ReentrantLock();
   private final AtomicBoolean rollLog = new AtomicBoolean(false);
   private final HRegionServer server;
   private volatile long lastrolltime = System.currentTimeMillis();
+  private volatile long lastrollRequestTime = System.currentTimeMillis();
   // Period to roll log.
   private final long rollperiod;
   private final int hlogIndexID;
   private final String logRollerName;
+  private final long timeBetweenRequest;
 
   /** @param server */
   public LogRoller(final HRegionServer server, int hlogIndexID) {
@@ -57,6 +69,8 @@ public class LogRoller extends HasThread implements LogRollListener {
     this.server = server;
     this.rollperiod =
       this.server.conf.getLong("hbase.regionserver.logroll.period", 3600000);
+    this.timeBetweenRequest = this.server.conf.getLong(LOG_ROLL_REQUEST_PERIOD_KEY,
+        LOG_ROLL_REQUEST_PERIOD_DEFAULT);
     this.hlogIndexID = hlogIndexID;
     this.logRollerName = "HLogRoller-" + hlogIndexID + " ";
   }
@@ -152,9 +166,13 @@ public class LogRoller extends HasThread implements LogRollListener {
   }
 
   public void logRollRequested() {
+    long currentTime = System.currentTimeMillis();
     synchronized (rollLog) {
-      rollLog.set(true);
-      rollLog.notifyAll();
+      if ((currentTime - lastrollRequestTime) > timeBetweenRequest) {
+        lastrollRequestTime = currentTime;
+        rollLog.set(true);
+        rollLog.notifyAll();
+      }
     }
   }
 
