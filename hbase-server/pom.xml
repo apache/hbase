@@ -29,6 +29,9 @@
   <artifactId>hbase-server</artifactId>
   <name>HBase - Server</name>
   <description>Main functionality for HBase</description>
+  <properties>
+    <test.build.webapps>target/test-classes/webapps</test.build.webapps>
+  </properties>
   <build>
     <!-- Makes sure the resources get added before they are processed
       by placing this first -->
@@ -210,6 +213,9 @@
               <value>org.apache.hadoop.hbase.ServerResourceCheckerJUnitListener</value>
             </property>
           </properties>
+          <systemPropertyVariables>
+            <test.build.webapps>target/test-classes/webapps</test.build.webapps>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
     </plugins>

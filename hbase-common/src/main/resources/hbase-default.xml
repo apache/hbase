@@ -1201,4 +1201,35 @@ possible configurations would overwhelm and obscure the important.
     <value>org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager</value>
     <description>Fully qualified name of class implementing coordinated state manager.</description>
   </property>
+  <property>
+    <name>hbase.http.filter.initializers</name>
+    <value>org.apache.hadoop.hbase.http.lib.StaticUserWebFilter</value>
+    <description>
+      A comma separated list of class names. Each class in the list must extend 
+      org.apache.hadoop.hbase.http.FilterInitializer. The corresponding Filter will 
+      be initialized. Then, the Filter will be applied to all user facing jsp 
+      and servlet web pages. 
+      The ordering of the list defines the ordering of the filters.
+      The default StaticUserWebFilter add a user principal as defined by the 
+      hbase.http.staticuser.user property.
+    </description>
+  </property>
+  <property>
+    <name>hbase.http.max.threads</name>
+    <value>10</value>
+    <description>
+      The maximum number of threads that the HTTP Server will create in its 
+      ThreadPool.
+    </description>
+  </property>
+  <!-- Static Web User Filter properties. -->
+  <property>
+    <description>
+      The user name to filter as, on static web filters
+      while rendering content. An example use is the HDFS
+      web UI (user to be used for browsing files).
+    </description>
+    <name>hbase.http.staticuser.user</name>
+    <value>dr.stack</value>
+  </property>
 </configuration>
