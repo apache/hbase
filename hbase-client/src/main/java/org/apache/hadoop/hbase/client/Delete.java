@@ -140,6 +140,9 @@ public class Delete extends Mutation implements Comparable<Row> {
     this.ts = d.getTimeStamp();
     this.familyMap.putAll(d.getFamilyCellMap());
     this.durability = d.durability;
+    for (Map.Entry<String, byte[]> entry : d.getAttributesMap().entrySet()) {
+      this.setAttribute(entry.getKey(), entry.getValue());
+    }
   }
 
   /**

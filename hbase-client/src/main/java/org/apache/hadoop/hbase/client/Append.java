@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -69,6 +70,18 @@ public class Append extends Mutation {
    */
   public Append(byte[] row) {
     this(row, 0, row.length);
+  }
+  /**
+   * Copy constructor
+   * @param a
+   */
+  public Append(Append a) {
+    this.row = a.getRow();
+    this.ts = a.getTimeStamp();
+    this.familyMap.putAll(a.getFamilyCellMap());
+    for (Map.Entry<String, byte[]> entry : a.getAttributesMap().entrySet()) {
+      this.setAttribute(entry.getKey(), entry.getValue());
+    }
   }
 
   /** Create a Append operation for the specified row.
