@@ -813,7 +813,6 @@ public class TestVisibilityLabels {
       put.setCellVisibility(new CellVisibility(SECRET));
       table.put(put);
 
-      // TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
       Scan s = new Scan();
       s.setMaxVersions(1);
       s.setAuthorizations(new Authorizations(SECRET));
