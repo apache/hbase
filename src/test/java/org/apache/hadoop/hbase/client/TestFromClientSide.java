@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -4414,56 +4413,6 @@ public class TestFromClientSide {
   @Test(timeout = 180000)
   public void testMajorCompactCFTable() throws Exception {
     compactCFTable(1);
-  }
-
-  /**
-   * Tests the non cached version of getRegionLocation by moving a region.
-   */
-  @Test(timeout = 180000)
-  public void testNonCachedGetRegionLocation() throws Exception {
-    // Test Initialization.
-    String tableName = "testNonCachedGetRegionLocation";
-    byte [] TABLE = Bytes.toBytes(tableName);
-    byte [] family1 = Bytes.toBytes("f1");
-    byte [] family2 = Bytes.toBytes("f2");
-    HTable table = TEST_UTIL.createTable(TABLE, new byte[][] {family1, family2}, 10);
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
-    Map <HRegionInfo, HServerAddress> regionsMap = table.getRegionsInfo();
-    assertEquals(1, regionsMap.size());
-    HRegionInfo regionInfo = regionsMap.keySet().iterator().next();
-    HServerAddress addrBefore = regionsMap.get(regionInfo);
-    // Verify region location before move.
-    HServerAddress addrCache =
-      table.getRegionLocation(regionInfo.getStartKey()).getServerAddress();
-    HServerAddress addrNoCache =
-      table.getRegionLocation(regionInfo.getStartKey(),
-          true).getServerAddress();
-
-    assertEquals(addrBefore.getPort(), addrCache.getPort());
-    assertEquals(addrBefore.getPort(), addrNoCache.getPort());
-
-    HServerAddress addrAfter = null;
-    // Now move the region to a different server.
-    for (int i = 0; i < SLAVES; i++) {
-      HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(i);
-      HServerAddress addr = regionServer.getServerInfo().getServerAddress();
-      if (addr.getPort() != addrBefore.getPort()) {
-        TEST_UTIL.moveRegionAndAssignment(regionInfo, addr);
-        TEST_UTIL.waitForTableConsistent();
-        addrAfter = addr;
-        break;
-      }
-    }
-
-    // Verify the region was moved.
-    addrCache =
-      table.getRegionLocation(regionInfo.getStartKey()).getServerAddress();
-    addrNoCache =
-      table.getRegionLocation(regionInfo.getStartKey(),
-          true).getServerAddress();
-    assertNotNull(addrAfter);
-    assertTrue(addrAfter.getPort() != addrCache.getPort());
-    assertEquals(addrAfter.getPort(), addrNoCache.getPort());
   }
 
   @Test(timeout = 180000)

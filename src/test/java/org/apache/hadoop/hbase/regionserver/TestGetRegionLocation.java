@@ -20,6 +20,10 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,9 +37,11 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.TableServers;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -257,6 +263,61 @@ public class TestGetRegionLocation {
         targetServer.getServerAddress(),
         newLocationAfterMoving.getServerAddress()
       );
+    }
+  }
+
+  /**
+   * Tests the non cached version of getRegionLocation by moving a region.
+   */
+  @Test(timeout = 180000)
+  public void testNonCachedGetRegionLocation() throws Exception {
+    // Test Initialization.
+    String tableName = "testNonCachedGetRegionLocation";
+    byte[] TABLE = Bytes.toBytes(tableName);
+    byte[] family1 = Bytes.toBytes("f1");
+    byte[] family2 = Bytes.toBytes("f2");
+    try (HTable table =
+        TEST_UTIL.createTable(TABLE, new byte[][] { family1, family2 }, 10)) {
+      Map<HRegionInfo, HServerAddress> regionsMap = table.getRegionsInfo();
+      assertEquals("Number of regions", 1, regionsMap.size());
+      HRegionInfo regionInfo = regionsMap.keySet().iterator().next();
+      HServerAddress addrBefore = regionsMap.get(regionInfo);
+      // Verify region location before move.
+      HServerAddress addrCache =
+          table.getRegionLocation(regionInfo.getStartKey()).getServerAddress();
+      HServerAddress addrNoCache =
+          table.getRegionLocation(regionInfo.getStartKey(), true)
+              .getServerAddress();
+
+      assertEquals("Port(cached)", addrBefore.getPort(), addrCache.getPort());
+      assertEquals("Port(no-cached)", addrBefore.getPort(),
+          addrNoCache.getPort());
+
+      HServerAddress addrAfter = null;
+      // Now move the region to a different server.
+      for (int i = 0; i < NUM_SLAVES; i++) {
+        HRegionServer regionServer =
+            TEST_UTIL.getHBaseCluster().getRegionServer(i);
+        HServerAddress addr = regionServer.getServerInfo().getServerAddress();
+        if (addr.getPort() != addrBefore.getPort()) {
+          TEST_UTIL.moveRegionAndAssignment(regionInfo, addr);
+          TEST_UTIL.waitForTableConsistent();
+          addrAfter = addr;
+          break;
+        }
+      }
+
+      // Verify the region was moved.
+      addrCache =
+          table.getRegionLocation(regionInfo.getStartKey()).getServerAddress();
+      addrNoCache =
+          table.getRegionLocation(regionInfo.getStartKey(), true)
+              .getServerAddress();
+      assertNotNull("Not server for destination", addrAfter);
+      assertTrue("Server is the same as before",
+          addrAfter.getPort() != addrCache.getPort());
+      assertEquals("Port after region mored", addrAfter.getPort(),
+          addrNoCache.getPort());
     }
   }
 
