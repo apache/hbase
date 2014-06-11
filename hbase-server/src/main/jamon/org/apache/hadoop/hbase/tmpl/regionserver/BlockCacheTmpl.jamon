@@ -195,37 +195,37 @@ org.apache.hadoop.util.StringUtils;
     </tr>
     <tr>
         <td>Count</td>
-        <td><% StringUtils.humanReadableInt(cacheConfig.getBlockCache().getBlockCount()) %></td>
+        <td><% String.format("%,d", cacheConfig.getBlockCache().getBlockCount()) %></td>
         <td>Number of blocks in Block Cache</td>
     </tr>
     <tr>
         <td>Evicted</td>
-        <td><% StringUtils.humanReadableInt(cacheConfig.getBlockCache().getStats().getEvictedCount()) %></td>
+        <td><% String.format("%,d", cacheConfig.getBlockCache().getStats().getEvictedCount()) %></td>
         <td>Number of blocks evicted</td>
     </tr>
     <tr>
         <td>Evictions</td>
-        <td><% StringUtils.humanReadableInt(cacheConfig.getBlockCache().getStats().getEvictionCount()) %></td>
+        <td><% String.format("%,d", cacheConfig.getBlockCache().getStats().getEvictionCount()) %></td>
         <td>Number of times an eviction occurred</td>
     </tr>
     <tr>
         <td>Hits</td>
-        <td><% StringUtils.humanReadableInt(cacheConfig.getBlockCache().getStats().getHitCount()) %></td>
+        <td><% String.format("%,d", cacheConfig.getBlockCache().getStats().getHitCount()) %></td>
         <td>Number requests that were cache hits</td>
     </tr>
     <tr>
         <td>Hits Caching</td>
-        <td><% StringUtils.humanReadableInt(cacheConfig.getBlockCache().getStats().getHitCachingCount()) %></td>
+        <td><% String.format("%,d", cacheConfig.getBlockCache().getStats().getHitCachingCount()) %></td>
         <td>Cache hit block requests but only requests set to use Block Cache</td>
     </tr>
     <tr>
         <td>Misses</td>
-        <td><% StringUtils.humanReadableInt(cacheConfig.getBlockCache().getStats().getMissCount()) %></td>
+        <td><% String.format("%,d", cacheConfig.getBlockCache().getStats().getMissCount()) %></td>
         <td>Number of requests that were cache misses</td>
     </tr>
     <tr>
         <td>Misses Caching</td>
-        <td><% StringUtils.humanReadableInt(cacheConfig.getBlockCache().getStats().getMissCount()) %></td>
+        <td><% String.format("%,d", cacheConfig.getBlockCache().getStats().getMissCount()) %></td>
         <td>Block requests that were cache misses but only requests set to use Block Cache</td>
     </tr>
     <tr>
@@ -294,15 +294,22 @@ are combined counts. Request count is sum of hits and misses.</p>
         <td><a href="<% bcUrl %>"><% bc.getClass().getSimpleName() %></a></td>
         <td>Class implementing this Block Cache Level</td>
     </tr>
+<%if bucketCache %>
+    <tr>
+        <td>Implementation</td>
+        <td><% ((BucketCache)bc).getIoEngine() %></a></td>
+        <td>IOEngine</td>
+    </tr>
+</%if>
     <tr>
         <td>Count</td>
-        <td><% StringUtils.humanReadableInt(cbsbf.getCount()) %></td>
+        <td><% String.format("%,d", cbsbf.getCount()) %></td>
         <td>Count of Blocks</td>
     </tr>
 <%if !bucketCache %>
     <tr>
         <td>Count</td>
-        <td><% StringUtils.humanReadableInt(cbsbf.getDataCount()) %></td>
+        <td><% String.format("%,d", cbsbf.getDataCount()) %></td>
         <td>Count of DATA Blocks</td>
     </tr>
 </%if>

@@ -36,8 +36,12 @@ public class FileIOEngine implements IOEngine {
   private static final Log LOG = LogFactory.getLog(FileIOEngine.class);
   private final RandomAccessFile raf;
   private final FileChannel fileChannel;
+  private final String path;
+  private long size;
 
   public FileIOEngine(String filePath, long fileSize) throws IOException {
+    this.path = filePath;
+    this.size = fileSize;
     try {
       raf = new RandomAccessFile(filePath, "rw");
     } catch (java.io.FileNotFoundException fex) {
@@ -56,6 +60,12 @@ public class FileIOEngine implements IOEngine {
 
     fileChannel = raf.getChannel();
     LOG.info("Allocating " + StringUtils.byteDesc(fileSize) + ", on the path:" + filePath);
+  }
+
+  @Override
+  public String toString() {
+    return "ioengine=" + this.getClass().getSimpleName() + ", path=" + this.path +
+      ", size=" + String.format("%,d", this.size);
   }
 
   /**

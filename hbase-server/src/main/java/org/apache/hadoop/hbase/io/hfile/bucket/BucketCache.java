@@ -259,6 +259,10 @@ public class BucketCache implements BlockCache, HeapSize {
       persistencePath + ", bucketAllocator=" + this.bucketAllocator);
   }
 
+  public String getIoEngine() {
+    return ioEngine.toString();
+  }
+
   /**
    * Get the IOEngine from the IO engine name
    * @param ioEngineName
