@@ -27,6 +27,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -477,6 +478,42 @@ public class FSUtils {
     // set overall percentage for all tables
     frags.put("-TOTAL-", Math.round((float) cfFragTotal / cfCountTotal * 100));
     return frags;
+  }
+
+  /**
+   * Returns the sizes of some regions on DFS.
+   */
+  public static Map<HRegionInfo, Long> getRegionSizesInBytes(HMaster master,
+      Set<HRegionInfo> regions) throws IOException {
+    Configuration conf = master.getConfiguration();
+    FileSystem fs = FileSystem.get(conf);
+    return getRegionSizesInBytes(regions, fs, master.getRootDir());
+  }
+
+  /**
+   * Returns the sizes of some regions on DFS.
+   */
+  public static Map<HRegionInfo, Long> getRegionSizesInBytes(
+      Set<HRegionInfo> regions, FileSystem fs, Path hbaseRootDir)
+      throws IOException {
+    Map<HRegionInfo, Long> sizes = new ConcurrentHashMap<>();
+
+    DirFilter df = new DirFilter(fs);
+    for (HRegionInfo region : regions) {
+      long size = 0L;
+      Path regionDir = HRegion.getRegionDir(hbaseRootDir, region);
+      for (FileStatus familyDir : fs.listStatus(regionDir, df)) {
+        for (FileStatus storeFile : fs.listStatus(familyDir.getPath())) {
+          if (storeFile.isDir()) {
+            continue;
+          }
+          size += storeFile.getLen();
+        }
+      }
+      sizes.put(region, size);
+    }
+
+    return sizes;
   }
 
   /**

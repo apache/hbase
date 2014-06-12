@@ -1255,6 +1255,8 @@ public class HMaster extends HasThread implements HMasterInterface,
         this.infoServer = new InfoServer(MASTER, a, port, false, conf);
         this.infoServer.setAttribute(MASTER, this);
         this.infoServer.start();
+        LOG.info("Master info server started at: " + a + ":"
+            + this.infoServer.getPort());
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Started service threads");

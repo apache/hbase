@@ -11,6 +11,8 @@
   import="org.apache.hadoop.hbase.master.HMaster" 
   import="org.apache.hadoop.hbase.master.MetaRegion"
   import="org.apache.hadoop.hbase.util.Bytes"
+  import="org.apache.hadoop.hbase.util.FSUtils"
+  import="org.apache.hadoop.util.StringUtils"
   import="java.util.Map"
   import="org.apache.hadoop.hbase.HConstants"%><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
@@ -135,20 +137,30 @@
 <%
   Map<HRegionInfo, HServerAddress> regions = table.getRegionsInfo();
   if(regions != null && regions.size() > 0) { %>
-<%=     tableHeader %>
+ <h2>Table Regions</h2>
+ <table>
+   <tr>
+     <th>Name</th>
+     <th>Region Server</th>
+     <th>Start Key</th>
+     <th>End Key</th>
+     <th>Bytes</th>
+   </tr>
 <%
+  Map<HRegionInfo, Long> regionSizes = FSUtils.getRegionSizesInBytes(master, regions.keySet());
   for(Map.Entry<HRegionInfo, HServerAddress> hriEntry : regions.entrySet()) {
     String urlRegionServer =
         "http://" + hriEntry.getValue().getHostname().toString() + ":" + rsInfoPort + "/";
 %>
-<tr>
-  <td><%= Bytes.toStringBinary(hriEntry.getKey().getRegionName())%></td>
-  <td><a href="<%= urlRegionServer %>"><%= hriEntry.getValue().getHostname().toString() + ":" + rsInfoPort %></a></td>
-  <td><%= Bytes.toStringBinary(hriEntry.getKey().getStartKey())%></td>
-  <td><%= Bytes.toStringBinary(hriEntry.getKey().getEndKey())%></td>
-</tr>
+  <tr>
+    <td><%= Bytes.toStringBinary(hriEntry.getKey().getRegionName())%></td>
+    <td><a href="<%= urlRegionServer %>"><%= hriEntry.getValue().getHostname().toString() + ":" + rsInfoPort %></a></td>
+    <td><%= Bytes.toStringBinary(hriEntry.getKey().getStartKey())%></td>
+    <td><%= Bytes.toStringBinary(hriEntry.getKey().getEndKey())%></td>
+    <td><%= StringUtils.byteDesc(regionSizes.get(hriEntry.getKey())) %></td>
+  </tr>
 <% } %>
-</table>
+ </table>
 <% }
 } catch(Exception ex) {
   ex.printStackTrace();
