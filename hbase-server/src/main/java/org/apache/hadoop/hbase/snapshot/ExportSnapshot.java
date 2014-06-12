@@ -649,7 +649,7 @@ public final class ExportSnapshot extends Configured implements Tool {
     // Update the conf with the current root dir, since may be a different cluster
     Configuration conf = new Configuration(baseConf);
     FSUtils.setRootDir(conf, rootDir);
-    FSUtils.setFsDefault(conf, snapshotDir);
+    FSUtils.setFsDefault(conf, FSUtils.getRootDir(conf));
     SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
     SnapshotReferenceUtil.verifySnapshot(conf, fs, snapshotDir, snapshotDesc);
   }
