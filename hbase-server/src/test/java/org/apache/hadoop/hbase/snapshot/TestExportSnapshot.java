@@ -161,26 +161,31 @@ public class TestExportSnapshot {
     //    group 2: 18, 13,  8,  3 (total size: 42)
     //    group 3: 17, 12,  7,  4 (total size: 42)
     //    group 4: 16, 11,  6,  5 (total size: 42)
-    List<List<SnapshotFileInfo>> splits = ExportSnapshot.getBalancedSplits(files, 5);
+    List<List<Pair<SnapshotFileInfo, Long>>> splits = ExportSnapshot.getBalancedSplits(files, 5);
     assertEquals(5, splits.size());
 
     String[] split0 = new String[] {"file-20", "file-11", "file-10", "file-1", "file-0"};
-    verifyBalanceSplit(splits.get(0), split0);
+    verifyBalanceSplit(splits.get(0), split0, 42);
     String[] split1 = new String[] {"file-19", "file-12", "file-9",  "file-2"};
-    verifyBalanceSplit(splits.get(1), split1);
+    verifyBalanceSplit(splits.get(1), split1, 42);
     String[] split2 = new String[] {"file-18", "file-13", "file-8",  "file-3"};
-    verifyBalanceSplit(splits.get(2), split2);
+    verifyBalanceSplit(splits.get(2), split2, 42);
     String[] split3 = new String[] {"file-17", "file-14", "file-7",  "file-4"};
-    verifyBalanceSplit(splits.get(3), split3);
+    verifyBalanceSplit(splits.get(3), split3, 42);
     String[] split4 = new String[] {"file-16", "file-15", "file-6",  "file-5"};
-    verifyBalanceSplit(splits.get(4), split4);
+    verifyBalanceSplit(splits.get(4), split4, 42);
   }
 
-  private void verifyBalanceSplit(final List<SnapshotFileInfo> split, final String[] expected) {
+  private void verifyBalanceSplit(final List<Pair<SnapshotFileInfo, Long>> split,
+      final String[] expected, final long expectedSize) {
     assertEquals(expected.length, split.size());
+    long totalSize = 0;
     for (int i = 0; i < expected.length; ++i) {
-      assertEquals(expected[i], split.get(i).getHfile());
+      Pair<SnapshotFileInfo, Long> fileInfo = split.get(i);
+      assertEquals(expected[i], fileInfo.getFirst().getHfile());
+      totalSize += fileInfo.getSecond();
     }
+    assertEquals(expectedSize, totalSize);
   }
 
   /**
