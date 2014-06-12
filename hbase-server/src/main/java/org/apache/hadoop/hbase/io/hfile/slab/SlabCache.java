@@ -57,8 +57,10 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * 
  * <p>It is configured with a call to {@link #addSlab(int, int)}
  *
- **/
+ * @deprecated As of 1.0, replaced by {@link org.apache.hadoop.hbase.io.hfile.bucket.BucketCache}.
+ */
 @InterfaceAudience.Private
+@Deprecated
 public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
   private final ConcurrentHashMap<BlockCacheKey, SingleSizeCache> backingStore;
   private final TreeMap<Integer, SingleSizeCache> slabs;

@@ -24,8 +24,11 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 
 /**
  * Interface for objects that want to know when actions occur in a SingleSizeCache.
- * */
+ *
+ * @deprecated As of 1.0, replaced by {@link org.apache.hadoop.hbase.io.hfile.bucket.BucketCache}.
+ */
 @InterfaceAudience.Private
+@Deprecated
 interface SlabItemActionWatcher {
 
   /**

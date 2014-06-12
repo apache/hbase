@@ -35,8 +35,10 @@ import org.apache.hadoop.util.StringUtils;
  * cache before looking for the block in the off heap cache. Metrics are the
  * combined size and hits and misses of both caches.
  *
- **/
+ * @deprecated As of 1.0, replaced by {@link org.apache.hadoop.hbase.io.hfile.bucket.BucketCache}.
+ */
 @InterfaceAudience.Private
+@Deprecated
 public class DoubleBlockCache implements ResizableBlockCache, HeapSize {
 
   static final Log LOG = LogFactory.getLog(DoubleBlockCache.class.getName());

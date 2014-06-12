@@ -515,6 +515,7 @@ public class CacheConfig {
         GLOBAL_BLOCK_CACHE_INSTANCE = lruCache;
       }
     } else {
+      LOG.warn("SlabCache is deprecated. Consider BucketCache as a replacement.");
       GLOBAL_BLOCK_CACHE_INSTANCE = new DoubleBlockCache(
           lruCacheSize, slabCacheOffHeapCacheSize, blockSize, blockSize, conf);
     }

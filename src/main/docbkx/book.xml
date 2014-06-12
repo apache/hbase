@@ -1953,7 +1953,8 @@ rs.close();
           <para>LruBlockCache is the original implementation, and is entirely within the Java heap.
             SlabCache and BucketCache are mainly intended for keeping blockcache data offheap,
             although BucketCache can also keep data onheap and in files.</para>
-          <para> BucketCache has seen more production deploys and has more deploy options. Fetching
+          <para><emphasis>SlabCache is deprecated and will be removed in 1.0!</emphasis></para>
+          <para>BucketCache has seen more production deploys and has more deploy options. Fetching
             will always be slower when fetching from BucketCache or SlabCache, as compared with the
             native onheap LruBlockCache. However, latencies tend to be less erratic over time,
             because there is less garbage collection.</para>
@@ -2112,6 +2113,7 @@ rs.close();
           <title>Offheap Block Cache</title>
           <section>
             <title>Enable SlabCache</title>
+            <para><emphasis>SlabCache is deprecated and will be removed in 1.0!</emphasis></para>
             <para> SlabCache is originally described in <link
                 xlink:href="http://blog.cloudera.com/blog/2012/01/caching-in-hbase-slabcache/">Caching
                 in Apache HBase: SlabCache</link>. Quoting from the API documentation for <link

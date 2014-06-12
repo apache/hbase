@@ -51,8 +51,10 @@ import com.google.common.cache.RemovalNotification;
  * Eviction and LRUness is taken care of by Guava's MapMaker, which creates a
  * ConcurrentLinkedHashMap.
  *
+ * @deprecated As of 1.0, replaced by {@link org.apache.hadoop.hbase.io.hfile.bucket.BucketCache}.
  **/
 @InterfaceAudience.Private
+@Deprecated
 public class SingleSizeCache implements BlockCache, HeapSize {
   private final Slab backingStore;
   private final ConcurrentMap<BlockCacheKey, CacheablePair> backingMap;
