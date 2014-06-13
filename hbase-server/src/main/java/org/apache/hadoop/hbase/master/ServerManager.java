@@ -60,8 +60,10 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
+import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -728,8 +730,9 @@ public class ServerManager {
         " failed because no RPC connection found to this server");
       return RegionOpeningState.FAILED_OPENING;
     }
-    OpenRegionRequest request =
-      RequestConverter.buildOpenRegionRequest(server, region, versionOfOfflineNode, favoredNodes);
+    OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(server, 
+      region, versionOfOfflineNode, favoredNodes, 
+      (RecoveryMode.LOG_REPLAY == this.services.getMasterFileSystem().getLogRecoveryMode()));
     try {
       OpenRegionResponse response = admin.openRegion(null, request);
       return ResponseConverter.getRegionOpeningState(response);
@@ -757,8 +760,8 @@ public class ServerManager {
       return null;
     }
 
-    OpenRegionRequest request =
-      RequestConverter.buildOpenRegionRequest(regionOpenInfos);
+    OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(regionOpenInfos, 
+      (RecoveryMode.LOG_REPLAY == this.services.getMasterFileSystem().getLogRecoveryMode()));
     try {
       OpenRegionResponse response = admin.openRegion(null, request);
       return ResponseConverter.getRegionOpeningStateList(response);

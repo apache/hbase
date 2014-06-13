@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.EntryBuffers;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.RegionEntryBuffer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -111,8 +112,10 @@ public class TestHLogMethods {
   @Test
   public void testEntrySink() throws Exception {
     Configuration conf = new Configuration();
+    RecoveryMode mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false) ? 
+      RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING);
     HLogSplitter splitter = new HLogSplitter(
-      conf, mock(Path.class), mock(FileSystem.class), null, null, null);
+      conf, mock(Path.class), mock(FileSystem.class), null, null, null, mode);
 
     EntryBuffers sink = splitter.new EntryBuffers(1*1024*1024);
     for (int i = 0; i < 1000; i++) {

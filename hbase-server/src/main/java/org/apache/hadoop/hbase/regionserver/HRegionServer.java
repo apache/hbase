@@ -364,9 +364,6 @@ public class HRegionServer extends HasThread implements
 
   private RegionServerProcedureManagerHost rspmHost;
 
-  // configuration setting on if replay WAL edits directly to another RS
-  protected final boolean distributedLogReplay;
-
   // Table level lock manager for locking for region operations
   protected TableLockManager tableLockManager;
 
@@ -447,7 +444,6 @@ public class HRegionServer extends HasThread implements
     this.startcode = System.currentTimeMillis();
     String hostName = rpcServices.isa.getHostName();
     serverName = ServerName.valueOf(hostName, rpcServices.isa.getPort(), startcode);
-    this.distributedLogReplay = HLogSplitter.isDistributedLogReplay(this.conf);
 
     // login the zookeeper client principal (if using security)
     ZKUtil.loginClient(this.conf, "hbase.zookeeper.client.keytab.file",
@@ -631,9 +627,7 @@ public class HRegionServer extends HasThread implements
       this.abort("Failed to reach zk cluster when creating procedure handler.", e);
     }
     // register watcher for recovering regions
-    if(this.distributedLogReplay) {
-      this.recoveringRegionWatcher = new RecoveringRegionWatcher(this.zooKeeper, this);
-    }
+    this.recoveringRegionWatcher = new RecoveringRegionWatcher(this.zooKeeper, this);
   }
 
   /**

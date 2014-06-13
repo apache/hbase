@@ -1182,6 +1182,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             + regionServer.serverName));
       }
     }
+
     OpenRegionResponse.Builder builder = OpenRegionResponse.newBuilder();
     final int regionCount = request.getOpenInfoCount();
     final Map<TableName, HTableDescriptor> htds =
@@ -1258,10 +1259,20 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
         if (previous == null) {
           // check if the region to be opened is marked in recovering state in ZK
-          if (regionServer.distributedLogReplay
-              && SplitLogManager.isRegionMarkedRecoveringInZK(regionServer.getZooKeeper(),
-            region.getEncodedName())) {
-            regionServer.recoveringRegions.put(region.getEncodedName(), null);
+          if (SplitLogManager.isRegionMarkedRecoveringInZK(regionServer.getZooKeeper(),
+              region.getEncodedName())) {
+            // check if current region open is for distributedLogReplay. This check is to support
+            // rolling restart/upgrade where we want to Master/RS see same configuration
+            if (regionOpenInfo.hasOpenForDistributedLogReplay()
+                && regionOpenInfo.getOpenForDistributedLogReplay()) {
+              regionServer.recoveringRegions.put(region.getEncodedName(), null);
+            } else {
+              // remove stale recovery region from ZK when we open region not for recovering which
+              // could happen when turn distributedLogReplay off from on.
+              List<String> tmpRegions = new ArrayList<String>();
+              tmpRegions.add(region.getEncodedName());
+              SplitLogManager.deleteRecoveringRegionZNodes(regionServer.getZooKeeper(), tmpRegions);
+            }
           }
           // If there is no action in progress, we can submit a specific handler.
           // Need to pass the expected version in the constructor.

@@ -444,6 +444,7 @@ public class TestSplitTransactionOnCluster {
       AssignmentManager.TEST_SKIP_SPLIT_HANDLING = false;
       admin.setBalancerRunning(true, false);
       cluster.getMaster().setCatalogJanitorEnabled(true);
+      cluster.startRegionServer();
       t.close();
     }
   }

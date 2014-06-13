@@ -46,16 +46,19 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Chore;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskFinisher.Status;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
@@ -138,7 +141,8 @@ public class SplitLogManager extends ZooKeeperListener {
    */
   protected final ReentrantLock recoveringRegionLock = new ReentrantLock();
 
-  final boolean distributedLogReplay;
+  private volatile RecoveryMode recoveryMode;
+  private volatile boolean isDrainingDone = false;
 
   private final ConcurrentMap<String, Task> tasks = new ConcurrentHashMap<String, Task>();
   private TimeoutMonitor timeoutMonitor;
@@ -160,9 +164,12 @@ public class SplitLogManager extends ZooKeeperListener {
    * @param stopper the stoppable in case anything is wrong
    * @param master the master services
    * @param serverName the master server name
+   * @throws KeeperException 
+   * @throws InterruptedIOException 
    */
   public SplitLogManager(ZooKeeperWatcher zkw, final Configuration conf,
-      Stoppable stopper, MasterServices master, ServerName serverName) {
+      Stoppable stopper, MasterServices master, ServerName serverName) 
+      throws InterruptedIOException, KeeperException {
     this(zkw, conf, stopper, master, serverName, new TaskFinisher() {
       @Override
       public Status finish(ServerName workerName, String logfile) {
@@ -178,20 +185,20 @@ public class SplitLogManager extends ZooKeeperListener {
   }
 
   /**
-   * Its OK to construct this object even when region-servers are not online. It
-   * does lookup the orphan tasks in zk but it doesn't block waiting for them
-   * to be done.
-   *
+   * Its OK to construct this object even when region-servers are not online. It does lookup the
+   * orphan tasks in zk but it doesn't block waiting for them to be done.
    * @param zkw the ZK watcher
    * @param conf the HBase configuration
    * @param stopper the stoppable in case anything is wrong
    * @param master the master services
    * @param serverName the master server name
    * @param tf task finisher
+   * @throws KeeperException
+   * @throws InterruptedIOException
    */
-  public SplitLogManager(ZooKeeperWatcher zkw, Configuration conf,
-        Stoppable stopper, MasterServices master,
-        ServerName serverName, TaskFinisher tf) {
+  public SplitLogManager(ZooKeeperWatcher zkw, Configuration conf, Stoppable stopper,
+      MasterServices master, ServerName serverName, TaskFinisher tf) throws InterruptedIOException,
+      KeeperException {
     super(zkw);
     this.taskFinisher = tf;
     this.conf = conf;
@@ -202,9 +209,12 @@ public class SplitLogManager extends ZooKeeperListener {
     this.timeout = conf.getInt("hbase.splitlog.manager.timeout", DEFAULT_TIMEOUT);
     this.unassignedTimeout =
       conf.getInt("hbase.splitlog.manager.unassigned.timeout", DEFAULT_UNASSIGNED_TIMEOUT);
-    this.distributedLogReplay = HLogSplitter.isDistributedLogReplay(conf);
+
+    // Determine recovery mode  
+    setRecoveryMode(true);
+
     LOG.info("Timeout=" + timeout + ", unassigned timeout=" + unassignedTimeout +
-      ", distributedLogReplay=" + this.distributedLogReplay);
+      ", distributedLogReplay=" + (this.recoveryMode == RecoveryMode.LOG_REPLAY));
 
     this.serverName = serverName;
     this.timeoutMonitor = new TimeoutMonitor(
@@ -465,8 +475,7 @@ public class SplitLogManager extends ZooKeeperListener {
    */
   private void
       removeRecoveringRegionsFromZK(final Set<ServerName> serverNames, Boolean isMetaRecovery) {
-
-    if (!this.distributedLogReplay) {
+    if (this.recoveryMode != RecoveryMode.LOG_REPLAY) {
       // the function is only used in WALEdit direct replay mode
       return;
     }
@@ -494,7 +503,7 @@ public class SplitLogManager extends ZooKeeperListener {
       if (count == 0 && this.master.isInitialized()
           && !this.master.getServerManager().areDeadServersInProgress()) {
         // no splitting work items left
-        deleteRecoveringRegionZNodes(null);
+        deleteRecoveringRegionZNodes(watcher, null);
         // reset lastRecoveringNodeCreationTime because we cleared all recovering znodes at
         // this point.
         lastRecoveringNodeCreationTime = Long.MAX_VALUE;
@@ -549,14 +558,6 @@ public class SplitLogManager extends ZooKeeperListener {
    */
   void removeStaleRecoveringRegionsFromZK(final Set<ServerName> failedServers)
       throws KeeperException, InterruptedIOException {
-
-    if (!this.distributedLogReplay) {
-      // remove any regions in recovery from ZK which could happen when we turn the feature on
-      // and later turn it off
-      ZKUtil.deleteChildrenRecursively(watcher, watcher.recoveringRegionsZNode);
-      // the function is only used in distributedLogReplay mode when master is in initialization
-      return;
-    }
 
     Set<String> knownFailedServers = new HashSet<String>();
     if (failedServers != null) {
@@ -625,7 +626,7 @@ public class SplitLogManager extends ZooKeeperListener {
     }
   }
 
-  private void deleteRecoveringRegionZNodes(List<String> regions) {
+  public static void deleteRecoveringRegionZNodes(ZooKeeperWatcher watcher, List<String> regions) {
     try {
       if (regions == null) {
         // remove all children under /home/recovering-regions
@@ -683,7 +684,7 @@ public class SplitLogManager extends ZooKeeperListener {
   }
 
   private void createNode(String path, Long retry_count) {
-    SplitLogTask slt = new SplitLogTask.Unassigned(serverName);
+    SplitLogTask slt = new SplitLogTask.Unassigned(serverName, this.recoveryMode);
     ZKUtil.asyncCreate(this.watcher, path, slt.toByteArray(), new CreateAsyncCallback(), retry_count);
     SplitLogCounters.tot_mgr_node_create_queued.incrementAndGet();
     return;
@@ -858,7 +859,7 @@ public class SplitLogManager extends ZooKeeperListener {
     task.incarnation++;
     try {
       // blocking zk call but this is done from the timeout thread
-      SplitLogTask slt = new SplitLogTask.Unassigned(this.serverName);
+      SplitLogTask slt = new SplitLogTask.Unassigned(this.serverName, this.recoveryMode);
       if (ZKUtil.setData(this.watcher, path, slt.toByteArray(), version) == false) {
         LOG.debug("failed to resubmit task " + path +
             " version changed");
@@ -951,7 +952,7 @@ public class SplitLogManager extends ZooKeeperListener {
     // Since the TimeoutMonitor will keep resubmitting UNASSIGNED tasks
     // therefore this behavior is safe.
     lastTaskCreateTime = EnvironmentEdgeManager.currentTimeMillis();
-    SplitLogTask slt = new SplitLogTask.Done(this.serverName);
+    SplitLogTask slt = new SplitLogTask.Done(this.serverName, this.recoveryMode);
     this.watcher.getRecoverableZooKeeper().getZooKeeper().
       create(ZKSplitLog.getRescanNode(watcher), slt.toByteArray(),
         Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL,
@@ -1099,7 +1100,7 @@ public class SplitLogManager extends ZooKeeperListener {
    */
   void markRegionsRecoveringInZK(final ServerName serverName, Set<HRegionInfo> userRegions)
       throws KeeperException, InterruptedIOException {
-    if (userRegions == null || !this.distributedLogReplay) {
+    if (userRegions == null || (this.recoveryMode != RecoveryMode.LOG_REPLAY)) {
       return;
     }
 
@@ -1241,6 +1242,111 @@ public class SplitLogManager extends ZooKeeperListener {
       LOG.warn("Can't parse last flushed sequence Id from znode:" + nodePath, e);
     }
     return result;
+  }
+  
+  /**
+   * This function is to set recovery mode from outstanding split log tasks from before or
+   * current configuration setting
+   * @param isForInitialization
+   * @throws KeeperException
+   * @throws InterruptedIOException
+   */
+  public void setRecoveryMode(boolean isForInitialization) throws KeeperException,
+      InterruptedIOException {
+    if(this.isDrainingDone) {
+      // when there is no outstanding splitlogtask after master start up, we already have up to date
+      // recovery mode
+      return;
+    }
+    if(this.watcher == null) {
+      // when watcher is null(testing code) and recovery mode can only be LOG_SPLITTING
+      this.isDrainingDone = true;
+      this.recoveryMode = RecoveryMode.LOG_SPLITTING;
+      return;
+    }
+    boolean hasSplitLogTask = false;
+    boolean hasRecoveringRegions = false;
+    RecoveryMode previousRecoveryMode = RecoveryMode.UNKNOWN;
+    RecoveryMode recoveryModeInConfig = (isDistributedLogReplay(conf)) ? 
+      RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING;
+
+    // Firstly check if there are outstanding recovering regions
+    List<String> regions = ZKUtil.listChildrenNoWatch(watcher, watcher.recoveringRegionsZNode);
+    if (regions != null && !regions.isEmpty()) {
+      hasRecoveringRegions = true;
+      previousRecoveryMode = RecoveryMode.LOG_REPLAY;
+    }
+    if (previousRecoveryMode == RecoveryMode.UNKNOWN) {
+      // Secondly check if there are outstanding split log task
+      List<String> tasks = ZKUtil.listChildrenNoWatch(watcher, watcher.splitLogZNode);
+      if (tasks != null && !tasks.isEmpty()) {
+        hasSplitLogTask = true;
+        if (isForInitialization) {
+          // during initialization, try to get recovery mode from splitlogtask
+          for (String task : tasks) {
+            try {
+              byte[] data = ZKUtil.getData(this.watcher,
+                ZKUtil.joinZNode(watcher.splitLogZNode, task));
+              if (data == null) continue;
+              SplitLogTask slt = SplitLogTask.parseFrom(data);
+              previousRecoveryMode = slt.getMode();
+              if (previousRecoveryMode == RecoveryMode.UNKNOWN) {
+                // created by old code base where we don't set recovery mode in splitlogtask
+                // we can safely set to LOG_SPLITTING because we're in master initialization code 
+                // before SSH is enabled & there is no outstanding recovering regions
+                previousRecoveryMode = RecoveryMode.LOG_SPLITTING;
+              }
+              break;
+            } catch (DeserializationException e) {
+              LOG.warn("Failed parse data for znode " + task, e);
+            } catch (InterruptedException e) {
+              throw new InterruptedIOException();
+            }
+          }
+        }
+      }
+    }
+
+    synchronized(this) {
+      if(this.isDrainingDone) {
+        return;
+      }
+      if (!hasSplitLogTask && !hasRecoveringRegions) {
+        this.isDrainingDone = true;
+        this.recoveryMode = recoveryModeInConfig;
+        return;
+      } else if (!isForInitialization) {
+        // splitlogtask hasn't drained yet, keep existing recovery mode
+        return;
+      }
+  
+      if (previousRecoveryMode != RecoveryMode.UNKNOWN) {
+        this.isDrainingDone = (previousRecoveryMode == recoveryModeInConfig);
+        this.recoveryMode = previousRecoveryMode;
+      } else {
+        this.recoveryMode = recoveryModeInConfig;
+      }
+    }
+  }
+
+  public RecoveryMode getRecoveryMode() {
+    return this.recoveryMode;
+  }
+  
+  /**
+   * Returns if distributed log replay is turned on or not
+   * @param conf
+   * @return true when distributed log replay is turned on
+   */
+  private boolean isDistributedLogReplay(Configuration conf) {
+    boolean dlr = conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
+      HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
+    int version = conf.getInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Distributed log replay=" + dlr + ", " + HFile.FORMAT_VERSION_KEY + "=" + version);
+    }
+    // For distributed log replay, hfile version must be 3 at least; we need tag support.
+    return dlr && (version >= 3);
   }
 
   /**

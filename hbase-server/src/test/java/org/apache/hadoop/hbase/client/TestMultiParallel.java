@@ -68,7 +68,7 @@ public class TestMultiParallel {
   private static final byte[] ONE_ROW = Bytes.toBytes("xxx");
   private static final byte [][] KEYS = makeKeys();
 
-  private static final int slaves = 3; // also used for testing HTable pool size
+  private static final int slaves = 5; // also used for testing HTable pool size
 
   @BeforeClass public static void beforeClass() throws Exception {
     ((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);

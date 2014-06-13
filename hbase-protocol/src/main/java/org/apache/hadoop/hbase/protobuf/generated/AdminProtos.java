@@ -4032,6 +4032,24 @@ public final class AdminProtos {
        */
       org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getFavoredNodesOrBuilder(
           int index);
+
+      // optional bool openForDistributedLogReplay = 4;
+      /**
+       * <code>optional bool openForDistributedLogReplay = 4;</code>
+       *
+       * <pre>
+       * open region for distributedLogReplay
+       * </pre>
+       */
+      boolean hasOpenForDistributedLogReplay();
+      /**
+       * <code>optional bool openForDistributedLogReplay = 4;</code>
+       *
+       * <pre>
+       * open region for distributedLogReplay
+       * </pre>
+       */
+      boolean getOpenForDistributedLogReplay();
     }
     /**
      * Protobuf type {@code OpenRegionRequest.RegionOpenInfo}
@@ -4108,6 +4126,11 @@ public final class AdminProtos {
                   mutable_bitField0_ |= 0x00000004;
                 }
                 favoredNodes_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.PARSER, extensionRegistry));
+                break;
+              }
+              case 32: {
+                bitField0_ |= 0x00000004;
+                openForDistributedLogReplay_ = input.readBool();
                 break;
               }
             }
@@ -4227,10 +4250,35 @@ public final class AdminProtos {
         return favoredNodes_.get(index);
       }
 
+      // optional bool openForDistributedLogReplay = 4;
+      public static final int OPENFORDISTRIBUTEDLOGREPLAY_FIELD_NUMBER = 4;
+      private boolean openForDistributedLogReplay_;
+      /**
+       * <code>optional bool openForDistributedLogReplay = 4;</code>
+       *
+       * <pre>
+       * open region for distributedLogReplay
+       * </pre>
+       */
+      public boolean hasOpenForDistributedLogReplay() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional bool openForDistributedLogReplay = 4;</code>
+       *
+       * <pre>
+       * open region for distributedLogReplay
+       * </pre>
+       */
+      public boolean getOpenForDistributedLogReplay() {
+        return openForDistributedLogReplay_;
+      }
+
       private void initFields() {
         region_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance();
         versionOfOfflineNode_ = 0;
         favoredNodes_ = java.util.Collections.emptyList();
+        openForDistributedLogReplay_ = false;
       }
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
@@ -4267,6 +4315,9 @@ public final class AdminProtos {
         for (int i = 0; i < favoredNodes_.size(); i++) {
           output.writeMessage(3, favoredNodes_.get(i));
         }
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          output.writeBool(4, openForDistributedLogReplay_);
+        }
         getUnknownFields().writeTo(output);
       }
 
@@ -4287,6 +4338,10 @@ public final class AdminProtos {
         for (int i = 0; i < favoredNodes_.size(); i++) {
           size += com.google.protobuf.CodedOutputStream
             .computeMessageSize(3, favoredNodes_.get(i));
+        }
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeBoolSize(4, openForDistributedLogReplay_);
         }
         size += getUnknownFields().getSerializedSize();
         memoizedSerializedSize = size;
@@ -4323,6 +4378,11 @@ public final class AdminProtos {
         }
         result = result && getFavoredNodesList()
             .equals(other.getFavoredNodesList());
+        result = result && (hasOpenForDistributedLogReplay() == other.hasOpenForDistributedLogReplay());
+        if (hasOpenForDistributedLogReplay()) {
+          result = result && (getOpenForDistributedLogReplay()
+              == other.getOpenForDistributedLogReplay());
+        }
         result = result &&
             getUnknownFields().equals(other.getUnknownFields());
         return result;
@@ -4347,6 +4407,10 @@ public final class AdminProtos {
         if (getFavoredNodesCount() > 0) {
           hash = (37 * hash) + FAVORED_NODES_FIELD_NUMBER;
           hash = (53 * hash) + getFavoredNodesList().hashCode();
+        }
+        if (hasOpenForDistributedLogReplay()) {
+          hash = (37 * hash) + OPENFORDISTRIBUTEDLOGREPLAY_FIELD_NUMBER;
+          hash = (53 * hash) + hashBoolean(getOpenForDistributedLogReplay());
         }
         hash = (29 * hash) + getUnknownFields().hashCode();
         memoizedHashCode = hash;
@@ -4473,6 +4537,8 @@ public final class AdminProtos {
           } else {
             favoredNodesBuilder_.clear();
           }
+          openForDistributedLogReplay_ = false;
+          bitField0_ = (bitField0_ & ~0x00000008);
           return this;
         }
 
@@ -4522,6 +4588,10 @@ public final class AdminProtos {
           } else {
             result.favoredNodes_ = favoredNodesBuilder_.build();
           }
+          if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+            to_bitField0_ |= 0x00000004;
+          }
+          result.openForDistributedLogReplay_ = openForDistributedLogReplay_;
           result.bitField0_ = to_bitField0_;
           onBuilt();
           return result;
@@ -4569,6 +4639,9 @@ public final class AdminProtos {
                 favoredNodesBuilder_.addAllMessages(other.favoredNodes_);
               }
             }
+          }
+          if (other.hasOpenForDistributedLogReplay()) {
+            setOpenForDistributedLogReplay(other.getOpenForDistributedLogReplay());
           }
           this.mergeUnknownFields(other.getUnknownFields());
           return this;
@@ -4999,6 +5072,55 @@ public final class AdminProtos {
             favoredNodes_ = null;
           }
           return favoredNodesBuilder_;
+        }
+
+        // optional bool openForDistributedLogReplay = 4;
+        private boolean openForDistributedLogReplay_ ;
+        /**
+         * <code>optional bool openForDistributedLogReplay = 4;</code>
+         *
+         * <pre>
+         * open region for distributedLogReplay
+         * </pre>
+         */
+        public boolean hasOpenForDistributedLogReplay() {
+          return ((bitField0_ & 0x00000008) == 0x00000008);
+        }
+        /**
+         * <code>optional bool openForDistributedLogReplay = 4;</code>
+         *
+         * <pre>
+         * open region for distributedLogReplay
+         * </pre>
+         */
+        public boolean getOpenForDistributedLogReplay() {
+          return openForDistributedLogReplay_;
+        }
+        /**
+         * <code>optional bool openForDistributedLogReplay = 4;</code>
+         *
+         * <pre>
+         * open region for distributedLogReplay
+         * </pre>
+         */
+        public Builder setOpenForDistributedLogReplay(boolean value) {
+          bitField0_ |= 0x00000008;
+          openForDistributedLogReplay_ = value;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional bool openForDistributedLogReplay = 4;</code>
+         *
+         * <pre>
+         * open region for distributedLogReplay
+         * </pre>
+         */
+        public Builder clearOpenForDistributedLogReplay() {
+          bitField0_ = (bitField0_ & ~0x00000008);
+          openForDistributedLogReplay_ = false;
+          onChanged();
+          return this;
         }
 
         // @@protoc_insertion_point(builder_scope:OpenRegionRequest.RegionOpenInfo)
@@ -21166,77 +21288,78 @@ public final class AdminProtos {
       "FileResponse\022\022\n\nstore_file\030\001 \003(\t\"\030\n\026GetO" +
       "nlineRegionRequest\";\n\027GetOnlineRegionRes" +
       "ponse\022 \n\013region_info\030\001 \003(\0132\013.RegionInfo\"" +
-      "\326\001\n\021OpenRegionRequest\0224\n\topen_info\030\001 \003(\013" +
+      "\374\001\n\021OpenRegionRequest\0224\n\topen_info\030\001 \003(\013" +
       "2!.OpenRegionRequest.RegionOpenInfo\022\027\n\017s" +
-      "erverStartCode\030\002 \001(\004\032r\n\016RegionOpenInfo\022\033" +
-      "\n\006region\030\001 \002(\0132\013.RegionInfo\022\037\n\027version_o" +
-      "f_offline_node\030\002 \001(\r\022\"\n\rfavored_nodes\030\003 " +
-      "\003(\0132\013.ServerName\"\235\001\n\022OpenRegionResponse\022",
-      "=\n\ropening_state\030\001 \003(\0162&.OpenRegionRespo" +
-      "nse.RegionOpeningState\"H\n\022RegionOpeningS" +
-      "tate\022\n\n\006OPENED\020\000\022\022\n\016ALREADY_OPENED\020\001\022\022\n\016" +
-      "FAILED_OPENING\020\002\"\271\001\n\022CloseRegionRequest\022" +
-      " \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\037\n\027ver" +
-      "sion_of_closing_node\030\002 \001(\r\022\036\n\020transition" +
-      "_in_ZK\030\003 \001(\010:\004true\022\'\n\022destination_server" +
-      "\030\004 \001(\0132\013.ServerName\022\027\n\017serverStartCode\030\005" +
-      " \001(\004\"%\n\023CloseRegionResponse\022\016\n\006closed\030\001 " +
-      "\002(\010\"P\n\022FlushRegionRequest\022 \n\006region\030\001 \002(",
-      "\0132\020.RegionSpecifier\022\030\n\020if_older_than_ts\030" +
-      "\002 \001(\004\"?\n\023FlushRegionResponse\022\027\n\017last_flu" +
-      "sh_time\030\001 \002(\004\022\017\n\007flushed\030\002 \001(\010\"K\n\022SplitR" +
-      "egionRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpe" +
-      "cifier\022\023\n\013split_point\030\002 \001(\014\"\025\n\023SplitRegi" +
-      "onResponse\"W\n\024CompactRegionRequest\022 \n\006re" +
-      "gion\030\001 \002(\0132\020.RegionSpecifier\022\r\n\005major\030\002 " +
-      "\001(\010\022\016\n\006family\030\003 \001(\014\"\027\n\025CompactRegionResp" +
-      "onse\"\262\001\n\031UpdateFavoredNodesRequest\022@\n\013up" +
-      "date_info\030\001 \003(\0132+.UpdateFavoredNodesRequ",
-      "est.RegionUpdateInfo\032S\n\020RegionUpdateInfo" +
-      "\022\033\n\006region\030\001 \002(\0132\013.RegionInfo\022\"\n\rfavored" +
-      "_nodes\030\002 \003(\0132\013.ServerName\".\n\032UpdateFavor" +
-      "edNodesResponse\022\020\n\010response\030\001 \001(\r\"v\n\023Mer" +
-      "geRegionsRequest\022\"\n\010region_a\030\001 \002(\0132\020.Reg" +
-      "ionSpecifier\022\"\n\010region_b\030\002 \002(\0132\020.RegionS" +
-      "pecifier\022\027\n\010forcible\030\003 \001(\010:\005false\"\026\n\024Mer" +
-      "geRegionsResponse\"X\n\010WALEntry\022\024\n\003key\030\001 \002" +
-      "(\0132\007.WALKey\022\027\n\017key_value_bytes\030\002 \003(\014\022\035\n\025" +
-      "associated_cell_count\030\003 \001(\005\"4\n\030Replicate",
-      "WALEntryRequest\022\030\n\005entry\030\001 \003(\0132\t.WALEntr" +
-      "y\"\033\n\031ReplicateWALEntryResponse\"\026\n\024RollWA" +
-      "LWriterRequest\"0\n\025RollWALWriterResponse\022" +
-      "\027\n\017region_to_flush\030\001 \003(\014\"#\n\021StopServerRe" +
-      "quest\022\016\n\006reason\030\001 \002(\t\"\024\n\022StopServerRespo" +
-      "nse\"\026\n\024GetServerInfoRequest\"B\n\nServerInf" +
-      "o\022 \n\013server_name\030\001 \002(\0132\013.ServerName\022\022\n\nw" +
-      "ebui_port\030\002 \001(\r\"9\n\025GetServerInfoResponse" +
-      "\022 \n\013server_info\030\001 \002(\0132\013.ServerInfo2\306\007\n\014A" +
-      "dminService\022>\n\rGetRegionInfo\022\025.GetRegion",
-      "InfoRequest\032\026.GetRegionInfoResponse\022;\n\014G" +
-      "etStoreFile\022\024.GetStoreFileRequest\032\025.GetS" +
-      "toreFileResponse\022D\n\017GetOnlineRegion\022\027.Ge" +
-      "tOnlineRegionRequest\032\030.GetOnlineRegionRe" +
-      "sponse\0225\n\nOpenRegion\022\022.OpenRegionRequest" +
-      "\032\023.OpenRegionResponse\0228\n\013CloseRegion\022\023.C" +
-      "loseRegionRequest\032\024.CloseRegionResponse\022" +
-      "8\n\013FlushRegion\022\023.FlushRegionRequest\032\024.Fl" +
-      "ushRegionResponse\0228\n\013SplitRegion\022\023.Split" +
-      "RegionRequest\032\024.SplitRegionResponse\022>\n\rC",
-      "ompactRegion\022\025.CompactRegionRequest\032\026.Co" +
-      "mpactRegionResponse\022;\n\014MergeRegions\022\024.Me" +
-      "rgeRegionsRequest\032\025.MergeRegionsResponse" +
-      "\022J\n\021ReplicateWALEntry\022\031.ReplicateWALEntr" +
-      "yRequest\032\032.ReplicateWALEntryResponse\022?\n\006" +
-      "Replay\022\031.ReplicateWALEntryRequest\032\032.Repl" +
-      "icateWALEntryResponse\022>\n\rRollWALWriter\022\025" +
-      ".RollWALWriterRequest\032\026.RollWALWriterRes" +
-      "ponse\022>\n\rGetServerInfo\022\025.GetServerInfoRe" +
-      "quest\032\026.GetServerInfoResponse\0225\n\nStopSer",
-      "ver\022\022.StopServerRequest\032\023.StopServerResp" +
-      "onse\022M\n\022UpdateFavoredNodes\022\032.UpdateFavor" +
-      "edNodesRequest\032\033.UpdateFavoredNodesRespo" +
-      "nseBA\n*org.apache.hadoop.hbase.protobuf." +
-      "generatedB\013AdminProtosH\001\210\001\001\240\001\001"
+      "erverStartCode\030\002 \001(\004\032\227\001\n\016RegionOpenInfo\022" +
+      "\033\n\006region\030\001 \002(\0132\013.RegionInfo\022\037\n\027version_" +
+      "of_offline_node\030\002 \001(\r\022\"\n\rfavored_nodes\030\003" +
+      " \003(\0132\013.ServerName\022#\n\033openForDistributedL",
+      "ogReplay\030\004 \001(\010\"\235\001\n\022OpenRegionResponse\022=\n" +
+      "\ropening_state\030\001 \003(\0162&.OpenRegionRespons" +
+      "e.RegionOpeningState\"H\n\022RegionOpeningSta" +
+      "te\022\n\n\006OPENED\020\000\022\022\n\016ALREADY_OPENED\020\001\022\022\n\016FA" +
+      "ILED_OPENING\020\002\"\271\001\n\022CloseRegionRequest\022 \n" +
+      "\006region\030\001 \002(\0132\020.RegionSpecifier\022\037\n\027versi" +
+      "on_of_closing_node\030\002 \001(\r\022\036\n\020transition_i" +
+      "n_ZK\030\003 \001(\010:\004true\022\'\n\022destination_server\030\004" +
+      " \001(\0132\013.ServerName\022\027\n\017serverStartCode\030\005 \001" +
+      "(\004\"%\n\023CloseRegionResponse\022\016\n\006closed\030\001 \002(",
+      "\010\"P\n\022FlushRegionRequest\022 \n\006region\030\001 \002(\0132" +
+      "\020.RegionSpecifier\022\030\n\020if_older_than_ts\030\002 " +
+      "\001(\004\"?\n\023FlushRegionResponse\022\027\n\017last_flush" +
+      "_time\030\001 \002(\004\022\017\n\007flushed\030\002 \001(\010\"K\n\022SplitReg" +
+      "ionRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpeci" +
+      "fier\022\023\n\013split_point\030\002 \001(\014\"\025\n\023SplitRegion" +
+      "Response\"W\n\024CompactRegionRequest\022 \n\006regi" +
+      "on\030\001 \002(\0132\020.RegionSpecifier\022\r\n\005major\030\002 \001(" +
+      "\010\022\016\n\006family\030\003 \001(\014\"\027\n\025CompactRegionRespon" +
+      "se\"\262\001\n\031UpdateFavoredNodesRequest\022@\n\013upda",
+      "te_info\030\001 \003(\0132+.UpdateFavoredNodesReques" +
+      "t.RegionUpdateInfo\032S\n\020RegionUpdateInfo\022\033" +
+      "\n\006region\030\001 \002(\0132\013.RegionInfo\022\"\n\rfavored_n" +
+      "odes\030\002 \003(\0132\013.ServerName\".\n\032UpdateFavored" +
+      "NodesResponse\022\020\n\010response\030\001 \001(\r\"v\n\023Merge" +
+      "RegionsRequest\022\"\n\010region_a\030\001 \002(\0132\020.Regio" +
+      "nSpecifier\022\"\n\010region_b\030\002 \002(\0132\020.RegionSpe" +
+      "cifier\022\027\n\010forcible\030\003 \001(\010:\005false\"\026\n\024Merge" +
+      "RegionsResponse\"X\n\010WALEntry\022\024\n\003key\030\001 \002(\013" +
+      "2\007.WALKey\022\027\n\017key_value_bytes\030\002 \003(\014\022\035\n\025as",
+      "sociated_cell_count\030\003 \001(\005\"4\n\030ReplicateWA" +
+      "LEntryRequest\022\030\n\005entry\030\001 \003(\0132\t.WALEntry\"" +
+      "\033\n\031ReplicateWALEntryResponse\"\026\n\024RollWALW" +
+      "riterRequest\"0\n\025RollWALWriterResponse\022\027\n" +
+      "\017region_to_flush\030\001 \003(\014\"#\n\021StopServerRequ" +
+      "est\022\016\n\006reason\030\001 \002(\t\"\024\n\022StopServerRespons" +
+      "e\"\026\n\024GetServerInfoRequest\"B\n\nServerInfo\022" +
+      " \n\013server_name\030\001 \002(\0132\013.ServerName\022\022\n\nweb" +
+      "ui_port\030\002 \001(\r\"9\n\025GetServerInfoResponse\022 " +
+      "\n\013server_info\030\001 \002(\0132\013.ServerInfo2\306\007\n\014Adm",
+      "inService\022>\n\rGetRegionInfo\022\025.GetRegionIn" +
+      "foRequest\032\026.GetRegionInfoResponse\022;\n\014Get" +
+      "StoreFile\022\024.GetStoreFileRequest\032\025.GetSto" +
+      "reFileResponse\022D\n\017GetOnlineRegion\022\027.GetO" +
+      "nlineRegionRequest\032\030.GetOnlineRegionResp" +
+      "onse\0225\n\nOpenRegion\022\022.OpenRegionRequest\032\023" +
+      ".OpenRegionResponse\0228\n\013CloseRegion\022\023.Clo" +
+      "seRegionRequest\032\024.CloseRegionResponse\0228\n" +
+      "\013FlushRegion\022\023.FlushRegionRequest\032\024.Flus" +
+      "hRegionResponse\0228\n\013SplitRegion\022\023.SplitRe",
+      "gionRequest\032\024.SplitRegionResponse\022>\n\rCom" +
+      "pactRegion\022\025.CompactRegionRequest\032\026.Comp" +
+      "actRegionResponse\022;\n\014MergeRegions\022\024.Merg" +
+      "eRegionsRequest\032\025.MergeRegionsResponse\022J" +
+      "\n\021ReplicateWALEntry\022\031.ReplicateWALEntryR" +
+      "equest\032\032.ReplicateWALEntryResponse\022?\n\006Re" +
+      "play\022\031.ReplicateWALEntryRequest\032\032.Replic" +
+      "ateWALEntryResponse\022>\n\rRollWALWriter\022\025.R" +
+      "ollWALWriterRequest\032\026.RollWALWriterRespo" +
+      "nse\022>\n\rGetServerInfo\022\025.GetServerInfoRequ",
+      "est\032\026.GetServerInfoResponse\0225\n\nStopServe" +
+      "r\022\022.StopServerRequest\032\023.StopServerRespon" +
+      "se\022M\n\022UpdateFavoredNodes\022\032.UpdateFavored" +
+      "NodesRequest\032\033.UpdateFavoredNodesRespons" +
+      "eBA\n*org.apache.hadoop.hbase.protobuf.ge" +
+      "neratedB\013AdminProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -21290,7 +21413,7 @@ public final class AdminProtos {
           internal_static_OpenRegionRequest_RegionOpenInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_OpenRegionRequest_RegionOpenInfo_descriptor,
-              new java.lang.String[] { "Region", "VersionOfOfflineNode", "FavoredNodes", });
+              new java.lang.String[] { "Region", "VersionOfOfflineNode", "FavoredNodes", "OpenForDistributedLogReplay", });
           internal_static_OpenRegionResponse_descriptor =
             getDescriptor().getMessageTypes().get(7);
           internal_static_OpenRegionResponse_fieldAccessorTable = new

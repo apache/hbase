@@ -75,6 +75,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -660,10 +661,14 @@ public class TestAssignmentManager {
     DeadServer deadServers = new DeadServer();
     deadServers.add(SERVERNAME_A);
     // I need a services instance that will return the AM
+    MasterFileSystem fs = Mockito.mock(MasterFileSystem.class);
+    Mockito.doNothing().when(fs).setLogRecoveryMode();
+    Mockito.when(fs.getLogRecoveryMode()).thenReturn(RecoveryMode.LOG_REPLAY);
     MasterServices services = Mockito.mock(MasterServices.class);
     Mockito.when(services.getAssignmentManager()).thenReturn(am);
     Mockito.when(services.getServerManager()).thenReturn(this.serverManager);
     Mockito.when(services.getZooKeeper()).thenReturn(this.watcher);
+    Mockito.when(services.getMasterFileSystem()).thenReturn(fs);
     ServerShutdownHandler handler = new ServerShutdownHandler(this.server,
       services, deadServers, SERVERNAME_A, false);
     am.failoverCleanupDone.set(true);

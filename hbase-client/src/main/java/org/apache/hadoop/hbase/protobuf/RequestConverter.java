@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.util.List;
 
 import com.google.protobuf.HBaseZeroCopyByteString;
+
+import org.apache.commons.configuration.Configuration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -702,17 +704,18 @@ public final class RequestConverter {
   * Create a protocol buffer OpenRegionRequest to open a list of regions
   *
   * @param regionOpenInfos info of a list of regions to open
+  * @param openForReplay
   * @return a protocol buffer OpenRegionRequest
   */
  public static OpenRegionRequest
      buildOpenRegionRequest(final List<Triple<HRegionInfo, Integer,
-         List<ServerName>>> regionOpenInfos) {
+         List<ServerName>>> regionOpenInfos, Boolean openForReplay) {
    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
    for (Triple<HRegionInfo, Integer, List<ServerName>> regionOpenInfo: regionOpenInfos) {
      Integer second = regionOpenInfo.getSecond();
      int versionOfOfflineNode = second == null ? -1 : second.intValue();
-     builder.addOpenInfo(buildRegionOpenInfo(
-       regionOpenInfo.getFirst(), versionOfOfflineNode, regionOpenInfo.getThird()));
+     builder.addOpenInfo(buildRegionOpenInfo(regionOpenInfo.getFirst(), versionOfOfflineNode, 
+       regionOpenInfo.getThird(), openForReplay));
    }
    return builder.build();
  }
@@ -724,12 +727,15 @@ public final class RequestConverter {
   * @param region the region to open
   * @param versionOfOfflineNode that needs to be present in the offline node
   * @param favoredNodes
+  * @param openForReplay
   * @return a protocol buffer OpenRegionRequest
   */
  public static OpenRegionRequest buildOpenRegionRequest(ServerName server,
-     final HRegionInfo region, final int versionOfOfflineNode, List<ServerName> favoredNodes) {
+     final HRegionInfo region, final int versionOfOfflineNode, List<ServerName> favoredNodes,
+     Boolean openForReplay) {
    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
-   builder.addOpenInfo(buildRegionOpenInfo(region, versionOfOfflineNode, favoredNodes));
+   builder.addOpenInfo(buildRegionOpenInfo(region, versionOfOfflineNode, favoredNodes, 
+     openForReplay));
    if (server != null) {
      builder.setServerStartCode(server.getStartcode());
    }
@@ -1493,7 +1499,7 @@ public final class RequestConverter {
    */
   private static RegionOpenInfo buildRegionOpenInfo(
       final HRegionInfo region, final int versionOfOfflineNode,
-      final List<ServerName> favoredNodes) {
+      final List<ServerName> favoredNodes, Boolean openForReplay) {
     RegionOpenInfo.Builder builder = RegionOpenInfo.newBuilder();
     builder.setRegion(HRegionInfo.convert(region));
     if (versionOfOfflineNode >= 0) {
@@ -1503,6 +1509,9 @@ public final class RequestConverter {
       for (ServerName server : favoredNodes) {
         builder.addFavoredNodes(ProtobufUtil.toServerName(server));
       }
+    }
+    if(openForReplay != null) {
+      builder.setOpenForDistributedLogReplay(openForReplay);
     }
     return builder.build();
   }

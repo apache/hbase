@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
@@ -64,7 +65,6 @@ public class ServerShutdownHandler extends EventHandler {
   protected final MasterServices services;
   protected final DeadServer deadServers;
   protected final boolean shouldSplitHlog; // whether to split HLog or not
-  protected final boolean distributedLogReplay;
   protected final int regionAssignmentWaitTimeout;
 
   public ServerShutdownHandler(final Server server, final MasterServices services,
@@ -86,7 +86,6 @@ public class ServerShutdownHandler extends EventHandler {
       LOG.warn(this.serverName + " is NOT in deadservers; it should be!");
     }
     this.shouldSplitHlog = shouldSplitHlog;
-    this.distributedLogReplay = HLogSplitter.isDistributedLogReplay(server.getConfiguration());
     this.regionAssignmentWaitTimeout = server.getConfiguration().getInt(
       HConstants.LOG_REPLAY_WAIT_REGION_TIMEOUT, 15000);
   }
@@ -183,10 +182,16 @@ public class ServerShutdownHandler extends EventHandler {
         throw new IOException("Server is stopped");
       }
 
+      // delayed to set recovery mode based on configuration only after all outstanding splitlogtask
+      // drained
+      this.services.getMasterFileSystem().setLogRecoveryMode();
+      boolean distributedLogReplay = 
+        (this.services.getMasterFileSystem().getLogRecoveryMode() == RecoveryMode.LOG_REPLAY);
+
       try {
         if (this.shouldSplitHlog) {
           LOG.info("Splitting logs for " + serverName + " before assignment.");
-          if (this.distributedLogReplay) {
+          if (distributedLogReplay) {
             LOG.info("Mark regions in recovery before assignment.");
             Set<ServerName> serverNames = new HashSet<ServerName>();
             serverNames.add(serverName);
@@ -286,7 +291,7 @@ public class ServerShutdownHandler extends EventHandler {
         throw (InterruptedIOException)new InterruptedIOException().initCause(ie);
       }
 
-      if (this.shouldSplitHlog && this.distributedLogReplay) {
+      if (this.shouldSplitHlog && distributedLogReplay) {
         // wait for region assignment completes
         for (HRegionInfo hri : toAssignRegions) {
           try {

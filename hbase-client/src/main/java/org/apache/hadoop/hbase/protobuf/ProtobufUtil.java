@@ -1596,7 +1596,7 @@ public final class ProtobufUtil {
   public static void openRegion(final AdminService.BlockingInterface admin,
       ServerName server, final HRegionInfo region) throws IOException {
     OpenRegionRequest request =
-      RequestConverter.buildOpenRegionRequest(server, region, -1, null);
+      RequestConverter.buildOpenRegionRequest(server, region, -1, null, null);
     try {
       admin.openRegion(null, request);
     } catch (ServiceException se) {

@@ -102,6 +102,7 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
@@ -711,7 +712,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     enableMeta(TableName.META_TABLE_NAME);
 
-    if (this.distributedLogReplay && (!previouslyFailedMetaRSs.isEmpty())) {
+    if ((RecoveryMode.LOG_REPLAY == this.getMasterFileSystem().getLogRecoveryMode())
+        && (!previouslyFailedMetaRSs.isEmpty())) {
       // replay WAL edits mode need new hbase:meta RS is assigned firstly
       status.setStatus("replaying log for Meta Region");
       this.fileSystemManager.splitMetaLog(previouslyFailedMetaRSs);
@@ -740,7 +742,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   private void splitMetaLogBeforeAssignment(ServerName currentMetaServer) throws IOException {
-    if (this.distributedLogReplay) {
+    if (RecoveryMode.LOG_REPLAY == this.getMasterFileSystem().getLogRecoveryMode()) {
       // In log replay mode, we mark hbase:meta region as recovering in ZK
       Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
       regions.add(HRegionInfo.FIRST_META_REGIONINFO);
