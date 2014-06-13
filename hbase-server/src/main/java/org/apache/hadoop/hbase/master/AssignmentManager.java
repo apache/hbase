@@ -1627,6 +1627,9 @@ public class AssignmentManager extends ZooKeeperListener {
                     + " has timed out, but the regions might"
                     + " already be opened on it.", e);
                 }
+                // wait and reset the re-try count, server might be just busy.
+                Thread.sleep(100);
+                i--;
                 continue;
               }
               throw e;
@@ -2044,8 +2047,8 @@ public class AssignmentManager extends ZooKeeperListener {
             }
           } else if (retry) {
             needNewPlan = false;
-            LOG.warn(assignMsg + ", trying to assign to the same region server " +
-                "try=" + i + " of " + this.maximumAttempts, t);
+            i--; // we want to retry as many times as needed as long as the RS is not dead.
+            LOG.warn(assignMsg + ", trying to assign to the same region server due ", t);
           } else {
             needNewPlan = true;
             LOG.warn(assignMsg + ", trying to assign elsewhere instead;" +
