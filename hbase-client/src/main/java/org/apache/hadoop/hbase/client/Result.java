@@ -789,6 +789,19 @@ public class Result implements CellScannable {
   }
 
   /**
+   * Get total size of raw cells 
+   * @param result
+   * @return Total size.
+   */
+  public static long getTotalSizeOfCells(Result result) {
+    long size = 0;
+    for (Cell c : result.rawCells()) {
+      size += KeyValueUtil.ensureKeyValue(c).heapSize();
+    }
+    return size;
+  }
+
+  /**
    * Copy another Result into this one. Needed for the old Mapred framework
    * @param other
    */
