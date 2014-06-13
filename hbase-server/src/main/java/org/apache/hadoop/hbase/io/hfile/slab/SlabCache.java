@@ -51,8 +51,10 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * order to determine where a given element fits. Redirects gets and puts to the
  * correct SingleSizeCache.
  *
- **/
+ * @deprecated As of 1.0, replaced by {@link org.apache.hadoop.hbase.io.hfile.bucket.BucketCache}.
+ */
 @InterfaceAudience.Private
+@Deprecated
 public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
 
   private final ConcurrentHashMap<BlockCacheKey, SingleSizeCache> backingStore;

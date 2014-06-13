@@ -33,9 +33,11 @@ import com.google.common.base.Preconditions;
  * Slab is a class which is designed to allocate blocks of a certain size.
  * Constructor creates a number of DirectByteBuffers and slices them into the
  * requisite size, then puts them all in a buffer.
- **/
-
+ *
+ * @deprecated As of 1.0, replaced by {@link org.apache.hadoop.hbase.io.hfile.bucket.BucketCache}.
+ */
 @InterfaceAudience.Private
+@Deprecated
 class Slab implements org.apache.hadoop.hbase.io.HeapSize {
   static final Log LOG = LogFactory.getLog(Slab.class);
 
