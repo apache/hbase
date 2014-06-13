@@ -1327,7 +1327,8 @@ MasterServices, Server {
   protected RegionServerStartupResponse.Builder createConfigurationSubset() {
     RegionServerStartupResponse.Builder resp = addConfig(
       RegionServerStartupResponse.newBuilder(), HConstants.HBASE_DIR);
-    return addConfig(resp, "fs.default.name");
+    resp = addConfig(resp, "fs.default.name");
+    return addConfig(resp, "hbase.master.info.port");
   }
 
   private RegionServerStartupResponse.Builder addConfig(
