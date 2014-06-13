@@ -246,7 +246,7 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
   protected static boolean isChildReadLock(String child) {
     int idx = child.lastIndexOf(ZKUtil.ZNODE_PATH_SEPARATOR);
     String suffix = child.substring(idx + 1);
-    return suffix.startsWith(WRITE_LOCK_CHILD_NODE_PREFIX);
+    return suffix.startsWith(READ_LOCK_CHILD_NODE_PREFIX);
   }
 
   /**
