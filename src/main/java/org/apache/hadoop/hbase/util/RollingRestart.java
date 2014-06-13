@@ -125,6 +125,10 @@ public class RollingRestart {
     FAIL
   }
 
+  void shutdownViaRPC() throws IOException {
+      admin.stopRegionServer(serverAddr, "Drained and stop via RPC by RollingRestart");
+  }
+
   boolean moveRegion(final HRegionInfo region) throws Exception {
     HRegionInterface destinationServer = getDestinationServer(region);
 
@@ -590,6 +594,8 @@ public class RollingRestart {
             "Default: new temp file for drain, none for undrain");
     options.addOption("readlog", "read_log_file", false,
         "Reads the drain log file and prints out regions. User -location to set path to the log file. Default: false");
+    options.addOption("S", "rpcstop", false,
+                    "stop the regionserver via RPC");
 
 
     if (args.length == 0) {
@@ -608,6 +614,7 @@ public class RollingRestart {
     int getOpFrequency = RollingRestart.DEFAULT_GETOP_FREQUENCY;
     int sleepIntervalBeforeRestart = RollingRestart.DEFAULT_SLEEP_BEFORE_RESTART_INTERVAL;
     boolean useHadoopCtl = true;
+    boolean stopViaRPC = false;
     int port = HConstants.DEFAULT_REGIONSERVER_PORT;
     RollingRestartMode mode = null;
 
@@ -686,6 +693,13 @@ public class RollingRestart {
       port = Integer.parseInt(cmd.getOptionValue("p"));
     }
 
+    if (cmd.hasOption("S")) {
+        if (mode != RollingRestartMode.DRAIN_AND_STOP_ONLY) {
+            LOG.error("Stop via RPC only works if drain and stop only is enabled (-o option)");
+            System.exit(1);
+        }
+        stopViaRPC = true;
+    }
 
     RollingRestart rr;
     try {
@@ -723,7 +737,11 @@ public class RollingRestart {
           break;
         case DRAIN_AND_STOP_ONLY:
           rr.drainServer(drainedLogFile);
-          rr.stop();
+          if (!stopViaRPC) {
+            rr.stop();
+          } else {
+            rr.shutdownViaRPC();
+          }
           break;
         case ALL:
           rr.drainServer(drainedLogFile);
