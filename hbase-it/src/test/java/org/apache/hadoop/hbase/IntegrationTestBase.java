@@ -34,12 +34,14 @@ import org.junit.Before;
  * Base class for HBase integration tests that want to use the Chaos Monkey.
  */
 public abstract class IntegrationTestBase extends AbstractHBaseTool {
-  public static final String LONG_OPT = "monkey";
+  public static final String NO_CLUSTER_CLEANUP_LONG_OPT = "noClusterCleanUp";
+  public static final String MONKEY_LONG_OPT = "monkey";
   private static final Log LOG = LogFactory.getLog(IntegrationTestBase.class);
 
   protected IntegrationTestingUtility util;
   protected ChaosMonkey monkey;
   protected String monkeyToUse;
+  protected boolean noClusterCleanUp = false;
 
   public IntegrationTestBase() {
     this(null);
@@ -51,13 +53,18 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
 
   @Override
   protected void addOptions() {
-    addOptWithArg("m", LONG_OPT, "Which chaos monkey to run");
+    addOptWithArg("m", MONKEY_LONG_OPT, "Which chaos monkey to run");
+    addOptNoArg("ncc", NO_CLUSTER_CLEANUP_LONG_OPT,
+      "Don't clean up the cluster at the end");
   }
 
   @Override
   protected void processOptions(CommandLine cmd) {
-    if (cmd.hasOption(LONG_OPT)) {
-      monkeyToUse = cmd.getOptionValue(LONG_OPT);
+    if (cmd.hasOption(MONKEY_LONG_OPT)) {
+      monkeyToUse = cmd.getOptionValue(MONKEY_LONG_OPT);
+    }
+    if (cmd.hasOption(NO_CLUSTER_CLEANUP_LONG_OPT)) {
+      noClusterCleanUp = true;
     }
   }
 
@@ -135,6 +142,10 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
   public abstract void setUpCluster() throws Exception;
 
   public void cleanUpCluster() throws Exception {
+    if (noClusterCleanUp) {
+      LOG.debug("noClusterCleanUp is set, skip restoring the cluster");
+      return;
+    }
     LOG.debug("Restoring the cluster");
     util.restoreCluster();
     LOG.debug("Done restoring the cluster");
