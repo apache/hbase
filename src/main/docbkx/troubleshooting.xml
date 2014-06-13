@@ -42,8 +42,9 @@
       example one trick with RegionServers is that they will print some metrics when aborting so
       grepping for <emphasis>Dump</emphasis> should get you around the start of the problem. </para>
     <para> RegionServer suicides are “normal”, as this is what they do when something goes wrong.
-      For example, if ulimit and xcievers (the two most important initial settings, see <xref
-        linkend="ulimit" />) aren’t changed, it will make it impossible at some point for DataNodes
+      For example, if ulimit and max transfer threads (the two most important initial settings, see
+      <xref linkend="ulimit" /> and <xref linkend="dfs.datanode.max.transfer.threads" />) aren’t
+      changed, it will make it impossible at some point for DataNodes
       to create new threads that from the HBase point of view is seen as if HDFS was gone. Think
       about what would happen if your MySQL database was suddenly unable to access files on your
       local file system, well it’s the same with HBase and HDFS. Another very common reason to see

@@ -501,14 +501,14 @@ Index: pom.xml
       <section
         xml:id="dfs.datanode.max.transfer.threads">
         <title><varname>dfs.datanode.max.transfer.threads</varname><indexterm>
-            <primary>xcievers</primary>
+            <primary>dfs.datanode.max.transfer.threads</primary>
           </indexterm></title>
 
-        <para>An Hadoop HDFS datanode has an upper bound on the number of files that it will serve
-          at any one time. The upper bound parameter is called <varname>xcievers</varname> (yes,
-          this is misspelled). Again, before doing any loading, make sure you have configured
-          Hadoop's <filename>conf/hdfs-site.xml</filename> setting the <varname>xceivers</varname>
-          value to at least the following:</para>
+        <para>An HDFS datanode has an upper bound on the number of files that it will serve
+          at any one time. Before doing any loading, make sure you have configured
+          Hadoop's <filename>conf/hdfs-site.xml</filename>, setting the
+          <varname>dfs.datanode.max.transfer.threads</varname> value to at least the following:
+        </para>
         <programlisting><![CDATA[
 <property>
   <name>dfs.datanode.max.transfer.threads</name>
@@ -518,19 +518,18 @@ Index: pom.xml
 
         <para>Be sure to restart your HDFS after making the above configuration.</para>
 
-        <para>Not having this configuration in place makes for strange looking failures. Eventually
-          you'll see a complain in the datanode logs complaining about the xcievers exceeded, but on
-          the run up to this one manifestation is complaint about missing blocks. For example:<footnote>
-            <para>See <link
-                xlink:href="http://ccgtech.blogspot.com/2010/02/hadoop-hdfs-deceived-by-xciever.html">Hadoop
-                HDFS: Deceived by Xciever</link> for an informative rant on xceivering.</para>
-          </footnote></para>
-        <para>See also <xref
-            linkend="casestudies.xceivers" />
-        </para>
+        <para>Not having this configuration in place makes for strange-looking failures. One
+        manifestation is a complaint about missing blocks. For example:</para>
         <screen>10/12/08 20:10:31 INFO hdfs.DFSClient: Could not obtain block
-        blk_XXXXXXXXXXXXXXXXXXXXXX_YYYYYYYY from any node: java.io.IOException: No live nodes
-        contain current block. Will get new block locations from namenode and retry...</screen>
+          blk_XXXXXXXXXXXXXXXXXXXXXX_YYYYYYYY from any node: java.io.IOException: No live nodes
+          contain current block. Will get new block locations from namenode and retry...</screen>
+        <para>See also <xref linkend="casestudies.max.transfer.threads" /> and note that this
+          property was previously known as <varname>dfs.datanode.max.xcievers</varname> (e.g.
+          <link
+            xlink:href="http://ccgtech.blogspot.com/2010/02/hadoop-hdfs-deceived-by-xciever.html">
+            Hadoop HDFS: Deceived by Xciever</link>).
+        </para>
+
 
       </section>
     </section>

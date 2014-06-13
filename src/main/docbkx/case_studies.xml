@@ -223,10 +223,10 @@ Link detected: yes
     </section>
 
     <section
-      xml:id="casestudies.xceivers">
-      <title>Case Study #4 (xcievers Config)</title>
-      <para> Case study of configuring <code>xceivers</code>, and diagnosing errors from
-        mis-configurations. <link
+      xml:id="casestudies.max.transfer.threads">
+      <title>Case Study #4 (max.transfer.threads Config)</title>
+      <para> Case study of configuring <code>max.transfer.threads</code> (previously known as
+        <code>xcievers</code>) and diagnosing errors from misconfigurations. <link
           xlink:href="http://www.larsgeorge.com/2012/03/hadoop-hbase-and-xceivers.html">http://www.larsgeorge.com/2012/03/hadoop-hbase-and-xceivers.html</link>
       </para>
       <para> See also <xref
