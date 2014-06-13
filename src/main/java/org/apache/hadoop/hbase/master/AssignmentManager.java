@@ -1681,6 +1681,8 @@ public class AssignmentManager extends ZooKeeperListener {
       boolean hijack) {
     boolean regionAlreadyInTransitionException = false;
     boolean serverNotRunningYet = false;
+    boolean socketTimeoutException = false;
+
     long maxRegionServerStartupWaitTime = -1;
     for (int i = 0; i < this.maximumAssignmentAttempts; i++) {
       int versionOfOfflineNode = -1;
@@ -1776,6 +1778,8 @@ public class AssignmentManager extends ZooKeeperListener {
         }
         regionAlreadyInTransitionException = false;
         serverNotRunningYet = false;
+        socketTimeoutException = false;
+
         if (t instanceof RegionAlreadyInTransitionException) {
           regionAlreadyInTransitionException = true;
           if (LOG.isDebugEnabled()) {
@@ -1812,16 +1816,26 @@ public class AssignmentManager extends ZooKeeperListener {
               + region.getRegionNameAsString()
               + ", but the region might already be opened on "
               + plan.getDestination() + ".", t);
-          return;
+          socketTimeoutException = true;
+          try {
+            Thread.sleep(100);
+            i--; // reset the try count
+          } catch (InterruptedException ie) {
+            LOG.warn("Failed to assign " + state.getRegion().getRegionNameAsString()
+                + " since interrupted", ie);
+            Thread.currentThread().interrupt();
+            return;
+          }
         }
         LOG.warn("Failed assignment of "
           + state.getRegion().getRegionNameAsString()
           + " to "
           + plan.getDestination()
           + ", trying to assign "
-          + (regionAlreadyInTransitionException || serverNotRunningYet
+          + (regionAlreadyInTransitionException || serverNotRunningYet || socketTimeoutException
             ? "to the same region server because of "
-            + "RegionAlreadyInTransitionException/ServerNotRunningYetException;"
+            + "RegionAlreadyInTransitionException/ServerNotRunningYetException/"
+            + "SocketTimeoutException;"
             : "elsewhere instead; ")
           + "retry=" + i, t);
         // Clean out plan we failed execute and one that doesn't look like it'll
@@ -1832,7 +1846,8 @@ public class AssignmentManager extends ZooKeeperListener {
         // RS may cause double assignments. In case of RegionAlreadyInTransitionException
         // reassigning to same RS.
         RegionPlan newPlan = plan;
-        if (!regionAlreadyInTransitionException && !serverNotRunningYet) {
+        if (!regionAlreadyInTransitionException
+            && !serverNotRunningYet && !socketTimeoutException) {
           // Force a new plan and reassign. Will return null if no servers.
           // The new plan could be the same as the existing plan since we don't
           // exclude the server of the original plan, which should not be
