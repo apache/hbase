@@ -169,28 +169,12 @@
                 /hbase/replication
         </pre>
         <p>
-            There are three major child znodes in the base replication znode:
+            There are two major child znodes in the base replication znode:
             <ul>
-            <li><b>State znode:</b> /hbase/replication/state</li>
             <li><b>Peers znode:</b> /hbase/replication/peers</li>
             <li><b>RS znode:</b> /hbase/replication/rs</li>
             </ul>
         </p>
-        <section name="The State znode">
-            <p>
-                The <b>state znode</b> indicates whether or not replication is enabled on the cluster 
-                corresponding to this zookeeper quorum. It does not have any child znodes and simply 
-                contains a boolean value. This value is initialized on startup based on the 
-                <i>hbase.replication</i> config parameter in the <i>hbase-site.xml</i> file. The status 
-                value is read/maintained by the <i>ReplicationZookeeper.ReplicationStatusTracker</i> 
-                class. It is also cached locally using an AtomicBoolean in the <i>ReplicationZookeeper</i> 
-                class. This value can be changed on a live cluster using the <i>stop_replication</i> 
-                command available through the hbase shell.
-            </p>
-            <pre>
-                /hbase/replication/state [VALUE: true]
-            </pre>
-        </section>
         <section name="The Peers znode">
             <p>
                 The <b>peers znode</b> contains a list of all peer replication clusters and the 
@@ -212,7 +196,6 @@
                 replication is enabled on that peer cluster. These <i>peer-state znodes</i> do not 
                 have child znodes and simply contain a boolean value (i.e. ENABLED or DISABLED). 
                 This value is read/maintained by the <i>ReplicationPeer.PeerStateTracker</i> class. 
-                It is also cached locally using an AtomicBoolean in the <i>ReplicationPeer</i> class.
             </p>
             <pre>
                 /hbase/replication/peers
@@ -295,7 +278,6 @@
                 The default replication znode structure looks like the following:
             </p>
             <pre>
-                /hbase/replication/state
                 /hbase/replication/peers/{peerId}/peer-state
                 /hbase/replication/rs
             </pre>

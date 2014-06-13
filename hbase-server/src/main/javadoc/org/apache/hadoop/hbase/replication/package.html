@@ -98,7 +98,9 @@ to another.
       deploy the files, and then restart HBase if it was running.
     </li>
     <li>Run the following command in the master's shell while it's running
-    <pre>add_peer</pre>
+    <pre>add_peer 'ID' 'CLUSTER_KEY'</pre>
+    The ID must be a short integer. To compose the CLUSTER_KEY, use the following template:
+    <pre>hbase.zookeeper.quorum:hbase.zookeeper.property.clientPort:zookeeper.znode.parent</pre>
     This will show you the help to setup the replication stream between
     both clusters. If both clusters use the same Zookeeper cluster, you have
     to use a different <b>zookeeper.znode.parent</b> since they can't
@@ -119,6 +121,17 @@ to another.
     <li>To list all configured peers run the following command in the master's
     shell
     <pre>list_peers</pre> (as of version 0.92)
+    </li>
+    <li>To enable a peer that was previousy disabled, run the following command in the master's shell.
+      <pre>enable_peer 'ID'</pre>
+    </li>
+    <li>To disable a peer, run the following command in the master's shell. This setting causes 
+      HBase to stop sending the edits to that peer cluster, but it still keeps track of all the 
+      new WALs that it will need to replicate if and when it is re-enabled.
+    <pre>disable_peer 'ID'</pre>
+    </li>
+    <li>To remove a peer, use the following command in the master's shell.
+      <pre>remove_peer 'ID'</pre>
     </li>
 </ol>
 
