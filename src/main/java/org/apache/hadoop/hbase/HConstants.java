@@ -1116,6 +1116,14 @@ public final class HConstants {
   public static final String HSTORE_BLOCKING_WAIT_TIME_KEY =
       "hbase.hstore.blockingWaitTime";
   public static final long DEFAULT_HSTORE_BLOCKING_WAIT_TIME = 90000;
+
+  public static final ProtocolVersion PROTOCOL_VERSION_THRIFT
+    = ProtocolVersion.THRIFT;
+  public static final ProtocolVersion PROTOCOL_VERSION_HADOOP_RPC
+    = ProtocolVersion.HADOOP_RPC;
+  public static final ProtocolVersion PROTOCOL_VERSION
+    = PROTOCOL_VERSION_THRIFT;
+
   private HConstants() {
     // Can't be instantiated with this constructor.
   }

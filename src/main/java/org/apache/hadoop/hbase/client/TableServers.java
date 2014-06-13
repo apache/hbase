@@ -65,7 +65,9 @@ import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ProtocolVersion;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.RootRegionLocation;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
@@ -243,6 +245,8 @@ public class TableServers implements ServerConnection {
   private int batchedUploadSoftFlushRetries;
   private long batchedUploadSoftFlushTimeoutMillis;
   private final boolean useThrift;
+  // Zookeeper wrapper to query zookeeper for client bootstrap.
+  private static ZooKeeperWrapper staticZK = null;
 
   private Map<StringBytes, StringBytes> initializedTableSet =
       new ConcurrentHashMap<>();
@@ -254,8 +258,21 @@ public class TableServers implements ServerConnection {
   public TableServers(Configuration conf) {
     this.conf = conf;
     params = HConnectionParams.getInstance(conf);
-    this.useThrift = conf.getBoolean(HConstants.CLIENT_TO_RS_USE_THRIFT,
+    boolean useThrift = conf.getBoolean(HConstants.CLIENT_TO_RS_USE_THRIFT,
       HConstants.CLIENT_TO_RS_USE_THRIFT_DEFAULT);
+    try {
+      if (staticZK == null) {
+        staticZK = getZooKeeperWrapper();
+      }
+      RootRegionLocation loc = staticZK.readWrappedRootRegionLocation();
+      if (loc != null) {
+        useThrift = loc.getProtocolVersion() ==
+          ProtocolVersion.THRIFT ? true : false;
+      }
+    } catch (Exception e) {
+      LOG.error("Falling back to config based protocol version detection", e);
+    }
+    this.useThrift = useThrift;
 
     String serverClassName =
       conf.get(HConstants.REGION_SERVER_CLASS,
@@ -1279,7 +1296,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
    *
    * @throws IOException
    */
-  private HRegionLocation locateRootRegion() throws IOException {
+  protected HRegionLocation locateRootRegion() throws IOException {
 
     // We lazily instantiate the ZooKeeper object because we don't want to
     // make the constructor have to throw IOException or handle it itself.
