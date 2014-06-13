@@ -29,8 +29,10 @@
  */
 -->
   <title>Apache HBase External APIs</title>
-<para>  This chapter will cover access to Apache HBase either through non-Java languages, or through custom protocols.
-</para>
+  <para> This chapter will cover access to Apache HBase either through non-Java languages, or
+    through custom protocols. For information on using the native HBase APIs, refer to <link
+      xlink:href="http://hbase.apache.org/apidocs/index.html">User API Reference</link> and the new <xref
+      linkend="hbase_apis" /> chapter. </para>
   <section xml:id="nonjava.jvm">
     <title>Non-Java Languages Talking to the JVM</title>
     <para>Currently the documentation on this topic in the

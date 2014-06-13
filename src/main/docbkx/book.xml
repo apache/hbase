@@ -3300,7 +3300,7 @@ All the settings that apply to normal compactions (file size limits, etc.) apply
     </section>
 
   </chapter>   <!--  architecture -->
-
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="hbase_apis.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="external_apis.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="thrift_filter_language.xml"/>
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="cp.xml" />
