@@ -522,9 +522,6 @@ class AsyncProcess {
     private final Object[] results;
     private final long nonceGroup;
 
-    @VisibleForTesting
-    protected AtomicInteger hardRetryLimit = null; // used for tests to stop retries.
-
     public AsyncRequestFutureImpl(TableName tableName, List<Action<Row>> actions, long nonceGroup,
         ExecutorService pool, boolean needResults, Object[] results,
         Batch.Callback<CResult> callback) {
@@ -558,7 +555,7 @@ class AsyncProcess {
       final Map<ServerName, MultiAction<Row>> actionsByServer =
           new HashMap<ServerName, MultiAction<Row>>();
 
-      HRegionLocation loc = null;
+      HRegionLocation loc;
       for (Action<Row> action : currentActions) {
         try {
           loc = findDestLocation(tableName, action.getAction());
@@ -661,10 +658,6 @@ class AsyncProcess {
         canRetry = false;
       }
 
-      if (canRetry && hardRetryLimit != null) {
-        canRetry = hardRetryLimit.decrementAndGet() >= 0;
-      }
-
       if (!canRetry) {
         // Batch.Callback<Res> was not called on failure in 0.94. We keep this.
         errors.add(throwable, row, server);
@@ -692,11 +685,12 @@ class AsyncProcess {
       byte[] row = rsActions.actions.values().iterator().next().get(0).getAction().getRow();
       hConnection.updateCachedLocations(tableName, row, null, server);
       errorsByServer.reportServerError(server);
+      boolean canRetry = errorsByServer.canRetryMore(numAttempt);
 
       List<Action<Row>> toReplay = new ArrayList<Action<Row>>();
       for (Map.Entry<byte[], List<Action<Row>>> e : rsActions.actions.entrySet()) {
         for (Action<Row> action : e.getValue()) {
-          if (manageError(action.getOriginalIndex(), action.getAction(), true, t, server)) {
+          if (manageError(action.getOriginalIndex(), action.getAction(), canRetry, t, server)) {
             toReplay.add(action);
           }
         }
