@@ -74,23 +74,23 @@ public class TestAsyncProcess {
   private static final String success = "success";
   private static Exception failure = new Exception("failure");
 
+  static class CountingThreadFactory implements ThreadFactory {
+    final AtomicInteger nbThreads;
+    ThreadFactory realFactory =  Threads.newDaemonThreadFactory("test-TestAsyncProcess");
+    @Override
+    public Thread newThread(Runnable r) {
+      nbThreads.incrementAndGet();
+      return realFactory.newThread(r);
+    }
+
+    CountingThreadFactory(AtomicInteger nbThreads){
+      this.nbThreads = nbThreads;
+    }
+  }
+
   static class MyAsyncProcess<Res> extends AsyncProcess<Res> {
     final AtomicInteger nbMultiResponse = new AtomicInteger();
     final AtomicInteger nbActions = new AtomicInteger();
-
-    static class CountingThreadFactory implements ThreadFactory {
-      final AtomicInteger nbThreads;
-      ThreadFactory realFactory =  Threads.newDaemonThreadFactory("test-TestAsyncProcess");
-      @Override
-      public Thread newThread(Runnable r) {
-        nbThreads.incrementAndGet();
-        return realFactory.newThread(r);
-      }
-
-      CountingThreadFactory(AtomicInteger nbThreads){
-        this.nbThreads = nbThreads;
-      }
-    }
 
     public MyAsyncProcess(HConnection hc, AsyncProcessCallback<Res> callback, Configuration conf) {
       this(hc, callback, conf, new AtomicInteger());
@@ -123,6 +123,33 @@ public class TestAsyncProcess {
       };
     }
   }
+
+  static class CallerWithFailure extends RpcRetryingCaller<MultiResponse>{
+
+    public CallerWithFailure() {
+      super(100, 100);
+    }
+
+    @Override
+    public MultiResponse callWithoutRetries(RetryingCallable<MultiResponse> callable)
+      throws IOException, RuntimeException {
+      throw new IOException("test");
+    }
+  }
+
+  static class AsyncProcessWithFailure<Res> extends MyAsyncProcess<Res> {
+
+    public AsyncProcessWithFailure(HConnection hc, Configuration conf) {
+      super(hc, null, conf, new AtomicInteger());
+      serverTrackerTimeout = 1;
+    }
+
+    @Override
+    protected RpcRetryingCaller<MultiResponse> createCaller(MultiServerCallable<Row> callable) {
+      return new CallerWithFailure();
+    }
+  }
+
 
   static MultiResponse createMultiResponse(final HRegionLocation loc,
       final MultiAction<Row> multi, AtomicInteger nbMultiResponse, AtomicInteger nbActions) {
@@ -706,6 +733,33 @@ public class TestAsyncProcess {
     // Checking that the ErrorsServers came into play and didn't make us stop immediately
     Assert.assertEquals(ht.ap.tasksSent.get(), 3);
   }
+
+  @Test
+  public void testGlobalErrors() throws IOException {
+    HTable ht = new HTable();
+    Configuration configuration = new Configuration(conf);
+    configuration.setBoolean(HConnectionManager.RETRIES_BY_SERVER_KEY, true);
+    configuration.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
+    ht.connection = new MyConnectionImpl(configuration);
+    AsyncProcessWithFailure<Object> ap =
+      new AsyncProcessWithFailure<Object>(ht.connection, configuration);
+    ht.ap = ap;
+
+    Assert.assertNotNull(ht.ap.createServerErrorTracker());
+
+    Put p = createPut(1, true);
+    ht.setAutoFlush(false, false);
+    ht.put(p);
+
+    try {
+      ht.flushCommits();
+      Assert.fail();
+    } catch (RetriesExhaustedWithDetailsException expected) {
+    }
+    // Checking that the ErrorsServers came into play and didn't make us stop immediately
+    Assert.assertEquals(3, ht.ap.tasksSent.get());
+  }
+
 
   /**
    * This test simulates multiple regions on 2 servers. We should have 2 multi requests and

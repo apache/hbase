@@ -646,11 +646,12 @@ class AsyncProcess<CResult> {
     hConnection.updateCachedLocations(tableName,
       rsActions.actions.values().iterator().next().get(0).getAction().getRow(), null, location);
     errorsByServer.reportServerError(location);
+    boolean canRetry = errorsByServer.canRetryMore(numAttempt);
 
     List<Action<Row>> toReplay = new ArrayList<Action<Row>>(initialActions.size());
     for (Map.Entry<byte[], List<Action<Row>>> e : rsActions.actions.entrySet()) {
       for (Action<Row> action : e.getValue()) {
-        if (manageError(action.getOriginalIndex(), action.getAction(), true, t, location)) {
+        if (manageError(action.getOriginalIndex(), action.getAction(), canRetry, t, location)) {
           toReplay.add(action);
         }
       }
