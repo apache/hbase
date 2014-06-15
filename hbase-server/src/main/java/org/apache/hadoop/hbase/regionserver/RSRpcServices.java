@@ -1263,8 +1263,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               region.getEncodedName())) {
             // check if current region open is for distributedLogReplay. This check is to support
             // rolling restart/upgrade where we want to Master/RS see same configuration
-            if (regionOpenInfo.hasOpenForDistributedLogReplay()
-                && regionOpenInfo.getOpenForDistributedLogReplay()) {
+            if (!regionOpenInfo.hasOpenForDistributedLogReplay()
+                  || regionOpenInfo.getOpenForDistributedLogReplay()) {
               regionServer.recoveringRegions.put(region.getEncodedName(), null);
             } else {
               // remove stale recovery region from ZK when we open region not for recovering which
