@@ -70,6 +70,27 @@ public interface PositionedByteRange extends ByteRange {
   public byte get();
 
   /**
+   * Retrieve the next short value from this range.
+   */
+  public short getShort();
+
+  /**
+   * Retrieve the next int value from this range.
+   */
+  public int getInt();
+
+  /**
+   * Retrieve the next long value from this range.
+   */
+  public long getLong();
+
+  /**
+   * Retrieve the next long value, which is stored as VLong, from this range
+   * @return the long value which is stored as VLong
+   */
+  public long getVLong();
+
+  /**
    * Fill {@code dst} with bytes from the range, starting from {@code position}.
    * This range's {@code position} is incremented by the length of {@code dst},
    * the number of bytes copied.
@@ -96,6 +117,34 @@ public interface PositionedByteRange extends ByteRange {
    * @return this.
    */
   public PositionedByteRange put(byte val);
+
+  /**
+   * Store short {@code val} at the next position in this range.
+   * @param val the new value.
+   * @return this.
+   */
+  public PositionedByteRange putShort(short val);
+
+  /**
+   * Store int {@code val} at the next position in this range.
+   * @param val the new value.
+   * @return this.
+   */
+  public PositionedByteRange putInt(int val);
+
+  /**
+   * Store long {@code val} at the next position in this range.
+   * @param val the new value.
+   * @return this.
+   */
+  public PositionedByteRange putLong(long val);
+
+  /**
+   * Store the long {@code val} at the next position as a VLong
+   * @param val the value to store
+   * @return number of bytes written
+   */
+  public int putVLong(long val);
 
   /**
    * Store the content of {@code val} in this range, starting at the next position.
@@ -143,6 +192,15 @@ public interface PositionedByteRange extends ByteRange {
 
   @Override
   public PositionedByteRange put(int index, byte val);
+
+  @Override
+  public PositionedByteRange putShort(int index, short val);
+
+  @Override
+  public PositionedByteRange putInt(int index, int val);
+
+  @Override
+  public PositionedByteRange putLong(int index, long val);
 
   @Override
   public PositionedByteRange put(int index, byte[] val);

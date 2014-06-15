@@ -68,4 +68,45 @@ public class TestSimpleByteRange {
     r.setLength(2);//verify we retained the 2nd byte, but dangerous in real code
     Assert.assertTrue(Bytes.equals(new byte[]{1, 3}, r.deepCopyToNewArray()));
   }
+
+  @Test
+  public void testPutandGetPrimitiveTypes() throws Exception {
+    ByteRange r = new SimpleByteRange(100);
+    int offset = 0;
+    int i1 = 18, i2 = 2;
+    short s1 = 0;
+    long l1 = 1234L, l2 = 0;
+    r.putInt(offset, i1);
+    offset += Bytes.SIZEOF_INT;
+    r.putInt(offset, i2);
+    offset += Bytes.SIZEOF_INT;
+    r.putShort(offset, s1);
+    offset += Bytes.SIZEOF_SHORT;
+    r.putLong(offset, l1);
+    offset += Bytes.SIZEOF_LONG;
+    int len = r.putVLong(offset, l1);
+    offset += len;
+    len = r.putVLong(offset, l2);
+    offset += len;
+    len = r.putVLong(offset, Long.MAX_VALUE);
+    offset += len;
+    len = r.putVLong(offset, Long.MIN_VALUE);
+
+    offset = 0;
+    Assert.assertEquals(i1, r.getInt(offset));
+    offset += Bytes.SIZEOF_INT;
+    Assert.assertEquals(i2, r.getInt(offset));
+    offset += Bytes.SIZEOF_INT;
+    Assert.assertEquals(s1, r.getShort(offset));
+    offset += Bytes.SIZEOF_SHORT;
+    Assert.assertEquals(l1, r.getLong(offset));
+    offset += Bytes.SIZEOF_LONG;
+    Assert.assertEquals(l1, r.getVLong(offset));
+    offset += SimpleByteRange.getVLongSize(l1);
+    Assert.assertEquals(l2, r.getVLong(offset));
+    offset += SimpleByteRange.getVLongSize(l2);
+    Assert.assertEquals(Long.MAX_VALUE, r.getVLong(offset));
+    offset += SimpleByteRange.getVLongSize(Long.MAX_VALUE);
+    Assert.assertEquals(Long.MIN_VALUE, r.getVLong(offset));
+  }
 }

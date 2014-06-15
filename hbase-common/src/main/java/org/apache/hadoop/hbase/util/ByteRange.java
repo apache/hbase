@@ -145,6 +145,34 @@ public interface ByteRange extends Comparable<ByteRange> {
   public byte get(int index);
 
   /**
+   * Retrieve the short value at {@code index}
+   * @param index zero-based index into this range
+   * @return the short value at {@code index}
+   */
+  public short getShort(int index);
+
+  /**
+   * Retrieve the int value at {@code index}
+   * @param index zero-based index into this range
+   * @return the int value at {@code index}
+   */
+  public int getInt(int index);
+
+  /**
+   * Retrieve the long value at {@code index}
+   * @param index zero-based index into this range
+   * @return the long value at {@code index}
+   */
+  public long getLong(int index);
+
+  /**
+   * Retrieve the long value at {@code index} which is stored as VLong
+   * @param index zero-based index into this range
+   * @return the long value at {@code index} which is stored as VLong
+   */
+  public long getVLong(int index);
+
+  /**
    * Fill {@code dst} with bytes from the range, starting from {@code index}.
    * @param index zero-based index into this range.
    * @param dst the destination of the copy.
@@ -170,6 +198,38 @@ public interface ByteRange extends Comparable<ByteRange> {
    * @return this.
    */
   public ByteRange put(int index, byte val);
+
+  /**
+   * Store the short value at {@code index}
+   * @param index the index in the range where {@code val} is stored
+   * @param val the value to store
+   * @return this
+   */
+  public ByteRange putShort(int index, short val);
+
+  /**
+   * Store the int value at {@code index}
+   * @param index the index in the range where {@code val} is stored
+   * @param val the value to store
+   * @return this
+   */
+  public ByteRange putInt(int index, int val);
+
+  /**
+   * Store the long value at {@code index}
+   * @param index the index in the range where {@code val} is stored
+   * @param val the value to store
+   * @return this
+   */
+  public ByteRange putLong(int index, long val);
+
+  /**
+   * Store the long value at {@code index} as a VLong
+   * @param index the index in the range where {@code val} is stored
+   * @param val the value to store
+   * @return number of bytes written
+   */
+  public int putVLong(int index, long val);
 
   /**
    * Store {@code val} at {@code index}.

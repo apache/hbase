@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -157,6 +158,34 @@ public class SimplePositionedByteRange extends SimpleByteRange implements Positi
   public byte get() { return get(position++); }
 
   @Override
+  public short getShort() {
+    short s = getShort(position);
+    position += Bytes.SIZEOF_SHORT;
+    return s;
+  }
+
+  @Override
+  public int getInt() {
+    int i = getInt(position);
+    position += Bytes.SIZEOF_INT;
+    return i;
+  }
+
+  @Override
+  public long getLong() {
+    long l = getLong(position);
+    position += Bytes.SIZEOF_LONG;
+    return l;
+  }
+
+  @Override
+  public long getVLong() {
+    long p = getVLong(position);
+    position += getVLongSize(p);
+    return p;
+  }
+
+  @Override
   public PositionedByteRange get(byte[] dst) {
     if (0 == dst.length) return this;
     return this.get(dst, 0, dst.length); // be clear we're calling self, not super
@@ -174,6 +203,34 @@ public class SimplePositionedByteRange extends SimpleByteRange implements Positi
   public PositionedByteRange put(byte val) {
     put(position++, val);
     return this;
+  }
+
+  @Override
+  public PositionedByteRange putShort(short val) {
+    putShort(position, val);
+    position += Bytes.SIZEOF_SHORT;
+    return this;
+  }
+
+  @Override
+  public PositionedByteRange putInt(int val) {
+    putInt(position, val);
+    position += Bytes.SIZEOF_INT;
+    return this;
+  }
+
+  @Override
+  public PositionedByteRange putLong(long val) {
+    putLong(position, val);
+    position += Bytes.SIZEOF_LONG;
+    return this;
+  }
+
+  @Override
+  public int putVLong(long val) {
+    int len = putVLong(position, val);
+    position += len;
+    return len;
   }
 
   @Override
@@ -227,6 +284,24 @@ public class SimplePositionedByteRange extends SimpleByteRange implements Positi
 
   @Override
   public PositionedByteRange put(int index, byte val) { super.put(index, val); return this; }
+
+  @Override
+  public PositionedByteRange putShort(int index, short val) {
+    super.putShort(index, val);
+    return this;
+  }
+
+  @Override
+  public PositionedByteRange putInt(int index, int val) {
+    super.putInt(index, val);
+    return this;
+  }
+
+  @Override
+  public PositionedByteRange putLong(int index, long val) {
+    super.putLong(index, val);
+    return this;
+  }
 
   @Override
   public PositionedByteRange put(int index, byte[] val) { super.put(index, val); return this; }

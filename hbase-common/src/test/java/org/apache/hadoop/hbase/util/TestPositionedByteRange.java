@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Assert;
 import org.junit.Test;
@@ -64,5 +66,56 @@ public class TestPositionedByteRange {
 
     // set position to the end of the range; this should not throw.
     r.setPosition(3);
+  }
+
+  @Test
+  public void testPutAndGetPrimitiveTypes() throws Exception {
+    PositionedByteRange pbr = new SimplePositionedByteRange(100);
+    int i1 = 18, i2 = 2;
+    short s1 = 0;
+    long l1 = 1234L;
+    pbr.putInt(i1);
+    pbr.putInt(i2);
+    pbr.putShort(s1);
+    pbr.putLong(l1);
+    pbr.putVLong(0);
+    pbr.putVLong(l1);
+    pbr.putVLong(Long.MAX_VALUE);
+    pbr.putVLong(Long.MIN_VALUE);
+    // rewind
+    pbr.setPosition(0);
+    Assert.assertEquals(i1, pbr.getInt());
+    Assert.assertEquals(i2, pbr.getInt());
+    Assert.assertEquals(s1, pbr.getShort());
+    Assert.assertEquals(l1, pbr.getLong());
+    Assert.assertEquals(0, pbr.getVLong());
+    Assert.assertEquals(l1, pbr.getVLong());
+    Assert.assertEquals(Long.MAX_VALUE, pbr.getVLong());
+    Assert.assertEquals(Long.MIN_VALUE, pbr.getVLong());
+  }
+
+  @Test
+  public void testPutGetAPIsCompareWithBBAPIs() throws Exception {
+    // confirm that the long/int/short writing is same as BBs
+    PositionedByteRange pbr = new SimplePositionedByteRange(100);
+    int i1 = -234, i2 = 2;
+    short s1 = 0;
+    long l1 = 1234L;
+    pbr.putInt(i1);
+    pbr.putShort(s1);
+    pbr.putInt(i2);
+    pbr.putLong(l1);
+    // rewind
+    pbr.setPosition(0);
+    Assert.assertEquals(i1, pbr.getInt());
+    Assert.assertEquals(s1, pbr.getShort());
+    Assert.assertEquals(i2, pbr.getInt());
+    Assert.assertEquals(l1, pbr.getLong());
+    // Read back using BB APIs
+    ByteBuffer bb = ByteBuffer.wrap(pbr.getBytes());
+    Assert.assertEquals(i1, bb.getInt());
+    Assert.assertEquals(s1, bb.getShort());
+    Assert.assertEquals(i2, bb.getInt());
+    Assert.assertEquals(l1, bb.getLong());
   }
 }

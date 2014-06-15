@@ -181,6 +181,63 @@ public class SimpleByteRange implements ByteRange {
   }
 
   @Override
+  public short getShort(int index) {
+    int offset = this.offset + index;
+    short n = 0;
+    n ^= bytes[offset] & 0xFF;
+    n <<= 8;
+    n ^= bytes[offset + 1] & 0xFF;
+    return n;
+  }
+
+  @Override
+  public int getInt(int index) {
+    int offset = this.offset + index;
+    int n = 0;
+    for (int i = offset; i < (offset + Bytes.SIZEOF_INT); i++) {
+      n <<= 8;
+      n ^= bytes[i] & 0xFF;
+    }
+    return n;
+  }
+
+  @Override
+  public long getLong(int index) {
+    int offset = this.offset + index;
+    long l = 0;
+    for (int i = offset; i < offset + Bytes.SIZEOF_LONG; i++) {
+      l <<= 8;
+      l ^= bytes[i] & 0xFF;
+    }
+    return l;
+  }
+
+  // Copied from com.google.protobuf.CodedInputStream
+  @Override
+  public long getVLong(int index) {
+    int shift = 0;
+    long result = 0;
+    while (shift < 64) {
+      final byte b = get(index++);
+      result |= (long) (b & 0x7F) << shift;
+      if ((b & 0x80) == 0) {
+        break;
+      }
+      shift += 7;
+    }
+    return result;
+  }
+
+  public static int getVLongSize(long val) {
+    int rPos = 0;
+    while ((val & ~0x7F) != 0) {
+      val >>>= 7;
+      rPos++;
+    }
+    return rPos + 1;
+  }
+
+  @Override
   public ByteRange get(int index, byte[] dst) {
     if (0 == dst.length) return this;
     return get(index, dst, 0, dst.length);
@@ -196,7 +253,63 @@ public class SimpleByteRange implements ByteRange {
   @Override
   public ByteRange put(int index, byte val) {
     bytes[offset + index] = val;
+    clearHashCache();
     return this;
+  }
+
+  @Override
+  public ByteRange putShort(int index, short val) {
+    // This writing is same as BB's putShort. When byte[] is wrapped in a BB and call putShort(),
+    // one can get the same result.
+    bytes[offset + index + 1] = (byte) val;
+    val >>= 8;
+    bytes[offset + index] = (byte) val;
+    clearHashCache();
+    return this;
+  }
+
+  @Override
+  public ByteRange putInt(int index, int val) {
+    // This writing is same as BB's putInt. When byte[] is wrapped in a BB and call getInt(), one
+    // can get the same result.
+    for (int i = Bytes.SIZEOF_INT - 1; i > 0; i--) {
+      bytes[offset + index + i] = (byte) val;
+      val >>>= 8;
+    }
+    bytes[offset + index] = (byte) val;
+    clearHashCache();
+    return this;
+  }
+
+  @Override
+  public ByteRange putLong(int index, long val) {
+    // This writing is same as BB's putLong. When byte[] is wrapped in a BB and call putLong(), one
+    // can get the same result.
+    for (int i = Bytes.SIZEOF_LONG - 1; i > 0; i--) {
+      bytes[offset + index + i] = (byte) val;
+      val >>>= 8;
+    }
+    bytes[offset + index] = (byte) val;
+    clearHashCache();
+    return this;
+  }
+
+  // Copied from com.google.protobuf.CodedOutputStream
+  @Override
+  public int putVLong(int index, long val) {
+    int rPos = 0;
+    while (true) {
+      if ((val & ~0x7F) == 0) {
+        bytes[offset + index + rPos] = (byte) val;
+        break;
+      } else {
+        bytes[offset + index + rPos] = (byte) ((val & 0x7F) | 0x80);
+        val >>>= 7;
+      }
+      rPos++;
+    }
+    clearHashCache();
+    return rPos + 1;
   }
 
   @Override
@@ -209,6 +322,7 @@ public class SimpleByteRange implements ByteRange {
   public ByteRange put(int index, byte[] val, int offset, int length) {
     if (0 == length) return this;
     System.arraycopy(val, offset, this.bytes, this.offset + index, length);
+    clearHashCache();
     return this;
   }
 
