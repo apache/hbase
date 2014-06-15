@@ -31,3 +31,7 @@ tr.task-monitor-IDLE td {
 tr.task-monitor-ABORTED td {
   background-color: #f66;
 }
+
+td.number {
+  text-align: right;
+}

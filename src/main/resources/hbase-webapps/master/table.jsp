@@ -13,6 +13,7 @@
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.FSUtils"
   import="org.apache.hadoop.util.StringUtils"
+  import="org.apache.commons.lang.StringEscapeUtils"
   import="java.util.Map"
   import="org.apache.hadoop.hbase.HConstants"%><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
@@ -153,11 +154,11 @@
         "http://" + hriEntry.getValue().getHostname().toString() + ":" + rsInfoPort + "/";
 %>
   <tr>
-    <td><%= Bytes.toStringBinary(hriEntry.getKey().getRegionName())%></td>
+    <td><%= StringEscapeUtils.escapeHtml(Bytes.toStringBinary(hriEntry.getKey().getRegionName())) %></td>
     <td><a href="<%= urlRegionServer %>"><%= hriEntry.getValue().getHostname().toString() + ":" + rsInfoPort %></a></td>
-    <td><%= Bytes.toStringBinary(hriEntry.getKey().getStartKey())%></td>
-    <td><%= Bytes.toStringBinary(hriEntry.getKey().getEndKey())%></td>
-    <td><%= StringUtils.byteDesc(regionSizes.get(hriEntry.getKey())) %></td>
+    <td><%= StringEscapeUtils.escapeHtml(Bytes.toStringBinary(hriEntry.getKey().getStartKey())) %></td>
+    <td><%= StringEscapeUtils.escapeHtml(Bytes.toStringBinary(hriEntry.getKey().getEndKey())) %></td>
+    <td class="number"><%= String.format("%,d", regionSizes.get(hriEntry.getKey())) %></td>
   </tr>
 <% } %>
  </table>
