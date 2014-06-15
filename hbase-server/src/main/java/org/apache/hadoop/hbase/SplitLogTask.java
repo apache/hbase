@@ -18,10 +18,13 @@
 package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
+import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -36,48 +39,58 @@ import com.google.protobuf.InvalidProtocolBufferException;
 public class SplitLogTask {
   private final ServerName originServer;
   private final ZooKeeperProtos.SplitLogTask.State state;
+  private final ZooKeeperProtos.SplitLogTask.RecoveryMode mode;
 
   public static class Unassigned extends SplitLogTask {
-    public Unassigned(final ServerName originServer) {
-      super(originServer, ZooKeeperProtos.SplitLogTask.State.UNASSIGNED);
+    public Unassigned(final ServerName originServer, final RecoveryMode mode) {
+      super(originServer, ZooKeeperProtos.SplitLogTask.State.UNASSIGNED, mode);
     }
   }
 
   public static class Owned extends SplitLogTask {
-    public Owned(final ServerName originServer) {
-      super(originServer, ZooKeeperProtos.SplitLogTask.State.OWNED);
+    public Owned(final ServerName originServer, final RecoveryMode mode) {
+      super(originServer, ZooKeeperProtos.SplitLogTask.State.OWNED, mode);
     }
   }
 
   public static class Resigned extends SplitLogTask {
-    public Resigned(final ServerName originServer) {
-      super(originServer, ZooKeeperProtos.SplitLogTask.State.RESIGNED);
+    public Resigned(final ServerName originServer, final RecoveryMode mode) {
+      super(originServer, ZooKeeperProtos.SplitLogTask.State.RESIGNED, mode);
     }
   }
 
   public static class Done extends SplitLogTask {
-    public Done(final ServerName originServer) {
-      super(originServer, ZooKeeperProtos.SplitLogTask.State.DONE);
+    public Done(final ServerName originServer, final RecoveryMode mode) {
+      super(originServer, ZooKeeperProtos.SplitLogTask.State.DONE, mode);
     }
   }
 
   public static class Err extends SplitLogTask {
-    public Err(final ServerName originServer) {
-      super(originServer, ZooKeeperProtos.SplitLogTask.State.ERR);
+    public Err(final ServerName originServer, final RecoveryMode mode) {
+      super(originServer, ZooKeeperProtos.SplitLogTask.State.ERR, mode);
     }
   }
 
   SplitLogTask(final ZooKeeperProtos.SplitLogTask slt) {
-    this(ProtobufUtil.toServerName(slt.getServerName()), slt.getState());
+    this.originServer = ProtobufUtil.toServerName(slt.getServerName());
+    this.state = slt.getState();
+    this.mode = (slt.hasMode()) ? slt.getMode() : 
+      ZooKeeperProtos.SplitLogTask.RecoveryMode.UNKNOWN;
   }
 
-  SplitLogTask(final ServerName originServer, final ZooKeeperProtos.SplitLogTask.State state) {
+  SplitLogTask(final ServerName originServer, final ZooKeeperProtos.SplitLogTask.State state,
+      final ZooKeeperProtos.SplitLogTask.RecoveryMode mode) {
     this.originServer = originServer;
     this.state = state;
+    this.mode = mode;
   }
 
   public ServerName getServerName() {
     return this.originServer;
+  }
+  
+  public ZooKeeperProtos.SplitLogTask.RecoveryMode getMode() {
+    return this.mode;
   }
 
   public boolean isUnassigned(final ServerName sn) {
@@ -167,7 +180,8 @@ public class SplitLogTask {
     // pbs just created.
     HBaseProtos.ServerName snpb = ProtobufUtil.toServerName(this.originServer);
     ZooKeeperProtos.SplitLogTask slts =
-      ZooKeeperProtos.SplitLogTask.newBuilder().setServerName(snpb).setState(this.state).build();
+      ZooKeeperProtos.SplitLogTask.newBuilder().setServerName(snpb).setState(this.state).
+      setMode(this.mode).build();
     return ProtobufUtil.prependPBMagic(slts.toByteArray());
   }
 }

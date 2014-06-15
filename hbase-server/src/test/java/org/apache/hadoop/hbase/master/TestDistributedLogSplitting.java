@@ -159,6 +159,7 @@ public class TestDistributedLogSplitting {
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
     conf.setFloat(HConstants.LOAD_BALANCER_SLOP_KEY, (float) 100.0); // no load balancing
     conf.setInt("hbase.regionserver.wal.max.splitters", 3);
+    conf.setInt("hfile.format.version", 3);
     TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.setDFSCluster(dfsCluster);
     TEST_UTIL.setZkCluster(zkCluster);
@@ -1169,7 +1170,6 @@ public class TestDistributedLogSplitting {
     LOG.info("testSameVersionUpdatesRecovery");
     conf.setLong("hbase.regionserver.hlog.blocksize", 15 * 1024);
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
-    conf.setInt("hfile.format.version", 3);
     startCluster(NUM_RS);
     final AtomicLong sequenceId = new AtomicLong(100);
     final int NUM_REGIONS_TO_CREATE = 40;
@@ -1261,7 +1261,6 @@ public class TestDistributedLogSplitting {
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 30 * 1024);
     conf.setInt("hbase.hstore.compactionThreshold", 3);
-    conf.setInt("hfile.format.version", 3);
     startCluster(NUM_RS);
     final AtomicLong sequenceId = new AtomicLong(100);
     final int NUM_REGIONS_TO_CREATE = 40;

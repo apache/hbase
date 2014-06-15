@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
@@ -122,14 +123,17 @@ public class MasterFileSystem {
     FSUtils.setFsDefault(conf, new Path(this.fs.getUri()));
     // make sure the fs has the same conf
     fs.setConf(conf);
-    this.distributedLogReplay = HLogSplitter.isDistributedLogReplay(this.conf);
     // setup the filesystem variable
     // set up the archived logs path
     this.oldLogDir = createInitialFileSystemLayout();
     HFileSystem.addLocationsOrderInterceptor(conf);
-    this.splitLogManager = new SplitLogManager(master.getZooKeeper(),
-      master.getConfiguration(), master, services,
-      master.getServerName(), masterRecovery);
+    try {
+      this.splitLogManager = new SplitLogManager(master.getZooKeeper(), master.getConfiguration(),
+          master, services, master.getServerName());
+    } catch (KeeperException e) {
+      throw new IOException(e);
+    }
+    this.distributedLogReplay = (this.splitLogManager.getRecoveryMode() == RecoveryMode.LOG_REPLAY);
   }
 
   /**
@@ -681,5 +685,23 @@ public class MasterFileSystem {
       }
     }
     return null;
+  }
+
+  /**
+   * The function is used in SSH to set recovery mode based on configuration after all outstanding
+   * log split tasks drained.
+   * @throws KeeperException
+   * @throws InterruptedIOException
+   */
+  public void setLogRecoveryMode() throws IOException {
+    try {
+      this.splitLogManager.setRecoveryMode(false);
+    } catch (KeeperException e) {
+      throw new IOException(e);
+    }
+  }
+
+  public RecoveryMode getLogRecoveryMode() {
+    return this.splitLogManager.getRecoveryMode();
   }
 }

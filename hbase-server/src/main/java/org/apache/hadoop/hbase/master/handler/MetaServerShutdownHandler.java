@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
 
@@ -62,10 +63,13 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
     boolean gotException = true; 
     try {
       AssignmentManager am = this.services.getAssignmentManager();
+      this.services.getMasterFileSystem().setLogRecoveryMode();
+      boolean distributedLogReplay = 
+        (this.services.getMasterFileSystem().getLogRecoveryMode() == RecoveryMode.LOG_REPLAY);
       try {
         if (this.shouldSplitHlog) {
           LOG.info("Splitting hbase:meta logs for " + serverName);
-          if (this.distributedLogReplay) {
+          if (distributedLogReplay) {
             Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
             regions.add(HRegionInfo.FIRST_META_REGIONINFO);
             this.services.getMasterFileSystem().prepareLogReplay(serverName, regions);
@@ -97,7 +101,7 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
       }
 
       try {
-        if (this.shouldSplitHlog && this.distributedLogReplay) {
+        if (this.shouldSplitHlog && distributedLogReplay) {
           if (!am.waitOnRegionToClearRegionsInTransition(HRegionInfo.FIRST_META_REGIONINFO,
             regionAssignmentWaitTimeout)) {
             // Wait here is to avoid log replay hits current dead server and incur a RPC timeout

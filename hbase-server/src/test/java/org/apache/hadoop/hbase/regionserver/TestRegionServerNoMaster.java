@@ -108,7 +108,8 @@ public class TestRegionServerNoMaster {
     // We reopen. We need a ZK node here, as a open is always triggered by a master.
     ZKAssign.createNodeOffline(HTU.getZooKeeperWatcher(), hri, getRS().getServerName());
     // first version is '0'
-    AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(getRS().getServerName(), hri, 0, null);
+    AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(
+      getRS().getServerName(), hri, 0, null, null);
     AdminProtos.OpenRegionResponse responseOpen = getRS().openRegion(null, orr);
     Assert.assertTrue(responseOpen.getOpeningStateCount() == 1);
     Assert.assertTrue(responseOpen.getOpeningState(0).
@@ -227,7 +228,8 @@ public class TestRegionServerNoMaster {
 
     // We're sending multiple requests in a row. The region server must handle this nicely.
     for (int i = 0; i < 10; i++) {
-      AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(getRS().getServerName(), hri, 0, null);
+      AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(
+        getRS().getServerName(), hri, 0, null, null);
       AdminProtos.OpenRegionResponse responseOpen = getRS().openRegion(null, orr);
       Assert.assertTrue(responseOpen.getOpeningStateCount() == 1);
 
@@ -248,7 +250,8 @@ public class TestRegionServerNoMaster {
     try {
       // fake region to be closing now, need to clear state afterwards
       getRS().regionsInTransitionInRS.put(hri.getEncodedNameAsBytes(), Boolean.FALSE);
-      AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(getRS().getServerName(), hri, 0, null);
+      AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(
+        getRS().getServerName(), hri, 0, null, null);
       getRS().openRegion(null, orr);
       Assert.fail("The closing region should not be opened");
     } catch (ServiceException se) {
@@ -403,7 +406,8 @@ public class TestRegionServerNoMaster {
     //actual close
     closeNoZK();
     try {
-      AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(earlierServerName, hri, 0, null);
+      AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(
+        earlierServerName, hri, 0, null, null);
       getRS().openRegion(null, orr);
       Assert.fail("The openRegion should have been rejected");
     } catch (ServiceException se) {

@@ -89,6 +89,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Mut
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.StoreSequenceId;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.LastSequenceId;
@@ -167,7 +168,7 @@ public class HLogSplitter {
   private final int minBatchSize;
 
   HLogSplitter(Configuration conf, Path rootDir,
-      FileSystem fs, LastSequenceId idChecker, ZooKeeperWatcher zkw) {
+      FileSystem fs, LastSequenceId idChecker, ZooKeeperWatcher zkw, RecoveryMode mode) {
     this.conf = HBaseConfiguration.create(conf);
     String codecClassName = conf
         .get(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
@@ -184,7 +185,7 @@ public class HLogSplitter {
     // a larger minBatchSize may slow down recovery because replay writer has to wait for
     // enough edits before replaying them
     this.minBatchSize = this.conf.getInt("hbase.regionserver.wal.logreplay.batch.size", 64);
-    this.distributedLogReplay = HLogSplitter.isDistributedLogReplay(this.conf);
+    this.distributedLogReplay = (RecoveryMode.LOG_REPLAY == mode);
 
     this.numWriterThreads = this.conf.getInt("hbase.regionserver.hlog.splitlog.writer.threads", 3);
     if (zkw != null && this.distributedLogReplay) {
@@ -218,8 +219,8 @@ public class HLogSplitter {
    */
   public static boolean splitLogFile(Path rootDir, FileStatus logfile, FileSystem fs,
       Configuration conf, CancelableProgressable reporter, LastSequenceId idChecker,
-      ZooKeeperWatcher zkw) throws IOException {
-    HLogSplitter s = new HLogSplitter(conf, rootDir, fs, idChecker, zkw);
+      ZooKeeperWatcher zkw, RecoveryMode mode) throws IOException {
+    HLogSplitter s = new HLogSplitter(conf, rootDir, fs, idChecker, zkw, mode);
     return s.splitLogFile(logfile, reporter);
   }
 
@@ -233,7 +234,8 @@ public class HLogSplitter {
     List<Path> splits = new ArrayList<Path>();
     if (logfiles != null && logfiles.length > 0) {
       for (FileStatus logfile: logfiles) {
-        HLogSplitter s = new HLogSplitter(conf, rootDir, fs, null, null);
+        HLogSplitter s = new HLogSplitter(conf, rootDir, fs, null, null, 
+          RecoveryMode.LOG_SPLITTING);
         if (s.splitLogFile(logfile, null)) {
           finishSplitLogFile(rootDir, oldLogDir, logfile.getPath(), conf);
           if (s.outputSink.splits != null) {
@@ -1971,15 +1973,5 @@ public class HLogSplitter {
     }
 
     return mutations;
-  }
-
-  /**
-   * Returns if distributed log replay is turned on or not
-   * @param conf
-   * @return true when distributed log replay is turned on
-   */
-  public static boolean isDistributedLogReplay(Configuration conf) {
-    return conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
-      HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
   }
 }

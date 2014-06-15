@@ -3230,6 +3230,16 @@ public final class ZooKeeperProtos {
      * <code>required .ServerName server_name = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder();
+
+    // optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];
+    /**
+     * <code>optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
+     */
+    boolean hasMode();
+    /**
+     * <code>optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode getMode();
   }
   /**
    * Protobuf type {@code SplitLogTask}
@@ -3310,6 +3320,17 @@ public final class ZooKeeperProtos {
                 serverName_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00000002;
+              break;
+            }
+            case 24: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode value = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(3, rawValue);
+              } else {
+                bitField0_ |= 0x00000004;
+                mode_ = value;
+              }
               break;
             }
           }
@@ -3460,6 +3481,97 @@ public final class ZooKeeperProtos {
       // @@protoc_insertion_point(enum_scope:SplitLogTask.State)
     }
 
+    /**
+     * Protobuf enum {@code SplitLogTask.RecoveryMode}
+     */
+    public enum RecoveryMode
+        implements com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>UNKNOWN = 0;</code>
+       */
+      UNKNOWN(0, 0),
+      /**
+       * <code>LOG_SPLITTING = 1;</code>
+       */
+      LOG_SPLITTING(1, 1),
+      /**
+       * <code>LOG_REPLAY = 2;</code>
+       */
+      LOG_REPLAY(2, 2),
+      ;
+
+      /**
+       * <code>UNKNOWN = 0;</code>
+       */
+      public static final int UNKNOWN_VALUE = 0;
+      /**
+       * <code>LOG_SPLITTING = 1;</code>
+       */
+      public static final int LOG_SPLITTING_VALUE = 1;
+      /**
+       * <code>LOG_REPLAY = 2;</code>
+       */
+      public static final int LOG_REPLAY_VALUE = 2;
+
+
+      public final int getNumber() { return value; }
+
+      public static RecoveryMode valueOf(int value) {
+        switch (value) {
+          case 0: return UNKNOWN;
+          case 1: return LOG_SPLITTING;
+          case 2: return LOG_REPLAY;
+          default: return null;
+        }
+      }
+
+      public static com.google.protobuf.Internal.EnumLiteMap<RecoveryMode>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static com.google.protobuf.Internal.EnumLiteMap<RecoveryMode>
+          internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<RecoveryMode>() {
+              public RecoveryMode findValueByNumber(int number) {
+                return RecoveryMode.valueOf(number);
+              }
+            };
+
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(index);
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.getDescriptor().getEnumTypes().get(1);
+      }
+
+      private static final RecoveryMode[] VALUES = values();
+
+      public static RecoveryMode valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+
+      private final int index;
+      private final int value;
+
+      private RecoveryMode(int index, int value) {
+        this.index = index;
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:SplitLogTask.RecoveryMode)
+    }
+
     private int bitField0_;
     // required .SplitLogTask.State state = 1;
     public static final int STATE_FIELD_NUMBER = 1;
@@ -3499,9 +3611,26 @@ public final class ZooKeeperProtos {
       return serverName_;
     }
 
+    // optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];
+    public static final int MODE_FIELD_NUMBER = 3;
+    private org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode mode_;
+    /**
+     * <code>optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
+     */
+    public boolean hasMode() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode getMode() {
+      return mode_;
+    }
+
     private void initFields() {
       state_ = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.State.UNASSIGNED;
       serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+      mode_ = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode.UNKNOWN;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -3533,6 +3662,9 @@ public final class ZooKeeperProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeMessage(2, serverName_);
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeEnum(3, mode_.getNumber());
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -3549,6 +3681,10 @@ public final class ZooKeeperProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(2, serverName_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(3, mode_.getNumber());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -3583,6 +3719,11 @@ public final class ZooKeeperProtos {
         result = result && getServerName()
             .equals(other.getServerName());
       }
+      result = result && (hasMode() == other.hasMode());
+      if (hasMode()) {
+        result = result &&
+            (getMode() == other.getMode());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -3603,6 +3744,10 @@ public final class ZooKeeperProtos {
       if (hasServerName()) {
         hash = (37 * hash) + SERVER_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getServerName().hashCode();
+      }
+      if (hasMode()) {
+        hash = (37 * hash) + MODE_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnum(getMode());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -3728,6 +3873,8 @@ public final class ZooKeeperProtos {
           serverNameBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000002);
+        mode_ = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode.UNKNOWN;
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
 
@@ -3768,6 +3915,10 @@ public final class ZooKeeperProtos {
         } else {
           result.serverName_ = serverNameBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.mode_ = mode_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -3789,6 +3940,9 @@ public final class ZooKeeperProtos {
         }
         if (other.hasServerName()) {
           mergeServerName(other.getServerName());
+        }
+        if (other.hasMode()) {
+          setMode(other.getMode());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -3980,6 +4134,42 @@ public final class ZooKeeperProtos {
           serverName_ = null;
         }
         return serverNameBuilder_;
+      }
+
+      // optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];
+      private org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode mode_ = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode.UNKNOWN;
+      /**
+       * <code>optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
+       */
+      public boolean hasMode() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode getMode() {
+        return mode_;
+      }
+      /**
+       * <code>optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
+       */
+      public Builder setMode(org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        bitField0_ |= 0x00000004;
+        mode_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
+       */
+      public Builder clearMode() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        mode_ = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode.UNKNOWN;
+        onChanged();
+        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:SplitLogTask)
@@ -9399,29 +9589,32 @@ public final class ZooKeeperProtos {
       "gionTransition\022\027\n\017event_type_code\030\001 \002(\r\022" +
       "\023\n\013region_name\030\002 \002(\014\022\023\n\013create_time\030\003 \002(" +
       "\004\022 \n\013server_name\030\004 \002(\0132\013.ServerName\022\017\n\007p" +
-      "ayload\030\005 \001(\014\"\231\001\n\014SplitLogTask\022\"\n\005state\030\001" +
+      "ayload\030\005 \001(\014\"\214\002\n\014SplitLogTask\022\"\n\005state\030\001" +
       " \002(\0162\023.SplitLogTask.State\022 \n\013server_name",
-      "\030\002 \002(\0132\013.ServerName\"C\n\005State\022\016\n\nUNASSIGN" +
-      "ED\020\000\022\t\n\005OWNED\020\001\022\014\n\010RESIGNED\020\002\022\010\n\004DONE\020\003\022" +
-      "\007\n\003ERR\020\004\"n\n\005Table\022$\n\005state\030\001 \002(\0162\014.Table" +
-      ".State:\007ENABLED\"?\n\005State\022\013\n\007ENABLED\020\000\022\014\n" +
-      "\010DISABLED\020\001\022\r\n\tDISABLING\020\002\022\014\n\010ENABLING\020\003" +
-      "\"%\n\017ReplicationPeer\022\022\n\nclusterkey\030\001 \002(\t\"" +
-      "^\n\020ReplicationState\022&\n\005state\030\001 \002(\0162\027.Rep" +
-      "licationState.State\"\"\n\005State\022\013\n\007ENABLED\020" +
-      "\000\022\014\n\010DISABLED\020\001\"+\n\027ReplicationHLogPositi" +
-      "on\022\020\n\010position\030\001 \002(\003\"%\n\017ReplicationLock\022",
-      "\022\n\nlock_owner\030\001 \002(\t\"\230\001\n\tTableLock\022\036\n\ntab" +
-      "le_name\030\001 \001(\0132\n.TableName\022\037\n\nlock_owner\030" +
-      "\002 \001(\0132\013.ServerName\022\021\n\tthread_id\030\003 \001(\003\022\021\n" +
-      "\tis_shared\030\004 \001(\010\022\017\n\007purpose\030\005 \001(\t\022\023\n\013cre" +
-      "ate_time\030\006 \001(\003\";\n\017StoreSequenceId\022\023\n\013fam" +
-      "ily_name\030\001 \002(\014\022\023\n\013sequence_id\030\002 \002(\004\"g\n\026R" +
-      "egionStoreSequenceIds\022 \n\030last_flushed_se" +
-      "quence_id\030\001 \002(\004\022+\n\021store_sequence_id\030\002 \003" +
-      "(\0132\020.StoreSequenceIdBE\n*org.apache.hadoo" +
-      "p.hbase.protobuf.generatedB\017ZooKeeperPro",
-      "tosH\001\210\001\001\240\001\001"
+      "\030\002 \002(\0132\013.ServerName\0221\n\004mode\030\003 \001(\0162\032.Spli" +
+      "tLogTask.RecoveryMode:\007UNKNOWN\"C\n\005State\022" +
+      "\016\n\nUNASSIGNED\020\000\022\t\n\005OWNED\020\001\022\014\n\010RESIGNED\020\002" +
+      "\022\010\n\004DONE\020\003\022\007\n\003ERR\020\004\">\n\014RecoveryMode\022\013\n\007U" +
+      "NKNOWN\020\000\022\021\n\rLOG_SPLITTING\020\001\022\016\n\nLOG_REPLA" +
+      "Y\020\002\"n\n\005Table\022$\n\005state\030\001 \002(\0162\014.Table.Stat" +
+      "e:\007ENABLED\"?\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DISA" +
+      "BLED\020\001\022\r\n\tDISABLING\020\002\022\014\n\010ENABLING\020\003\"%\n\017R" +
+      "eplicationPeer\022\022\n\nclusterkey\030\001 \002(\t\"^\n\020Re" +
+      "plicationState\022&\n\005state\030\001 \002(\0162\027.Replicat",
+      "ionState.State\"\"\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010" +
+      "DISABLED\020\001\"+\n\027ReplicationHLogPosition\022\020\n" +
+      "\010position\030\001 \002(\003\"%\n\017ReplicationLock\022\022\n\nlo" +
+      "ck_owner\030\001 \002(\t\"\230\001\n\tTableLock\022\036\n\ntable_na" +
+      "me\030\001 \001(\0132\n.TableName\022\037\n\nlock_owner\030\002 \001(\013" +
+      "2\013.ServerName\022\021\n\tthread_id\030\003 \001(\003\022\021\n\tis_s" +
+      "hared\030\004 \001(\010\022\017\n\007purpose\030\005 \001(\t\022\023\n\013create_t" +
+      "ime\030\006 \001(\003\";\n\017StoreSequenceId\022\023\n\013family_n" +
+      "ame\030\001 \002(\014\022\023\n\013sequence_id\030\002 \002(\004\"g\n\026Region" +
+      "StoreSequenceIds\022 \n\030last_flushed_sequenc",
+      "e_id\030\001 \002(\004\022+\n\021store_sequence_id\030\002 \003(\0132\020." +
+      "StoreSequenceIdBE\n*org.apache.hadoop.hba" +
+      "se.protobuf.generatedB\017ZooKeeperProtosH\001" +
+      "\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -9457,7 +9650,7 @@ public final class ZooKeeperProtos {
           internal_static_SplitLogTask_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_SplitLogTask_descriptor,
-              new java.lang.String[] { "State", "ServerName", });
+              new java.lang.String[] { "State", "ServerName", "Mode", });
           internal_static_Table_descriptor =
             getDescriptor().getMessageTypes().get(5);
           internal_static_Table_fieldAccessorTable = new

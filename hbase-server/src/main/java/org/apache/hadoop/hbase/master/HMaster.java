@@ -111,15 +111,12 @@ import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.*;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
@@ -200,7 +197,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequ
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
@@ -209,6 +205,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -391,12 +388,6 @@ MasterServices, Server {
   /** The health check chore. */
   private HealthCheckChore healthCheckChore;
 
-  /**
-   * is in distributedLogReplay mode. When true, SplitLogWorker directly replays WAL edits to newly
-   * assigned region servers instead of creating recovered.edits files.
-   */
-  private final boolean distributedLogReplay;
-
   /** flag used in test cases in order to simulate RS failures during master initialization */
   private volatile boolean initializationBeforeMetaAssignment = false;
 
@@ -516,9 +507,6 @@ MasterServices, Server {
         Threads.setDaemonThreadRunning(clusterStatusPublisherChore.getThread());
       }
     }
-
-    distributedLogReplay = this.conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
-      HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
   }
 
   /**
@@ -1039,7 +1027,8 @@ MasterServices, Server {
 
     enableMeta(TableName.META_TABLE_NAME);
 
-    if (this.distributedLogReplay && (!previouslyFailedMetaRSs.isEmpty())) {
+    if ((RecoveryMode.LOG_REPLAY == this.getMasterFileSystem().getLogRecoveryMode())
+        && (!previouslyFailedMetaRSs.isEmpty())) {
       // replay WAL edits mode need new hbase:meta RS is assigned firstly
       status.setStatus("replaying log for Meta Region");
       this.fileSystemManager.splitMetaLog(previouslyFailedMetaRSs);
@@ -1063,7 +1052,7 @@ MasterServices, Server {
   }
 
   private void splitMetaLogBeforeAssignment(ServerName currentMetaServer) throws IOException {
-    if (this.distributedLogReplay) {
+    if (RecoveryMode.LOG_REPLAY == this.getMasterFileSystem().getLogRecoveryMode()) {
       // In log replay mode, we mark hbase:meta region as recovering in ZK
       Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
       regions.add(HRegionInfo.FIRST_META_REGIONINFO);

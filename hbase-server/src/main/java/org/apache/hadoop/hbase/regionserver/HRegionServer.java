@@ -495,9 +495,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
   private RegionServerProcedureManagerHost rspmHost;
 
-  // configuration setting on if replay WAL edits directly to another RS
-  private final boolean distributedLogReplay;
-
   // Table level lock manager for locking for region operations
   private TableLockManager tableLockManager;
 
@@ -630,7 +627,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // Put up the webui. Webui may come up on port other than configured if
     // that port is occupied. Adjust serverInfo if this is the case.
     this.rsInfo.setInfoPort(putUpWebUI());
-    this.distributedLogReplay = HLogSplitter.isDistributedLogReplay(this.conf);
   }
 
   /**
@@ -764,9 +760,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         ServerName.valueOf(isa.getHostName(), isa.getPort(), startcode));
 
     // register watcher for recovering regions
-    if(this.distributedLogReplay) {
-      this.recoveringRegionWatcher = new RecoveringRegionWatcher(this.zooKeeper, this);
-    }
+    this.recoveringRegionWatcher = new RecoveringRegionWatcher(this.zooKeeper, this);
   }
 
   /**
@@ -3670,10 +3664,20 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
         if (previous == null) {
           // check if the region to be opened is marked in recovering state in ZK
-          if (this.distributedLogReplay
-              && SplitLogManager.isRegionMarkedRecoveringInZK(this.getZooKeeper(),
-            region.getEncodedName())) {
-            this.recoveringRegions.put(region.getEncodedName(), null);
+          if (SplitLogManager.isRegionMarkedRecoveringInZK(this.zooKeeper,
+                region.getEncodedName())) {
+            // check if current region open is for distributedLogReplay. This check is to support
+            // rolling restart/upgrade where we want to Master/RS see same configuration
+            if (!regionOpenInfo.hasOpenForDistributedLogReplay() 
+                  || regionOpenInfo.getOpenForDistributedLogReplay()) {
+              this.recoveringRegions.put(region.getEncodedName(), null);
+            } else {
+              // remove stale recovery region from ZK when we open region not for recovering which
+              // could happen when turn distributedLogReplay off from on.
+              List<String> tmpRegions = new ArrayList<String>();
+              tmpRegions.add(region.getEncodedName());
+              SplitLogManager.deleteRecoveringRegionZNodes(this.zooKeeper, tmpRegions);
+            }
           }
           // If there is no action in progress, we can submit a specific handler.
           // Need to pass the expected version in the constructor.

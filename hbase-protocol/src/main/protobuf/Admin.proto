@@ -75,6 +75,8 @@ message OpenRegionRequest {
     required RegionInfo region = 1;
     optional uint32 version_of_offline_node = 2;
     repeated ServerName favored_nodes = 3;
+    // open region for distributedLogReplay
+    optional bool openForDistributedLogReplay = 4;
   }
 }
 

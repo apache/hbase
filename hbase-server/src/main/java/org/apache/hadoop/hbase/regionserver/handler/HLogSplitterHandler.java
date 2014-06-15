@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.SplitLogTask;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.SplitLogManager;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor.Status;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -55,11 +56,12 @@ public class HLogSplitterHandler extends EventHandler {
   private final AtomicInteger inProgressTasks;
   private final MutableInt curTaskZKVersion;
   private final TaskExecutor splitTaskExecutor;
+  private final RecoveryMode mode;
 
   public HLogSplitterHandler(final Server server, String curTask,
       final MutableInt curTaskZKVersion,
       CancelableProgressable reporter,
-      AtomicInteger inProgressTasks, TaskExecutor splitTaskExecutor) {
+      AtomicInteger inProgressTasks, TaskExecutor splitTaskExecutor, RecoveryMode mode) {
 	  super(server, EventType.RS_LOG_REPLAY);
     this.curTask = curTask;
     this.wal = ZKSplitLog.getFileName(curTask);
@@ -70,16 +72,17 @@ public class HLogSplitterHandler extends EventHandler {
     this.zkw = server.getZooKeeper();
     this.curTaskZKVersion = curTaskZKVersion;
     this.splitTaskExecutor = splitTaskExecutor;
+    this.mode = mode;
   }
 
   @Override
   public void process() throws IOException {
     long startTime = System.currentTimeMillis();
     try {
-      Status status = this.splitTaskExecutor.exec(wal, reporter);
+      Status status = this.splitTaskExecutor.exec(wal, mode, reporter);
       switch (status) {
       case DONE:
-        endTask(zkw, new SplitLogTask.Done(this.serverName),
+        endTask(zkw, new SplitLogTask.Done(this.serverName, this.mode),
           SplitLogCounters.tot_wkr_task_done, curTask, curTaskZKVersion.intValue());
         break;
       case PREEMPTED:
@@ -88,7 +91,7 @@ public class HLogSplitterHandler extends EventHandler {
         break;
       case ERR:
         if (server != null && !server.isStopped()) {
-          endTask(zkw, new SplitLogTask.Err(this.serverName),
+          endTask(zkw, new SplitLogTask.Err(this.serverName, this.mode),
             SplitLogCounters.tot_wkr_task_err, curTask, curTaskZKVersion.intValue());
           break;
         }
@@ -99,7 +102,7 @@ public class HLogSplitterHandler extends EventHandler {
         if (server != null && server.isStopped()) {
           LOG.info("task execution interrupted because worker is exiting " + curTask);
         }
-        endTask(zkw, new SplitLogTask.Resigned(this.serverName),
+        endTask(zkw, new SplitLogTask.Resigned(this.serverName, this.mode),
           SplitLogCounters.tot_wkr_task_resigned, curTask, curTaskZKVersion.intValue());
         break;
       }
