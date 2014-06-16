@@ -418,7 +418,7 @@ public class TestSplitTransactionOnCluster {
       AssignmentManager.TEST_SKIP_SPLIT_HANDLING = true;
       // Now try splitting and it should work.
       split(hri, server, regionCount);
-        // Assert the ephemeral node is up in zk.
+
       String path = ZKAssign.getNodeName(TESTING_UTIL.getZooKeeperWatcher(),
         hri.getEncodedName());
       RegionTransition rt = null;
@@ -437,7 +437,7 @@ public class TestSplitTransactionOnCluster {
         }
         LOG.info("EPHEMERAL NODE BEFORE SERVER ABORT, path=" + path + ", stats=" + stats);
         assertTrue(rt != null && rt.getEventType().equals(EventType.RS_ZK_REGION_SPLIT));
-        // Now crash the server
+        // Now crash the server, for ZK-less assignment, the server is auto aborted
         cluster.abortRegionServer(tableRegionIndex);
       }
       waitUntilRegionServerDead();
@@ -1329,12 +1329,12 @@ public class TestSplitTransactionOnCluster {
   private void waitUntilRegionServerDead() throws InterruptedException, InterruptedIOException {
     // Wait until the master processes the RS shutdown
     for (int i=0; cluster.getMaster().getClusterStatus().
-        getServers().size() == NB_SERVERS && i<100; i++) {
+        getServers().size() > NB_SERVERS && i<100; i++) {
       LOG.info("Waiting on server to go down");
       Thread.sleep(100);
     }
     assertFalse("Waited too long for RS to die", cluster.getMaster().getClusterStatus().
-        getServers().size() == NB_SERVERS);
+        getServers().size() > NB_SERVERS);
   }
 
   private void awaitDaughters(byte[] tableName, int numDaughters) throws InterruptedException {

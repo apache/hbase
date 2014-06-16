@@ -458,10 +458,10 @@ public class AssignmentManager extends ZooKeeperListener {
     // need to be handled.
 
     // Scan hbase:meta to build list of existing regions, servers, and assignment
-    // Returns servers who have not checked in (assumed dead) and their regions
-    Map<ServerName, List<HRegionInfo>> deadServers;
+    // Returns servers who have not checked in (assumed dead) that some regions
+    // were assigned to (according to the meta)
+    Set<ServerName> deadServers = rebuildUserRegions();
 
-    deadServers = rebuildUserRegions();
     // This method will assign all user regions if a clean server startup or
     // it will reconstruct master state and cleanup any leftovers from
     // previous master process.
@@ -489,8 +489,8 @@ public class AssignmentManager extends ZooKeeperListener {
    * @throws InterruptedException
    */
   boolean processDeadServersAndRegionsInTransition(
-      final Map<ServerName, List<HRegionInfo>> deadServers)
-    throws KeeperException, IOException, InterruptedException, CoordinatedStateException {
+      final Set<ServerName> deadServers) throws KeeperException,
+        IOException, InterruptedException, CoordinatedStateException {
     List<String> nodes = ZKUtil.listChildrenNoWatch(watcher,
       watcher.assignmentZNode);
 
@@ -2702,13 +2702,12 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Rebuild the list of user regions and assignment information.
    * <p>
-   * Returns a map of servers that are not found to be online and the regions
-   * they were hosting.
-   * @return map of servers not online to their assigned regions, as stored
-   *         in META
+   * Returns a set of servers that are not found to be online that hosted
+   * some regions.
+   * @return set of servers not online that hosted some regions per meta
    * @throws IOException
    */
-  Map<ServerName, List<HRegionInfo>> rebuildUserRegions() throws
+  Set<ServerName> rebuildUserRegions() throws
       IOException, KeeperException, CoordinatedStateException {
     Set<TableName> disabledOrEnablingTables = tableStateManager.getTablesInStates(
       ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.ENABLING);
@@ -2722,16 +2721,16 @@ public class AssignmentManager extends ZooKeeperListener {
     List<Result> results = MetaReader.fullScan(this.catalogTracker);
     // Get any new but slow to checkin region server that joined the cluster
     Set<ServerName> onlineServers = serverManager.getOnlineServers().keySet();
-    // Map of offline servers and their regions to be returned
-    Map<ServerName, List<HRegionInfo>> offlineServers =
-      new TreeMap<ServerName, List<HRegionInfo>>();
+    // Set of offline servers to be returned
+    Set<ServerName> offlineServers = new HashSet<ServerName>();
     // Iterate regions in META
     for (Result result : results) {
       HRegionInfo regionInfo = HRegionInfo.getHRegionInfo(result);
       if (regionInfo == null) continue;
       State state = RegionStateStore.getRegionState(result);
+      ServerName lastHost = HRegionInfo.getServerName(result);
       ServerName regionLocation = RegionStateStore.getRegionServer(result);
-      regionStates.createRegionState(regionInfo, state, regionLocation);
+      regionStates.createRegionState(regionInfo, state, regionLocation, lastHost);
       if (!regionStates.isRegionInState(regionInfo, State.OPEN)) {
         // Region is not open (either offline or in transition), skip
         continue;
@@ -2739,13 +2738,10 @@ public class AssignmentManager extends ZooKeeperListener {
       TableName tableName = regionInfo.getTable();
       if (!onlineServers.contains(regionLocation)) {
         // Region is located on a server that isn't online
-        List<HRegionInfo> offlineRegions = offlineServers.get(regionLocation);
-        if (offlineRegions == null) {
-          offlineRegions = new ArrayList<HRegionInfo>(1);
-          offlineServers.put(regionLocation, offlineRegions);
+        offlineServers.add(regionLocation);
+        if (useZKForAssignment) {
+          regionStates.regionOffline(regionInfo);
         }
-        regionStates.regionOffline(regionInfo);
-        offlineRegions.add(regionInfo);
       } else if (!disabledOrEnablingTables.contains(tableName)) {
         // Region is being served and on an active server
         // add only if region not in disabled or enabling table
@@ -2838,13 +2834,9 @@ public class AssignmentManager extends ZooKeeperListener {
    * @throws KeeperException
    */
   private void processDeadServersAndRecoverLostRegions(
-      Map<ServerName, List<HRegionInfo>> deadServers)
-          throws IOException, KeeperException {
-    if (deadServers != null) {
-      for (Map.Entry<ServerName, List<HRegionInfo>> server: deadServers.entrySet()) {
-        ServerName serverName = server.getKey();
-        // We need to keep such info even if the server is known dead
-        regionStates.setLastRegionServerOfRegions(serverName, server.getValue());
+      Set<ServerName> deadServers) throws IOException, KeeperException {
+    if (deadServers != null && !deadServers.isEmpty()) {
+      for (ServerName serverName: deadServers) {
         if (!serverManager.isServerDead(serverName)) {
           serverManager.expireServer(serverName); // Let SSH do region re-assign
         }
@@ -3420,7 +3412,7 @@ public class AssignmentManager extends ZooKeeperListener {
       }
     } else if (code == TransitionCode.SPLIT_PONR) {
       try {
-        regionStateStore.splitRegion(p, a, b, sn);
+        regionStates.splitRegion(p, a, b, sn);
       } catch (IOException ioe) {
         LOG.info("Failed to record split region " + p.getShortNameToLog());
         return "Failed to record the splitting in meta";
@@ -3469,7 +3461,7 @@ public class AssignmentManager extends ZooKeeperListener {
       }
     } else if (code == TransitionCode.MERGE_PONR) {
       try {
-        regionStateStore.mergeRegions(p, a, b, sn);
+        regionStates.mergeRegions(p, a, b, sn);
       } catch (IOException ioe) {
         LOG.info("Failed to record merged region " + p.getShortNameToLog());
         return "Failed to record the merging in meta";

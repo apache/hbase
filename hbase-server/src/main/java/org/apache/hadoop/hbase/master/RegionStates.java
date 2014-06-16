@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -248,16 +249,22 @@ public class RegionStates {
    * no effect, and the original state is returned.
    */
   public RegionState createRegionState(final HRegionInfo hri) {
-    return createRegionState(hri, null, null);
+    return createRegionState(hri, null, null, null);
   }
 
   /**
    * Add a region to RegionStates with the specified state.
    * If the region is already in RegionStates, this call has
    * no effect, and the original state is returned.
+   *
+   * @param hri the region info to create a state for
+   * @param newState the state to the region in set to
+   * @param serverName the server the region is transitioning on
+   * @param lastHost the last server that hosts the region
+   * @return the current state
    */
-  public synchronized RegionState createRegionState(
-      final HRegionInfo hri, State newState, ServerName serverName) {
+  public synchronized RegionState createRegionState(final HRegionInfo hri,
+      State newState, ServerName serverName, ServerName lastHost) {
     if (newState == null || (newState == State.OPEN && serverName == null)) {
       newState =  State.OFFLINE;
     }
@@ -274,16 +281,24 @@ public class RegionStates {
       regionState = new RegionState(hri, newState, serverName);
       regionStates.put(encodedName, regionState);
       if (newState == State.OPEN) {
-        regionAssignments.put(hri, serverName);
-        lastAssignments.put(encodedName, serverName);
-        Set<HRegionInfo> regions = serverHoldings.get(serverName);
-        if (regions == null) {
-          regions = new HashSet<HRegionInfo>();
-          serverHoldings.put(serverName, regions);
+        if (!serverName.equals(lastHost)) {
+          LOG.warn("Open region's last host " + lastHost
+            + " should be the same as the current one " + serverName
+            + ", ignored the last and used the current one");
+          lastHost = serverName;
         }
-        regions.add(hri);
+        lastAssignments.put(encodedName, lastHost);
+        regionAssignments.put(hri, lastHost);
       } else if (!regionState.isUnassignable()) {
         regionsInTransition.put(encodedName, regionState);
+      }
+      if (lastHost != null && newState != State.SPLIT) {
+        Set<HRegionInfo> regions = serverHoldings.get(lastHost);
+        if (regions == null) {
+          regions = new HashSet<HRegionInfo>();
+          serverHoldings.put(lastHost, regions);
+        }
+        regions.add(hri);
       }
     }
     return regionState;
@@ -591,6 +606,31 @@ public class RegionStates {
   }
 
   /**
+   * Get a copy of all regions assigned to a server
+   */
+  public synchronized Set<HRegionInfo> getServerRegions(ServerName serverName) {
+    Set<HRegionInfo> regions = serverHoldings.get(serverName);
+    if (regions == null) return null;
+    return new HashSet<HRegionInfo>(regions);
+  }
+
+  /**
+   * Remove a region from all state maps.
+   */
+  @VisibleForTesting
+  public synchronized void deleteRegion(final HRegionInfo hri) {
+    String encodedName = hri.getEncodedName();
+    regionsInTransition.remove(encodedName);
+    regionStates.remove(encodedName);
+    lastAssignments.remove(encodedName);
+    ServerName sn = regionAssignments.remove(hri);
+    if (sn != null) {
+      Set<HRegionInfo> regions = serverHoldings.get(sn);
+      regions.remove(hri);
+    }
+  }
+
+  /**
    * Checking if a region was assigned to a server which is not online now.
    * If so, we should hold re-assign this region till SSH has split its hlogs.
    * Once logs are split, the last assignment of this region will be reset,
@@ -651,6 +691,38 @@ public class RegionStates {
     lastAssignments.put(encodedName, serverName);
   }
 
+  void splitRegion(HRegionInfo p,
+      HRegionInfo a, HRegionInfo b, ServerName sn) throws IOException {
+    regionStateStore.splitRegion(p, a, b, sn);
+    synchronized (this) {
+      // After PONR, split is considered to be done.
+      // Update server holdings to be aligned with the meta.
+      Set<HRegionInfo> regions = serverHoldings.get(sn);
+      if (regions == null) {
+        throw new IllegalStateException(sn + " should host some regions");
+      }
+      regions.remove(p);
+      regions.add(a);
+      regions.add(b);
+    }
+  }
+
+  void mergeRegions(HRegionInfo p,
+      HRegionInfo a, HRegionInfo b, ServerName sn) throws IOException {
+    regionStateStore.mergeRegions(p, a, b, sn);
+    synchronized (this) {
+      // After PONR, merge is considered to be done.
+      // Update server holdings to be aligned with the meta.
+      Set<HRegionInfo> regions = serverHoldings.get(sn);
+      if (regions == null) {
+        throw new IllegalStateException(sn + " should host some regions");
+      }
+      regions.remove(a);
+      regions.remove(b);
+      regions.add(p);
+    }
+  }
+
   /**
    * At cluster clean re/start, mark all user regions closed except those of tables
    * that are excluded, such as disabled/disabling/enabling tables. All user regions
@@ -661,8 +733,11 @@ public class RegionStates {
     Set<HRegionInfo> toBeClosed = new HashSet<HRegionInfo>(regionStates.size());
     for(RegionState state: regionStates.values()) {
       HRegionInfo hri = state.getRegion();
+      if (state.isSplit() || hri.isSplit()) {
+        continue;
+      }
       TableName tableName = hri.getTable();
-      if (!TableName.META_TABLE_NAME.equals(tableName) && !hri.isSplit()
+      if (!TableName.META_TABLE_NAME.equals(tableName)
           && (noExcludeTables || !excludedTables.contains(tableName))) {
         toBeClosed.add(hri);
       }
@@ -858,20 +933,5 @@ public class RegionStates {
       this.notifyAll();
     }
     return regionState;
-  }
-
-  /**
-   * Remove a region from all state maps.
-   */
-  private synchronized void deleteRegion(final HRegionInfo hri) {
-    String encodedName = hri.getEncodedName();
-    regionsInTransition.remove(encodedName);
-    regionStates.remove(encodedName);
-    lastAssignments.remove(encodedName);
-    ServerName sn = regionAssignments.remove(hri);
-    if (sn != null) {
-      Set<HRegionInfo> regions = serverHoldings.get(sn);
-      regions.remove(hri);
-    }
   }
 }

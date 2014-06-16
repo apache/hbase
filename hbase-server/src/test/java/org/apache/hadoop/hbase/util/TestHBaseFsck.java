@@ -1426,6 +1426,12 @@ public class TestHBaseFsck {
       meta.delete(new Delete(daughters.getSecond().getRegionName()));
       meta.flushCommits();
 
+      // Remove daughters from regionStates
+      RegionStates regionStates = TEST_UTIL.getMiniHBaseCluster().getMaster().
+        getAssignmentManager().getRegionStates();
+      regionStates.deleteRegion(daughters.getFirst());
+      regionStates.deleteRegion(daughters.getSecond());
+
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new ERROR_CODE[] {ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
           ERROR_CODE.NOT_IN_META_OR_DEPLOYED, ERROR_CODE.HOLE_IN_REGION_CHAIN}); //no LINGERING_SPLIT_PARENT

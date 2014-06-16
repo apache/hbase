@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
+import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 
@@ -162,8 +163,16 @@ public class ServerShutdownHandler extends EventHandler {
           this.server.getCatalogTracker().waitForMeta();
           // Skip getting user regions if the server is stopped.
           if (!this.server.isStopped()) {
-            hris = MetaReader.getServerUserRegions(this.server.getCatalogTracker(),
-              this.serverName).keySet();
+            if (ConfigUtil.useZKForAssignment(server.getConfiguration())) {
+              hris = MetaReader.getServerUserRegions(this.server.getCatalogTracker(),
+                this.serverName).keySet();
+            } else {
+              // Not using ZK for assignment, regionStates has everything we want
+              hris = am.getRegionStates().getServerRegions(serverName);
+              if (hris != null) {
+                hris.remove(HRegionInfo.FIRST_META_REGIONINFO);
+              }
+            }
           }
           break;
         } catch (InterruptedException e) {

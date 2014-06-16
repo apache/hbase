@@ -23,7 +23,6 @@ import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.NavigableMap;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -47,14 +46,11 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -338,30 +334,6 @@ public class MasterFileSystem {
       }
     }
     return logDirs;
-  }
-
-  /**
-   * Mark regions in recovering state when distributedLogReplay are set true
-   * @param serverNames Set of ServerNames to be replayed wals in order to recover changes contained
-   *          in them
-   * @throws IOException
-   */
-  public void prepareLogReplay(Set<ServerName> serverNames) throws IOException {
-    if (!this.distributedLogReplay) {
-      return;
-    }
-    // mark regions in recovering state
-    for (ServerName serverName : serverNames) {
-      NavigableMap<HRegionInfo, Result> regions = this.getServerUserRegions(serverName);
-      if (regions == null) {
-        continue;
-      }
-      try {
-        this.splitLogManager.markRegionsRecoveringInZK(serverName, regions.keySet());
-      } catch (KeeperException e) {
-        throw new IOException(e);
-      }
-    }
   }
 
   /**
@@ -673,19 +645,6 @@ public class MasterFileSystem {
     htd.addFamily(hcd);
     this.services.getTableDescriptors().add(htd);
     return htd;
-  }
-
-  private NavigableMap<HRegionInfo, Result> getServerUserRegions(ServerName serverName)
-      throws IOException {
-    if (!this.master.isStopped()) {
-      try {
-        this.master.getCatalogTracker().waitForMeta();
-        return MetaReader.getServerUserRegions(this.master.getCatalogTracker(), serverName);
-      } catch (InterruptedException e) {
-        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
-      }
-    }
-    return null;
   }
 
   /**
