@@ -1981,7 +1981,6 @@ public class HRegion implements HeapSize { // , Writable{
     checkReadOnly();
     checkResources();
     startRegionOperation(Operation.DELETE);
-    this.writeRequestsCount.increment();
     try {
       delete.getRow();
       // All edits for the given row (across all column families) must happen atomically.
@@ -2090,7 +2089,6 @@ public class HRegion implements HeapSize { // , Writable{
     // will be extremely rare; we'll deal with it when it happens.
     checkResources();
     startRegionOperation(Operation.PUT);
-    this.writeRequestsCount.increment();
     try {
       // All edits for the given row (across all column families) must happen atomically.
       doBatchMutate(put);
