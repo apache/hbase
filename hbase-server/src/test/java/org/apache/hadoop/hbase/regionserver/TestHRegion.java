@@ -4983,6 +4983,32 @@ public class TestHRegion {
     }
   }
 
+  @Test
+  public void testWriteRequestsCounter() throws IOException {
+    byte[] fam = Bytes.toBytes("info");
+    byte[][] families = { fam };
+    this.region = initHRegion(tableName, method, CONF, families);
+
+    Assert.assertEquals(0L, region.getWriteRequestsCount());
+
+    Put put = new Put(row);
+    put.add(fam, fam, fam);
+
+    Assert.assertEquals(0L, region.getWriteRequestsCount());
+    region.put(put);
+    Assert.assertEquals(1L, region.getWriteRequestsCount());
+    region.put(put);
+    Assert.assertEquals(2L, region.getWriteRequestsCount());
+    region.put(put);
+    Assert.assertEquals(3L, region.getWriteRequestsCount());
+
+    region.delete(new Delete(row));
+    Assert.assertEquals(4L, region.getWriteRequestsCount());
+
+    HRegion.closeHRegion(this.region);
+    this.region = null;
+  }
+
   private static HRegion initHRegion(byte[] tableName, String callingMethod,
       byte[]... families) throws IOException {
     return initHRegion(tableName, callingMethod, HBaseConfiguration.create(),
