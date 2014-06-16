@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.HServerInfo;
 import org.apache.hadoop.hbase.HServerLoad;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.TableServers;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
@@ -2756,7 +2757,8 @@ public class RegionManager {
 
   /** Recovers root region location from ZK. Should only be called on master startup. */
   void recoverRootRegionLocationFromZK() {
-    HServerInfo rootLocationInZK = zkWrapper.readRootRegionServerInfo();
+    HServerInfo rootLocationInZK = zkWrapper.readRootRegionServerInfo(
+      TableServers.getProtocolVersionFromConf(this.master.getConfiguration()));
     if (rootLocationInZK != null) {
       synchronized (rootRegionLocation) {
         rootRegionLocation.set(rootLocationInZK);

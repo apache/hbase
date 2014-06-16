@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniZooKeeperCluster;
+import org.apache.hadoop.hbase.ProtocolVersion;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.StopStatus;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -271,6 +272,8 @@ public class HMaster extends HasThread implements HMasterInterface,
    */
   public HMaster(Configuration conf) throws IOException {
     this.conf = conf;
+    this.conf.set(HConstants.CLIENT_TO_RS_PROTOCOL_VERSION,
+        ProtocolVersion.THRIFT.name());
 
     // Get my address. So what's the difference between the temp a and address?
     // address.toString() will always produce an IP address as the hostname.

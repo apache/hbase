@@ -1124,6 +1124,12 @@ public final class HConstants {
   public static final ProtocolVersion PROTOCOL_VERSION
     = PROTOCOL_VERSION_THRIFT;
 
+  public static final String CLIENT_TO_RS_PROTOCOL_VERSION =
+      "hbase.client.to.rs.protocol.version";
+
+  public static final String CLIENT_TO_RS_PROTOCOL_VERSION_DEFAULT =
+      PROTOCOL_VERSION_THRIFT.name();
+
   private HConstants() {
     // Can't be instantiated with this constructor.
   }

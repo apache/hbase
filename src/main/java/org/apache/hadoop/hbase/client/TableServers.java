@@ -244,9 +244,7 @@ public class TableServers implements ServerConnection {
     batchedUploadUpdatesMap = new ConcurrentHashMap<>();
   private int batchedUploadSoftFlushRetries;
   private long batchedUploadSoftFlushTimeoutMillis;
-  private final boolean useThrift;
-  // Zookeeper wrapper to query zookeeper for client bootstrap.
-  private static ZooKeeperWrapper staticZK = null;
+  private AtomicBoolean useThrift = null;
 
   private Map<StringBytes, StringBytes> initializedTableSet =
       new ConcurrentHashMap<>();
@@ -258,21 +256,6 @@ public class TableServers implements ServerConnection {
   public TableServers(Configuration conf) {
     this.conf = conf;
     params = HConnectionParams.getInstance(conf);
-    boolean useThrift = conf.getBoolean(HConstants.CLIENT_TO_RS_USE_THRIFT,
-      HConstants.CLIENT_TO_RS_USE_THRIFT_DEFAULT);
-    try {
-      if (staticZK == null) {
-        staticZK = getZooKeeperWrapper();
-      }
-      RootRegionLocation loc = staticZK.readWrappedRootRegionLocation();
-      if (loc != null) {
-        useThrift = loc.getProtocolVersion() ==
-          ProtocolVersion.THRIFT ? true : false;
-      }
-    } catch (Exception e) {
-      LOG.error("Falling back to config based protocol version detection", e);
-    }
-    this.useThrift = useThrift;
 
     String serverClassName =
       conf.get(HConstants.REGION_SERVER_CLASS,
@@ -1199,6 +1182,48 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
     metaCache.clear();
   }
 
+  public static ProtocolVersion getProtocolVersionFromConf(Configuration conf) {
+    String protocolVersion = conf.get(HConstants.CLIENT_TO_RS_PROTOCOL_VERSION);
+    if (protocolVersion == null) {
+      return null;
+    }
+    try {
+      return ProtocolVersion.valueOf(protocolVersion);
+    } catch(Exception e) {
+      return null;
+    }
+  }
+
+  public void lazilySetProtocolVersionFromConfigAndRoot() {
+    if (this.useThrift != null) return;
+    synchronized (this) {
+      if (this.useThrift != null) return;
+      useThrift = new AtomicBoolean();
+      ProtocolVersion protocolVersion = getProtocolVersionFromConf(this.conf);
+      if (protocolVersion != null) {
+        if (protocolVersion == ProtocolVersion.THRIFT) {
+          useThrift.set(true);
+        } else {
+          useThrift.set(false);
+        }
+      } else {
+        try {
+          ZooKeeperWrapper staticZK = getZooKeeperWrapper();
+          RootRegionLocation loc =
+              staticZK.readWrappedRootRegionLocation(protocolVersion);
+          if (loc != null) {
+            useThrift.set(loc.getProtocolVersion() ==
+              ProtocolVersion.THRIFT ? true : false);
+          }
+        } catch (Exception e) {
+          LOG.error("Falling back to config based protocol version detection", e);
+          this.useThrift.set(conf.getBoolean(HConstants.CLIENT_TO_RS_USE_THRIFT,
+              HConstants.CLIENT_TO_RS_USE_THRIFT_DEFAULT));
+        }
+      }
+    }
+  }
+
   @SuppressWarnings("resource")
   @Override
   public HRegionInterface getHRegionConnection(
@@ -1209,7 +1234,9 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
       getMaster();
     }
     HRegionInterface server = HRegionServer.getMainRS(regionServer);
-    if (server != null && !this.useThrift) {
+    lazilySetProtocolVersionFromConfigAndRoot();
+
+    if (server != null && !this.useThrift.get()) {
       return server;
     }
 
@@ -1222,7 +1249,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
       // establish an RPC for this RS
       // set hbase.ipc.client.connect.max.retries to retry connection
       // attempts
-      if (this.useThrift) {
+      if (this.useThrift.get()) {
         Class<? extends ThriftClientInterface> serverInterface =
             ThriftHRegionInterface.Async.class;
         if (thriftPortWrittenToMeta) {
@@ -1310,7 +1337,8 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
           && localTimeouts < params.getNumRetries()) {
         // Don't read root region until we're out of safe mode so we know
         // that the meta regions have been assigned.
-        rootRegionAddress = zk.readRootRegionLocation();
+        rootRegionAddress = zk.readRootRegionLocation(
+            getProtocolVersionFromConf(conf));
         if (rootRegionAddress == null) {
           try {
             if (LOG.isDebugEnabled()) {

@@ -93,6 +93,7 @@ import org.apache.hadoop.hbase.Leases;
 import org.apache.hadoop.hbase.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ProtocolVersion;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.UnknownRowLockException;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -620,6 +621,9 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
       this.rpcServerInfo = new HServerInfo(new HServerAddress(
         new InetSocketAddress(address.getBindAddress(), port)),
         System.currentTimeMillis(), machineName);
+
+      this.conf.set(HConstants.CLIENT_TO_RS_PROTOCOL_VERSION,
+          ProtocolVersion.HADOOP_RPC.name());
     }
     if (useThrift) {
       int niftyServerPort =
@@ -643,6 +647,8 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
         port = niftyThriftServer.getPort();
       }
       isRpcServerRunning = true;
+      this.conf.set(HConstants.CLIENT_TO_RS_PROTOCOL_VERSION,
+          ProtocolVersion.THRIFT.name());
     }
 
     this.serverInfo = new HServerInfo(new HServerAddress(
@@ -890,7 +896,9 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
       for (int tries = 0; !stopRequestedAtStageOne.get() && isHealthy();) {
         // Try to get the root region location from the master.
         if (!haveRootRegion.get()) {
-          HServerAddress rootServer = zooKeeperWrapper.readRootRegionLocation();
+          HServerAddress rootServer =
+              zooKeeperWrapper.readRootRegionLocation(
+                  TableServers.getProtocolVersionFromConf(conf));
           if (rootServer != null) {
             // By setting the root region location, we bypass the wait imposed
             // on HTable for all regions being assigned.

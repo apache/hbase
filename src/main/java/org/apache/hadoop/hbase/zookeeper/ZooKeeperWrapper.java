@@ -53,7 +53,9 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HServerInfo;
+import org.apache.hadoop.hbase.ProtocolVersion;
 import org.apache.hadoop.hbase.RootRegionLocation;
+import org.apache.hadoop.hbase.client.TableServers;
 import org.apache.hadoop.hbase.executor.HBaseEventHandler.HBaseEventType;
 import org.apache.hadoop.hbase.executor.RegionTransitionEventData;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -183,6 +185,11 @@ public class ZooKeeperWrapper implements Watcher {
 
   private static SimpleDateFormat format = new SimpleDateFormat("yy/MM/dd HH:mm:ss");
 
+  /**
+   * Configuration object to get the protocol version from.
+   */
+  private final Configuration conf;
+
   private static String format(long date) {
     return format.format(new Date(date));
   }
@@ -259,6 +266,7 @@ public class ZooKeeperWrapper implements Watcher {
       Abortable abortable) throws IOException {
     this.instanceName = instanceName;
     Properties properties = HQuorumPeer.makeZKProps(conf);
+    this.conf = conf;
     quorumServers = HQuorumPeer.getZKQuorumServersString(properties);
     if (quorumServers == null) {
       throw new IOException("Could not read quorum servers from " +
@@ -394,7 +402,8 @@ public class ZooKeeperWrapper implements Watcher {
     sb.append("\nHBase tree in ZooKeeper is rooted at ").append(parentZNode);
     sb.append("\n  Cluster up? ").append(exists(clusterStateZNode, true));
     sb.append("\n  Master address: ").append(readMasterAddress(null));
-    sb.append("\n  Region server holding ROOT: ").append(readRootRegionLocation());
+    sb.append("\n  Region server holding ROOT: ").append(readRootRegionLocation(
+        TableServers.getProtocolVersionFromConf(conf)));
     sb.append("\n  Region servers:");
     for (HServerAddress address : scanRSDirectory()) {
       sb.append("\n    - ").append(address);
@@ -588,12 +597,13 @@ public class ZooKeeperWrapper implements Watcher {
    * @return HServerAddress pointing to server serving root region or null if
    *         there was a problem reading the ZNode.
    */
-  public HServerAddress readRootRegionLocation() {
-    RootRegionLocation loc = readWrappedRootRegionLocation();
+  public HServerAddress readRootRegionLocation(ProtocolVersion defaultProtocolVersion) {
+    RootRegionLocation loc = readWrappedRootRegionLocation(defaultProtocolVersion);
     return loc == null ? null : loc.getServerAddress();
   }
 
-  public RootRegionLocation readWrappedRootRegionLocation() {
+  public RootRegionLocation readWrappedRootRegionLocation(
+      ProtocolVersion defaultProtocolVersion) {
     RootRegionLocation loc = readRootRegionLocation(rootRegionZNodeFinal, null);
     if (loc != null) {
       return loc;
@@ -611,8 +621,10 @@ public class ZooKeeperWrapper implements Watcher {
   /**
    * @return the location of the server serving the root region, including the start code
    */
-  public HServerInfo readRootRegionServerInfo() {
-    RootRegionLocation loc = readWrappedRootRegionLocation();
+  public HServerInfo readRootRegionServerInfo(ProtocolVersion
+      defaultProtocolVersion) {
+    RootRegionLocation loc = readWrappedRootRegionLocation(
+        defaultProtocolVersion);
     if (loc == null) return null;
     return new HServerInfo(loc.getServerAddress(),
         loc.getStartCode(), loc.getHostName());
