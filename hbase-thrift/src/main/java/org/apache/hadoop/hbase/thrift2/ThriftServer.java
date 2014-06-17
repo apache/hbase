@@ -125,10 +125,10 @@ public class ThriftServer {
     }
   }
 
-  private static TTransportFactory getTTransportFactory(boolean framed) {
+  private static TTransportFactory getTTransportFactory(boolean framed, int frameSize) {
     if (framed) {
       log.debug("Using framed transport");
-      return new TFramedTransport.Factory();
+      return new TFramedTransport.Factory(frameSize);
     } else {
       return new TTransportFactory();
     }
@@ -274,7 +274,8 @@ public class ThriftServer {
 
     boolean framed = cmd.hasOption("framed") ||
         conf.getBoolean("hbase.regionserver.thrift.framed", false) || nonblocking || hsha;
-    TTransportFactory transportFactory = getTTransportFactory(framed);
+    TTransportFactory transportFactory = getTTransportFactory(framed,
+        conf.getInt("hbase.regionserver.thrift.framed.max_frame_size_in_mb", 2) * 1024 * 1024);
     InetSocketAddress inetSocketAddress = bindToPort(cmd.getOptionValue("bind"), listenPort);
     conf.setBoolean("hbase.regionserver.thrift.framed", framed);
 
