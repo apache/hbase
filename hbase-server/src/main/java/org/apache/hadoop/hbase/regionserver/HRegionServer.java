@@ -4628,4 +4628,11 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     respBuilder.setResponse(openInfoList.size());
     return respBuilder.build();
   }
+
+  /**
+   * @return The cache config instance used by the regionserver.
+   */
+  public CacheConfig getCacheConfig() {
+    return this.cacheConfig;
+  }
 }

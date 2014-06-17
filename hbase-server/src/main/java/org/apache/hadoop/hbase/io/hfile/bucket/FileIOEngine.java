@@ -36,8 +36,12 @@ public class FileIOEngine implements IOEngine {
   static final Log LOG = LogFactory.getLog(FileIOEngine.class);
 
   private FileChannel fileChannel = null;
+  private final String path;
+  private long size;
 
   public FileIOEngine(String filePath, long fileSize) throws IOException {
+    this.path = filePath;
+    this.size = fileSize;
     RandomAccessFile raf = null;
     try {
       raf = new RandomAccessFile(filePath, "rw");
@@ -54,6 +58,12 @@ public class FileIOEngine implements IOEngine {
       if (raf != null) raf.close();
       throw ioex;
     }
+  }
+
+  @Override
+  public String toString() {
+    return "ioengine=" + this.getClass().getSimpleName() + ", path=" + this.path +
+      ", size=" + String.format("%,d", this.size);
   }
 
   /**

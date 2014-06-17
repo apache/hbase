@@ -32,6 +32,8 @@ import org.apache.hadoop.hbase.util.ByteBufferArray;
 public class ByteBufferIOEngine implements IOEngine {
 
   private ByteBufferArray bufferArray;
+  private final long capacity;
+  private final boolean direct;
 
   /**
    * Construct the ByteBufferIOEngine with the given capacity
@@ -41,7 +43,15 @@ public class ByteBufferIOEngine implements IOEngine {
    */
   public ByteBufferIOEngine(long capacity, boolean direct)
       throws IOException {
+    this.capacity = capacity;
+    this.direct = direct;
     bufferArray = new ByteBufferArray(capacity, direct);
+  }
+
+  @Override
+  public String toString() {
+    return "ioengine=" + this.getClass().getSimpleName() + ", capacity=" +
+      String.format("%,d", this.capacity) + ", direct=" + this.direct;
   }
 
   /**

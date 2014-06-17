@@ -37,9 +37,9 @@ import org.apache.hadoop.hbase.io.HeapSize;
  * {@link Comparable}.
  */
 @InterfaceAudience.Private
-public class CachedBlockQueue implements HeapSize {
+public class LruCachedBlockQueue implements HeapSize {
 
-  private MinMaxPriorityQueue<CachedBlock> queue;
+  private MinMaxPriorityQueue<LruCachedBlock> queue;
 
   private long heapSize;
   private long maxSize;
@@ -48,7 +48,7 @@ public class CachedBlockQueue implements HeapSize {
    * @param maxSize the target size of elements in the queue
    * @param blockSize expected average size of blocks
    */
-  public CachedBlockQueue(long maxSize, long blockSize) {
+  public LruCachedBlockQueue(long maxSize, long blockSize) {
     int initialSize = (int)(maxSize / blockSize);
     if(initialSize == 0) initialSize++;
     queue = MinMaxPriorityQueue.expectedSize(initialSize).create();
@@ -64,12 +64,12 @@ public class CachedBlockQueue implements HeapSize {
    * added to the queue.  Otherwise, there is no side effect of this call.
    * @param cb block to try to add to the queue
    */
-  public void add(CachedBlock cb) {
+  public void add(LruCachedBlock cb) {
     if(heapSize < maxSize) {
       queue.add(cb);
       heapSize += cb.heapSize();
     } else {
-      CachedBlock head = queue.peek();
+      LruCachedBlock head = queue.peek();
       if(cb.compareTo(head) > 0) {
         heapSize += cb.heapSize();
         heapSize -= head.heapSize();
@@ -87,7 +87,7 @@ public class CachedBlockQueue implements HeapSize {
    * @return The next element in this queue, or {@code null} if the queue is
    * empty.
    */
-  public CachedBlock poll() {
+  public LruCachedBlock poll() {
     return queue.poll();
   }
 
@@ -95,7 +95,7 @@ public class CachedBlockQueue implements HeapSize {
    * @return The last element in this queue, or {@code null} if the queue is
    * empty.
    */
-  public CachedBlock pollLast() {
+  public LruCachedBlock pollLast() {
     return queue.pollLast();
   }
 

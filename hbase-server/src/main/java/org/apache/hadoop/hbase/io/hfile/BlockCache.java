@@ -18,18 +18,16 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.io.IOException;
-import java.util.List;
+import java.util.Iterator;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 
 /**
  * Block cache interface. Anything that implements the {@link Cacheable}
  * interface can be put in the cache.
  */
 @InterfaceAudience.Private
-public interface BlockCache {
+public interface BlockCache extends Iterable<CachedBlock> {
   /**
    * Add block to cache.
    * @param cacheKey The block's cache key.
@@ -101,28 +99,18 @@ public interface BlockCache {
   long getCurrentSize();
 
   /**
-   * Returns the number of blocks that have been evicted.
-   * @return number of evicted blocks
-   */
-  long getEvictedCount();
-
-  /**
    * Returns the number of blocks currently cached in the block cache.
    * @return number of blocks in the cache
    */
   long getBlockCount();
 
   /**
-   * Performs a BlockCache summary and returns a List of BlockCacheColumnFamilySummary objects.
-   * This method could be fairly heavyweight in that it evaluates the entire HBase file-system
-   * against what is in the RegionServer BlockCache.
-   * <br><br>
-   * The contract of this interface is to return the List in sorted order by Table name, then
-   * ColumnFamily.
-   *
-   * @param conf HBaseConfiguration
-   * @return List of BlockCacheColumnFamilySummary
-   * @throws IOException exception
+   * @return Iterator over the blocks in the cache.
    */
-  List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries(Configuration conf) throws IOException;
+  Iterator<CachedBlock> iterator();
+
+  /**
+   * @return The list of sub blockcaches that make up this one; returns null if no sub caches.
+   */
+  BlockCache [] getBlockCaches();
 }

@@ -31,6 +31,7 @@ import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -48,15 +49,17 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.BlockPriority;
+import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
+import org.apache.hadoop.hbase.io.hfile.CachedBlock;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheUtil;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -254,7 +257,15 @@ public class BucketCache implements BlockCache, HeapSize {
     // Run the statistics thread periodically to print the cache statistics log
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this),
         statThreadPeriod, statThreadPeriod, TimeUnit.SECONDS);
-    LOG.info("Started bucket cache");
+    LOG.info("Started bucket cache; ioengine=" + ioEngineName +
+        ", capacity=" + StringUtils.byteDesc(capacity) +
+      ", blockSize=" + StringUtils.byteDesc(blockSize) + ", writerThreadNum=" +
+        writerThreadNum + ", writerQLen=" + writerQLen + ", persistencePath=" +
+      persistencePath + ", bucketAllocator=" + this.bucketAllocator);
+  }
+
+  public String getIoEngine() {
+    return ioEngine.toString();
   }
 
   /**
@@ -375,8 +386,9 @@ public class BucketCache implements BlockCache, HeapSize {
           if (lenRead != len) {
             throw new RuntimeException("Only " + lenRead + " bytes read, " + len + " expected");
           }
-          Cacheable cachedBlock = bucketEntry.deserializerReference(
-              deserialiserMap).deserialize(bb, true);
+          CacheableDeserializer<Cacheable> deserializer =
+            bucketEntry.deserializerReference(this.deserialiserMap);
+          Cacheable cachedBlock = deserializer.deserialize(bb, true);
           long timeTaken = System.nanoTime() - start;
           if (updateCacheMetrics) {
             cacheStats.hit(caching);
@@ -898,7 +910,7 @@ public class BucketCache implements BlockCache, HeapSize {
     return cacheStats;
   }
 
-  BucketAllocator getAllocator() {
+  public BucketAllocator getAllocator() {
     return this.bucketAllocator;
   }
 
@@ -927,11 +939,6 @@ public class BucketCache implements BlockCache, HeapSize {
     return this.bucketAllocator.getUsedSize();
   }
 
-  @Override
-  public long getEvictedCount() {
-    return cacheStats.getEvictedCount();
-  }
-
   /**
    * Evicts all blocks for a specific HFile.
    * <p>
@@ -958,28 +965,6 @@ public class BucketCache implements BlockCache, HeapSize {
     return numEvicted;
   }
 
-
-  @Override
-  public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries(
-      Configuration conf) {
-    throw new UnsupportedOperationException();
-  }
-
-  static enum BlockPriority {
-    /**
-     * Accessed a single time (used for scan-resistance)
-     */
-    SINGLE,
-    /**
-     * Accessed multiple times
-     */
-    MULTI,
-    /**
-     * Block from in-memory store
-     */
-    MEMORY
-  };
-
   /**
    * Item in cache. We expect this to be where most memory goes. Java uses 8
    * bytes just for object headers; after this, we want to use as little as
@@ -996,6 +981,10 @@ public class BucketCache implements BlockCache, HeapSize {
     byte deserialiserIndex;
     private volatile long accessTime;
     private BlockPriority priority;
+    /**
+     * Time this block was cached.  Presumes we are created just before we are added to the cache.
+     */
+    private final long cachedTime = System.nanoTime();
 
     BucketEntry(long offset, int length, long accessTime, boolean inMemory) {
       setOffset(offset);
@@ -1061,6 +1050,10 @@ public class BucketCache implements BlockCache, HeapSize {
     @Override
     public boolean equals(Object that) {
       return this == that;
+    }
+
+    public long getCachedTime() {
+      return cachedTime;
     }
   }
 
@@ -1200,4 +1193,75 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
+  @Override
+  public Iterator<CachedBlock> iterator() {
+    // Don't bother with ramcache since stuff is in here only a little while.
+    final Iterator<Map.Entry<BlockCacheKey, BucketEntry>> i =
+        this.backingMap.entrySet().iterator();
+    return new Iterator<CachedBlock>() {
+      private final long now = System.nanoTime();
+
+      @Override
+      public boolean hasNext() {
+        return i.hasNext();
+      }
+
+      @Override
+      public CachedBlock next() {
+        final Map.Entry<BlockCacheKey, BucketEntry> e = i.next();
+        return new CachedBlock() {
+          @Override
+          public String toString() {
+            return BlockCacheUtil.toString(this, now);
+          }
+
+          @Override
+          public BlockPriority getBlockPriority() {
+            return e.getValue().getPriority();
+          }
+
+          @Override
+          public BlockType getBlockType() {
+            // Not held by BucketEntry.  Could add it if wanted on BucketEntry creation.
+            return null;
+          }
+
+          @Override
+          public long getOffset() {
+            return e.getKey().getOffset();
+          }
+
+          @Override
+          public long getSize() {
+            return e.getValue().getLength();
+          }
+
+          @Override
+          public long getCachedTime() {
+            return e.getValue().getCachedTime();
+          }
+
+          @Override
+          public String getFilename() {
+            return e.getKey().getHfileName();
+          }
+
+          @Override
+          public int compareTo(CachedBlock other) {
+            return (int)(this.getOffset() - other.getOffset());
+          }
+        };
+      }
+
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+    };
+  }
+
+  @Override
+  public BlockCache[] getBlockCaches() {
+    return null;
+  }
 }

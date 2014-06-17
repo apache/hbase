@@ -34,6 +34,12 @@ public class BucketCacheStats extends CacheStats {
   private final static int nanoTime = 1000000;
   private long lastLogTime = EnvironmentEdgeManager.currentTimeMillis();
 
+  @Override
+  public String toString() {
+    return super.toString() + ", ioHitsPerSecond=" + getIOHitsPerSecond() +
+      ", ioTimePerHit=" + getIOTimePerHit();
+  }
+
   public void ioHit(long time) {
     ioHitCount.incrementAndGet();
     ioHitTime.addAndGet(time);
@@ -43,7 +49,7 @@ public class BucketCacheStats extends CacheStats {
     long now = EnvironmentEdgeManager.currentTimeMillis();
     long took = (now - lastLogTime) / 1000;
     lastLogTime = now;
-    return ioHitCount.get() / took;
+    return took == 0? 0: ioHitCount.get() / took;
   }
 
   public double getIOTimePerHit() {

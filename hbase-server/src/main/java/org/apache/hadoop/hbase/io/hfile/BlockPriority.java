@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,14 +17,17 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-
-@InterfaceAudience.Private
-public interface CachedBlock extends Comparable<CachedBlock> {
-  BlockPriority getBlockPriority();
-  BlockType getBlockType();
-  long getOffset();
-  long getSize();
-  long getCachedTime();
-  String getFilename();
+public enum BlockPriority {
+  /**
+   * Accessed a single time (used for scan-resistance)
+   */
+  SINGLE,
+  /**
+   * Accessed multiple times
+   */
+  MULTI,
+  /**
+   * Block from in-memory store
+   */
+  MEMORY
 }

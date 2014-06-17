@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
-import org.apache.hadoop.hbase.io.hfile.CachedBlock;
+import org.apache.hadoop.hbase.io.hfile.LruCachedBlock;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -279,8 +279,8 @@ public class TestHeapSize  {
     // CachedBlock Fixed Overhead
     // We really need "deep" sizing but ClassSize does not do this.
     // Perhaps we should do all these more in this style....
-    cl = CachedBlock.class;
-    actual = CachedBlock.PER_BLOCK_OVERHEAD;
+    cl = LruCachedBlock.class;
+    actual = LruCachedBlock.PER_BLOCK_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
     expected += ClassSize.estimateBase(String.class, false);
     expected += ClassSize.estimateBase(ByteBuffer.class, false);

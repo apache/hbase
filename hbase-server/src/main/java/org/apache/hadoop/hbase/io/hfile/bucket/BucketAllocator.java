@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BucketEntry;
+import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
 /**
  * This class is used to allocate a block with specified size and free the block
@@ -42,10 +43,12 @@ import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BucketEntry;
  * This class is not thread safe.
  */
 @InterfaceAudience.Private
+@JsonIgnoreProperties({"indexStatistics", "freeSize", "usedSize"})
 public final class BucketAllocator {
   static final Log LOG = LogFactory.getLog(BucketAllocator.class);
 
-  final private static class Bucket {
+  @JsonIgnoreProperties({"completelyFree", "uninstantiated"})
+  public final static class Bucket {
     private long baseOffset;
     private int itemAllocationSize, sizeIndex;
     private int itemCount;
@@ -77,7 +80,7 @@ public final class BucketAllocator {
       return sizeIndex;
     }
 
-    public int itemAllocationSize() {
+    public int getItemAllocationSize() {
       return itemAllocationSize;
     }
 
@@ -97,15 +100,15 @@ public final class BucketAllocator {
       return usedCount;
     }
 
-    public int freeBytes() {
+    public int getFreeBytes() {
       return freeCount * itemAllocationSize;
     }
 
-    public int usedBytes() {
+    public int getUsedBytes() {
       return usedCount * itemAllocationSize;
     }
 
-    public long baseOffset() {
+    public long getBaseOffset() {
       return baseOffset;
     }
 
@@ -372,19 +375,18 @@ public final class BucketAllocator {
       }
       realCacheSize.addAndGet(foundLen);
       buckets[bucketNo].addAllocation(foundOffset);
-      usedSize += buckets[bucketNo].itemAllocationSize();
+      usedSize += buckets[bucketNo].getItemAllocationSize();
       bucketSizeInfos[bucketSizeIndex].blockAllocated(b);
     }
   }
 
-  public String getInfo() {
+  public String toString() {
     StringBuilder sb = new StringBuilder(1024);
     for (int i = 0; i < buckets.length; ++i) {
       Bucket b = buckets[i];
-      sb.append("    Bucket ").append(i).append(": ").append(b.itemAllocationSize());
-      sb.append(" freeCount=").append(b.freeCount()).append(" used=")
-          .append(b.usedCount());
-      sb.append('\n');
+      if (i > 0) sb.append(", ");
+      sb.append("bucket.").append(i).append(": size=").append(b.getItemAllocationSize());
+      sb.append(", freeCount=").append(b.freeCount()).append(", used=").append(b.usedCount());
     }
     return sb.toString();
   }
@@ -441,8 +443,8 @@ public final class BucketAllocator {
     assert bucketNo >= 0 && bucketNo < buckets.length;
     Bucket targetBucket = buckets[bucketNo];
     bucketSizeInfos[targetBucket.sizeIndex()].freeBlock(targetBucket, offset);
-    usedSize -= targetBucket.itemAllocationSize();
-    return targetBucket.itemAllocationSize();
+    usedSize -= targetBucket.getItemAllocationSize();
+    return targetBucket.getItemAllocationSize();
   }
 
   public int sizeIndexOfAllocation(long offset) {
@@ -456,7 +458,7 @@ public final class BucketAllocator {
     int bucketNo = (int) (offset / bucketCapacity);
     assert bucketNo >= 0 && bucketNo < buckets.length;
     Bucket targetBucket = buckets[bucketNo];
-    return targetBucket.itemAllocationSize();
+    return targetBucket.getItemAllocationSize();
   }
 
   static class IndexStatistics {
@@ -504,6 +506,10 @@ public final class BucketAllocator {
       this.usedCount = used;
       this.totalCount = free + used;
     }
+  }
+
+  public Bucket [] getBuckets() {
+    return this.buckets;
   }
 
   public void dumpToLog() {

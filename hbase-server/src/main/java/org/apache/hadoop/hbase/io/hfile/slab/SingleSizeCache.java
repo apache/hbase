@@ -19,21 +19,20 @@
 package org.apache.hadoop.hbase.io.hfile.slab;
 
 import java.nio.ByteBuffer;
-import java.util.List;
+import java.util.Iterator;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
+import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.util.StringUtils;
@@ -319,16 +318,6 @@ public class SingleSizeCache implements BlockCache, HeapSize {
     return 0;
   }
 
-  /*
-   * Not implemented. Extremely costly to do this from the off heap cache, you'd
-   * need to copy every object on heap once
-   */
-  @Override
-  public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries(
-      Configuration conf) {
-    throw new UnsupportedOperationException();
-  }
-
   /* Just a pair class, holds a reference to the parent cacheable */
   private static class CacheablePair implements HeapSize {
     final CacheableDeserializer<Cacheable> deserializer;
@@ -352,5 +341,15 @@ public class SingleSizeCache implements BlockCache, HeapSize {
       return ClassSize.align(ClassSize.OBJECT + ClassSize.REFERENCE * 3
           + ClassSize.ATOMIC_LONG);
     }
+  }
+
+  @Override
+  public Iterator<CachedBlock> iterator() {
+    return null;
+  }
+
+  @Override
+  public BlockCache[] getBlockCaches() {
+    return null;
   }
 }

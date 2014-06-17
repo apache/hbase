@@ -20,7 +20,8 @@
 package org.apache.hadoop.hbase.io.hfile.slab;
 
 import java.math.BigDecimal;
-import java.util.List;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -35,10 +36,13 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.BlockCacheColumnFamilySummary;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.BlockPriority;
+import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.io.hfile.CachedBlock;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheUtil;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.util.StringUtils;
@@ -58,7 +62,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
 
   private final ConcurrentHashMap<BlockCacheKey, SingleSizeCache> backingStore;
-  private final TreeMap<Integer, SingleSizeCache> sizer;
+  private final TreeMap<Integer, SingleSizeCache> slabs;
   static final Log LOG = LogFactory.getLog(SlabCache.class);
   static final int STAT_THREAD_PERIOD_SECS = 60 * 5;
 
@@ -88,10 +92,13 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
     this.successfullyCachedStats = new SlabStats();
 
     backingStore = new ConcurrentHashMap<BlockCacheKey, SingleSizeCache>();
-    sizer = new TreeMap<Integer, SingleSizeCache>();
+    slabs = new TreeMap<Integer, SingleSizeCache>();
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this),
         STAT_THREAD_PERIOD_SECS, STAT_THREAD_PERIOD_SECS, TimeUnit.SECONDS);
+  }
 
+  public Map<Integer, SingleSizeCache> getSizer() {
+    return slabs;
   }
 
   /**
@@ -168,7 +175,7 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
    *         object is too large, returns null.
    */
   Entry<Integer, SingleSizeCache> getHigherBlock(int size) {
-    return sizer.higherEntry(size - 1);
+    return slabs.higherEntry(size - 1);
   }
 
   private BigDecimal[] stringArrayToBigDecimalArray(String[] parsee) {
@@ -182,7 +189,7 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
   private void addSlab(int blockSize, int numBlocks) {
     LOG.info("Creating a slab of blockSize " + blockSize + " with " + numBlocks
         + " blocks, " + StringUtils.humanReadableInt(blockSize * (long) numBlocks) + "bytes.");
-    sizer.put(blockSize, new SingleSizeCache(blockSize, numBlocks, this));
+    slabs.put(blockSize, new SingleSizeCache(blockSize, numBlocks, this));
   }
 
   /**
@@ -283,7 +290,7 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
    * Also terminates the scheduleThreadPool.
    */
   public void shutdown() {
-    for (SingleSizeCache s : sizer.values()) {
+    for (SingleSizeCache s : slabs.values()) {
       s.shutdown();
     }
     this.scheduleThreadPool.shutdown();
@@ -291,7 +298,7 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
 
   public long heapSize() {
     long childCacheSize = 0;
-    for (SingleSizeCache s : sizer.values()) {
+    for (SingleSizeCache s : slabs.values()) {
       childCacheSize += s.heapSize();
     }
     return SlabCache.CACHE_FIXED_OVERHEAD + childCacheSize;
@@ -303,7 +310,7 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
 
   public long getFreeSize() {
     long childFreeSize = 0;
-    for (SingleSizeCache s : sizer.values()) {
+    for (SingleSizeCache s : slabs.values()) {
       childFreeSize += s.getFreeSize();
     }
     return childFreeSize;
@@ -312,7 +319,7 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
   @Override
   public long getBlockCount() {
     long count = 0;
-    for (SingleSizeCache cache : sizer.values()) {
+    for (SingleSizeCache cache : slabs.values()) {
       count += cache.getBlockCount();
     }
     return count;
@@ -340,7 +347,7 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
 
     @Override
     public void run() {
-      for (SingleSizeCache s : ourcache.sizer.values()) {
+      for (SingleSizeCache s : ourcache.slabs.values()) {
         s.logStats();
       }
 
@@ -418,14 +425,75 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
     return numEvicted;
   }
 
-  /*
-   * Not implemented. Extremely costly to do this from the off heap cache, you'd
-   * need to copy every object on heap once
-   */
   @Override
-  public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries(
-      Configuration conf) {
-    throw new UnsupportedOperationException();
+  public Iterator<CachedBlock> iterator() {
+    // Don't bother with ramcache since stuff is in here only a little while.
+    final Iterator<Map.Entry<BlockCacheKey, SingleSizeCache>> i =
+        this.backingStore.entrySet().iterator();
+    return new Iterator<CachedBlock>() {
+      private final long now = System.nanoTime();
+
+      @Override
+      public boolean hasNext() {
+        return i.hasNext();
+      }
+
+      @Override
+      public CachedBlock next() {
+        final Map.Entry<BlockCacheKey, SingleSizeCache> e = i.next();
+        final Cacheable cacheable = e.getValue().getBlock(e.getKey(), false, false, false);
+        return new CachedBlock() {
+          @Override
+          public String toString() {
+            return BlockCacheUtil.toString(this, now);
+          }
+
+          @Override
+          public BlockPriority getBlockPriority() {
+            return null;
+          }
+
+          @Override
+          public BlockType getBlockType() {
+            return cacheable.getBlockType();
+          }
+
+          @Override
+          public long getOffset() {
+            return e.getKey().getOffset();
+          }
+
+          @Override
+          public long getSize() {
+            return cacheable == null? 0: cacheable.getSerializedLength();
+          }
+
+          @Override
+          public long getCachedTime() {
+            return -1;
+          }
+
+          @Override
+          public String getFilename() {
+            return e.getKey().getHfileName();
+          }
+
+          @Override
+          public int compareTo(CachedBlock other) {
+            return (int)(this.getOffset() - other.getOffset());
+          }
+        };
+      }
+
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+    };
   }
 
+  @Override
+  public BlockCache[] getBlockCaches() {
+    return null;
+  }
 }

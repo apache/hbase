@@ -18,8 +18,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import java.io.IOException;
-import java.util.List;
+import java.util.Iterator;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -155,10 +154,6 @@ public class DoubleBlockCache implements BlockCache, HeapSize {
     return onHeapCache.getCurrentSize() + offHeapCache.getCurrentSize();
   }
 
-  public long getEvictedCount() {
-    return onHeapCache.getEvictedCount() + offHeapCache.getEvictedCount();
-  }
-
   @Override
   public int evictBlocksByHfileName(String hfileName) {
     onHeapCache.evictBlocksByHfileName(hfileName);
@@ -167,14 +162,17 @@ public class DoubleBlockCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public List<BlockCacheColumnFamilySummary> getBlockCacheColumnFamilySummaries(
-      Configuration conf) throws IOException {
-    return onHeapCache.getBlockCacheColumnFamilySummaries(conf);
-  }
-
-  @Override
   public long getBlockCount() {
     return onHeapCache.getBlockCount() + offHeapCache.getBlockCount();
   }
 
+  @Override
+  public Iterator<CachedBlock> iterator() {
+    return new BlockCachesIterator(getBlockCaches());
+  }
+
+  @Override
+  public BlockCache[] getBlockCaches() {
+    return new BlockCache [] {this.onHeapCache, this.offHeapCache};
+  }
 }

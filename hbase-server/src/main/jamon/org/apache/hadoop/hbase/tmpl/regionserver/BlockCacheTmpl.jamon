@@ -1,0 +1,433 @@
+<%doc>
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+Template for rendering Block Cache tabs in RegionServer Status page.
+</%doc>
+<%args>
+CacheConfig cacheConfig;
+Configuration config;
+</%args>
+<%java>
+  BlockCache bc = cacheConfig == null? null: cacheConfig.getBlockCache();
+  String bcUrl = null;
+  String bcName = null;
+  if (bc != null) {
+    bcUrl = "http://hbase.apache.org/devapidocs/" + bc.getClass().getName().replaceAll("\\.", "/") + ".html";
+    bcName = bc.getClass().getSimpleName();
+  }
+  BlockCache [] bcs = cacheConfig == null? null: cacheConfig.getBlockCache() == null? null: cacheConfig.getBlockCache().getBlockCaches();
+</%java>
+<%import>
+java.util.Map;
+org.apache.hadoop.hbase.io.hfile.BlockCacheUtil.CachedBlocksByFile;
+org.apache.hadoop.hbase.io.hfile.BlockCacheUtil.AgeSnapshot;
+org.apache.hadoop.hbase.io.hfile.CachedBlock;
+org.apache.hadoop.conf.Configuration;
+org.apache.hadoop.hbase.io.hfile.CacheConfig;
+org.apache.hadoop.hbase.io.hfile.BlockCache;
+org.apache.hadoop.hbase.io.hfile.bucket.BucketCacheStats;
+org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator;
+org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.Bucket;
+org.apache.hadoop.hbase.io.hfile.slab.SlabCache;
+org.apache.hadoop.hbase.io.hfile.slab.SingleSizeCache;
+org.apache.hadoop.util.StringUtils;
+</%import>
+<div class="tabbable">
+    <ul class="nav nav-pills">
+        <li class="active"><a href="#tab_bc_baseInfo" data-toggle="tab">Base Info</a></li>
+        <li class=""><a href="#tab_bc_config" data-toggle="tab">Config</a></li>
+        <li class=""><a href="#tab_bc_stats" data-toggle="tab">Stats</a></li>
+        <li class=""><a href="#tab_bc_l1" data-toggle="tab">L1</a></li>
+        <li class=""><a href="#tab_bc_l2" data-toggle="tab">L2</a></li>
+    </ul>
+    <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
+        <div class="tab-pane active" id="tab_bc_baseInfo">
+            <& bc_baseInfo; cacheConfig = cacheConfig; bcUrl = bcUrl; bcName = bcName;  &>
+        </div>
+        <div class="tab-pane" id="tab_bc_config">
+            <& bc_config; cacheConfig = cacheConfig &>
+        </div>
+        <div class="tab-pane" id="tab_bc_stats">
+            <& bc_stats; cacheConfig = cacheConfig &>
+        </div>
+        <div class="tab-pane" id="tab_bc_l1">
+            <& bc_l; bc = bcs == null? bc: bcs[0]; name = "L1" &>
+        </div>
+        <div class="tab-pane" id="tab_bc_l2">
+            <& bc_l; bc = bcs == null? null: bcs.length <= 1? null: bcs[1]; name = "L2"  &>
+        </div>
+    </div>
+</div>
+
+<%def bc_baseInfo>
+<%args>
+    CacheConfig cacheConfig;
+    String bcUrl;
+    String bcName;
+</%args>
+<%java>
+  BlockCache bc = cacheConfig == null? null: cacheConfig.getBlockCache();
+  BlockCache [] bcs = bc == null? null: bc.getBlockCaches();
+  String bcl1Url = null;
+  String bcl1Name = null;
+  String bcl2Url = null;
+  String bcl2Name = null;
+  if (bcs != null) {
+    BlockCache bcl1 = bcs[0];
+    if (bcl1 != null) {
+      bcl1Url = "http://hbase.apache.org/devapidocs/" + bcl1.getClass().getName().replaceAll("\\.", "/") + ".html";
+      bcl1Name = bcl1.getClass().getSimpleName();
+    }
+    if (bcs.length == 2) {
+      BlockCache bcl2 = bcs[1];
+      bcl2Url = "http://hbase.apache.org/devapidocs/" + bcl2.getClass().getName().replaceAll("\\.", "/") + ".html";
+      bcl2Name = bcl2.getClass().getSimpleName();
+    }
+  }
+</%java>
+<table class="table table-striped">
+    <tr>
+        <th>Attribute</th>
+        <th>Value</th>
+        <th>Description</th>
+    </tr>
+    </tr>
+    <tr>
+        <td>Implementation</td>
+        <td><a href="<% bcUrl %>"><% bcName %></a></td>
+        <td>Block Cache implementing class</td>
+    </tr>
+</table>
+<p>See <a href="http://hbase.apache.org/book.html#block.cache">Block Cache</a> in the HBase Reference Guide for help.</p>
+</%def>
+
+<%def bc_config>
+<%args>
+    CacheConfig cacheConfig;
+</%args>
+<%if cacheConfig == null %>
+<p>CacheConfig is null</p>
+<%else>
+<table class="table table-striped">
+    <tr>
+        <th>Attribute</th>
+        <th>Value</th>
+        <th>Description</th>
+    </tr>
+    <tr>
+        <td>Cache DATA on Read</td>
+        <td><% cacheConfig.shouldCacheDataOnRead() %></td>
+        <td>True if DATA blocks are cached on read
+        (INDEX & BLOOM blocks are always cached)</td>
+    </tr>
+    <tr>
+        <td>Cache DATA on Write</td>
+        <td><% cacheConfig.shouldCacheDataOnWrite() %></td>
+        <td>True if DATA blocks are cached on write.</td>
+    </tr>
+    <tr>
+        <td>Cache INDEX on Write</td>
+        <td><% cacheConfig.shouldCacheIndexesOnWrite() %></td>
+        <td>True if INDEX blocks are cached on write</td>
+    </tr>
+    <tr>
+        <td>Cache BLOOM on Write</td>
+        <td><% cacheConfig.shouldCacheBloomsOnWrite() %></td>
+        <td>True if BLOOM blocks are cached on write</td>
+    </tr>
+    <tr>
+        <td>Evict blocks on Close</td>
+        <td><% cacheConfig.shouldEvictOnClose() %></td>
+        <td>True if blocks are evicted from cache when an HFile
+        reader is closed</td>
+    </tr>
+    <tr>
+        <td>Compress blocks</td>
+        <td><% cacheConfig.shouldCacheCompressed() %></td>
+        <td>True if blocks are compressed in cache</td>
+    </tr>
+    <tr>
+        <td>Prefetch on Open</td>
+        <td><% cacheConfig.shouldPrefetchOnOpen() %></td>
+        <td>True if blocks are prefetched into cache on open</td>
+    </tr>
+</table>
+</%if>
+</%def>
+
+<%def bc_stats>
+<%args>
+    CacheConfig cacheConfig;
+</%args>
+<%if cacheConfig == null %>
+<p>CacheConfig is null</p>
+<%else>
+<table class="table table-striped">
+    <tr>
+        <th>Attribute</th>
+        <th>Value</th>
+        <th>Description</th>
+    </tr>
+    <tr>
+        <td>Size</td>
+        <td><% StringUtils.humanReadableInt(cacheConfig.getBlockCache().size()) %></td>
+        <td>Total size of Block Cache (bytes)</td>
+    </tr>
+    <tr>
+        <td>Free</td>
+        <td><% StringUtils.humanReadableInt(cacheConfig.getBlockCache().getFreeSize()) %></td>
+        <td>Free space in Block Cache (bytes)</td>
+    </tr>
+    <tr>
+        <td>Count</td>
+        <td><% String.format("%,d", cacheConfig.getBlockCache().getBlockCount()) %></td>
+        <td>Number of blocks in Block Cache</td>
+    </tr>
+    <tr>
+        <td>Evicted</td>
+        <td><% String.format("%,d", cacheConfig.getBlockCache().getStats().getEvictedCount()) %></td>
+        <td>Number of blocks evicted</td>
+    </tr>
+    <tr>
+        <td>Evictions</td>
+        <td><% String.format("%,d", cacheConfig.getBlockCache().getStats().getEvictionCount()) %></td>
+        <td>Number of times an eviction occurred</td>
+    </tr>
+    <tr>
+        <td>Hits</td>
+        <td><% String.format("%,d", cacheConfig.getBlockCache().getStats().getHitCount()) %></td>
+        <td>Number requests that were cache hits</td>
+    </tr>
+    <tr>
+        <td>Hits Caching</td>
+        <td><% String.format("%,d", cacheConfig.getBlockCache().getStats().getHitCachingCount()) %></td>
+        <td>Cache hit block requests but only requests set to use Block Cache</td>
+    </tr>
+    <tr>
+        <td>Misses</td>
+        <td><% String.format("%,d", cacheConfig.getBlockCache().getStats().getMissCount()) %></td>
+        <td>Number of requests that were cache misses</td>
+    </tr>
+    <tr>
+        <td>Misses Caching</td>
+        <td><% String.format("%,d", cacheConfig.getBlockCache().getStats().getMissCount()) %></td>
+        <td>Block requests that were cache misses but only requests set to use Block Cache</td>
+    </tr>
+    <tr>
+        <td>Hit Ratio</td>
+        <td><% String.format("%,.2f", cacheConfig.getBlockCache().getStats().getHitRatio() * 100) %><% "%" %></td>
+        <td>Hit Count divided by total requests count</td>
+    </tr>
+</table>
+<p>If Block Cache is made up of more than one cache -- i.e. a L1 and a L2 -- then the above
+are combined counts. Request count is sum of hits and misses.</p>
+</%if>
+</%def>
+
+<%def bc_l>
+<%args>
+    BlockCache bc;
+    String name;
+</%args>
+<%if bc == null %>
+<p>No <% name %> deployed</p>
+<%else>
+<& block_cache; bc = bc; name = name;  &>
+</%if>
+</%def>
+
+<%def block_cache>
+<%args>
+    BlockCache bc;
+    String name;
+</%args>
+<%java>
+  final long nanosPerSecond = 1000000000;
+  String bcUrl = "http://hbase.apache.org/devapidocs/" + bc.getClass().getName().replaceAll("\\.", "/") + ".html";
+  String bcName = bc.getClass().getSimpleName();
+  org.apache.hadoop.hbase.io.hfile.BlockCacheUtil.CachedBlocksByFile cbsbf =
+    org.apache.hadoop.hbase.io.hfile.BlockCacheUtil.getLoadedCachedBlocksByFile(config, bc);
+  AgeSnapshot snapshot = cbsbf.getAgeSnapshot();
+
+  boolean slabCache = bc.getClass().getSimpleName().equals("SlabCache");
+  Map<Integer, SingleSizeCache> sizer = null;
+
+  boolean bucketCache = bc.getClass().getSimpleName().equals("BucketCache");
+  BucketCacheStats bucketCacheStats = null;
+  BucketAllocator bucketAllocator = null;
+  Bucket [] buckets = null;
+
+  if (slabCache) {
+    sizer = ((SlabCache)bc).getSizer();
+  } else if (bucketCache) {
+    bucketCacheStats = (BucketCacheStats)bc.getStats();
+    bucketAllocator = ((BucketCache)bc).getAllocator();
+    buckets = bucketAllocator.getBuckets();
+  }
+</%java>
+<%if cbsbf.isFull() %>
+<p><b>Too many blocks!</b> Listing out the first <% snapshot.getMax() %> only (hbase.ui.blockcache.by.file.max)</p> 
+</%if>
+<table id="blocks_summary" class="table table-striped">
+    <tr>
+        <th>Attribute</th>
+        <th>Value</th>
+        <th>Description</th>
+    </tr>
+    <tr>
+        <td>Implementation</td>
+        <td><a href="<% bcUrl %>"><% bc.getClass().getSimpleName() %></a></td>
+        <td>Class implementing this Block Cache Level</td>
+    </tr>
+<%if bucketCache %>
+    <tr>
+        <td>Implementation</td>
+        <td><% ((BucketCache)bc).getIoEngine() %></a></td>
+        <td>IOEngine</td>
+    </tr>
+</%if>
+    <tr>
+        <td>Count</td>
+        <td><% String.format("%,d", cbsbf.getCount()) %></td>
+        <td>Count of Blocks</td>
+    </tr>
+<%if !bucketCache %>
+    <tr>
+        <td>Count</td>
+        <td><% String.format("%,d", cbsbf.getDataCount()) %></td>
+        <td>Count of DATA Blocks</td>
+    </tr>
+</%if>
+    <tr>
+        <td>Size</td>
+        <td><% StringUtils.humanReadableInt(cbsbf.getSize()) %></td>
+        <td>Size of Blocks</td>
+    </tr>
+<%if !bucketCache %>
+    <tr>
+        <td>Size</td>
+        <td><% StringUtils.humanReadableInt(cbsbf.getDataSize()) %></td>
+        <td>Size of DATA Blocks</td>
+    </tr>
+</%if>
+<%doc>Can't do age of block in cache when slab cache</%doc>
+<%if !slabCache %>
+    <tr>
+        <td>Mean</td>
+        <td><% String.format("%,d", (long)(snapshot.getMean()/nanosPerSecond)) %></td>
+        <td>Mean age of Blocks in cache (seconds)</td>
+    </tr>
+    <tr>
+        <td>StdDev</td>
+        <td><% String.format("%,d", (long)(snapshot.getStdDev()/nanosPerSecond)) %></td>
+        <td>Age standard deviation of Blocks in cache</td>
+    </tr>
+    <tr>
+        <td>Min</td>
+        <td><% String.format("%,d", (long)(snapshot.getMin()/nanosPerSecond)) %></td>
+        <td>Min age of Blocks in cache (seconds)</td>
+    </tr>
+    <tr>
+        <td>Max</td>
+        <td><% String.format("%,d", (long)(snapshot.getMax()/nanosPerSecond)) %></td>
+        <td>Max age of Blocks in cache (seconds)</td>
+    </tr>
+    <tr>
+        <td>95th Percentile</td>
+        <td><% String.format("%,d", (long)(snapshot.get95thPercentile()/nanosPerSecond)) %></td>
+        <td>95th percentile of age of Blocks in cache (seconds)</td>
+    </tr>
+    <tr>
+        <td>99th Percentile</td>
+        <td><% String.format("%,d", (long)(snapshot.get99thPercentile()/nanosPerSecond)) %></td>
+        <td>99th percentile of age of Blocks in cache (seconds)</td>
+    </tr>
+</%if>
+<%if bucketCache %>
+    <tr>
+        <td>Hits per Second</td>
+        <td><% bucketCacheStats.getIOHitsPerSecond() %></td>
+        <td>Block gets against this cache per second</td>
+    </tr>
+    <tr>
+        <td>Time per Hit</td>
+        <td><% bucketCacheStats.getIOTimePerHit() %></td>
+        <td>Time per cache hit</td>
+    </tr>
+</%if>
+</table>
+<%doc>Call through to Block Cache Detail rendering template</%doc>
+<p>View Block Cache <a href="?format=json&bcn=<% name %>">as JSON</a> | Block Cache <a href="?format=json&bcn=<% name %>&bcv=file">as JSON by file</a></p>
+<%if bucketCache %>
+<p>BucketCache does not discern between DATA and META blocks so we do not show DATA counts (If deploy is using CombinedBlockCache, BucketCache is only DATA blocks</p>
+<h3>BucketCache Buckets</h3>
+<table class="table table-striped">
+    <tr>
+        <th>Bucket Offset</th>
+        <th>Allocation Size</th>
+        <th>Free Count</th>
+        <th>Used Count</th>
+    </tr>
+<%for Bucket bucket: buckets %>
+    <tr>
+        <td><% bucket.getBaseOffset() %></td>
+        <td><% bucket.getItemAllocationSize() %></td>
+        <td><% bucket.getFreeBytes() %></td>
+        <td><% bucket.getUsedBytes() %></td>
+    </tr>
+</%for>
+</table>
+<%elseif slabCache %>
+<p>SlabCache does not keep account of block ages so can not show stats on how long blocks have been cached.</p>
+<h3>SlabCache Slabs</h3>
+<table class="table table-striped">
+    <tr>
+        <th>Block Size</th>
+        <th>Size</th>
+        <th>Free Size</th>
+        <th>Count</th>
+        <th>Evicted</th>
+        <th>Evictions</th>
+        <th>Hits</th>
+        <th>Caching</th>
+        <th>Misses</th>
+        <th>Caching</th>
+        <th>Hit Ratio</th>
+    </tr>
+<%for Map.Entry<Integer, SingleSizeCache> e: sizer.entrySet() %>
+    <tr>
+        <td><% StringUtils.humanReadableInt(e.getKey()) %></td>
+        <td><% StringUtils.humanReadableInt(e.getValue().size()) %></td>
+        <td><% StringUtils.humanReadableInt(e.getValue().getFreeSize()) %></td>
+        <td><% StringUtils.humanReadableInt(e.getValue().getBlockCount()) %></td>
+        <td><% StringUtils.humanReadableInt(e.getValue().getStats().getEvictedCount()) %></td>
+        <td><% StringUtils.humanReadableInt(e.getValue().getStats().getEvictionCount()) %></td>
+        <td><% StringUtils.humanReadableInt(e.getValue().getStats().getHitCount()) %></td>
+        <td><% StringUtils.humanReadableInt(e.getValue().getStats().getHitCachingCount()) %></td>
+        <td><% StringUtils.humanReadableInt(e.getValue().getStats().getMissCount()) %></td>
+        <td><% StringUtils.humanReadableInt(e.getValue().getStats().getMissCachingCount()) %></td>
+        <td><% String.format("%,.2f", e.getValue().getStats().getHitRatio() * 100) %><% "%" %></td>
+    </tr>
+</%for>
+</table>
+</%if>
+<%java>
+cbsbf = null;
+</%java>
+</%def>
+

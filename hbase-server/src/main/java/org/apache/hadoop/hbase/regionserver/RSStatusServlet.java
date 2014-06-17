@@ -39,20 +39,24 @@ public class RSStatusServlet extends HttpServlet {
     HRegionServer hrs = (HRegionServer)getServletContext().getAttribute(
         HRegionServer.REGIONSERVER);
     assert hrs != null : "No RS in context!";
-    
+
     resp.setContentType("text/html");
-    
+
     if (!hrs.isOnline()) {
       resp.getWriter().write("The RegionServer is initializing!");
       resp.getWriter().close();
       return;
     }
-    
+
     RSStatusTmpl tmpl = new RSStatusTmpl();
     if (req.getParameter("format") != null)
       tmpl.setFormat(req.getParameter("format"));
     if (req.getParameter("filter") != null)
       tmpl.setFilter(req.getParameter("filter"));
+    if (req.getParameter("bcn") != null)
+      tmpl.setBcn(req.getParameter("bcn"));
+    if (req.getParameter("bcv") != null)
+      tmpl.setBcv(req.getParameter("bcv"));
     tmpl.render(resp.getWriter(), hrs);
   }
 }
