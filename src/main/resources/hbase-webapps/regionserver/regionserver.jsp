@@ -2,16 +2,18 @@
   import="java.text.SimpleDateFormat"
   import="java.util.*"
   import="java.io.IOException"
+  import="org.apache.commons.lang.StringEscapeUtils"
   import="org.apache.hadoop.io.Text"
-  import="org.apache.hadoop.hbase.regionserver.HRegionServer"
-  import="org.apache.hadoop.hbase.regionserver.HRegionServer.ClosedRegionInfo"
-  import="org.apache.hadoop.hbase.regionserver.HRegion"
-  import="org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics"
-  import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HServerInfo"
   import="org.apache.hadoop.hbase.HServerLoad"
-  import="org.apache.hadoop.hbase.HRegionInfo" %><%
+  import="org.apache.hadoop.hbase.HRegionInfo"
+  import="org.apache.hadoop.hbase.regionserver.HRegion"
+  import="org.apache.hadoop.hbase.regionserver.HRegionServer"
+  import="org.apache.hadoop.hbase.regionserver.HRegionServer.ClosedRegionInfo"
+  import="org.apache.hadoop.hbase.regionserver.metrics.RegionServerMetrics"
+  import="org.apache.hadoop.hbase.util.Bytes"
+%><%
   HRegionServer regionServer = (HRegionServer)getServletContext().getAttribute(HRegionServer.REGIONSERVER);
   HServerInfo serverInfo = null;
   try {
@@ -54,45 +56,49 @@
 <h2>Online Regions</h2>
 <% if (onlineRegionInfoAndOpenDate != null && onlineRegionInfoAndOpenDate.size() > 0) { %>
 <table>
-<tr><th>Region Name</th>
-	<th>Start Key</th>
-	<th>End Key</th>
-  <th>Metrics</th>
-  <th>Open Time</th>
-</tr>
-<%   for (HRegionInfo r : onlineRegionInfoAndOpenDate.keySet()) {
-        HServerLoad.RegionLoad load = regionServer.createRegionLoad(r.getRegionName());
- %>
-
-<tr><td><%= r.getRegionNameAsString() %></td>
-    <td><%= Bytes.toStringBinary(r.getStartKey()) %></td>
-    <td><%= Bytes.toStringBinary(r.getEndKey()) %></td>
+	<tr><th>Region Name</th>
+	  <th>Start Key</th>
+	  <th>End Key</th>
+	  <th>Metrics</th>
+	  <th>Open Time</th>
+	</tr>
+<%
+    for (HRegionInfo r : onlineRegionInfoAndOpenDate.keySet()) {
+      HServerLoad.RegionLoad load = regionServer.createRegionLoad(r.getRegionName());
+%>
+	<tr>
+    <td><%= StringEscapeUtils.escapeHtml(r.getRegionNameAsString()) %></td>
+    <td><%= StringEscapeUtils.escapeHtml(Bytes.toStringBinary(r.getStartKey())) %></td>
+    <td><%= StringEscapeUtils.escapeHtml(Bytes.toStringBinary(r.getEndKey())) %></td>
     <td><%= load.toString() %></td>
     <td><%= onlineRegionInfoAndOpenDate.get(r) %></td>
-</tr>
+  </tr>
 <%
      } 
 %>
 </table>
 <h2>Recently Closed Regions</h2>
-<% if (recentlyClosedRegionInfo != null && recentlyClosedRegionInfo.size() > 0) 
-   { %>
-<table>
-<tr><th>Region Name</th>
-  <th>Start Key</th>
-  <th>End Key</th>
-  <th>Closed Time</th>
-</tr>
 <%
-  for (HRegionServer.ClosedRegionInfo info: recentlyClosedRegionInfo) {
+  if (recentlyClosedRegionInfo != null && recentlyClosedRegionInfo.size() > 0) {
 %>
-<tr><td><%= info.getRegionName() %></td>
-  <td><%= info.getStartKey() %></td>
-  <td><%= info.getEndKey() %></td>
-  <td><%= info.getCloseDateAsString() %></td>
-</tr>
+<table>
+	<tr>
+	  <th>Region Name</th>
+	  <th>Start Key</th>
+	  <th>End Key</th>
+	  <th>Closed Time</th>
+	</tr>
 <%
-  }
+    for (HRegionServer.ClosedRegionInfo info: recentlyClosedRegionInfo) {
+%>
+	<tr>
+	  <td><%= StringEscapeUtils.escapeHtml(info.getRegionNameAsString()) %></td>
+	  <td><%= StringEscapeUtils.escapeHtml(info.getStartKeyAsString()) %></td>
+	  <td><%= StringEscapeUtils.escapeHtml(info.getEndKeyAsString()) %></td>
+	  <td><%= info.getCloseDateAsString() %></td>
+	</tr>
+<%
+    }
 %>
 </table>
 <%
@@ -104,12 +110,12 @@ the region named
 <em>domains,apache.org,5464829424211263407</em> is party to the table 
 <em>domains</em>, has an id of <em>5464829424211263407</em> and the first key
 in the region is <em>apache.org</em>.  The <em>-ROOT-</em>
-and <em>.META.</em> 'tables' are internal sytem tables (or 'catalog' tables in db-speak).
+and <em>.META.</em> 'tables' are internal system tables (or 'catalog' tables in db-speak).
 The -ROOT- keeps a list of all regions in the .META. table.  The .META. table
 keeps a list of all regions in the system. The empty key is used to denote
 table start and table end.  A region with an empty start key is the first region in a table.
 If region has both an empty start and an empty end key, its the only region in the table.  See
-<a href="http://hbase.org">HBase Home</a> for further explication.<p>
+<a href="http://hbase.org">HBase Home</a> for further explanation.<p>
 <% } else { %>
 <p>Not serving regions</p>
 <% } %>

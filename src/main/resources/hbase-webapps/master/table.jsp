@@ -1,9 +1,10 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.Map"
-  import="org.apache.hadoop.io.Writable"
+  import="org.apache.commons.lang.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.HTable"
   import="org.apache.hadoop.hbase.client.HBaseAdmin"
+  import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.HRegionInfo"
   import="org.apache.hadoop.hbase.HServerAddress"
   import="org.apache.hadoop.hbase.HServerInfo"
@@ -12,10 +13,9 @@
   import="org.apache.hadoop.hbase.master.MetaRegion"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.FSUtils"
+  import="org.apache.hadoop.io.Writable"
   import="org.apache.hadoop.util.StringUtils"
-  import="org.apache.commons.lang.StringEscapeUtils"
-  import="java.util.Map"
-  import="org.apache.hadoop.hbase.HConstants"%><%
+%><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
   int rsInfoPort = conf.getInt(HConstants.REGIONSERVER_INFO_PORT, HConstants.DEFAULT_REGIONSERVER_INFOPORT);

@@ -1,21 +1,22 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="java.util.*"
+  import="org.apache.commons.lang.StringEscapeUtils"
   import="org.apache.hadoop.conf.Configuration"
-  import="org.apache.hadoop.hbase.util.Bytes"
-  import="org.apache.hadoop.hbase.util.JvmVersion"
-  import="org.apache.hadoop.hbase.util.FSUtils"
+  import="org.apache.hadoop.hbase.client.HBaseAdmin"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.HConstants"
   import="org.apache.hadoop.hbase.master.MetaRegion"
-  import="org.apache.hadoop.hbase.client.HBaseAdmin"
-  import="org.apache.hadoop.hbase.HServerInfo"
-  import="org.apache.hadoop.hbase.HServerAddress"
-  import="org.apache.hadoop.hbase.HTableDescriptor"
   import="org.apache.hadoop.hbase.HColumnDescriptor"
   import="org.apache.hadoop.hbase.HRegionInfo"
+  import="org.apache.hadoop.hbase.HServerAddress"
+  import="org.apache.hadoop.hbase.HServerInfo"
+  import="org.apache.hadoop.hbase.HTableDescriptor"
+  import="org.apache.hadoop.hbase.master.AssignmentPlan" 
   import="org.apache.hadoop.hbase.master.RegionPlacement"
   import="org.apache.hadoop.hbase.master.RegionAssignmentSnapshot"
-  import="org.apache.hadoop.hbase.master.AssignmentPlan" 
+  import="org.apache.hadoop.hbase.util.Bytes"
+  import="org.apache.hadoop.hbase.util.FSUtils"
+  import="org.apache.hadoop.hbase.util.JvmVersion"
 %><%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
@@ -121,8 +122,8 @@
 %>
 			<tr>
 				<form method="post">
-					<input type="hidden" name="regionName" value="<%= regionName %>">
-    				<td><%=regionName%> </td>
+					<input type="hidden" name="regionName" value="<%= StringEscapeUtils.escapeHtml(regionName) %>">
+    				<td><%= StringEscapeUtils.escapeHtml(regionName) %> </td>
 					<%			
 					  if (position.startsWith("Not")) {
 					%>

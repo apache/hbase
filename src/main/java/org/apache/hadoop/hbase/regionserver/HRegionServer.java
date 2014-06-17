@@ -1583,20 +1583,21 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
    * including region name, closeDate, startKey, endKey.
    */
   public static class ClosedRegionInfo {
-    private final String regionName;
+    private final String regionNameStr;
     private final long closeDate;
-    private final String startKey;
-    private final String endKey;
+    private final String startKeyStr;
+    private final String endKeyStr;
 
-    ClosedRegionInfo(String name, long date, byte[] startKey, byte[] endKey) {
-      this.regionName = name;
+    ClosedRegionInfo(String regionNameStr, long date, byte[] startKey,
+        byte[] endKey) {
+      this.regionNameStr = regionNameStr;
       this.closeDate = date;
-      this.startKey = (startKey == null) ? "" : Bytes.toStringBinary(startKey);
-      this.endKey = (endKey == null) ? "" : Bytes.toStringBinary(endKey);
+      this.startKeyStr = (startKey == null) ? "" : Bytes.toStringBinary(startKey);
+      this.endKeyStr = (endKey == null) ? "" : Bytes.toStringBinary(endKey);
     }
 
-    public String getRegionName() {
-      return regionName;
+    public String getRegionNameAsString() {
+      return regionNameStr;
     }
 
     public long getCloseDate() {
@@ -1611,12 +1612,12 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
       return formatter.format(date);
     }
 
-    public String getStartKey() {
-      return startKey;
+    public String getStartKeyAsString() {
+      return startKeyStr;
     }
 
-    public String getEndKey() {
-      return endKey;
+    public String getEndKeyAsString() {
+      return endKeyStr;
     }
   }
 
