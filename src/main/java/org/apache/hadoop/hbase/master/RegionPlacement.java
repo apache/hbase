@@ -131,7 +131,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
       plan.initialize(primaryRSMap, secondaryAndTertiaryRSMap);
       return plan;
     } catch (Exception e) {
-      LOG.debug("Cannot generate the assignment plan because " + e);
+      LOG.debug("Cannot generate the assignment plan", e);
       return null;
     }
   }
@@ -401,8 +401,8 @@ public class RegionPlacement implements RegionPlacementPolicy{
               + regionInfo.getRegionNameAsString());
         }
       } catch (Exception e) {
-        LOG.warn("Cannot place the favored nodes for region " +
-            regionInfo.getRegionNameAsString() + " because " + e);
+        LOG.warn("Cannot place the favored nodes for region "
+            + regionInfo.getRegionNameAsString(), e);
         continue;
       }
     }
@@ -460,12 +460,12 @@ public class RegionPlacement implements RegionPlacementPolicy{
                 serverSkipSet);
 
             if (secondaryRS == null || tertiaryRS == null) {
-              LOG.error("Cannot place the secondary and terinary"
+              LOG.error("Cannot place the secondary and terinary "
                   + "region server for region "
                   + regionInfo.getRegionNameAsString());
             }
             // Create the secondary and tertiary pair
-            pair = new Pair<HServerAddress, HServerAddress>();
+            pair = new Pair<>();
             pair.setFirst(secondaryRS);
             pair.setSecond(tertiaryRS);
           }
@@ -537,13 +537,13 @@ public class RegionPlacement implements RegionPlacementPolicy{
                   + regionInfo.getRegionNameAsString());
             }
             // Create the secondary and tertiary pair
-            pair = new Pair<HServerAddress, HServerAddress>();
+            pair = new Pair<>();
             pair.setFirst(secondaryRS);
             pair.setSecond(tertiaryRS);
           } else {
             // Pick the secondary rs from this secondary rack
             // and pick the tertiary from another random rack
-            pair = new Pair<HServerAddress, HServerAddress>();
+            pair = new Pair<>();
             HServerAddress secondary = domain.getOneRandomServer(secondaryRack);
             pair.setFirst(secondary);
 
@@ -572,7 +572,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
         }
       } catch (Exception e) {
         LOG.warn("Cannot place the favored nodes for region "
-            + regionInfo.getRegionNameAsString() + " because " + e);
+                + regionInfo.getRegionNameAsString(), e);
         continue;
       }
     }
@@ -1163,8 +1163,8 @@ public class RegionPlacement implements RegionPlacementPolicy{
         genAssignmentPlan(table, assignmentSnapshot, regionLocalityMap, plan,
             USE_MUNKRES_FOR_PLACING_SECONDARY_AND_TERTIARY);
       } catch (Exception e) {
-        LOG.error("Get some exceptions for placing primary region server" +
-            "for table " + table + " because " + e);
+        LOG.error("Get some exceptions for placing primary region server"
+            + "for table " + table, e);
       }
     }
     LOG.info("Finish to generate the new assignment plan for the " +
@@ -1217,8 +1217,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
       metaTable.put(puts);
       LOG.info("Updated the META with the new assignment plan");
     } catch (Exception e) {
-      LOG.error("Failed to update META with the new assignment" +
-          "plan because " + e.getMessage());
+      LOG.error("Failed to update META with the new assignment plan", e);
     }
   }
 
@@ -1893,7 +1892,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
           try {
             favoredNodes = RegionPlacement.getFavoredNodeList(favoredNodesStr);
           } catch (IllegalArgumentException e) {
-            LOG.error("Cannot parse the invalid favored nodes because " + e);
+            LOG.error("Cannot parse the invalid favored nodes", e);
           }
           AssignmentPlan newPlan = new AssignmentPlan();
           newPlan.updateAssignmentPlan(regionInfo, favoredNodes);
@@ -1944,8 +1943,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
           ObjectMapper jsonMapper = new ObjectMapper();
           jsonMapper.defaultPrettyPrintingWriter().writeValue(new File(path), data);
         } catch (Exception e) {
-          LOG.error("Unable to download current assignment plan" + e);
-          e.printStackTrace();
+          LOG.error("Unable to download current assignment plan", e);
         }
       } else {
         printHelp(opt);
@@ -2358,7 +2356,7 @@ public class RegionPlacement implements RegionPlacementPolicy{
         try {
           favoredNodes = RegionPlacement.getFavoredNodeList(nodesStr);
         } catch (IllegalArgumentException e) {
-          LOG.error("Cannot parse the invalid favored nodes because " + e);
+          LOG.error("Cannot parse the invalid favored nodes", e);
         }
       }
       newPlan.updateAssignmentPlan(regionInfo, favoredNodes);
