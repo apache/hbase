@@ -872,7 +872,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         HTable t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Delete d = new Delete(TEST_ROW1);
-          d.deleteColumns(TEST_FAMILY1, TEST_Q1);
+          d.deleteColumns(TEST_FAMILY1, TEST_Q1, 120);
           t.checkAndDelete(TEST_ROW1, TEST_FAMILY1, TEST_Q1, ZERO, d);
         } finally {
           t.close();
