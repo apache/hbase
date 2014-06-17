@@ -186,7 +186,8 @@ public abstract class ZKProcedureUtil
    * Is this in the procedure barrier acquired znode path
    */
   boolean isAcquiredPathNode(String path) {
-    return path.startsWith(this.acquiredZnode) && !path.equals(acquiredZnode);
+    return path.startsWith(this.acquiredZnode) && !path.equals(acquiredZnode) &&
+      isMemberNode(path, acquiredZnode);
   }
 
   /**
@@ -200,9 +201,23 @@ public abstract class ZKProcedureUtil
    * Is this in the procedure barrier reached znode path
    */
   boolean isReachedPathNode(String path) {
-    return path.startsWith(this.reachedZnode) && !path.equals(reachedZnode);
+    return path.startsWith(this.reachedZnode) && !path.equals(reachedZnode) &&
+      isMemberNode(path, reachedZnode);
   }
 
+  /*
+   * Returns true if the specified path is a member of the "statePath"
+   *      /hbase/<ProcName>/<state>/<instance>/member
+   *      |------ state path -----|
+   *      |------------------ path ------------------|
+   */
+  private boolean isMemberNode(final String path, final String statePath) {
+    int count = 0;
+    for (int i = statePath.length(); i < path.length(); ++i) {
+      count += (path.charAt(i) == ZKUtil.ZNODE_PATH_SEPARATOR) ? 1 : 0;
+    }
+    return count == 2;
+  }
 
   /**
    * Is this in the procedure barrier abort znode path

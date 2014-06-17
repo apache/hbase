@@ -82,7 +82,7 @@ public class ZKUtil {
   private static final Log LOG = LogFactory.getLog(ZKUtil.class);
 
   // TODO: Replace this with ZooKeeper constant when ZOOKEEPER-277 is resolved.
-  private static final char ZNODE_PATH_SEPARATOR = '/';
+  public static final char ZNODE_PATH_SEPARATOR = '/';
   private static int zkDumpConnectionTimeOut;
 
   /**
