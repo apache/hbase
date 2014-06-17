@@ -67,4 +67,9 @@ public abstract class BaseCoordinatedStateManager implements CoordinatedStateMan
    * Method to retrieve coordination for opening region operations.
    */
   public abstract OpenRegionCoordination getOpenRegionCoordination();
+
+  /**
+   * Method to retrieve coordination for region merge transaction
+   */
+  public abstract  RegionMergeCoordination getRegionMergeCoordination();
 }

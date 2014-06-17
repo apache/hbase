@@ -60,10 +60,12 @@ import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.coordination.RegionMergeCoordination;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
 import org.apache.hadoop.hbase.coordination.SplitTransactionCoordination.SplitTransactionDetails;
 import org.apache.hadoop.hbase.coordination.ZkOpenRegionCoordination;
+import org.apache.hadoop.hbase.coordination.ZkRegionMergeCoordination;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
@@ -82,7 +84,6 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
-import org.apache.hadoop.hbase.regionserver.RegionMergeTransaction;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -3538,11 +3539,14 @@ public class AssignmentManager extends ZooKeeperListener {
     EventType et = rt.getEventType();
     if (et == EventType.RS_ZK_REQUEST_REGION_MERGE) {
       try {
-        if (RegionMergeTransaction.transitionMergingNode(watcher, p,
-            hri_a, hri_b, sn, -1, EventType.RS_ZK_REQUEST_REGION_MERGE,
-            EventType.RS_ZK_REGION_MERGING) == -1) {
+        RegionMergeCoordination.RegionMergeDetails std =
+            ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
+                .getRegionMergeCoordination().getDefaultDetails();
+        ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
+            .getRegionMergeCoordination().processRegionMergeRequest(p, hri_a, hri_b, sn, std);
+        if (((ZkRegionMergeCoordination.ZkRegionMergeDetails) std).getZnodeVersion() == -1) {
           byte[] data = ZKAssign.getData(watcher, encodedName);
-          EventType currentType = null;
+         EventType currentType = null;
           if (data != null) {
             RegionTransition newRt = RegionTransition.parseFrom(data);
             currentType = newRt.getEventType();

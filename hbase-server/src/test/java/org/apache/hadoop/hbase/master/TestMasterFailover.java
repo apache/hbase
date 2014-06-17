@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.RegionState.State;
@@ -389,8 +390,8 @@ public class TestMasterFailover {
 
     // Regions of table of merging regions
     // Cause: Master was down while merging was going on
-    RegionMergeTransaction.createNodeMerging(
-      zkw, newRegion, mergingServer, a, b);
+    ((BaseCoordinatedStateManager) hrs.getCoordinatedStateManager())
+      .getRegionMergeCoordination().startRegionMergeTransaction(newRegion, mergingServer, a, b);
 
     /*
      * ZK = NONE
