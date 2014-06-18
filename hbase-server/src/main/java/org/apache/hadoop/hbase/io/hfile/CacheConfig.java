@@ -203,6 +203,13 @@ public class CacheConfig {
   private final boolean prefetchOnOpen;
 
   /**
+   * If true and if more than one tier in this cache deploy -- e.g. CombinedBlockCache has an L1
+   * and an L2 tier -- then cache data blocks up in the L1 tier (The meta blocks are likely being
+   * cached up in L1 already.  At least this is the case if CombinedBlockCache).
+   */
+  private boolean cacheDataInL1;
+
+  /**
    * Create a cache configuration using the specified configuration object and
    * family descriptor.
    * @param conf hbase configuration
@@ -224,7 +231,9 @@ public class CacheConfig {
             DEFAULT_EVICT_ON_CLOSE) || family.shouldEvictBlocksOnClose(),
         conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_COMPRESSED_CACHE),
         conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY,
-            DEFAULT_PREFETCH_ON_OPEN) || family.shouldPrefetchBlocksOnOpen()
+            DEFAULT_PREFETCH_ON_OPEN) || family.shouldPrefetchBlocksOnOpen(),
+        conf.getBoolean(HColumnDescriptor.CACHE_DATA_IN_L1,
+            HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1) || family.shouldCacheDataInL1()
      );
   }
 
@@ -246,7 +255,9 @@ public class CacheConfig {
         conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE),
         conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY,
             DEFAULT_COMPRESSED_CACHE),
-        conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN)
+        conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN),
+        conf.getBoolean(HColumnDescriptor.CACHE_DATA_IN_L1,
+          HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1)
      );
   }
 
@@ -263,12 +274,15 @@ public class CacheConfig {
    * @param evictOnClose whether blocks should be evicted when HFile is closed
    * @param cacheCompressed whether to store blocks as compressed in the cache
    * @param prefetchOnOpen whether to prefetch blocks upon open
+   * @param cacheDataInL1 If more than one cache tier deployed, if true, cache this column families
+   * data blocks up in the L1 tier.
    */
   CacheConfig(final BlockCache blockCache,
       final boolean cacheDataOnRead, final boolean inMemory,
       final boolean cacheDataOnWrite, final boolean cacheIndexesOnWrite,
       final boolean cacheBloomsOnWrite, final boolean evictOnClose,
-      final boolean cacheCompressed, final boolean prefetchOnOpen) {
+      final boolean cacheCompressed, final boolean prefetchOnOpen,
+      final boolean cacheDataInL1) {
     this.blockCache = blockCache;
     this.cacheDataOnRead = cacheDataOnRead;
     this.inMemory = inMemory;
@@ -278,6 +292,7 @@ public class CacheConfig {
     this.evictOnClose = evictOnClose;
     this.cacheCompressed = cacheCompressed;
     this.prefetchOnOpen = prefetchOnOpen;
+    this.cacheDataInL1 = cacheDataInL1;
     LOG.info(this);
   }
 
@@ -289,7 +304,8 @@ public class CacheConfig {
     this(cacheConf.blockCache, cacheConf.cacheDataOnRead, cacheConf.inMemory,
         cacheConf.cacheDataOnWrite, cacheConf.cacheIndexesOnWrite,
         cacheConf.cacheBloomsOnWrite, cacheConf.evictOnClose,
-        cacheConf.cacheCompressed, cacheConf.prefetchOnOpen);
+        cacheConf.cacheCompressed, cacheConf.prefetchOnOpen,
+        cacheConf.cacheDataInL1);
   }
 
   /**
@@ -340,6 +356,13 @@ public class CacheConfig {
   }
 
   /**
+   * @return True if cache data blocks in L1 tier (if more than one tier in block cache deploy).
+   */
+  public boolean isCacheDataInL1() {
+    return isBlockCacheEnabled() && this.cacheDataInL1;
+  }
+
+  /**
    * @return true if data blocks should be written to the cache when an HFile is
    *         written, false if not
    */
@@ -352,8 +375,19 @@ public class CacheConfig {
    * @param cacheDataOnWrite whether data blocks should be written to the cache
    *                         when an HFile is written
    */
+  @VisibleForTesting
   public void setCacheDataOnWrite(boolean cacheDataOnWrite) {
     this.cacheDataOnWrite = cacheDataOnWrite;
+  }
+
+  /**
+   * Only used for testing.
+   * @param cacheDataInL1 Whether to cache data blocks up in l1 (if a multi-tier cache
+   * implementation).
+   */
+  @VisibleForTesting
+  public void setCacheDataInL1(boolean cacheDataInL1) {
+    this.cacheDataInL1 = cacheDataInL1;
   }
 
   /**

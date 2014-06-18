@@ -1945,14 +1945,15 @@ rs.close();
         <title>Block Cache</title>
 
         <para>HBase provides three different BlockCache implementations: the default onheap
-          LruBlockCache, and BucketCache, and SlabCache, which are both offheap. This section
+          LruBlockCache, and BucketCache, and SlabCache, which are both (usually) offheap. This section
           discusses benefits and drawbacks of each implementation, how to choose the appropriate
           option, and configuration options for each.</para>
         <section>
           <title>Cache Choices</title>
-          <para>LruBlockCache is the original implementation, and is entirely within the Java heap.
-            SlabCache and BucketCache are mainly intended for keeping blockcache data offheap,
-            although BucketCache can also keep data onheap and in files.</para>
+          <para><classname>LruBlockCache</classname> is the original implementation, and is
+              entirely within the Java heap.  <classname>SlabCache</classname> and
+              <classname>BucketCache</classname> are mainly intended for keeping blockcache
+              data offheap, although BucketCache can also keep data onheap and in files.</para>
           <para><emphasis>SlabCache is deprecated and will be removed in 1.0!</emphasis></para>
           <para>BucketCache has seen more production deploys and has more deploy options. Fetching
             will always be slower when fetching from BucketCache or SlabCache, as compared with the
@@ -1961,9 +1962,22 @@ rs.close();
           <para>Anecdotal evidence indicates that BucketCache requires less garbage collection than
             SlabCache so should be even less erratic (than SlabCache or LruBlockCache).</para>
           <para>SlabCache tends to do more garbage collections, because blocks are always moved
-            between L1 and L2, at least given the way DoubleBlockCache currently works. Because the
-            hosting class for each implementation (DoubleBlockCache vs CombinedBlockCache) works so
-            differently, it is difficult to do a fair comparison between BucketCache and SlabCache.
+              between L1 and L2, at least given the way <classname>DoubleBlockCache</classname>
+              currently works. When you enable SlabCache, you are enabling a two tier caching
+              system, an L1 cache which is implemented by an instance of LruBlockCache and
+              an offheap L2 cache which is implemented by SlabCache.  Management of these
+              two tiers and how blocks move between them is done by <classname>DoubleBlockCache</classname>
+              when you are using SlabCache. DoubleBlockCache works by caching all blocks in L1
+              AND L2.  When blocks are evicted from L1, they are moved to L2.  See
+              <xref linkend="offheap.blockcache.slabcache" /> for more detail on how DoubleBlockCache works.
+          </para>
+          <para>The hosting class for BucketCache is <classname>CombinedBlockCache</classname>.
+              It keeps all DATA blocks in the BucketCache and meta blocks -- INDEX and BLOOM blocks --
+              onheap in the L1 <classname>LruBlockCache</classname>.
+          </para>
+          <para>Because the hosting class for each implementation
+              (<classname>DoubleBlockCache</classname> vs <classname>CombinedBlockCache</classname>)
+              works so differently, it is difficult to do a fair comparison between BucketCache and SlabCache.
             See Nick Dimiduk's <link
               xlink:href="http://www.n10k.com/blog/blockcache-101/">BlockCache 101</link> for some
             numbers. See also the description of <link
@@ -1973,7 +1987,15 @@ rs.close();
           <para>For more information about the off heap cache options, see <xref
               linkend="offheap.blockcache" />.</para>
         </section>
-
+        <section xml:id="cache.configurations">
+            <title>General Cache Configurations</title>
+            <para>Apart from the cache implementaiton itself, you can set some general
+                configuration options to control how the cache performs.
+               See <link
+                xlink:href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html" />.
+              After setting any of these options, restart or rolling restart your cluster for the
+              configuration to take effect. Check logs for errors or unexpected behavior.</para>
+      </section>
         <section
           xml:id="block.cache.design">
           <title>LruBlockCache Design</title>
@@ -1991,11 +2013,15 @@ rs.close();
                 again, it upgrades to this priority. It is thus part of the second group considered
                 during evictions.</para>
             </listitem>
-            <listitem>
+            <listitem xml_id="hbase.cache.inmemory">
               <para>In-memory access priority: If the block's family was configured to be
                 "in-memory", it will be part of this priority disregarding the number of times it
                 was accessed. Catalog tables are configured like this. This group is the last one
                 considered during evictions.</para>
+            <para>To mark a column family as in-memory, call
+                <programlisting>HColumnDescriptor.setInMemory(true);</programlisting> if creating a table from java,
+                or set <command>IN_MEMORY => true</command> when creating or altering a table in
+                the shell: e.g.  <programlisting>hbase(main):003:0> create  't', {NAME => 'f', IN_MEMORY => 'true'}</programlisting></para>
             </listitem>
           </itemizedlist>
           <para> For more information, see the <link
@@ -2082,7 +2108,8 @@ rs.close();
           <para>Currently the recommended way to measure HFile indexes and bloom filters sizes is to
             look at the region server web UI and checkout the relevant metrics. For keys, sampling
             can be done by using the HFile command line tool and look for the average key size
-            metric. </para>
+            metric. Since HBase 0.98.3, you can view detail on BlockCache stats and metrics
+            in a special Block Cache section in the UI.</para>
           <para>It's generally bad to use block caching when the WSS doesn't fit in memory. This is
             the case when you have for example 40GB available across all your region servers' block
             caches but you need to process 1TB of data. One of the reasons is that the churn
@@ -2111,14 +2138,15 @@ rs.close();
         <section
           xml:id="offheap.blockcache">
           <title>Offheap Block Cache</title>
-          <section>
+          <section xml:id="offheap.blockcache.slabcache">
             <title>Enable SlabCache</title>
             <para><emphasis>SlabCache is deprecated and will be removed in 1.0!</emphasis></para>
             <para> SlabCache is originally described in <link
                 xlink:href="http://blog.cloudera.com/blog/2012/01/caching-in-hbase-slabcache/">Caching
                 in Apache HBase: SlabCache</link>. Quoting from the API documentation for <link
                 xlink:href="http://hbase.apache.org/0.94/apidocs/org/apache/hadoop/hbase/io/hfile/DoubleBlockCache.html">DoubleBlockCache</link>,
-              it is an abstraction layer that combines two caches, the smaller onHeapCache and the
+              the hosting class for SlabCache deploys,
+              DoubleBlockCache is an abstraction layer that combines two caches, the smaller onHeapCache and the
               larger offHeapCache. CacheBlock attempts to cache the block in both caches, while
               readblock reads first from the faster on heap cache before looking for the block in
               the off heap cache. Metrics are the combined size and hits and misses of both
@@ -2138,22 +2166,41 @@ rs.close();
             <title>Enable BucketCache</title>
             <para> To enable BucketCache, set the value of
                 <varname>hbase.offheapcache.percentage</varname> to 0 in the RegionServer's
-                <filename>hbase-site.xml</filename> file. This disables SlabCache. Next, set the
-              various options for BucketCache to values appropriate to your situation. You can find
-              more information about all of the (more than 26) options at <link
-                xlink:href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html" />.
-              After setting the options, restart or rolling restart your cluster for the
-              configuration to take effect. Check logs for errors or unexpected behavior.</para>
-            <para>The offheap and onheap caches are managed by <link
+                <filename>hbase-site.xml</filename> file. This disables SlabCache.
+
+                <para>Just as for SlabCache, the usual deploy of BucketCache is via a
+                    managing class that sets up two caching tiers: an L1 onheap cache
+                    implemented by LruBlockCache and a second L2 cache implemented
+                    with BucketCache. The managing class is <link
                 xlink:href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CombinedBlockCache.html">CombinedBlockCache</link>
-              by default. The link describes the mechanism of CombinedBlockCache. To disable
+            by default. The just-previous link describes the mechanism of CombinedBlockCache. In short, it works
+            by keeping meta blocks -- INDEX and BLOOM in the L1, onheap LruBlockCache tier -- and DATA
+            blocks are kept in the L2, BucketCache tier. It is possible to amend this behavior in
+            HBase since version 1.0 and ask that a column family have both its meta and DATA blocks hosted onheap in the L1 tier by
+            setting <varname>cacheDataInL1</varname> via <programlisting>(HColumnDescriptor.setCacheDataInL1(true)</programlisting>
+            or in the shell, creating or amending column families setting <varname>CACHE_DATA_IN_L1</varname>
+            to true: e.g. <programlisting>hbase(main):003:0> create 't', {NAME => 't', CONFIGURATION => {CACHE_DATA_IN_L1 => 'true'}}</programlisting></para>
+    </para>
+        <para>The BucketCache deploy can be
+            onheap, offheap, or file based. You set which via the
+            <varname>hbase.bucketcache.ioengine</varname> setting it to
+            <varname>heap</varname> for BucketCache running as part of the java heap,
+            <varname>offheap</varname> for BucketCache to make allocations offheap,
+            and <varname>file:PATH_TO_FILE</varname> for BucketCache to use a file
+            (Useful in particular if you have some fast i/o attached to the box such
+            as SSDs).
+        </para>
+        <para>To disable
               CombinedBlockCache, and use the BucketCache as a strict L2 cache to the L1
               LruBlockCache, set <varname>CacheConfig.BUCKET_CACHE_COMBINED_KEY</varname> to
                 <literal>false</literal>. In this mode, on eviction from L1, blocks go to L2.</para>
+
             <para> By default, <varname>CacheConfig.BUCKET_CACHE_COMBINED_PERCENTAGE_KEY</varname>
               defaults to <literal>0.9</literal>. This means that whatever size you set for the
               bucket cache with <varname>CacheConfig.BUCKET_CACHE_SIZE_KEY</varname>, 90% will be
               used for offheap and 10% will be used by the onheap LruBlockCache. </para>
+          <para>
+          </para>
             <procedure>
               <title>BucketCache Example Configuration</title>
               <para> This sample provides a configuration for a 4 GB offheap BucketCache with a 1 GB

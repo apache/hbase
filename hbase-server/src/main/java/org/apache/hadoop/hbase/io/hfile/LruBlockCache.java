@@ -38,6 +38,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
@@ -57,10 +58,14 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * constant-time {@link #cacheBlock} and {@link #getBlock} operations.<p>
  *
  * Contains three levels of block priority to allow for
- * scan-resistance and in-memory families.  A block is added with an inMemory
- * flag if necessary, otherwise a block becomes a single access priority.  Once
- * a blocked is accessed again, it changes to multiple access.  This is used
- * to prevent scans from thrashing the cache, adding a least-frequently-used
+ * scan-resistance and in-memory families {@link HColumnDescriptor#setInMemory(boolean)} (An
+ * in-memory column family is a column family that should be served from memory if possible):
+ * single-access, multiple-accesses, and in-memory priority.
+ * A block is added with an in-memory priority flag if
+ * {@link HColumnDescriptor#isInMemory()}, otherwise a block becomes a single access
+ * priority the first time it is read into this block cache.  If a block is accessed again while
+ * in cache, it is marked as a multiple access priority block.  This delineation of blocks is used
+ * to prevent scans from thrashing the cache adding a least-frequently-used
  * element to the eviction algorithm.<p>
  *
  * Each priority is given its own chunk of the total cache to ensure
@@ -74,10 +79,10 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * pre-allocating data structures and in initial heap estimation of the map.<p>
  *
  * The detailed constructor defines the sizes for the three priorities (they
- * should total to the maximum size defined).  It also sets the levels that
+ * should total to the <code>maximum size</code> defined).  It also sets the levels that
  * trigger and control the eviction thread.<p>
  *
- * The acceptable size is the cache size level which triggers the eviction
+ * The <code>acceptable size</code> is the cache size level which triggers the eviction
  * process to start.  It evicts enough blocks to get the size below the
  * minimum size specified.<p>
  *
@@ -94,14 +99,23 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
   static final Log LOG = LogFactory.getLog(LruBlockCache.class);
 
+  /**
+   * Percentage of total size that eviction will evict until; e.g. if set to .8, then we will keep
+   * evicting during an eviction run till the cache size is down to 80% of the total.
+   */
   static final String LRU_MIN_FACTOR_CONFIG_NAME = "hbase.lru.blockcache.min.factor";
+
+  /**
+   * Acceptable size of cache (no evictions if size < acceptable)
+   */
   static final String LRU_ACCEPTABLE_FACTOR_CONFIG_NAME = "hbase.lru.blockcache.acceptable.factor";
+
   static final String LRU_SINGLE_PERCENTAGE_CONFIG_NAME = "hbase.lru.blockcache.single.percentage";
   static final String LRU_MULTI_PERCENTAGE_CONFIG_NAME = "hbase.lru.blockcache.multi.percentage";
   static final String LRU_MEMORY_PERCENTAGE_CONFIG_NAME = "hbase.lru.blockcache.memory.percentage";
 
   /**
-   * Configuration key to force data-block always(except in-memory are too much)
+   * Configuration key to force data-block always (except in-memory are too much)
    * cached in memory for in-memory hfile, unlike inMemory, which is a column-family
    * configuration, inMemoryForceMode is a cluster-wide configuration
    */
@@ -306,9 +320,11 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    * @param cacheKey block's cache key
    * @param buf block buffer
    * @param inMemory if block is in-memory
+   * @param cacheDataInL1
    */
   @Override
-  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
+      final boolean cacheDataInL1) {
     LruCachedBlock cb = map.get(cacheKey);
     if(cb != null) {
       // compare the contents, if they are not equal, we are in big trouble
@@ -346,7 +362,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    * @param buf block buffer
    */
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
-    cacheBlock(cacheKey, buf, false);
+    cacheBlock(cacheKey, buf, false, false);
   }
 
   /**
@@ -920,7 +936,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     Map<BlockType, Integer> counts =
         new EnumMap<BlockType, Integer>(BlockType.class);
     for (LruCachedBlock cb : map.values()) {
-      BlockType blockType = ((HFileBlock) cb.getBuffer()).getBlockType();
+      BlockType blockType = ((Cacheable)cb.getBuffer()).getBlockType();
       Integer count = counts.get(blockType);
       counts.put(blockType, (count == null ? 0 : count) + 1);
     }

@@ -294,7 +294,8 @@ public class SingleSizeCache implements BlockCache, HeapSize {
 
   /* Since its offheap, it doesn't matter if its in memory or not */
   @Override
-  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
+      final boolean cacheDataInL1) {
     this.cacheBlock(cacheKey, buf);
   }
 

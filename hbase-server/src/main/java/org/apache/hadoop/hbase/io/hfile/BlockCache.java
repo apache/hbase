@@ -33,8 +33,11 @@ public interface BlockCache extends Iterable<CachedBlock> {
    * @param cacheKey The block's cache key.
    * @param buf The block contents wrapped in a ByteBuffer.
    * @param inMemory Whether block should be treated as in-memory
+   * @param cacheDataInL1 If multi-tier block cache deploy -- i.e. has an L1 and L2 tier -- then
+   * if this flag is true, cache data blocks up in the L1 tier (meta blocks are probably being
+   * cached in L1 already).
    */
-  void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory);
+  void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory, boolean cacheDataInL1);
 
   /**
    * Add block to cache (defaults to not in-memory).

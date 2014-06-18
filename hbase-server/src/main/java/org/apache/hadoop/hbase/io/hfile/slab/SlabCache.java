@@ -241,7 +241,8 @@ public class SlabCache implements SlabItemActionWatcher, BlockCache, HeapSize {
    * We don't care about whether its in memory or not, so we just pass the call
    * through.
    */
-  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
+      final boolean cacheDataInL1) {
     cacheBlock(cacheKey, buf);
   }
 

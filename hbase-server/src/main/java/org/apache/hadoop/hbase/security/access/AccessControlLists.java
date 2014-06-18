@@ -115,7 +115,10 @@ public class AccessControlLists {
             10, // Ten is arbitrary number.  Keep versions to help debugging.
             Compression.Algorithm.NONE.getName(), true, true, 8 * 1024,
             HConstants.FOREVER, BloomType.NONE.toString(),
-            HConstants.REPLICATION_SCOPE_LOCAL));
+            HConstants.REPLICATION_SCOPE_LOCAL).
+            // Set cache data blocks in L1 if more than one cache tier deployed; e.g. this will
+            // be the case if we are using CombinedBlockCache (Bucket Cache).
+            setCacheDataInL1(true));
   }
 
   /**

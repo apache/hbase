@@ -1318,6 +1318,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
               .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
               // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
               .setBloomFilterType(BloomType.NONE)
+              // Enable cache of data blocks in L1 if more than one caching tier deployed:
+              // e.g. if using CombinedBlockCache (BucketCache).
+              .setCacheDataInL1(true)
       });
 
   static {
@@ -1345,6 +1348,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
               .setInMemory(true)
               .setBlocksize(8 * 1024)
               .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+              // Enable cache of data blocks in L1 if more than one caching tier deployed:
+              // e.g. if using CombinedBlockCache (BucketCache).
+              .setCacheDataInL1(true)
       });
 
   @Deprecated

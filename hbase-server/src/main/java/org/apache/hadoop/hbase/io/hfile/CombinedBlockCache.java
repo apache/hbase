@@ -54,18 +54,19 @@ public class CombinedBlockCache implements BlockCache, HeapSize {
   }
 
   @Override
-  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
+      final boolean cacheDataInL1) {
     boolean isMetaBlock = buf.getBlockType().getCategory() != BlockCategory.DATA;
-    if (isMetaBlock) {
-      lruCache.cacheBlock(cacheKey, buf, inMemory);
+    if (isMetaBlock || cacheDataInL1) {
+      lruCache.cacheBlock(cacheKey, buf, inMemory, cacheDataInL1);
     } else {
-      bucketCache.cacheBlock(cacheKey, buf, inMemory);
+      bucketCache.cacheBlock(cacheKey, buf, inMemory, cacheDataInL1);
     }
   }
 
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
-    cacheBlock(cacheKey, buf, false);
+    cacheBlock(cacheKey, buf, false, false);
   }
 
   @Override

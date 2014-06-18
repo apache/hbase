@@ -290,7 +290,7 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf) {
-    cacheBlock(cacheKey, buf, false);
+    cacheBlock(cacheKey, buf, false, false);
   }
 
   /**
@@ -298,9 +298,11 @@ public class BucketCache implements BlockCache, HeapSize {
    * @param cacheKey block's cache key
    * @param cachedItem block buffer
    * @param inMemory if block is in-memory
+   * @param cacheDataInL1
    */
   @Override
-  public void cacheBlock(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory) {
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable cachedItem, boolean inMemory,
+      final boolean cacheDataInL1) {
     cacheBlockWithWait(cacheKey, cachedItem, inMemory, wait_when_cache);
   }
 

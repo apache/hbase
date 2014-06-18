@@ -80,8 +80,9 @@ public class DoubleBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   @Override
-  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory) {
-    onHeapCache.cacheBlock(cacheKey, buf, inMemory);
+  public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
+      final boolean cacheDataInL1) {
+    onHeapCache.cacheBlock(cacheKey, buf, inMemory, cacheDataInL1);
     offHeapCache.cacheBlock(cacheKey, buf);
   }
 

@@ -89,6 +89,13 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public static final String CACHE_BLOOMS_ON_WRITE = "CACHE_BLOOMS_ON_WRITE";
   public static final String EVICT_BLOCKS_ON_CLOSE = "EVICT_BLOCKS_ON_CLOSE";
   /**
+   * Key for cache data into L1 if cache is set up with more than one tier.
+   * To set in the shell, do something like this:
+   * <code>hbase(main):003:0> create 't', {NAME => 't', CONFIGURATION => {CACHE_DATA_IN_L1 => 'true'}}</code>
+   */
+  public static final String CACHE_DATA_IN_L1 = "CACHE_DATA_IN_L1";
+
+  /**
    * Key for the PREFETCH_BLOCKS_ON_OPEN attribute.
    * If set, all INDEX, BLOOM, and DATA blocks of HFiles belonging to this
    * family will be loaded into the cache as soon as the file is opened. These
@@ -151,7 +158,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   private volatile Integer blocksize = null;
 
   /**
-   * Default setting for whether to serve from memory or not.
+   * Default setting for whether to try and serve this column family from memory or not.
    */
   public static final boolean DEFAULT_IN_MEMORY = false;
 
@@ -170,6 +177,13 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * is enabled.
    */
   public static final boolean DEFAULT_CACHE_DATA_ON_WRITE = false;
+
+  /**
+   * Default setting for whether to cache data blocks in L1 tier.  Only makes sense if more than
+   * one tier in operations: i.e. if we have an L1 and a L2.  This will be the cases if we are
+   * using BucketCache.
+   */
+  public static final boolean DEFAULT_CACHE_DATA_IN_L1 = false;
 
   /**
    * Default setting for whether to cache index blocks on write if block
@@ -236,6 +250,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       DEFAULT_VALUES.put(KEEP_DELETED_CELLS, String.valueOf(DEFAULT_KEEP_DELETED));
       DEFAULT_VALUES.put(DATA_BLOCK_ENCODING, String.valueOf(DEFAULT_DATA_BLOCK_ENCODING));
       DEFAULT_VALUES.put(CACHE_DATA_ON_WRITE, String.valueOf(DEFAULT_CACHE_DATA_ON_WRITE));
+      DEFAULT_VALUES.put(CACHE_DATA_IN_L1, String.valueOf(DEFAULT_CACHE_DATA_IN_L1));
       DEFAULT_VALUES.put(CACHE_INDEX_ON_WRITE, String.valueOf(DEFAULT_CACHE_INDEX_ON_WRITE));
       DEFAULT_VALUES.put(CACHE_BLOOMS_ON_WRITE, String.valueOf(DEFAULT_CACHE_BLOOMS_ON_WRITE));
       DEFAULT_VALUES.put(EVICT_BLOCKS_ON_CLOSE, String.valueOf(DEFAULT_EVICT_BLOCKS_ON_CLOSE));
@@ -742,7 +757,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /**
-   * @return True if we are to keep all in use HRegionServer cache.
+   * @return True if we are to favor keeping all values for this column family in the 
+   * HRegionServer cache.
    */
   public boolean isInMemory() {
     String value = getValue(HConstants.IN_MEMORY);
@@ -752,8 +768,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /**
-   * @param inMemory True if we are to keep all values in the HRegionServer
-   * cache
+   * @param inMemory True if we are to favor keeping all values for this column family in the
+   * HRegionServer cache
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setInMemory(boolean inMemory) {
@@ -872,11 +888,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @return true if we should cache data blocks on write
    */
   public boolean shouldCacheDataOnWrite() {
-    String value = getValue(CACHE_DATA_ON_WRITE);
-    if (value != null) {
-      return Boolean.valueOf(value).booleanValue();
-    }
-    return DEFAULT_CACHE_DATA_ON_WRITE;
+    return setAndGetBoolean(CACHE_DATA_ON_WRITE, DEFAULT_CACHE_DATA_ON_WRITE);
   }
 
   /**
@@ -888,14 +900,33 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /**
+   * @return true if we should cache data blocks in the L1 cache (if block cache deploy
+   * has more than one tier; e.g. we are using CombinedBlockCache).
+   */
+  public boolean shouldCacheDataInL1() {
+    return setAndGetBoolean(CACHE_DATA_IN_L1, DEFAULT_CACHE_DATA_IN_L1);
+  }
+
+  /**
+   * @param value true if we should cache data blocks in the L1 cache (if block cache deploy
+   * has more than one tier; e.g. we are using CombinedBlockCache).
+   * @return this (for chained invocation)
+   */
+  public HColumnDescriptor setCacheDataInL1(boolean value) {
+    return setValue(CACHE_DATA_IN_L1, Boolean.toString(value));
+  }
+
+  private boolean setAndGetBoolean(final String key, final boolean defaultSetting) {
+    String value = getValue(key);
+    if (value != null) return Boolean.valueOf(value).booleanValue();
+    return defaultSetting;
+  }
+
+  /**
    * @return true if we should cache index blocks on write
    */
   public boolean shouldCacheIndexesOnWrite() {
-    String value = getValue(CACHE_INDEX_ON_WRITE);
-    if (value != null) {
-      return Boolean.valueOf(value).booleanValue();
-    }
-    return DEFAULT_CACHE_INDEX_ON_WRITE;
+    return setAndGetBoolean(CACHE_INDEX_ON_WRITE, DEFAULT_CACHE_INDEX_ON_WRITE);
   }
 
   /**
@@ -910,11 +941,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @return true if we should cache bloomfilter blocks on write
    */
   public boolean shouldCacheBloomsOnWrite() {
-    String value = getValue(CACHE_BLOOMS_ON_WRITE);
-    if (value != null) {
-      return Boolean.valueOf(value).booleanValue();
-    }
-    return DEFAULT_CACHE_BLOOMS_ON_WRITE;
+    return setAndGetBoolean(CACHE_BLOOMS_ON_WRITE, DEFAULT_CACHE_BLOOMS_ON_WRITE);
   }
 
   /**
@@ -930,11 +957,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * close
    */
   public boolean shouldEvictBlocksOnClose() {
-    String value = getValue(EVICT_BLOCKS_ON_CLOSE);
-    if (value != null) {
-      return Boolean.valueOf(value).booleanValue();
-    }
-    return DEFAULT_EVICT_BLOCKS_ON_CLOSE;
+    return setAndGetBoolean(EVICT_BLOCKS_ON_CLOSE, DEFAULT_EVICT_BLOCKS_ON_CLOSE);
   }
 
   /**
@@ -950,11 +973,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @return true if we should prefetch blocks into the blockcache on open
    */
   public boolean shouldPrefetchBlocksOnOpen() {
-    String value = getValue(PREFETCH_BLOCKS_ON_OPEN);
-   if (value != null) {
-      return Boolean.valueOf(value).booleanValue();
-    }
-    return DEFAULT_PREFETCH_BLOCKS_ON_OPEN;
+    return setAndGetBoolean(PREFETCH_BLOCKS_ON_OPEN, DEFAULT_PREFETCH_BLOCKS_ON_OPEN);
   }
 
   /**

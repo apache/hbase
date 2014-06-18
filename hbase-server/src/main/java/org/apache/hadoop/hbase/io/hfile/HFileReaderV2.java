@@ -354,7 +354,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
       // Cache the block
       if (cacheBlock) {
         cacheConf.getBlockCache().cacheBlock(cacheKey, metaBlock,
-            cacheConf.isInMemory());
+            cacheConf.isInMemory(), this.cacheConf.isCacheDataInL1());
       }
 
       return metaBlock.getBufferWithoutHeader();
@@ -459,7 +459,8 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
         // Cache the block if necessary
         if (cacheBlock && cacheConf.shouldCacheBlockOnRead(hfileBlock.getBlockType().getCategory())) {
-          cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock, cacheConf.isInMemory());
+          cacheConf.getBlockCache().cacheBlock(cacheKey, hfileBlock, cacheConf.isInMemory(),
+            this.cacheConf.isCacheDataInL1());
         }
 
         if (updateCacheMetrics && hfileBlock.getBlockType().isData()) {

@@ -286,7 +286,7 @@ public class TestLruBlockCache {
       cache.getBlock(multiBlocks[i].cacheKey, true, false, true);
 
       // Add memory blocks as such
-      cache.cacheBlock(memoryBlocks[i].cacheKey, memoryBlocks[i], true);
+      cache.cacheBlock(memoryBlocks[i].cacheKey, memoryBlocks[i], true, false);
       expectedCacheSize += memoryBlocks[i].cacheBlockHeapSize();
 
     }
@@ -321,7 +321,7 @@ public class TestLruBlockCache {
     assertEquals(null, cache.getBlock(multiBlocks[0].cacheKey, true, false, true));
 
     // Insert another memory block
-    cache.cacheBlock(memoryBlocks[3].cacheKey, memoryBlocks[3], true);
+    cache.cacheBlock(memoryBlocks[3].cacheKey, memoryBlocks[3], true, false);
 
     // Three evictions, three evicted.
     assertEquals(3, cache.getStats().getEvictionCount());
@@ -359,7 +359,7 @@ public class TestLruBlockCache {
     assertEquals(null, cache.getBlock(multiBlocks[2].cacheKey, true, false, true));
 
     // Cache a big memory block
-    cache.cacheBlock(bigBlocks[2].cacheKey, bigBlocks[2], true);
+    cache.cacheBlock(bigBlocks[2].cacheKey, bigBlocks[2], true, false);
 
     // Six evictions, twelve evicted (3 new)
     assertEquals(6, cache.getStats().getEvictionCount());
@@ -412,7 +412,7 @@ public class TestLruBlockCache {
     assertEquals(expectedCacheSize, cache.heapSize());
 
     // 1. Insert a memory block, oldest single should be evicted, si:mu:me = 4:4:1
-    cache.cacheBlock(memoryBlocks[0].cacheKey, memoryBlocks[0], true);
+    cache.cacheBlock(memoryBlocks[0].cacheKey, memoryBlocks[0], true, false);
     // Single eviction, one block evicted
     assertEquals(1, cache.getStats().getEvictionCount());
     assertEquals(1, cache.getStats().getEvictedCount());
@@ -420,7 +420,7 @@ public class TestLruBlockCache {
     assertEquals(null, cache.getBlock(singleBlocks[0].cacheKey, true, false, true));
 
     // 2. Insert another memory block, another single evicted, si:mu:me = 3:4:2
-    cache.cacheBlock(memoryBlocks[1].cacheKey, memoryBlocks[1], true);
+    cache.cacheBlock(memoryBlocks[1].cacheKey, memoryBlocks[1], true, false);
     // Two evictions, two evicted.
     assertEquals(2, cache.getStats().getEvictionCount());
     assertEquals(2, cache.getStats().getEvictedCount());
@@ -428,10 +428,10 @@ public class TestLruBlockCache {
     assertEquals(null, cache.getBlock(singleBlocks[1].cacheKey, true, false, true));
 
     // 3. Insert 4 memory blocks, 2 single and 2 multi evicted, si:mu:me = 1:2:6
-    cache.cacheBlock(memoryBlocks[2].cacheKey, memoryBlocks[2], true);
-    cache.cacheBlock(memoryBlocks[3].cacheKey, memoryBlocks[3], true);
-    cache.cacheBlock(memoryBlocks[4].cacheKey, memoryBlocks[4], true);
-    cache.cacheBlock(memoryBlocks[5].cacheKey, memoryBlocks[5], true);
+    cache.cacheBlock(memoryBlocks[2].cacheKey, memoryBlocks[2], true, false);
+    cache.cacheBlock(memoryBlocks[3].cacheKey, memoryBlocks[3], true, false);
+    cache.cacheBlock(memoryBlocks[4].cacheKey, memoryBlocks[4], true, false);
+    cache.cacheBlock(memoryBlocks[5].cacheKey, memoryBlocks[5], true, false);
     // Three evictions, three evicted.
     assertEquals(6, cache.getStats().getEvictionCount());
     assertEquals(6, cache.getStats().getEvictedCount());
@@ -443,9 +443,9 @@ public class TestLruBlockCache {
 
     // 4. Insert 3 memory blocks, the remaining 1 single and 2 multi evicted
     // si:mu:me = 0:0:9
-    cache.cacheBlock(memoryBlocks[6].cacheKey, memoryBlocks[6], true);
-    cache.cacheBlock(memoryBlocks[7].cacheKey, memoryBlocks[7], true);
-    cache.cacheBlock(memoryBlocks[8].cacheKey, memoryBlocks[8], true);
+    cache.cacheBlock(memoryBlocks[6].cacheKey, memoryBlocks[6], true, false);
+    cache.cacheBlock(memoryBlocks[7].cacheKey, memoryBlocks[7], true, false);
+    cache.cacheBlock(memoryBlocks[8].cacheKey, memoryBlocks[8], true, false);
     // Three evictions, three evicted.
     assertEquals(9, cache.getStats().getEvictionCount());
     assertEquals(9, cache.getStats().getEvictedCount());
@@ -456,7 +456,7 @@ public class TestLruBlockCache {
 
     // 5. Insert one memory block, the oldest memory evicted
     // si:mu:me = 0:0:9
-    cache.cacheBlock(memoryBlocks[9].cacheKey, memoryBlocks[9], true);
+    cache.cacheBlock(memoryBlocks[9].cacheKey, memoryBlocks[9], true, false);
     // one eviction, one evicted.
     assertEquals(10, cache.getStats().getEvictionCount());
     assertEquals(10, cache.getStats().getEvictedCount());
@@ -571,7 +571,7 @@ public class TestLruBlockCache {
       cache.getBlock(multiBlocks[i].cacheKey, true, false, true);
 
       // Add memory blocks as such
-      cache.cacheBlock(memoryBlocks[i].cacheKey, memoryBlocks[i], true);
+      cache.cacheBlock(memoryBlocks[i].cacheKey, memoryBlocks[i], true, false);
     }
 
     // Do not expect any evictions yet

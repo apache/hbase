@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -157,7 +158,7 @@ public class TestCacheConfig {
     Cacheable c = new DataCacheEntry();
     // Do asserts on block counting.
     long initialBlockCount = bc.getBlockCount();
-    bc.cacheBlock(bck, c);
+    bc.cacheBlock(bck, c, cc.isInMemory(), cc.isCacheDataInL1());
     assertEquals(doubling? 2: 1, bc.getBlockCount() - initialBlockCount);
     bc.evictBlock(bck);
     assertEquals(initialBlockCount, bc.getBlockCount());
@@ -165,13 +166,26 @@ public class TestCacheConfig {
     // buffers do lazy allocation so sizes are off on first go around.
     if (sizing) {
       long originalSize = bc.getCurrentSize();
-      bc.cacheBlock(bck, c);
+      bc.cacheBlock(bck, c, cc.isInMemory(), cc.isCacheDataInL1());
       long size = bc.getCurrentSize();
       assertTrue(bc.getCurrentSize() > originalSize);
       bc.evictBlock(bck);
       size = bc.getCurrentSize();
       assertEquals(originalSize, size);
     }
+  }
+
+  /**
+   * @param cc
+   * @param filename
+   * @return
+   */
+  private long cacheDataBlock(final CacheConfig cc, final String filename) {
+    BlockCacheKey bck = new BlockCacheKey(filename, 0);
+    Cacheable c = new DataCacheEntry();
+    // Do asserts on block counting.
+    cc.getBlockCache().cacheBlock(bck, c, cc.isInMemory(), cc.isCacheDataInL1());
+    return cc.getBlockCache().getBlockCount();
   }
 
   @Test
@@ -201,5 +215,37 @@ public class TestCacheConfig {
     basicBlockCacheOps(cc, false, false);
     assertTrue(cc.getBlockCache() instanceof CombinedBlockCache);
     // TODO: Assert sizes allocated are right and proportions.
+  }
+
+  /**
+   * Test the cacheDataInL1 flag.  When set, data blocks should be cached in the l1 tier, up in
+   * LruBlockCache when using CombinedBlockCcahe.
+   */
+  @Test
+  public void testCacheDataInL1() {
+    this.conf.set(CacheConfig.BUCKET_CACHE_IOENGINE_KEY, "offheap");
+    this.conf.setInt(CacheConfig.BUCKET_CACHE_SIZE_KEY, 100);
+    this.conf.setFloat(CacheConfig.BUCKET_CACHE_COMBINED_PERCENTAGE_KEY, 0.8f);
+    CacheConfig cc = new CacheConfig(this.conf);
+    assertTrue(cc.getBlockCache() instanceof CombinedBlockCache);
+    CombinedBlockCache cbc = (CombinedBlockCache)cc.getBlockCache();
+    // Add a data block.  Should go into L2, into the Bucket Cache, not the LruBlockCache.
+    cacheDataBlock(cc, "1");
+    LruBlockCache lrubc = (LruBlockCache)cbc.getBlockCaches()[0];
+    assertDataBlockCount(lrubc, 0);
+    // Enable our test flag.
+    cc.setCacheDataInL1(true);
+    cacheDataBlock(cc, "2");
+    assertDataBlockCount(lrubc, 1);
+    cc.setCacheDataInL1(false);
+    cacheDataBlock(cc, "3");
+    assertDataBlockCount(lrubc, 1);
+  }
+
+  private void assertDataBlockCount(final LruBlockCache bc, final int expected) {
+    Map<BlockType, Integer> blocks = bc.getBlockTypeCountsForTest();
+    assertEquals(expected, blocks == null? 0:
+      blocks.get(BlockType.DATA) == null? 0:
+      blocks.get(BlockType.DATA).intValue());
   }
 }
