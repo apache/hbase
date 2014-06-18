@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.util.InfoServer;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.net.DNS;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.nio.SelectChannelConnector;
@@ -108,8 +107,7 @@ public class RESTServer implements Constants {
       }
     }
 
-    UserGroupInformation realUser = userProvider.getCurrent().getUGI();
-    RESTServlet servlet = RESTServlet.getInstance(conf, realUser);
+    RESTServlet servlet = RESTServlet.getInstance(conf, userProvider);
 
     Options options = new Options();
     options.addOption("p", "port", true, "Port to bind to [default: 8080]");
