@@ -116,6 +116,7 @@ public class ThriftServerRunner implements Runnable {
   static final String BIND_CONF_KEY = "hbase.regionserver.thrift.ipaddress";
   static final String COMPACT_CONF_KEY = "hbase.regionserver.thrift.compact";
   static final String FRAMED_CONF_KEY = "hbase.regionserver.thrift.framed";
+  static final String MAX_FRAME_SIZE_CONF_KEY = "hbase.regionserver.thrift.framed.max_frame_size_in_mb";
   static final String PORT_CONF_KEY = "hbase.regionserver.thrift.port";
   static final String COALESCE_INC_KEY = "hbase.regionserver.thrift.coalesceIncrement";
 
@@ -281,7 +282,8 @@ public class ThriftServerRunner implements Runnable {
     // Construct correct TransportFactory
     TTransportFactory transportFactory;
     if (conf.getBoolean(FRAMED_CONF_KEY, false) || implType.isAlwaysFramed) {
-      transportFactory = new TFramedTransport.Factory();
+      transportFactory = new TFramedTransport.Factory(
+          conf.getInt(MAX_FRAME_SIZE_CONF_KEY, 2)  * 1024 * 1024);
       LOG.debug("Using framed transport");
     } else {
       transportFactory = new TTransportFactory();
