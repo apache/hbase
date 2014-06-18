@@ -32,11 +32,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.http.InfoServer;
-import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.ImplType;
-import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
-import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 
 /**
@@ -91,17 +88,6 @@ public class ThriftServer {
    */
    void doMain(final String[] args) throws Exception {
      processOptions(args);
-
-    UserProvider userProvider = UserProvider.instantiate(conf);
-    // login the server principal (if using secure Hadoop)
-    if (userProvider.isHadoopSecurityEnabled() && userProvider.isHBaseSecurityEnabled()) {
-      String machineName =
-          Strings.domainNamePointerToHostName(DNS.getDefaultHost(
-            conf.get("hbase.thrift.dns.interface", "default"),
-            conf.get("hbase.thrift.dns.nameserver", "default")));
-      userProvider
-          .login("hbase.thrift.keytab.file", "hbase.thrift.kerberos.principal", machineName);
-    }
 
      serverRunner = new ThriftServerRunner(conf);
 
@@ -168,9 +154,10 @@ public class ThriftServer {
 
     // Get port to bind to
     try {
-      int listenPort = Integer.parseInt(cmd.getOptionValue(PORT_OPTION,
-          String.valueOf(DEFAULT_LISTEN_PORT)));
-      conf.setInt(ThriftServerRunner.PORT_CONF_KEY, listenPort);
+      if (cmd.hasOption(PORT_OPTION)) {
+        int listenPort = Integer.parseInt(cmd.getOptionValue(PORT_OPTION));
+        conf.setInt(ThriftServerRunner.PORT_CONF_KEY, listenPort);
+      }
     } catch (NumberFormatException e) {
       LOG.error("Could not parse the value provided for the port option", e);
       printUsageAndExit(options, -1);

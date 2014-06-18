@@ -25,6 +25,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -37,6 +38,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.sasl.AuthorizeCallback;
+import javax.security.sasl.Sasl;
+import javax.security.sasl.SaslServer;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
@@ -70,6 +77,8 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.security.SecurityUtil;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.thrift.CallQueue.Call;
 import org.apache.hadoop.hbase.thrift.generated.AlreadyExists;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
@@ -85,9 +94,16 @@ import org.apache.hadoop.hbase.thrift.generated.TRegionInfo;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.thrift.generated.TScan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ConnectionCache;
+import org.apache.hadoop.hbase.util.Strings;
+import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.security.SaslRpcServer.SaslGssCallbackHandler;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.thrift.TException;
+import org.apache.thrift.TProcessor;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
+import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.server.THsHaServer;
 import org.apache.thrift.server.TNonblockingServer;
@@ -96,6 +112,7 @@ import org.apache.thrift.server.TThreadedSelectorServer;
 import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TNonblockingServerSocket;
 import org.apache.thrift.transport.TNonblockingServerTransport;
+import org.apache.thrift.transport.TSaslServerTransport;
 import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TTransportFactory;
@@ -108,6 +125,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * the Hbase API specified in the Hbase.thrift IDL file.
  */
 @InterfaceAudience.Private
+@SuppressWarnings("deprecation")
 public class ThriftServerRunner implements Runnable {
 
   private static final Log LOG = LogFactory.getLog(ThriftServerRunner.class);
@@ -122,6 +140,17 @@ public class ThriftServerRunner implements Runnable {
   static final String PORT_CONF_KEY = "hbase.regionserver.thrift.port";
   static final String COALESCE_INC_KEY = "hbase.regionserver.thrift.coalesceIncrement";
 
+  /**
+   * Thrift quality of protection configuration key. Valid values can be:
+   * auth-conf: authentication, integrity and confidentiality checking
+   * auth-int: authentication and integrity checking
+   * auth: authentication only
+   *
+   * This is used to authenticate the callers and support impersonation.
+   * The thrift server and the HBase cluster must run in secure mode.
+   */
+  static final String THRIFT_QOP_KEY = "hbase.thrift.security.qop";
+
   private static final String DEFAULT_BIND_ADDR = "0.0.0.0";
   public static final int DEFAULT_LISTEN_PORT = 9090;
   private final int listenPort;
@@ -130,6 +159,11 @@ public class ThriftServerRunner implements Runnable {
   volatile TServer tserver;
   private final Hbase.Iface handler;
   private final ThriftMetrics metrics;
+  private final HBaseHandler hbaseHandler;
+  private final UserGroupInformation realUser;
+
+  private final String qop;
+  private String host;
 
   /** An enum of server implementation selections */
   enum ImplType {
@@ -230,15 +264,37 @@ public class ThriftServerRunner implements Runnable {
   }
 
   public ThriftServerRunner(Configuration conf) throws IOException {
-    this(conf, new ThriftServerRunner.HBaseHandler(conf));
-  }
-
-  public ThriftServerRunner(Configuration conf, HBaseHandler handler) {
+    UserProvider userProvider = UserProvider.instantiate(conf);
+    // login the server principal (if using secure Hadoop)
+    boolean securityEnabled = userProvider.isHadoopSecurityEnabled()
+      && userProvider.isHBaseSecurityEnabled();
+    if (securityEnabled) {
+      host = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
+        conf.get("hbase.thrift.dns.interface", "default"),
+        conf.get("hbase.thrift.dns.nameserver", "default")));
+      userProvider.login("hbase.thrift.keytab.file",
+        "hbase.thrift.kerberos.principal", host);
+    }
     this.conf = HBaseConfiguration.create(conf);
     this.listenPort = conf.getInt(PORT_CONF_KEY, DEFAULT_LISTEN_PORT);
     this.metrics = new ThriftMetrics(conf, ThriftMetrics.ThriftServerType.ONE);
-    handler.initMetrics(metrics);
-    this.handler = HbaseHandlerMetricsProxy.newInstance(handler, metrics, conf);
+    this.hbaseHandler = new HBaseHandler(conf, userProvider);
+    this.hbaseHandler.initMetrics(metrics);
+    this.handler = HbaseHandlerMetricsProxy.newInstance(
+      hbaseHandler, metrics, conf);
+    this.realUser = userProvider.getCurrent().getUGI();
+    qop = conf.get(THRIFT_QOP_KEY);
+    if (qop != null) {
+      if (!qop.equals("auth") && !qop.equals("auth-int")
+          && !qop.equals("auth-conf")) {
+        throw new IOException("Invalid hbase.thrift.security.qop: " + qop
+          + ", it must be 'auth', 'auth-int', or 'auth-conf'");
+      }
+      if (!securityEnabled) {
+        throw new IOException("Thrift server must"
+          + " run in secure mode to support authentication");
+      }
+    }
   }
 
   /*
@@ -246,14 +302,21 @@ public class ThriftServerRunner implements Runnable {
    */
   @Override
   public void run() {
-    try {
-      setupServer();
-      tserver.serve();
-    } catch (Exception e) {
-      LOG.fatal("Cannot run ThriftServer", e);
-      // Crash the process if the ThriftServer is not running
-      System.exit(-1);
-    }
+    realUser.doAs(
+      new PrivilegedAction<Object>() {
+        @Override
+        public Object run() {
+          try {
+            setupServer();
+            tserver.serve();
+          } catch (Exception e) {
+            LOG.fatal("Cannot run ThriftServer", e);
+            // Crash the process if the ThriftServer is not running
+            System.exit(-1);
+          }
+          return null;
+        }
+      });
   }
 
   public void shutdown() {
@@ -277,18 +340,72 @@ public class ThriftServerRunner implements Runnable {
       protocolFactory = new TBinaryProtocol.Factory();
     }
 
-    Hbase.Processor<Hbase.Iface> processor =
-        new Hbase.Processor<Hbase.Iface>(handler);
+    final TProcessor p = new Hbase.Processor<Hbase.Iface>(handler);
     ImplType implType = ImplType.getServerImpl(conf);
+    TProcessor processor = p;
 
     // Construct correct TransportFactory
     TTransportFactory transportFactory;
     if (conf.getBoolean(FRAMED_CONF_KEY, false) || implType.isAlwaysFramed) {
+      if (qop != null) {
+        throw new RuntimeException("Thrift server authentication"
+          + " doesn't work with framed transport yet");
+      }
       transportFactory = new TFramedTransport.Factory(
           conf.getInt(MAX_FRAME_SIZE_CONF_KEY, 2)  * 1024 * 1024);
       LOG.debug("Using framed transport");
-    } else {
+    } else if (qop == null) {
       transportFactory = new TTransportFactory();
+    } else {
+      // Extract the name from the principal
+      String name = SecurityUtil.getUserFromPrincipal(
+        conf.get("hbase.thrift.kerberos.principal"));
+      Map<String, String> saslProperties = new HashMap<String, String>();
+      saslProperties.put(Sasl.QOP, qop);
+      TSaslServerTransport.Factory saslFactory = new TSaslServerTransport.Factory();
+      saslFactory.addServerDefinition("GSSAPI", name, host, saslProperties,
+        new SaslGssCallbackHandler() {
+          @Override
+          public void handle(Callback[] callbacks)
+              throws UnsupportedCallbackException {
+            AuthorizeCallback ac = null;
+            for (Callback callback : callbacks) {
+              if (callback instanceof AuthorizeCallback) {
+                ac = (AuthorizeCallback) callback;
+              } else {
+                throw new UnsupportedCallbackException(callback,
+                    "Unrecognized SASL GSSAPI Callback");
+              }
+            }
+            if (ac != null) {
+              String authid = ac.getAuthenticationID();
+              String authzid = ac.getAuthorizationID();
+              if (!authid.equals(authzid)) {
+                ac.setAuthorized(false);
+              } else {
+                ac.setAuthorized(true);
+                String userName = SecurityUtil.getUserFromPrincipal(authzid);
+                LOG.info("Effective user: " + userName);
+                ac.setAuthorizedID(userName);
+              }
+            }
+          }
+        });
+      transportFactory = saslFactory;
+
+      // Create a processor wrapper, to get the caller
+      processor = new TProcessor() {
+        @Override
+        public boolean process(TProtocol inProt,
+            TProtocol outProt) throws TException {
+          TSaslServerTransport saslServerTransport =
+            (TSaslServerTransport)inProt.getTransport();
+          SaslServer saslServer = saslServerTransport.getSaslServer();
+          String principal = saslServer.getAuthorizationID();
+          hbaseHandler.setEffectiveUser(principal);
+          return p.process(inProt, outProt);
+        }
+      };
     }
 
     if (conf.get(BIND_CONF_KEY) != null && !implType.canSpecifyBindIP) {
@@ -415,13 +532,14 @@ public class ThriftServerRunner implements Runnable {
    */
   public static class HBaseHandler implements Hbase.Iface {
     protected Configuration conf;
-    protected volatile HBaseAdmin admin = null;
     protected final Log LOG = LogFactory.getLog(this.getClass().getName());
 
     // nextScannerId and scannerMap are used to manage scanner state
     protected int nextScannerId = 0;
     protected HashMap<Integer, ResultScannerWrapper> scannerMap = null;
     private ThriftMetrics metrics = null;
+
+    private final ConnectionCache connectionCache;
 
     private static ThreadLocal<Map<String, HTable>> threadLocalTables =
         new ThreadLocal<Map<String, HTable>>() {
@@ -432,6 +550,9 @@ public class ThriftServerRunner implements Runnable {
     };
 
     IncrementCoalescer coalescer = null;
+
+    static final String CLEANUP_INTERVAL = "hbase.thrift.connection.cleanup-interval";
+    static final String MAX_IDLETIME = "hbase.thrift.connection.max-idletime";
 
     /**
      * Returns a list of all the column families for a given htable.
@@ -460,10 +581,10 @@ public class ThriftServerRunner implements Runnable {
      */
     public HTable getTable(final byte[] tableName) throws
         IOException {
-      String table = new String(tableName);
+      String table = Bytes.toString(tableName);
       Map<String, HTable> tables = threadLocalTables.get();
       if (!tables.containsKey(table)) {
-        tables.put(table, new HTable(conf, tableName));
+        tables.put(table, (HTable)connectionCache.getTable(table));
       }
       return tables.get(table);
     }
@@ -507,33 +628,27 @@ public class ThriftServerRunner implements Runnable {
       return scannerMap.remove(id);
     }
 
-    /**
-     * Constructs an HBaseHandler object.
-     * @throws IOException
-     */
-    protected HBaseHandler()
-    throws IOException {
-      this(HBaseConfiguration.create());
-    }
-
-    protected HBaseHandler(final Configuration c) throws IOException {
+    protected HBaseHandler(final Configuration c,
+        final UserProvider userProvider) throws IOException {
       this.conf = c;
       scannerMap = new HashMap<Integer, ResultScannerWrapper>();
       this.coalescer = new IncrementCoalescer(this);
+
+      int cleanInterval = conf.getInt(CLEANUP_INTERVAL, 10 * 1000);
+      int maxIdleTime = conf.getInt(MAX_IDLETIME, 10 * 60 * 1000);
+      connectionCache = new ConnectionCache(
+        conf, userProvider, cleanInterval, maxIdleTime);
     }
 
     /**
      * Obtain HBaseAdmin. Creates the instance if it is not already created.
      */
     private HBaseAdmin getHBaseAdmin() throws IOException {
-      if (admin == null) {
-        synchronized (this) {
-          if (admin == null) {
-            admin = new HBaseAdmin(conf);
-          }
-        }
-      }
-      return admin;
+      return connectionCache.getAdmin();
+    }
+
+    void setEffectiveUser(String effectiveUser) {
+      connectionCache.setEffectiveUser(effectiveUser);
     }
 
     @Override
