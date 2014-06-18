@@ -74,6 +74,8 @@ public class ThriftServer {
   private static final Log log = LogFactory.getLog(ThriftServer.class);
 
   public static final String DEFAULT_LISTEN_PORT = "9090";
+  //The max length of a message frame in MB
+  static final String MAX_FRAME_SIZE_CONF_KEY = "hbase.regionserver.thrift.framed.max_frame_size_in_mb";
 
   public ThriftServer() {
   }
@@ -124,10 +126,10 @@ public class ThriftServer {
     }
   }
 
-  private static TTransportFactory getTTransportFactory(boolean framed) {
+  private static TTransportFactory getTTransportFactory(boolean framed, int maxFrameSize) {
     if (framed) {
       log.debug("Using framed transport");
-      return new TFramedTransport.Factory();
+      return new TFramedTransport.Factory(maxFrameSize);
     } else {
       return new TTransportFactory();
     }
@@ -275,7 +277,8 @@ public class ThriftServer {
 
       boolean framed = cmd.hasOption("framed") ||
         conf.getBoolean("hbase.regionserver.thrift.framed", false) || nonblocking || hsha;
-      TTransportFactory transportFactory = getTTransportFactory(framed);
+      TTransportFactory transportFactory = getTTransportFactory(framed,
+        conf.getInt(MAX_FRAME_SIZE_CONF_KEY, 2)  * 1024 * 1024);
       conf.setBoolean("hbase.regionserver.thrift.framed", framed);
 
       // TODO: Remove once HBASE-2155 is resolved

@@ -284,7 +284,15 @@ public class TBoundedThreadPoolServer extends TServer {
         outputProtocol = outputProtocolFactory_.getProtocol(outputTransport);
         // we check stopped_ first to make sure we're not supposed to be shutting
         // down. this is necessary for graceful shutdown.
-        while (!stopped && processor.process(inputProtocol, outputProtocol)) {}
+        while (!stopped && processor.process(inputProtocol, outputProtocol)) {
+           // message limit is reset for every request
+           // see THRIFT-601, working on thrift 0.8.0
+           // NOTE that THRIFT-820 breaks this again in thrift 0.9.0
+           // and TFramedTransport needs to be used from this version onwards
+           // to avoid the buffer overflow
+           inputProtocol = inputProtocolFactory_.getProtocol(inputTransport);
+           outputProtocol = outputProtocolFactory_.getProtocol(outputTransport);
+        }
       } catch (TTransportException ttx) {
         // Assume the client died and continue silently
       } catch (TException tx) {

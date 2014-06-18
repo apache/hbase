@@ -115,6 +115,9 @@ public class ThriftServerRunner implements Runnable {
   static final String COMPACT_CONF_KEY = "hbase.regionserver.thrift.compact";
   static final String FRAMED_CONF_KEY = "hbase.regionserver.thrift.framed";
   static final String PORT_CONF_KEY = "hbase.regionserver.thrift.port";
+  //The max length of an individual thrift message and frames in MB
+  static final String MAX_MESSAGE_LENGTH_CONF_KEY = "hbase.regionserver.thrift.binary.max_message_length_in_mb";
+  static final String MAX_FRAME_SIZE_CONF_KEY = "hbase.regionserver.thrift.framed.max_frame_size_in_mb";
   static final String COALESCE_INC_KEY = "hbase.regionserver.thrift.coalesceIncrement";
 
   private static final String DEFAULT_BIND_ADDR = "0.0.0.0";
@@ -269,7 +272,8 @@ public class ThriftServerRunner implements Runnable {
       protocolFactory = new TCompactProtocol.Factory();
     } else {
       LOG.debug("Using binary protocol");
-      protocolFactory = new TBinaryProtocol.Factory();
+      int maxMessageLength = conf.getInt(MAX_MESSAGE_LENGTH_CONF_KEY, 2) * 1024 * 1024;
+      protocolFactory = new TBinaryProtocol.Factory(false, true, maxMessageLength);
     }
 
     Hbase.Processor<Hbase.Iface> processor =
@@ -279,7 +283,8 @@ public class ThriftServerRunner implements Runnable {
     // Construct correct TransportFactory
     TTransportFactory transportFactory;
     if (conf.getBoolean(FRAMED_CONF_KEY, false) || implType.isAlwaysFramed) {
-      transportFactory = new TFramedTransport.Factory();
+      int maxFrameSize = conf.getInt(MAX_FRAME_SIZE_CONF_KEY, 2)  * 1024 * 1024;
+      transportFactory = new TFramedTransport.Factory(maxFrameSize);
       LOG.debug("Using framed transport");
     } else {
       transportFactory = new TTransportFactory();
