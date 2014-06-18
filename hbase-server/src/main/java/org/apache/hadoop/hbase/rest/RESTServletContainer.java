@@ -50,28 +50,27 @@ public class RESTServletContainer extends ServletContainer {
   public void service(final HttpServletRequest request,
       final HttpServletResponse response) throws ServletException, IOException {
     final String doAsUserFromQuery = request.getParameter("doAs");
-    Configuration conf = RESTServlet.getInstance().getConfiguration();
-    final boolean proxyConfigured = conf.getBoolean("hbase.rest.support.proxyuser", false);
-    if (doAsUserFromQuery != null && !proxyConfigured) {
-      throw new ServletException("Support for proxyuser is not configured");
-    }
-    UserGroupInformation ugi = RESTServlet.getInstance().getRealUser();
+    RESTServlet servlet = RESTServlet.getInstance();
     if (doAsUserFromQuery != null) {
+      Configuration conf = servlet.getConfiguration();
+      if (!conf.getBoolean("hbase.rest.support.proxyuser", false)) {
+        throw new ServletException("Support for proxyuser is not configured");
+      }
+      UserGroupInformation ugi = servlet.getRealUser();
       // create and attempt to authorize a proxy user (the client is attempting
       // to do proxy user)
-      ugi = UserGroupInformation.createProxyUser(doAsUserFromQuery, ugi);    
+      ugi = UserGroupInformation.createProxyUser(doAsUserFromQuery, ugi);
       // validate the proxy user authorization
       try {
         ProxyUsers.authorize(ugi, request.getRemoteAddr(), conf);
       } catch(AuthorizationException e) {
         throw new ServletException(e.getMessage());
       }
+      servlet.setEffectiveUser(doAsUserFromQuery);
     } else {
-      // the REST server would send the request without validating the proxy
-      // user authorization
-      ugi = UserGroupInformation.createProxyUser(request.getRemoteUser(), ugi);
+      String effectiveUser = request.getRemoteUser();
+      servlet.setEffectiveUser(effectiveUser);
     }
-    RESTServlet.getInstance().setEffectiveUser(ugi);
     super.service(request, response);
   }
 }

@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -421,18 +422,18 @@ public class TestGetAndPutResource extends RowResourceBase {
     response = deleteRow(TABLE, ROW_4);
     assertEquals(response.getCode(), 200);
 
-    UserGroupInformation ugi = User.getCurrent().getUGI();
+    UserProvider userProvider = UserProvider.instantiate(conf);
     METRICS_ASSERT.assertCounterGt("requests", 2l,
-      RESTServlet.getInstance(conf, ugi).getMetrics().getSource());
+      RESTServlet.getInstance(conf, userProvider).getMetrics().getSource());
 
     METRICS_ASSERT.assertCounterGt("successfulGet", 0l,
-      RESTServlet.getInstance(conf, ugi).getMetrics().getSource());
+      RESTServlet.getInstance(conf, userProvider).getMetrics().getSource());
 
     METRICS_ASSERT.assertCounterGt("successfulPut", 0l,
-      RESTServlet.getInstance(conf, ugi).getMetrics().getSource());
+      RESTServlet.getInstance(conf, userProvider).getMetrics().getSource());
 
     METRICS_ASSERT.assertCounterGt("successfulDelete", 0l,
-      RESTServlet.getInstance(conf, ugi).getMetrics().getSource());
+      RESTServlet.getInstance(conf, userProvider).getMetrics().getSource());
   }
   
   @Test
