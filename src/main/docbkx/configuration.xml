@@ -1474,7 +1474,8 @@ index e70ebc6..96f8c27 100644
           for details)
         </para>
         <para>As an alternative, You can use the coprocessor-based JMX implementation provided
-          by HBase. To enable it, add below property in <filename>hbase-site.xml</filename>:
+          by HBase. To enable it in 0.99 or above, add below property in
+          <filename>hbase-site.xml</filename>:
         <programlisting><![CDATA[
 <property>
     <name>hbase.coprocessor.regionserver.classes</name>
@@ -1548,6 +1549,17 @@ export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS $HBASE_JMX_BASE "
       <screen>
 jconsole -J-Djavax.net.ssl.trustStore=/home/tianq/jconsoleKeyStore
       </screen>
+        </para>
+        <para>NOTE: for HBase 0.98, To enable the HBase JMX implementation on Master, you also
+          need to add below property in <filename>hbase-site.xml</filename>:
+        <programlisting><![CDATA[
+<property>
+    <name>hbase.coprocessor.master.classes</name>
+    <value>org.apache.hadoop.hbase.JMXListener</value>
+</property>
+]]></programlisting>
+          The corresponding properties for port configuration are master.rmi.registry.port
+          (by default 10101) and master.rmi.connector.port(by default the same as registry.port)
         </para>
     </section>
 
