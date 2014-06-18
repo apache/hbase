@@ -142,11 +142,11 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionTransitionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionTransitionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -1244,11 +1244,11 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
-  public ReportRegionTransitionResponse reportRegionTransition(RpcController controller,
-      ReportRegionTransitionRequest req) throws ServiceException {
+  public ReportRegionStateTransitionResponse reportRegionStateTransition(RpcController c,
+      ReportRegionStateTransitionRequest req) throws ServiceException {
     try {
       master.checkServiceStarted();
-      RegionTransition rt = req.getTransition(0);
+      RegionStateTransition rt = req.getTransition(0);
       TableName tableName = ProtobufUtil.toTableName(
         rt.getRegionInfo(0).getTableName());
       if (!TableName.META_TABLE_NAME.equals(tableName)
@@ -1259,8 +1259,8 @@ public class MasterRpcServices extends RSRpcServices
       }
       ServerName sn = ProtobufUtil.toServerName(req.getServer());
       String error = master.assignmentManager.onRegionTransition(sn, rt);
-      ReportRegionTransitionResponse.Builder rrtr =
-        ReportRegionTransitionResponse.newBuilder();
+      ReportRegionStateTransitionResponse.Builder rrtr =
+        ReportRegionStateTransitionResponse.newBuilder();
       if (error != null) {
         rrtr.setErrorMessage(error);
       }

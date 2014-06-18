@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -208,7 +208,7 @@ public class OpenRegionHandler extends EventHandler {
         }
       } finally {
         if (!useZKForAssignment) {
-          rsServices.reportRegionTransition(TransitionCode.FAILED_OPEN, regionInfo);
+          rsServices.reportRegionStateTransition(TransitionCode.FAILED_OPEN, regionInfo);
         } else {
           // Even if cleanupFailed open fails we need to do this transition
           // See HBASE-7698
@@ -216,7 +216,7 @@ public class OpenRegionHandler extends EventHandler {
         }
       }
     } else if (!useZKForAssignment) {
-      rsServices.reportRegionTransition(TransitionCode.FAILED_OPEN, regionInfo);
+      rsServices.reportRegionStateTransition(TransitionCode.FAILED_OPEN, regionInfo);
     } else {
       // If still transition to OPENING is not done, we need to transition znode
       // to FAILED_OPEN

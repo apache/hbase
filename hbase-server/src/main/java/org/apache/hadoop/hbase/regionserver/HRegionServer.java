@@ -108,11 +108,11 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionTransitionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionTransitionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
@@ -1683,7 +1683,7 @@ public class HRegionServer extends HasThread implements
       MetaEditor.updateRegionLocation(ct, r.getRegionInfo(),
         this.serverName, openSeqNum);
     }
-    if (!useZKForAssignment && !reportRegionTransition(
+    if (!useZKForAssignment && !reportRegionStateTransition(
         TransitionCode.OPENED, openSeqNum, r.getRegionInfo())) {
       throw new IOException("Failed to report opened region to master: "
         + r.getRegionNameAsString());
@@ -1693,16 +1693,17 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public boolean reportRegionTransition(TransitionCode code, HRegionInfo... hris) {
-    return reportRegionTransition(code, HConstants.NO_SEQNUM, hris);
+  public boolean reportRegionStateTransition(TransitionCode code, HRegionInfo... hris) {
+    return reportRegionStateTransition(code, HConstants.NO_SEQNUM, hris);
   }
 
   @Override
-  public boolean reportRegionTransition(
+  public boolean reportRegionStateTransition(
       TransitionCode code, long openSeqNum, HRegionInfo... hris) {
-    ReportRegionTransitionRequest.Builder builder = ReportRegionTransitionRequest.newBuilder();
+    ReportRegionStateTransitionRequest.Builder builder =
+      ReportRegionStateTransitionRequest.newBuilder();
     builder.setServer(ProtobufUtil.toServerName(serverName));
-    RegionTransition.Builder transition = builder.addTransitionBuilder();
+    RegionStateTransition.Builder transition = builder.addTransitionBuilder();
     transition.setTransitionCode(code);
     if (code == TransitionCode.OPENED && openSeqNum >= 0) {
       transition.setOpenSeqNum(openSeqNum);
@@ -1710,7 +1711,7 @@ public class HRegionServer extends HasThread implements
     for (HRegionInfo hri: hris) {
       transition.addRegionInfo(HRegionInfo.convert(hri));
     }
-    ReportRegionTransitionRequest request = builder.build();
+    ReportRegionStateTransitionRequest request = builder.build();
     while (keepLooping()) {
       RegionServerStatusService.BlockingInterface rss = rssStub;
       try {
@@ -1718,8 +1719,8 @@ public class HRegionServer extends HasThread implements
           createRegionServerStatusStub();
           continue;
         }
-        ReportRegionTransitionResponse response =
-          rss.reportRegionTransition(null, request);
+        ReportRegionStateTransitionResponse response =
+          rss.reportRegionStateTransition(null, request);
         if (response.hasErrorMessage()) {
           LOG.info("Failed to transition " + hris[0]
             + " to " + code + ": " + response.getErrorMessage());

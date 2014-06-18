@@ -60,9 +60,9 @@ import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.coordination.RegionMergeCoordination;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
+import org.apache.hadoop.hbase.coordination.RegionMergeCoordination;
 import org.apache.hadoop.hbase.coordination.SplitTransactionCoordination.SplitTransactionDetails;
 import org.apache.hadoop.hbase.coordination.ZkOpenRegionCoordination;
 import org.apache.hadoop.hbase.coordination.ZkRegionMergeCoordination;
@@ -80,8 +80,8 @@ import org.apache.hadoop.hbase.master.handler.ClosedRegionHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.OpenedRegionHandler;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
@@ -3808,7 +3808,7 @@ public class AssignmentManager extends ZooKeeperListener {
    *        region open/close
    */
   protected String onRegionTransition(final ServerName serverName,
-      final RegionServerStatusProtos.RegionTransition transition) {
+      final RegionStateTransition transition) {
     TransitionCode code = transition.getTransitionCode();
     HRegionInfo hri = HRegionInfo.convert(transition.getRegionInfo(0));
     RegionState current = regionStates.getRegionState(hri);
