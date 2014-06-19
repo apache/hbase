@@ -50,6 +50,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.TimeoutException;
 
 import javax.annotation.Nullable;
 
@@ -1154,6 +1155,7 @@ private HRegionLocation locateMetaInRoot(final byte[] row,
             e instanceof SyncFailedException ||
             e instanceof EOFException ||
             e instanceof TTransportException ||
+            e instanceof TimeoutException ||
             isNetworkException(e.getCause()));
   }
 
