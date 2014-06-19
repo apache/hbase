@@ -38,6 +38,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -130,7 +132,8 @@ public class TableResource extends ResourceBase {
       @DefaultValue("-1") @QueryParam(Constants.SCAN_BATCH_SIZE) int batchSize,
       @DefaultValue("0") @QueryParam(Constants.SCAN_START_TIME) long startTime,
       @DefaultValue(Long.MAX_VALUE + "") @QueryParam(Constants.SCAN_END_TIME) long endTime,
-      @DefaultValue("true") @QueryParam(Constants.SCAN_BATCH_SIZE) boolean cacheBlocks) {
+      @DefaultValue("true") @QueryParam(Constants.SCAN_BATCH_SIZE) boolean cacheBlocks, 
+      @DefaultValue("") @QueryParam(Constants.SCAN_FILTER) String filters) {
     try {
       Filter filter = null;
       if (scanSpec.indexOf('*') > 0) {
@@ -164,7 +167,20 @@ public class TableResource extends ResourceBase {
           tableScan.addFamily(Bytes.toBytes(familysplit[0]));
         }
       }
-      if (filter != null) {
+      FilterList filterList = null;
+      if (StringUtils.isNotEmpty(filters)) {
+          ParseFilter pf = new ParseFilter();
+          Filter filterParam = pf.parseFilterString(filters);
+          if (filter != null) {
+            filterList = new FilterList(filter, filterParam);
+          }
+          else {
+            filter = filterParam;
+          }
+      }
+      if (filterList != null) {
+        tableScan.setFilter(filterList);
+      } else if (filter != null) {
         tableScan.setFilter(filter);
       }
       int fetchSize = this.servlet.getConfiguration().getInt(Constants.SCAN_FETCH_SIZE, 10);

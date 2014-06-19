@@ -27,6 +27,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,6 +49,9 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.ParseFilter;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
@@ -87,6 +91,7 @@ public class TestTableScan {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
+    conf.set(Constants.CUSTOM_FILTERS, "CustomFilter:" + CustomFilter.class.getName()); 
     TEST_UTIL.startMiniCluster();
     REST_TEST_UTIL.startServletContainer(conf);
     client = new Client(new Cluster().add("localhost",
@@ -184,7 +189,6 @@ public class TestTableScan {
     count = TestScannerResource.countCellSet(model);
     assertEquals(15, count);
     checkRowsNotNull(model);
-
   }
 
   @Test
@@ -458,6 +462,108 @@ public class TestTableScan {
     CellSetModel model = mapper.readValue(response.getStream(), CellSetModel.class);
     int count = TestScannerResource.countCellSet(model);
     assertEquals(0, count);
+  }
+  
+  @Test
+  public void testSimpleFilter() throws IOException, JAXBException {
+    StringBuilder builder = new StringBuilder();
+    builder = new StringBuilder();
+    builder.append("/*");
+    builder.append("?");
+    builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
+    builder.append("&");
+    builder.append(Constants.SCAN_START_ROW + "=aaa");
+    builder.append("&");
+    builder.append(Constants.SCAN_END_ROW + "=aay");
+    builder.append("&");
+    builder.append(Constants.SCAN_FILTER + "=" + URLEncoder.encode("PrefixFilter('aab')", "UTF-8"));
+    Response response =
+        client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
+    assertEquals(200, response.getCode());
+    JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
+    Unmarshaller ush = ctx.createUnmarshaller();
+    CellSetModel model = (CellSetModel) ush.unmarshal(response.getStream());
+    int count = TestScannerResource.countCellSet(model);
+    assertEquals(1, count);
+    assertEquals("aab", new String(model.getRows().get(0).getCells().get(0).getValue()));
+  }
+
+  @Test
+  public void testCompoundFilter() throws IOException, JAXBException {
+    StringBuilder builder = new StringBuilder();
+    builder = new StringBuilder();
+    builder.append("/*");
+    builder.append("?");
+    builder.append(Constants.SCAN_FILTER + "="
+        + URLEncoder.encode("PrefixFilter('abc') AND QualifierFilter(=,'binary:1')", "UTF-8"));
+    Response response =
+        client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
+    assertEquals(200, response.getCode());
+    JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
+    Unmarshaller ush = ctx.createUnmarshaller();
+    CellSetModel model = (CellSetModel) ush.unmarshal(response.getStream());
+    int count = TestScannerResource.countCellSet(model);
+    assertEquals(1, count);
+    assertEquals("abc", new String(model.getRows().get(0).getCells().get(0).getValue()));
+  }
+
+  @Test
+  public void testCustomFilter() throws IOException, JAXBException {
+    StringBuilder builder = new StringBuilder();
+    builder = new StringBuilder();
+    builder.append("/a*");
+    builder.append("?");
+    builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
+    builder.append("&");
+    builder.append(Constants.SCAN_FILTER + "=" + URLEncoder.encode("CustomFilter('abc')", "UTF-8"));
+    Response response =
+        client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
+    assertEquals(200, response.getCode());
+    JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
+    Unmarshaller ush = ctx.createUnmarshaller();
+    CellSetModel model = (CellSetModel) ush.unmarshal(response.getStream());
+    int count = TestScannerResource.countCellSet(model);
+    assertEquals(1, count);
+    assertEquals("abc", new String(model.getRows().get(0).getCells().get(0).getValue()));
+  }
+  
+  @Test
+  public void testNegativeCustomFilter() throws IOException, JAXBException {
+    StringBuilder builder = new StringBuilder();
+    builder = new StringBuilder();
+    builder.append("/b*");
+    builder.append("?");
+    builder.append(Constants.SCAN_COLUMN + "=" + COLUMN_1);
+    builder.append("&");
+    builder.append(Constants.SCAN_FILTER + "=" + URLEncoder.encode("CustomFilter('abc')", "UTF-8"));
+    Response response =
+        client.get("/" + TABLE + builder.toString(), Constants.MIMETYPE_XML);
+    assertEquals(200, response.getCode());
+    JAXBContext ctx = JAXBContext.newInstance(CellSetModel.class);
+    Unmarshaller ush = ctx.createUnmarshaller();
+    CellSetModel model = (CellSetModel) ush.unmarshal(response.getStream());
+    int count = TestScannerResource.countCellSet(model);
+    // Should return no rows as the filters conflict
+    assertEquals(0, count);
+  }
+
+  public static class CustomFilter extends PrefixFilter {
+    private byte[] key = null;
+
+    public CustomFilter(byte[] key) {
+      super(key);
+    }
+    
+    @Override
+    public boolean filterRowKey(byte[] buffer, int offset, int length) {
+      int cmp = Bytes.compareTo(buffer, offset, length, this.key, 0, this.key.length);
+      return cmp != 0;
+    }
+
+    public static Filter createFilterFromArguments(ArrayList<byte[]> filterArguments) {
+      byte[] prefix = ParseFilter.removeQuotesFromByteArray(filterArguments.get(0));
+      return new CustomFilter(prefix);
+    }
   }
 
   /**

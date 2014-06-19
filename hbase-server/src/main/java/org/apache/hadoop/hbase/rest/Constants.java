@@ -68,6 +68,8 @@ public interface Constants {
   String SCAN_BATCH_SIZE = "batchsize";
   String SCAN_LIMIT = "limit";
   String SCAN_FETCH_SIZE = "hbase.rest.scan.fetchsize";
+  String SCAN_FILTER = "filter"; 
+  String CUSTOM_FILTERS = "hbase.rest.custom.filters"; 
 
   String ROW_KEYS_PARAM_NAME = "row";
   /** If this query parameter is present when processing row or scanner resources,

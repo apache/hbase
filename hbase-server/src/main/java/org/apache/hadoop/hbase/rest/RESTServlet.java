@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -186,6 +187,7 @@ public class RESTServlet implements Constants {
 
     this.realUser = realUser;
     this.conf = conf;
+    registerCustomFilter(conf);
   }
 
   /**
@@ -254,5 +256,20 @@ public class RESTServlet implements Constants {
       }
     }
     return connInfo;
+  }
+  
+  private void registerCustomFilter(Configuration conf) {
+    String[] filterList = conf.getStrings(Constants.CUSTOM_FILTERS);
+    if (filterList != null) {
+      for (String filterClass : filterList) {
+        String[] filterPart = filterClass.split(":");
+        if (filterPart.length != 2) {
+          LOG.warn(
+            "Invalid filter specification " + filterClass + " - skipping");
+        } else {
+          ParseFilter.registerFilter(filterPart[0], filterPart[1]);
+        }
+      }
+    }
   }
 }
