@@ -350,6 +350,29 @@ checkCompilationErrors() {
 }
 
 ###############################################################################
+### Check there are no protoc compilation errors, passing a file to be parsed.
+checkProtocCompilationErrors() {
+  local file=$1
+  COMPILATION_ERROR=false
+  eval $(awk '/\[ERROR/ {print "COMPILATION_ERROR=true"}' $file)
+  if $COMPILATION_ERROR ; then
+    ERRORS=$($AWK '/\[ERROR/ { print $0 }' $file)
+    echo "======================================================================"
+    echo "There are Protoc compilation errors."
+    echo "======================================================================"
+    echo "$ERRORS"
+    JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:red}-1 javac{color}.  The patch appears to cause mvn compile-protobuf profile to fail.
+
+    Protoc Compilation errors resume:
+    $ERRORS
+    "
+    cleanupAndExit 1
+  fi
+}
+
+###############################################################################
 ### Attempt to apply the patch
 applyPatch () {
   echo ""
@@ -460,6 +483,27 @@ checkJavacWarnings () {
       fi
     fi
   fi
+  JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:green}+1 javac{color}.  The applied patch does not increase the total number of javac compiler warnings."
+  return 0
+}
+
+###############################################################################
+checkProtocErrors () {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Determining whether there is patched protoc error."
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+  echo "$MVN clean install -DskipTests -Pcompile-protobuf -X -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchProtocErrors.txt 2>&1"
+  export MAVEN_OPTS="${MAVEN_OPTS}"
+  $MVN clean install -DskipTests -Pcompile-protobuf -X -D${PROJECT_NAME}PatchProcess  > $PATCH_DIR/patchProtocErrors.txt 2>&1
+  checkProtocCompilationErrors $PATCH_DIR/patchProtocErrors.txt
   JIRA_COMMENT="$JIRA_COMMENT
 
     {color:green}+1 javac{color}.  The applied patch does not increase the total number of javac compiler warnings."
@@ -858,6 +902,8 @@ fi
 checkAntiPatterns
 (( RESULT = RESULT + $? ))
 checkJavacWarnings
+(( RESULT = RESULT + $? ))
+checkProtocErrors
 (( RESULT = RESULT + $? ))
 checkJavadocWarnings
 (( RESULT = RESULT + $? ))
