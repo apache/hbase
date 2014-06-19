@@ -108,6 +108,7 @@ class AsyncProcess<CResult> {
       new ConcurrentSkipListMap<byte[], AtomicInteger>(Bytes.BYTES_COMPARATOR);
   protected final ConcurrentMap<ServerName, AtomicInteger> taskCounterPerServer =
       new ConcurrentHashMap<ServerName, AtomicInteger>();
+  protected final int timeout;
 
   /**
    * The number of tasks simultaneously executed on the cluster.
@@ -218,6 +219,9 @@ class AsyncProcess<CResult> {
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     this.numTries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+    this.timeout = conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+
 
     this.maxTotalConcurrentTasks = conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
       HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS);
@@ -536,7 +540,7 @@ class AsyncProcess<CResult> {
           try {
             MultiServerCallable<Row> callable = createCallable(loc, multiAction);
             try {
-              res = createCaller(callable).callWithoutRetries(callable);
+              res = createCaller(callable).callWithoutRetries(callable, timeout);
             } catch (IOException e) {
               // The service itself failed . It may be an error coming from the communication
               //   layer, but, as well, a functional error raised by the server.
