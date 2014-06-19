@@ -295,18 +295,131 @@
     <section
       xml:id="schema.bloom">
       <title>Bloom Filters</title>
-      <para>Bloom Filters can be enabled per-ColumnFamily. Use
-          <code>HColumnDescriptor.setBloomFilterType(NONE | ROW | ROWCOL)</code> to enable blooms
-        per Column Family. Default = <varname>NONE</varname> for no bloom filters. If
-          <varname>ROW</varname>, the hash of the row will be added to the bloom on each insert. If
-          <varname>ROWCOL</varname>, the hash of the row + column family name + column family
-        qualifier will be added to the bloom on each key insert.</para>
-      <para>See <link
-          xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link>
-        and <xref
-          linkend="blooms" /> for more information or this answer up in quora, <link
+      <para>A Bloom filter, named for its creator, Burton Howard Bloom, is a data structure which is
+        designed to predict whether a given element is a member of a set of data. A positive result
+        from a Bloom filter is not always accurate, but a negative result is guaranteed to be
+        accurate. Bloom filters are designed to be "accurate enough" for sets of data which are so
+        large that conventional hashing mechanisms would be impractical. For more information about
+        Bloom filters in general, refer to <link
+          xlink:href="http://en.wikipedia.org/wiki/Bloom_filter" />.</para>
+      <para>In terms of HBase, Bloom filters provide a lightweight in-memory structure to reduce the
+        number of disk reads for a given Get operation (Bloom filters do not work with Scans) to only the StoreFiles likely to
+        contain the desired Row. The potential performance gain increases with the number of
+        parallel reads. </para>
+      <para>The Bloom filters themselves are stored in the metadata of each HFile and never need to
+        be updated. When an HFile is opened because a region is deployed to a RegionServer, the
+        Bloom filter is loaded into memory. </para>
+      <para>HBase includes some tuning mechanisms for folding the Bloom filter to reduce the size
+        and keep the false positive rate within a desired range.</para>
+      <para>Bloom filters were introduced in <link
+          xlink:href="https://issues.apache.org/jira/browse/HBASE-1200">HBASE-1200</link>. Since
+        HBase 0.96, row-based Bloom filters are enabled by default. (<link
+          xlink:href="https://issues.apache.org/jira/browse/HBASE-8450">HBASE-</link>)</para>
+      <para>For more information on Bloom filters in relation to HBase, see <xref
+          linkend="blooms" /> for more information, or the following Quora discussion: <link
           xlink:href="http://www.quora.com/How-are-bloom-filters-used-in-HBase">How are bloom
           filters used in HBase?</link>. </para>
+      
+      <section xml:id="bloom.filters.when">
+        <title>When To Use Bloom Filters</title>
+        <para>Since HBase 0.96, row-based Bloom filters are enabled by default. You may choose to
+          disable them or to change some tables to use row+column Bloom filters, depending on the
+          characteristics of your data and how it is loaded into HBase.</para>
+
+        <para>To determine whether Bloom filters could have a positive impact, check the value of
+          <code>blockCacheHitRatio</code> in the RegionServer metrics. If Bloom filters are enabled, the value of
+          <code>blockCacheHitRatio</code> should increase, because the Bloom filter is filtering out blocks that
+          are definitely not needed. </para>
+        <para>You can choose to enable Bloom filters for a row or for a row+column combination. If
+          you generally scan entire rows, the row+column combination will not provide any benefit. A
+          row-based Bloom filter can operate on a row+column Get, but not the other way around.
+          However, if you have a large number of column-level Puts, such that a row may be present
+          in every StoreFile, a row-based filter will always return a positive result and provide no
+          benefit. Unless you have one column per row, row+column Bloom filters require more space,
+          in order to store more keys. Bloom filters work best when the size of each data entry is
+          at least a few kilobytes in size. </para>
+        <para>Overhead will be reduced when your data is stored in a few larger StoreFiles, to avoid
+          extra disk IO during low-level scans to find a specific row. </para>
+        <para>Bloom filters need to be rebuilt upon deletion, so may not be appropriate in
+          environments with a large number of deletions.</para>
+      </section>
+      
+      <section>
+        <title>Enabling Bloom Filters</title>
+        <para>Bloom filters are enabled on a Column Family. You can do this by using the
+          setBloomFilterType method of HColumnDescriptor or using the HBase API. Valid values are
+            <literal>NONE</literal> (the default), <literal>ROW</literal>, or
+            <literal>ROWCOL</literal>. See <xref
+            linkend="bloom.filters.when" /> for more information on <literal>ROW</literal> versus
+            <literal>ROWCOL</literal>. See also the API documentation for <link
+            xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link>.</para>
+          <para>The following example creates a table and enables a ROWCOL Bloom filter on the
+            <literal>colfam1</literal> column family.</para>
+        <screen>
+hbase> <userinput>create 'mytable',{NAME => 'colfam1', BLOOMFILTER => 'ROWCOL'}</userinput>          
+        </screen>
+      </section>
+      
+      <section>
+        <title>Configuring Server-Wide Behavior of Bloom Filters</title>
+        <para>You can configure the following settings in the <filename>hbase-site.xml</filename>.
+        </para>
+        <informaltable>
+          <tgroup cols="3">
+            <thead>
+              <row>
+                <entry>Parameter</entry>
+                <entry>Default</entry>
+                <entry>Description</entry>
+              </row>
+            </thead>
+            <tbody>
+              <row>
+                <entry><para><code>io.hfile.bloom.enabled</code></para></entry>
+                <entry><para><literal>yes</literal></para></entry>
+                <entry><para>Set to <literal>no</literal> to kill bloom filters server-wide if
+                    something goes wrong</para></entry>
+              </row>
+              <row>
+                <entry><para><code>io.hfile.bloom.error.rate</code></para></entry>
+                <entry><para><literal>.01</literal></para></entry>
+                <entry><para>The average false positive rate for bloom filters. Folding is used to
+                  maintain the false positive rate. Expressed as a decimal representation of a
+                  percentage.</para></entry>
+              </row>
+              <row>
+                <entry><para><code>io.hfile.bloom.max.fold</code></para></entry>
+                <entry><para><literal>7</literal></para></entry>
+                <entry><para>The guaranteed maximum fold rate. Changing this setting should not be
+                  necessary and is not recommended.</para></entry>
+              </row>
+              <row>
+                <entry><para><code>io.storefile.bloom.max.keys</code></para></entry>
+                <entry><para><literal>128000000</literal></para></entry>
+                <entry><para>For default (single-block) Bloom filters, this specifies the maximum
+                    number of keys.</para></entry>
+              </row>
+              <row>
+                <entry><para><code>io.storefile.delete.family.bloom.enabled</code></para></entry>
+                <entry><para><literal>true</literal></para></entry>
+                <entry><para>Master switch to enable Delete Family Bloom filters and store them in
+                  the StoreFile.</para></entry>
+              </row>
+              <row>
+                <entry><para><code>io.storefile.bloom.block.size</code></para></entry>
+                <entry><para><literal>65536</literal></para></entry>
+                <entry><para>Target Bloom block size. Bloom filter blocks of approximately this size
+                    are interleaved with data blocks.</para></entry>
+              </row>
+              <row>
+                <entry><para><code>hfile.block.bloom.cacheonwrite</code></para></entry>
+                <entry><para><literal>false</literal></para></entry>
+                <entry><para>Enables cache-on-write for inline blocks of a compound Bloom filter.</para></entry>
+              </row>
+            </tbody>
+          </tgroup>
+        </informaltable>
+      </section>
     </section>
     <section
       xml:id="schema.cf.blocksize">
