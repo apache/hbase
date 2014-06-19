@@ -537,6 +537,9 @@ public class HBaseTestingUtility {
       // Wait till hbase is down before going on to shutdown zk.
       this.hbaseCluster.join();
       this.hbaseCluster = null;
+      // hbaseAdmin holds some connection that have been closed during shutting
+      // down HBase cluster.
+      this.hbaseAdmin = null;
     }
   }
 
