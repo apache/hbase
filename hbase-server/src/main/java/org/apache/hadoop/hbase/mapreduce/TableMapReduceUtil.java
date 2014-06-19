@@ -391,7 +391,8 @@ public class TableMapReduceUtil {
       job.setMapOutputKeyClass(outputKeyClass);
     }
     job.setMapperClass(mapper);
-    HBaseConfiguration.addHbaseResources(job.getConfiguration());
+    Configuration conf = job.getConfiguration();
+    HBaseConfiguration.merge(conf, HBaseConfiguration.create(conf));
     List<String> scanStrings = new ArrayList<String>();
 
     for (Scan scan : scans) {
