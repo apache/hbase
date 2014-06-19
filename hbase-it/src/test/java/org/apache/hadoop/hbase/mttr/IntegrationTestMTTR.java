@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.chaos.actions.MoveRegionsOfTableAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartActiveMasterAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRsHoldingMetaAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRsHoldingTableAction;
+import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -188,7 +189,8 @@ public class IntegrationTestMTTR {
     restartMetaAction = new RestartRsHoldingMetaAction(sleepTime);
 
     // Set up the action that will move the regions of our table.
-    moveRegionAction = new MoveRegionsOfTableAction(sleepTime, tableName.getNameAsString());
+    moveRegionAction = new MoveRegionsOfTableAction(sleepTime,
+        MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME, tableName.getNameAsString());
 
     // Kill the master
     restartMasterAction = new RestartActiveMasterAction(1000);

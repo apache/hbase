@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+import java.util.Properties;
 import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -32,15 +35,23 @@ import org.junit.Before;
 
 /**
  * Base class for HBase integration tests that want to use the Chaos Monkey.
+ * Usage: bin/hbase <sub_class_of_IntegrationTestBase> <options>
+ * Options: -h,--help Show usage
+ *          -m,--monkey <arg> Which chaos monkey to run
+ *          -monkeyProps <arg> The properties file for specifying chaos monkey properties.
+ *          -ncc Option to not clean up the cluster at the end.
  */
 public abstract class IntegrationTestBase extends AbstractHBaseTool {
+
   public static final String NO_CLUSTER_CLEANUP_LONG_OPT = "noClusterCleanUp";
   public static final String MONKEY_LONG_OPT = "monkey";
+  public static final String CHAOS_MONKEY_PROPS = "monkeyProps";
   private static final Log LOG = LogFactory.getLog(IntegrationTestBase.class);
 
   protected IntegrationTestingUtility util;
   protected ChaosMonkey monkey;
   protected String monkeyToUse;
+  protected Properties monkeyProps;
   protected boolean noClusterCleanUp = false;
 
   public IntegrationTestBase() {
@@ -56,6 +67,8 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
     addOptWithArg("m", MONKEY_LONG_OPT, "Which chaos monkey to run");
     addOptNoArg("ncc", NO_CLUSTER_CLEANUP_LONG_OPT,
       "Don't clean up the cluster at the end");
+    addOptWithArg(CHAOS_MONKEY_PROPS, "The properties file for specifying chaos "
+        + "monkey properties.");
   }
 
   @Override
@@ -65,6 +78,19 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
     }
     if (cmd.hasOption(NO_CLUSTER_CLEANUP_LONG_OPT)) {
       noClusterCleanUp = true;
+    }
+    monkeyProps = new Properties();
+    if (cmd.hasOption(CHAOS_MONKEY_PROPS)) {
+      String chaosMonkeyPropsFile = cmd.getOptionValue(CHAOS_MONKEY_PROPS);
+      if (StringUtils.isNotEmpty(chaosMonkeyPropsFile)) {
+        try {
+          monkeyProps.load(this.getClass().getClassLoader()
+              .getResourceAsStream(chaosMonkeyPropsFile));
+        } catch (IOException e) {
+          LOG.warn(e);
+          System.exit(EXIT_FAILURE);
+        }
+      }
     }
   }
 
@@ -113,6 +139,7 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
     }
     monkey = fact.setUtil(util)
                  .setTableName(getTablename())
+                 .setProperties(monkeyProps)
                  .setColumnFamilies(getColumnFamilies()).build();
     monkey.start();
   }

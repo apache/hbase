@@ -27,15 +27,33 @@ import org.apache.hadoop.hbase.chaos.policies.Policy;
 public class UnbalanceMonkeyFactory extends MonkeyFactory {
   /** How often to introduce the chaos. If too frequent, sequence of kills on minicluster
    * can cause test to fail when Put runs out of retries. */
-  private static final long CHAOS_EVERY_MS = 65 * 1000;
+  private long chaosEveryMilliSec;
+  private long waitForUnbalanceMilliSec;
+  private long waitForKillMilliSec;
+  private long waitAfterBalanceMilliSec;
 
   @Override
   public ChaosMonkey build() {
-    Policy chaosPolicy = new PeriodicRandomActionPolicy(
-        CHAOS_EVERY_MS,
-        new UnbalanceKillAndRebalanceAction()
-    );
+    loadProperties();
+    Policy chaosPolicy = new PeriodicRandomActionPolicy(chaosEveryMilliSec,
+        new UnbalanceKillAndRebalanceAction(waitForUnbalanceMilliSec, waitForKillMilliSec,
+            waitAfterBalanceMilliSec));
 
     return new PolicyBasedChaosMonkey(util, chaosPolicy);
+  }
+
+  private void loadProperties() {
+    chaosEveryMilliSec = Long.parseLong(this.properties.getProperty(
+      MonkeyConstants.UNBALANCE_CHAOS_EVERY_MS,
+      MonkeyConstants.DEFAULT_UNBALANCE_CHAOS_EVERY_MS + ""));
+    waitForUnbalanceMilliSec = Long.parseLong(this.properties.getProperty(
+      MonkeyConstants.UNBALANCE_WAIT_FOR_UNBALANCE_MS,
+      MonkeyConstants.DEFAULT_UNBALANCE_WAIT_FOR_UNBALANCE_MS + ""));
+    waitForKillMilliSec = Long.parseLong(this.properties.getProperty(
+      MonkeyConstants.UNBALANCE_WAIT_FOR_KILLS_MS,
+      MonkeyConstants.DEFAULT_UNBALANCE_WAIT_FOR_KILLS_MS + ""));
+    waitAfterBalanceMilliSec = Long.parseLong(this.properties.getProperty(
+      MonkeyConstants.UNBALANCE_WAIT_AFTER_BALANCE_MS,
+      MonkeyConstants.DEFAULT_UNBALANCE_WAIT_AFTER_BALANCE_MS + ""));
   }
 }

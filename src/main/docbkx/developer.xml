@@ -1011,6 +1011,27 @@ mvn verify</programlisting>
 As you can see from the log, ChaosMonkey started the default PeriodicRandomActionPolicy, which is configured with all the available actions, and ran RestartActiveMaster and RestartRandomRs actions. ChaosMonkey tool, if run from command line, will keep on running until the process is killed.
 </para>
 </section>
+<section xml:id="chaos.monkey.properties">
+    <title>Passing individual Chaos Monkey per-test Settings/Properties</title>
+<para>
+    Since HBase version 1.0.0 (<link xlink:href="https://issues.apache.org/jira/browse/HBASE-11348">HBASE-11348 Make frequency and sleep times of chaos monkeys configurable</link>),
+    the chaos monkeys used to run integration tests can be configured per test run. Users can create a java properties file and
+    and pass this to the chaos monkey with timing configurations. The properties file needs to be in the HBase classpath.
+    The various properties that can be configured and their default values can be found listed in the
+    <classname>org.apache.hadoop.hbase.chaos.factories.MonkeyConstants</classname> class. 
+    If any chaos monkey configuration is missing from the property file, then the default values are assumed.
+    For example:
+    <console><prompt>$</prompt> <userinput>bin/hbase org.apache.hadoop.hbase.IntegrationTestIngest -m slowDeterministic -monkeyProps monkey.properties</userinput></console>
+    The above command will start the integration tests and chaos monkey passing the properties file <filename>monkey.properties</filename>. 
+    Here is an example chaos monkey file:
+    <programlisting>sdm.action1.period=120000
+sdm.action2.period=40000
+move.regions.sleep.time=80000
+move.regions.max.time=1000000
+move.regions.sleep.time=80000
+batch.restart.rs.ratio=0.4f</programlisting>
+</para>
+</section>
 </section>
 </section> <!-- tests -->
 
