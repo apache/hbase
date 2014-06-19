@@ -35,3 +35,19 @@ tr.task-monitor-ABORTED td {
 td.number {
   text-align: right;
 }
+
+td.bad, td.warn, td.good {
+  font-weight: bold;
+}
+
+td.good {
+  color: #32CD32;
+}
+
+td.warn {
+  color: #FFD700;
+}
+
+td.bad {
+  color: red;
+}

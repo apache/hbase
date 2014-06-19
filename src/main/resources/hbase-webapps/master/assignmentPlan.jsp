@@ -71,82 +71,80 @@
   Map<HRegionInfo, List<HServerAddress>> assignmentMap = plan.getAssignmentMap();
   Map<HRegionInfo, HServerAddress> currentAssignment = snapShot.getRegionToRegionServerMap();
 
-%><?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> 
-<html xmlns="http://www.w3.org/1999/xhtml">
-	<head>
-		<meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
-		<title>HBase Assignment Plan</title>
-		<link rel="stylesheet" type="text/css" href="/static/hbase.css" />
-	</head>
-	<body>
-		<a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="HBase Logo" title="HBase Logo" /></a>
-		<h1 id="page_title">Region Assignment Plan</h1>
-		<p id="links_menu"><a href="/master.jsp">Master</a></p>
-		<hr id="head_rule" />
+%><!DOCTYPE html> 
+<html lang="en">
+<head>
+	<meta charset="utf-8"/>
+	<meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/>
+	<title>HBase Assignment Plan</title>
+	<link rel="stylesheet" type="text/css" href="/static/hbase.css" />
+</head>
+<body>
+	<a id="logo" href="http://wiki.apache.org/lucene-hadoop/Hbase"><img src="/static/hbase_logo_med.gif" alt="HBase Logo" title="HBase Logo" /></a>
+	<h1 id="page_title">Region Assignment Plan</h1>
+	<p id="links_menu"><a href="/master.jsp">Master</a></p>
+	<hr id="head_rule" />
 
-		<h2>Region Assignment Plan </h2>
+	<h2>Region Assignment Plan </h2>
 <%
-			if (error.length() != 0) {
+	if (error.length() != 0) {
 %>
-				<h3>Failed to update the favored nodes: <font color="#FF0000"><%=favoredNodes%> </font>, </h3>
-				<h3>for the region: <font color="#FF0000"> <%=regionName%> </font></h3>
-				<h3><%=error%></h3>
+	<h3>Failed to update the favored nodes: <font color="#FF0000"><%=favoredNodes%> </font>, </h3>
+	<h3>for the region: <font color="#FF0000"> <%= StringEscapeUtils.escapeHtml(regionName) %> </font></h3>
+	<h3><%=error%></h3>
 <%
-			} else if (regionName != null) {
+	} else if (regionName != null) {
 %>
-				<h3> Succeeded to update the favored nodes: <font color="#32CD32"><%=favoredNodes%> </font>,</h3>
-				<h3> for the region: <font color="#32CD32"><%=regionName%> </font></h3>
+	<h3> Succeeded to update the favored nodes: <font color="#32CD32"><%=favoredNodes%> </font>,</h3>
+	<h3> for the region: <font color="#32CD32"><%= StringEscapeUtils.escapeHtml(regionName) %> </font></h3>
 <%			
-			}
+	}
 %>
-		<table>
-			<tr>
-    			<th>Region Name</th> <th>Position</th> <th>Primary RS</th> <th>Secondary RS</th> <th>Tertiary RS</th>  <th>Actions</th>
-			</tr>
+	<table>
+		<tr>
+      <th>Region Name</th>
+      <th>Position</th>
+      <th>Primary RS</th>
+      <th>Secondary RS</th>
+      <th>Tertiary RS</th>
+      <th>Actions</th>
+		</tr>
 <%				
-					for (Map.Entry<String, HRegionInfo> entry : regionNameToRegionInfoMap.entrySet()) {
-						HRegionInfo regionInfo = entry.getValue();
-						List<HServerAddress> favoredNodeList = assignmentMap.get(regionInfo);
-						regionName = regionInfo.getRegionNameAsString();
-						HServerAddress currentRS = currentAssignment.get(regionInfo);
-						String position = "Not Assigned";
-						AssignmentPlan.POSITION favoredNodePosition =
-							AssignmentPlan.getFavoredServerPosition(favoredNodeList, currentRS);
-						if (favoredNodePosition == null) {
-							position = "Not on FavoredNode";
-						} else {
-							position = favoredNodePosition.toString();
-						}
+	for (Map.Entry<String, HRegionInfo> entry : regionNameToRegionInfoMap.entrySet()) {
+		HRegionInfo regionInfo = entry.getValue();
+		List<HServerAddress> favoredNodeList = assignmentMap.get(regionInfo);
+		regionName = regionInfo.getRegionNameAsString();
+		
+		String position = "Not Assigned";
+		String tdClass = "bad";
+		
+		HServerAddress currentRS = currentAssignment.get(regionInfo);
+		if (currentRS != null) {
+		  AssignmentPlan.POSITION favoredNodePosition =
+		      AssignmentPlan.getFavoredServerPosition(favoredNodeList, currentRS);
+		  if (favoredNodePosition == null) {
+		    position = "" + currentRS;
+		  } else {
+		    position = favoredNodePosition.toString();
+		    if (favoredNodePosition == AssignmentPlan.POSITION.PRIMARY) {
+		      tdClass = "good";
+		    } else {
+		      tdClass = "warn";
+		    }
+		  }
+		}
 %>
-			<tr>
-				<form method="post">
-					<input type="hidden" name="regionName" value="<%= StringEscapeUtils.escapeHtml(regionName) %>">
-    				<td><%= StringEscapeUtils.escapeHtml(regionName) %> </td>
-					<%			
-					  if (position.startsWith("Not")) {
-					%>
-							<td><b><font color="#FF0000"><%=position%></font></b></td>
-					<%	
-					} else if (position.equalsIgnoreCase(AssignmentPlan.POSITION.PRIMARY.toString())){
-					%>
-							<td><b><font color="#32CD32"><%=position%></font></b></td>
-					<%	
-					} else {
-					%>
-							<td><b><font color="#FFD700"><%=position%></font></b></td>
-					<%	
-					} 
-					%>
-					<td><input type="text" size="40" name="primaryRS" value="<%=favoredNodeList == null ? "" : favoredNodeList.get(AssignmentPlan.POSITION.PRIMARY.ordinal()).getHostNameWithPort()%>"</td>
-					<td><input type="text" size="40" name="secondaryRS" value="<%=favoredNodeList == null ? "" : favoredNodeList.get(AssignmentPlan.POSITION.SECONDARY.ordinal()).getHostNameWithPort()%>"</td>
-					<td><input type="text" size="40" name="tertiaryRS" value="<%=favoredNodeList == null ? "" : favoredNodeList.get(AssignmentPlan.POSITION.TERTIARY.ordinal()).getHostNameWithPort()%>"</td>
-					<td><input type="submit" size="5" value="Update"></td>
-				</form>
-			</tr>
+		<tr><form method="post">
+			<input type="hidden" name="regionName" value="<%= StringEscapeUtils.escapeHtml(regionName) %>">
+			<td><%= StringEscapeUtils.escapeHtml(regionName) %></td>
+			<td class="<%= tdClass %>"><%= position %></td>
+			<td><input type="text" size="40" name="primaryRS" value="<%= favoredNodeList == null ? "" : favoredNodeList.get(AssignmentPlan.POSITION.PRIMARY.ordinal()).getHostNameWithPort() %>"</td>
+			<td><input type="text" size="40" name="secondaryRS" value="<%= favoredNodeList == null ? "" : favoredNodeList.get(AssignmentPlan.POSITION.SECONDARY.ordinal()).getHostNameWithPort() %>"</td>
+			<td><input type="text" size="40" name="tertiaryRS" value="<%= favoredNodeList == null ? "" : favoredNodeList.get(AssignmentPlan.POSITION.TERTIARY.ordinal()).getHostNameWithPort() %>"</td>
+			<td><input type="submit" size="5" value="Update"></td>
+		</form></tr>
 <%   
-				}  
+	}  
 %>
 		</table>
 	</body>
