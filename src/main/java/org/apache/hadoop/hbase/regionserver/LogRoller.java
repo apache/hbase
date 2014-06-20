@@ -19,6 +19,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -67,8 +68,10 @@ public class LogRoller extends HasThread implements LogRollListener {
   public LogRoller(final HRegionServer server, int hlogIndexID) {
     super();
     this.server = server;
-    this.rollperiod =
-      this.server.conf.getLong("hbase.regionserver.logroll.period", 3600000);
+
+    long confRoll = this.server.conf.getLong("hbase.regionserver.logroll.period", 3600000);
+    this.rollperiod = (long) (confRoll + (RandomUtils.nextDouble() * 0.2 * confRoll));
+
     this.timeBetweenRequest = this.server.conf.getLong(LOG_ROLL_REQUEST_PERIOD_KEY,
         LOG_ROLL_REQUEST_PERIOD_DEFAULT);
     this.hlogIndexID = hlogIndexID;
