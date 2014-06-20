@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Hash;
@@ -293,6 +294,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     HColumnDescriptor family = new HColumnDescriptor(FAMILY_NAME);
     family.setDataBlockEncoding(opts.blockEncoding);
     family.setCompressionType(opts.compression);
+    family.setBloomFilterType(opts.bloomType);
     if (opts.inMemoryCF) {
       family.setInMemory(true);
     }
@@ -510,6 +512,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.compression = that.compression;
       this.blockEncoding = that.blockEncoding;
       this.filterAll = that.filterAll;
+      this.bloomType = that.bloomType;
       this.valueRandom = that.valueRandom;
       this.valueSize = that.valueSize;
       this.period = that.period;
@@ -535,6 +538,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public boolean inMemoryCF = false;
     public int presplitRegions = 0;
     public Compression.Algorithm compression = Compression.Algorithm.NONE;
+    public BloomType bloomType = BloomType.ROW;
     public DataBlockEncoding blockEncoding = DataBlockEncoding.NONE;
     public boolean valueRandom = false;
     public int valueSize = DEFAULT_VALUE_LENGTH;
@@ -1238,6 +1242,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         + " there by not returning any thing back to the client.  Helps to check the server side"
         + " performance.  Uses FilterAllFilter internally. ");
     System.err.println(" latency         Set to report operation latencies. Default: False");
+    System.err.println(" bloomFilter      Bloom filter type, one of " + Arrays.toString(BloomType.values()));
     System.err.println(" valueSize       Pass value size to use: Default: 1024");
     System.err.println(" valueRandom     Set if we should vary value size between 0 and " +
         "'valueSize': Default: Not set.");
@@ -1366,7 +1371,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
           opts.presplitRegions = Integer.parseInt(cmd.substring(presplit.length()));
           continue;
         }
-        
+
         final String inMemory = "--inmemory=";
         if (cmd.startsWith(inMemory)) {
           opts.inMemoryCF = Boolean.parseBoolean(cmd.substring(inMemory.length()));
@@ -1406,6 +1411,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
         final String size = "--size=";
         if (cmd.startsWith(size)) {
           opts.size = Float.parseFloat(cmd.substring(size.length()));
+          continue;
+        }
+
+        final String bloomFilter = "--bloomFilter";
+        if (cmd.startsWith(bloomFilter)) {
+          opts.bloomType = BloomType.valueOf(cmd.substring(bloomFilter.length()));
           continue;
         }
 
