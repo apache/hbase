@@ -154,7 +154,7 @@ class AsyncProcess {
   protected final long pause;
   protected int numTries;
   protected int serverTrackerTimeout;
-  protected int operationTimeout;
+  protected int timeout;
   // End configuration settings.
 
   protected static class BatchErrors {
@@ -205,8 +205,8 @@ class AsyncProcess {
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     this.numTries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
-    this.operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+    this.timeout = conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
 
     this.maxTotalConcurrentTasks = conf.getInt(HConstants.HBASE_CLIENT_MAX_TOTAL_TASKS,
       HConstants.DEFAULT_HBASE_CLIENT_MAX_TOTAL_TASKS);
@@ -596,7 +596,7 @@ class AsyncProcess {
             try {
               MultiServerCallable<Row> callable = createCallable(server, tableName, multiAction);
               try {
-                res = createCaller(callable).callWithoutRetries(callable, operationTimeout);
+                res = createCaller(callable).callWithoutRetries(callable, timeout);
               } catch (IOException e) {
                 // The service itself failed . It may be an error coming from the communication
                 //   layer, but, as well, a functional error raised by the server.
