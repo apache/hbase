@@ -196,6 +196,9 @@ public class CreateTableHandler extends EventHandler {
    */
   protected void completed(final Throwable exception) {
     releaseTableLock();
+    String msg = exception == null ? null : exception.getMessage();
+    LOG.info("Table, " + this.hTableDescriptor.getTableName() + ", creation " +
+        msg == null ? "successful" : "failed. " + msg);
     if (exception != null) {
       removeEnablingTable(this.assignmentManager, this.hTableDescriptor.getTableName());
     }

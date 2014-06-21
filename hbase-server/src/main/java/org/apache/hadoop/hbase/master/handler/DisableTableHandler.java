@@ -191,7 +191,7 @@ public class DisableTableHandler extends EventHandler {
     // Flip the table to disabled if success.
     if (done) this.assignmentManager.getTableStateManager().setTableState(this.tableName,
       ZooKeeperProtos.Table.State.DISABLED);
-    LOG.info("Disabled table is done=" + done);
+    LOG.info("Disabled table, " + this.tableName + ", is done=" + done);
   }
 
   /**
