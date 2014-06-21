@@ -14,6 +14,7 @@
   import="org.apache.hadoop.hbase.master.AssignmentPlan" 
   import="org.apache.hadoop.hbase.master.RegionPlacement"
   import="org.apache.hadoop.hbase.master.RegionAssignmentSnapshot"
+  import="org.apache.hadoop.hbase.util.Base64"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.FSUtils"
   import="org.apache.hadoop.hbase.util.JvmVersion"
@@ -24,14 +25,21 @@
   RegionAssignmentSnapshot snapShot = rp.getRegionAssignmentSnapshot();
   Map<String, HRegionInfo> regionNameToRegionInfoMap = snapShot.getRegionNameToRegionInfoMap();
 
-  String regionName = request.getParameter("regionName");
+  String regionNameStr = null;
+  String regionName64 = request.getParameter("regionName64");
+  if (regionName64 != null && regionName64.length() > 0) {
+    byte[] regionName = Base64.decode(regionName64, Base64.URL_SAFE);
+    if (regionName != null) {
+      regionNameStr = Bytes.toStringBinary(regionName);
+    }
+  }
   String primaryRS = null;
   String secondaryRS = null;
   String tertiaryRS = null;
   String favoredNodes = "";
   String error = "";
-  if (regionName != null) {
-		HRegionInfo region = regionNameToRegionInfoMap.get(regionName);
+  if (regionNameStr != null) {
+		HRegionInfo region = regionNameToRegionInfoMap.get(regionNameStr);
 		List<HServerAddress> favoredNodesList = null;
 		if (region == null) {
 			error = " because cannot find this region in META !";
@@ -90,13 +98,13 @@
 	if (error.length() != 0) {
 %>
 	<h3>Failed to update the favored nodes: <font color="#FF0000"><%=favoredNodes%> </font>, </h3>
-	<h3>for the region: <font color="#FF0000"> <%= StringEscapeUtils.escapeHtml(regionName) %> </font></h3>
+	<h3>for the region: <font color="#FF0000"> <%= StringEscapeUtils.escapeHtml(regionNameStr) %> </font></h3>
 	<h3><%=error%></h3>
 <%
-	} else if (regionName != null) {
+	} else if (regionNameStr != null) {
 %>
 	<h3> Succeeded to update the favored nodes: <font color="#32CD32"><%=favoredNodes%> </font>,</h3>
-	<h3> for the region: <font color="#32CD32"><%= StringEscapeUtils.escapeHtml(regionName) %> </font></h3>
+	<h3> for the region: <font color="#32CD32"><%= StringEscapeUtils.escapeHtml(regionNameStr) %> </font></h3>
 <%			
 	}
 %>
@@ -113,7 +121,8 @@
 	for (Map.Entry<String, HRegionInfo> entry : regionNameToRegionInfoMap.entrySet()) {
 		HRegionInfo regionInfo = entry.getValue();
 		List<HServerAddress> favoredNodeList = assignmentMap.get(regionInfo);
-		regionName = regionInfo.getRegionNameAsString();
+		byte[] regionName = regionInfo.getRegionName();
+		regionNameStr = regionInfo.getRegionNameAsString();
 		
 		String position = "Not Assigned";
 		String tdClass = "bad";
@@ -135,8 +144,8 @@
 		}
 %>
 		<tr><form method="post">
-			<input type="hidden" name="regionName" value="<%= StringEscapeUtils.escapeHtml(regionName) %>">
-			<td><%= StringEscapeUtils.escapeHtml(regionName) %></td>
+			<input type="hidden" name="regionName64" value="<%= Base64.encodeBytes(regionName, Base64.URL_SAFE) %>">
+			<td><%= StringEscapeUtils.escapeHtml(regionNameStr) %></td>
 			<td class="<%= tdClass %>"><%= position %></td>
 			<td><input type="text" size="40" name="primaryRS" value="<%= favoredNodeList == null ? "" : favoredNodeList.get(AssignmentPlan.POSITION.PRIMARY.ordinal()).getHostNameWithPort() %>"</td>
 			<td><input type="text" size="40" name="secondaryRS" value="<%= favoredNodeList == null ? "" : favoredNodeList.get(AssignmentPlan.POSITION.SECONDARY.ordinal()).getHostNameWithPort() %>"</td>
