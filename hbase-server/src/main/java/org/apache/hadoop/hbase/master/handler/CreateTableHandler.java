@@ -169,6 +169,9 @@ public class CreateTableHandler extends EventHandler {
    */
   protected void completed(final Throwable exception) {
     releaseTableLock();
+    String msg = exception == null ? null : exception.getMessage();
+    LOG.info("Table, " + this.hTableDescriptor.getTableName() + ", creation " +
+        msg == null ? "successful" : "failed. " + msg);
     if (exception != null) {
       // Try deleting the enabling node in case of error
       // If this does not happen then if the client tries to create the table

@@ -187,7 +187,7 @@ public class DisableTableHandler extends EventHandler {
     }
     // Flip the table to disabled if success.
     if (done) this.assignmentManager.getZKTable().setDisabledTable(this.tableName);
-    LOG.info("Disabled table is done=" + done);
+    LOG.info("Disabled table, " + this.tableName + ", is done=" + done);
   }
 
   /**
