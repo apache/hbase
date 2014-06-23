@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConcatenatedLists;
+import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -472,13 +473,22 @@ public class StripeStoreFileManager
     if (!LOG.isDebugEnabled()) return;
     StringBuilder sb = new StringBuilder();
     sb.append("\n" + string + "; current stripe state is as such:");
-    sb.append("\n level 0 with ").append(state.level0Files.size()).append(" files;");
+    sb.append("\n level 0 with ").append(state.level0Files.size())
+        .append(
+          " files: "
+              + StringUtils.humanReadableInt(StripeCompactionPolicy
+                  .getTotalFileSize(state.level0Files)) + ";");
     for (int i = 0; i < state.stripeFiles.size(); ++i) {
       String endRow = (i == state.stripeEndRows.length)
           ? "(end)" : "[" + Bytes.toString(state.stripeEndRows[i]) + "]";
       sb.append("\n stripe ending in ").append(endRow).append(" with ")
-        .append(state.stripeFiles.get(i).size()).append(" files;");
+          .append(state.stripeFiles.get(i).size())
+          .append(
+            " files: "
+                + StringUtils.humanReadableInt(StripeCompactionPolicy
+                    .getTotalFileSize(state.stripeFiles.get(i))) + ";");
     }
+    sb.append("\n").append(state.stripeFiles.size()).append(" stripes total.");
     sb.append("\n").append(getStorefileCount()).append(" files total.");
     LOG.debug(sb.toString());
   }
