@@ -17,22 +17,27 @@
 */
 package org.apache.hadoop.hbase.http.log;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.*;
 import java.net.*;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.http.log.LogLevel;
 import org.apache.hadoop.net.NetUtils;
-
-import junit.framework.TestCase;
-
 import org.apache.commons.logging.*;
 import org.apache.commons.logging.impl.*;
 import org.apache.log4j.*;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
-public class TestLogLevel extends TestCase {
+@Category(SmallTests.class)
+public class TestLogLevel {
   static final PrintStream out = System.out;
 
+  @Test (timeout=60000)
+  @SuppressWarnings("deprecation")
   public void testDynamicLogLevel() throws Exception {
     String logName = TestLogLevel.class.getName();
     Log testlog = LogFactory.getLog(logName);
@@ -45,38 +50,46 @@ public class TestLogLevel extends TestCase {
       log.error("log.error1");
       assertTrue(!Level.ERROR.equals(log.getEffectiveLevel()));
 
-      HttpServer server = new HttpServer.Builder().setName("..")
-          .addEndpoint(new URI("http://localhost:0")).setFindPort(true)
-          .build();
-      
-      server.start();
-      String authority = NetUtils.getHostPortString(server
-          .getConnectorAddress(0));
+      HttpServer server = null;
+      try {
+        server = new HttpServer.Builder().setName("..")
+            .addEndpoint(new URI("http://localhost:0")).setFindPort(true)
+            .build();
 
-      //servlet
-      URL url = new URL("http://" + authority + "/logLevel?log=" + logName
-          + "&level=" + Level.ERROR);
-      out.println("*** Connecting to " + url);
-      URLConnection connection = url.openConnection();
-      connection.connect();
+        server.start();
+        String authority = NetUtils.getHostPortString(server
+            .getConnectorAddress(0));
 
-      BufferedReader in = new BufferedReader(new InputStreamReader(
-          connection.getInputStream()));
-      for(String line; (line = in.readLine()) != null; out.println(line));
-      in.close();
+        //servlet
+        URL url = new URL("http://" + authority + "/logLevel?log=" + logName
+            + "&level=" + Level.ERROR);
+        out.println("*** Connecting to " + url);
+        HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+        connection.connect();
 
-      log.debug("log.debug2");
-      log.info("log.info2");
-      log.error("log.error2");
-      assertTrue(Level.ERROR.equals(log.getEffectiveLevel()));
+        BufferedReader in = new BufferedReader(new InputStreamReader(
+            connection.getInputStream()));
+        for(String line; (line = in.readLine()) != null; out.println(line));
+        in.close();
+        connection.disconnect();
 
-      //command line
-      String[] args = {"-setlevel", authority, logName, Level.DEBUG.toString()};
-      LogLevel.main(args);
-      log.debug("log.debug3");
-      log.info("log.info3");
-      log.error("log.error3");
-      assertTrue(Level.DEBUG.equals(log.getEffectiveLevel()));
+        log.debug("log.debug2");
+        log.info("log.info2");
+        log.error("log.error2");
+        assertTrue(Level.ERROR.equals(log.getEffectiveLevel()));
+
+        //command line
+        String[] args = {"-setlevel", authority, logName, Level.DEBUG.toString()};
+        LogLevel.main(args);
+        log.debug("log.debug3");
+        log.info("log.info3");
+        log.error("log.error3");
+        assertTrue(Level.DEBUG.equals(log.getEffectiveLevel()));
+      } finally {
+        if (server != null) {
+          server.stop();
+        }
+      }
     }
     else {
       out.println(testlog.getClass() + " not tested.");
