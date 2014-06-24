@@ -847,15 +847,15 @@ class AsyncProcess<CResult> {
    * @param currentNumberOfTask - the number of task finished when calling the method.
    */
   protected void waitForNextTaskDone(long currentNumberOfTask) throws InterruptedIOException {
-    while (currentNumberOfTask == tasksDone.get()) {
-      try {
-        synchronized (this.tasksDone) {
+    synchronized (this.tasksDone) {
+      while (currentNumberOfTask == tasksDone.get()) {
+        try {
           this.tasksDone.wait(100);
+        } catch (InterruptedException e) {
+          throw new InterruptedIOException("#" + id + ", interrupted." +
+              " currentNumberOfTask=" + currentNumberOfTask +
+              ",  tableName=" + tableName + ", tasksDone=" + tasksDone.get());
         }
-      } catch (InterruptedException e) {
-        throw new InterruptedIOException("#" + id + ", interrupted." +
-            " currentNumberOfTask=" + currentNumberOfTask +
-            ",  tableName=" + tableName + ", tasksDone=" + tasksDone.get());
       }
     }
   }

@@ -266,7 +266,7 @@ public class OpenRegionHandler extends EventHandler {
       }
       synchronized (signaller) {
         try {
-          signaller.wait(period);
+          if (!signaller.get()) signaller.wait(period);
         } catch (InterruptedException e) {
           // Go to the loop check.
         }

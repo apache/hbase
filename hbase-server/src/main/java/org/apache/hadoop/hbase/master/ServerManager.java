@@ -470,7 +470,8 @@ public class ServerManager {
 
   void letRegionServersShutdown() {
     long previousLogTime = 0;
-    while (!onlineServers.isEmpty()) {
+    int onlineServersCt;
+    while ((onlineServersCt = onlineServers.size()) > 0) {
 
       if (System.currentTimeMillis() > (previousLogTime + 1000)) {
         StringBuilder sb = new StringBuilder();
@@ -487,7 +488,7 @@ public class ServerManager {
 
       synchronized (onlineServers) {
         try {
-          onlineServers.wait(100);
+          if (onlineServersCt == onlineServers.size()) onlineServers.wait(100);
         } catch (InterruptedException ignored) {
           // continue
         }
