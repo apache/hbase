@@ -4916,8 +4916,12 @@ public class HRegion implements HeapSize { // , Writable{
     WALEdit walEdit = new WALEdit();
 
     // 1. Run pre-process hook
-    processor.preProcess(this, walEdit);
-
+    try {
+      processor.preProcess(this, walEdit);
+    } catch (IOException e) {
+      closeRegionOperation();
+      throw e;
+    }
     // Short circuit the read only case
     if (processor.readOnly()) {
       try {
