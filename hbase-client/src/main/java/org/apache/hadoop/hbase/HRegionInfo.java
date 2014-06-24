@@ -1057,8 +1057,13 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY,
       HConstants.STARTCODE_QUALIFIER);
     if (cell == null || cell.getValueLength() == 0) return null;
-    return ServerName.valueOf(hostAndPort,
-        Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+    try {
+      return ServerName.valueOf(hostAndPort,
+          Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+    } catch (IllegalArgumentException e) {
+      LOG.error("Ignoring invalid region for server " + hostAndPort + "; cell=" + cell, e);
+      return null;
+    }
   }
 
   /**
