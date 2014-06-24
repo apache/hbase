@@ -97,7 +97,7 @@ public class TestLogActionsListener {
       KeyValue kv = new KeyValue(b,b,b);
       WALEdit edit = new WALEdit();
       edit.add(kv);
-      hlog.append(hri, b, edit, 0);
+      hlog.append(hri, b, edit, 0).get();
       if (i == 10) {
         hlog.addLogActionsListerner(laterList);
       }

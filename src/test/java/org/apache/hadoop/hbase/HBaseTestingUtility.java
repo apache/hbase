@@ -2086,4 +2086,8 @@ public class HBaseTestingUtility {
     getHBaseAdmin().moveRegion(regionInfo.getRegionName(),
         regionServer.toString());
   }
+
+  public HConnection getConnection() {
+    return HConnectionManager.getConnection(this.conf);
+  }
 }

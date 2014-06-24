@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -432,14 +433,14 @@ public class TestWALReplay {
     long now = ee.currentTimeMillis();
     edit.add(new KeyValue(rowName, Bytes.toBytes("another family"), rowName,
       now, rowName));
-    wal.append(hri, tableName, edit, now);
+    wal.append(hri, tableName, edit, now).get();
 
     // Delete the c family to verify deletes make it over.
     edit = new WALEdit();
     now = ee.currentTimeMillis();
     edit.add(new KeyValue(rowName, Bytes.toBytes("c"), null, now,
       KeyValue.Type.DeleteFamily));
-    wal.append(hri, tableName, edit, now);
+    wal.append(hri, tableName, edit, now).get();
 
     // Sync.
     wal.sync();
@@ -579,7 +580,7 @@ public class TestWALReplay {
   private void addWALEdits (final byte [] tableName, final HRegionInfo hri,
       final byte [] rowName, final byte [] family,
       final int count, EnvironmentEdge ee, final HLog wal)
-  throws IOException {
+  throws IOException, InterruptedException, ExecutionException {
     String familyStr = Bytes.toString(family);
     for (int j = 0; j < count; j++) {
       byte[] qualifierBytes = Bytes.toBytes(Integer.toString(j));
@@ -587,7 +588,7 @@ public class TestWALReplay {
       WALEdit edit = new WALEdit();
       edit.add(new KeyValue(rowName, family, qualifierBytes,
         ee.currentTimeMillis(), columnBytes));
-      wal.append(hri, tableName, edit, ee.currentTimeMillis());
+      wal.append(hri, tableName, edit, ee.currentTimeMillis()).checkedGet();
     }
   }
 

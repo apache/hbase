@@ -64,6 +64,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import javax.annotation.Nullable;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
@@ -174,7 +176,12 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
 
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * HRegionServer makes a set of HRegions available to clients.  It checks in with
@@ -2064,6 +2071,13 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
     return this.hlogs[i];
   }
 
+  /**
+   * Return number of logs present in the regionserver
+   */
+  public int getLogCount() {
+    return this.hlogs.length;
+  }
+
   public int getTotalHLogCnt() {
     return this.hlogs.length;
   }
@@ -2917,13 +2931,18 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
     }
   }
 
-  @Override
-  public int put(final byte[] regionName, final List<Put> puts)
-  throws IOException {
+  public CheckedFuture<Integer, IOException> putAsync(final byte[] regionName,
+      final List<Put> puts) throws IOException {
     return applyMutations(regionName, puts, "multiput_");
   }
 
-  private int applyMutations(final byte[] regionName,
+  @Override
+  public int put(final byte[] regionName,
+      final List<Put> puts) throws IOException {
+    return applyMutations(regionName, puts, "multiput_").checkedGet();
+  }
+
+  private CheckedFuture<Integer, IOException> applyMutations(final byte[] regionName,
       final List<? extends Mutation> mutations,
       String methodName)
   throws IOException {
@@ -2944,16 +2963,43 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
         opWithLocks[i++] = new Pair<Mutation, Integer>(p, lock);
       }
 
-      OperationStatusCode[] codes = region.batchMutateWithLocks(opWithLocks,
+      ListenableFuture<OperationStatusCode[]> batchMutateFuture =
+          region.batchMutateWithLocks(opWithLocks,
           methodName);
-      for (i = 0; i < codes.length; i++) {
-        if (codes[i] != OperationStatusCode.SUCCESS)
-          return i;
-      }
-      return HConstants.MULTIPUT_SUCCESS;
+      return Futures.makeChecked(Futures.transform(batchMutateFuture,
+            new AsyncFunction<OperationStatusCode[], Integer>() {
+
+          @Override
+          public ListenableFuture<Integer> apply(OperationStatusCode[] codes)
+              throws Exception {
+            try {
+              for (int i = 0; i < codes.length; i++) {
+                if (codes[i] != OperationStatusCode.SUCCESS)
+                  return Futures.immediateFuture(i);
+              }
+              return Futures.immediateFuture(HConstants.MULTIPUT_SUCCESS);
+            } catch (Throwable t) {
+              return Futures.immediateFailedCheckedFuture(
+                  convertThrowableToIOE(cleanup(t)));
+            }
+          }
+        }), getConvertThrowableToIOEFunction());
     } catch (Throwable t) {
       throw convertThrowableToIOE(cleanup(t));
     }
+  }
+
+  private Function<Exception, IOException> getConvertThrowableToIOEFunction() {
+    return new Function<Exception, IOException>() {
+      @Override
+      @Nullable
+      public IOException apply(@Nullable Exception e) {
+        if (e instanceof ExecutionException) {
+          return convertThrowableToIOE(cleanup(e.getCause()));
+        }
+        return convertThrowableToIOE(cleanup(e));
+      }
+    };
   }
 
   private boolean checkAndMutate(final byte[] regionName, final byte [] row,
@@ -3218,7 +3264,7 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
   public int delete(final byte[] regionName,
                                   final List<Delete> deletes)
   throws IOException {
-    return applyMutations(regionName, deletes, "multidelete_");
+    return applyMutations(regionName, deletes, "multidelete_").checkedGet();
   }
 
   @Override
@@ -3867,32 +3913,18 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
   public MultiPutResponse multiPut(MultiPut puts) throws IOException {
     MultiPutResponse resp = new MultiPutResponse();
 
-    // do each region as it's own.
-    int size = puts.puts.size();
-    int index = 0;
+    Map<byte[], CheckedFuture<Integer, IOException>> futuresMap =
+        new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for( Map.Entry<byte[], List<Put>> e: puts.puts.entrySet()) {
-      int result = put(e.getKey(), e.getValue());
-      resp.addResult(e.getKey(), result);
-
-      index++;
-      if (index < size) {
-        // remove the reference to the region list of Puts to save RAM except
-        // for the last one. We will lose the reference to the last one pretty
-        // soon anyway; keep it for a little more, until we get back
-        // to HBaseServer level, where we might need to pretty print
-        // the MultiPut request for debugging slow/large puts.
-        // Note: A single row "put" from client also end up in server
-        // as a multiPut().
-        // We set the value to an empty array so taskmonitor can either get
-        //  the old value or an empty array. If we call clear() on the array,
-        //  then we might have a race condition where we're iterating over the
-        //  array at the same time we clear it (which throws an exception)
-        // This relies on the fact that Map.Entry.setValue() boils down to a
-        //   simple reference assignment, which is atomic
-        e.setValue(emptyPutArray); // clear some RAM
-      }
+      futuresMap.put(e.getKey(), putAsync(e.getKey(), e.getValue()));
     }
-
+    for (Entry<byte[], CheckedFuture<Integer, IOException>> e :
+        futuresMap.entrySet()) {
+      CheckedFuture<Integer, IOException> f = e.getValue();
+      byte[] row = e.getKey();
+      int ret = f.checkedGet();
+      resp.addResult(row, ret);
+    }
     return resp;
   }
 

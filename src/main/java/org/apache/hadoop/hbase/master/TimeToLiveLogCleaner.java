@@ -48,8 +48,9 @@ public class TimeToLiveLogCleaner implements LogCleanerDelegate {
     long currentTime = System.currentTimeMillis();
     try {
       // If the path name is in hourly format, skip getting modification time
-      if (OldLogsCleaner.isOldLogsArchivedToHourlyDir() && OldLogsCleaner.isMatchDatePattern(filePath)) {
-        time = HLog.DATE_FORMAT.parse(filePath.getName()).getTime();
+      if (OldLogsCleaner.isOldLogsArchivedToHourlyDir()
+          && OldLogsCleaner.isMatchDatePattern(filePath)) {
+        time = HLog.getDateFormat().parse(filePath.getName()).getTime();
       } else {
         FileStatus fStat = filePath.getFileSystem(conf).getFileStatus(filePath);
         time = fStat.getModificationTime();
