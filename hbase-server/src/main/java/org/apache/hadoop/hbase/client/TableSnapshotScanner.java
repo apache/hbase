@@ -176,12 +176,16 @@ public class TableSnapshotScanner extends AbstractClientScanner {
         }
       }
 
-      result = currentRegionScanner.next();
-      if (result != null) {
-        return result;
-      } else {
-        currentRegionScanner.close();
-        currentRegionScanner = null;
+      try {
+        result = currentRegionScanner.next();
+        if (result != null) {
+          return result;
+        }
+      } finally {
+        if (result == null) {
+          currentRegionScanner.close();
+          currentRegionScanner = null;
+        }        
       }
     }
   }
