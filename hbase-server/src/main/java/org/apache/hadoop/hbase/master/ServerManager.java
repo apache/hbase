@@ -511,7 +511,8 @@ public class ServerManager {
     long previousLogTime = 0;
     ServerName sn = master.getServerName();
     ZooKeeperWatcher zkw = master.getZooKeeper();
-    while (!onlineServers.isEmpty()) {
+    int onlineServersCt;
+    while ((onlineServersCt = onlineServers.size()) > 0){
 
       if (System.currentTimeMillis() > (previousLogTime + 1000)) {
         Set<ServerName> remainingServers = onlineServers.keySet();
@@ -548,7 +549,7 @@ public class ServerManager {
       }
       synchronized (onlineServers) {
         try {
-          onlineServers.wait(100);
+          if (onlineServersCt == onlineServers.size()) onlineServers.wait(100);
         } catch (InterruptedException ignored) {
           // continue
         }

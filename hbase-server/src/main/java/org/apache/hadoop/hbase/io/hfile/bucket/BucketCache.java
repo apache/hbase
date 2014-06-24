@@ -334,7 +334,8 @@ public class BucketCache implements BlockCache, HeapSize {
     if (!successfulAddition && wait) {
       synchronized (cacheWaitSignals[queueNum]) {
         try {
-          cacheWaitSignals[queueNum].wait(DEFAULT_CACHE_WAIT_TIME);
+          successfulAddition = bq.offer(re);
+          if (!successfulAddition) cacheWaitSignals[queueNum].wait(DEFAULT_CACHE_WAIT_TIME);
         } catch (InterruptedException ie) {
           Thread.currentThread().interrupt();
         }

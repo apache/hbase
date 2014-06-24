@@ -901,6 +901,7 @@ class AsyncProcess {
             LOG.info("#" + id + ", waiting for " + currentInProgress + "  actions to finish");
           }
           synchronized (actionsInProgress) {
+            if (actionsInProgress.get() == 0) break;
             actionsInProgress.wait(100);
           }
         }
@@ -979,6 +980,7 @@ class AsyncProcess {
       oldInProgress = currentInProgress;
       try {
         synchronized (this.tasksInProgress) {
+          if (tasksInProgress.get() != oldInProgress) break;
           this.tasksInProgress.wait(100);
         }
       } catch (InterruptedException e) {

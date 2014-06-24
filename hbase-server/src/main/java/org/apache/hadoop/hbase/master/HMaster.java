@@ -543,8 +543,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.initializationBeforeMetaAssignment = true;
 
     // Wait for regionserver to finish initialization.
-    while (!isStopped() && !isOnline()) {
-      synchronized (online) {
+    synchronized (online) {
+      while (!isStopped() && !isOnline()) {
         online.wait(100);
       }
     }

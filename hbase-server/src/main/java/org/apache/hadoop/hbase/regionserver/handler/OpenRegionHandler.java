@@ -264,7 +264,7 @@ public class OpenRegionHandler extends EventHandler {
         try {
           // Wait for 10 seconds, so that server shutdown
           // won't take too long if this thread happens to run.
-          signaller.wait(10000);
+          if (!signaller.get()) signaller.wait(10000);
         } catch (InterruptedException e) {
           // Go to the loop check.
         }

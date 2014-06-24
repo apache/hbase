@@ -1488,6 +1488,7 @@ public class RpcClient {
       }
       try {
         synchronized (call) {
+          if (call.done) break;
           call.wait(Math.min(call.remainingTime(), 1000) + 1);
         }
       } catch (InterruptedException e) {

@@ -75,7 +75,7 @@ class LogRoller extends HasThread implements WALActionsListener {
         if (!periodic) {
           synchronized (rollLog) {
             try {
-              rollLog.wait(this.threadWakeFrequency);
+              if (!rollLog.get()) rollLog.wait(this.threadWakeFrequency);
             } catch (InterruptedException e) {
               // Fall through
             }
