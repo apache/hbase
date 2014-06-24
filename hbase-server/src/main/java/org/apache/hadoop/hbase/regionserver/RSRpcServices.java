@@ -580,7 +580,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         mArray[i++] = mutation;
       }
 
-      requestCount.add(mutations.size());
       if (!region.getRegionInfo().isMetaTable()) {
         regionServer.cacheFlusher.reclaimMemStoreMemory();
       }

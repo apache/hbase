@@ -2269,8 +2269,8 @@ public class HRegion implements HeapSize { // , Writable{
 
       try {
         if (!initialized) {
+          this.writeRequestsCount.add(batchOp.operations.length);
           if (!batchOp.isInReplay()) {
-            this.writeRequestsCount.increment();
             doPreMutationHook(batchOp);
           }
           initialized = true;

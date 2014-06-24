@@ -32,6 +32,8 @@ import org.junit.experimental.categories.Category;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 
 @Category(MediumTests.class)
@@ -106,30 +108,36 @@ public class TestRegionServerMetrics {
     TEST_UTIL.createTable(tName, cfName);
 
     new HTable(conf, tName).close(); //wait for the table to come up.
+
+    // Do a first put to be sure that the connection is established, meta is there and so on.
+    HTable table = new HTable(conf, tName);
+    Put p = new Put(row);
+    p.add(cfName, qualifier, initValue);
+    table.put(p);
+
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     long requests = metricsHelper.getCounter("totalRequestCount", serverSource);
     long readRequests = metricsHelper.getCounter("readRequestCount", serverSource);
     long writeRequests = metricsHelper.getCounter("writeRequestCount", serverSource);
 
-    HTable table = new HTable(conf, tName);
-
-    Put p = new Put(row);
-
-
-    p.add(cfName, qualifier, initValue);
-
     for (int i=0; i< 30; i++) {
       table.put(p);
     }
 
-
-    table.flushCommits();
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+    metricsHelper.assertCounter("totalRequestCount", requests + 30, serverSource);
+    metricsHelper.assertCounter("readRequestCount", readRequests, serverSource);
+    metricsHelper.assertCounter("writeRequestCount", writeRequests + 30, serverSource);
 
     Get g = new Get(row);
     for (int i=0; i< 10; i++) {
       table.get(g);
     }
 
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+    metricsHelper.assertCounter("totalRequestCount", requests + 40, serverSource);
+    metricsHelper.assertCounter("readRequestCount", readRequests + 10, serverSource);
+    metricsHelper.assertCounter("writeRequestCount", writeRequests + 30, serverSource);
 
     for ( HRegionInfo i:table.getRegionLocations().keySet()) {
       MetricsRegionAggregateSource agg = rs.getRegion(i.getRegionName())
@@ -141,14 +149,30 @@ public class TestRegionServerMetrics {
           "_region_" + i.getEncodedName()+
           "_metric";
       metricsHelper.assertCounter(prefix + "_getNumOps", 10, agg);
-      metricsHelper.assertCounter(prefix + "_mutateCount", 30, agg);
+      metricsHelper.assertCounter(prefix + "_mutateCount", 31, agg);
     }
 
+    List<Get> gets = new ArrayList<Get>();
+    for (int i=0; i< 10; i++) {
+      gets.add(new Get(row));
+    }
+    table.get(gets);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    metricsHelper.assertCounterGt("totalRequestCount", requests + 39, serverSource);
-    metricsHelper.assertCounterGt("readRequestCount", readRequests + 9, serverSource);
-    metricsHelper.assertCounterGt("writeRequestCount", writeRequests + 29, serverSource);
+    metricsHelper.assertCounter("totalRequestCount", requests + 50, serverSource);
+    metricsHelper.assertCounter("readRequestCount", readRequests + 20, serverSource);
+    metricsHelper.assertCounter("writeRequestCount", writeRequests + 30, serverSource);
+
+    table.setAutoFlushTo(false);
+    for (int i=0; i< 30; i++) {
+      table.put(p);
+    }
+    table.flushCommits();
+
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+    metricsHelper.assertCounter("totalRequestCount", requests + 80, serverSource);
+    metricsHelper.assertCounter("readRequestCount", readRequests + 20, serverSource);
+    metricsHelper.assertCounter("writeRequestCount", writeRequests + 60, serverSource);
 
     table.close();
   }
