@@ -132,7 +132,7 @@
 		  AssignmentPlan.POSITION favoredNodePosition =
 		      AssignmentPlan.getFavoredServerPosition(favoredNodeList, currentRS);
 		  if (favoredNodePosition == null) {
-		    position = "" + currentRS;
+		    position = currentRS.getHostNameWithPort();
 		  } else {
 		    position = favoredNodePosition.toString();
 		    if (favoredNodePosition == AssignmentPlan.POSITION.PRIMARY) {
