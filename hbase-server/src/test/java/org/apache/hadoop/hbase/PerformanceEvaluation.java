@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -503,6 +504,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.flushCommits = that.flushCommits;
       this.writeToWAL = that.writeToWAL;
       this.autoFlush = that.autoFlush;
+      this.oneCon = that.oneCon;
       this.useTags = that.useTags;
       this.noOfTags = that.noOfTags;
       this.reportLatency = that.reportLatency;
@@ -531,6 +533,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public boolean flushCommits = true;
     public boolean writeToWAL = true;
     public boolean autoFlush = false;
+    public boolean oneCon = false;
     public boolean useTags = false;
     public int noOfTags = 1;
     public boolean reportLatency = false;
@@ -577,8 +580,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
      * Note that all subclasses of this class must provide a public contructor
      * that has the exact same list of arguments.
      */
-    Test(final Configuration conf, final TestOptions options, final Status status) {
-      this.conf = conf;
+    Test(final HConnection con, final TestOptions options, final Status status) {
+      this.connection = con;
+      this.conf = con.getConfiguration();
       this.opts = options;
       this.status = status;
       this.testName = this.getClass().getSimpleName();
@@ -631,9 +635,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     void testSetup() throws IOException {
-      this.connection = HConnectionManager.createConnection(conf);
-      this.table = connection.getTable(opts.tableName);
-      this.table.setAutoFlush(opts.autoFlush, true);
+      if (!opts.oneCon) {
+        this.connection = HConnectionManager.createConnection(conf);
+      }
+      this.table = new HTable(TableName.valueOf(opts.tableName), connection);
+      this.table.setAutoFlushTo(opts.autoFlush);
 
       try {
         Constructor<?> ctor =
@@ -654,7 +660,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
         this.table.flushCommits();
       }
       table.close();
-      connection.close();
+      if (!opts.oneCon) {
+        connection.close();
+      }
       receiverHost.closeReceivers();
     }
 
@@ -765,8 +773,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   @SuppressWarnings("unused")
   static class RandomSeekScanTest extends Test {
-    RandomSeekScanTest(Configuration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    RandomSeekScanTest(HConnection con, TestOptions options, Status status) {
+      super(con, options, status);
     }
 
     @Override
@@ -795,8 +803,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static abstract class RandomScanWithRangeTest extends Test {
-    RandomScanWithRangeTest(Configuration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    RandomScanWithRangeTest(HConnection con, TestOptions options, Status status) {
+      super(con, options, status);
     }
 
     @Override
@@ -811,7 +819,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       int count = 0;
       ResultScanner s = this.table.getScanner(scan);
       for (; (r = s.next()) != null;) {
-        updateValueSize(r);;
+        updateValueSize(r);
         count++;
       }
       if (i % 100 == 0) {
@@ -839,8 +847,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class RandomScanWithRange10Test extends RandomScanWithRangeTest {
-    RandomScanWithRange10Test(Configuration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    RandomScanWithRange10Test(HConnection con, TestOptions options, Status status) {
+      super(con, options, status);
     }
 
     @Override
@@ -850,8 +858,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class RandomScanWithRange100Test extends RandomScanWithRangeTest {
-    RandomScanWithRange100Test(Configuration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    RandomScanWithRange100Test(HConnection con, TestOptions options, Status status) {
+      super(con, options, status);
     }
 
     @Override
@@ -861,8 +869,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class RandomScanWithRange1000Test extends RandomScanWithRangeTest {
-    RandomScanWithRange1000Test(Configuration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    RandomScanWithRange1000Test(HConnection con, TestOptions options, Status status) {
+      super(con, options, status);
     }
 
     @Override
@@ -872,8 +880,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class RandomScanWithRange10000Test extends RandomScanWithRangeTest {
-    RandomScanWithRange10000Test(Configuration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    RandomScanWithRange10000Test(HConnection con, TestOptions options, Status status) {
+      super(con, options, status);
     }
 
     @Override
@@ -885,8 +893,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   static class RandomReadTest extends Test {
     private ArrayList<Get> gets;
 
-    RandomReadTest(Configuration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    RandomReadTest(HConnection con, TestOptions options, Status status) {
+      super(con, options, status);
       if (opts.multiGet > 0) {
         LOG.info("MultiGet enabled. Sending GETs in batches of " + opts.multiGet + ".");
         this.gets = new ArrayList<Get>(opts.multiGet);
@@ -930,8 +938,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class RandomWriteTest extends Test {
-    RandomWriteTest(Configuration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    RandomWriteTest(HConnection con, TestOptions options, Status status) {
+      super(con, options, status);
     }
 
     @Override
@@ -962,8 +970,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   static class ScanTest extends Test {
     private ResultScanner testScanner;
 
-    ScanTest(Configuration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    ScanTest(HConnection con, TestOptions options, Status status) {
+      super(con, options, status);
     }
 
     @Override
@@ -993,8 +1001,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class SequentialReadTest extends Test {
-    SequentialReadTest(Configuration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    SequentialReadTest(HConnection con, TestOptions options, Status status) {
+      super(con, options, status);
     }
 
     @Override
@@ -1009,8 +1017,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class SequentialWriteTest extends Test {
-    SequentialWriteTest(Configuration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    SequentialWriteTest(HConnection con, TestOptions options, Status status) {
+      super(con, options, status);
     }
 
     @Override
@@ -1041,8 +1049,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
   static class FilteredScanTest extends Test {
     protected static final Log LOG = LogFactory.getLog(FilteredScanTest.class.getName());
 
-    FilteredScanTest(Configuration conf, TestOptions options, Status status) {
-      super(conf, options, status);
+    FilteredScanTest(HConnection con, TestOptions options, Status status) {
+      super(con, options, status);
     }
 
     @Override
@@ -1159,10 +1167,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
     long totalElapsedTime;
 
     final Test t;
+    HConnection con = HConnectionManager.createConnection(conf);
     try {
       Constructor<? extends Test> constructor =
-        cmd.getDeclaredConstructor(Configuration.class, TestOptions.class, Status.class);
-      t = constructor.newInstance(conf, opts, status);
+        cmd.getDeclaredConstructor(HConnection.class, TestOptions.class, Status.class);
+      t = constructor.newInstance(con, opts, status);
     } catch (NoSuchMethodException e) {
       throw new IllegalArgumentException("Invalid command class: " +
           cmd.getName() + ".  It does not provide a constructor as described by " +
@@ -1177,6 +1186,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       "ms at offset " + opts.startRow + " for " + opts.perClientRunRows + " rows" +
       " (" + calculateMbps((int)(opts.perClientRunRows * opts.sampleRate), totalElapsedTime,
           getAverageValueLength(opts)) + ")");
+    con.close();
     return totalElapsedTime;
   }
 
@@ -1229,6 +1239,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       "Default: false");
     System.err.println(" writeToWAL      Set writeToWAL on puts. Default: True");
     System.err.println(" autoFlush       Set autoFlush on htable. Default: False");
+    System.err.println(" oneCon          all the threads share the same connection. Default: False");
     System.err.println(" presplit        Create presplit table. Recommended for accurate perf " +
       "analysis (see guide).  Default: disabled");
     System.err.println(" inmemory        Tries to keep the HFiles of the CF " +
@@ -1363,6 +1374,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
         final String autoFlush = "--autoFlush=";
         if (cmd.startsWith(autoFlush)) {
           opts.autoFlush = Boolean.parseBoolean(cmd.substring(autoFlush.length()));
+          continue;
+        }
+
+        final String onceCon = "--oneCon=";
+        if (cmd.startsWith(onceCon)) {
+          opts.oneCon = Boolean.parseBoolean(cmd.substring(onceCon.length()));
           continue;
         }
 
