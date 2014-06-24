@@ -23,7 +23,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -45,7 +44,7 @@ import org.junit.experimental.categories.Category;
 import java.io.IOException;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 /**
  * Class to test the checkRegionInfo() and fixRegionInfo() methods of HBaseFsck.
@@ -80,17 +79,10 @@ public class TestHBaseFsckFixRegionInfo {
 
     byte[] tableName = Bytes.toBytes("testFixRegionInfo");
 
-    byte[][] splitKeys = {
-        new byte[] { 1, 1, 1 },
-        new byte[] { 2, 2, 2 },
-        new byte[] { 3, 3, 3 },
-        new byte[] { 4, 4, 4 },
-        new byte[] { 5, 5, 5 },
-        new byte[] { 6, 6, 6 },
-        new byte[] { 7, 7, 7 },
-        new byte[] { 8, 8, 8 },
-        new byte[] { 9, 9, 9 },
-    };
+    byte[][] splitKeys =
+        { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 }, new byte[] { 3, 3, 3 },
+            new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 }, new byte[] { 6, 6, 6 },
+            new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 }, new byte[] { 9, 9, 9 }, };
 
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
@@ -100,79 +92,77 @@ public class TestHBaseFsckFixRegionInfo {
     HBaseFsck fsckToCorrupt = new HBaseFsck(TEST_UTIL.getConfiguration());
     fsckToCorrupt.initAndScanRootMeta();
     /*
-     * The following line is necessary because some .regioninfo files (specifically the ROOT and the META)
-     * become outdated immediately after initialization. This is because some parameters are immediately changed
-     * after initialization, and these changes are not updated in the .regioninfo. So here we update all files.
-     * This allows us to accurate measure the # of corrupted files later.
+     * The following line is necessary because some .regioninfo files (specifically the ROOT and the
+     * META) become outdated immediately after initialization. This is because some parameters are
+     * immediately changed after initialization, and these changes are not updated in the
+     * .regioninfo. So here we update all files. This allows us to accurate measure the # of
+     * corrupted files later.
      */
     fsckToCorrupt.fixRegionInfo();
 
-    //Randomly corrupt some files
+    // Randomly corrupt some files
     int modifyCount = 0; // # of corrupted files
     for (HbckInfo hbi : fsckToCorrupt.getRegionInfo().values()) {
       if (Math.random() < 0.5) {
-        Path tableDir = HTableDescriptor.getTableDir(FSUtils.getRootDir(conf),
-            hbi.metaEntry.getTableDesc().getName());
+        Path tableDir =
+            HTableDescriptor.getTableDir(FSUtils.getRootDir(conf), hbi.metaEntry.getTableDesc()
+                .getName());
         Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
         FileSystem fs = rootDir.getFileSystem(conf);
-        Path regionPath = HRegion.getRegionDir(tableDir,
-            hbi.metaEntry.getEncodedName());
+        Path regionPath = HRegion.getRegionDir(tableDir, hbi.metaEntry.getEncodedName());
         Path regionInfoPath = new Path(regionPath, HRegion.REGIONINFO_FILE);
 
-        //read the original .regioninfo into an HRegionInfo
+        // read the original .regioninfo into an HRegionInfo
         FSDataInputStream in = fs.open(regionInfoPath);
-        HRegionInfo hri_original = new HRegionInfo();
-        hri_original.readFields(in);
+        HRegionInfo hriOriginal = new HRegionInfo();
+        hriOriginal.readFields(in);
         in.close();
 
-        //change the HRegionInfo
-        HRegionInfo hri_modified = randomlyModifyRegion(hri_original);
+        // change the HRegionInfo
+        HRegionInfo hriModified = randomlyModifyRegion(hriOriginal);
 
-        //rewrite the original .regioninfo
-        FSDataOutputStream out = fs.create(regionInfoPath, true);
-        hri_modified.write(out);
-        out.write('\n');
-        out.write('\n');
-        out.write(Bytes.toBytes(hri_modified.toString()));
-        out.close();
+        // rewrite the original .regioninfo
+        hriModified.writeToDisk(conf);
+        System.out.println("SUCCESSFULLY CORRUPTED:"
+            + !hriOriginal.toString().equals(hriModified.toString()));
+        System.out.println("Original " + hriOriginal.toString());
+        System.out.println("Modified: " + hriModified.toString());
         modifyCount++;
       }
     }
 
-    //we incorrectly rewrote some .regioninfo files, so some .regioninfos are incorrect
+    // we incorrectly rewrote some .regioninfo files, so some .regioninfos are incorrect
     HBaseFsck fsckCorrupted = new HBaseFsck(TEST_UTIL.getConfiguration());
     fsckCorrupted.initAndScanRootMeta();
     Map<HRegionInfo, Path> risToRewrite = fsckCorrupted.checkRegionInfo();
-    assertEquals(modifyCount, risToRewrite.size()); // # of files to rewrite must be the # of modified files
+    assertTrue("Expected " + modifyCount + " inconsistencies but saw " + risToRewrite.size()
+        + ".", risToRewrite.size() <= modifyCount); // # of files to rewrite is at most # of files modified
 
-    //after fixing, we should see no errors
+    // after fixing, we should see no errors
     HBaseFsck fsckFixed = new HBaseFsck(TEST_UTIL.getConfiguration());
     fsckFixed.initAndScanRootMeta();
     fsckFixed.fixRegionInfo();
     risToRewrite = fsckFixed.checkRegionInfo();
-    assertEquals(0, risToRewrite.size());
+    assertEquals("Expected 0 inconsistencies after fixing but saw " + risToRewrite.size() + ".", 0,
+      risToRewrite.size());
   }
 
-  HRegionInfo randomlyModifyRegion(HRegionInfo hri){
-    HTableDescriptor tableDesc = hri.getTableDesc();
+  HRegionInfo randomlyModifyRegion(HRegionInfo hri) {
+    HRegionInfo hriModified = new HRegionInfo(hri);
+    HTableDescriptor tableDescOriginal = hriModified.getTableDesc();
+    HTableDescriptor tableDescModified = new HTableDescriptor(tableDescOriginal);
     double rand = Math.random();
-    if (rand < 0.2){
-      tableDesc.setReadOnly(!tableDesc.isReadOnly());
+    if (rand < 0.25) {
+      tableDescModified.setReadOnly(!tableDescOriginal.isReadOnly());
+    } else if (rand < 0.5) {
+      tableDescModified.setDeferredLogFlush(!tableDescOriginal.isDeferredLogFlush());
+    } else if (rand < 0.75) {
+      tableDescModified.setWALDisabled(!tableDescOriginal.isWALDisabled());
+    } else {
+      tableDescModified.setMemStoreFlushSize((long) tableDescOriginal.getMemStoreFlushSize() + 1); // is incorrect
     }
-    else if (rand < 0.4){
-      tableDesc.setDeferredLogFlush(!tableDesc.isDeferredLogFlush());
-    }
-    else if (rand < 0.6){
-      tableDesc.setName(Bytes.toBytes("NEWNAME"));
-    }
-    else if (rand < 0.8){
-      tableDesc.setMaxFileSize( (long) 100);
-    }
-    else{
-      tableDesc.setMemStoreFlushSize( (long) 200);
-    }
-    hri.setTableDesc(tableDesc);
-    return hri;
+    hriModified.setTableDesc(tableDescModified);
+    return hriModified;
   }
 
 }

@@ -26,8 +26,14 @@ import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JenkinsHash;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.apache.hadoop.io.VersionedWritable;
@@ -115,6 +121,7 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
     return encodedName;
   }
 
+  public static final char NEWLINE = '\n';
   /** delimiter used between portions of a region name */
   public static final int DELIMITER = ',';
 
@@ -695,5 +702,54 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
   public KVComparator getComparator() {
     return isRootRegion()? KeyValue.ROOT_COMPARATOR: isMetaRegion()?
       KeyValue.META_COMPARATOR: KeyValue.COMPARATOR;
+  }
+
+  /**
+   * This method writes the .regioninfo file. This method is synchronized so that no two threads
+   * attempt to write the same .regioninfo file at the same time.
+   * @param conf
+   * @return true if the write was successful
+   * @throws IOException
+   */
+  public synchronized boolean writeToDisk(Configuration conf) throws IOException {
+    Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
+    FileSystem fs = rootDir.getFileSystem(conf);
+    return writeToDisk(conf, fs);
+  }
+
+  /**
+   * This method writes the .regioninfo file. This method is synchronized so that no two threads
+   * attempt to write the same .regioninfo file at the same time.
+   * @param conf
+   * @param fs
+   * @return true if the write is successful
+   * @throws IOException
+   */
+  public synchronized boolean writeToDisk(Configuration conf, FileSystem fs) throws IOException {
+    Path tableDir =
+        HTableDescriptor.getTableDir(FSUtils.getRootDir(conf), this.getTableDesc().getName());
+    Path regionPath = HRegion.getRegionDir(tableDir, this.getEncodedName());
+    Path regionInfoPath = new Path(regionPath, HRegion.REGIONINFO_FILE);
+    FSDataOutputStream out = fs.create(regionInfoPath, true);
+    boolean successfulWrite = true;
+    try {
+      // we write to file the information necessary to reconstruct this HRegionInfo via readFields()
+      // this.toString() calls tableDesc.toString(), so this file will contain back-up information
+      // for the table
+      write(out);
+      out.write(NEWLINE);
+      out.write(NEWLINE);
+      out.write(Bytes.toBytes(this.toString()));
+      LOG.debug("Rewrote .regioninfo file of " + this.getRegionNameAsString() + " at "
+          + regionInfoPath);
+    } catch (IOException e) {
+      successfulWrite = false;
+      LOG.error("Could not rewrite the .regioninfo of " + this.getRegionNameAsString() + " at "
+          + regionInfoPath, e);
+    } finally {
+      out.close();
+      LOG.debug(".regioninfo File Contents: " + this.toString());
+    }
+    return successfulWrite;
   }
 }

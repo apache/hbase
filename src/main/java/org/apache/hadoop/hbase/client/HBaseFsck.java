@@ -46,7 +46,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -328,27 +327,9 @@ public class HBaseFsck {
   void fixRegionInfo() throws IOException {
     Map<HRegionInfo, Path> risToRewrite = checkRegionInfo();
     LOG.info("FOUND " + risToRewrite.size() + " corrupted .regioninfo files to rewrite");
-    Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
-    FileSystem fs = rootDir.getFileSystem(conf);
     for(Map.Entry<HRegionInfo, Path> entry : risToRewrite.entrySet()){
       HRegionInfo hri = entry.getKey();
-      Path regionInfoPath = entry.getValue();
-      FSDataOutputStream out = fs.create(regionInfoPath, true);
-
-      try {
-        hri.write(out);
-        out.write('\n');
-        out.write('\n');
-        out.write(Bytes.toBytes(hri.toString()));
-        LOG.debug("Rewrote .regioninfo file of " + Bytes.toString(hri.getRegionName()) +"at " + regionInfoPath);
-      } catch (IOException e){
-        errors.reportError("Could not rewrite the .regioninfo of "+Bytes.toString(hri.getRegionName()) + " at " +regionInfoPath);
-      }
-      
-      finally {
-        out.close();
-        LOG.debug(".regioninfo File Contents: " + Bytes.toBytes(hri.toString()));
-      }
+      hri.writeToDisk(conf);
     }
   }
 

@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Writable;
@@ -69,14 +68,17 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion, ThriftClientI
    * Batch adds, modifies, and deletes columns from the specified table.
    * Any of the lists may be null, in which case those types of alterations 
    * will not occur.
+   * .regioninfo files in the relevant table will be properly rewritten after
+   * the modification
    *
    * @param tableName table to modify
    * @param columnAdditions column descriptors to add to the table
    * @param columnModifications pairs of column names with new descriptors
    * @param columnDeletions column names to delete from the table
+   * @return true if all .regioninfo files in the table were properly rewritten
    * @throws IOException e
    */
-  public void alterTable(final byte [] tableName,
+  public boolean alterTable(final byte [] tableName,
                          List<HColumnDescriptor> columnAdditions,
                          List<Pair<byte [], HColumnDescriptor>> columnModifications,
                          List<byte []> columnDeletions) throws IOException;
@@ -85,14 +87,17 @@ public interface HMasterInterface extends HBaseRPCProtocolVersion, ThriftClientI
    * Batch adds, modifies, and deletes columns from the specified table.
    * Any of the lists may be null, in which case those types of alterations
    * will not occur.
+   * .regioninfo files in the relevant table will be properly rewritten after
+   * the modification
    *
    * @param tableName table to modify
    * @param columnAdditions column descriptors to add to the table
    * @param columnModifications pairs of column names with new descriptors
    * @param columnDeletions column names to delete from the table
+   * @return true if all .regioninfo files in the table were properly rewritten
    * @throws IOException e
    */
-  public void alterTable(final byte [] tableName,
+  public boolean alterTable(final byte [] tableName,
                          List<HColumnDescriptor> columnAdditions,
                          List<Pair<byte [], HColumnDescriptor>> columnModifications,
                          List<byte []> columnDeletions,

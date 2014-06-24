@@ -40,7 +40,11 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -142,7 +146,7 @@ import com.google.common.collect.Lists;
  * @see Watcher
  */
 public class HMaster extends HasThread implements HMasterInterface,
-    HMasterRegionInterface, Watcher, StoppableMaster {
+HMasterRegionInterface, Watcher, StoppableMaster {
   // MASTER is name of the webapp and the attribute name used stuffing this
   //instance into web context.
   public static final String MASTER = "master";
@@ -361,7 +365,7 @@ public class HMaster extends HasThread implements HMasterInterface,
       LOG.debug("HMaster started in backup mode. Stall " + stallTime +
           "ms giving primary master a fair chance to be the master...");
       try {
-          Thread.sleep(stallTime);
+        Thread.sleep(stallTime);
       } catch (InterruptedException e) {
         // interrupted = user wants to kill us.  Don't continue
         throw new IOException("Interrupted waiting for master address");
@@ -371,7 +375,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     final String masterName = getServerName();
     // initialize the thread pool for non-distributed log splitting.
     int maxSplitLogThread =
-      conf.getInt("hbase.master.splitLogThread.max", 1000);
+        conf.getInt("hbase.master.splitLogThread.max", 1000);
     logSplitThreadPool = Threads.getBoundedCachedThreadPool(
         maxSplitLogThread, 30L, TimeUnit.SECONDS,
         new ThreadFactory() {
@@ -391,18 +395,18 @@ public class HMaster extends HasThread implements HMasterInterface,
     // Only read favored nodes if using the assignment-based load balancer.
     this.shouldAssignRegionsWithFavoredNodes = conf.getClass(
         HConstants.LOAD_BALANCER_IMPL, Object.class).equals(
-        RegionManager.AssignmentLoadBalancer.class);
+            RegionManager.AssignmentLoadBalancer.class);
     LOG.debug("Whether to read the favoredNodes from meta: " +
         (shouldAssignRegionsWithFavoredNodes ? "Yes" : "No"));
 
     // Initialize table level lock manager for schema changes, if enabled.
     if (conf.getBoolean(HConstants.MASTER_SCHEMA_CHANGES_LOCK_ENABLE,
-      HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_LOCK_ENABLE)) {
+        HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_LOCK_ENABLE)) {
       int schemaChangeLockTimeoutMs = conf.getInt(
-        HConstants.MASTER_SCHEMA_CHANGES_LOCK_TIMEOUT_MS,
-        HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_LOCK_TIMEOUT_MS);
+          HConstants.MASTER_SCHEMA_CHANGES_LOCK_TIMEOUT_MS,
+          HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_LOCK_TIMEOUT_MS);
       tableLockManager = new TableLockManager(zooKeeperWrapper,
-        address, schemaChangeLockTimeoutMs);
+          address, schemaChangeLockTimeoutMs);
 
       this.schemaChangeTryLockTimeoutMs = conf.getInt(
           HConstants.MASTER_SCHEMA_CHANGES_TRY_LOCK_TIMEOUT_MS,
@@ -477,8 +481,8 @@ public class HMaster extends HasThread implements HMasterInterface,
     this.getConfigurationManager().registerObserver(serverManager);
 
     this.regionServerOperationQueue =
-      new RegionServerOperationQueue(this.conf, serverManager,
-          getClosedStatus());
+        new RegionServerOperationQueue(this.conf, serverManager,
+            getClosedStatus());
 
     // start the "close region" executor service
     HBaseEventType.RS2ZK_REGION_CLOSED.startMasterExecutorService(
@@ -539,16 +543,16 @@ public class HMaster extends HasThread implements HMasterInterface,
       zooKeeperWrapper = ZooKeeperWrapper.createInstance(localConf,
           getZKWrapperName(), new Abortable() {
 
-            @Override
-            public void abort(String why, Throwable e) {
-              stop("ZK session expired");
-            }
+        @Override
+        public void abort(String why, Throwable e) {
+          stop("ZK session expired");
+        }
 
-            @Override
-            public boolean isAborted() {
-              return stopped;
-            }
-          });
+        @Override
+        public boolean isAborted() {
+          return stopped;
+        }
+      });
     }
   }
 
@@ -595,8 +599,8 @@ public class HMaster extends HasThread implements HMasterInterface,
    * @throws IOException
    */
   private static Path checkRootDir(final Path rd, final Configuration c,
-    final FileSystem fs)
-  throws IOException {
+      final FileSystem fs)
+          throws IOException {
     // If FS is in safe mode wait till out of it.
     FSUtils.waitOnSafeMode(c, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
         10 * 1000));
@@ -615,7 +619,7 @@ public class HMaster extends HasThread implements HMasterInterface,
   }
 
   private static void bootstrap(final Path rd, final Configuration c)
-  throws IOException {
+      throws IOException {
     LOG.info("BOOTSTRAP: creating ROOT and first META regions");
     try {
       // Bootstrapping, make sure blockcache is off.  Else, one will be
@@ -623,21 +627,21 @@ public class HMaster extends HasThread implements HMasterInterface,
       // not make it in first place.  Turn off block caching for bootstrap.
       // Enable after.
       HRegionInfo rootHRI = HTableDescriptor.isMetaregionSeqidRecordEnabled(c) ?
-        new HRegionInfo(HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN) :
-        new HRegionInfo(HRegionInfo.ROOT_REGIONINFO);
-      setInfoFamilyCaching(rootHRI, false);
-      HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
-      setInfoFamilyCaching(metaHRI, false);
-      HRegion root = HRegion.createHRegion(rootHRI, rd, c);
-      HRegion meta = HRegion.createHRegion(metaHRI, rd, c);
-      setInfoFamilyCaching(rootHRI, true);
-      setInfoFamilyCaching(metaHRI, true);
-      // Add first region from the META table to the ROOT region.
-      HRegion.addRegionToMETA(root, meta);
-      root.close();
-      root.getLog().closeAndDelete();
-      meta.close();
-      meta.getLog().closeAndDelete();
+          new HRegionInfo(HRegionInfo.ROOT_REGIONINFO_WITH_HISTORIAN_COLUMN) :
+            new HRegionInfo(HRegionInfo.ROOT_REGIONINFO);
+          setInfoFamilyCaching(rootHRI, false);
+          HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
+          setInfoFamilyCaching(metaHRI, false);
+          HRegion root = HRegion.createHRegion(rootHRI, rd, c);
+          HRegion meta = HRegion.createHRegion(metaHRI, rd, c);
+          setInfoFamilyCaching(rootHRI, true);
+          setInfoFamilyCaching(metaHRI, true);
+          // Add first region from the META table to the ROOT region.
+          HRegion.addRegionToMETA(root, meta);
+          root.close();
+          root.getLog().closeAndDelete();
+          meta.close();
+          meta.getLog().closeAndDelete();
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
       LOG.error("bootstrap", e);
@@ -663,10 +667,10 @@ public class HMaster extends HasThread implements HMasterInterface,
    * @throws UnknownHostException
    */
   private static String getMyAddress(final Configuration c)
-    throws UnknownHostException, SocketException {
+      throws UnknownHostException, SocketException {
     // Find out our address up in DNS.
     String s = DNS.getDefaultHost(c.get("hbase.master.dns.interface","default"),
-      c.get("hbase.master.dns.nameserver","default"));
+        c.get("hbase.master.dns.nameserver","default"));
     if (preferIpv6AddressForMaster(c)) {
       // Use IPv6 address if possible.
       s = HServerInfo.getIPv6AddrIfLocalMachine(s);
@@ -818,7 +822,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     }
 
     MonitoredTask startupStatus =
-      TaskMonitor.get().createStatus("Master startup");
+        TaskMonitor.get().createStatus("Master startup");
     startupStatus.setDescription("Master startup");
     clusterStateRecovery = new ZKClusterStateRecovery(this, connection);
     try {
@@ -887,19 +891,19 @@ public class HMaster extends HasThread implements HMasterInterface,
             break;
           } else {
             LOG.debug("Waiting on " +
-              this.serverManager.getServersToServerInfo().keySet().toString());
+                this.serverManager.getServersToServerInfo().keySet().toString());
           }
         }
         switch (this.regionServerOperationQueue.process()) {
         case FAILED:
-            // If FAILED op processing, bad. Exit.
+          // If FAILED op processing, bad. Exit.
           break FINISHED;
         case REQUEUED_BUT_PROBLEM:
           // LOG if the file system is down, but don't do anything.
           checkFileSystem(false);
           break;
         default:
-            // Continue run loop if conditions are PROCESSED, NOOP, REQUEUED
+          // Continue run loop if conditions are PROCESSED, NOOP, REQUEUED
           break;
         }
       }
@@ -944,8 +948,8 @@ public class HMaster extends HasThread implements HMasterInterface,
   private void initPreferredAssignment() {
     // assign the regions based on the region locality in this period of time
     this.applyPreferredAssignmentPeriod =
-      conf.getLong("hbase.master.applyPreferredAssignment.period",
-          5 * 60 * 1000);
+        conf.getLong("hbase.master.applyPreferredAssignment.period",
+            5 * 60 * 1000);
 
     // disable scanning dfs by setting applyPreferredAssignmentPeriod to 0
     if (applyPreferredAssignmentPeriod > 0) {
@@ -953,8 +957,8 @@ public class HMaster extends HasThread implements HMasterInterface,
       // since master startup, then the master is free to assign this region
       // out to any region server
       this.holdRegionForBestLocalityPeriod =
-        conf.getLong("hbase.master.holdRegionForBestLocality.period",
-            1 * 60 * 1000);
+          conf.getLong("hbase.master.holdRegionForBestLocality.period",
+              1 * 60 * 1000);
 
       // try to get the locality map from disk
       this.preferredRegionToRegionServerMapping = getRegionLocalityFromSnapshot(conf);
@@ -969,24 +973,24 @@ public class HMaster extends HasThread implements HMasterInterface,
 
   public static MapWritable getRegionLocalityFromSnapshot(Configuration conf) {
     String region_assignment_snapshot_dir =
-      conf.get("hbase.tmp.dir");
+        conf.get("hbase.tmp.dir");
     if (region_assignment_snapshot_dir == null) {
       return null;
     }
 
     String region_assignment_snapshot =
-      region_assignment_snapshot_dir + "/" + LOCALITY_SNAPSHOT_FILE_NAME;
+        region_assignment_snapshot_dir + "/" + LOCALITY_SNAPSHOT_FILE_NAME;
 
     long refresh_interval =
-      conf.getLong("hbase.master.regionLocality.snapshot.validity_time_ms",
-          24 * 60 * 60 * 1000);
+        conf.getLong("hbase.master.regionLocality.snapshot.validity_time_ms",
+            24 * 60 * 60 * 1000);
 
     File snapshotFile = new File(region_assignment_snapshot);
     try {
       if (!snapshotFile.exists()) {
-          LOG.info("preferredRegionToRegionServerMapping snapshot not found. File Path: "
-              + region_assignment_snapshot);
-          return null;
+        LOG.info("preferredRegionToRegionServerMapping snapshot not found. File Path: "
+            + region_assignment_snapshot);
+        return null;
       }
 
       long time_elapsed = System.currentTimeMillis() - snapshotFile.lastModified();
@@ -1028,10 +1032,10 @@ public class HMaster extends HasThread implements HMasterInterface,
     LOG.debug("Evaluate preferredRegionToRegionServerMapping; expecting pause here");
     try {
       regionLocalityMap = FSUtils
-            .getRegionLocalityMappingFromFS(FileSystem.get(conf), FSUtils.getRootDir(conf),
-                poolSize,
-                conf,
-                tablename);
+          .getRegionLocalityMappingFromFS(FileSystem.get(conf), FSUtils.getRootDir(conf),
+              poolSize,
+              conf,
+              tablename);
     } catch (Exception e) {
       LOG.error("Got unexpected exception when evaluating " +
           "preferredRegionToRegionServerMapping : " + e.toString());
@@ -1047,7 +1051,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     }
 
     String region_assignment_snapshot = tmp_path
-      + "/" + LOCALITY_SNAPSHOT_FILE_NAME;
+        + "/" + LOCALITY_SNAPSHOT_FILE_NAME;
     // write the preferredRegionAssignment to disk
     try {
       LOG.info("Saving preferredRegionToRegionServerMapping  " +
@@ -1055,8 +1059,8 @@ public class HMaster extends HasThread implements HMasterInterface,
       regionLocalityMap.write(new DataOutputStream(
           new FileOutputStream(region_assignment_snapshot)));
     } catch (IOException e) {
-        LOG.error("Error saving preferredRegionToRegionServerMapping  " +
-            "to file " + region_assignment_snapshot +  " : " + e.toString());
+      LOG.error("Error saving preferredRegionToRegionServerMapping  " +
+          "to file " + region_assignment_snapshot +  " : " + e.toString());
     }
     return regionLocalityMap;
   }
@@ -1298,18 +1302,18 @@ public class HMaster extends HasThread implements HMasterInterface,
 
   @Override
   public MapWritable regionServerStartup(final HServerInfo serverInfo)
-  throws IOException {
+      throws IOException {
     // Set the ip into the passed in serverInfo.  Its ip is more than likely
     // not the ip that the master sees here.  See at end of this method where
     // we pass it back to the regionserver by setting "hbase.regionserver.address"
     String rsAddress = HBaseServer.getRemoteAddress();
     serverInfo.setServerAddress(new HServerAddress(rsAddress,
-      serverInfo.getServerAddress().getPort()));
+        serverInfo.getServerAddress().getPort()));
     // Register with server manager
     this.serverManager.regionServerStartup(serverInfo);
     // Send back some config info
     MapWritable mw = createConfigurationSubset();
-     mw.put(new Text("hbase.regionserver.address"), new Text(rsAddress));
+    mw.put(new Text("hbase.regionserver.address"), new Text(rsAddress));
     return mw;
   }
 
@@ -1329,10 +1333,10 @@ public class HMaster extends HasThread implements HMasterInterface,
 
   @Override
   public HMsg [] regionServerReport(HServerInfo serverInfo, HMsg msgs[],
-    HRegionInfo[] mostLoadedRegions)
-  throws IOException {
+      HRegionInfo[] mostLoadedRegions)
+          throws IOException {
     return adornRegionServerAnswer(serverInfo,
-      this.serverManager.regionServerReport(serverInfo, msgs, mostLoadedRegions));
+        this.serverManager.regionServerReport(serverInfo, msgs, mostLoadedRegions));
   }
 
   void updateLastFlushedSequenceIds(HServerInfo serverInfo) {
@@ -1349,7 +1353,7 @@ public class HMaster extends HasThread implements HMasterInterface,
                 + Bytes.toStringBinary(entry.getKey()) + " Ignoring.");
           }
           continue; // Don't let smaller sequence ids override greater
-                    // sequence ids.
+          // sequence ids.
         }
       }
       flushedSequenceIdByRegion.put(entry.getKey(), entry.getValue());
@@ -1429,14 +1433,14 @@ public class HMaster extends HasThread implements HMasterInterface,
   }
 
   protected void lockTable(byte[] tableName, String purpose)
-  throws IOException {
+      throws IOException {
     if (isTableLockEnabled()) {
       tableLockManager.lockTable(tableName, purpose);
     }
   }
 
   protected void unlockTable(byte[] tableName)
-  throws IOException {
+      throws IOException {
     if (isTableLockEnabled()) {
       tableLockManager.unlockTable(tableName);
     }
@@ -1475,7 +1479,7 @@ public class HMaster extends HasThread implements HMasterInterface,
 
   @Override
   public void createTable(HTableDescriptor desc, byte [][] splitKeys)
-  throws IOException {
+      throws IOException {
     HRegionInfo[] newRegions = createRegionsForNewTable(desc, splitKeys);
     try {
       // We can not create a table unless meta regions have already been
@@ -1492,14 +1496,14 @@ public class HMaster extends HasThread implements HMasterInterface,
       throw e;
     } catch (IOException e) {
       LOG.error("Cannot create table " + desc.getNameAsString() +
-        " because of " + e.toString());
+          " because of " + e.toString());
       throw RemoteExceptionHandler.checkIOException(e);
     }
   }
 
   private static boolean tableExists(HRegionInterface srvr,
       byte[] metaRegionName, String tableName)
-      throws IOException {
+          throws IOException {
     byte[] firstRowInTable = Bytes.toBytes(tableName + ",,");
     Scan scan = new Scan(firstRowInTable);
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
@@ -1509,8 +1513,8 @@ public class HMaster extends HasThread implements HMasterInterface,
           BaseScanner.getOneResultFromScanner(srvr, scannerid);
       if (data != null && data.size() > 0) {
         HRegionInfo info = Writables.getHRegionInfo(
-          data.getValue(HConstants.CATALOG_FAMILY,
-              HConstants.REGIONINFO_QUALIFIER));
+            data.getValue(HConstants.CATALOG_FAMILY,
+                HConstants.REGIONINFO_QUALIFIER));
         if (info.getTableDesc().getNameAsString().equals(tableName)) {
           // A region for this table already exists. Ergo table exists.
           return true;
@@ -1569,7 +1573,7 @@ public class HMaster extends HasThread implements HMasterInterface,
         if (assignmentPlan != null) {
           // create the region with favorite nodes.
           List<HServerAddress> favoredNodes =
-            assignmentPlan.getAssignment(newRegion);
+              assignmentPlan.getAssignment(newRegion);
           regionManager.createRegion(newRegion, srvr, metaRegionName,
               favoredNodes);
         } else {
@@ -1611,33 +1615,47 @@ public class HMaster extends HasThread implements HMasterInterface,
   }
 
   @Override
-  public void alterTable(final byte [] tableName,
-                         List<HColumnDescriptor> columnAdditions,
-                         List<Pair<byte [], HColumnDescriptor>> columnModifications,
-                         List<byte []> columnDeletions,
-                         int waitInterval,
-                         int maxConcurrentRegionsClosed) throws IOException {
-    //This lock will be released when the ThrottledRegionReopener is done.
+  /**
+   * returns true if all .regioninfo files were succesfully rewritten after alteration
+   */
+  public boolean alterTable(final byte[] tableName, List<HColumnDescriptor> columnAdditions,
+      List<Pair<byte[], HColumnDescriptor>> columnModifications, List<byte[]> columnDeletions,
+      int waitInterval, int maxConcurrentRegionsClosed) throws IOException {
+    // This lock will be released when the ThrottledRegionReopener is done.
     if (!tryLockTable(tableName, "alter", schemaChangeTryLockTimeoutMs)) {
       throw new TableLockTimeoutException("Timed out acquiring lock for "
-          + Bytes.toStringBinary(tableName) + " after "
-          + schemaChangeTryLockTimeoutMs + " ms.");
+          + Bytes.toStringBinary(tableName) + " after " + schemaChangeTryLockTimeoutMs + " ms.");
     }
 
     InjectionHandler.processEvent(InjectionEvent.HMASTER_ALTER_TABLE);
-    ThrottledRegionReopener reopener = this.regionManager.
-        createThrottledReopener(Bytes.toString(tableName), waitInterval, maxConcurrentRegionsClosed);
+    ThrottledRegionReopener reopener =
+        this.regionManager.createThrottledReopener(Bytes.toString(tableName), waitInterval,
+          maxConcurrentRegionsClosed);
     // Regions are added to the reopener in MultiColumnOperation
-    new MultiColumnOperation(this, tableName, columnAdditions,
-        columnModifications, columnDeletions).process();
+    new MultiColumnOperation(this, tableName, columnAdditions, columnModifications, columnDeletions)
+        .process();
     reopener.startRegionsReopening();
+
+    // after the alteration, all .regioninfo files for this table will be old so we rewrite them.
+    try {
+      writeRegionInfo(tableName);
+    } catch (Exception e) {
+      LOG.error(
+        "Failed to complete rewriting .regioninfo files for table "
+            + Bytes.toStringBinary(tableName), e);
+      return false;
+    }
+    return true;
   }
 
   @Override
-  public void alterTable(final byte [] tableName,
-                         List<HColumnDescriptor> columnAdditions,
-                         List<Pair<byte [], HColumnDescriptor>> columnModifications,
-                         List<byte []> columnDeletions) throws IOException {
+  /**
+   * Returns true if all backup .regioninfo files were successfully rewritten
+   */
+  public boolean alterTable(final byte [] tableName,
+      List<HColumnDescriptor> columnAdditions,
+      List<Pair<byte [], HColumnDescriptor>> columnModifications,
+      List<byte []> columnDeletions) throws IOException {
 
     int waitInterval = conf.getInt(HConstants.MASTER_SCHEMA_CHANGES_WAIT_INTERVAL_MS,
         HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_WAIT_INTERVAL_MS);
@@ -1645,7 +1663,45 @@ public class HMaster extends HasThread implements HMasterInterface,
     int maxClosedRegions = conf.getInt(HConstants.MASTER_SCHEMA_CHANGES_MAX_CONCURRENT_REGION_CLOSE,
         HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_MAX_CONCURRENT_REGION_CLOSE);
 
-    alterTable(tableName, columnAdditions, columnModifications, columnDeletions, waitInterval, maxClosedRegions);
+    return alterTable(tableName, columnAdditions, columnModifications, columnDeletions, waitInterval, maxClosedRegions);
+  }
+
+  /**
+   * This method rewrites all .regioninfo files for all regions belonging to the Table whose name is
+   * tableName
+   * @param tableName
+   * @return true if all .regioninfo files that belong to the table are successfully rewritten.
+   * @throws IOException
+   * @throws ExecutionException
+   * @throws InterruptedException
+   */
+  public boolean writeRegionInfo(byte[] tableName) throws Exception {
+    List<Pair<HRegionInfo, HServerAddress>> tableRegions = getTableRegions(tableName);
+    ExecutorService executor = Executors.newCachedThreadPool();
+    List<Future<Boolean>> futures = new ArrayList<>();
+    for (final Pair<HRegionInfo, HServerAddress> entry : tableRegions) {
+      Callable<Boolean> writer = new Callable<Boolean>() {
+        
+        // return true if the write is successful
+        public Boolean call() {
+          HRegionInfo hri = entry.getFirst();
+          try {
+            return hri.writeToDisk(conf);
+          } catch (IOException e) {
+            LOG.error("Failed to write .regioninfo for Region: " + hri.getRegionNameAsString(), e);
+            return false;
+          }
+        }
+      };
+      Future<Boolean> future = executor.submit(writer);
+      futures.add(future);
+    }
+    for (Future<Boolean> f : futures) {
+      if (!f.get()) { // if any write was not successful
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override
@@ -1654,7 +1710,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     Pair <Integer, Integer> p = new Pair<Integer, Integer>(0,0);
     if (regionManager.getThrottledReopener(Bytes.toString(tableName)) != null) {
       p = regionManager.getThrottledReopener(
-                    Bytes.toString(tableName)).getReopenStatus();
+          Bytes.toString(tableName)).getReopenStatus();
     } else {
       // Table is not reopening any regions return (0,0)
     }
@@ -1663,21 +1719,21 @@ public class HMaster extends HasThread implements HMasterInterface,
 
   @Override
   public void addColumn(byte [] tableName, HColumnDescriptor column)
-  throws IOException {
+      throws IOException {
     alterTable(tableName, Arrays.asList(column), null, null);
   }
 
   @Override
   public void modifyColumn(byte [] tableName, byte [] columnName,
-    HColumnDescriptor descriptor)
-  throws IOException {
+      HColumnDescriptor descriptor)
+          throws IOException {
     alterTable(tableName, null, Arrays.asList(
         new Pair<byte[], HColumnDescriptor>(columnName, descriptor)), null);
   }
 
   @Override
   public void deleteColumn(final byte [] tableName, final byte [] c)
-  throws IOException {
+      throws IOException {
     alterTable(tableName, null, null,
         Arrays.asList(KeyValue.parseColumn(c)[0]));
   }
@@ -1718,27 +1774,27 @@ public class HMaster extends HasThread implements HMasterInterface,
    */
   public List<Pair<HRegionInfo,HServerAddress>> getTableRegions(
       final byte [] tableName)
-  throws IOException {
+          throws IOException {
     final ArrayList<Pair<HRegionInfo, HServerAddress>> result =
-      Lists.newArrayList();
+        Lists.newArrayList();
 
     if (!Bytes.equals(HConstants.META_TABLE_NAME, tableName)) {
       MetaScannerVisitor visitor =
-        new MetaScannerVisitor() {
-          @Override
-          public boolean processRow(Result data) throws IOException {
-            if (data == null || data.size() <= 0)
-              return true;
-            Pair<HRegionInfo, HServerAddress> pair =
-              metaRowToRegionPair(data);
-            if (pair == null) return false;
-            if (!Bytes.equals(pair.getFirst().getTableDesc().getName(),
-                  tableName)) {
-              return false;
-            }
-            result.add(pair);
+          new MetaScannerVisitor() {
+        @Override
+        public boolean processRow(Result data) throws IOException {
+          if (data == null || data.size() <= 0)
             return true;
+          Pair<HRegionInfo, HServerAddress> pair =
+              metaRowToRegionPair(data);
+          if (pair == null) return false;
+          if (!Bytes.equals(pair.getFirst().getTableDesc().getName(),
+              tableName)) {
+            return false;
           }
+          result.add(pair);
+          return true;
+        }
       };
 
       MetaScanner.metaScan(conf, visitor, new StringBytes(tableName));
@@ -1748,7 +1804,7 @@ public class HMaster extends HasThread implements HMasterInterface,
       for (MetaRegion mRegion: metaRegions) {
         if (Bytes.equals(mRegion.getRegionInfo().getTableDesc().getName(), tableName)) {
           result.add(new Pair<HRegionInfo, HServerAddress>
-              (mRegion.getRegionInfo(), mRegion.getServer()));
+          (mRegion.getRegionInfo(), mRegion.getServer()));
         }
       }
     }
@@ -1779,26 +1835,26 @@ public class HMaster extends HasThread implements HMasterInterface,
    */
   Pair<HRegionInfo,HServerAddress> getTableRegionForRow(
       final byte [] tableName, final byte [] rowKey)
-  throws IOException {
+          throws IOException {
     final AtomicReference<Pair<HRegionInfo, HServerAddress>> result =
-      new AtomicReference<Pair<HRegionInfo, HServerAddress>>(null);
+        new AtomicReference<Pair<HRegionInfo, HServerAddress>>(null);
 
     MetaScannerVisitor visitor =
-      new MetaScannerVisitor() {
-        @Override
-        public boolean processRow(Result data) throws IOException {
-          if (data == null || data.size() <= 0)
-            return true;
-          Pair<HRegionInfo, HServerAddress> pair =
-            metaRowToRegionPair(data);
-          if (pair == null) return false;
-          if (!Bytes.equals(pair.getFirst().getTableDesc().getName(),
-                tableName)) {
-            return false;
-          }
-          result.set(pair);
+        new MetaScannerVisitor() {
+      @Override
+      public boolean processRow(Result data) throws IOException {
+        if (data == null || data.size() <= 0)
           return true;
+        Pair<HRegionInfo, HServerAddress> pair =
+            metaRowToRegionPair(data);
+        if (pair == null) return false;
+        if (!Bytes.equals(pair.getFirst().getTableDesc().getName(),
+            tableName)) {
+          return false;
         }
+        result.set(pair);
+        return true;
+      }
     };
 
     MetaScanner.metaScan(conf, visitor, new StringBytes(tableName), rowKey, 1);
@@ -1808,7 +1864,7 @@ public class HMaster extends HasThread implements HMasterInterface,
   @SuppressWarnings("deprecation")
   Pair<HRegionInfo,HServerAddress> getTableRegionFromName(
       final byte [] regionName)
-  throws IOException {
+          throws IOException {
     byte [] tableName = HRegionInfo.parseRegionName(regionName)[0];
 
     Set<MetaRegion> regions = regionManager.getMetaRegionsForTable(tableName);
@@ -1834,7 +1890,7 @@ public class HMaster extends HasThread implements HMasterInterface,
    * @throws IOException
    */
   protected Result getFromMETA(final byte[] row, final byte[] family)
-  throws IOException {
+      throws IOException {
     MetaRegion meta = this.regionManager.getMetaRegionForRow(row);
     HRegionInterface srvr = getMETAServer(meta);
     Get get = new Get.Builder(row).addFamily(family).create();
@@ -1847,7 +1903,7 @@ public class HMaster extends HasThread implements HMasterInterface,
    * @throws IOException
    */
   private HRegionInterface getMETAServer(final MetaRegion meta)
-  throws IOException {
+      throws IOException {
     return this.connection.getHRegionConnection(meta.getServer());
   }
 
@@ -1858,18 +1914,18 @@ public class HMaster extends HasThread implements HMasterInterface,
    * @throws IOException if a remote or network exception occurs
    */
   public HTableDescriptor getTableDescriptor(final byte [] tableName)
-  throws IOException {
+      throws IOException {
     return this.connection.getHTableDescriptor(new StringBytes(tableName));
   }
 
   @Override
   public void modifyTable(final byte[] tableName, HConstants.Modify op,
       Writable[] args)
-  throws IOException {
+          throws IOException {
     switch (op) {
     case TABLE_SET_HTD:
       if (args == null || args.length < 1 ||
-          !(args[0] instanceof HTableDescriptor))
+      !(args[0] instanceof HTableDescriptor))
         throw new IOException("SET_HTD request requires an HTableDescriptor");
       HTableDescriptor htd = (HTableDescriptor) args[0];
       LOG.info("modifyTable(SET_HTD): " + htd);
@@ -1883,7 +1939,7 @@ public class HMaster extends HasThread implements HMasterInterface,
       if (args != null && args.length > 0) {
         if (!(args[0] instanceof ImmutableBytesWritable))
           throw new IOException(
-            "request argument must be ImmutableBytesWritable");
+              "request argument must be ImmutableBytesWritable");
         Pair<HRegionInfo,HServerAddress> pair = null;
         if(tableName == null) {
           byte [] regionName = ((ImmutableBytesWritable)args[0]).get();
@@ -1892,8 +1948,8 @@ public class HMaster extends HasThread implements HMasterInterface,
           byte [] rowKey = ((ImmutableBytesWritable)args[0]).get();
           pair = getTableRegionForRow(tableName, rowKey);
         }
-          LOG.info("About to " + op.toString() + " on "
-              + Bytes.toStringBinary(tableName) + " and pair is " + pair);
+        LOG.info("About to " + op.toString() + " on "
+            + Bytes.toStringBinary(tableName) + " and pair is " + pair);
         if (pair != null && pair.getSecond() != null) {
           // If the column family name is specified, we need to perform a
           // column family specific action instead of an action on the whole
@@ -1916,12 +1972,12 @@ public class HMaster extends HasThread implements HMasterInterface,
         for (Pair<HRegionInfo,HServerAddress> pair: getTableRegions(tableName)) {
           if (pair.getSecond() == null) continue; // undeployed
           this.regionManager.startAction(pair.getFirst().getRegionName(),
-            pair.getFirst(), pair.getSecond(), op);
+              pair.getFirst(), pair.getSecond(), op);
         }
       }
       break;
 
-    // format : {tableName row | region} splitPoint
+      // format : {tableName row | region} splitPoint
     case TABLE_EXPLICIT_SPLIT:
       if (args == null || args.length < (tableName == null? 2 : 1)) {
         throw new IOException("incorrect number of arguments given");
@@ -1947,13 +2003,13 @@ public class HMaster extends HasThread implements HMasterInterface,
       }
       HRegionInfo r = pair.getFirst();
       r.setSplitPoint(splitPoint);
-        LOG.info("About to " + op.toString() + " on "
-            + Bytes.toStringBinary(pair.getFirst().getTableDesc().getName())
-            + " at " + Bytes.toStringBinary(splitPoint) + " and pair is "
-            + pair);
+      LOG.info("About to " + op.toString() + " on "
+          + Bytes.toStringBinary(pair.getFirst().getTableDesc().getName())
+          + " at " + Bytes.toStringBinary(splitPoint) + " and pair is "
+          + pair);
       if (pair.getSecond() != null) {
         this.regionManager.startAction(pair.getFirst().getRegionName(),
-          pair.getFirst(), pair.getSecond(), Modify.TABLE_SPLIT);
+            pair.getFirst(), pair.getSecond(), Modify.TABLE_SPLIT);
       }
       break;
 
@@ -1976,7 +2032,7 @@ public class HMaster extends HasThread implements HMasterInterface,
       }
 
       this.regionManager.getAssignmentManager().
-        addTransientAssignment(serverAddress, hri);
+      addTransientAssignment(serverAddress, hri);
       // Close the region so that it will be re-opened by the preferred host.
       modifyTable(tableName, HConstants.Modify.CLOSE_REGION, new Writable[]{args[0]});
 
@@ -1986,7 +2042,7 @@ public class HMaster extends HasThread implements HMasterInterface,
     case CLOSE_REGION:
       if (args == null || args.length < 1 || args.length > 2) {
         throw new IOException("Requires at least a region name; " +
-          "or cannot have more than region name and servername");
+            "or cannot have more than region name and servername");
       }
       // Arguments are regionname and an optional server name.
       byte [] regionname = ((ImmutableBytesWritable)args[0]).get();
@@ -2001,8 +2057,8 @@ public class HMaster extends HasThread implements HMasterInterface,
       if (hostnameAndPort == null) {
         // Get server from the .META. if it wasn't passed as argument
         hostnameAndPort =
-          Bytes.toString(rr.getValue(HConstants.CATALOG_FAMILY,
-              HConstants.SERVER_QUALIFIER));
+            Bytes.toString(rr.getValue(HConstants.CATALOG_FAMILY,
+                HConstants.SERVER_QUALIFIER));
       }
       // Take region out of the intransistions in case it got stuck there doing
       // an open or whatever.
@@ -2010,11 +2066,11 @@ public class HMaster extends HasThread implements HMasterInterface,
       // If hostnameAndPort is still null, then none, exit.
       if (hostnameAndPort == null) break;
       long startCode =
-        Bytes.toLong(rr.getValue(HConstants.CATALOG_FAMILY,
-            HConstants.STARTCODE_QUALIFIER));
+          Bytes.toLong(rr.getValue(HConstants.CATALOG_FAMILY,
+              HConstants.STARTCODE_QUALIFIER));
       String name = HServerInfo.getServerName(hostnameAndPort, startCode);
       LOG.info("Marking " + hri.getRegionNameAsString() +
-        " as closing on " + name + "; cleaning SERVER + STARTCODE; " +
+          " as closing on " + name + "; cleaning SERVER + STARTCODE; " +
           "master will tell regionserver to close region on next heartbeat");
       this.regionManager.setClosing(name, hri, hri.isOffline());
       break;
@@ -2053,14 +2109,14 @@ public class HMaster extends HasThread implements HMasterInterface,
    * @throws IOException
    */
   static HRegionInfo getHRegionInfo(final byte[] row, final Result res)
-  throws IOException {
+      throws IOException {
     byte[] regioninfo = res.getValue(HConstants.CATALOG_FAMILY,
         HConstants.REGIONINFO_QUALIFIER);
 
     if (regioninfo == null) {
       StringBuilder sb =  new StringBuilder();
       NavigableMap<byte[], byte[]> infoMap =
-        res.getFamilyMap(HConstants.CATALOG_FAMILY);
+          res.getFamilyMap(HConstants.CATALOG_FAMILY);
       if (infoMap == null) {
         return null;
       }
@@ -2133,12 +2189,12 @@ public class HMaster extends HasThread implements HMasterInterface,
       final Configuration conf)  {
     try {
       Constructor<? extends HMaster> c =
-        masterClass.getConstructor(Configuration.class);
+          masterClass.getConstructor(Configuration.class);
       return c.newInstance(conf);
     } catch (Exception e) {
       throw new RuntimeException("Failed construction of " +
-        "Master: " + masterClass.toString() +
-        ((e.getCause() != null)? e.getCause().getMessage(): ""), e);
+          "Master: " + masterClass.toString() +
+          ((e.getCause() != null)? e.getCause().getMessage(): ""), e);
     }
   }
 
@@ -2210,14 +2266,14 @@ public class HMaster extends HasThread implements HMasterInterface,
           RuntimeMXBean runtime = ManagementFactory.getRuntimeMXBean();
           if (runtime != null) {
             LOG.info("vmName=" + runtime.getVmName() + ", vmVendor=" +
-              runtime.getVmVendor() + ", vmVersion=" + runtime.getVmVersion());
+                runtime.getVmVendor() + ", vmVersion=" + runtime.getVmVersion());
             LOG.info("vmInputArguments=" + runtime.getInputArguments());
           }
           // If 'local', defer to LocalHBaseCluster instance.  Starts master
           // and regionserver both in the one JVM.
           if (LocalHBaseCluster.isLocal(conf)) {
             final MiniZooKeeperCluster zooKeeperCluster =
-              new MiniZooKeeperCluster();
+                new MiniZooKeeperCluster();
             File zkDataPath = new File(conf.get("hbase.zookeeper.property.dataDir"));
             int zkClientPort = conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 0);
             if (zkClientPort == 0) {
@@ -2234,11 +2290,11 @@ public class HMaster extends HasThread implements HMasterInterface,
               throw new IOException(errorMsg);
             }
             conf.set(HConstants.ZOOKEEPER_CLIENT_PORT,
-              Integer.toString(clientPort));
+                Integer.toString(clientPort));
             // Need to have the zk cluster shutdown when master is shutdown.
             // Run a subclass that does the zk cluster shutdown on its way out.
             LocalHBaseCluster cluster = new LocalHBaseCluster(conf, 1, 1,
-              LocalHMaster.class, HRegionServer.class);
+                LocalHMaster.class, HRegionServer.class);
             ((LocalHMaster)cluster.getMaster()).setZKCluster(zooKeeperCluster);
             cluster.startup();
           } else {

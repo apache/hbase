@@ -140,7 +140,7 @@ public class HBaseAdmin {
    * @throws MasterNotRunningException if the master is not running
    */
   public boolean tableExists(final String tableName)
-  throws MasterNotRunningException {
+      throws MasterNotRunningException {
     return tableExists(new StringBytes(tableName));
   }
 
@@ -150,7 +150,7 @@ public class HBaseAdmin {
    * @throws MasterNotRunningException if the master is not running
    */
   public boolean tableExists(final byte [] tableName)
-  throws MasterNotRunningException {
+      throws MasterNotRunningException {
     return tableExists(new StringBytes(tableName));
   }
 
@@ -183,7 +183,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public HTableDescriptor getTableDescriptor(final byte [] tableName)
-  throws IOException {
+      throws IOException {
     return this.connection.getHTableDescriptor(new StringBytes(tableName));
   }
 
@@ -208,7 +208,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void createTable(HTableDescriptor desc)
-  throws IOException {
+      throws IOException {
     createTable(desc, null);
   }
 
@@ -238,7 +238,7 @@ public class HBaseAdmin {
    */
   public void createTable(HTableDescriptor desc, byte [] startKey,
       byte [] endKey, int numRegions)
-  throws IOException {
+          throws IOException {
     HTableDescriptor.isLegalTableName(desc.getName());
     if(numRegions < 3) {
       throw new IllegalArgumentException("Must create at least three regions");
@@ -270,7 +270,7 @@ public class HBaseAdmin {
    * @throws IOException
    */
   public void createTable(final HTableDescriptor desc, byte [][] splitKeys)
-  throws IOException {
+      throws IOException {
     HTableDescriptor.isLegalTableName(desc.getName());
     checkSplitKeys(splitKeys);
     createTableAsync(desc, splitKeys);
@@ -347,8 +347,8 @@ public class HBaseAdmin {
       for (byte[] splitKey : splitKeys) {
         if (Bytes.equals(splitKey, HConstants.EMPTY_BYTE_ARRAY)) {
           throw new IllegalArgumentException(
-            "Split keys cannot be empty"
-          );
+              "Split keys cannot be empty"
+              );
         }
         if (lastKey != null && Bytes.equals(splitKey, lastKey)) {
           throw new IllegalArgumentException(
@@ -373,7 +373,7 @@ public class HBaseAdmin {
    * @throws IOException
    */
   public void createTableAsync(HTableDescriptor desc, byte [][] splitKeys)
-  throws IOException {
+      throws IOException {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
@@ -420,15 +420,15 @@ public class HBaseAdmin {
     final int batchCount = this.conf.getInt("hbase.admin.scanner.caching", 10);
     // Wait until first region is deleted
     HRegionInterface server =
-      connection.getHRegionConnection(firstMetaServer.getServerAddress());
+        connection.getHRegionConnection(firstMetaServer.getServerAddress());
     HRegionInfo info = new HRegionInfo();
     for (int tries = 0; tries < numRetries; tries++) {
       long scannerId = -1L;
       try {
         Scan scan = new Scan().addColumn(HConstants.CATALOG_FAMILY,
-          HConstants.REGIONINFO_QUALIFIER);
+            HConstants.REGIONINFO_QUALIFIER);
         scannerId = server.openScanner(
-          firstMetaServer.getRegionInfo().getRegionName(), scan);
+            firstMetaServer.getRegionInfo().getRegionName(), scan);
         // Get a batch at a time.
         Result[] values = server.next(scannerId, batchCount);
         if (values == null || values.length == 0) {
@@ -519,7 +519,7 @@ public class HBaseAdmin {
       long sleep = getPauseTime(tries);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Sleeping= " + sleep + "ms, waiting for all regions to be " +
-          "enabled in " + Bytes.toStringBinary(tableName));
+            "enabled in " + Bytes.toStringBinary(tableName));
       }
       try {
         Thread.sleep(sleep);
@@ -528,12 +528,12 @@ public class HBaseAdmin {
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Wake. Waiting for all regions to be enabled from " +
-          Bytes.toStringBinary(tableName));
+            Bytes.toStringBinary(tableName));
       }
     }
     if (!enabled)
       throw new IOException("Unable to enable table " +
-        Bytes.toStringBinary(tableName));
+          Bytes.toStringBinary(tableName));
     LOG.info("Enabled table " + Bytes.toStringBinary(tableName));
   }
 
@@ -574,7 +574,7 @@ public class HBaseAdmin {
       if (disabled) break;
       if (LOG.isDebugEnabled()) {
         LOG.debug("Sleep. Waiting for all regions to be disabled from " +
-          Bytes.toStringBinary(tableName));
+            Bytes.toStringBinary(tableName));
       }
       try {
         Thread.sleep(getPauseTime(tries));
@@ -583,12 +583,12 @@ public class HBaseAdmin {
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Wake. Waiting for all regions to be disabled from " +
-          Bytes.toStringBinary(tableName));
+            Bytes.toStringBinary(tableName));
       }
     }
     if (!disabled) {
       throw new RegionException("Retries exhausted, it took too long to wait"+
-        " for the table " + Bytes.toStringBinary(tableName) + " to be disabled.");
+          " for the table " + Bytes.toStringBinary(tableName) + " to be disabled.");
     }
     LOG.info("Disabled " + Bytes.toStringBinary(tableName));
   }
@@ -649,15 +649,18 @@ public class HBaseAdmin {
   /**
    * Batch alter a table. Only takes regions offline once and performs a single
    * update to .META.
+   * Rewrite the .regioninfo files that belong to the modified table
    * Asynchronous operation.
    *
    * @param tableName name of the table to add column to
    * @param columnAdditions column descriptors to add to the table
    * @param columnModifications pairs of column names with new descriptors
    * @param columnDeletions column names to delete from the table
+   * @return true if all .regioninfo files that belong to the modified table
+   * are successfully rewritten
    * @throws IOException if a remote or network exception occurs
    */
-  public void alterTable(final String tableName,
+  public boolean alterTable(final String tableName,
       List<HColumnDescriptor> columnAdditions,
       List<Pair<String, HColumnDescriptor>> columnModifications,
       List<String> columnDeletions) throws IOException {
@@ -669,7 +672,7 @@ public class HBaseAdmin {
     int maxClosedRegions = conf.getInt(HConstants.MASTER_SCHEMA_CHANGES_MAX_CONCURRENT_REGION_CLOSE,
         HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_MAX_CONCURRENT_REGION_CLOSE);
 
-    alterTable(tableName, columnAdditions, columnModifications,
+    return alterTable(tableName, columnAdditions, columnModifications,
         columnDeletions, waitInterval, maxClosedRegions);
   }
 
@@ -686,14 +689,16 @@ public class HBaseAdmin {
    *                     numConcurrentRegionsClosed over
    * @param maxConcurrentRegionsClosed the max number of regions to have closed
    *                                   at a time.
+   * @return true if all .regioninfo files belonging to the modified table
+   * are successfully rewritten
    * @throws IOException if a remote or network exception occurs
    */
-  public void alterTable(final String tableName,
-                         List<HColumnDescriptor> columnAdditions,
-                         List<Pair<String, HColumnDescriptor>> columnModifications,
-                         List<String> columnDeletions,
-                         int waitInterval,
-                         int maxConcurrentRegionsClosed) throws IOException {
+  public boolean alterTable(final String tableName,
+      List<HColumnDescriptor> columnAdditions,
+      List<Pair<String, HColumnDescriptor>> columnModifications,
+      List<String> columnDeletions,
+      int waitInterval,
+      int maxConcurrentRegionsClosed) throws IOException {
     // convert all of the strings to bytes and pass to the bytes method
     List<Pair<byte [], HColumnDescriptor>> modificationsBytes =
         new ArrayList<Pair<byte [], HColumnDescriptor>>(
@@ -701,21 +706,22 @@ public class HBaseAdmin {
     List<byte []> deletionsBytes =
         new ArrayList<byte []>(columnDeletions.size());
 
-    for(Pair<String, HColumnDescriptor> c : columnModifications) {
-      modificationsBytes.add(new Pair<byte [], HColumnDescriptor>(
-          Bytes.toBytes(c.getFirst()), c.getSecond()));
-    }
-    for(String c : columnDeletions) {
-      deletionsBytes.add(Bytes.toBytes(c));
-    }
+        for(Pair<String, HColumnDescriptor> c : columnModifications) {
+          modificationsBytes.add(new Pair<byte [], HColumnDescriptor>(
+              Bytes.toBytes(c.getFirst()), c.getSecond()));
+        }
+        for(String c : columnDeletions) {
+          deletionsBytes.add(Bytes.toBytes(c));
+        }
 
-    alterTable(Bytes.toBytes(tableName), columnAdditions, modificationsBytes,
-        deletionsBytes, waitInterval, maxConcurrentRegionsClosed);
+        return alterTable(Bytes.toBytes(tableName), columnAdditions, modificationsBytes,
+            deletionsBytes, waitInterval, maxConcurrentRegionsClosed);
   }
 
   /**
    * Batch alter a table. Only takes regions offline once and performs a single
    * update to .META.
+   * Rewrite the .regioninfo files that belong to the modified table
    * Any of the three lists can be null, in which case those types of
    * alterations will be ignored.
    * Asynchronous operation.
@@ -724,9 +730,11 @@ public class HBaseAdmin {
    * @param columnAdditions column descriptors to add to the table
    * @param columnModifications pairs of column names with new descriptors
    * @param columnDeletions column names to delete from the table
+   * @return true if all .regioninfo files belonging to the modified table
+   * are successfully rewritten
    * @throws IOException if a remote or network exception occurs
    */
-  public void alterTable(final byte [] tableName,
+  public boolean alterTable(final byte [] tableName,
       List<HColumnDescriptor> columnAdditions,
       List<Pair<byte[], HColumnDescriptor>> columnModifications,
       List<byte[]> columnDeletions) throws IOException {
@@ -739,12 +747,13 @@ public class HBaseAdmin {
     int maxClosedRegions = conf.getInt(HConstants.MASTER_SCHEMA_CHANGES_MAX_CONCURRENT_REGION_CLOSE,
         HConstants.DEFAULT_MASTER_SCHEMA_CHANGES_MAX_CONCURRENT_REGION_CLOSE);
 
-    alterTable(tableName, columnAdditions, columnModifications, columnDeletions, waitInterval, maxClosedRegions);
+    return alterTable(tableName, columnAdditions, columnModifications, columnDeletions, waitInterval, maxClosedRegions);
   }
 
   /**
    * Batch alter a table. Only takes regions offline once and performs a single
    * update to .META.
+   * Rewrite all the .regioninfo files that belong to the modified table
    * Any of the three lists can be null, in which case those types of
    * alterations will be ignored.
    * Asynchronous operation.
@@ -757,25 +766,27 @@ public class HBaseAdmin {
    *                     numConcurrentRegionsClosed over
    * @param maxConcurrentRegionsClosed the max number of regions to have closed
    *                                   at a time.
+   * @return true if all .regioninfo files belonging to the modified table
+   * are successfully rewritten
    * @throws IOException if a remote or network exception occurs
    */
-  public void alterTable(final byte [] tableName,
-                         List<HColumnDescriptor> columnAdditions,
-                         List<Pair<byte[], HColumnDescriptor>> columnModifications,
-                         List<byte[]> columnDeletions,
-                         int waitInterval,
-                         int maxConcurrentRegionsClosed) throws IOException {
+  public boolean alterTable(final byte [] tableName,
+      List<HColumnDescriptor> columnAdditions,
+      List<Pair<byte[], HColumnDescriptor>> columnModifications,
+      List<byte[]> columnDeletions,
+      int waitInterval,
+      int maxConcurrentRegionsClosed) throws IOException {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
     HTableDescriptor.isLegalTableName(tableName);
     try {
-      this.master.alterTable(tableName, columnAdditions, columnModifications,
+      return this.master.alterTable(tableName, columnAdditions, columnModifications,
           columnDeletions, waitInterval, maxConcurrentRegionsClosed);
     } catch (RemoteException e) {
       throw RemoteExceptionHandler.decodeRemoteException(e);
     }
-  }
+}
 
   /**
    * Get the status of alter command - indicates how many regions have received
@@ -808,7 +819,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void addColumn(final String tableName, HColumnDescriptor column)
-  throws IOException {
+      throws IOException {
     alterTable(Bytes.toBytes(tableName), Arrays.asList(column), null, null);
   }
 
@@ -821,7 +832,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void addColumn(final byte [] tableName, HColumnDescriptor column)
-  throws IOException {
+      throws IOException {
     alterTable(tableName, Arrays.asList(column), null, null);
   }
 
@@ -834,7 +845,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void deleteColumn(final String tableName, final String columnName)
-  throws IOException {
+      throws IOException {
     alterTable(Bytes.toBytes(tableName), null, null,
         Arrays.asList(Bytes.toBytes(columnName)));
   }
@@ -849,7 +860,7 @@ public class HBaseAdmin {
    */
   public void deleteColumn(final byte [] tableName,
       final byte [] columnName)
-  throws IOException {
+          throws IOException {
     alterTable(tableName, null, null, Arrays.asList(columnName));
   }
 
@@ -863,15 +874,15 @@ public class HBaseAdmin {
    */
   public void modifyColumn(final String tableName, final String columnName,
       HColumnDescriptor descriptor)
-  throws IOException {
+          throws IOException {
     alterTable(Bytes.toBytes(tableName), null, Arrays.asList(
-          new Pair<byte [], HColumnDescriptor>(Bytes.toBytes(columnName),
+        new Pair<byte [], HColumnDescriptor>(Bytes.toBytes(columnName),
             descriptor)), null);
   }
 
   public void modifyColumn(final String tableName,
       HColumnDescriptor descriptor)
-  throws IOException {
+          throws IOException {
     modifyColumn(tableName, descriptor.getNameAsString(), descriptor);
   }
 
@@ -885,10 +896,10 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void modifyColumn(final byte [] tableName, final byte [] columnName,
-    HColumnDescriptor descriptor)
-  throws IOException {
+      HColumnDescriptor descriptor)
+          throws IOException {
     alterTable(tableName, null, Arrays.asList(
-          new Pair<byte [], HColumnDescriptor>(columnName, descriptor)), null);
+        new Pair<byte [], HColumnDescriptor>(columnName, descriptor)), null);
   }
 
   /**
@@ -901,7 +912,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void closeRegion(final String regionname, final Object... args)
-  throws IOException {
+      throws IOException {
     closeRegion(Bytes.toBytes(regionname), args);
   }
 
@@ -915,7 +926,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void closeRegion(final byte [] regionname, final Object... args)
-  throws IOException {
+      throws IOException {
     // Be careful. Must match the handler over in HMaster at MODIFY_CLOSE_REGION
     int len = (args == null)? 0: args.length;
     int xtraArgsCount = 1;
@@ -925,7 +936,7 @@ public class HBaseAdmin {
       System.arraycopy(args, 0, newargs, xtraArgsCount, len);
     }
     modifyTable(HConstants.META_TABLE_NAME, HConstants.Modify.CLOSE_REGION,
-      newargs);
+        newargs);
   }
 
   /**
@@ -939,7 +950,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void moveRegion(final String regionName, final String regionServer)
-  throws IOException {
+      throws IOException {
     moveRegion(Bytes.toBytes(regionName), regionServer);
   }
 
@@ -954,9 +965,9 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void moveRegion(final byte[] regionName, final String regionServer)
-  throws IOException {
+      throws IOException {
     modifyTable(HConstants.META_TABLE_NAME, HConstants.Modify.MOVE_REGION,
-      new Object[]{regionName, regionServer});
+        new Object[]{regionName, regionServer});
   }
 
   /**
@@ -1012,7 +1023,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   private void compactCF(String tableName, String columnFamily, HConstants.Modify op)
-    throws IOException {
+      throws IOException {
     compactCF(Bytes.toBytes(tableName), Bytes.toBytes(columnFamily), op);
   }
 
@@ -1025,11 +1036,11 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   private void compactCF(final byte[] tableName, final byte[] columnFamily, HConstants.Modify op)
-    throws IOException {
+      throws IOException {
     // Validate table name and column family.
     if (!this.connection.tableExists(new StringBytes(tableName))) {
       throw new IllegalArgumentException("HTable " + new StringBytes(tableName)
-          + " does not exist");
+      + " does not exist");
     } else if (!getTableDescriptor(tableName).hasFamily(columnFamily)) {
       throw new IllegalArgumentException("Column Family "
           + new String(columnFamily) + " does not exist in "
@@ -1040,6 +1051,7 @@ public class HBaseAdmin {
     HTable table = new HTable(this.conf, tableName);
     Set <HRegionInfo> regions = table.getRegionsInfo().keySet();
     Iterator <HRegionInfo> regionsIt = regions.iterator();
+    table.close();
 
     // Iterate over all regions and send a compaction request to each.
     while (regionsIt.hasNext()) {
@@ -1057,7 +1069,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void compact(String tableOrRegionName, String columnFamily)
-    throws IOException {
+      throws IOException {
     if (tableExists(tableOrRegionName)) {
       compactCF(tableOrRegionName, columnFamily, HConstants.Modify.TABLE_COMPACT);
       return;
@@ -1080,7 +1092,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void compact(final byte[] tableOrRegionName, final byte[] columnFamily)
-    throws IOException {
+      throws IOException {
     if (tableExists(tableOrRegionName)) {
       compactCF(tableOrRegionName, columnFamily, HConstants.Modify.TABLE_COMPACT);
       return;
@@ -1100,7 +1112,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void majorCompact(final String tableNameOrRegionName)
-  throws IOException {
+      throws IOException {
     majorCompact(Bytes.toBytes(tableNameOrRegionName));
   }
 
@@ -1112,7 +1124,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void majorCompact(final byte [] tableNameOrRegionName)
-  throws IOException {
+      throws IOException {
     modifyTable(tableNameOrRegionName, HConstants.Modify.TABLE_MAJOR_COMPACT);
   }
 
@@ -1125,7 +1137,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void majorCompact(String tableOrRegionName, String columnFamily)
-    throws IOException {
+      throws IOException {
     if (tableExists(tableOrRegionName)) {
       compactCF(tableOrRegionName, columnFamily,
           HConstants.Modify.TABLE_MAJOR_COMPACT);
@@ -1148,7 +1160,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void majorCompact(final byte[] tableOrRegionName, final byte[] columnFamily)
-    throws IOException {
+      throws IOException {
     if (tableExists(tableOrRegionName)) {
       compactCF(tableOrRegionName, columnFamily,
           HConstants.Modify.TABLE_MAJOR_COMPACT);
@@ -1181,7 +1193,7 @@ public class HBaseAdmin {
   }
 
   public void split(final String tableNameOrRegionName,
-    final String splitPoint) throws IOException {
+      final String splitPoint) throws IOException {
     split(Bytes.toBytes(tableNameOrRegionName), Bytes.toBytes(splitPoint));
   }
 
@@ -1199,11 +1211,11 @@ public class HBaseAdmin {
       throw new IllegalArgumentException("Pass a table name or region name");
     }
     byte [] tableName = tableExists(tableNameOrRegionName)?
-      tableNameOrRegionName: null;
+        tableNameOrRegionName: null;
     byte [] regionName = tableName == null? tableNameOrRegionName: null;
     Object [] args = regionName == null?
-      new byte [][] {splitPoint}: new byte [][] {regionName, splitPoint};
-    modifyTable(tableName, HConstants.Modify.TABLE_EXPLICIT_SPLIT, args);
+        new byte [][] {splitPoint}: new byte [][] {regionName, splitPoint};
+        modifyTable(tableName, HConstants.Modify.TABLE_EXPLICIT_SPLIT, args);
   }
 
   /*
@@ -1215,7 +1227,7 @@ public class HBaseAdmin {
    */
   private void modifyTable(final byte [] tableNameOrRegionName,
       final HConstants.Modify op)
-  throws IOException {
+          throws IOException {
     if (tableNameOrRegionName == null) {
       throw new IllegalArgumentException("Pass a table name or region name");
     }
@@ -1236,7 +1248,7 @@ public class HBaseAdmin {
    * @throws IOException if a remote or network exception occurs
    */
   public void modifyTable(final byte [] tableName, HTableDescriptor htd)
-  throws IOException {
+      throws IOException {
     modifyTable(tableName, HConstants.Modify.TABLE_SET_HTD, htd);
   }
 
@@ -1252,7 +1264,7 @@ public class HBaseAdmin {
    */
   public void modifyTable(final byte [] tableName, HConstants.Modify op,
       Object... args)
-      throws IOException {
+          throws IOException {
     if (this.master == null) {
       throw new MasterNotRunningException("master has been shut down");
     }
@@ -1266,7 +1278,7 @@ public class HBaseAdmin {
       switch (op) {
       case TABLE_SET_HTD:
         if (args == null || args.length < 1 ||
-            !(args[0] instanceof HTableDescriptor)) {
+        !(args[0] instanceof HTableDescriptor)) {
           throw new IllegalArgumentException("SET_HTD requires a HTableDescriptor");
         }
         arr = new Writable[1];
@@ -1325,7 +1337,7 @@ public class HBaseAdmin {
       return new BooleanWritable((Boolean) o);
     } else {
       throw new IllegalArgumentException("Requires byte [] or " +
-        "ImmutableBytesWritable, not " + o.getClass() + " : " + o);
+          "ImmutableBytesWritable, not " + o.getClass() + " : " + o);
     }
   }
 
@@ -1358,8 +1370,8 @@ public class HBaseAdmin {
   public synchronized void stopRegionServerForRestart(final HServerAddress hsa)
       throws IOException {
     HRegionInterface rs = this.connection.getHRegionConnection(hsa);
-      LOG.info("Restarting RegionServer" + hsa.toString());
-      rs.stopForRestart();
+    LOG.info("Restarting RegionServer" + hsa.toString());
+    rs.stopForRestart();
   }
 
   /**
@@ -1393,9 +1405,9 @@ public class HBaseAdmin {
   public synchronized void setNumHDFSQuorumReadThreads(final HServerAddress hsa,
       int numThreads) throws IOException {
     HRegionInterface rs = this.connection.getHRegionConnection(hsa);
-      LOG.info("Setting numHDFSQuorumReadThreads for RegionServer" + hsa.toString()
-          + " to " + numThreads);
-      rs.setNumHDFSQuorumReadThreads(numThreads);
+    LOG.info("Setting numHDFSQuorumReadThreads for RegionServer" + hsa.toString()
+        + " to " + numThreads);
+    rs.setNumHDFSQuorumReadThreads(numThreads);
   }
 
   /**
@@ -1409,9 +1421,9 @@ public class HBaseAdmin {
   public synchronized void setHDFSQuorumReadTimeoutMillis(final HServerAddress hsa,
       long timeoutMillis) throws IOException {
     HRegionInterface rs = this.connection.getHRegionConnection(hsa);
-      LOG.info("Setting quorumReadTimeout for RegionServer" + hsa.toString()
-          + " to " + timeoutMillis);
-      rs.setHDFSQuorumReadTimeoutMillis(timeoutMillis);
+    LOG.info("Setting quorumReadTimeout for RegionServer" + hsa.toString()
+        + " to " + timeoutMillis);
+    rs.setHDFSQuorumReadTimeoutMillis(timeoutMillis);
   }
 
   /**
@@ -1427,9 +1439,9 @@ public class HBaseAdmin {
   }
 
   private HRegionLocation getFirstMetaServerForTable(final byte [] tableName)
-  throws IOException {
+      throws IOException {
     return connection.locateRegion(HConstants.META_TABLE_NAME_STRINGBYTES,
-      HRegionInfo.createRegionName(tableName, null, HConstants.NINES, false));
+        HRegionInfo.createRegionName(tableName, null, HConstants.NINES, false));
   }
 
   /**
@@ -1439,7 +1451,7 @@ public class HBaseAdmin {
    * @throws MasterNotRunningException if a remote or network exception occurs
    */
   public static void checkHBaseAvailable(Configuration conf)
-  throws MasterNotRunningException {
+      throws MasterNotRunningException {
     Configuration copyOfConf = HBaseConfiguration.create(conf);
     copyOfConf.setInt(HConstants.CLIENT_RETRY_NUM_STRING, 1);
     new HBaseAdmin(copyOfConf);

@@ -59,7 +59,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -755,20 +754,7 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
     // clash w/ a store/family name.  There is possibility, but assumption is
     // that its slim (don't want to use control character in filename because
     //
-    Path regioninfo = new Path(this.regiondir, REGIONINFO_FILE);
-    if (this.fs.exists(regioninfo) &&
-        this.fs.getFileStatus(regioninfo).getLen() > 0) {
-      return;
-    }
-    FSDataOutputStream out = this.fs.create(regioninfo, true);
-    try {
-      this.regionInfo.write(out);
-      out.write('\n');
-      out.write('\n');
-      out.write(Bytes.toBytes(this.regionInfo.toString()));
-    } finally {
-      out.close();
-    }
+    this.regionInfo.writeToDisk(conf, fs);
   }
 
   public AtomicLong getMemstoreSize() {
