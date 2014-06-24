@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.coprocessor.observers.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.observers.RegionObserver;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
@@ -80,10 +79,10 @@ public class RegionCoprocessorHost extends
    * @throws IOException
    */
   public void reloadCoprocessors(Configuration newConf) throws IOException {
-    Map<String, List<Pair<String, String>>> map = this
+    Map<String, List<String>> map = this
         .readCoprocessorsFromConf(newConf);
     String coprocTable = this.region.getTableDesc().getNameAsString();
-    List<Pair<String, String>> forTable = map.get(coprocTable);
+    List<String> forTable = map.get(coprocTable);
     // reload system default cp's from configuration.
     reloadSysCoprocessorsOnConfigChange(newConf, REGION_COPROCESSOR_CONF_KEY);
     // reload system default cp's for user tables from configuration.
@@ -216,6 +215,7 @@ public class RegionCoprocessorHost extends
     }
 
 
+    @Override
     public void shutdown() {
       super.shutdown();
     }

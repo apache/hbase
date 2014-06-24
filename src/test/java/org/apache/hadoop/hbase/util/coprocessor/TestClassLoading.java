@@ -19,27 +19,28 @@
 package org.apache.hadoop.hbase.util.coprocessor;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.io.OutputStream;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorAdmin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.observers.TestHRegionObserverBypassCoprocessor.TestCoprocessor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonGenerator;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -49,12 +50,9 @@ import org.junit.Test;
 * Test coprocessors class loading.
 */
 public class TestClassLoading {
- private static final Log LOG = LogFactory.getLog(TestClassLoading.class);
  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
  private static final byte[] DUMMY = Bytes.toBytes("dummy");
  private static final byte[] TEST = Bytes.toBytes("test");
-
- private static MiniDFSCluster cluster;
 
  static final String tableName = "TestClassLoading";
  static final String cpName1 = "TestCP1";
@@ -69,7 +67,6 @@ public class TestClassLoading {
     conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
         testCoprocessor.getName());
     TEST_UTIL.startMiniCluster(1);
-    cluster = TEST_UTIL.getDFSCluster();
   }
 
   @AfterClass
@@ -104,38 +101,58 @@ public class TestClassLoading {
     return newStr;
   }
 
+  private void uploadCoprocessor(File jarFile, String name, int version,
+      String className) throws Exception {
+    Path localPath =
+        TEST_UTIL.getTestDir("TestClassLoading-uploadCoprocessor-" + name
+            + "-" + version);
+
+    LocalFileSystem lfs = FileSystem.getLocal(TEST_UTIL.getConfiguration());
+    lfs.delete(localPath, true);
+
+    lfs.mkdirs(localPath);
+    lfs.copyFromLocalFile(false, new Path(jarFile.toString()), new Path(
+        localPath, jarFile.getName()));
+
+    JsonFactory f = new JsonFactory();
+    try (OutputStream out =
+        lfs.create(new Path(localPath, CoprocessorHost.CONFIG_JSON))) {
+      JsonGenerator g = f.createJsonGenerator(out);
+      g.writeStartObject();
+
+      g.writeStringField(CoprocessorHost.COPROCESSOR_JSON_NAME_FIELD, name);
+
+      g.writeNumberField(CoprocessorHost.COPROCESSOR_JSON_VERSION_FIELD,
+          version);
+
+      g.writeArrayFieldStart(CoprocessorHost.COPROCESSOR_JSON_LOADED_CLASSES_FIELD);
+      g.writeString(className);
+      g.writeEndArray();
+      g.writeEndObject();
+      g.close();
+    }
+
+    new CoprocessorAdmin(TEST_UTIL.getConfiguration()).upload(localPath, true);
+  }
+
   @Test
   public void testClassLoadingFromHDFS() throws Exception {
-    FileSystem fs = cluster.getFileSystem();
+    final String CP_NAME = "test";
+
+    // Create jar files.
     File jarFile1 = buildCoprocessorJar(cpName1);
     System.out.println(jarFile1.getName());
     File jarFile2 = buildCoprocessorJar(cpName2);
-    // have to create directories because we are not placing the files on hdfs
-    // root
-    assertTrue(fs.mkdirs(new Path("/coprocessors/test/1")));
-    // copy the jars into dfs
-    fs.moveFromLocalFile(new Path(jarFile1.getPath()), new Path(fs.getUri()
-        .toString(), buildCorrectPathForCoprocessorJar("") + Path.SEPARATOR));
+    System.out.println(jarFile2.getName());
+    // Upload jars to dfs
+    uploadCoprocessor(jarFile1, CP_NAME, 1, cpName1);
+    uploadCoprocessor(jarFile2, CP_NAME, 2, cpName2);
 
-    String jarFileOnHDFS1 = buildCorrectPathForCoprocessorJar(fs.getUri()
-        .toString()) + Path.SEPARATOR + jarFile1.getName();
-    Path pathOnHDFS1 = new Path(jarFileOnHDFS1);
-    System.out.println(jarFileOnHDFS1);
-    assertTrue("Copy jar file to HDFS failed.", fs.exists(pathOnHDFS1));
-    LOG.info("Copied jar file to HDFS: " + jarFileOnHDFS1);
-
-    fs.moveFromLocalFile(new Path(jarFile2.getPath()), new Path(fs.getUri()
-        .toString(), buildCorrectPathForCoprocessorJar("") + Path.SEPARATOR));
-
-    String jarFileOnHDFS2 = buildCorrectPathForCoprocessorJar(fs.getUri()
-        .toString()) + Path.SEPARATOR + jarFile2.getName();
-    Path pathOnHDFS2 = new Path(jarFileOnHDFS2);
-    assertTrue("Copy jar file to HDFS failed.", fs.exists(pathOnHDFS2));
-    LOG.info("Copied jar file to HDFS: " + jarFileOnHDFS2);
     Configuration conf = TEST_UTIL.getConfiguration();
 
     // check if only TestCoprocessor is currently loaded
-    List<HRegion> regions = TEST_UTIL.getMiniHBaseCluster().getRegions(Bytes.toBytes(tableName));
+    List<HRegion> regions =
+        TEST_UTIL.getMiniHBaseCluster().getRegions(Bytes.toBytes(tableName));
     Set<String> expectedCoprocessorSimpleName = new HashSet<>();
     Set<String> allCoprocessors = RegionCoprocessorHost
         .getEverLoadedCoprocessors();
@@ -148,7 +165,7 @@ public class TestClassLoading {
     // remove the firstly added coprocessor
     conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY, "");
     conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_FROM_HDFS_KEY,
-        tableName + "," + pathOnHDFS1.toString() + "," + cpName1);
+        CoprocessorHost.genDfsPerTableProjectEntry(CP_NAME, 1, tableName));
 
     // invoke online configuration change
     HRegionServer.configurationManager.notifyAllObservers(conf);
@@ -169,8 +186,8 @@ public class TestClassLoading {
     //now load the second coprocessor too
     String current = conf.get(CoprocessorHost.USER_REGION_COPROCESSOR_FROM_HDFS_KEY);
     conf.setStrings(CoprocessorHost.USER_REGION_COPROCESSOR_FROM_HDFS_KEY,
-        current + ";" + tableName + "," + pathOnHDFS2.toString() + ","
-            + cpName2);
+        current + ";"
+            + CoprocessorHost.genDfsPerTableProjectEntry(CP_NAME, 2, tableName));
     // invoke online config change
     HRegionServer.configurationManager.notifyAllObservers(conf);
     allCoprocessors = RegionCoprocessorHost.getEverLoadedCoprocessors();
@@ -179,8 +196,8 @@ public class TestClassLoading {
     expectedCoprocessorSimpleName.add(cpName2);
     for (HRegion r : regions) {
       Set<String> currentCoprocessors = r.getCoprocessorHost().getCoprocessors();
-      assertTrue("Number of currently loaded coprocessors",
-          currentCoprocessors.size() == 2);
+      assertEquals("Number of currently loaded coprocessors", 2,
+          currentCoprocessors.size());
       assertEquals("Expected loaded coprocessors",
           expectedCoprocessorSimpleName, currentCoprocessors);
     }

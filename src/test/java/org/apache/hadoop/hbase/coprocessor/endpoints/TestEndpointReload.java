@@ -244,14 +244,14 @@ public class TestEndpointReload {
 
     // two
     conf.setStrings(EndpointLoader.FACTORY_CLASSES_KEY,
-        EndpointLoader.genDfsEndpointEntry(TWO_NAME, TWO_VERSION));
+        CoprocessorHost.genDfsProjectEntry(TWO_NAME, TWO_VERSION));
     HRegionServer.configurationManager.notifyAllObservers(conf);
     checkEndpionts(cp, jarFile, false, true);
 
     // one+two
     conf.setStrings(EndpointLoader.FACTORY_CLASSES_KEY,
         OneFactory.class.getName(),
-        EndpointLoader.genDfsEndpointEntry(TWO_NAME, TWO_VERSION));
+        CoprocessorHost.genDfsProjectEntry(TWO_NAME, TWO_VERSION));
     HRegionServer.configurationManager.notifyAllObservers(conf);
     checkEndpionts(cp, jarFile, true, true);
   }

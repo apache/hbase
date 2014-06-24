@@ -22,20 +22,14 @@ package org.apache.hadoop.hbase.coprocessor.endpoints;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.coprocessor.CoprocessorClassLoader;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Static methods for loading endpoints.
@@ -55,86 +49,29 @@ public class EndpointLoader {
   private static final String dfsTmpPrefix = "endpoint."
       + UUID.randomUUID().toString();
 
-  private static final Pattern PAT_PROJECT_VERSION =
-      Pattern.compile("[^@]+@[0-9]+");
-
-  /**
-   * Returns an entry string for a version of a project.
-   */
-  public static String genDfsEndpointEntry(String project, int version) {
-    return project + "@" + version;
-  }
-
-  private static ClassLoader getDfsClassLoader(Configuration conf,
-      FileSystem fs, Path projectPath) throws IOException {
-    FileStatus[] jars = fs.listStatus(projectPath, new PathFilter() {
-      @Override
-      public boolean accept(Path path) {
-        return path.getName().endsWith(".jar");
-      }
-    });
-
-    if (jars.length < 1) {
-      throw new IOException("No jars in " + projectPath + " found!");
-    }
-
-    // TODO load class based on all jars.
-    return CoprocessorClassLoader.getClassLoader(jars[0].getPath(),
-        EndpointLoader.class.getClassLoader(), dfsTmpPrefix, conf);
-  }
-
-  @SuppressWarnings({ "unchecked", "rawtypes" })
-  private static List<IEndpointFactory> loadProject(Configuration conf,
+  @SuppressWarnings({ "rawtypes" })
+  private static List<IEndpointFactory> loadEndpointProject(Configuration conf,
       FileSystem fs, String dfsRootPath, String project, int version)
       throws IOException {
-    Path projectPath = new Path(CoprocessorHost.getCoprocessorPath(dfsRootPath,
-        project, version));
-    if (!fs.exists(projectPath)) {
-      throw new IOException("Folder " + projectPath + " doesn't exist!");
-    }
-    if (!fs.getFileStatus(projectPath).isDir()) {
-      throw new IOException(projectPath + " is not a folder!");
-    }
 
-    Path configPath = new Path(projectPath, CoprocessorHost.CONFIG_JSON);
-    if (!fs.exists(configPath)) {
-      throw new IOException("Cannot find config file: " + configPath);
-    }
+    Pair<List<Class<?>>, ClassLoader> classesAndLoader =
+        CoprocessorHost.getProjectClassesAndLoader(conf, fs, dfsRootPath, project, version,
+        dfsTmpPrefix);
 
-    Map<String, Object> jConf = FSUtils.readJSONFromFile(fs, configPath);
-    String name = (String) jConf.get(
-        CoprocessorHost.COPROCESSOR_JSON_NAME_FIELD);
-    if (!name.equals(project)) {
-      throw new IOException("Loaded name " + name + " is not expected"
-          + project);
-    }
-
-    int loadedVer =
-        (int) jConf.get(CoprocessorHost.COPROCESSOR_JSON_VERSION_FIELD);
-    if (loadedVer != version) {
-      throw new IOException("Loaded version " + loadedVer + " is not expected"
-        + version);
-    }
-
-    ArrayList<String> loadedClasses = (ArrayList<String>) jConf.get(
-        CoprocessorHost.COPROCESSOR_JSON_LOADED_CLASSES_FIELD);
-
-    ClassLoader cl = getDfsClassLoader(conf, fs, projectPath);
-    List<IEndpointFactory> res = new ArrayList<>(loadedClasses.size());
-    for (int i = 0; i < loadedClasses.size(); i++) {
+    List<IEndpointFactory> res = new ArrayList<>(
+        classesAndLoader.getFirst().size());
+    for (Class<?> cls: classesAndLoader.getFirst()) {
+      if (!IEndpointFactory.class.isAssignableFrom(cls)) {
+        LOG.info("Class " + cls + " cannot be assigned as "
+            + IEndpointFactory.class + ", ignored!");
+        continue;
+      }
       try {
-        Class<?> cls = cl.loadClass(loadedClasses.get(i));
-        if (!IEndpointFactory.class.isAssignableFrom(cls)) {
-          LOG.info("Class " + cls + " cannot be assigned as "
-              + IEndpointFactory.class + ", ignored!");
-          continue;
-        }
         res.add((IEndpointFactory) cls.newInstance());
       } catch (Throwable t) {
-        LOG.error("Load class " + loadedClasses.get(i) + " failed!", t);
+        LOG.info("Creating instance of " + cls + " failed!", t);
       }
     }
-
     return res;
   }
 
@@ -154,7 +91,7 @@ public class EndpointLoader {
 
     for (String className : classNames) {
       try {
-        if (PAT_PROJECT_VERSION.matcher(className).matches()) {
+        if (CoprocessorHost.PAT_PROJECT_VERSION.matcher(className).matches()) {
           String[] projVer = className.split("@");
           String project = projVer[0];
           int version = Integer.parseInt(projVer[1]);
@@ -162,8 +99,8 @@ public class EndpointLoader {
           if (fs == null) {
             fs = FileSystem.get(conf);
           }
-          List<IEndpointFactory> factories = loadProject(conf, fs, dfsRoot,
-              project, version);
+          List<IEndpointFactory> factories = loadEndpointProject(conf, fs,
+              dfsRoot, project, version);
           for (IEndpointFactory factory : factories) {
             LOG.info("Loading endpoint class " + factory.getClass().getName());
             reg.register(factory.getEndpointInterface(), factory);

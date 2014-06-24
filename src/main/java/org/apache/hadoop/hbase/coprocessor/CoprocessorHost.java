@@ -31,17 +31,22 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.ipc.ThriftClientInterface;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.util.coprocessor.CoprocessorClassLoader;
@@ -89,6 +94,8 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   // unique file prefix to use for local copies of jars when classloading
   protected String pathPrefix;
   protected AtomicInteger loadSequence = new AtomicInteger();
+  public static final Pattern PAT_PROJECT_VERSION =
+      Pattern.compile("[^@]+@[0-9]+");
   /**
    * The field name for "loaded classes"
    */
@@ -204,14 +211,15 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
 
   /**
    * Read coprocessors that should be loaded from configuration. In the
-   * configuration we should have string of tuples of [table, jar, class] for
-   * each usage of coprocesssor
+   * configuration we should have string of tuples of
+   * "project@version->table[,table]" or "classname->table[,table]"
+   * for each usage of coprocessor
    *
    * @param conf
    */
-  public Map<String, List<Pair<String, String>>> readCoprocessorsFromConf(
+  public Map<String, List<String>> readCoprocessorsFromConf(
       Configuration conf) {
-    Map<String, List<Pair<String, String>>> coprocConfigMap = new HashMap<>();
+    Map<String, List<String>> coprocConfigMap = new HashMap<>();
     String fromConfig = conf.get(USER_REGION_COPROCESSOR_FROM_HDFS_KEY);
     if (fromConfig == null || fromConfig.isEmpty()) {
       return coprocConfigMap;
@@ -219,27 +227,29 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     String[] tuples = fromConfig.split(";");
     for (String tuple : tuples) {
       tuple = tuple.trim();
-      String[] str = tuple.split(",");
-      // str[0] is table, str[1] is path for the jar, str[2] is name of the
-      // class
-      if (str.length != 3) {
-        LOG.error("Configuration is not in expected format: " + str);
-        return null;
+      String[] pathAndTables = tuple.split("->", 2);
+      if (pathAndTables.length != 2) {
+        LOG.error("Configuration is not in expected format: " + tuple);
+        // Ignore this tuple
+        continue;
       }
-      String table = str[0].trim();
-      List<Pair<String, String>> inMap = coprocConfigMap.get(table);
-      if (inMap == null) {
-        inMap = new ArrayList<>();
-        coprocConfigMap.put(table, inMap);
+      String path = pathAndTables[0].trim();
+      String[] tables = pathAndTables[1].trim().split(",");
+      for (String table : tables) {
+        List<String> inMap = coprocConfigMap.get(table);
+        if (inMap == null) {
+          inMap = new ArrayList<>();
+          coprocConfigMap.put(table, inMap);
+        }
+        inMap.add(path);
       }
-      inMap.add(new Pair<>(str[1].trim(), str[2].trim()));
     }
     return coprocConfigMap;
   }
 
   /**
    * Checks if the specified path for the coprocessor jar is in expected format
-   * TODO: make this more advanced - currently is very hardoced and dummy
+   * TODO: make this more advanced - currently is very hardcoded and dummy
    *
    * @param path
    *          - Absolute and complete path where the coprocessor jar resides
@@ -261,25 +271,23 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   }
 
   /**
-   * Used to load coprocessors whose jar is specified via hdfs path. All
+   * Used to load coprocessors whose jar is specified via HDFS path. All
    * existing coprocessors will be unloaded (if they appear again in the new
    * configuration then they will be re-added).
    *
    * @param config
    * @throws IOException
    */
-  protected void reloadCoprocessorsFromHdfs(String table,
-      List<Pair<String, String>> toLoad, Configuration config)
-      throws IOException {
+  protected void reloadCoprocessorsFromHdfs(String table, List<String> toLoad,
+      Configuration config) throws IOException {
     // remove whatever is loaded first
     removeLoadedCoprocWithKey(USER_REGION_COPROCESSOR_FROM_HDFS_KEY);
     List<E> newCoprocessors = new ArrayList<>();
 
     LOG.info("Loading coprocessor for table: " + table);
-    for (Pair<String, String> pair : toLoad) {
-      LOG.info("Jar: " + pair.getFirst() + " class: " + pair.getSecond());
-      E coproc = load(new Path(pair.getFirst()), pair.getSecond(),
-          Coprocessor.PRIORITY_USER, config,
+    for (String path : toLoad) {
+      LOG.info("Loading from " + path);
+      E coproc = load(path, Coprocessor.PRIORITY_USER, config,
           USER_REGION_COPROCESSOR_FROM_HDFS_KEY);
       newCoprocessors.add(coproc);
     }
@@ -300,38 +308,48 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * @param conf configuration for coprocessor
    * @throws java.io.IOException Exception
    */
-  public E load(Path path, String className, int priority,
-      Configuration conf, String confKey) throws IOException {
+  public E load(String path, int priority, Configuration conf, String confKey)
+      throws IOException {
     Class<?> implClass = null;
-    LOG.debug("Loading coprocessor class " + className + " with path " +
-        path + " and priority " + priority);
-
     ClassLoader cl = null;
-    if (path == null) {
-      try {
-        implClass = getClass().getClassLoader().loadClass(className);
-      } catch (ClassNotFoundException e) {
-        throw new IOException("No jar path specified for " + className);
+    if (PAT_PROJECT_VERSION.matcher(path).matches()) {
+      String[] projVer = path.split("@");
+      String project = projVer[0];
+      int version = Integer.parseInt(projVer[1]);
+
+      FileSystem fs = FileSystem.get(conf);
+      String dfsRoot = getCoprocessorDfsRoot(conf);
+
+      Pair<List<Class<?>>, ClassLoader> classesAndLoader =
+          getProjectClassesAndLoader(conf, fs, dfsRoot, project, version,
+          pathPrefix);
+      if (classesAndLoader.getFirst().size() != 1) {
+        // The number of loaded classes should be one for observers.
+        throw new IOException("The number of loaded classes for observers "
+            + "should be one but we got: " + classesAndLoader.getFirst());
       }
+      implClass = classesAndLoader.getFirst().get(0);
+      cl = classesAndLoader.getSecond();
     } else {
-      cl = CoprocessorClassLoader.getClassLoader(
-        path, getClass().getClassLoader(), pathPrefix, conf);
+      String className = path;
+      LOG.debug("Loading coprocessor class " + className + " with path " + path
+          + " and priority " + priority);
       try {
+        cl = this.getClass().getClassLoader();
         implClass = cl.loadClass(className);
       } catch (ClassNotFoundException e) {
-        throw new IOException("Cannot load external coprocessor class " + className, e);
+        throw new IOException("Cannot load coprocessor class " + className, e);
       }
     }
+
     //load custom code for coprocessor
     try (ContextResetter ctxResetter = new ContextResetter(cl)) {
-//       switch temporarily to the thread classloader for custom CP
+      // switch temporarily to the thread classloader for custom CP
       E cpInstance = loadInstance(implClass, priority, conf, confKey);
       return cpInstance;
     } catch (Exception e) {
-      String msg = new StringBuilder()
-          .append("Cannot load external coprocessor class ").append(className)
-          .toString();
-      throw new IOException(msg, e);
+      throw new IOException("Cannot load external coprocessor class "
+          + implClass.getName(), e);
     }
   }
 
@@ -632,6 +650,101 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
           "' threw: '" + e + "' and has been removed from the active " +
           "coprocessor set.", e);
     }
+  }
+
+  public static ClassLoader getDfsClassLoader(Configuration conf,
+      FileSystem fs, Path projectPath, String localPathPrefx)
+      throws IOException {
+    FileStatus[] jars = fs.listStatus(projectPath, new PathFilter() {
+      @Override
+      public boolean accept(Path path) {
+        return path.getName().endsWith(".jar");
+      }
+    });
+
+    if (jars.length < 1) {
+      throw new IOException("No jars in " + projectPath + " found!");
+    }
+
+    // TODO load class based on all jars.
+    return CoprocessorClassLoader.getClassLoader(jars[0].getPath(),
+        CoprocessorHost.class.getClassLoader(), localPathPrefx, conf);
+  }
+
+  /**
+   * Returns an entry string for a version of a project.
+   */
+  public static String genDfsProjectEntry(String project, int version) {
+    return project + "@" + version;
+  }
+
+  /**
+   * Returns an entry string for a version of a project for a table.
+   */
+  public static String genDfsPerTableProjectEntry(String project, int version,
+      String tableName) {
+    return project + "@" + version + "->" + tableName;
+  }
+
+  /**
+   * Returns the list of classes and ClassLoader to load them.
+   *
+   * @param conf The configuration
+   * @param fs The file-system.
+   * @param dfsRootPath The root path of coprocessors on DFS.
+   * @param project The name of the project.
+   * @param version The version of the project to load
+   * @param localPathPrefx The prefix of paths for CoprocessorClassLoader to
+   *                       copy jars to local.
+   * @return A Pair of classes to load and the ClassLoader.
+   */
+  @SuppressWarnings({ "unchecked" })
+  public static Pair<List<Class<?>>, ClassLoader> getProjectClassesAndLoader(
+      Configuration conf, FileSystem fs,
+      String dfsRootPath, String project, int version, String localPathPrefx)
+      throws IOException {
+    Path projectPath =
+        new Path(getCoprocessorPath(dfsRootPath, project, version));
+    if (!fs.exists(projectPath)) {
+      throw new IOException("Folder " + projectPath + " doesn't exist!");
+    }
+    if (!fs.getFileStatus(projectPath).isDir()) {
+      throw new IOException(projectPath + " is not a folder!");
+    }
+
+    Path configPath = new Path(projectPath, CONFIG_JSON);
+    if (!fs.exists(configPath)) {
+      throw new IOException("Cannot find config file: " + configPath);
+    }
+
+    Map<String, Object> jConf = FSUtils.readJSONFromFile(fs, configPath);
+    String name = (String) jConf.get(COPROCESSOR_JSON_NAME_FIELD);
+    if (!name.equals(project)) {
+      throw new IOException("Loaded name " + name + " is not expected"
+          + project);
+    }
+
+    int loadedVer = (int) jConf.get(COPROCESSOR_JSON_VERSION_FIELD);
+    if (loadedVer != version) {
+      throw new IOException("Loaded version " + loadedVer + " is not expected"
+          + version);
+    }
+
+    ArrayList<String> loadedClasses =
+        (ArrayList<String>) jConf.get(COPROCESSOR_JSON_LOADED_CLASSES_FIELD);
+
+    ClassLoader cl = getDfsClassLoader(conf, fs, projectPath, localPathPrefx);
+    List<Class<?>> res = new ArrayList<>(loadedClasses.size());
+    for (int i = 0; i < loadedClasses.size(); i++) {
+      try {
+        Class<?> cls = cl.loadClass(loadedClasses.get(i));
+        res.add(cls);
+      } catch (Throwable t) {
+        LOG.error("Load class " + loadedClasses.get(i) + " failed, ignored!", t);
+      }
+    }
+
+    return Pair.newPair(res, cl);
   }
 
   /**

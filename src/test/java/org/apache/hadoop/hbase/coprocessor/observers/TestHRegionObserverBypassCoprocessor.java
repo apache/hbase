@@ -134,9 +134,9 @@ public class TestHRegionObserverBypassCoprocessor {
     HTable table = new HTable(util.getConfiguration(), tableName);
     Set<String> allCoprocessors = RegionCoprocessorHost
         .getEverLoadedCoprocessors();
-    Assert.assertEquals("There should be only one coprocessor everloaded", 1, allCoprocessors.size());
-    Assert
-        .assertEquals(
+    Assert.assertEquals("There should be only one coprocessor everloaded", 1,
+        allCoprocessors.size());
+    Assert.assertEquals(
             "Expected loaded coprocessor is different from one which is currently loaded",
             TestCoprocessor.class.getName(), allCoprocessors.toArray()[0]);
     Configuration conf = util.getConfiguration();
