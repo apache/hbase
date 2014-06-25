@@ -72,7 +72,7 @@ public class ThriftUtilities {
         .setCompressionType(comp)
         .setInMemory(in.inMemory)
         .setBlockCacheEnabled(in.blockCacheEnabled)
-        .setTimeToLive(in.timeToLive)
+        .setTimeToLive(in.timeToLive > 0 ? in.timeToLive : Integer.MAX_VALUE)
         .setBloomFilterType(bt);
     return col;
   }
