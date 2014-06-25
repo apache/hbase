@@ -41,12 +41,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -64,6 +66,7 @@ import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -440,14 +443,35 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     }
 
     protected void createSchema() throws IOException {
-      HBaseAdmin admin = new HBaseAdmin(getConf());
-      TableName tableName = getTableName(getConf());
-      if (!admin.tableExists(tableName)) {
-        HTableDescriptor htd = new HTableDescriptor(getTableName(getConf()));
-        htd.addFamily(new HColumnDescriptor(FAMILY_NAME));
-        admin.createTable(htd);
+      Configuration conf = getConf();
+      HBaseAdmin admin = new HBaseAdmin(conf);
+      TableName tableName = getTableName(conf);
+      try {
+        if (!admin.tableExists(tableName)) {
+          HTableDescriptor htd = new HTableDescriptor(getTableName(getConf()));
+          htd.addFamily(new HColumnDescriptor(FAMILY_NAME));
+          int numberOfServers = admin.getClusterStatus().getServers().size();
+          if (numberOfServers == 0) {
+            throw new IllegalStateException("No live regionservers");
+          }
+          int regionsPerServer = conf.getInt(HBaseTestingUtility.REGIONS_PER_SERVER_KEY,
+                                HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER);
+          int totalNumberOfRegions = numberOfServers * regionsPerServer;
+          LOG.info("Number of live regionservers: " + numberOfServers + ", " +
+              "pre-splitting table into " + totalNumberOfRegions + " regions " +
+              "(default regions per server: " + regionsPerServer + ")");
+
+          byte[][] splits = new RegionSplitter.UniformSplit().split(
+              totalNumberOfRegions);
+
+          admin.createTable(htd, splits);
+        }
+      } catch (MasterNotRunningException e) {
+        LOG.error("Master not running", e);
+        throw new IOException(e);
+      } finally {
+        admin.close();
       }
-      admin.close();
     }
 
     public int runRandomInputGenerator(int numMappers, long numNodes, Path tmpOutput,
@@ -480,7 +504,6 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         Integer width, Integer wrapMuplitplier) throws Exception {
       LOG.info("Running Generator with numMappers=" + numMappers +", numNodes=" + numNodes);
       createSchema();
-
       Job job = new Job(getConf());
 
       job.setJobName("Link Generator");
