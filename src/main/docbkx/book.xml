@@ -3205,7 +3205,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
                 </listitem>
               </varlistentry>
             </variablelist>
-            <table>
+            <table xlink:id="compaction.parameters">
               <title>Parameters Used by Compaction Algorithm</title>
               <textobject>
                 <para>This table contains the main configuration parameters for compaction. This
