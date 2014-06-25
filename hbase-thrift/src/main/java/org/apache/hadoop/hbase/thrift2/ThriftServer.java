@@ -107,6 +107,8 @@ public class ThriftServer extends Configured implements Tool {
    */
   static final String THRIFT_QOP_KEY = "hbase.thrift.security.qop";
 
+  static final String BACKLOG_CONF_KEY = "hbase.regionserver.thrift.backlog";
+
   public static final int DEFAULT_LISTEN_PORT = 9090;
 
 
@@ -269,9 +271,12 @@ public class ThriftServer extends Configured implements Tool {
                                               TProcessor processor,
                                               TTransportFactory transportFactory,
                                               int workerThreads,
-                                              InetSocketAddress inetSocketAddress)
+                                              InetSocketAddress inetSocketAddress,
+                                              int backlog)
       throws TTransportException {
-    TServerTransport serverTransport = new TServerSocket(inetSocketAddress);
+    TServerTransport serverTransport = new TServerSocket(
+                                           new TServerSocket.ServerSocketTransportArgs().
+                                               bindAddr(inetSocketAddress).backlog(backlog));
     log.info("starting HBase ThreadPool Thrift server on " + inetSocketAddress.toString());
     TThreadPoolServer.Args serverArgs = new TThreadPoolServer.Args(serverTransport);
     serverArgs.processor(processor);
@@ -350,6 +355,9 @@ public class ThriftServer extends Configured implements Tool {
     } catch (NumberFormatException e) {
       throw new RuntimeException("Could not parse the value provided for the port option", e);
     }
+
+    // Thrift's implementation uses '0' as a placeholder for 'use the default.'
+    int backlog = conf.getInt(BACKLOG_CONF_KEY, 0);
 
     // Local hostname and user name,
     // used only if QOP is configured.
@@ -479,7 +487,8 @@ public class ThriftServer extends Configured implements Tool {
           processor,
           transportFactory,
           workerThreads,
-          inetSocketAddress);
+          inetSocketAddress,
+          backlog);
     }
 
     final TServer tserver = server;

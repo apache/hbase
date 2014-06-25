@@ -171,6 +171,7 @@ public class ThriftServerRunner implements Runnable {
    * The thrift server and the HBase cluster must run in secure mode.
    */
   static final String THRIFT_QOP_KEY = "hbase.thrift.security.qop";
+  static final String BACKLOG_CONF_KEY = "hbase.regionserver.thrift.backlog";
 
   private static final String DEFAULT_BIND_ADDR = "0.0.0.0";
   public static final int DEFAULT_LISTEN_PORT = 9090;
@@ -515,6 +516,9 @@ public class ThriftServerRunner implements Runnable {
           "-" + BIND_CONF_KEY + " not supported with " + implType);
     }
 
+    // Thrift's implementation uses '0' as a placeholder for 'use the default.'
+    int backlog = conf.getInt(BACKLOG_CONF_KEY, 0);
+
     if (implType == ImplType.HS_HA || implType == ImplType.NONBLOCKING ||
         implType == ImplType.THREADED_SELECTOR) {
 
@@ -560,7 +564,8 @@ public class ThriftServerRunner implements Runnable {
       InetAddress listenAddress = getBindAddress(conf);
 
       TServerTransport serverTransport = new TServerSocket(
-          new InetSocketAddress(listenAddress, listenPort));
+          new TServerSocket.ServerSocketTransportArgs().
+              bindAddr(new InetSocketAddress(listenAddress, listenPort)).backlog(backlog));
 
       TBoundedThreadPoolServer.Args serverArgs =
           new TBoundedThreadPoolServer.Args(serverTransport, conf);
