@@ -18,12 +18,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-import org.codehaus.jackson.map.ObjectMapper;
-
 import java.io.IOException;
 import java.util.Map;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.JsonMapper;
 
 /**
  * Superclass for any type that maps to a potentially application-level query.
@@ -36,8 +36,6 @@ public abstract class Operation {
   // TODO make this configurable
   // TODO Do we need this anymore now we have protobuffed it all?
   private static final int DEFAULT_MAX_COLS = 5;
-
-  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   /**
    * Produces a Map containing a fingerprint which identifies the type and 
@@ -69,7 +67,7 @@ public abstract class Operation {
    * @return a JSONObject containing this Operation's information, as a string
    */
   public String toJSON(int maxCols) throws IOException {
-    return MAPPER.writeValueAsString(toMap(maxCols));
+    return JsonMapper.writeMapAsString(toMap(maxCols));
   }
 
   /**
