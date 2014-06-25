@@ -194,7 +194,7 @@ public class ColumnDescriptor implements org.apache.thrift.TBase<ColumnDescripto
 
     this.blockCacheEnabled = false;
 
-    this.timeToLive = -1;
+    this.timeToLive = 2147483647;
 
   }
 
@@ -270,7 +270,7 @@ public class ColumnDescriptor implements org.apache.thrift.TBase<ColumnDescripto
 
     this.blockCacheEnabled = false;
 
-    this.timeToLive = -1;
+    this.timeToLive = 2147483647;
 
   }
 
