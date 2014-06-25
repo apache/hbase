@@ -393,7 +393,24 @@ public final class CellUtil {
    *         {@link KeyValue.Type#DeleteColumn} KeyValue type.
    */
   public static boolean isDelete(final Cell cell) {
-    return KeyValue.isDelete(cell.getTypeByte());
+    return isDelete(cell.getTypeByte());
+  }
+
+  /**
+   * @return True if a delete type, a {@link KeyValue.Type#Delete} or a
+   *         {KeyValue.Type#DeleteFamily} or a
+   *         {@link KeyValue.Type#DeleteColumn} KeyValue type.
+   */
+  public static boolean isDelete(final byte type) {
+    return Type.Delete.getCode() <= type
+        && type <= Type.DeleteFamily.getCode();
+  }
+
+  /**
+   * @return True if this cell is a {@link KeyValue.Type#Delete} type.
+   */
+  public static boolean isDeleteType(Cell cell) {
+    return cell.getTypeByte() == Type.Delete.getCode();
   }
 
   public static boolean isDeleteFamily(final Cell cell) {
@@ -402,6 +419,15 @@ public final class CellUtil {
 
   public static boolean isDeleteFamilyVersion(final Cell cell) {
     return cell.getTypeByte() == Type.DeleteFamilyVersion.getCode();
+  }
+
+  /**
+   *
+   * @return True if this cell is a delete family or column type.
+   */
+  public static boolean isDeleteColumnOrFamily(Cell cell) {
+    int t = cell.getTypeByte();
+    return t == Type.DeleteColumn.getCode() || t == Type.DeleteFamily.getCode();
   }
 
   /**

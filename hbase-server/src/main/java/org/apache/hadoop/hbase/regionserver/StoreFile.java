@@ -37,6 +37,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.KeyValue;
@@ -883,7 +884,7 @@ public class StoreFile {
 
     private void appendDeleteFamilyBloomFilter(final KeyValue kv)
         throws IOException {
-      if (!kv.isDeleteFamily() && !kv.isDeleteFamilyVersion()) {
+      if (!CellUtil.isDeleteFamily(kv) && !CellUtil.isDeleteFamilyVersion(kv)) {
         return;
       }
 

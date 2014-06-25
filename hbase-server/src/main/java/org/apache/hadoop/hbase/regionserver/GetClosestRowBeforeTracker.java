@@ -25,6 +25,7 @@ import java.util.TreeSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
@@ -144,7 +145,7 @@ class GetClosestRowBeforeTracker {
     for (KeyValue d: ds) {
       long kvts = kv.getTimestamp();
       long dts = d.getTimestamp();
-      if (d.isDeleteFamily()) {
+      if (CellUtil.isDeleteFamily(d)) {
         if (kvts <= dts) return true;
         continue;
       }

@@ -22,8 +22,8 @@ import java.io.IOException;
 import java.util.NavigableSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -117,7 +117,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
       int length, byte type) {
     // delete markers should never be passed to an
     // *Explicit*ColumnTracker
-    assert !KeyValue.isDelete(type);
+    assert !CellUtil.isDelete(type);
     do {
       // No more columns left, we are done with this query
       if(done()) {
@@ -168,7 +168,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
   @Override
   public ScanQueryMatcher.MatchCode checkVersions(byte[] bytes, int offset, int length,
       long timestamp, byte type, boolean ignoreCount) throws IOException {
-    assert !KeyValue.isDelete(type);
+    assert !CellUtil.isDelete(type);
     if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
     // Check if it is a duplicate timestamp
     if (sameAsPreviousTS(timestamp)) {

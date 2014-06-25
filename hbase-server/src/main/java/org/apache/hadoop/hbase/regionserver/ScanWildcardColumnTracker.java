@@ -22,8 +22,8 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -134,7 +134,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    * Increase the version counter unless this is a delete
    */
   private MatchCode checkVersion(byte type, long timestamp) {
-    if (!KeyValue.isDelete(type)) {
+    if (!CellUtil.isDelete(type)) {
       currentCount++;
     }
     if (currentCount > maxVersions) {

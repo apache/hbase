@@ -2049,7 +2049,7 @@ public class HRegion implements HeapSize { // , Writable{
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         //  Check if time is LATEST, change to time of most recent addition if so
         //  This is expensive.
-        if (kv.isLatestTimestamp() && kv.isDeleteType()) {
+        if (kv.isLatestTimestamp() && CellUtil.isDeleteType(kv)) {
           byte[] qual = CellUtil.cloneQualifier(kv);
           if (qual == null) qual = HConstants.EMPTY_BYTE_ARRAY;
 

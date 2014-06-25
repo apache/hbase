@@ -23,6 +23,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -72,7 +73,7 @@ public class TimeRangeTracker implements Writable {
    */
   public void includeTimestamp(final KeyValue kv) {
     includeTimestamp(kv.getTimestamp());
-    if (kv.isDeleteColumnOrFamily()) {
+    if (CellUtil.isDeleteColumnOrFamily(kv)) {
       includeTimestamp(0);
     }
   }
