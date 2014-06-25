@@ -23,7 +23,7 @@
   <!--This 'all' id is not appended to the produced bundle because we do this: http://maven.apache.org/plugins/maven-assembly-plugin/faq.html#required-classifiers -->
   <id>bin</id>
   <formats>
-    <format>tar.gz</format>
+    <format>dir</format>
   </formats>
   <componentDescriptors>
       <componentDescriptor>src/main/assembly/components.xml</componentDescriptor>
@@ -33,12 +33,17 @@
       <!-- Enable access to all projects in the current multimodule build. Eclipse
         says this is an error, but builds from the command line just fine. -->
       <useAllReactorProjects>true</useAllReactorProjects>
+      <!-- Without the following line, the native client dependencies will get
+        packaged with the other HBase jars -->
+      <excludes><exclude>org.apache.hbase:hbase-native-client</exclude></excludes>
       <!-- Binaries for the dependencies also go in the hbase-jars directory -->
       <binaries>
         <outputDirectory>lib</outputDirectory>
         <unpack>false</unpack>
         <dependencySets>
-          <dependencySet/>
+          <dependencySet>
+            <excludes><exclude>org.apache.hbase:hbase-native-client</exclude></excludes>
+          </dependencySet>
         </dependencySets>
       </binaries>
     </moduleSet>
