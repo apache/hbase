@@ -161,10 +161,6 @@ public class TestHeaderSendReceive {
     Assert.assertTrue(ProfilingData.TOTAL_SERVER_TIME_MS
         + " should be greater than zero",
         pd.getLong(ProfilingData.TOTAL_SERVER_TIME_MS).longValue() >= 0L);
-    if (isPut) {
-      assertNotNull(ProfilingData.HLOG_SYNC_TIME_MS + " is null",
-          pd.getLong(ProfilingData.HLOG_SYNC_TIME_MS));
-    }
   }
 
   /**
