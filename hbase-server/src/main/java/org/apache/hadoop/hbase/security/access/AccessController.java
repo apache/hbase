@@ -1314,12 +1314,6 @@ public class AccessController extends BaseRegionObserver
   }
 
   @Override
-  public void preCompactSelection(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final Store store, final List<StoreFile> candidates) throws IOException {
-    requirePermission("compact", getTableName(e.getEnvironment()), null, null, Action.ADMIN);
-  }
-
-  @Override
   public void preGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte [] row, final byte [] family, final Result result)
       throws IOException {
