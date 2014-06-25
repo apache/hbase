@@ -356,6 +356,7 @@ public class TestHCM {
 
     final AtomicReference<Throwable> failed = new AtomicReference<Throwable>(null);
     Thread t = new Thread("testConnectionCloseThread") {
+      @Override
       public void run() {
         int done = 0;
         try {
@@ -1262,6 +1263,29 @@ public class TestHCM {
       }
     }
     pool.shutdownNow();
+  }
+
+  @Test(timeout = 60000)
+  public void testConnectionRideOverClusterRestart() throws IOException, InterruptedException {
+    Configuration config = new Configuration(TEST_UTIL.getConfiguration());
+
+    TableName tableName = TableName.valueOf("testConnectionRideOverClusterRestart");
+    TEST_UTIL.createTable(tableName.getName(), new byte[][] {FAM_NAM}, config).close();
+
+    HConnection connection = HConnectionManager.createConnection(config);
+    HTableInterface table = connection.getTable(tableName);
+
+    // this will cache the meta location and table's region location
+    table.get(new Get(Bytes.toBytes("foo")));
+
+    // restart HBase
+    TEST_UTIL.shutdownMiniHBaseCluster();
+    TEST_UTIL.restartHBaseCluster(2);
+    // this should be able to discover new locations for meta and table's region
+    table.get(new Get(Bytes.toBytes("foo")));
+    TEST_UTIL.deleteTable(tableName);
+    table.close();
+    connection.close();
   }
 }
 

@@ -1092,7 +1092,6 @@ class ConnectionManager {
         throw new IllegalArgumentException(
             "table name cannot be null or zero length");
       }
-
       if (tableName.equals(TableName.META_TABLE_NAME)) {
         return locateMeta(tableName, useCache, replicaId);
       } else {
@@ -1119,10 +1118,13 @@ class ConnectionManager {
       synchronized (metaRegionLock) {
         // Check the cache again for a hit in case some other thread made the
         // same query while we were waiting on the lock.
-        locations = getCachedLocation(tableName, metaCacheKey);
-        if (locations != null) {
-          return locations;
+        if (useCache) {
+          locations = getCachedLocation(tableName, metaCacheKey);
+          if (locations != null) {
+            return locations;
+          }
         }
+
         // Look up from zookeeper
         locations = this.registry.getMetaRegionLocation();
         if (locations != null) {
