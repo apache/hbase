@@ -82,6 +82,11 @@
 
     </note>
 
+    <section>
+      <title>JDK Version Requirements</title>
+      <para>HBase requires that a JDK be installed. See <xref linkend="java" /> for information
+        about supported JDK versions.</para>
+    </section>
 
     <section>
       <title>Download and unpack the latest stable release.</title>

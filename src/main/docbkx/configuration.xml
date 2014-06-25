@@ -59,8 +59,51 @@
     <section
       xml:id="java">
       <title>Java</title>
-      <para>Just like Hadoop, HBase requires at least Java 6 from <link
-          xlink:href="http://www.java.com/download/">Oracle</link>. </para>
+      <para>HBase requires at least Java 6 from <link
+          xlink:href="http://www.java.com/download/">Oracle</link>. The following table lists which JDK version are
+        compatible with each version of HBase.</para>
+      <informaltable>
+        <tgroup cols="4">
+          <thead>
+            <row>
+              <entry>HBase Version</entry>
+              <entry>JDK 6</entry>
+              <entry>JDK 7</entry>
+              <entry>JDK 8</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>1.0</entry>
+              <entry>yes</entry>
+              <entry>yes</entry>
+              <entry><para>Running with JDK 8 will work but is not well tested.</para></entry>
+            </row>
+            <row>
+              <entry>0.98</entry>
+              <entry>yes</entry>
+              <entry>yes</entry>
+              <entry><para>Running with JDK 8 works but is not well tested. Building with JDK 8
+                would require removal of the deprecated remove() method of the PoolMap class and is
+                under consideration. See ee <link
+                xlink:href="https://issues.apache.org/jira/browse/HBASE-7608">HBASE-7608</link> for
+                more information about JDK 8 support.</para></entry>
+            </row>
+            <row>
+              <entry>0.96</entry>
+              <entry>yes</entry>
+              <entry>yes</entry>
+              <entry></entry>
+            </row>
+            <row>
+              <entry>0.94</entry>
+              <entry>yes</entry>
+              <entry>yes</entry>
+              <entry></entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </informaltable>
     </section>
 
     <section
