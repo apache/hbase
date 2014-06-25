@@ -808,6 +808,7 @@ public final class ExportSnapshot extends Configured implements Tool {
         outputRoot = new Path(args[++i]);
       } else if (cmd.equals("-copy-from")) {
         inputRoot = new Path(args[++i]);
+        FSUtils.setRootDir(conf, inputRoot);
       } else if (cmd.equals("-no-checksum-verify")) {
         verifyChecksum = false;
       } else if (cmd.equals("-no-target-verify")) {
