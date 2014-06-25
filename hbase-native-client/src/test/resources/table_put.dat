@@ -1,0 +1,7 @@
+#first row is for table name and cfs second row are inputs for one put operation. time stamp is optional for column
+#all lines starts with '#' are comments - application skip those lines
+test_table,cf1,cf2,cf3,cf4,cf5
+row1,cf1:col1:4,cf4:col4:5
+row1,cf5:col1:4,cf4:col4:5
+row3,cf1:col1:4,cf4:col4:5
+row4,cf1:col1:4,cf4:col4:5
