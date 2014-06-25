@@ -18,15 +18,23 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.AdditionalMatchers.aryEq;
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isNull;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.only;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -36,21 +44,30 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.ScanType;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StripeMultiFileWriter;
 import org.apache.hadoop.hbase.regionserver.StripeStoreConfig;
 import org.apache.hadoop.hbase.regionserver.StripeStoreFileManager;
 import org.apache.hadoop.hbase.regionserver.StripeStoreFlusher;
+import org.apache.hadoop.hbase.regionserver.TestStripeCompactor.StoreFileWritersCapture;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy.StripeInformationProvider;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConcatenatedLists;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
-import org.apache.hadoop.hbase.regionserver.TestStripeCompactor.StoreFileWritersCapture;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.ArgumentMatcher;
@@ -317,6 +334,38 @@ public class TestStripeCompactionPolicy {
     }
   }
 
+  @SuppressWarnings("unchecked")
+  @Test
+  public void testMergeExpiredStripes() throws Exception {
+    // HBASE-11397
+    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    long now = defaultTtl + 2;
+    edge.setValue(now);
+    EnvironmentEdgeManager.injectEdge(edge);
+    try {
+      StoreFile expiredFile = createFile(), notExpiredFile = createFile();
+      when(expiredFile.getReader().getMaxTimestamp()).thenReturn(now - defaultTtl - 1);
+      when(notExpiredFile.getReader().getMaxTimestamp()).thenReturn(now - defaultTtl + 1);
+      List<StoreFile> expired = Lists.newArrayList(expiredFile, expiredFile);
+      List<StoreFile> notExpired = Lists.newArrayList(notExpiredFile, notExpiredFile);
+
+      StripeCompactionPolicy policy =
+          createPolicy(HBaseConfiguration.create(), defaultSplitSize, defaultSplitCount,
+            defaultInitialCount, true);
+
+      // Merge all three expired stripes into one.
+      StripeCompactionPolicy.StripeInformationProvider si =
+          createStripesWithFiles(expired, expired, expired);
+      verifyMergeCompatcion(policy, si, 0, 2);
+
+      // Merge two adjacent expired stripes into one.
+      si = createStripesWithFiles(notExpired, expired, notExpired, expired, expired, notExpired);
+      verifyMergeCompatcion(policy, si, 3, 4);
+    } finally {
+      EnvironmentEdgeManager.reset();
+    }
+  }
+
   private static StripeCompactionPolicy.StripeInformationProvider createStripesWithFiles(
       List<StoreFile>... stripeFiles) throws Exception {
     return createStripesWithFiles(createBoundaries(stripeFiles.length),
@@ -366,6 +415,19 @@ public class TestStripeCompactionPolicy {
 
   private static ArrayList<StoreFile> al(StoreFile... sfs) {
     return new ArrayList<StoreFile>(Arrays.asList(sfs));
+  }
+
+  private void verifyMergeCompatcion(StripeCompactionPolicy policy, StripeInformationProvider si,
+      int from, int to) throws Exception {
+    StripeCompactionPolicy.StripeCompactionRequest scr = policy.selectCompaction(si, al(), false);
+    Collection<StoreFile> sfs = getAllFiles(si, from, to);
+    verifyCollectionsEqual(sfs, scr.getRequest().getFiles());
+
+    // All the Stripes are expired, so the Compactor will not create any Writers. We need to create
+    // an empty file to preserve metadata
+    StripeCompactor sc = createCompactor();
+    List<Path> paths = scr.execute(sc);
+    assertEquals(1, paths.size());
   }
 
   /**
@@ -629,7 +691,12 @@ public class TestStripeCompactionPolicy {
     StoreFile.Reader r = mock(StoreFile.Reader.class);
     when(r.getEntries()).thenReturn(size);
     when(r.length()).thenReturn(size);
+    when(r.getBloomFilterType()).thenReturn(BloomType.NONE);
+    when(r.getHFileReader()).thenReturn(mock(HFile.Reader.class));
+    when(r.getStoreFileScanner(anyBoolean(), anyBoolean(), anyBoolean(), anyLong())).thenReturn(
+      mock(StoreFileScanner.class));
     when(sf.getReader()).thenReturn(r);
+    when(sf.createReader()).thenReturn(r);
     return sf;
   }
 
@@ -640,5 +707,56 @@ public class TestStripeCompactionPolicy {
   private static void setFileStripe(StoreFile sf, byte[] startKey, byte[] endKey) {
     when(sf.getMetadataValue(StripeStoreFileManager.STRIPE_START_KEY)).thenReturn(startKey);
     when(sf.getMetadataValue(StripeStoreFileManager.STRIPE_END_KEY)).thenReturn(endKey);
+  }
+
+  private static StripeCompactor createCompactor() throws Exception {
+    HColumnDescriptor col = new HColumnDescriptor(Bytes.toBytes("foo"));
+    StoreFileWritersCapture writers = new StoreFileWritersCapture();
+    Store store = mock(Store.class);
+    when(store.getFamily()).thenReturn(col);
+    when(
+      store.createWriterInTmp(anyLong(), any(Compression.Algorithm.class), anyBoolean(),
+        anyBoolean(), anyBoolean())).thenAnswer(writers);
+
+    Configuration conf = HBaseConfiguration.create();
+    final Scanner scanner = new Scanner();
+    return new StripeCompactor(conf, store) {
+      @Override
+      protected InternalScanner createScanner(Store store, List<StoreFileScanner> scanners,
+          long smallestReadPoint, long earliestPutTs, byte[] dropDeletesFromRow,
+          byte[] dropDeletesToRow) throws IOException {
+        return scanner;
+      }
+
+      @Override
+      protected InternalScanner createScanner(Store store, List<StoreFileScanner> scanners,
+          ScanType scanType, long smallestReadPoint, long earliestPutTs) throws IOException {
+        return scanner;
+      }
+    };
+  }
+
+  private static class Scanner implements InternalScanner {
+    private final ArrayList<KeyValue> kvs;
+
+    public Scanner(KeyValue... kvs) {
+      this.kvs = new ArrayList<KeyValue>(Arrays.asList(kvs));
+    }
+
+    @Override
+    public boolean next(List<Cell> results) throws IOException {
+      if (kvs.isEmpty()) return false;
+      results.add(kvs.remove(0));
+      return !kvs.isEmpty();
+    }
+
+    @Override
+    public boolean next(List<Cell> result, int limit) throws IOException {
+      return next(result);
+    }
+
+    @Override
+    public void close() throws IOException {
+    }
   }
 }
