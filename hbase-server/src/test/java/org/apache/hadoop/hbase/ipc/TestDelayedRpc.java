@@ -154,7 +154,7 @@ public class TestDelayedRpc {
     conf.setInt("hbase.ipc.warn.delayedrpc.number", MAX_DELAYED_RPC);
     // Set up an appender to catch the "Too many delayed calls" that we expect.
     ListAppender listAppender = new ListAppender();
-    Logger log = Logger.getLogger("org.apache.hadoop.ipc.RpcServer");
+    Logger log = Logger.getLogger(RpcServer.class);
     log.addAppender(listAppender);
     log.setLevel(Level.WARN);
 

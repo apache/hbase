@@ -51,20 +51,26 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
+import io.netty.util.internal.ConcurrentSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
@@ -144,9 +150,7 @@ import com.google.protobuf.TextFormat;
  */
 @InterfaceAudience.Private
 public class RpcServer implements RpcServerInterface {
-  // The logging package is deliberately outside of standard o.a.h.h package so it is not on
-  // by default.
-  public static final Log LOG = LogFactory.getLog("org.apache.hadoop.ipc.RpcServer");
+  public static final Log LOG = LogFactory.getLog(RpcServer.class);
 
   private final boolean authorize;
   private boolean isSecurityEnabled;
@@ -162,8 +166,6 @@ public class RpcServer implements RpcServerInterface {
    * The maximum size that we can hold in the RPC queue
    */
   private static final int DEFAULT_MAX_CALLQUEUE_SIZE = 1024 * 1024 * 1024;
-
-  static final int BUFFER_INITIAL_SIZE = 1024;
 
   private static final String WARN_DELAYED_CALLS = "hbase.ipc.warn.delayedrpc.number";
 
@@ -216,14 +218,14 @@ public class RpcServer implements RpcServerInterface {
 
   /**
    * This flag is used to indicate to sub threads when they should go down.  When we call
-   * {@link #startThreads()}, all threads started will consult this flag on whether they should
+   * {@link #start()}, all threads started will consult this flag on whether they should
    * keep going.  It is set to false when {@link #stop()} is called.
    */
   volatile boolean running = true;
 
   /**
    * This flag is set to true after all threads are up and 'running' and the server is then opened
-   * for business by the calle to {@link #openServer()}.
+   * for business by the call to {@link #start()}.
    */
   volatile boolean started = false;
 
@@ -321,30 +323,20 @@ public class RpcServer implements RpcServerInterface {
      * Short string representation without param info because param itself could be huge depends on
      * the payload of a command
      */
-    @SuppressWarnings("deprecation")
     String toShortString() {
-      String serviceName = this.connection.service != null?
-        this.connection.service.getDescriptorForType().getName() : "null";
-      StringBuilder sb = new StringBuilder();
-      sb.append("callId: ");
-      sb.append(this.id);
-      sb.append(" service: ");
-      sb.append(serviceName);
-      sb.append(" methodName: ");
-      sb.append((this.md != null) ? this.md.getName() : "");
-      sb.append(" size: ");
-      sb.append(StringUtils.humanReadableInt(this.size));
-      sb.append(" connection: ");
-      sb.append(connection.toString());
-      return sb.toString();
+      String serviceName = this.connection.service != null ?
+          this.connection.service.getDescriptorForType().getName() : "null";
+      return "callId: " + this.id + " service: " + serviceName +
+          " methodName: " + ((this.md != null) ? this.md.getName() : "n/a") +
+          " size: " + StringUtils.TraditionalBinaryPrefix.long2String(this.size, "", 1) +
+          " connection: " + connection.toString();
     }
 
     String toTraceString() {
       String serviceName = this.connection.service != null ?
                            this.connection.service.getDescriptorForType().getName() : "";
       String methodName = (this.md != null) ? this.md.getName() : "";
-      String result = serviceName + "." + methodName;
-      return result;
+      return serviceName + "." + methodName;
     }
 
     protected synchronized void setSaslTokenResponse(ByteBuffer response) {
@@ -407,7 +399,6 @@ public class RpcServer implements RpcServerInterface {
 
     private BufferChain wrapWithSasl(BufferChain bc)
         throws IOException {
-      if (bc == null) return bc;
       if (!this.connection.useSasl) return bc;
       // Looks like no way around this; saslserver wants a byte array.  I have to make it one.
       // THIS IS A BIG UGLY COPY.
@@ -418,9 +409,10 @@ public class RpcServer implements RpcServerInterface {
       synchronized (connection.saslServer) {
         token = connection.saslServer.wrap(responseBytes, 0, responseBytes.length);
       }
-      if (LOG.isDebugEnabled())
-        LOG.debug("Adding saslServer wrapped token of size " + token.length
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Adding saslServer wrapped token of size " + token.length
             + " as call response.");
+      }
 
       ByteBuffer bbTokenLength = ByteBuffer.wrap(Bytes.toBytes(token.length));
       ByteBuffer bbTokenBytes = ByteBuffer.wrap(token);
@@ -514,12 +506,13 @@ public class RpcServer implements RpcServerInterface {
                                          //-tion (for idle connections) ran
     private long cleanupInterval = 10000; //the minimum interval between
                                           //two cleanup runs
-    private int backlogLength = conf.getInt("ipc.server.listen.queue.size", 128);
+    private int backlogLength;
 
     private ExecutorService readPool;
 
     public Listener(final String name) throws IOException {
       super(name);
+      backlogLength = conf.getInt("ipc.server.listen.queue.size", 128);
       // Create a new server socket and set to non blocking mode
       acceptChannel = ServerSocketChannel.open();
       acceptChannel.configureBlocking(false);
@@ -569,7 +562,6 @@ public class RpcServer implements RpcServerInterface {
 
       private synchronized void doRunLoop() {
         while (running) {
-          SelectionKey key = null;
           try {
             readSelector.select();
             while (adding) {
@@ -578,20 +570,19 @@ public class RpcServer implements RpcServerInterface {
 
             Iterator<SelectionKey> iter = readSelector.selectedKeys().iterator();
             while (iter.hasNext()) {
-              key = iter.next();
+              SelectionKey key = iter.next();
               iter.remove();
               if (key.isValid()) {
                 if (key.isReadable()) {
                   doRead(key);
                 }
               }
-              key = null;
             }
           } catch (InterruptedException e) {
             LOG.debug("Interrupted while sleeping");
             return;
           } catch (IOException ex) {
-            LOG.error(getName() + ": error in Reader", ex);
+            LOG.info(getName() + ": IOException in Reader", ex);
           }
         }
       }
@@ -788,30 +779,34 @@ public class RpcServer implements RpcServerInterface {
     }
 
     void doRead(SelectionKey key) throws InterruptedException {
-      int count = 0;
-      Connection c = (Connection)key.attachment();
+      int count;
+      Connection c = (Connection) key.attachment();
       if (c == null) {
         return;
       }
       c.setLastContact(System.currentTimeMillis());
       try {
         count = c.readAndProcess();
+
+        if (count > 0) {
+          c.setLastContact(System.currentTimeMillis());
+        }
+
       } catch (InterruptedException ieo) {
         throw ieo;
       } catch (Exception e) {
-        LOG.info(getName() + ": count of bytes read: " + count, e);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(getName() + ": Caught exception while reading:" + e.getMessage());
+        }
         count = -1; //so that the (count < 0) block is executed
       }
       if (count < 0) {
         if (LOG.isDebugEnabled()) {
           LOG.debug(getName() + ": DISCONNECTING client " + c.toString() +
-            " because read count=" + count +
-            ". Number of active connections: " + numConnections);
+              " because read count=" + count +
+              ". Number of active connections: " + numConnections);
         }
         closeConnection(c);
-        // c = null;
-      } else {
-        c.setLastContact(System.currentTimeMillis());
       }
     }
 
@@ -841,13 +836,12 @@ public class RpcServer implements RpcServerInterface {
   // Sends responses of RPC back to clients.
   protected class Responder extends Thread {
     private final Selector writeSelector;
-    private int pending;         // connections waiting to register
+    private final ConcurrentSet<Connection> writingCons = new ConcurrentSet<Connection>();
 
     Responder() throws IOException {
       this.setName("RpcServer.responder");
       this.setDaemon(true);
       writeSelector = Selector.open(); // create a selector
-      pending = 0;
     }
 
     @Override
@@ -865,13 +859,49 @@ public class RpcServer implements RpcServerInterface {
       }
     }
 
+    /**
+     * Take the list of the connections that want to write, and register them
+     *  in the selector.
+     */
+    private void registerWrites(){
+      Iterator<Connection> it = writingCons.iterator();
+      while (it.hasNext()){
+        Connection c = it.next();
+        it.remove();
+        SelectionKey sk = c.channel.keyFor(writeSelector);
+        if (sk == null){
+          try {
+            c.channel.register(writeSelector, SelectionKey.OP_WRITE, c);
+          } catch (ClosedChannelException e) {
+            // ignore: the client went away.
+          }
+        } else {
+          sk.interestOps(SelectionKey.OP_WRITE);
+        }
+      }
+    }
+
+    /**
+     * Add a connection to the list that want to write,
+     */
+    public void registerForWrite(Connection c) {
+      if (writingCons.add(c)) {
+        writeSelector.wakeup();
+      }
+    }
+
     private void doRunLoop() {
       long lastPurgeTime = 0;   // last check for old calls.
       while (running) {
         try {
-          waitPending();     // If a channel is being registered, wait.
-          writeSelector.select(purgeTimeout);
-          Iterator<SelectionKey> iter = writeSelector.selectedKeys().iterator();
+          registerWrites();
+          int keyCt = writeSelector.select(purgeTimeout);
+          if (keyCt == 0) {
+            continue;
+          }
+
+          Set<SelectionKey> keys = writeSelector.selectedKeys();
+          Iterator<SelectionKey> iter = keys.iterator();
           while (iter.hasNext()) {
             SelectionKey key = iter.next();
             iter.remove();
@@ -880,41 +910,12 @@ public class RpcServer implements RpcServerInterface {
                 doAsyncWrite(key);
               }
             } catch (IOException e) {
-              LOG.info(getName() + ": asyncWrite", e);
-            }
-          }
-          long now = System.currentTimeMillis();
-          if (now < lastPurgeTime + purgeTimeout) {
-            continue;
-          }
-          lastPurgeTime = now;
-          //
-          // If there were some calls that have not been sent out for a
-          // long time, discard them.
-          //
-          if (LOG.isDebugEnabled()) LOG.debug(getName() + ": checking for old call responses.");
-          ArrayList<Call> calls;
-
-          // get the list of channels from list of keys.
-          synchronized (writeSelector.keys()) {
-            calls = new ArrayList<Call>(writeSelector.keys().size());
-            iter = writeSelector.keys().iterator();
-            while (iter.hasNext()) {
-              SelectionKey key = iter.next();
-              Call call = (Call)key.attachment();
-              if (call != null && key.channel() == call.connection.channel) {
-                calls.add(call);
-              }
+              LOG.debug(getName() + ": asyncWrite", e);
             }
           }
 
-          for(Call call : calls) {
-            try {
-              doPurge(call, now);
-            } catch (IOException e) {
-              LOG.warn(getName() + ": error in purging old calls " + e);
-            }
-          }
+          lastPurgeTime = purge(lastPurgeTime);
+
         } catch (OutOfMemoryError e) {
           if (errorHandler != null) {
             if (errorHandler.checkOOME(e)) {
@@ -937,180 +938,164 @@ public class RpcServer implements RpcServerInterface {
           }
         } catch (Exception e) {
           LOG.warn(getName() + ": exception in Responder " +
-              StringUtils.stringifyException(e));
+              StringUtils.stringifyException(e), e);
         }
       }
       LOG.info(getName() + ": stopped");
     }
 
-    private void doAsyncWrite(SelectionKey key) throws IOException {
-      Call call = (Call)key.attachment();
-      if (call == null) {
-        return;
+    /**
+     * If there were some calls that have not been sent out for a
+     * long time, we close the connection.
+     * @return the time of the purge.
+     */
+    private long purge(long lastPurgeTime) {
+      long now = System.currentTimeMillis();
+      if (now < lastPurgeTime + purgeTimeout) {
+        return lastPurgeTime;
       }
-      if (key.channel() != call.connection.channel) {
+
+      ArrayList<Connection> conWithOldCalls = new ArrayList<Connection>();
+      // get the list of channels from list of keys.
+      synchronized (writeSelector.keys()) {
+        for (SelectionKey key : writeSelector.keys()) {
+          Connection connection = (Connection) key.attachment();
+          if (connection == null) {
+            throw new IllegalStateException("Coding error: SelectionKey key without attachment.");
+          }
+          Call call = connection.responseQueue.peekFirst();
+          if (call != null && now > call.timestamp + purgeTimeout) {
+            conWithOldCalls.add(call.connection);
+          }
+        }
+      }
+
+      // Seems safer to close the connection outside of the synchronized loop...
+      for (Connection connection : conWithOldCalls) {
+        closeConnection(connection);
+      }
+
+      return now;
+    }
+
+    private void doAsyncWrite(SelectionKey key) throws IOException {
+      Connection connection = (Connection) key.attachment();
+      if (connection == null) {
+        throw new IOException("doAsyncWrite: no connection");
+      }
+      if (key.channel() != connection.channel) {
         throw new IOException("doAsyncWrite: bad channel");
       }
 
-      synchronized(call.connection.responseQueue) {
-        if (processResponse(call.connection.responseQueue, false)) {
-          try {
-            key.interestOps(0);
-          } catch (CancelledKeyException e) {
-            /* The Listener/reader might have closed the socket.
-             * We don't explicitly cancel the key, so not sure if this will
-             * ever fire.
-             * This warning could be removed.
-             */
-            LOG.warn("Exception while changing ops : " + e);
-          }
+      if (processAllResponses(connection)) {
+        try {
+          // We wrote everything, so we don't need to be told when the socket is ready for
+          //  write anymore.
+         key.interestOps(0);
+        } catch (CancelledKeyException e) {
+          /* The Listener/reader might have closed the socket.
+           * We don't explicitly cancel the key, so not sure if this will
+           * ever fire.
+           * This warning could be removed.
+           */
+          LOG.warn("Exception while changing ops : " + e);
         }
       }
     }
 
-    //
-    // Remove calls that have been pending in the responseQueue
-    // for a long time.
-    //
-    private void doPurge(Call call, long now) throws IOException {
-      synchronized (call.connection.responseQueue) {
-        Iterator<Call> iter = call.connection.responseQueue.listIterator(0);
-        while (iter.hasNext()) {
-          Call nextCall = iter.next();
-          if (now > nextCall.timestamp + purgeTimeout) {
-            closeConnection(nextCall.connection);
-            break;
-          }
-        }
-      }
-    }
-
-    // Processes one response. Returns true if there are no more pending
-    // data for this channel.
-    //
-    private boolean processResponse(final LinkedList<Call> responseQueue, boolean inHandler)
-    throws IOException {
+    /**
+     * Process the response for this call. You need to have the lock on
+     * {@link org.apache.hadoop.hbase.ipc.RpcServer.Connection#responseWriteLock}
+     *
+     * @param call the call
+     * @return true if we proceed the call fully, false otherwise.
+     * @throws IOException
+     */
+    private boolean processResponse(final Call call) throws IOException {
       boolean error = true;
-      boolean done = false;       // there is more data for this channel.
-      int numElements;
-      Call call = null;
       try {
-        //noinspection SynchronizationOnLocalVariableOrMethodParameter
-        synchronized (responseQueue) {
-          //
-          // If there are no items for this channel, then we are done
-          //
-          numElements = responseQueue.size();
-          if (numElements == 0) {
-            error = false;
-            return true;              // no more data for this channel.
-          }
-          //
-          // Extract the first call
-          //
-          call = responseQueue.removeFirst();
-          SocketChannel channel = call.connection.channel;
-          //
-          // Send as much data as we can in the non-blocking fashion
-          //
-          long numBytes = channelWrite(channel, call.response);
-          if (numBytes < 0) {
-            return true;
-          }
-          if (!call.response.hasRemaining()) {
-            call.connection.decRpcCount();
-            //noinspection RedundantIfStatement
-            if (numElements == 1) {    // last call fully processes.
-              done = true;             // no more data for this channel.
-            } else {
-              done = false;            // more calls pending to be sent.
-            }
-            if (LOG.isDebugEnabled()) {
-              LOG.debug(getName() + ": callId: " + call.id + " wrote " + numBytes + " bytes.");
-            }
-          } else {
-            //
-            // If we were unable to write the entire response out, then
-            // insert in Selector queue.
-            //
-            call.connection.responseQueue.addFirst(call);
-
-            if (inHandler) {
-              // set the serve time when the response has to be sent later
-              call.timestamp = System.currentTimeMillis();
-              if (enqueueInSelector(call))
-                done = true;
-            }
-            if (LOG.isDebugEnabled()) {
-              LOG.debug(getName() + call.toShortString() + " partially sent, wrote " +
-                numBytes + " bytes.");
-            }
-          }
-          error = false;              // everything went off well
+        // Send as much data as we can in the non-blocking fashion
+        long numBytes = channelWrite(call.connection.channel, call.response);
+        if (numBytes < 0) {
+          throw new HBaseIOException("Error writing on the socket " +
+            "for the call:" + call.toShortString());
         }
+        error = false;
       } finally {
-        if (error && call != null) {
-          LOG.warn(getName() + call.toShortString() + ": output error -- closing");
-          done = true;               // error. no more data for this channel.
+        if (error) {
+          LOG.debug(getName() + call.toShortString() + ": output error -- closing");
           closeConnection(call.connection);
         }
       }
-      return done;
+
+      if (!call.response.hasRemaining()) {
+        call.connection.decRpcCount();  // Say that we're done with this call.
+        return true;
+      } else {
+        return false; // Socket can't take more, we will have to come back.
+      }
     }
 
-    //
-    // Enqueue for background thread to send responses out later.
-    //
-    private boolean enqueueInSelector(Call call) throws IOException {
-      boolean done = false;
-      incPending();
+    /**
+     * Process all the responses for this connection
+     *
+     * @return true if all the calls were processed or that someone else is doing it. false if there
+     * is still some work to do. In this case, we expect the caller to delay us.
+     * @throws IOException
+     */
+    private boolean processAllResponses(final Connection connection) throws IOException {
+      // We want only one writer on the channel for a connection at a time.
+      connection.responseWriteLock.lock();
       try {
-        // Wake up the thread blocked on select, only then can the call
-        // to channel.register() complete.
-        SocketChannel channel = call.connection.channel;
-        writeSelector.wakeup();
-        channel.register(writeSelector, SelectionKey.OP_WRITE, call);
-      } catch (ClosedChannelException e) {
-        //It's OK.  Channel might be closed else where.
-        done = true;
+        for (int i = 0; i < 20; i++) { // protection if some handlers manage to need all the responder
+          Call call = connection.responseQueue.pollFirst();
+          if (call == null) {
+            return true;
+          }
+          if (!processResponse(call)) {
+            connection.responseQueue.addFirst(call);
+            return false;
+          }
+        }
       } finally {
-        decPending();
+        connection.responseWriteLock.unlock();
       }
-      return done;
+
+      return connection.responseQueue.isEmpty();
     }
 
     //
     // Enqueue a response from the application.
     //
     void doRespond(Call call) throws IOException {
-      // set the serve time when the response has to be sent later
-      call.timestamp = System.currentTimeMillis();
+      boolean added = false;
 
-      boolean doRegister = false;
-      synchronized (call.connection.responseQueue) {
-        call.connection.responseQueue.addLast(call);
-        if (call.connection.responseQueue.size() == 1) {
-          doRegister = !processResponse(call.connection.responseQueue, false);
+      // If there is already a write in progress, we don't wait. This allows to free the handlers
+      //  immediately for other tasks.
+      if (call.connection.responseQueue.isEmpty() && call.connection.responseWriteLock.tryLock()) {
+        try {
+          if (call.connection.responseQueue.isEmpty()) {
+            // If we're alone, we can try to do a direct call to the socket. It's
+            //  an optimisation to save on context switches and data transfer between cores..
+            if (processResponse(call)) {
+              return; // we're done.
+            }
+            // Too big to fit, putting ahead.
+            call.connection.responseQueue.addFirst(call);
+            added = true; // We will register to the selector later, outside of the lock.
+          }
+        } finally {
+          call.connection.responseWriteLock.unlock();
         }
       }
-      if (doRegister) {
-        enqueueInSelector(call);
+
+      if (!added) {
+        call.connection.responseQueue.addLast(call);
       }
-    }
+      call.responder.registerForWrite(call.connection);
 
-    private synchronized void incPending() {   // call waiting to be enqueued.
-      pending++;
-    }
-
-    private synchronized void decPending() { // call done enqueueing.
-      pending--;
-      notify();
-    }
-
-    private synchronized void waitPending() throws InterruptedException {
-      while (pending > 0) {
-        wait();
-      }
+      // set the serve time when the response has to be sent later
+      call.timestamp = System.currentTimeMillis();
     }
   }
 
@@ -1133,7 +1118,8 @@ public class RpcServer implements RpcServerInterface {
     protected SocketChannel channel;
     private ByteBuffer data;
     private ByteBuffer dataLengthBuffer;
-    protected final LinkedList<Call> responseQueue;
+    protected final ConcurrentLinkedDeque<Call> responseQueue = new ConcurrentLinkedDeque<Call>();
+    private final Lock responseWriteLock = new ReentrantLock();
     private Counter rpcCount = new Counter(); // number of outstanding rpcs
     private long lastContact;
     private InetAddress addr;
@@ -1163,9 +1149,9 @@ public class RpcServer implements RpcServerInterface {
     SaslServer saslServer;
     private boolean useWrap = false;
     // Fake 'call' for failed authorization response
-    private static final int AUTHROIZATION_FAILED_CALLID = -1;
+    private static final int AUTHORIZATION_FAILED_CALLID = -1;
     private final Call authFailedCall =
-      new Call(AUTHROIZATION_FAILED_CALLID, null, null, null, null, null, this, null, 0, null);
+      new Call(AUTHORIZATION_FAILED_CALLID, null, null, null, null, null, this, null, 0, null);
     private ByteArrayOutputStream authFailedResponse =
         new ByteArrayOutputStream();
     // Fake 'call' for SASL context setup
@@ -1188,7 +1174,6 @@ public class RpcServer implements RpcServerInterface {
         this.hostAddress = addr.getHostAddress();
       }
       this.remotePort = socket.getPort();
-      this.responseQueue = new LinkedList<Call>();
       if (socketSendBufferSize != 0) {
         try {
           socket.setSendBufferSize(socketSendBufferSize);
@@ -1199,7 +1184,7 @@ public class RpcServer implements RpcServerInterface {
       }
     }
 
-    @Override
+      @Override
     public String toString() {
       return getHostAddress() + ":" + remotePort;
     }
@@ -1218,10 +1203,6 @@ public class RpcServer implements RpcServerInterface {
 
     public void setLastContact(long lastContact) {
       this.lastContact = lastContact;
-    }
-
-    public long getLastContact() {
-      return lastContact;
     }
 
     /* Return true if the connection has no outstanding rpc */
@@ -1274,7 +1255,7 @@ public class RpcServer implements RpcServerInterface {
           processUnwrappedData(plaintextData);
         }
       } else {
-        byte[] replyToken = null;
+        byte[] replyToken;
         try {
           if (saslServer == null) {
             switch (authMethod) {
@@ -1408,121 +1389,148 @@ public class RpcServer implements RpcServerInterface {
       }
     }
 
+    private int readPreamble() throws IOException {
+      int count;
+      // Check for 'HBas' magic.
+      this.dataLengthBuffer.flip();
+      if (!HConstants.RPC_HEADER.equals(dataLengthBuffer)) {
+        return doBadPreambleHandling("Expected HEADER=" +
+            Bytes.toStringBinary(HConstants.RPC_HEADER.array()) +
+            " but received HEADER=" + Bytes.toStringBinary(dataLengthBuffer.array()) +
+            " from " + toString());
+      }
+      // Now read the next two bytes, the version and the auth to use.
+      ByteBuffer versionAndAuthBytes = ByteBuffer.allocate(2);
+      count = channelRead(channel, versionAndAuthBytes);
+      if (count < 0 || versionAndAuthBytes.remaining() > 0) {
+        return count;
+      }
+      int version = versionAndAuthBytes.get(0);
+      byte authbyte = versionAndAuthBytes.get(1);
+      this.authMethod = AuthMethod.valueOf(authbyte);
+      if (version != CURRENT_VERSION) {
+        String msg = getFatalConnectionString(version, authbyte);
+        return doBadPreambleHandling(msg, new WrongVersionException(msg));
+      }
+      if (authMethod == null) {
+        String msg = getFatalConnectionString(version, authbyte);
+        return doBadPreambleHandling(msg, new BadAuthException(msg));
+      }
+      if (isSecurityEnabled && authMethod == AuthMethod.SIMPLE) {
+        AccessControlException ae = new AccessControlException("Authentication is required");
+        setupResponse(authFailedResponse, authFailedCall, ae, ae.getMessage());
+        responder.doRespond(authFailedCall);
+        throw ae;
+      }
+      if (!isSecurityEnabled && authMethod != AuthMethod.SIMPLE) {
+        doRawSaslReply(SaslStatus.SUCCESS, new IntWritable(
+            SaslUtil.SWITCH_TO_SIMPLE_AUTH), null, null);
+        authMethod = AuthMethod.SIMPLE;
+        // client has already sent the initial Sasl message and we
+        // should ignore it. Both client and server should fall back
+        // to simple auth from now on.
+        skipInitialSaslHandshake = true;
+      }
+      if (authMethod != AuthMethod.SIMPLE) {
+        useSasl = true;
+      }
+
+      dataLengthBuffer.clear();
+      connectionPreambleRead = true;
+      return count;
+    }
+
+    private int read4Bytes() throws IOException {
+      if (this.dataLengthBuffer.remaining() > 0) {
+        return channelRead(channel, this.dataLengthBuffer);
+      } else {
+        return 0;
+      }
+    }
+
+
     /**
-     * Read off the wire.
-     * @return Returns -1 if failure (and caller will close connection) else return how many
-     * bytes were read and processed
+     * Read off the wire. If there is not enough data to read, update the connection state with
+     *  what we have and returns.
+     * @return Returns -1 if failure (and caller will close connection), else zero or more.
      * @throws IOException
      * @throws InterruptedException
      */
     public int readAndProcess() throws IOException, InterruptedException {
-      while (true) {
-        // Try and read in an int.  If new connection, the int will hold the 'HBas' HEADER.  If it
-        // does, read in the rest of the connection preamble, the version and the auth method.
-        // Else it will be length of the data to read (or -1 if a ping).  We catch the integer
-        // length into the 4-byte this.dataLengthBuffer.
-        int count;
-        if (this.dataLengthBuffer.remaining() > 0) {
-          count = channelRead(channel, this.dataLengthBuffer);
-          if (count < 0 || this.dataLengthBuffer.remaining() > 0) {
-            return count;
-          }
-        }
-        // If we have not read the connection setup preamble, look to see if that is on the wire.
-        if (!connectionPreambleRead) {
-          // Check for 'HBas' magic.
-          this.dataLengthBuffer.flip();
-          if (!HConstants.RPC_HEADER.equals(dataLengthBuffer)) {
-            return doBadPreambleHandling("Expected HEADER=" +
-              Bytes.toStringBinary(HConstants.RPC_HEADER.array()) +
-              " but received HEADER=" + Bytes.toStringBinary(dataLengthBuffer.array()) +
-              " from " + toString());
-          }
-          // Now read the next two bytes, the version and the auth to use.
-          ByteBuffer versionAndAuthBytes = ByteBuffer.allocate(2);
-          count = channelRead(channel, versionAndAuthBytes);
-          if (count < 0 || versionAndAuthBytes.remaining() > 0) {
-            return count;
-          }
-          int version = versionAndAuthBytes.get(0);
-          byte authbyte = versionAndAuthBytes.get(1);
-          this.authMethod = AuthMethod.valueOf(authbyte);
-          if (version != CURRENT_VERSION) {
-            String msg = getFatalConnectionString(version, authbyte);
-            return doBadPreambleHandling(msg, new WrongVersionException(msg));
-          }
-          if (authMethod == null) {
-            String msg = getFatalConnectionString(version, authbyte);
-            return doBadPreambleHandling(msg, new BadAuthException(msg));
-          }
-          if (isSecurityEnabled && authMethod == AuthMethod.SIMPLE) {
-            AccessControlException ae = new AccessControlException("Authentication is required");
-            setupResponse(authFailedResponse, authFailedCall, ae, ae.getMessage());
-            responder.doRespond(authFailedCall);
-            throw ae;
-          }
-          if (!isSecurityEnabled && authMethod != AuthMethod.SIMPLE) {
-            doRawSaslReply(SaslStatus.SUCCESS, new IntWritable(
-                SaslUtil.SWITCH_TO_SIMPLE_AUTH), null, null);
-            authMethod = AuthMethod.SIMPLE;
-            // client has already sent the initial Sasl message and we
-            // should ignore it. Both client and server should fall back
-            // to simple auth from now on.
-            skipInitialSaslHandshake = true;
-          }
-          if (authMethod != AuthMethod.SIMPLE) {
-            useSasl = true;
-          }
-          connectionPreambleRead = true;
-          // Preamble checks out. Go around again to read actual connection header.
-          dataLengthBuffer.clear();
-          continue;
-        }
-        // We have read a length and we have read the preamble.  It is either the connection header
-        // or it is a request.
-        if (data == null) {
-          dataLengthBuffer.flip();
-          int dataLength = dataLengthBuffer.getInt();
-          if (dataLength == RpcClient.PING_CALL_ID) {
-            if (!useWrap) { //covers the !useSasl too
-              dataLengthBuffer.clear();
-              return 0;  //ping message
-            }
-          }
-          if (dataLength < 0) {
-            throw new IllegalArgumentException("Unexpected data length "
-                + dataLength + "!! from " + getHostAddress());
-          }
-          data = ByteBuffer.allocate(dataLength);
-          incRpcCount();  // Increment the rpc count
-        }
-        count = channelRead(channel, data);
-        if (count < 0) {
-          return count;
-        } else if (data.remaining() == 0) {
-          dataLengthBuffer.clear();
-          data.flip();
-          if (skipInitialSaslHandshake) {
-            data = null;
-            skipInitialSaslHandshake = false;
-            continue;
-          }
-          boolean headerRead = connectionHeaderRead;
-          if (useSasl) {
-            saslReadAndProcess(data.array());
-          } else {
-            processOneRpc(data.array());
-          }
-          this.data = null;
-          if (!headerRead) {
-            continue;
-          }
-        } else if (count > 0) {
-          // We got some data and there is more to read still; go around again.
-          if (LOG.isTraceEnabled()) LOG.trace("Continue to read rest of data " + data.remaining());
-          continue;
-        }
+      // Try and read in an int.  If new connection, the int will hold the 'HBas' HEADER.  If it
+      // does, read in the rest of the connection preamble, the version and the auth method.
+      // Else it will be length of the data to read (or -1 if a ping).  We catch the integer
+      // length into the 4-byte this.dataLengthBuffer.
+      int count = read4Bytes();
+      if (count < 0 || dataLengthBuffer.remaining() > 0 ){
         return count;
+      }
+
+      // If we have not read the connection setup preamble, look to see if that is on the wire.
+      if (!connectionPreambleRead) {
+        count = readPreamble();
+        if (!connectionPreambleRead) {
+          return count;
+        }
+
+        count = read4Bytes();
+        if (count < 0 || dataLengthBuffer.remaining() > 0) {
+          return count;
+        }
+      }
+
+      // We have read a length and we have read the preamble.  It is either the connection header
+      // or it is a request.
+      if (data == null) {
+        dataLengthBuffer.flip();
+        int dataLength = dataLengthBuffer.getInt();
+        if (dataLength == RpcClient.PING_CALL_ID) {
+          if (!useWrap) { //covers the !useSasl too
+            dataLengthBuffer.clear();
+            return 0;  //ping message
+          }
+        }
+        if (dataLength < 0) { // A data length of zero is legal.
+          throw new IllegalArgumentException("Unexpected data length "
+              + dataLength + "!! from " + getHostAddress());
+        }
+        data = ByteBuffer.allocate(dataLength);
+
+        // Increment the rpc count. This counter will be decreased when we write
+        //  the response.  If we want the connection to be detected as idle properly, we
+        //  need to keep the inc / dec correct.
+        incRpcCount();
+      }
+
+      count = channelRead(channel, data);
+
+      if (count >= 0 && data.remaining() == 0) { // count==0 if dataLength == 0
+        process();
+      }
+
+      return count;
+    }
+
+    /**
+     * Process the data buffer and clean the connection state for the next call.
+     */
+    private void process() throws IOException, InterruptedException {
+      data.flip();
+      try {
+        if (skipInitialSaslHandshake) {
+          skipInitialSaslHandshake = false;
+          return;
+        }
+
+        if (useSasl) {
+          saslReadAndProcess(data.array());
+        } else {
+          processOneRpc(data.array());
+        }
+
+      } finally {
+        dataLengthBuffer.clear(); // Clean for the next call
+        data = null; // For the GC
       }
     }
 
@@ -1588,7 +1596,6 @@ public class RpcServer implements RpcServerInterface {
 
     /**
      * Set up cell block codecs
-     * @param header
      * @throws FatalConnectionException
      */
     private void setupCellBlockCodecs(final ConnectionHeader header)
@@ -1616,7 +1623,7 @@ public class RpcServer implements RpcServerInterface {
       ReadableByteChannel ch = Channels.newChannel(new ByteArrayInputStream(inBuf));
       // Read all RPCs contained in the inBuf, even partial ones
       while (true) {
-        int count = -1;
+        int count;
         if (unwrappedDataLengthBuffer.remaining() > 0) {
           count = channelRead(ch, unwrappedDataLengthBuffer);
           if (count <= 0 || unwrappedDataLengthBuffer.remaining() > 0)
@@ -1761,12 +1768,11 @@ public class RpcServer implements RpcServerInterface {
           ProxyUsers.authorize(user, this.getHostAddress(), conf);
         }
         authorize(user, connectionHeader, getHostInetAddress());
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Authorized " + TextFormat.shortDebugString(connectionHeader));
-        }
         metrics.authorizationSuccess();
       } catch (AuthorizationException ae) {
-        LOG.debug("Connection authorization failed: " + ae.getMessage(), ae);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Connection authorization failed: " + ae.getMessage(), ae);
+        }
         metrics.authorizationFailure();
         setupResponse(authFailedResponse, authFailedCall, ae, ae.getMessage());
         responder.doRespond(authFailedCall);
@@ -1845,7 +1851,6 @@ public class RpcServer implements RpcServerInterface {
    * @param name Used keying this rpc servers' metrics and for naming the Listener thread.
    * @param services A list of services.
    * @param isa Where to listen
-   * @param conf
    * @throws IOException
    */
   public RpcServer(final Server server, final String name,
@@ -1861,7 +1866,7 @@ public class RpcServer implements RpcServerInterface {
     this.maxQueueSize =
       this.conf.getInt("ipc.server.max.callqueue.size", DEFAULT_MAX_CALLQUEUE_SIZE);
     this.readThreads = conf.getInt("ipc.server.read.threadpool.size", 10);
-    this.maxIdleTime = 2*conf.getInt("ipc.client.connection.maxidletime", 1000);
+    this.maxIdleTime = 2 * conf.getInt("ipc.client.connection.maxidletime", 1000);
     this.maxConnectionsToNuke = conf.getInt("ipc.client.kill.max", 10);
     this.thresholdIdleConnections = conf.getInt("ipc.client.idlethreshold", 4000);
     this.purgeTimeout = conf.getLong("ipc.client.call.purge.timeout",
@@ -1908,7 +1913,6 @@ public class RpcServer implements RpcServerInterface {
    * @param response buffer to serialize the response into
    * @param call {@link Call} to which we are setting up the response
    * @param error error message, if the call failed
-   * @param t
    * @throws IOException
    */
   private void setupResponse(ByteArrayOutputStream response, Call call, Throwable t, String error)
@@ -2021,13 +2025,9 @@ public class RpcServer implements RpcServerInterface {
       if (tooSlow || tooLarge) {
         // when tagging, we let TooLarge trump TooSmall to keep output simple
         // note that large responses will often also be slow.
-        StringBuilder buffer = new StringBuilder(256);
-        buffer.append(md.getName());
-        buffer.append("(");
-        buffer.append(param.getClass().getName());
-        buffer.append(")");
         logResponse(new Object[]{param},
-            md.getName(), buffer.toString(), (tooLarge ? "TooLarge" : "TooSlow"),
+            md.getName(), md.getName() + "(" + param.getClass().getName() + ")",
+            (tooLarge ? "TooLarge" : "TooSlow"),
             status.getClient(), startTime, processingTime, qTime,
             responseSize);
       }
@@ -2270,7 +2270,7 @@ public class RpcServer implements RpcServerInterface {
    * Needed for features such as delayed calls.  We need to be able to store the current call
    * so that we can complete it later or ask questions of what is supported by the current ongoing
    * call.
-   * @return An RpcCallConext backed by the currently ongoing call (gotten from a thread local)
+   * @return An RpcCallContext backed by the currently ongoing call (gotten from a thread local)
    */
   public static RpcCallContext getCurrentCall() {
     return CurCall.get();
@@ -2329,17 +2329,6 @@ public class RpcServer implements RpcServerInterface {
     return null;
   }
 
-  /** Returns remote address as a string when invoked inside an RPC.
-   *  Returns null in case of an error.
-   *  @return String
-   */
-  public static String getRemoteAddress() {
-    Call call = CurCall.get();
-    if (call != null) {
-      return call.connection.getHostAddress();
-    }
-    return null;
-  }
 
   /**
    * A convenience method to bind to a given address and report
