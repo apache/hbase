@@ -1114,7 +1114,7 @@ public class HLog implements Syncable {
       txid = this.unflushedEntries.incrementAndGet();
     }
     if (info.isMetaRegion()) forceSync();
-    final long start = System.currentTimeMillis();
+    final long start = System.nanoTime();
 
     return Futures.makeChecked(Futures.transform(logSyncFuture,
       new AsyncFunction<Void, Long>() {
@@ -1126,7 +1126,7 @@ public class HLog implements Syncable {
           writeSize.inc(len);
 
           // Update the metrics and log down the outliers
-          long end = System.currentTimeMillis();
+          long end = System.nanoTime();
           long syncTime = end - start;
           gsyncTime.inc(syncTime);
 
