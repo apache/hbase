@@ -112,6 +112,10 @@ import org.htrace.impl.ProbabilitySampler;
  */
 public class PerformanceEvaluation extends Configured implements Tool {
   protected static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
+  private static final ObjectMapper MAPPER = new ObjectMapper();
+  static {
+    MAPPER.configure(SORT_PROPERTIES_ALPHABETICALLY, true);
+  }
 
   public static final String TABLE_NAME = "TestTable";
   public static final byte[] FAMILY_NAME = Bytes.toBytes("info");
@@ -337,7 +341,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         @Override
         public Long call() throws Exception {
           TestOptions threadOpts = new TestOptions(opts);
-          threadOpts.startRow = index * threadOpts.perClientRunRows;
+          if (threadOpts.startRow == 0) threadOpts.startRow = index * threadOpts.perClientRunRows;
           long elapsedTime = runOneClient(cmd, getConf(), threadOpts, new Status() {
             public void setStatus(final String msg) throws IOException {
               LOG.info(msg);
@@ -434,15 +438,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
     Map<Integer, String> m = new TreeMap<Integer, String>();
     Hash h = MurmurHash.getInstance();
     int perClientRows = (opts.totalRows / opts.numClientThreads);
-    ObjectMapper mapper = new ObjectMapper();
-    mapper.configure(SORT_PROPERTIES_ALPHABETICALLY, true);
     try {
       for (int i = 0; i < 10; i++) {
         for (int j = 0; j < opts.numClientThreads; j++) {
           TestOptions next = new TestOptions(opts);
           next.startRow = (j * perClientRows) + (i * (perClientRows/10));
           next.perClientRunRows = perClientRows / 10;
-          String s = mapper.writeValueAsString(next);
+          String s = MAPPER.writeValueAsString(next);
+          LOG.info("maptask input=" + s);
           int hash = h.hash(Bytes.toBytes(s));
           m.put(hash, s);
         }
@@ -488,6 +491,32 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * This makes tracking all these arguments a little easier.
    */
   static class TestOptions {
+    boolean nomapred = false;
+    boolean filterAll = false;
+    int startRow = 0;
+    float size = 1.0f;
+    int perClientRunRows = DEFAULT_ROWS_PER_GB;
+    int numClientThreads = 1;
+    int totalRows = DEFAULT_ROWS_PER_GB;
+    float sampleRate = 1.0f;
+    double traceRate = 0.0;
+    String tableName = TABLE_NAME;
+    boolean flushCommits = true;
+    boolean writeToWAL = true;
+    boolean autoFlush = false;
+    boolean oneCon = false;
+    boolean useTags = false;
+    int noOfTags = 1;
+    boolean reportLatency = false;
+    int multiGet = 0;
+    boolean inMemoryCF = false;
+    int presplitRegions = 0;
+    Compression.Algorithm compression = Compression.Algorithm.NONE;
+    BloomType bloomType = BloomType.ROW;
+    DataBlockEncoding blockEncoding = DataBlockEncoding.NONE;
+    boolean valueRandom = false;
+    int valueSize = DEFAULT_VALUE_LENGTH;
+    int period = (this.perClientRunRows / 10) == 0? perClientRunRows: perClientRunRows / 10;
 
     public TestOptions() {}
 
@@ -520,32 +549,109 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.period = that.period;
     }
 
-    public boolean nomapred = false;
-    public boolean filterAll = false;
-    public int startRow = 0;
-    public float size = 1.0f;
-    public int perClientRunRows = DEFAULT_ROWS_PER_GB;
-    public int numClientThreads = 1;
-    public int totalRows = DEFAULT_ROWS_PER_GB;
-    public float sampleRate = 1.0f;
-    public double traceRate = 0.0;
-    public String tableName = TABLE_NAME;
-    public boolean flushCommits = true;
-    public boolean writeToWAL = true;
-    public boolean autoFlush = false;
-    public boolean oneCon = false;
-    public boolean useTags = false;
-    public int noOfTags = 1;
-    public boolean reportLatency = false;
-    public int multiGet = 0;
-    public boolean inMemoryCF = false;
-    public int presplitRegions = 0;
-    public Compression.Algorithm compression = Compression.Algorithm.NONE;
-    public BloomType bloomType = BloomType.ROW;
-    public DataBlockEncoding blockEncoding = DataBlockEncoding.NONE;
-    public boolean valueRandom = false;
-    public int valueSize = DEFAULT_VALUE_LENGTH;
-    public int period = (this.perClientRunRows / 10) == 0? perClientRunRows: perClientRunRows / 10;
+    public boolean isNomapred() {
+      return nomapred;
+    }
+
+    public boolean isFilterAll() {
+      return filterAll;
+    }
+
+    public int getStartRow() {
+      return startRow;
+    }
+
+    public float getSize() {
+      return size;
+    }
+
+    public int getPerClientRunRows() {
+      return perClientRunRows;
+    }
+
+    public int getNumClientThreads() {
+      return numClientThreads;
+    }
+
+    public int getTotalRows() {
+      return totalRows;
+    }
+
+    public float getSampleRate() {
+      return sampleRate;
+    }
+
+    public double getTraceRate() {
+      return traceRate;
+    }
+
+    public String getTableName() {
+      return tableName;
+    }
+
+    public boolean isFlushCommits() {
+      return flushCommits;
+    }
+
+    public boolean isWriteToWAL() {
+      return writeToWAL;
+    }
+
+    public boolean isAutoFlush() {
+      return autoFlush;
+    }
+
+    public boolean isUseTags() {
+      return useTags;
+    }
+
+    public int getNoOfTags() {
+      return noOfTags;
+    }
+
+    public boolean isReportLatency() {
+      return reportLatency;
+    }
+
+    public int getMultiGet() {
+      return multiGet;
+    }
+
+    public boolean isInMemoryCF() {
+      return inMemoryCF;
+    }
+
+    public int getPresplitRegions() {
+      return presplitRegions;
+    }
+
+    public Compression.Algorithm getCompression() {
+      return compression;
+    }
+
+    public DataBlockEncoding getBlockEncoding() {
+      return blockEncoding;
+    }
+
+    public boolean isValueRandom() {
+      return valueRandom;
+    }
+
+    public int getValueSize() {
+      return valueSize;
+    }
+
+    public int getPeriod() {
+      return period;
+    }
+
+    public BloomType getBloomType() {
+      return bloomType;
+    }
+
+    public boolean isOneCon() {
+      return oneCon;
+    }
   }
 
   /*
@@ -1196,6 +1302,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
   private void runTest(final Class<? extends Test> cmd, TestOptions opts) throws IOException,
       InterruptedException, ClassNotFoundException {
+    // Log the configuration we're going to run with. Uses JSON mapper because lazy. It'll do
+    // the TestOptions introspection for us and dump the output in a readable format.
+    LOG.info(cmd.getSimpleName() + " test run options=" + MAPPER.writeValueAsString(opts));
     HBaseAdmin admin = null;
     try {
       admin = new HBaseAdmin(getConf());
@@ -1256,7 +1365,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" bloomFilter      Bloom filter type, one of " + Arrays.toString(BloomType.values()));
     System.err.println(" valueSize       Pass value size to use: Default: 1024");
     System.err.println(" valueRandom     Set if we should vary value size between 0 and " +
-        "'valueSize': Default: Not set.");
+        "'valueSize'; set on read for stats on size: Default: Not set.");
     System.err.println(" period          Report every 'period' rows: " +
       "Default: opts.perClientRunRows / 10");
     System.err.println();
@@ -1326,6 +1435,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
         final String rows = "--rows=";
         if (cmd.startsWith(rows)) {
           opts.perClientRunRows = Integer.parseInt(cmd.substring(rows.length()));
+          continue;
+        }
+
+        final String startRow = "--startRow=";
+        if (cmd.startsWith(startRow)) {
+          opts.startRow = Integer.parseInt(cmd.substring(startRow.length()));
           continue;
         }
 
