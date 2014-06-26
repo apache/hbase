@@ -68,7 +68,7 @@ public class FailureInjectingThriftHRegionServer extends ThriftHRegionServer {
   }
 
   @Override
-  public Result get(byte[] regionName, Get get) throws ThriftHBaseException {
+  public ListenableFuture<Result> get(byte[] regionName, Get get) {
     switch (failureType) {
       // Region server will throw RegionOverloadedException, wrapped in ThriftHBaseException
       case REGIONOVERLOADEDEXCEPTION:
@@ -77,8 +77,8 @@ public class FailureInjectingThriftHRegionServer extends ThriftHRegionServer {
           return super.get(regionName, get);
         }
         LOG.debug("Exception repeat count: " + repeatCount);
-        throw new ThriftHBaseException(
-            new RegionOverloadedException("GetAsync Test ROE", HConstants.DEFAULT_HBASE_CLIENT_PAUSE));
+        return Futures.immediateFailedFuture(new ThriftHBaseException(
+            new RegionOverloadedException("GetAsync Test ROE", HConstants.DEFAULT_HBASE_CLIENT_PAUSE)));
 
       // Region server will disconnect the client, cause TTransportException on client side
       case STOP:
@@ -101,7 +101,7 @@ public class FailureInjectingThriftHRegionServer extends ThriftHRegionServer {
           return super.get(regionName, get);
         }
         LOG.debug("Exception repeat count: " + repeatCount);
-        throw new ThriftHBaseException(getRetriableExceptions(repeatCount));
+        return Futures.immediateFailedFuture(new ThriftHBaseException(getRetriableExceptions(repeatCount)));
 
       case DONOTRETRYEXCEPTION:
         if (++repeatCount > repeats) {
@@ -109,8 +109,8 @@ public class FailureInjectingThriftHRegionServer extends ThriftHRegionServer {
           return super.get(regionName, get);
         }
         LOG.debug("Exception repeat count: " + repeatCount);
-        throw new ThriftHBaseException(
-            new DoNotRetryIOException("GetAsync Test DoNotRetryIOE"));
+        return Futures.immediateFailedFuture( new ThriftHBaseException(
+            new DoNotRetryIOException("GetAsync Test DoNotRetryIOE")));
 
       default:
         return super.get(regionName, get);

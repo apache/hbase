@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.ipc.ThriftHRegionInterface;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.SizeAwareThriftHRegionServer;
 import org.apache.hadoop.hbase.regionserver.ThriftHRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -439,8 +440,8 @@ public class MiniHBaseCluster {
     return hbaseCluster.getRegionServer(serverNumber);
   }
 
-  public ThriftHRegionInterface.Sync getThriftRegionServer(int serverNumber) {
-    return new ThriftHRegionServer(getRegionServer(serverNumber));
+  public ThriftHRegionInterface.Async getThriftRegionServer(int serverNumber) {
+    return new SizeAwareThriftHRegionServer(getRegionServer(serverNumber));
   }
 
   public List<HRegion> getRegions(byte[] tableName) {

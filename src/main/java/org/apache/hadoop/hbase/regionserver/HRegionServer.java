@@ -638,7 +638,7 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
               HConstants.DEFAULT_REGIONSERVER_SWIFT_PORT);
       Class<? extends ThriftHRegionServer> thriftServerClass =
           (Class<? extends ThriftHRegionServer>)
-              conf.getClass(HConstants.THRIFT_REGION_SERVER_IMPL, ThriftHRegionServer.class);
+              conf.getClass(HConstants.THRIFT_REGION_SERVER_IMPL, SizeAwareThriftHRegionServer.class);
 
       ThriftHRegionServer thriftServer;
       try {

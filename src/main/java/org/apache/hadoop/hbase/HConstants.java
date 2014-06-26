@@ -833,7 +833,7 @@ public final class HConstants {
    * Number of threads for swift server
    */
   public static final String SWIFT_WORKER_THREADS = "hbase.swift.worker.threads";
-  public static final int SWIFT_WORKER_THREADS_DEFAULT = 300;
+  public static final int SWIFT_WORKER_THREADS_DEFAULT = 10;
 
   /**
    * Number of io threads for swift server

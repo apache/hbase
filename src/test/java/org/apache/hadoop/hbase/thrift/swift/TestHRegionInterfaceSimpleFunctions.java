@@ -73,7 +73,7 @@ public class TestHRegionInterfaceSimpleFunctions {
       throws IOException, InterruptedException, ExecutionException, TimeoutException, ThriftHBaseException {
     HTable table = TEST_UTIL.createTable(TABLENAME, FAMILY);
     HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(0);
-    ThriftHRegionInterface.Sync thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
+    ThriftHRegionInterface.Async thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
     TEST_UTIL.loadTable(table, FAMILY);
 
     HServerInfo info = server.getHServerInfo();
@@ -151,7 +151,7 @@ public class TestHRegionInterfaceSimpleFunctions {
     assertEquals(client.getHLogsList(false), server.getHLogsList(false));
 
     // getReginoAssignment
-    List<HRegionInfo> infos = thriftServer.getRegionsAssignment();
+    List<HRegionInfo> infos = thriftServer.getRegionsAssignment().get();
     assertFalse(infos.isEmpty());
   }
 
@@ -161,7 +161,7 @@ public class TestHRegionInterfaceSimpleFunctions {
   @Test
   public void testAtomicMutation() throws Exception {
     HTable table = TEST_UTIL.createTable(TABLENAME, FAMILY);
-    ThriftHRegionInterface.Sync thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
+    ThriftHRegionInterface.Async thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
 
     byte[] row = Bytes.toBytes("test-row");
     byte[] invalidValue = Bytes.toBytes("test-row2");
@@ -169,18 +169,18 @@ public class TestHRegionInterfaceSimpleFunctions {
     byte[] regionName = regionInfo.getRegionName();
     Put put = new Put(row);
     put.add(FAMILY, null, row);
-    assertTrue(thriftServer.checkAndPut(regionName, row, FAMILY, null, null, put));
+    assertTrue(thriftServer.checkAndPut(regionName, row, FAMILY, null, null, put).get());
     assertFalse(thriftServer.checkAndPut(
-        regionInfo.getRegionName(), row, FAMILY, null, invalidValue, put));
+        regionInfo.getRegionName(), row, FAMILY, null, invalidValue, put).get());
     Delete delete = new Delete(row);
     delete.deleteFamily(FAMILY);
-    assertFalse(thriftServer.checkAndDelete(regionName, row, FAMILY, null, invalidValue, delete));
-    assertTrue(thriftServer.checkAndDelete(regionName, row, FAMILY, null, row, delete));
+    assertFalse(thriftServer.checkAndDelete(regionName, row, FAMILY, null, invalidValue, delete).get());
+    assertTrue(thriftServer.checkAndDelete(regionName, row, FAMILY, null, row, delete).get());
 
     put = new Put(row);
     put.add(FAMILY, null, Bytes.toBytes(1L));
-    thriftServer.put(regionName, put);
-    long result = thriftServer.incrementColumnValue(regionName, row, FAMILY, null, 100L, false);
+    thriftServer.put(regionName, put).get();
+    long result = thriftServer.incrementColumnValue(regionName, row, FAMILY, null, 100L, false).get();
     assertEquals(101L, result);
   }
 
@@ -190,13 +190,13 @@ public class TestHRegionInterfaceSimpleFunctions {
   @Test
   public void testQuorumConfigurationChanges() throws Exception {
     HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(0);
-    ThriftHRegionInterface.Sync thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
+    ThriftHRegionInterface.Async thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
 
     int threads = server.getQuorumReadThreadsMax() + 1;
     long timeout = server.getQuorumReadTimeoutMillis() + 1;
 
-    thriftServer.setNumHDFSQuorumReadThreads(threads);
-    thriftServer.setHDFSQuorumReadTimeoutMillis(timeout);
+    thriftServer.setNumHDFSQuorumReadThreads(threads).get();
+    thriftServer.setHDFSQuorumReadTimeoutMillis(timeout).get();
 
     assertEquals(threads, server.getQuorumReadThreadsMax());
     assertEquals(timeout, server.getQuorumReadTimeoutMillis());
@@ -208,7 +208,7 @@ public class TestHRegionInterfaceSimpleFunctions {
   @Test
   public void testCloseRegion() throws Exception {
     HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(0);
-    ThriftHRegionInterface.Sync thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
+    ThriftHRegionInterface.Async thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
 
     HRegion[] region = server.getOnlineRegionsAsArray();
     HRegionInfo regionInfo = region[0].getRegionInfo();
@@ -218,7 +218,7 @@ public class TestHRegionInterfaceSimpleFunctions {
     String regionZNode = zkWrapper.getZNode(
         zkWrapper.getRegionInTransitionZNode(), regionInfo.getEncodedName());
 
-    thriftServer.closeRegion(regionInfo, true);
+    thriftServer.closeRegion(regionInfo, true).get();
 
     byte[] data = zkWrapper.readZNode(regionZNode, new Stat());
     RegionTransitionEventData rsData = new RegionTransitionEventData();
@@ -235,11 +235,11 @@ public class TestHRegionInterfaceSimpleFunctions {
    */
   @Test
   public void testStopRegionServer() throws Exception {
-    ThriftHRegionInterface.Sync thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
-    thriftServer.updateConfiguration();
+    ThriftHRegionInterface.Async thriftServer = TEST_UTIL.getHBaseCluster().getThriftRegionServer(0);
+    thriftServer.updateConfiguration().get();
 
     String why = "test reason";
     thriftServer.stop(why);
-    assertEquals(thriftServer.getStopReason(), why);
+    assertEquals(thriftServer.getStopReason().get(), why);
   }
 }
