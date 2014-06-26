@@ -75,7 +75,7 @@
           <tbody>
             <row>
               <entry>1.0</entry>
-              <entry>yes</entry>
+              <entry><link xlink:href="http://search-hadoop.com/m/DHED4Zlz0R1">Not Supported</link></entry>
               <entry>yes</entry>
               <entry><para>Running with JDK 8 will work but is not well tested.</para></entry>
             </row>
