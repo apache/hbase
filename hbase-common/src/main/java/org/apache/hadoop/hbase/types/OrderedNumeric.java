@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.OrderedBytes;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
-import org.apache.hadoop.hbase.util.SimplePositionedByteRange;
+import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 
 /**
  * An {@link Number} of arbitrary precision and variable-length encoding. The
@@ -47,7 +47,7 @@ public class OrderedNumeric extends OrderedBytesBase<Number> {
   @Override
   public int encodedLength(Number val) {
     // TODO: this could be done better.
-    PositionedByteRange buff = new SimplePositionedByteRange(100);
+    PositionedByteRange buff = new SimplePositionedMutableByteRange(100);
     return encode(buff, val);
   }
 

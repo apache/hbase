@@ -15,24 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hbase.util;
 
-package org.apache.hadoop.hbase.util.bytes;
+/**
+ * Exception thrown when a read only byte range is modified
+ */
+public class ReadOnlyByteRangeException extends UnsupportedOperationException {
+  public ReadOnlyByteRangeException() {
 
-import junit.framework.Assert;
-
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.util.ByteRange;
-import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
-@Category(SmallTests.class)
-public class TestByteRange {
-
-  @Test
-  public void testConstructor() {
-    ByteRange b = new SimpleMutableByteRange(new byte[] { 0, 1, 2 });
-    Assert.assertEquals(3, b.getLength());
   }
 
 }

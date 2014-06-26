@@ -18,37 +18,20 @@
 
 package org.apache.hadoop.hbase.util;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
- * Extends the basic {@link SimpleByteRange} implementation with position
- * support. {@code position} is considered transient, not fundamental to the
- * definition of the range, and does not participate in
- * {@link #compareTo(ByteRange)}, {@link #hashCode()}, or
+ * Extends the basic {@link SimpleMutableByteRange} implementation with position
+ * support and it is a readonly version. {@code position} is considered
+ * transient, not fundamental to the definition of the range, and does not
+ * participate in {@link #compareTo(ByteRange)}, {@link #hashCode()}, or
  * {@link #equals(Object)}. {@code Position} is retained by copy operations.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 @edu.umd.cs.findbugs.annotations.SuppressWarnings("EQ_DOESNT_OVERRIDE_EQUALS")
-public class SimplePositionedByteRange extends SimpleByteRange implements PositionedByteRange {
-
-  /**
-   * The current index into the range. Like {@link ByteBuffer} position, it
-   * points to the next value that will be read/written in the array. It
-   * provides the appearance of being 0-indexed, even though its value is
-   * calculated according to offset.
-   * <p>
-   * Position is considered transient and does not participate in
-   * {@link #equals(Object)} or {@link #hashCode()} comparisons.
-   * </p>
-   */
-  private int position = 0;
+public class SimplePositionedByteRange extends AbstractPositionedByteRange {
 
   /**
    * Create a new {@code PositionedByteRange} lacking a backing array and with
@@ -65,7 +48,7 @@ public class SimplePositionedByteRange extends SimpleByteRange implements Positi
    * @param capacity the size of the backing array.
    */
   public SimplePositionedByteRange(int capacity) {
-    super(capacity);
+    this(new byte[capacity]);
   }
 
   /**
@@ -73,7 +56,7 @@ public class SimplePositionedByteRange extends SimpleByteRange implements Positi
    * @param bytes The array to wrap.
    */
   public SimplePositionedByteRange(byte[] bytes) {
-    super(bytes);
+    set(bytes);
   }
 
   /**
@@ -84,194 +67,68 @@ public class SimplePositionedByteRange extends SimpleByteRange implements Positi
    * @param length The length of this range.
    */
   public SimplePositionedByteRange(byte[] bytes, int offset, int length) {
-    super(bytes, offset, length);
-  }
-
-  @Override
-  public PositionedByteRange unset() {
-    this.position = 0;
-    super.unset();
-    return this;
+    set(bytes, offset, length);
   }
 
   @Override
   public PositionedByteRange set(int capacity) {
-    this.position = 0;
-    super.set(capacity);
-    return this;
+    if (super.bytes != null) {
+      throw new ReadOnlyByteRangeException();
+    }
+    return super.set(capacity);
   }
 
   @Override
   public PositionedByteRange set(byte[] bytes) {
-    this.position = 0;
-    super.set(bytes);
-    return this;
+    if (super.bytes != null) {
+      throw new ReadOnlyByteRangeException();
+    }
+    return super.set(bytes);
   }
 
   @Override
   public PositionedByteRange set(byte[] bytes, int offset, int length) {
-    this.position = 0;
-    super.set(bytes, offset, length);
-    return this;
-  }
-
-  /**
-   * Update the beginning of this range. {@code offset + length} may not be greater than
-   * {@code bytes.length}. Resets {@code position} to 0.
-   * @param offset the new start of this range.
-   * @return this.
-   */
-  @Override
-  public PositionedByteRange setOffset(int offset) {
-    this.position = 0;
-    super.setOffset(offset);
-    return this;
-  }
-
-  /**
-   * Update the length of this range. {@code offset + length} should not be
-   * greater than {@code bytes.length}. If {@code position} is greater than
-   * the new {@code length}, sets {@code position} to {@code length}.
-   * @param length The new length of this range.
-   * @return this.
-   */
-  @Override
-  public PositionedByteRange setLength(int length) {
-    this.position = Math.min(position, length);
-    super.setLength(length);
-    return this;
-  }
-
-  @Override
-  public int getPosition() { return position; }
-
-  @Override
-  public PositionedByteRange setPosition(int position) { this.position = position; return this; }
-
-  @Override
-  public int getRemaining() { return length - position; }
-
-  @Override
-  public byte peek() { return bytes[offset + position]; }
-
-  @Override
-  public byte get() { return get(position++); }
-
-  @Override
-  public short getShort() {
-    short s = getShort(position);
-    position += Bytes.SIZEOF_SHORT;
-    return s;
-  }
-
-  @Override
-  public int getInt() {
-    int i = getInt(position);
-    position += Bytes.SIZEOF_INT;
-    return i;
-  }
-
-  @Override
-  public long getLong() {
-    long l = getLong(position);
-    position += Bytes.SIZEOF_LONG;
-    return l;
-  }
-
-  @Override
-  public long getVLong() {
-    long p = getVLong(position);
-    position += getVLongSize(p);
-    return p;
-  }
-
-  @Override
-  public PositionedByteRange get(byte[] dst) {
-    if (0 == dst.length) return this;
-    return this.get(dst, 0, dst.length); // be clear we're calling self, not super
-  }
-
-  @Override
-  public PositionedByteRange get(byte[] dst, int offset, int length) {
-    if (0 == length) return this;
-    super.get(this.position, dst, offset, length);
-    this.position += length;
-    return this;
+    if (super.bytes != null) {
+      throw new ReadOnlyByteRangeException();
+    }
+    return super.set(bytes, offset, length);
   }
 
   @Override
   public PositionedByteRange put(byte val) {
-    put(position++, val);
-    return this;
+    throw new ReadOnlyByteRangeException();
   }
 
   @Override
   public PositionedByteRange putShort(short val) {
-    putShort(position, val);
-    position += Bytes.SIZEOF_SHORT;
-    return this;
+    throw new ReadOnlyByteRangeException();
   }
 
   @Override
   public PositionedByteRange putInt(int val) {
-    putInt(position, val);
-    position += Bytes.SIZEOF_INT;
-    return this;
+    throw new ReadOnlyByteRangeException();
   }
 
   @Override
   public PositionedByteRange putLong(long val) {
-    putLong(position, val);
-    position += Bytes.SIZEOF_LONG;
-    return this;
+    throw new ReadOnlyByteRangeException();
   }
 
   @Override
   public int putVLong(long val) {
-    int len = putVLong(position, val);
-    position += len;
-    return len;
+    throw new ReadOnlyByteRangeException();
   }
 
   @Override
   public PositionedByteRange put(byte[] val) {
-    if (0 == val.length) return this;
-    return this.put(val, 0, val.length);
+    throw new ReadOnlyByteRangeException();
   }
 
   @Override
   public PositionedByteRange put(byte[] val, int offset, int length) {
-    if (0 == length) return this;
-    super.put(position, val, offset, length);
-    this.position += length;
-    return this;
+    throw new ReadOnlyByteRangeException();
   }
 
-  /**
-   * Similar to {@link ByteBuffer#flip()}. Sets length to position, position
-   * to offset.
-   */
-  @VisibleForTesting
-  PositionedByteRange flip() {
-    clearHashCache();
-    length = position;
-    position = offset;
-    return this;
-  }
-
-  /**
-   * Similar to {@link ByteBuffer#clear()}. Sets position to 0, length to
-   * capacity.
-   */
-  @VisibleForTesting
-  PositionedByteRange clear() {
-    clearHashCache();
-    position = 0;
-    length = bytes.length - offset;
-    return this;
-  }
-
-  // java boilerplate
 
   @Override
   public PositionedByteRange get(int index, byte[] dst) { super.get(index, dst); return this; }
@@ -283,33 +140,38 @@ public class SimplePositionedByteRange extends SimpleByteRange implements Positi
   }
 
   @Override
-  public PositionedByteRange put(int index, byte val) { super.put(index, val); return this; }
+  public PositionedByteRange put(int index, byte val) {
+    throw new ReadOnlyByteRangeException();
+  }
 
   @Override
   public PositionedByteRange putShort(int index, short val) {
-    super.putShort(index, val);
-    return this;
+    throw new ReadOnlyByteRangeException();
   }
 
   @Override
   public PositionedByteRange putInt(int index, int val) {
-    super.putInt(index, val);
-    return this;
+    throw new ReadOnlyByteRangeException();
+  }
+  
+  @Override
+  public int putVLong(int index, long val) {
+    throw new ReadOnlyByteRangeException();
   }
 
   @Override
   public PositionedByteRange putLong(int index, long val) {
-    super.putLong(index, val);
-    return this;
+    throw new ReadOnlyByteRangeException();
   }
 
   @Override
-  public PositionedByteRange put(int index, byte[] val) { super.put(index, val); return this; }
+  public PositionedByteRange put(int index, byte[] val) {
+    throw new ReadOnlyByteRangeException();
+  }
 
   @Override
   public PositionedByteRange put(int index, byte[] val, int offset, int length) {
-    super.put(index, val, offset, length);
-    return this;
+    throw new ReadOnlyByteRangeException();
   }
 
   @Override
@@ -333,4 +195,15 @@ public class SimplePositionedByteRange extends SimpleByteRange implements Positi
     clone.position = this.position;
     return clone;
   }
+
+  @Override
+  public PositionedByteRange setLimit(int limit) {
+    throw new ReadOnlyByteRangeException();
+  }
+  
+  @Override
+  public PositionedByteRange unset() {
+    throw new ReadOnlyByteRangeException();
+  }
+
 }

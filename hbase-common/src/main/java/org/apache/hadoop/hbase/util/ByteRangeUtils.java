@@ -64,7 +64,7 @@ public class ByteRangeUtils {
     }
     ArrayList<ByteRange> ranges = Lists.newArrayListWithCapacity(arrays.size());
     for (byte[] array : arrays) {
-      ranges.add(new SimpleByteRange(array));
+      ranges.add(new SimpleMutableByteRange(array));
     }
     return ranges;
   }

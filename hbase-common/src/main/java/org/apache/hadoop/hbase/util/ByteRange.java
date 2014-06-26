@@ -303,4 +303,5 @@ public interface ByteRange extends Comparable<ByteRange> {
    * @return new {@code ByteRange} object referencing this range's byte[].
    */
   public ByteRange shallowCopySubRange(int innerOffset, int copyLength);
+
 }

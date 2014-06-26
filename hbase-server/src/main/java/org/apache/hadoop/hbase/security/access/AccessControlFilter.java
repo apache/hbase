@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.SimpleByteRange;
+import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 
 /**
  * <strong>NOTE: for internal use only by AccessController implementation</strong>
@@ -82,8 +82,8 @@ class AccessControlFilter extends FilterBase {
     isSystemTable = tableName.isSystemTable();
     this.strategy = strategy;
     this.cfVsMaxVersions = cfVsMaxVersions;
-    this.prevFam = new SimpleByteRange();
-    this.prevQual = new SimpleByteRange();
+    this.prevFam = new SimpleMutableByteRange();
+    this.prevQual = new SimpleMutableByteRange();
   }
 
   @Override

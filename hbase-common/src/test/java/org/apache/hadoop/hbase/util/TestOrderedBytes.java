@@ -125,7 +125,7 @@ public class TestOrderedBytes {
       for (int i = 0; i < vals.length; i++) {
         // allocate a buffer 2-bytes larger than necessary and place our range over the center.
         byte[] a = new byte[lens[i] + 2];
-        PositionedByteRange buf = new SimplePositionedByteRange(a, 1, lens[i]);
+        PositionedByteRange buf = new SimplePositionedMutableByteRange(a, 1, lens[i]);
 
         // verify encode
         assertEquals("Surprising return value.",
@@ -162,7 +162,7 @@ public class TestOrderedBytes {
       for (int i = 0; i < I_VALS.length; i++) {
         // allocate a buffer 3-bytes larger than necessary to detect over/underflow
         byte[] a = new byte[I_LENGTHS[i] + 3];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, I_LENGTHS[i] + 1);
+        PositionedByteRange buf1 = new SimplePositionedMutableByteRange(a, 1, I_LENGTHS[i] + 1);
         buf1.setPosition(1);
 
         // verify encode
@@ -193,7 +193,7 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       byte[][] encoded = new byte[I_VALS.length][];
-      PositionedByteRange pbr = new SimplePositionedByteRange();
+      PositionedByteRange pbr = new SimplePositionedMutableByteRange();
       for (int i = 0; i < I_VALS.length; i++) {
         encoded[i] = new byte[I_LENGTHS[i]];
         OrderedBytes.encodeNumeric(pbr.set(encoded[i]), I_VALS[i], ord);
@@ -229,7 +229,7 @@ public class TestOrderedBytes {
       for (int i = 0; i < D_VALS.length; i++) {
         // allocate a buffer 3-bytes larger than necessary to detect over/underflow
         byte[] a = new byte[D_LENGTHS[i] + 3];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, D_LENGTHS[i] + 1);
+        PositionedByteRange buf1 = new SimplePositionedMutableByteRange(a, 1, D_LENGTHS[i] + 1);
         buf1.setPosition(1);
 
         // verify encode
@@ -260,7 +260,7 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       byte[][] encoded = new byte[D_VALS.length][];
-      PositionedByteRange pbr = new SimplePositionedByteRange();
+      PositionedByteRange pbr = new SimplePositionedMutableByteRange();
       for (int i = 0; i < D_VALS.length; i++) {
         encoded[i] = new byte[D_LENGTHS[i]];
         OrderedBytes.encodeNumeric(pbr.set(encoded[i]), D_VALS[i], ord);
@@ -296,7 +296,7 @@ public class TestOrderedBytes {
       for (int i = 0; i < BD_VALS.length; i++) {
         // allocate a buffer 3-bytes larger than necessary to detect over/underflow
         byte[] a = new byte[BD_LENGTHS[i] + 3];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, BD_LENGTHS[i] + 1);
+        PositionedByteRange buf1 = new SimplePositionedMutableByteRange(a, 1, BD_LENGTHS[i] + 1);
         buf1.setPosition(1);
 
         // verify encode
@@ -335,8 +335,8 @@ public class TestOrderedBytes {
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (int i = 0; i < I_VALS.length; i++) {
         // verify primitives
-        PositionedByteRange pbri = new SimplePositionedByteRange(I_LENGTHS[i]);
-        PositionedByteRange pbrr = new SimplePositionedByteRange(I_LENGTHS[i]);
+        PositionedByteRange pbri = new SimplePositionedMutableByteRange(I_LENGTHS[i]);
+        PositionedByteRange pbrr = new SimplePositionedMutableByteRange(I_LENGTHS[i]);
         OrderedBytes.encodeNumeric(pbri, I_VALS[i], ord);
         OrderedBytes.encodeNumeric(pbrr, I_VALS[i], ord);
         assertArrayEquals("Integer and real encodings differ.", pbri.getBytes(), pbrr.getBytes());
@@ -347,7 +347,7 @@ public class TestOrderedBytes {
 
         // verify BigDecimal for Real encoding
         BigDecimal bd = BigDecimal.valueOf(I_VALS[i]);
-        PositionedByteRange pbrbd = new SimplePositionedByteRange(I_LENGTHS[i]);
+        PositionedByteRange pbrbd = new SimplePositionedMutableByteRange(I_LENGTHS[i]);
         OrderedBytes.encodeNumeric(pbrbd, bd, ord);
         assertArrayEquals("Integer and BigDecimal encodings differ.",
           pbri.getBytes(), pbrbd.getBytes());
@@ -374,7 +374,7 @@ public class TestOrderedBytes {
       for (int i = 0; i < vals.length; i++) {
         // allocate a buffer 3-bytes larger than necessary to detect over/underflow
         byte[] a = new byte[2 + 3];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, 2 + 1);
+        PositionedByteRange buf1 = new SimplePositionedMutableByteRange(a, 1, 2 + 1);
         buf1.setPosition(1);
 
         // verify encode
@@ -405,7 +405,7 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       byte[][] encoded = new byte[vals.length][2];
-      PositionedByteRange pbr = new SimplePositionedByteRange();
+      PositionedByteRange pbr = new SimplePositionedMutableByteRange();
       for (int i = 0; i < vals.length; i++) {
         OrderedBytes.encodeInt8(pbr.set(encoded[i]), vals[i], ord);
       }
@@ -442,7 +442,7 @@ public class TestOrderedBytes {
       for (int i = 0; i < vals.length; i++) {
         // allocate a buffer 3-bytes larger than necessary to detect over/underflow
         byte[] a = new byte[3 + 3];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, 3 + 1);
+        PositionedByteRange buf1 = new SimplePositionedMutableByteRange(a, 1, 3 + 1);
         buf1.setPosition(1);
 
         // verify encode
@@ -473,7 +473,7 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       byte[][] encoded = new byte[vals.length][3];
-      PositionedByteRange pbr = new SimplePositionedByteRange();
+      PositionedByteRange pbr = new SimplePositionedMutableByteRange();
       for (int i = 0; i < vals.length; i++) {
         OrderedBytes.encodeInt16(pbr.set(encoded[i]), vals[i], ord);
       }
@@ -510,7 +510,7 @@ public class TestOrderedBytes {
       for (int i = 0; i < vals.length; i++) {
         // allocate a buffer 3-bytes larger than necessary to detect over/underflow
         byte[] a = new byte[5 + 3];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, 5 + 1);
+        PositionedByteRange buf1 = new SimplePositionedMutableByteRange(a, 1, 5 + 1);
         buf1.setPosition(1);
 
         // verify encode
@@ -541,7 +541,7 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       byte[][] encoded = new byte[vals.length][5];
-      PositionedByteRange pbr = new SimplePositionedByteRange();
+      PositionedByteRange pbr = new SimplePositionedMutableByteRange();
       for (int i = 0; i < vals.length; i++) {
         OrderedBytes.encodeInt32(pbr.set(encoded[i]), vals[i], ord);
       }
@@ -577,7 +577,7 @@ public class TestOrderedBytes {
       for (int i = 0; i < vals.length; i++) {
         // allocate a buffer 3-bytes larger than necessary to detect over/underflow
         byte[] a = new byte[9 + 3];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, 9 + 1);
+        PositionedByteRange buf1 = new SimplePositionedMutableByteRange(a, 1, 9 + 1);
         buf1.setPosition(1);
 
         // verify encode
@@ -608,7 +608,7 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       byte[][] encoded = new byte[vals.length][9];
-      PositionedByteRange pbr = new SimplePositionedByteRange();
+      PositionedByteRange pbr = new SimplePositionedMutableByteRange();
       for (int i = 0; i < vals.length; i++) {
         OrderedBytes.encodeInt64(pbr.set(encoded[i]), vals[i], ord);
       }
@@ -645,7 +645,7 @@ public class TestOrderedBytes {
       for (int i = 0; i < vals.length; i++) {
         // allocate a buffer 3-bytes larger than necessary to detect over/underflow
         byte[] a = new byte[5 + 3];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, 5 + 1);
+        PositionedByteRange buf1 = new SimplePositionedMutableByteRange(a, 1, 5 + 1);
         buf1.setPosition(1);
 
         // verify encode
@@ -677,7 +677,7 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       byte[][] encoded = new byte[vals.length][5];
-      PositionedByteRange pbr = new SimplePositionedByteRange();
+      PositionedByteRange pbr = new SimplePositionedMutableByteRange();
       for (int i = 0; i < vals.length; i++) {
         OrderedBytes.encodeFloat32(pbr.set(encoded[i]), vals[i], ord);
       }
@@ -715,7 +715,7 @@ public class TestOrderedBytes {
       for (int i = 0; i < vals.length; i++) {
         // allocate a buffer 3-bytes larger than necessary to detect over/underflow
         byte[] a = new byte[9 + 3];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, 9 + 1);
+        PositionedByteRange buf1 = new SimplePositionedMutableByteRange(a, 1, 9 + 1);
         buf1.setPosition(1);
 
         // verify encode
@@ -747,7 +747,7 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       byte[][] encoded = new byte[vals.length][9];
-      PositionedByteRange pbr = new SimplePositionedByteRange();
+      PositionedByteRange pbr = new SimplePositionedMutableByteRange();
       for (int i = 0; i < vals.length; i++) {
         OrderedBytes.encodeFloat64(pbr.set(encoded[i]), vals[i], ord);
       }
@@ -785,7 +785,8 @@ public class TestOrderedBytes {
       for (int i = 0; i < vals.length; i++) {
         // allocate a buffer 3-bytes larger than necessary to detect over/underflow
         byte[] a = new byte[expectedLengths[i] + 3];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, expectedLengths[i] + 1);
+        PositionedByteRange buf1 = new SimplePositionedMutableByteRange(a, 1,
+            expectedLengths[i] + 1);
         buf1.setPosition(1);
 
         // verify encode
@@ -815,7 +816,7 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       byte[][] encoded = new byte[vals.length][];
-      PositionedByteRange pbr = new SimplePositionedByteRange();
+      PositionedByteRange pbr = new SimplePositionedMutableByteRange();
       for (int i = 0; i < vals.length; i++) {
         encoded[i] = new byte[expectedLengths[i]];
         OrderedBytes.encodeString(pbr.set(encoded[i]), vals[i], ord);
@@ -840,7 +841,7 @@ public class TestOrderedBytes {
 
   @Test(expected = IllegalArgumentException.class)
   public void testStringNoNullChars() {
-    PositionedByteRange buff = new SimplePositionedByteRange(3);
+    PositionedByteRange buff = new SimplePositionedMutableByteRange(3);
     OrderedBytes.encodeString(buff, "\u0000", Order.ASCENDING);
   }
 
@@ -898,7 +899,7 @@ public class TestOrderedBytes {
         // allocate a buffer 3-bytes larger than necessary to detect over/underflow
         int expectedLen = OrderedBytes.blobVarEncodedLength(val.length);
         byte[] a = new byte[expectedLen + 3];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, expectedLen + 1);
+        PositionedByteRange buf1 = new SimplePositionedMutableByteRange(a, 1, expectedLen + 1);
         buf1.setPosition(1);
 
         // verify encode
@@ -928,7 +929,7 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       byte[][] encoded = new byte[vals.length][];
-      PositionedByteRange pbr = new SimplePositionedByteRange();
+      PositionedByteRange pbr = new SimplePositionedMutableByteRange();
       for (int i = 0; i < vals.length; i++) {
         encoded[i] = new byte[OrderedBytes.blobVarEncodedLength(vals[i].length)];
         OrderedBytes.encodeBlobVar(pbr.set(encoded[i]), vals[i], ord);
@@ -973,7 +974,7 @@ public class TestOrderedBytes {
         // allocate a buffer 3-bytes larger than necessary to detect over/underflow
         int expectedLen = val.length + (Order.ASCENDING == ord ? 1 : 2);
         byte[] a = new byte[expectedLen + 3];
-        PositionedByteRange buf1 = new SimplePositionedByteRange(a, 1, expectedLen + 1);
+        PositionedByteRange buf1 = new SimplePositionedMutableByteRange(a, 1, expectedLen + 1);
         buf1.setPosition(1);
 
         // verify encode
@@ -1003,7 +1004,7 @@ public class TestOrderedBytes {
      */
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       byte[][] encoded = new byte[vals.length][];
-      PositionedByteRange pbr = new SimplePositionedByteRange();
+      PositionedByteRange pbr = new SimplePositionedMutableByteRange();
       for (int i = 0; i < vals.length; i++) {
         encoded[i] = new byte[vals[i].length + (Order.ASCENDING == ord ? 1 : 2)];
         OrderedBytes.encodeBlobCopy(pbr.set(encoded[i]), vals[i], ord);
@@ -1031,7 +1032,7 @@ public class TestOrderedBytes {
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       byte[] a = new byte[3 + (Order.ASCENDING == ord ? 1 : 2) + 2];
       PositionedByteRange buf =
-          new SimplePositionedByteRange(a, 1, 3 + (Order.ASCENDING == ord ? 1 : 2));
+          new SimplePositionedMutableByteRange(a, 1, 3 + (Order.ASCENDING == ord ? 1 : 2));
       OrderedBytes.encodeBlobCopy(buf, "foobarbaz".getBytes(), 3, 3, ord);
       buf.setPosition(0);
       assertArrayEquals("bar".getBytes(), OrderedBytes.decodeBlobCopy(buf));
@@ -1046,7 +1047,7 @@ public class TestOrderedBytes {
     byte[] val = { 0x01, 0x02, 0x00, 0x03 };
     // TODO: implementation detail leaked here.
     byte[] ascExpected = { 0x38, 0x01, 0x02, 0x00, 0x03 };
-    PositionedByteRange buf = new SimplePositionedByteRange(val.length + 1);
+    PositionedByteRange buf = new SimplePositionedMutableByteRange(val.length + 1);
     OrderedBytes.encodeBlobCopy(buf, val, Order.ASCENDING);
     assertArrayEquals(ascExpected, buf.getBytes());
     buf.set(val.length + 2);
@@ -1081,7 +1082,7 @@ public class TestOrderedBytes {
     byte[] blobCopy = Bytes.toBytes("bar");
 
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
-      PositionedByteRange buff = new SimplePositionedByteRange(30);
+      PositionedByteRange buff = new SimplePositionedMutableByteRange(30);
       int o;
       o = OrderedBytes.encodeNull(buff, ord);
       buff.setPosition(0);

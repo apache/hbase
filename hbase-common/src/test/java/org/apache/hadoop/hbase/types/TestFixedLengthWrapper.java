@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
-import org.apache.hadoop.hbase.util.SimplePositionedByteRange;
+import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -46,7 +46,7 @@ public class TestFixedLengthWrapper {
   @Test
   public void testReadWrite() {
     for (int limit : limits) {
-      PositionedByteRange buff = new SimplePositionedByteRange(limit);
+      PositionedByteRange buff = new SimplePositionedMutableByteRange(limit);
       for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
         for (byte[] val : VALUES) {
           buff.setPosition(0);
@@ -65,21 +65,21 @@ public class TestFixedLengthWrapper {
 
   @Test(expected = IllegalArgumentException.class)
   public void testInsufficientRemainingRead() {
-    PositionedByteRange buff = new SimplePositionedByteRange(0);
+    PositionedByteRange buff = new SimplePositionedMutableByteRange(0);
     DataType<byte[]> type = new FixedLengthWrapper<byte[]>(new RawBytes(), 3);
     type.decode(buff);
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void testInsufficientRemainingWrite() {
-    PositionedByteRange buff = new SimplePositionedByteRange(0);
+    PositionedByteRange buff = new SimplePositionedMutableByteRange(0);
     DataType<byte[]> type = new FixedLengthWrapper<byte[]>(new RawBytes(), 3);
     type.encode(buff, Bytes.toBytes(""));
   }
 
   @Test(expected = IllegalArgumentException.class)
   public void testOverflowPassthrough() {
-    PositionedByteRange buff = new SimplePositionedByteRange(3);
+    PositionedByteRange buff = new SimplePositionedMutableByteRange(3);
     DataType<byte[]> type = new FixedLengthWrapper<byte[]>(new RawBytes(), 0);
     type.encode(buff, Bytes.toBytes("foo"));
   }

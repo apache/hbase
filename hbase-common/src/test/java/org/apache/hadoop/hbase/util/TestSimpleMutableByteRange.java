@@ -23,27 +23,27 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestSimpleByteRange {
+public class TestSimpleMutableByteRange {
 
   @Test
   public void testEmpty(){
-    Assert.assertTrue(SimpleByteRange.isEmpty(null));
-    ByteRange r = new SimpleByteRange();
-    Assert.assertTrue(SimpleByteRange.isEmpty(r));
+    Assert.assertTrue(SimpleMutableByteRange.isEmpty(null));
+    ByteRange r = new SimpleMutableByteRange();
+    Assert.assertTrue(SimpleMutableByteRange.isEmpty(r));
     Assert.assertTrue(r.isEmpty());
     r.set(new byte[0]);
     Assert.assertEquals(0, r.getBytes().length);
     Assert.assertEquals(0, r.getOffset());
     Assert.assertEquals(0, r.getLength());
     Assert.assertTrue(Bytes.equals(new byte[0], r.deepCopyToNewArray()));
-    Assert.assertEquals(0, r.compareTo(new SimpleByteRange(new byte[0], 0, 0)));
+    Assert.assertEquals(0, r.compareTo(new SimpleMutableByteRange(new byte[0], 0, 0)));
     Assert.assertEquals(0, r.hashCode());
   }
 
   @Test
   public void testBasics() {
-    ByteRange r = new SimpleByteRange(new byte[] { 1, 3, 2 });
-    Assert.assertFalse(SimpleByteRange.isEmpty(r));
+    ByteRange r = new SimpleMutableByteRange(new byte[] { 1, 3, 2 });
+    Assert.assertFalse(SimpleMutableByteRange.isEmpty(r));
     Assert.assertNotNull(r.getBytes());//should be empty byte[], but could change this behavior
     Assert.assertEquals(3, r.getBytes().length);
     Assert.assertEquals(0, r.getOffset());
@@ -68,10 +68,10 @@ public class TestSimpleByteRange {
     r.setLength(2);//verify we retained the 2nd byte, but dangerous in real code
     Assert.assertTrue(Bytes.equals(new byte[]{1, 3}, r.deepCopyToNewArray()));
   }
-
+  
   @Test
   public void testPutandGetPrimitiveTypes() throws Exception {
-    ByteRange r = new SimpleByteRange(100);
+    ByteRange r = new SimpleMutableByteRange(100);
     int offset = 0;
     int i1 = 18, i2 = 2;
     short s1 = 0;

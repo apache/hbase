@@ -98,7 +98,7 @@ import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.SimpleByteRange;
+import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 import com.google.common.collect.ArrayListMultimap;
@@ -669,13 +669,13 @@ public class AccessController extends BaseRegionObserver
     Map<ByteRange, List<Cell>> familyMap1 = new HashMap<ByteRange, List<Cell>>();
     for (Entry<byte[], ? extends Collection<?>> entry : familyMap.entrySet()) {
       if (entry.getValue() instanceof List) {
-        familyMap1.put(new SimpleByteRange(entry.getKey()), (List<Cell>) entry.getValue());
+        familyMap1.put(new SimpleMutableByteRange(entry.getKey()), (List<Cell>) entry.getValue());
       }
     }
     RegionScanner scanner = getRegion(e).getScanner(new Scan(get));
     List<Cell> cells = Lists.newArrayList();
     Cell prevCell = null;
-    ByteRange curFam = new SimpleByteRange();
+    ByteRange curFam = new SimpleMutableByteRange();
     boolean curColAllVersions = (request == OpType.DELETE);
     long curColCheckTs = opTs;
     boolean foundColumn = false;
@@ -773,7 +773,6 @@ public class AccessController extends BaseRegionObserver
       e.setValue(newCells);
     }
   }
-
   /* ---- MasterObserver implementation ---- */
 
   public void start(CoprocessorEnvironment env) throws IOException {
@@ -1360,7 +1359,7 @@ public class AccessController extends BaseRegionObserver
     TableName table = getTableName(region);
     Map<ByteRange, Integer> cfVsMaxVersions = Maps.newHashMap();
     for (HColumnDescriptor hcd : region.getTableDesc().getFamilies()) {
-      cfVsMaxVersions.put(new SimpleByteRange(hcd.getName()), hcd.getMaxVersions());
+      cfVsMaxVersions.put(new SimpleMutableByteRange(hcd.getName()), hcd.getMaxVersions());
     }
     if (!authResult.isAllowed()) {
       if (!cellFeaturesEnabled || compatibleEarlyTermination) {

@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.ByteRangeUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
-import org.apache.hadoop.hbase.util.SimpleByteRange;
+import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.hbase.util.Strings;
 
 import com.google.common.collect.Lists;
@@ -137,7 +137,7 @@ public class TokenizerNode{
 
   public TokenizerNode(Tokenizer builder, TokenizerNode parent, int nodeDepth,
       int tokenStartOffset, int tokenOffset, int tokenLength) {
-    this.token = new SimpleByteRange();
+    this.token = new SimpleMutableByteRange();
     reconstruct(builder, parent, nodeDepth, tokenStartOffset, tokenOffset, tokenLength);
     this.children = Lists.newArrayList();
   }

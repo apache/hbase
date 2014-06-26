@@ -1104,7 +1104,8 @@ public class OrderedBytes {
       ;
     end++; // increment end to 1-past last byte
     // create ret buffer using length of encoded data + 1 (header byte)
-    PositionedByteRange ret = new SimplePositionedByteRange(blobVarDecodedLength(end - start + 1));
+    PositionedByteRange ret = new SimplePositionedMutableByteRange(blobVarDecodedLength(end - start
+        + 1));
     int s = 6;
     byte t = (byte) ((ord.apply(a[offset + start]) << 1) & 0xff);
     for (int i = start + 1; i < end; i++) {
@@ -1730,7 +1731,7 @@ public class OrderedBytes {
    */
   public static int length(PositionedByteRange buff) {
     PositionedByteRange b =
-        new SimplePositionedByteRange(buff.getBytes(), buff.getOffset(), buff.getLength());
+        new SimplePositionedMutableByteRange(buff.getBytes(), buff.getOffset(), buff.getLength());
     b.setPosition(buff.getPosition());
     int cnt = 0;
     for (; isEncodedValue(b); skip(buff), cnt++)

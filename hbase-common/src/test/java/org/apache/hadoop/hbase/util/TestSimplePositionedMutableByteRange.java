@@ -25,10 +25,10 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestPositionedByteRange {
+public class TestSimplePositionedMutableByteRange {
   @Test
   public void testPosition() {
-    PositionedByteRange r = new SimplePositionedByteRange(new byte[5], 1, 3);
+    PositionedByteRange r = new SimplePositionedMutableByteRange(new byte[5], 1, 3);
 
     // exercise single-byte put
     r.put(Bytes.toBytes("f")[0])
@@ -70,7 +70,7 @@ public class TestPositionedByteRange {
 
   @Test
   public void testPutAndGetPrimitiveTypes() throws Exception {
-    PositionedByteRange pbr = new SimplePositionedByteRange(100);
+    PositionedByteRange pbr = new SimplePositionedMutableByteRange(100);
     int i1 = 18, i2 = 2;
     short s1 = 0;
     long l1 = 1234L;
@@ -97,7 +97,7 @@ public class TestPositionedByteRange {
   @Test
   public void testPutGetAPIsCompareWithBBAPIs() throws Exception {
     // confirm that the long/int/short writing is same as BBs
-    PositionedByteRange pbr = new SimplePositionedByteRange(100);
+    PositionedByteRange pbr = new SimplePositionedMutableByteRange(100);
     int i1 = -234, i2 = 2;
     short s1 = 0;
     long l1 = 1234L;

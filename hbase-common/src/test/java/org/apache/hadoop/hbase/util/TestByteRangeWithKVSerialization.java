@@ -69,12 +69,13 @@ public class TestByteRangeWithKVSerialization {
       kvs.add(kv);
       totalSize += kv.getLength() + Bytes.SIZEOF_LONG;
     }
-    PositionedByteRange pbr = new SimplePositionedByteRange(totalSize);
+    PositionedByteRange pbr = new SimplePositionedMutableByteRange(totalSize);
     for (KeyValue kv : kvs) {
       writeCell(pbr, kv);
     }
 
-    PositionedByteRange pbr1 = new SimplePositionedByteRange(pbr.getBytes(), 0, pbr.getPosition());
+    PositionedByteRange pbr1 = new SimplePositionedMutableByteRange(pbr.getBytes(), 0,
+        pbr.getPosition());
     for (int i = 0; i < kvCount; i++) {
       KeyValue kv = readCell(pbr1);
       KeyValue kv1 = kvs.get(i);

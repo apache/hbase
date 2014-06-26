@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.ByteRange;
-import org.apache.hadoop.hbase.util.SimpleByteRange;
+import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 
 import com.google.common.base.Preconditions;
 
@@ -117,7 +117,7 @@ public class HeapMemStoreLAB implements MemStoreLAB {
       if (allocOffset != -1) {
         // We succeeded - this is the common case - small alloc
         // from a big buffer
-        return new SimpleByteRange(c.data, allocOffset, size);
+        return new SimpleMutableByteRange(c.data, allocOffset, size);
       }
 
       // not enough space!

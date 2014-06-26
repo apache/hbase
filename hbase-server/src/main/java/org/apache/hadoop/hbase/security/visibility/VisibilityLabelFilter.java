@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.SimpleByteRange;
+import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 
 /**
  * This Filter checks the visibility expression with each KV against visibility labels associated
@@ -50,8 +50,8 @@ class VisibilityLabelFilter extends FilterBase {
   public VisibilityLabelFilter(BitSet authLabels, Map<ByteRange, Integer> cfVsMaxVersions) {
     this.authLabels = authLabels;
     this.cfVsMaxVersions = cfVsMaxVersions;
-    this.curFamily = new SimpleByteRange();
-    this.curQualifier = new SimpleByteRange();
+    this.curFamily = new SimpleMutableByteRange();
+    this.curQualifier = new SimpleMutableByteRange();
   }
 
   @Override

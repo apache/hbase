@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
-import org.apache.hadoop.hbase.util.SimplePositionedByteRange;
+import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -58,13 +58,13 @@ public class TestTerminatedWrapper {
   @Test(expected = IllegalArgumentException.class)
   public void testEncodedValueContainsTerm() {
     DataType<byte[]> type = new TerminatedWrapper<byte[]>(new RawBytes(), "foo");
-    PositionedByteRange buff = new SimplePositionedByteRange(16);
+    PositionedByteRange buff = new SimplePositionedMutableByteRange(16);
     type.encode(buff, Bytes.toBytes("hello foobar!"));
   }
 
   @Test
   public void testReadWriteSkippable() {
-    PositionedByteRange buff = new SimplePositionedByteRange(14);
+    PositionedByteRange buff = new SimplePositionedMutableByteRange(14);
     for (OrderedString t : new OrderedString[] {
         OrderedString.ASCENDING, OrderedString.DESCENDING
     }) {
@@ -83,7 +83,7 @@ public class TestTerminatedWrapper {
 
   @Test
   public void testReadWriteNonSkippable() {
-    PositionedByteRange buff = new SimplePositionedByteRange(12);
+    PositionedByteRange buff = new SimplePositionedMutableByteRange(12);
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (byte[] term : TERMINATORS) {
         for (byte[] val : VALUES_BYTES) {
@@ -100,7 +100,7 @@ public class TestTerminatedWrapper {
 
   @Test
   public void testSkipSkippable() {
-    PositionedByteRange buff = new SimplePositionedByteRange(14);
+    PositionedByteRange buff = new SimplePositionedMutableByteRange(14);
     for (OrderedString t : new OrderedString[] {
         OrderedString.ASCENDING, OrderedString.DESCENDING
     }) {
@@ -120,7 +120,7 @@ public class TestTerminatedWrapper {
 
   @Test
   public void testSkipNonSkippable() {
-    PositionedByteRange buff = new SimplePositionedByteRange(12);
+    PositionedByteRange buff = new SimplePositionedMutableByteRange(12);
     for (Order ord : new Order[] { Order.ASCENDING, Order.DESCENDING }) {
       for (byte[] term : TERMINATORS) {
         for (byte[] val : VALUES_BYTES) {
@@ -137,7 +137,7 @@ public class TestTerminatedWrapper {
 
   @Test(expected = IllegalArgumentException.class)
   public void testInvalidSkip() {
-    PositionedByteRange buff = new SimplePositionedByteRange(Bytes.toBytes("foo"));
+    PositionedByteRange buff = new SimplePositionedMutableByteRange(Bytes.toBytes("foo"));
     DataType<byte[]> type = new TerminatedWrapper<byte[]>(new RawBytes(), new byte[] { 0x00 });
     type.skip(buff);
   }

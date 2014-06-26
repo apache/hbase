@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
-import org.apache.hadoop.hbase.util.SimplePositionedByteRange;
+import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -41,7 +41,7 @@ public class TestRawString {
       RawString type =
           Order.ASCENDING == ord ? RawString.ASCENDING : RawString.DESCENDING;
       for (String val : VALUES) {
-        PositionedByteRange buff = new SimplePositionedByteRange(Bytes.toBytes(val).length);
+        PositionedByteRange buff = new SimplePositionedMutableByteRange(Bytes.toBytes(val).length);
         assertEquals(buff.getLength(), type.encode(buff, val));
         byte[] expected = Bytes.toBytes(val);
         ord.apply(expected);

@@ -110,7 +110,7 @@ import org.apache.hadoop.hbase.security.visibility.expression.Operator;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.SimpleByteRange;
+import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 import com.google.common.collect.Lists;
@@ -1016,7 +1016,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       throws IOException {
     Map<ByteRange, Integer> cfVsMaxVersions = new HashMap<ByteRange, Integer>();
     for (HColumnDescriptor hcd : region.getTableDesc().getFamilies()) {
-      cfVsMaxVersions.put(new SimpleByteRange(hcd.getName()), hcd.getMaxVersions());
+      cfVsMaxVersions.put(new SimpleMutableByteRange(hcd.getName()), hcd.getMaxVersions());
     }
     if (authorizations == null) {
       // No Authorizations present for this scan/Get!

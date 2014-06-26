@@ -26,7 +26,7 @@ import java.util.Arrays;
 
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
-import org.apache.hadoop.hbase.util.SimplePositionedByteRange;
+import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -41,7 +41,7 @@ public class TestStructNullExtension {
     Struct s = new StructBuilder()
         .add(new RawStringTerminated("|")) // not nullable
         .toStruct();
-    PositionedByteRange buf = new SimplePositionedByteRange(4);
+    PositionedByteRange buf = new SimplePositionedMutableByteRange(4);
     s.encode(buf, new Object[1]);
   }
 
@@ -61,7 +61,7 @@ public class TestStructNullExtension {
         .add(OrderedNumeric.ASCENDING)
         .toStruct();
 
-    PositionedByteRange buf1 = new SimplePositionedByteRange(7);
+    PositionedByteRange buf1 = new SimplePositionedMutableByteRange(7);
     Object[] val1 = new Object[] { BigDecimal.ONE, "foo" }; // => 2 bytes + 5 bytes
     assertEquals("Encoding shorter value wrote a surprising number of bytes.",
       buf1.getLength(), shorter.encode(buf1, val1));
@@ -93,7 +93,7 @@ public class TestStructNullExtension {
       Arrays.copyOf(val1, 4), longer.decode(buf1));
 
     // test omission of trailing members
-    PositionedByteRange buf2 = new SimplePositionedByteRange(7);
+    PositionedByteRange buf2 = new SimplePositionedMutableByteRange(7);
     buf1.setPosition(0);
     assertEquals(
       "Encoding a short value with extended struct should have same result as using short struct.",

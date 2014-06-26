@@ -23,7 +23,7 @@ import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
-import org.apache.hadoop.hbase.util.SimplePositionedByteRange;
+import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -109,7 +109,7 @@ public class TestUnion2 {
   public void testEncodeDecode() {
     Integer intVal = Integer.valueOf(10);
     String strVal = "hello";
-    PositionedByteRange buff = new SimplePositionedByteRange(10);
+    PositionedByteRange buff = new SimplePositionedMutableByteRange(10);
     SampleUnion1 type = new SampleUnion1();
 
     type.encode(buff, intVal);
@@ -125,7 +125,7 @@ public class TestUnion2 {
   public void testSkip() {
     Integer intVal = Integer.valueOf(10);
     String strVal = "hello";
-    PositionedByteRange buff = new SimplePositionedByteRange(10);
+    PositionedByteRange buff = new SimplePositionedMutableByteRange(10);
     SampleUnion1 type = new SampleUnion1();
 
     int len = type.encode(buff, intVal);

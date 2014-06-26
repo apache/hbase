@@ -22,7 +22,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
-import org.apache.hadoop.hbase.util.SimplePositionedByteRange;
+import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 
 /**
  * Wraps an existing {@code DataType} implementation as a terminated
@@ -134,7 +134,7 @@ public class TerminatedWrapper<T> implements DataType<T> {
       byte[] b = new byte[term - src.getPosition()];
       src.get(b);
       // TODO: should we assert that b.position == b.length?
-      T ret = wrapped.decode(new SimplePositionedByteRange(b));
+      T ret = wrapped.decode(new SimplePositionedMutableByteRange(b));
       src.get(this.term);
       return ret;
     }

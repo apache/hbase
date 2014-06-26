@@ -15,60 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
 /**
- * A basic {@link ByteRange} implementation.
+ *  A read only version of the {@link ByteRange}.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public class SimpleByteRange implements ByteRange {
-
-  private static final int UNSET_HASH_VALUE = -1;
-
-  // Note to maintainers: Do not make these final, as the intention is to
-  // reuse objects of this class
-
-  /**
-   * The array containing the bytes in this range. It will be >= length.
-   */
-  protected byte[] bytes;
-
-  /**
-   * The index of the first byte in this range. {@code ByteRange.get(0)} will
-   * return bytes[offset].
-   */
-  protected int offset;
-
-  /**
-   * The number of bytes in the range.  Offset + length must be <= bytes.length
-   */
-  protected int length;
-
-  /**
-   * Variable for lazy-caching the hashCode of this range. Useful for
-   * frequently used ranges, long-lived ranges, or long ranges.
-   */
-  private int hash = UNSET_HASH_VALUE;
-
-  /**
-   * Create a new {@code ByteRange} lacking a backing array and with an
-   * undefined viewport.
-   */
+public class SimpleByteRange extends AbstractByteRange {
   public SimpleByteRange() {
-    unset();
   }
-
-  /**
-   * Create a new {@code ByteRange} over a new backing array of size
-   * {@code capacity}. The range's offset and length are 0 and {@code capacity},
-   * respectively.
-   * @param capacity the size of the backing array.
-   */
+  
   public SimpleByteRange(int capacity) {
     this(new byte[capacity]);
   }
@@ -97,265 +52,55 @@ public class SimpleByteRange implements ByteRange {
   //
 
   @Override
-  public byte[] getBytes() {
-    return bytes;
-  }
-
-  @Override
   public ByteRange unset() {
-    clearHashCache();
-    this.bytes = null;
-    this.offset = 0;
-    this.length = 0;
-    return this;
+    throw new ReadOnlyByteRangeException();
   }
 
   @Override
   public ByteRange set(int capacity) {
-    return set(new byte[capacity]);
+    if (super.bytes != null) {
+      throw new ReadOnlyByteRangeException();
+    }
+    return super.set(capacity);
   }
 
   @Override
   public ByteRange set(byte[] bytes) {
-    if (null == bytes) return unset();
-    clearHashCache();
-    this.bytes = bytes;
-    this.offset = 0;
-    this.length = bytes.length;
-    return this;
+    if (super.bytes != null) {
+      throw new ReadOnlyByteRangeException();
+    }
+    return super.set(bytes);
   }
 
   @Override
   public ByteRange set(byte[] bytes, int offset, int length) {
-    if (null == bytes) return unset();
-    clearHashCache();
-    this.bytes = bytes;
-    this.offset = offset;
-    this.length = length;
-    return this;
-  }
-
-  @Override
-  public int getOffset() {
-    return offset;
-  }
-
-  @Override
-  public ByteRange setOffset(int offset) {
-    clearHashCache();
-    this.offset = offset;
-    return this;
-  }
-
-  @Override
-  public int getLength() {
-    return length;
-  }
-
-  @Override
-  public ByteRange setLength(int length) {
-    clearHashCache();
-    this.length = length;
-    return this;
-  }
-
-  @Override
-  public boolean isEmpty() {
-    return isEmpty(this);
-  }
-
-  /**
-   * @return true when {@code range} is of zero length, false otherwise.
-   */
-  public static boolean isEmpty(ByteRange range) {
-    return range == null || range.getLength() == 0;
+    if (super.bytes != null) {
+      throw new ReadOnlyByteRangeException();
+    }
+    return super.set(bytes, offset, length);
   }
 
   //
   // methods for retrieving data
   //
-
-  @Override
-  public byte get(int index) {
-    return bytes[offset + index];
-  }
-
-  @Override
-  public short getShort(int index) {
-    int offset = this.offset + index;
-    short n = 0;
-    n ^= bytes[offset] & 0xFF;
-    n <<= 8;
-    n ^= bytes[offset + 1] & 0xFF;
-    return n;
-  }
-
-  @Override
-  public int getInt(int index) {
-    int offset = this.offset + index;
-    int n = 0;
-    for (int i = offset; i < (offset + Bytes.SIZEOF_INT); i++) {
-      n <<= 8;
-      n ^= bytes[i] & 0xFF;
-    }
-    return n;
-  }
-
-  @Override
-  public long getLong(int index) {
-    int offset = this.offset + index;
-    long l = 0;
-    for (int i = offset; i < offset + Bytes.SIZEOF_LONG; i++) {
-      l <<= 8;
-      l ^= bytes[i] & 0xFF;
-    }
-    return l;
-  }
-
-  // Copied from com.google.protobuf.CodedInputStream
-  @Override
-  public long getVLong(int index) {
-    int shift = 0;
-    long result = 0;
-    while (shift < 64) {
-      final byte b = get(index++);
-      result |= (long) (b & 0x7F) << shift;
-      if ((b & 0x80) == 0) {
-        break;
-      }
-      shift += 7;
-    }
-    return result;
-  }
-
-  public static int getVLongSize(long val) {
-    int rPos = 0;
-    while ((val & ~0x7F) != 0) {
-      val >>>= 7;
-      rPos++;
-    }
-    return rPos + 1;
-  }
-
-  @Override
-  public ByteRange get(int index, byte[] dst) {
-    if (0 == dst.length) return this;
-    return get(index, dst, 0, dst.length);
-  }
-
-  @Override
-  public ByteRange get(int index, byte[] dst, int offset, int length) {
-    if (0 == length) return this;
-    System.arraycopy(this.bytes, this.offset + index, dst, offset, length);
-    return this;
-  }
-
   @Override
   public ByteRange put(int index, byte val) {
-    bytes[offset + index] = val;
-    clearHashCache();
-    return this;
-  }
-
-  @Override
-  public ByteRange putShort(int index, short val) {
-    // This writing is same as BB's putShort. When byte[] is wrapped in a BB and call putShort(),
-    // one can get the same result.
-    bytes[offset + index + 1] = (byte) val;
-    val >>= 8;
-    bytes[offset + index] = (byte) val;
-    clearHashCache();
-    return this;
-  }
-
-  @Override
-  public ByteRange putInt(int index, int val) {
-    // This writing is same as BB's putInt. When byte[] is wrapped in a BB and call getInt(), one
-    // can get the same result.
-    for (int i = Bytes.SIZEOF_INT - 1; i > 0; i--) {
-      bytes[offset + index + i] = (byte) val;
-      val >>>= 8;
-    }
-    bytes[offset + index] = (byte) val;
-    clearHashCache();
-    return this;
-  }
-
-  @Override
-  public ByteRange putLong(int index, long val) {
-    // This writing is same as BB's putLong. When byte[] is wrapped in a BB and call putLong(), one
-    // can get the same result.
-    for (int i = Bytes.SIZEOF_LONG - 1; i > 0; i--) {
-      bytes[offset + index + i] = (byte) val;
-      val >>>= 8;
-    }
-    bytes[offset + index] = (byte) val;
-    clearHashCache();
-    return this;
-  }
-
-  // Copied from com.google.protobuf.CodedOutputStream
-  @Override
-  public int putVLong(int index, long val) {
-    int rPos = 0;
-    while (true) {
-      if ((val & ~0x7F) == 0) {
-        bytes[offset + index + rPos] = (byte) val;
-        break;
-      } else {
-        bytes[offset + index + rPos] = (byte) ((val & 0x7F) | 0x80);
-        val >>>= 7;
-      }
-      rPos++;
-    }
-    clearHashCache();
-    return rPos + 1;
+    throw new ReadOnlyByteRangeException();
   }
 
   @Override
   public ByteRange put(int index, byte[] val) {
-    if (0 == val.length) return this;
-    return put(index, val, 0, val.length);
+    throw new ReadOnlyByteRangeException();
   }
 
   @Override
   public ByteRange put(int index, byte[] val, int offset, int length) {
-    if (0 == length) return this;
-    System.arraycopy(val, offset, this.bytes, this.offset + index, length);
-    clearHashCache();
-    return this;
+    throw new ReadOnlyByteRangeException();
   }
 
   //
   // methods for duplicating the current instance
   //
-
-  @Override
-  public byte[] deepCopyToNewArray() {
-    byte[] result = new byte[length];
-    System.arraycopy(bytes, offset, result, 0, length);
-    return result;
-  }
-
-  @Override
-  public ByteRange deepCopy() {
-    SimpleByteRange clone = new SimpleByteRange(deepCopyToNewArray());
-    if (isHashCached()) {
-      clone.hash = hash;
-    }
-    return clone;
-  }
-
-  @Override
-  public void deepCopyTo(byte[] destination, int destinationOffset) {
-    System.arraycopy(bytes, offset, destination, destinationOffset, length);
-  }
-
-  @Override
-  public void deepCopySubRangeTo(int innerOffset, int copyLength, byte[] destination,
-      int destinationOffset) {
-    System.arraycopy(bytes, offset + innerOffset, destination, destinationOffset, copyLength);
-  }
 
   @Override
   public ByteRange shallowCopy() {
@@ -365,20 +110,17 @@ public class SimpleByteRange implements ByteRange {
     }
     return clone;
   }
-
+  
   @Override
   public ByteRange shallowCopySubRange(int innerOffset, int copyLength) {
-    SimpleByteRange clone = new SimpleByteRange(bytes, offset + innerOffset, copyLength);
+    SimpleByteRange clone = new SimpleByteRange(bytes, offset + innerOffset,
+        copyLength);
     if (isHashCached()) {
       clone.hash = hash;
     }
     return clone;
   }
-
-  //
-  // methods used for comparison
-  //
-
+  
   @Override
   public boolean equals(Object thatObject) {
     if (thatObject == null){
@@ -398,42 +140,31 @@ public class SimpleByteRange implements ByteRange {
   }
 
   @Override
-  public int hashCode() {
-    if (isHashCached()) {// hash is already calculated and cached
-      return hash;
+  public ByteRange deepCopy() {
+    SimpleByteRange clone = new SimpleByteRange(deepCopyToNewArray());
+    if (isHashCached()) {
+      clone.hash = hash;
     }
-    if (this.isEmpty()) {// return 0 for empty ByteRange
-      hash = 0;
-      return hash;
-    }
-    int off = offset;
-    hash = 0;
-    for (int i = 0; i < length; i++) {
-      hash = 31 * hash + bytes[off++];
-    }
-    return hash;
-  }
-
-  private boolean isHashCached() {
-    return hash != UNSET_HASH_VALUE;
-  }
-
-  protected void clearHashCache() {
-    hash = UNSET_HASH_VALUE;
-  }
-
-  /**
-   * Bitwise comparison of each byte in the array.  Unsigned comparison, not
-   * paying attention to java's signed bytes.
-   */
-  @Override
-  public int compareTo(ByteRange other) {
-    return Bytes.compareTo(bytes, offset, length, other.getBytes(), other.getOffset(),
-      other.getLength());
+    return clone;
   }
 
   @Override
-  public String toString() {
-    return Bytes.toStringBinary(bytes, offset, length);
+  public ByteRange putInt(int index, int val) {
+    throw new ReadOnlyByteRangeException();
+  }
+
+  @Override
+  public ByteRange putLong(int index, long val) {
+    throw new ReadOnlyByteRangeException();
+  }
+
+  @Override
+  public ByteRange putShort(int index, short val) {
+    throw new ReadOnlyByteRangeException();
+  }
+
+  @Override
+  public int putVLong(int index, long val) {
+    throw new ReadOnlyByteRangeException();
   }
 }

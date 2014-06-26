@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
-import org.apache.hadoop.hbase.util.SimplePositionedByteRange;
+import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -350,8 +350,10 @@ public class TestStruct {
     Constructor<?> ctor = specialized.encodedClass().getConstructor(Object[].class);
     for (int i = 0; i < vals.length; i++) {
       vals[i] = ctor.newInstance(new Object[] { constructorArgs[i] });
-      encodedGeneric[i] = new SimplePositionedByteRange(generic.encodedLength(constructorArgs[i]));
-      encodedSpecialized[i] = new SimplePositionedByteRange(specialized.encodedLength(vals[i]));
+      encodedGeneric[i] = new SimplePositionedMutableByteRange(
+          generic.encodedLength(constructorArgs[i]));
+      encodedSpecialized[i] = new SimplePositionedMutableByteRange(
+          specialized.encodedLength(vals[i]));
     }
 
     // populate our arrays

@@ -21,7 +21,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
-import org.apache.hadoop.hbase.util.SimplePositionedByteRange;
+import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -34,7 +34,7 @@ public class TestOrderedString {
 
   @Test
   public void testEncodedLength() {
-    PositionedByteRange buff = new SimplePositionedByteRange(20);
+    PositionedByteRange buff = new SimplePositionedMutableByteRange(20);
     for (DataType<String> type : new OrderedString[] { OrderedString.ASCENDING, OrderedString.DESCENDING }) {
       for (String val : VALUES) {
         buff.setPosition(0);

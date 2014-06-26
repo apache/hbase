@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeTestConstants;
 import org.apache.hadoop.hbase.codec.prefixtree.row.BaseTestRowData;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.SimpleByteRange;
+import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.hbase.util.byterange.impl.ByteRangeTreeSet;
 import org.junit.Assert;
 
@@ -62,7 +62,7 @@ public class TestRowDataExerciseFInts extends BaseTestRowData{
         rowStrings.add("com.isabellasBlog/directoryBb/pageHhh");
         ByteRangeTreeSet ba = new ByteRangeTreeSet();
         for(String row : rowStrings){
-        	ba.add(new SimpleByteRange(Bytes.toBytes(row)));
+        	ba.add(new SimpleMutableByteRange(Bytes.toBytes(row)));
         }
         rows = ba.compile().getSortedRanges();
 	}

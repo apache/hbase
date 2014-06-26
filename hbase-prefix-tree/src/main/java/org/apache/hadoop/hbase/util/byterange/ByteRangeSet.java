@@ -26,7 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ArrayUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.SimpleByteRange;
+import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 
 import com.google.common.collect.Lists;
 
@@ -106,7 +106,7 @@ public abstract class ByteRangeSet {
   protected int store(ByteRange bytes) {
     int indexOfNewElement = numUniqueRanges;
     if (uniqueRanges.size() <= numUniqueRanges) {
-      uniqueRanges.add(new SimpleByteRange());
+      uniqueRanges.add(new SimpleMutableByteRange());
     }
     ByteRange storedRange = uniqueRanges.get(numUniqueRanges);
     int neededBytes = numBytes + bytes.getLength();

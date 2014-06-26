@@ -21,7 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
-import org.apache.hadoop.hbase.util.SimplePositionedByteRange;
+import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
 
 /**
  * Wraps an existing {@link DataType} implementation as a fixed-length
@@ -83,7 +83,7 @@ public class FixedLengthWrapper<T> implements DataType<T> {
           + src.getPosition() + " max length: " + length);
     }
     // create a copy range limited to length bytes. boo.
-    PositionedByteRange b = new SimplePositionedByteRange(length);
+    PositionedByteRange b = new SimplePositionedMutableByteRange(length);
     src.get(b.getBytes());
     return base.decode(b);
   }

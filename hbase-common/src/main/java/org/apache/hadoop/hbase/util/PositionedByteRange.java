@@ -164,6 +164,22 @@ public interface PositionedByteRange extends ByteRange {
    */
   public PositionedByteRange put(byte[] val, int offset, int length);
 
+  /**
+   * Limits the byte range upto a specified value. Limit cannot be greater than
+   * capacity
+   *
+   * @param limit
+   * @return PositionedByteRange
+   */
+  public PositionedByteRange setLimit(int limit);
+
+  /**
+   * Return the current limit
+   *
+   * @return limit
+   */
+  public int getLimit();
+
   // override parent interface declarations to return this interface.
 
   @Override

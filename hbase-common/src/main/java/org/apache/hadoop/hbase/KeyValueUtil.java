@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IterableUtils;
-import org.apache.hadoop.hbase.util.SimpleByteRange;
+import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.io.WritableUtils;
 
 import com.google.common.base.Function;
@@ -197,8 +197,8 @@ public class KeyValueUtil {
    * Increment the row bytes and clear the other fields
    */
   public static KeyValue createFirstKeyInIncrementedRow(final Cell in){
-    byte[] thisRow = new SimpleByteRange(in.getRowArray(), in.getRowOffset(), in.getRowLength())
-        .deepCopyToNewArray();
+    byte[] thisRow = new SimpleMutableByteRange(in.getRowArray(), in.getRowOffset(),
+        in.getRowLength()).deepCopyToNewArray();
     byte[] nextRow = Bytes.unsignedCopyAndIncrement(thisRow);
     return createFirstOnRow(nextRow);
   }
