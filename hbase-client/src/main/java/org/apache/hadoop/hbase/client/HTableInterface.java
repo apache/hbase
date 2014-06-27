@@ -108,25 +108,26 @@ public interface HTableInterface extends Closeable {
   Boolean[] exists(List<Get> gets) throws IOException;
 
   /**
-   * Method that does a batch call on Deletes, Gets, Puts, Increments, Appends and RowMutations.
+   * Method that does a batch call on Deletes, Gets, Puts, Increments and Appends.
    * The ordering of execution of the actions is not defined. Meaning if you do a Put and a
    * Get in the same {@link #batch} call, you will not necessarily be
    * guaranteed that the Get returns what the Put had put.
    *
-   * @param actions list of Get, Put, Delete, Increment, Append, RowMutations objects
+   * @param actions list of Get, Put, Delete, Increment, Append objects
    * @param results Empty Object[], same size as actions. Provides access to partial
    *                results, in case an exception is thrown. A null in the result array means that
    *                the call for that action failed, even after retries
    * @throws IOException
    * @since 0.90.0
    */
-  void batch(final List<?extends Row> actions, final Object[] results) throws IOException, InterruptedException;
+  void batch(final List<? extends Row> actions, final Object[] results) throws IOException,
+      InterruptedException;
 
   /**
    * Same as {@link #batch(List, Object[])}, but returns an array of
    * results instead of using a results parameter reference.
    *
-   * @param actions list of Get, Put, Delete, Increment, Append, RowMutations objects
+   * @param actions list of Get, Put, Delete, Increment, Append objects
    * @return the results from the actions. A null in the return array means that
    *         the call for that action failed, even after retries
    * @throws IOException
