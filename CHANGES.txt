@@ -1,4 +1,24 @@
 HBase Change Log
+Release 0.94.21 - 06/27/2014
+Bug
+
+    [HBASE-10692] - The Multi TableMap job don't support the security HBase cluster
+    [HBASE-11052] - Sending random data crashes thrift service
+    [HBASE-11096] - stop method of Master and RegionServer coprocessor is not invoked
+    [HBASE-11234] - FastDiffDeltaEncoder#getFirstKeyInBlock returns wrong result
+    [HBASE-11341] - ZKProcedureCoordinatorRpcs should respond only to members
+    [HBASE-11414] - Backport to 0.94: HBASE-7711 rowlock release problem with thread interruptions in batchMutate
+
+Improvement
+
+    [HBASE-8495] - Change ownership of the directory to bulk load
+    [HBASE-10871] - Indefinite OPEN/CLOSE wait on busy RegionServers
+
+New Feature
+
+    [HBASE-10935] - support snapshot policy where flush memstore can be skipped to prevent production cluster freeze
+
+
 Release 0.94.20 - 05/23/2014
 Sub-task
 
