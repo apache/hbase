@@ -1109,7 +1109,8 @@ public final class ProtobufUtil {
             kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
         valueBuilder.setTimestamp(kv.getTimestamp());
         if(cell.getTagsLength() > 0) {
-          valueBuilder.setTags(ByteString.copyFrom(CellUtil.getTagArray(kv)));
+          valueBuilder.setTags(HBaseZeroCopyByteString.wrap(kv.getTagsArray(), kv.getTagsOffset(),
+              kv.getTagsLength()));
         }
         if (type == MutationType.DELETE) {
           KeyValue.Type keyValueType = KeyValue.Type.codeToType(kv.getType());
