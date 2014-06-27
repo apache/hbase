@@ -52,7 +52,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -541,8 +540,7 @@ public class TestHLogSplit {
    * safely commence on the master.
    * */
   @Test
-  public void testLogRollAfterSplitStart() throws IOException,
-      InterruptedException, ExecutionException {
+  public void testLogRollAfterSplitStart() throws IOException {
     // set flush interval to a large number so it doesn't interrupt us
     final String F_INTERVAL = "hbase.regionserver.optionallogflushinterval";
     long oldFlushInterval = conf.getLong(F_INTERVAL, 1000);
@@ -563,7 +561,7 @@ public class TestHLogSplit {
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(Bytes.toBytes(i), tableName, tableName));
-        log.append(regioninfo, tableName, kvs, System.currentTimeMillis()).get();
+        log.append(regioninfo, tableName, kvs, System.currentTimeMillis());
       }
       // Send the data to HDFS datanodes and close the HDFS writer
       log.sync(true);

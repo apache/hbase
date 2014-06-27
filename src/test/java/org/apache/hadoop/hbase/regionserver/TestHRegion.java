@@ -372,7 +372,7 @@ public class TestHRegion extends HBaseTestCase {
       puts[i].add(cf, qual, val);
     }
 
-    OperationStatusCode[] codes = this.region.put(puts).get();
+    OperationStatusCode[] codes = this.region.put(puts);
     assertEquals(10, codes.length);
     for (int i = 0; i < 10; i++) {
       assertEquals(OperationStatusCode.SUCCESS, codes[i]);
@@ -382,7 +382,7 @@ public class TestHRegion extends HBaseTestCase {
     LOG.info("Next a batch put with one invalid family");
     puts[5].add(Bytes.toBytes("BAD_CF"), qual, val);
     try {
-      codes = this.region.put(puts).get();
+      codes = this.region.put(puts);
 
       // put should throw an exception
       assertTrue(false);
@@ -403,7 +403,7 @@ public class TestHRegion extends HBaseTestCase {
     TestThread putter = new TestThread(ctx) {
       @Override
       public void doWork() throws IOException {
-        retFromThread.set(region.put(puts).checkedGet());
+        retFromThread.set(region.put(puts));
       }
     };
     LOG.info("...starting put thread while holding lock");
@@ -439,8 +439,7 @@ public class TestHRegion extends HBaseTestCase {
       putsAndLocks.add(pair);
     }
 
-    codes = region.batchMutateWithLocks(putsAndLocks.toArray(
-        new Pair[0]), "multiput_").get();
+    codes = region.batchMutateWithLocks(putsAndLocks.toArray(new Pair[0]), "multiput_");
     LOG.info("...performed put");
     for (int i = 0; i < 10; i++) {
       assertEquals(OperationStatusCode.SUCCESS, codes[i]);

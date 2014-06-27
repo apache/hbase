@@ -56,8 +56,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import javax.annotation.Nullable;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -108,14 +106,9 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.AsyncFunction;
-import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * HRegion stores data for a certain region of a table.  It stores all columns
@@ -1981,7 +1974,7 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
         WALEdit walEdit = new WALEdit();
         addFamilyMapToWALEdit(familyMap, walEdit);
         seqNum = this.log.append(regionInfo,
-            regionInfo.getTableDesc().getName(), walEdit, now).checkedGet();
+                regionInfo.getTableDesc().getName(), walEdit, now);
       }
 
       // Now make changes to the memstore.
@@ -2062,7 +2055,7 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
 
       try {
         // All edits for the given row (across all column families) must happen atomically.
-        put(put.getFamilyMap(), writeToWAL).checkedGet();
+        put(put.getFamilyMap(), writeToWAL);
       } finally {
         if (lockid == null) releaseRowLock(lid);
       }
@@ -2097,28 +2090,14 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
    * Perform a batch put with no pre-specified locks
    * @see HRegion#put(Pair[])
    */
-  public CheckedFuture<OperationStatusCode[], IOException> put(Put[] puts) throws IOException {
+  public OperationStatusCode[] put(Put[] puts) throws IOException {
     @SuppressWarnings("unchecked")
     Pair<Mutation, Integer> putsAndLocks[] = new Pair[puts.length];
 
     for (int i = 0; i < puts.length; i++) {
       putsAndLocks[i] = new Pair<Mutation, Integer>(puts[i], null);
     }
-    return Futures.makeChecked(batchMutateWithLocks(putsAndLocks, "multiput_"),
-        getExceptionMapperFunction());
-  }
-
-  public Function<Exception, IOException> getExceptionMapperFunction() {
-    return new Function<Exception, IOException>() {
-      @Override
-      @Nullable
-      public IOException apply(@Nullable Exception e) {
-        if (e instanceof ExecutionException) {
-          return new IOException(e.getCause());
-        }
-        return new IOException(e);
-      }
-    };
+    return batchMutateWithLocks(putsAndLocks, "multiput_");
   }
 
   /**
@@ -2127,54 +2106,32 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
    * @param methodName "multiput_/multidelete_" to update metrics correctly.
    * @throws IOException
    */
-  public ListenableFuture<OperationStatusCode[]> batchMutateWithLocks(
-      Pair<Mutation, Integer>[] putsAndLocks, String methodName)
-          throws IOException {
+  public OperationStatusCode[] batchMutateWithLocks(Pair<Mutation, Integer>[] putsAndLocks,
+      String methodName) throws IOException {
     BatchOperationInProgress<Pair<Mutation, Integer>> batchOp =
       new BatchOperationInProgress<Pair<Mutation,Integer>>(putsAndLocks);
-    return batchMutateWithLazyRetry(batchOp, methodName);
-  }
 
-  public ListenableFuture<OperationStatusCode[]> batchMutateWithLazyRetry(
-      final BatchOperationInProgress<Pair<Mutation, Integer>> batchOp,
-      final String methodName) throws IOException {
-
-    if (!batchOp.isDone()) {
+    while (!batchOp.isDone()) {
       checkReadOnly();
       checkResources();
 
+      long newSize;
       splitsAndClosesLock.readLock().lock();
       try {
         doPreMutationHook(batchOp);
-        return Futures.transform(doMiniBatchOp(batchOp, methodName),
-            new AsyncFunction<Long, OperationStatusCode[]>() {
-          @Override
-          public ListenableFuture<OperationStatusCode[]> apply(Long addedSize)
-              throws Exception {
-            splitsAndClosesLock.readLock().lock();
-            try {
-              long newSize = incMemoryUsage(addedSize);
-              if (isFlushSize(newSize)) {
-                requestFlush();
-              }
-            } finally {
-              splitsAndClosesLock.readLock().unlock();
-            }
-            if (batchOp.isDone()) {
-              HRegion.writeOps.incrementAndGet();
-              return Futures.immediateFuture(batchOp.retCodes);
-            }
-            return batchMutateWithLazyRetry(batchOp, methodName);
-          }
-        });
-      } catch (Exception e) {
-        return Futures.immediateFuture(batchOp.retCodes);
+        long addedSize = doMiniBatchOp(batchOp, methodName);
+        newSize = this.incMemoryUsage(addedSize);
       } finally {
         splitsAndClosesLock.readLock().unlock();
       }
+      if (isFlushSize(newSize)) {
+        requestFlush();
+      }
     }
-    return Futures.immediateFuture(batchOp.retCodes);
+    HRegion.writeOps.incrementAndGet();
+    return batchOp.retCodes;
   }
+
 
   /**
    * Execute coprocessor hooks for mutations
@@ -2208,26 +2165,23 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
     }
   }
 
-  private ListenableFuture<Long> doMiniBatchOp(
-      final BatchOperationInProgress <Pair<Mutation, Integer>> batchOp,
-      final String methodNameForMetricsUpdate)
-          throws IOException {
-    boolean preWallEditSuccessfull = false;
+  private long doMiniBatchOp(BatchOperationInProgress<Pair<Mutation, Integer>> batchOp,
+      String methodNameForMetricsUpdate) throws IOException {
     String signature = null;
     // variable to note if all Put items are for the same CF -- metrics related
     boolean isSignatureClear = true;
 
-    final long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTimeMillis();
 
     byte[] byteNow = Bytes.toBytes(now);
     boolean locked = false;
 
     /** Keep track of the locks we hold so we can release them in finally clause */
-    final List<Integer> acquiredLocks =
-        Lists.newArrayListWithCapacity(batchOp.operations.length);
+    List<Integer> acquiredLocks = Lists.newArrayListWithCapacity(batchOp.operations.length);
     // We try to set up a batch in the range [firstIndex,lastIndexExclusive)
-    final int firstIndex = batchOp.nextIndexToProcess;
+    int firstIndex = batchOp.nextIndexToProcess;
     int lastIndexExclusive = firstIndex;
+    boolean success = false;
     try {
       // ------------------------------------
       // STEP 1. Try to acquire as many locks as we can, and ensure
@@ -2239,8 +2193,7 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
       Integer currentLockID = null;
 
       while (lastIndexExclusive < batchOp.operations.length) {
-        Pair<Mutation, Integer> nextPair =
-            batchOp.operations[lastIndexExclusive];
+        Pair<Mutation, Integer> nextPair = batchOp.operations[lastIndexExclusive];
         Mutation op = nextPair.getFirst();
         Integer providedLockId = nextPair.getSecond();
 
@@ -2291,9 +2244,6 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
           }
         }
       }
-
-      final int finalLastIndexExclusive = lastIndexExclusive;
-
       // We've now grabbed as many puts off the list as we can
       assert numReadyToWrite > 0;
 
@@ -2303,7 +2253,7 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
       // ------------------------------------
       // STEP 2. Update any LATEST_TIMESTAMP timestamps
       // ----------------------------------
-      for (int i = firstIndex; i < finalLastIndexExclusive; i++) {
+      for (int i = firstIndex; i < lastIndexExclusive; i++) {
         Mutation op = batchOp.operations[i].getFirst();
 
         if (op instanceof Put) {
@@ -2317,14 +2267,13 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
         }
       }
 
-      ListenableFuture<Long> wallEditFuture =
-          Futures.immediateFuture(-1L);
+      long seqNum = -1;
       // ------------------------------------
       // STEP 3. Write to WAL
       // ----------------------------------
       if (!this.disableWAL) {
         WALEdit walEdit = new WALEdit();
-        for (int i = firstIndex; i < finalLastIndexExclusive; i++) {
+        for (int i = firstIndex; i < lastIndexExclusive; i++) {
           // Skip puts that were determined to be invalid during preprocessing
           if (batchOp.retCodes[i] != OperationStatusCode.NOT_RUN) continue;
 
@@ -2334,80 +2283,48 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
         }
 
         // Append the edit to WAL
-        wallEditFuture = this.log.append(regionInfo,
-                  regionInfo.getTableDesc().getName(),
-                  walEdit, now);
+        seqNum = this.log.append(regionInfo,
+                regionInfo.getTableDesc().getName(),
+                walEdit, now);
       }
-      final String finalSignature = signature;
 
-      preWallEditSuccessfull = true;
+      // ------------------------------------
+      // STEP 4. Write back to memstore
+      // ----------------------------------
 
-      return Futures.transform(wallEditFuture, new AsyncFunction<Long, Long>() {
-        @Override
-        public ListenableFuture<Long> apply(Long input) throws Exception {
-          boolean memstoreUpdatesSuccessful = false;
-          updatesLock.readLock().lock();
-          try  {
-            // ------------------------------------
-            // STEP 4. Write back to memstore
-            // ----------------------------------
+      long addedSize = 0;
+      for (int i = firstIndex; i < lastIndexExclusive; i++) {
+        if (batchOp.retCodes[i] != OperationStatusCode.NOT_RUN) continue;
 
-            long addedSize = 0;
-            for (int i = firstIndex; i < finalLastIndexExclusive; i++) {
-              if (batchOp.retCodes[i] != OperationStatusCode.NOT_RUN) continue;
+        Mutation op = batchOp.operations[i].getFirst();
+        addedSize += applyFamilyMapToMemstore(op.getFamilyMap(), seqNum);
+        batchOp.retCodes[i] = OperationStatusCode.SUCCESS;
+      }
+      success = true;
+      return addedSize;
+    } finally {
+      if (locked) {
+        this.updatesLock.readLock().unlock();
+      }
 
-              Mutation op = batchOp.operations[i].getFirst();
-              addedSize += applyFamilyMapToMemstore(op.getFamilyMap(), input);
-              batchOp.retCodes[i] = OperationStatusCode.SUCCESS;
-            }
-            memstoreUpdatesSuccessful = true;
-            return Futures.immediateFuture(addedSize);
-          } finally {
-            releaseLocksAndUpdateMetrics(updatesLock, acquiredLocks,
-                finalSignature, methodNameForMetricsUpdate, firstIndex,
-                finalLastIndexExclusive, batchOp, true,
-                memstoreUpdatesSuccessful, now);
+      releaseRowLocks(acquiredLocks);
+
+      // do after lock
+      long after = EnvironmentEdgeManager.currentTimeMillis();
+      if (null == signature) {
+        signature = SchemaMetrics.CF_BAD_FAMILY_PREFIX;
+      }
+      HRegion.incrTimeVaryingMetric(signature + methodNameForMetricsUpdate, after - now);
+
+      if (!success) {
+        for (int i = firstIndex; i < lastIndexExclusive; i++) {
+          if (batchOp.retCodes[i] == OperationStatusCode.NOT_RUN) {
+            batchOp.retCodes[i] = OperationStatusCode.FAILURE;
           }
         }
-      });
-    } catch (Throwable t) {
-      return Futures.immediateFuture(null);
-    } finally {
-      releaseLocksAndUpdateMetrics(updatesLock,
-          Collections.<Integer> emptyList(), signature,
-          methodNameForMetricsUpdate, firstIndex, lastIndexExclusive, batchOp,
-          locked, preWallEditSuccessfull, now);
-    }
-  }
-
-  /**
-   * This method was intended for code de-duplication and nothing else.
-   */
-  private void releaseLocksAndUpdateMetrics(ReentrantReadWriteLock updatedLock,
-      List<Integer> acquiredLocks, String signature,
-      String methodNameForMetricsUpdate, int firstIndex, int lastIndexExclusive,
-      BatchOperationInProgress<Pair<Mutation, Integer>> batchOp, boolean locked,
-      boolean preWallEditSuccessfull, long now) {
-    if (locked) {
-      this.updatesLock.readLock().unlock();
-    }
-    releaseRowLocks(acquiredLocks);
-    // do after lock
-    long after = EnvironmentEdgeManager.currentTimeMillis();
-    if (null == signature) {
-      signature = SchemaMetrics.CF_BAD_FAMILY_PREFIX;
-    }
-    HRegion.incrTimeVaryingMetric(
-        signature + methodNameForMetricsUpdate, after - now);
-
-    if (!preWallEditSuccessfull) {
-      for (int i = firstIndex; i < lastIndexExclusive; i++) {
-        if (batchOp.retCodes[i] == OperationStatusCode.NOT_RUN) {
-          batchOp.retCodes[i] = OperationStatusCode.FAILURE;
-        }
       }
+      batchOp.nextIndexToProcess = lastIndexExclusive;
     }
-    batchOp.nextIndexToProcess = lastIndexExclusive;
   }
 
   //TODO, Think that gets/puts and deletes should be refactored a bit so that
@@ -2468,7 +2385,7 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
         if (matches) {
           // All edits for the given row (across all column families) must happen atomically.
           if (isPut) {
-            put(((Put)w).getFamilyMap(), writeToWAL).checkedGet();
+            put(((Put)w).getFamilyMap(), writeToWAL);
           } else {
             Delete d = (Delete)w;
             prepareDeleteFamilyMap(d);
@@ -2564,7 +2481,7 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
   throws IOException {
     Map<byte[], List<KeyValue>> familyMap = new HashMap<byte[], List<KeyValue>>();
     familyMap.put(family, edits);
-    this.put(familyMap, true).checkedGet();
+    this.put(familyMap, true);
   }
 
   /**
@@ -2574,12 +2491,11 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
    * @param writeToWAL if true, then we should write to the log
    * @throws IOException
    */
-  private CheckedFuture<Void, IOException> put(final Map<byte [], List<KeyValue>> familyMap,
+  private void put(final Map<byte [], List<KeyValue>> familyMap,
       boolean writeToWAL) throws IOException {
-    final long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTimeMillis();
     byte[] byteNow = Bytes.toBytes(now);
-    ListenableFuture<Long> wallEditSyncFuture =
-        Futures.immediateFuture(new Long(-1));
+    boolean flush = false;
     this.updatesLock.readLock().lock();
     try {
       checkFamilies(familyMap.keySet());
@@ -2590,42 +2506,29 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
       // If order is reversed, i.e. we write to memstore first, and
       // for some reason fail to write/sync to commit log, the memstore
       // will contain uncommitted transactions.
+      long seqNum = -1;
       if (!this.disableWAL && writeToWAL) {
         WALEdit walEdit = new WALEdit();
         addFamilyMapToWALEdit(familyMap, walEdit);
-        wallEditSyncFuture = this.log.append(regionInfo,
+        seqNum = this.log.append(regionInfo,
                 regionInfo.getTableDesc().getName(), walEdit, now);
       }
-      return Futures.makeChecked(Futures.transform(wallEditSyncFuture,
-          new AsyncFunction<Long, Void>() {
-            @Override
-            public ListenableFuture<Void> apply(Long input) throws Exception {
-              boolean flush = false;
-              updatesLock.readLock().lock();
-              try {
-                long addedSize = applyFamilyMapToMemstore(familyMap, input);
-                flush = isFlushSize(incMemoryUsage(addedSize));
-              } finally {
-                updatesLock.readLock().unlock();
-              }
 
-              // do after lock
-              long after = EnvironmentEdgeManager.currentTimeMillis();
-              String signature = SchemaMetrics.generateSchemaMetricsPrefix(
-                  getTableDesc().getNameAsString(), familyMap.keySet());
-              HRegion.incrTimeVaryingMetric(signature + "put_", after - now);
-
-              if (flush) {
-                // Request a cache flush. Do it outside update lock.
-                requestFlush();
-              }
-              return Futures.immediateFuture(null);
-            }
-          }), this.getExceptionMapperFunction());
-    } catch (Exception e) {
-      return Futures.immediateFailedCheckedFuture(new IOException(e));
+      long addedSize = applyFamilyMapToMemstore(familyMap, seqNum);
+      flush = isFlushSize(this.incMemoryUsage(addedSize));
     } finally {
       this.updatesLock.readLock().unlock();
+    }
+
+    // do after lock
+    long after = EnvironmentEdgeManager.currentTimeMillis();
+    String signature = SchemaMetrics.generateSchemaMetricsPrefix(
+        this.getTableDesc().getNameAsString(), familyMap.keySet());
+    HRegion.incrTimeVaryingMetric(signature + "put_", after - now);
+
+    if (flush) {
+      // Request a cache flush.  Do it outside update lock.
+      requestFlush();
     }
   }
 
@@ -3885,9 +3788,8 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
 
         // 6. append/sync all edits at once
         // TODO: Do batching as in doMiniBatchPut
-        long seqNum;
-        seqNum = this.log.append(regionInfo, this.getTableDesc().getName(),
-            walEdit, now).checkedGet();
+        long seqNum = this.log.append(regionInfo, this.getTableDesc().getName(),
+                walEdit, now);
 
         // 7. apply to memstore
         long addedSize = 0;
@@ -3973,7 +3875,7 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
         WALEdit walEdit = new WALEdit();
         walEdit.add(newKv);
         seqNum = this.log.append(regionInfo, regionInfo.getTableDesc().getName(),
-            walEdit, now).checkedGet();
+          walEdit, now);
       }
 
       // Now request the ICV to the store, this will set the timestamp

@@ -24,6 +24,9 @@ import java.util.LinkedList;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
+import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.Log;
+
 /**
  * Manages the read/write consistency within memstore. This provides
  * an interface for readers to determine what entries to ignore, and

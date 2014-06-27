@@ -50,9 +50,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-
 /**
  * This class is for testing HCM features
  */
@@ -278,11 +275,9 @@ public class TestHCM {
     }
 
     @Override
-    public ListenableFuture<OperationStatusCode[]> batchMutateWithLocks(
-        Pair<Mutation, Integer>[] putsAndLocks,
+    public OperationStatusCode[] batchMutateWithLocks(Pair<Mutation, Integer>[] putsAndLocks,
         String methodName) throws IOException {
-      return Futures.immediateFailedFuture(
-          new IOException("Test induced failure"));
+      throw new IOException("Test induced failure");
     }
   }
 

@@ -144,11 +144,10 @@ public class TestOldLogsCleaner {
     fs.mkdirs(legacyDir);
     fs.createNewFile(new Path(legacyDir, "123.456"));
     Calendar cal = Calendar.getInstance();
-    System.out.println("Now is: " + HLog.getDateFormat().format(cal.getTime()));
+    System.out.println("Now is: " + HLog.DATE_FORMAT.format(cal.getTime()));
     for (int i = 0; i < 10; i++) {
       cal.add(Calendar.HOUR, -1);
-      Path hourDir = new Path(oldLogDir,
-          HLog.getDateFormat().format(cal.getTime()));
+      Path hourDir = new Path(oldLogDir, HLog.DATE_FORMAT.format(cal.getTime()));
       fs.mkdirs(hourDir);
       fs.createNewFile(new Path(hourDir, new Path(fakeMachineName + "." + i)));
     }

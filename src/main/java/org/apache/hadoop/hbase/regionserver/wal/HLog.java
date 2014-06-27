@@ -63,8 +63,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.Nullable;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -82,10 +80,13 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.ipc.HBaseServer.Call;
+import org.apache.hadoop.hbase.ipc.ProfilingData;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionSeqidTransition;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -98,13 +99,7 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.StringUtils;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.AsyncFunction;
-import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.SettableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -151,9 +146,7 @@ public class HLog implements Syncable {
   public static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");
   public static final byte [] METAROW = Bytes.toBytes("METAROW");
   public static final boolean SPLIT_SKIP_ERRORS_DEFAULT = false;
-  public static SimpleDateFormat getDateFormat() {
-    return new SimpleDateFormat("yyyy-MM-dd-HH");
-  }
+  public static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd-HH");
 
   /*
    * Name of directory that holds recovered edits written by the wal log
@@ -188,8 +181,8 @@ public class HLog implements Syncable {
       Collections.synchronizedList(new ArrayList<LogActionsListener>());
 
 
-  volatile static Class<? extends Writer> logWriterClass;
-  volatile static Class<? extends Reader> logReaderClass;
+  static Class<? extends Writer> logWriterClass;
+  static Class<? extends Reader> logReaderClass;
 
   private OutputStream hdfs_out;     // OutputStream associated with the current SequenceFile.writer
   private int initialReplication;    // initial replication factor of SequenceFile.writer
@@ -291,6 +284,9 @@ public class HLog implements Syncable {
   private final List<LogEntryVisitor> logEntryVisitors =
       new CopyOnWriteArrayList<LogEntryVisitor>();
 
+  private volatile long lastLogRollStartTimeMillis = 0;
+  private volatile long lastLogRollDurationMillis = 0;
+
   /**
    * Pattern used to validate a HLog file name
    */
@@ -309,9 +305,9 @@ public class HLog implements Syncable {
       synchronized (this) {
         min = Math.min(min, val);
         max = Math.max(max, val);
-        total += val;
-        ++count;
       }
+      total += val;
+      ++count;
     }
 
     Metric get() {
@@ -363,17 +359,14 @@ public class HLog implements Syncable {
    */
   private class DoubleListBuffer {
     private LinkedList<Entry> currentList = new LinkedList<Entry>();
-    private SettableFuture<Void> currentFuture = SettableFuture.create();;
     private LinkedList<Entry> syncList = new LinkedList<Entry>();
 
     /**
      * Append a log entry into the buffer
      * @param entry log entry
      */
-    synchronized private ListenableFuture<Void> appendToBuffer(Entry entry) {
-      Preconditions.checkNotNull(this.currentFuture);
+    synchronized private void appendToBuffer(Entry entry) {
       currentList.add(entry);
-      return this.currentFuture;
     }
 
     /**
@@ -382,8 +375,6 @@ public class HLog implements Syncable {
      * @return number of log entries synced
      */
     private int appendAndSync() throws IOException {
-      // The future returned to the append operation.
-      SettableFuture<Void> future;
       synchronized (this) {
         if (currentList.isEmpty()) { // no thing to sync
           return 0;
@@ -394,47 +385,24 @@ public class HLog implements Syncable {
         LinkedList<Entry> tmp = syncList;
         syncList = currentList;
         currentList = tmp;
-        future = currentFuture;
-        this.currentFuture = SettableFuture.create();
       }
 
-      try {
-        // append entries to writer
-        int syncedEntries = syncList.size();
-        while (!syncList.isEmpty()) {
-          Entry entry = syncList.remove();
-          writer.append(entry);
-        }
-
-        // sync the data
-        long now = System.currentTimeMillis();
-        writer.sync();
-        syncTime.inc(System.currentTimeMillis() - now);
-        future.set(null);
-        return syncedEntries;
-      } catch (Exception e) {
-        future.setException(e);
-        return 0;
+      // append entries to writer
+      int syncedEntries = syncList.size();
+      while (!syncList.isEmpty()) {
+        Entry entry = syncList.remove();
+        writer.append(entry);
       }
+
+      // sync the data
+      long now = System.currentTimeMillis();
+      writer.sync();
+      syncTime.inc(System.currentTimeMillis() - now);
+      return syncedEntries;
     }
   }
 
   private DoubleListBuffer logBuffer = new DoubleListBuffer();
-
-  /**
-   * Minimal constructor to get going in tests
-   */
-  public HLog(final Configuration conf, Path basePath) throws IOException {
-    this(FileSystem.get(conf), new Path(basePath, ".logs"),
-        new Path(basePath, ".oldlogs"), conf, null);
-  }
-
-  /**
-   * Minimal constructor to get going in tests
-   */
-  public HLog(final Configuration conf) throws IOException {
-    this(conf, new Path("/tmp"));
-  }
 
   /**
    * HLog creating with a null actions listener.
@@ -683,6 +651,8 @@ public class HLog implements Syncable {
         this.numEntries.set(0);
 
         t1 = EnvironmentEdgeManager.currentTimeMillis();
+        lastLogRollStartTimeMillis = t0;
+        lastLogRollDurationMillis = (t1 - t0);
       }
 
       Path oldFile = null;
@@ -729,7 +699,7 @@ public class HLog implements Syncable {
   throws IOException {
     try {
       if (logReaderClass == null) {
-        logReaderClass = conf.getClass("hbase.regionserver.hlog.reader.impl",
+        logReaderClass =conf.getClass("hbase.regionserver.hlog.reader.impl",
                 SequenceFileLogReader.class, Reader.class);
       }
 
@@ -738,7 +708,8 @@ public class HLog implements Syncable {
       return reader;
     } catch (IOException e) {
       throw e;
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       throw new IOException("Cannot get log reader", e);
     }
   }
@@ -1081,10 +1052,10 @@ public class HLog implements Syncable {
    *          of the memstore.
    * @throws IOException
    */
-  public CheckedFuture<Long, IOException> append(HRegionInfo info, byte[] tableName, WALEdit edits,
+  public long append(HRegionInfo info, byte [] tableName, WALEdit edits,
     final long now) throws IOException {
     if (!this.enabled || edits.isEmpty()) {
-      return Futures.immediateCheckedFuture(-1L);
+      return -1L;
     }
     if (logSyncerThread.syncerShuttingDown) {
       // can't acquire lock for the duration of append()
@@ -1092,13 +1063,13 @@ public class HLog implements Syncable {
       throw new IOException("Cannot append; logSyncer shutting down");
     }
 
-    final long len = edits.getTotalKeyValueLength();
-    final long txid;
-    final long seqNum;
+    long len = edits.getTotalKeyValueLength();
+    long txid = 0;
+    long seqNum;
 
+    long start = System.currentTimeMillis();
     byte[] regionName = info.getRegionName();
 
-    ListenableFuture<Void> logSyncFuture;
     synchronized (this.appendLock) {
       // The 'lastSeqWritten' map holds the sequence number of the oldest
       // write for each region (i.e. the first edit added to the particular
@@ -1109,54 +1080,50 @@ public class HLog implements Syncable {
       this.firstSeqWrittenInCurrentMemstore.putIfAbsent(regionName, seqNum);
       HLogKey logKey = makeKey(regionName, tableName, seqNum, now);
 
-      logSyncFuture = doWrite(info, logKey, edits);
+      doWrite(info, logKey, edits);
       // Only count 1 row as an unflushed entry.
       txid = this.unflushedEntries.incrementAndGet();
     }
-    if (info.isMetaRegion()) forceSync();
-    final long start = System.nanoTime();
+    // Update the metrics
+    this.numEntries.incrementAndGet();
+    writeSize.inc(len);
 
-    return Futures.makeChecked(Futures.transform(logSyncFuture,
-      new AsyncFunction<Void, Long>() {
-        @Override
-        public ListenableFuture<Long> apply(Void input) throws Exception {
-          Preconditions.checkArgument(txid >= getCurSyncPoint());
-          // Update the metrics
-          numEntries.incrementAndGet();
-          writeSize.inc(len);
+    // sync txn to file system
+    start = System.nanoTime();
+    this.sync(info.isMetaRegion(), txid);
 
-          // Update the metrics and log down the outliers
-          long end = System.nanoTime();
-          long syncTime = end - start;
-          gsyncTime.inc(syncTime);
+    // Update the metrics and log down the outliers
+    long end = System.nanoTime();
+    long syncTime = end - start;
+    gsyncTime.inc(syncTime);
+    if (syncTime > SECOND_IN_NS) {
+      LOG.warn(String.format(
+        "%s took %d ns appending an edit to hlog; editcount=%d, len~=%s",
+        Thread.currentThread().getName(), syncTime, this.numEntries.get(),
+        StringUtils.humanReadableInt(len)));
+      slowSyncs.incrementAndGet();
+    }
 
-          if (syncTime > SECOND_IN_NS) {
-            LOG.warn(String.format(
-              "%s took %d ns appending an edit to hlog; editcount=%d, len~=%s",
-              Thread.currentThread().getName(), syncTime, numEntries.get(),
-              StringUtils.humanReadableInt(len)));
-            slowSyncs.incrementAndGet();
-          }
-          if (slowSyncs.get() >= slowBeforeRoll) {
-            requestLogRoll();
-            slowSyncs.set(0);
-          }
-          return Futures.immediateFuture(new Long(seqNum));
-        }
-      }), this.getExceptionMapperFunction());
-  }
+    if (slowSyncs.get() >= slowBeforeRoll) {
+      this.requestLogRoll();
+      this.slowSyncs.set(0);
+    }
 
-  public Function<Exception, IOException> getExceptionMapperFunction() {
-    return new Function<Exception, IOException>() {
-      @Override
-      @Nullable
-      public IOException apply(@Nullable Exception e) {
-        if (e instanceof ExecutionException) {
-          return new IOException(e.getCause());
-        }
-        return new IOException(e);
+    // Update the per-request profiling data
+    Call call = HRegionServer.callContext.get();
+    ProfilingData pData = call == null ? null : call.getProfilingData();
+    if (pData != null) {
+      if (this.lastLogRollStartTimeMillis > start
+          && end > this.lastLogRollStartTimeMillis) {
+        // We also had a log roll in between
+        pData.addLong(ProfilingData.HLOG_ROLL_TIME_MS, this.lastLogRollDurationMillis);
+        // Do not account for this as the sync time.
+        syncTime = syncTime - this.lastLogRollDurationMillis;
       }
-    };
+      // update sync time
+      pData.addLong(ProfilingData.HLOG_SYNC_TIME_MS, syncTime);
+    }
+    return seqNum;
   }
 
   /**
@@ -1199,7 +1166,7 @@ public class HLog implements Syncable {
           forceSync = false;
           // wake up every 100ms to check if logsyncer has to shut down
           queueEmpty.awaitNanos(100*1000000);
-          if (unflushedEntries.get() >= syncTillHere) {
+          if (unflushedEntries.get() == syncTillHere) {
             // call hflush() if we haven't flushed for a while now
             // This force-sync is just a safety mechanism - we being
             // paranoid. If there hasn't been any syncing activity for
@@ -1241,18 +1208,6 @@ public class HLog implements Syncable {
       }
     }
 
-    /**
-     * This method needs to be called to indicate that we need to force the
-     * log syncer thread to sync.
-     * @param force
-     */
-    public void setForceSync(boolean force) {
-      forceSync = false;
-    }
-
-    public long getCurSyncPoint() {
-      return syncTillHere;
-    }
     /**
      * This method first signals the thread that there's a sync needed
      * and then waits for it to happen before returning.
@@ -1318,14 +1273,6 @@ public class HLog implements Syncable {
    */
   public void sync(boolean force, long txid) throws IOException {
     logSyncerThread.addToSyncQueue(force, txid);
-  }
-
-  public void forceSync() {
-    logSyncerThread.setForceSync(true);
-  }
-
-  public long getCurSyncPoint() {
-    return logSyncerThread.getCurSyncPoint();
   }
 
   private void hflush() {
@@ -1431,9 +1378,9 @@ public class HLog implements Syncable {
     }
   }
 
-  protected ListenableFuture<Void> doWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit)
+  protected void doWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit)
   throws IOException {
-    return this.logBuffer.appendToBuffer(new Entry(logKey, logEdit));
+    this.logBuffer.appendToBuffer(new Entry(logKey, logEdit));
   }
 
   /** @return How many items have been added to the log */
@@ -1942,8 +1889,7 @@ public class HLog implements Syncable {
     String subDirectoryName;
     if (ARCHIVE_TO_HOURLY_DIR) {
       // Group into hourly sub-directory
-      subDirectoryName =
-          getDateFormat().format(Calendar.getInstance().getTime());
+      subDirectoryName = DATE_FORMAT.format(Calendar.getInstance().getTime());
     } else {
       // since the filename is a valid name, we know there
       // is a last '.' (won't return -1)
@@ -2441,25 +2387,11 @@ public class HLog implements Syncable {
     walEdit.add(kvLast);
     walEdit.add(kvNext);
     walEdit.add(kvRegionInfo);
-    long newSeqid;
-    try {
-      newSeqid = append(regionInfo, regionInfo.getTableDesc()
-              .getName(), walEdit, now).get();
-    } catch (InterruptedException | ExecutionException e) {
-      throw new IOException(e);
-    }
+    long newSeqid = append(regionInfo, regionInfo.getTableDesc().getName(), walEdit, now);
     LOG.info("Region " + regionInfo.getRegionNameAsString() +
                " sequence id transition " +
                seqidTransition.getLastSeqid() + "->" +
                seqidTransition.getNextSeqid() + " appended to HLog at seqid=" + newSeqid);
     return true;
-  }
-
-  /**
-   * Returns the underlying configuration object.
-   * @return
-   */
-  public Configuration getConfiguration() {
-    return this.conf;
   }
 }

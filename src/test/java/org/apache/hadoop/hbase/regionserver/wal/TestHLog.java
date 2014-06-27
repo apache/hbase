@@ -29,7 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.ExecutionException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
@@ -139,12 +139,9 @@ public class TestHLog  {
    * Just write multiple logs then split.  Before fix for HADOOP-2283, this
    * would fail.
    * @throws IOException
-   * @throws ExecutionException
-   * @throws InterruptedException
    */
   @Test
-  public void testSplit() throws IOException,
-      InterruptedException, ExecutionException {
+  public void testSplit() throws IOException {
 
     final byte [] tableName = Bytes.toBytes(TestHLog.class.getSimpleName());
     final byte [] rowName = tableName;
@@ -170,7 +167,7 @@ public class TestHLog  {
                 System.currentTimeMillis(), column));
             LOG.info("Region " + i + ": " + edit);
             log.append(infos[i], tableName, edit,
-              System.currentTimeMillis()).get();
+              System.currentTimeMillis());
           }
         }
         log.rollWriter();
@@ -219,7 +216,7 @@ public class TestHLog  {
     for (int i = 0; i < total; i++) {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(Bytes.toBytes(i), bytes, bytes));
-      wal.append(info, bytes, kvs, System.currentTimeMillis()).get();
+      wal.append(info, bytes, kvs, System.currentTimeMillis());
     }
     // Now call sync and try reading.  Opening a Reader before you sync just
     // gives you EOFE.
@@ -237,7 +234,7 @@ public class TestHLog  {
     for (int i = 0; i < total; i++) {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(Bytes.toBytes(i), bytes, bytes));
-      wal.append(info, bytes, kvs, System.currentTimeMillis()).get();
+      wal.append(info, bytes, kvs, System.currentTimeMillis());
     }
     reader = HLog.getReader(fs, walPath, conf);
     count = 0;
@@ -256,7 +253,7 @@ public class TestHLog  {
     for (int i = 0; i < total; i++) {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(Bytes.toBytes(i), bytes, value));
-      wal.append(info, bytes, kvs, System.currentTimeMillis()).get();
+      wal.append(info, bytes, kvs, System.currentTimeMillis());
     }
     // Now I should have written out lots of blocks.  Sync then read.
     wal.sync();
@@ -353,7 +350,7 @@ public class TestHLog  {
     for (int i = 0; i < total; i++) {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(Bytes.toBytes(i), tableName, tableName));
-      wal.append(regioninfo, tableName, kvs, System.currentTimeMillis()).get();
+      wal.append(regioninfo, tableName, kvs, System.currentTimeMillis());
     }
     // Now call sync to send the data to HDFS datanodes
     wal.sync(true);
@@ -451,12 +448,9 @@ public class TestHLog  {
   /**
    * Tests that we can write out an edit, close, and then read it back in again.
    * @throws IOException
-   * @throws ExecutionException
-   * @throws InterruptedException
    */
   @Test
-  public void testEditAdd() throws IOException,
-      InterruptedException, ExecutionException {
+  public void testEditAdd() throws IOException {
     final int COL_COUNT = 10;
     final byte [] tableName = Bytes.toBytes("tablename");
     final byte [] row = Bytes.toBytes("row");
@@ -475,7 +469,7 @@ public class TestHLog  {
       HRegionInfo info = new HRegionInfo(new HTableDescriptor(tableName),
         row,Bytes.toBytes(Bytes.toString(row) + "1"), false);
       final byte [] regionName = info.getRegionName();
-      log.append(info, tableName, cols, System.currentTimeMillis()).get();
+      log.append(info, tableName, cols, System.currentTimeMillis());
       long logSeqId = log.startCacheFlush(info.getRegionName());
       log.completeCacheFlush(regionName, tableName, logSeqId, info.isMetaRegion());
       log.close();
@@ -547,12 +541,9 @@ public class TestHLog  {
 
   /**
    * @throws IOException
-   * @throws ExecutionException
-   * @throws InterruptedException
    */
   @Test
-  public void testAppend() throws IOException,
-      InterruptedException, ExecutionException {
+  public void testAppend() throws IOException {
     final int COL_COUNT = 10;
     final byte [] tableName = Bytes.toBytes("tablename");
     final byte [] row = Bytes.toBytes("row");
@@ -570,7 +561,7 @@ public class TestHLog  {
       }
       HRegionInfo hri = new HRegionInfo(new HTableDescriptor(tableName),
           HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
-      log.append(hri, tableName, cols, System.currentTimeMillis()).get();
+      log.append(hri, tableName, cols, System.currentTimeMillis());
       long logSeqId = log.startCacheFlush(hri.getRegionName());
       log.completeCacheFlush(hri.getRegionName(), tableName, logSeqId, false);
       log.close();
@@ -650,13 +641,13 @@ public class TestHLog  {
   }
 
   private void addEdits(HLog log, HRegionInfo hri, byte [] tableName,
-                        int times) throws IOException, InterruptedException, ExecutionException {
+                        int times) throws IOException {
     final byte [] row = Bytes.toBytes("row");
     for (int i = 0; i < times; i++) {
       long timestamp = System.currentTimeMillis();
       WALEdit cols = new WALEdit();
       cols.add(new KeyValue(row, row, row, timestamp, row));
-      log.append(hri, tableName, cols, timestamp).checkedGet();
+      log.append(hri, tableName, cols, timestamp);
     }
   }
 
@@ -668,23 +659,6 @@ public class TestHLog  {
         Thread.sleep(1100);
       } catch (InterruptedException e) {
         ExceptionUtils.toIOException(e);
-      }
-      super.sync();
-    }
-  }
-
-  public static class FailingSequenceFileLogWriter
-    extends SequenceFileLogWriter implements HLog.Writer {
-    static boolean enabled = false;
-    public synchronized static void setFailureMode(boolean enabled) {
-      FailingSequenceFileLogWriter.enabled = enabled;
-    }
-
-    @Override
-    public void sync() throws IOException {
-      if (FailingSequenceFileLogWriter.enabled) {
-        throw new IOException(
-          "Failing here to see if the error propogates upstream");
       }
       super.sync();
     }
