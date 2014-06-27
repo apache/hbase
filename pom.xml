@@ -1959,7 +1959,7 @@
 		<groupId>org.apache.hadoop</groupId>
 		<!-- doclet lives in hadoop 2's hadoop-common module -->
 		<artifactId>hadoop-common</artifactId>
-		<version>2.3.0</version>
+		<version>${hadoop-two.version}</version>
 	      </docletArtifact>
 	      <destDir>apidocs</destDir>
 	      <name>User API</name>
