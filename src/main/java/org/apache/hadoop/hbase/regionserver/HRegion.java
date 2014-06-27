@@ -3639,7 +3639,10 @@ public class HRegion implements HeapSize { // , Writable{
               throw new IOException("Timed out on getting lock for row=" + rowKey);
             }
           } catch (InterruptedException ie) {
-            // Empty
+            LOG.warn("internalObtainRowLock interrupted for row=" + rowKey);
+            InterruptedIOException iie = new InterruptedIOException();
+            iie.initCause(ie);
+            throw iie;
           }
         }
       }
