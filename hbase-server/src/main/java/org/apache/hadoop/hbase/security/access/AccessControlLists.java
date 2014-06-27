@@ -685,8 +685,8 @@ public class AccessControlLists {
    public static List<Permission> getCellPermissionsForUser(User user, Cell cell)
        throws IOException {
      List<Permission> results = Lists.newArrayList();
-     byte[] tags = CellUtil.getTagArray(cell);
-     Iterator<Tag> tagsIterator = CellUtil.tagsIterator(tags, 0, tags.length);
+     Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
+        cell.getTagsLength());
      while (tagsIterator.hasNext()) {
        Tag tag = tagsIterator.next();
        if (tag.getType() == ACL_TAG_TYPE) {

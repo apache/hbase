@@ -88,7 +88,6 @@ import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
@@ -753,8 +752,8 @@ public class AccessController extends BaseRegionObserver
       List<Cell> newCells = Lists.newArrayList();
       for (Cell cell: e.getValue()) {
         List<Tag> tags = Lists.newArrayList(new Tag(AccessControlLists.ACL_TAG_TYPE, perms));
-        byte[] tagBytes = CellUtil.getTagArray(cell);
-        Iterator<Tag> tagIterator = CellUtil.tagsIterator(tagBytes, 0, tagBytes.length);
+        Iterator<Tag> tagIterator = CellUtil.tagsIterator(cell.getTagsArray(),
+            cell.getTagsOffset(), cell.getTagsLength());
         while (tagIterator.hasNext()) {
           tags.add(tagIterator.next());
         }
@@ -1808,14 +1807,14 @@ public class AccessController extends BaseRegionObserver
     List<Tag> tags = Lists.newArrayList();
     ListMultimap<String,Permission> perms = ArrayListMultimap.create();
     if (oldCell != null) {
-      byte[] tagBytes = CellUtil.getTagArray(oldCell);
-      Iterator<Tag> tagIterator = CellUtil.tagsIterator(tagBytes, 0, tagBytes.length);
+      Iterator<Tag> tagIterator = CellUtil.tagsIterator(oldCell.getTagsArray(),
+          oldCell.getTagsOffset(), oldCell.getTagsLength());
       while (tagIterator.hasNext()) {
         Tag tag = tagIterator.next();
         if (tag.getType() != AccessControlLists.ACL_TAG_TYPE) {
           if (LOG.isTraceEnabled()) {
             LOG.trace("Carrying forward tag from " + oldCell + ": type " + tag.getType() +
-              " length " + tag.getValue().length);
+              " length " + tag.getTagLength());
           }
           tags.add(tag);
         } else {
