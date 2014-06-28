@@ -274,13 +274,12 @@ public class ServerManager {
       long l = entry.getValue().getCompleteSequenceId();
       if (existingValue != null) {
         if (l != -1 && l < existingValue) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("RegionServer " + sn +
-                " indicates a last flushed sequence id (" + entry.getValue() +
-                ") that is less than the previous last flushed sequence id (" +
-                existingValue + ") for region " +
-                Bytes.toString(entry.getKey()) + " Ignoring.");
-          }
+          LOG.warn("RegionServer " + sn +
+              " indicates a last flushed sequence id (" + entry.getValue() +
+              ") that is less than the previous last flushed sequence id (" +
+              existingValue + ") for region " +
+              Bytes.toString(entry.getKey()) + " Ignoring.");
+
           continue; // Don't let smaller sequence ids override greater
           // sequence ids.
         }
