@@ -10,6 +10,7 @@ import org.apache.hadoop.hbase.client.MultiPut;
 import org.apache.hadoop.hbase.client.MultiPutResponse;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.TMultiResponse;
+import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -35,7 +36,7 @@ public class SizeAwareThriftHRegionServer extends ThriftHRegionServer {
       Futures.addCallback(f, new DecrementWriteSizeCallback(heapSize));
       return f;
     } else {
-      return Futures.immediateFailedFuture(new RegionOverloadedException());
+      return Futures.immediateFailedFuture(new ThriftHBaseException(new RegionOverloadedException()));
     }
   }
 
@@ -51,7 +52,7 @@ public class SizeAwareThriftHRegionServer extends ThriftHRegionServer {
       Futures.addCallback(f, new DecrementWriteSizeCallback(heapSize));
       return f;
     } else {
-      return Futures.immediateFailedFuture(new RegionOverloadedException());
+      return Futures.immediateFailedFuture(new ThriftHBaseException(new RegionOverloadedException()));
     }
   }
 
@@ -79,7 +80,7 @@ public class SizeAwareThriftHRegionServer extends ThriftHRegionServer {
       Futures.addCallback(f, new DecrementWriteSizeCallback(heapSize));
       return f;
     } else {
-      return Futures.immediateFailedFuture(new RegionOverloadedException());
+      return Futures.immediateFailedFuture(new ThriftHBaseException(new RegionOverloadedException()));
     }
   }
 
@@ -97,7 +98,7 @@ public class SizeAwareThriftHRegionServer extends ThriftHRegionServer {
       Futures.addCallback(f, new DecrementWriteSizeCallback(heapSize));
       return f;
     } else {
-      return Futures.immediateFailedFuture(new RegionOverloadedException());
+      return Futures.immediateFailedFuture(new ThriftHBaseException(new RegionOverloadedException()));
     }
   }
 
@@ -110,7 +111,7 @@ public class SizeAwareThriftHRegionServer extends ThriftHRegionServer {
       Futures.addCallback(f, new DecrementWriteSizeCallback(heapSize));
       return f;
     } else {
-      return Futures.immediateFailedFuture(new RegionOverloadedException());
+      return Futures.immediateFailedFuture(new ThriftHBaseException(new RegionOverloadedException()));
     }
   }
 
@@ -126,7 +127,7 @@ public class SizeAwareThriftHRegionServer extends ThriftHRegionServer {
       Futures.addCallback(f, new DecrementWriteSizeCallback(heapSize));
       return f;
     } else {
-      return Futures.immediateFailedFuture(new RegionOverloadedException());
+      return Futures.immediateFailedFuture(new ThriftHBaseException(new RegionOverloadedException()));
     }
   }
 
