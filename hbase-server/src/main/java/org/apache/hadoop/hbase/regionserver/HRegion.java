@@ -743,7 +743,6 @@ public class HRegion implements HeapSize { // , Writable{
     this.closing.set(false);
     this.closed.set(false);
 
-    this.completeSequenceId = nextSeqid;
     if (coprocessorHost != null) {
       status.setStatus("Running coprocessor post-open hooks");
       coprocessorHost.postOpen();
@@ -1596,7 +1595,9 @@ public class HRegion implements HeapSize { // , Writable{
    * Should the memstore be flushed now
    */
   boolean shouldFlush() {
-    if(this.completeSequenceId + this.flushPerChanges < this.sequenceId.get()) {
+    // This is a rough measure.
+    if (this.completeSequenceId > 0 
+          && (this.completeSequenceId + this.flushPerChanges < this.sequenceId.get())) {
       return true;
     }
     if (flushCheckInterval <= 0) { //disabled
