@@ -95,6 +95,13 @@ public class Export {
     s.setTimeRange(startTime, endTime);
     // Set cache blocks
     s.setCacheBlocks(false);
+    // set Start and Stop row
+    if (conf.get(TableInputFormat.SCAN_ROW_START) != null) {
+      s.setStartRow(Bytes.toBytes(conf.get(TableInputFormat.SCAN_ROW_START)));
+    }
+    if (conf.get(TableInputFormat.SCAN_ROW_STOP) != null) {
+      s.setStopRow(Bytes.toBytes(conf.get(TableInputFormat.SCAN_ROW_STOP)));
+    }
     // Set Scan Column Family
     boolean raw = Boolean.parseBoolean(conf.get(RAW_SCAN));
     if (raw) {
@@ -155,6 +162,8 @@ public class Export {
     System.err.println("  to control/limit what is exported..");
     System.err.println("   -D " + TableInputFormat.SCAN_COLUMN_FAMILY + "=<familyName>");
     System.err.println("   -D " + RAW_SCAN + "=true");
+    System.err.println("   -D " + TableInputFormat.SCAN_ROW_START + "=<ROWSTART>");
+    System.err.println("   -D " + TableInputFormat.SCAN_ROW_STOP + "=<ROWSTOP>");
     System.err.println("For performance consider the following properties:\n"
         + "   -Dhbase.client.scanner.caching=100\n"
         + "   -Dmapred.map.tasks.speculative.execution=false\n"
