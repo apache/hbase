@@ -56,7 +56,7 @@ public class TestServerSideExceptionDestructive {
     Configuration conf = TEST_UTIL.getConfiguration();
 
     conf.setClass(HConstants.THRIFT_REGION_SERVER_IMPL,
-        FailureInjectingThriftHRegionServer.class, ThriftHRegionInterface.Sync.class);
+        FailureInjectingThriftHRegionServer.class, ThriftHRegionInterface.Async.class);
 
     conf.setInt(HConstants.CLIENT_RETRY_NUM_STRING, 5);
 

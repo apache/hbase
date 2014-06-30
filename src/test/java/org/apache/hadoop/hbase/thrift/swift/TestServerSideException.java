@@ -73,7 +73,7 @@ public class TestServerSideException {
         true);
 
     conf.setClass(HConstants.THRIFT_REGION_SERVER_IMPL,
-        FailureInjectingThriftHRegionServer.class, ThriftHRegionInterface.Sync.class);
+        FailureInjectingThriftHRegionServer.class, ThriftHRegionInterface.Async.class);
 
     conf.setInt(HConstants.CLIENT_RETRY_NUM_STRING, 5);
     // Server will allow client to retry once when there is RegionOverloadedException
