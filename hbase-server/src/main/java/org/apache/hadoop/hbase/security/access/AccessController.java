@@ -1372,8 +1372,7 @@ public class AccessController extends BaseRegionObserver
         // filter) but that's the price of backwards compatibility. 
         if (hasFamilyQualifierPermission(user, Action.READ, env, families)) {
           Filter ourFilter = new AccessControlFilter(authManager, user, table,
-            query.getACLStrategy() ? AccessControlFilter.Strategy.CHECK_CELL_FIRST :
-              AccessControlFilter.Strategy.CHECK_TABLE_AND_CF_ONLY,
+            AccessControlFilter.Strategy.CHECK_TABLE_AND_CF_ONLY,
             cfVsMaxVersions);
           // wrap any existing filter
           if (filter != null) {
@@ -1400,9 +1399,7 @@ public class AccessController extends BaseRegionObserver
         // allowed. We will not throw an AccessDeniedException. This is a
         // behavioral change since 0.96. 
         Filter ourFilter = new AccessControlFilter(authManager, user, table,
-          query.getACLStrategy() ? AccessControlFilter.Strategy.CHECK_CELL_FIRST :
-            AccessControlFilter.Strategy.CHECK_CELL_DEFAULT,
-          cfVsMaxVersions);
+          AccessControlFilter.Strategy.CHECK_CELL_DEFAULT, cfVsMaxVersions);
         // wrap any existing filter
         if (filter != null) {
           ourFilter = new FilterList(FilterList.Operator.MUST_PASS_ALL,

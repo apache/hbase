@@ -455,29 +455,6 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   }
 
   /**
-   * @return true if ACLs should be evaluated on the cell level first
-   */
-  public boolean getACLStrategy() {
-    byte[] bytes = getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL_STRATEGY);
-    if (bytes != null) {
-      return Bytes.equals(bytes, AccessControlConstants.OP_ATTRIBUTE_ACL_STRATEGY_CELL_FIRST);
-    }
-    return false;
-  }
-
-  /**
-   * @param cellFirstStrategy true if ACLs should be evaluated on the cell
-   * level first, false if ACL should first be checked at the CF and table
-   * levels
-   */
-  public void setACLStrategy(boolean cellFirstStrategy) {
-    if (cellFirstStrategy) {
-      setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL_STRATEGY,
-        AccessControlConstants.OP_ATTRIBUTE_ACL_STRATEGY_CELL_FIRST);
-    }
-  }
-
-  /**
    * Subclasses should override this method to add the heap size of their own fields.
    * @return the heap size to add (will be aligned).
    */
