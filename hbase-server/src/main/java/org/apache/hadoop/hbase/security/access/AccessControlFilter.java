@@ -53,8 +53,6 @@ class AccessControlFilter extends FilterBase {
     CHECK_TABLE_AND_CF_ONLY,
     /** Cell permissions can override table or CF permissions */
     CHECK_CELL_DEFAULT,
-    /** Cell permissions must authorize */
-    CHECK_CELL_FIRST,
   };
 
   private TableAuthManager authManager;
@@ -127,14 +125,6 @@ class AccessControlFilter extends FilterBase {
       case CHECK_CELL_DEFAULT: {
         if (authManager.authorize(user, table, family, qualifier, Permission.Action.READ) ||
             authManager.authorize(user, table, cell, Permission.Action.READ)) {
-          return ReturnCode.INCLUDE;
-        }
-      }
-      break;
-      // Cell permissions must authorize
-      case CHECK_CELL_FIRST: {
-        if (authManager.authorize(user, table, cell, Permission.Action.READ) &&
-            authManager.authorize(user, table, family, qualifier, Permission.Action.READ)) {
           return ReturnCode.INCLUDE;
         }
       }

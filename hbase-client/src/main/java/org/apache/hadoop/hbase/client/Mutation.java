@@ -455,26 +455,18 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   }
 
   /**
-   * @return true if ACLs should be evaluated on the cell level first
+   * @deprecated No effect
    */
+  @Deprecated
   public boolean getACLStrategy() {
-    byte[] bytes = getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL_STRATEGY);
-    if (bytes != null) {
-      return Bytes.equals(bytes, AccessControlConstants.OP_ATTRIBUTE_ACL_STRATEGY_CELL_FIRST);
-    }
     return false;
   }
 
   /**
-   * @param cellFirstStrategy true if ACLs should be evaluated on the cell
-   * level first, false if ACL should first be checked at the CF and table
-   * levels
+   * @deprecated No effect
    */
+  @Deprecated
   public void setACLStrategy(boolean cellFirstStrategy) {
-    if (cellFirstStrategy) {
-      setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL_STRATEGY,
-        AccessControlConstants.OP_ATTRIBUTE_ACL_STRATEGY_CELL_FIRST);
-    }
   }
 
   /**
@@ -484,7 +476,6 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   protected long extraHeapSize(){
     return 0L;
   }
-
 
   /**
    * @param row Row to check

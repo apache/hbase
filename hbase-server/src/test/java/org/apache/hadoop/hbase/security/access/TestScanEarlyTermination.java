@@ -267,33 +267,5 @@ public class TestScanEarlyTermination extends SecureTestUtil {
         }
       }
     }, USER_OTHER);
-
-    // A scan of FAMILY1 and FAMILY2 will produce combined results. If we use
-    // a cell first strategy then cell ACLs come into effect. In FAMILY2, that
-    // cell ACL on Q1 now grants access and the empty permission set on Q2 now
-    // denies access.
-    verifyAllowed(new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        // force a new RS connection
-        conf.set("testkey", UUID.randomUUID().toString());
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Scan scan = new Scan();
-          scan.setACLStrategy(true);
-          Result result = t.getScanner(scan).next();
-          if (result != null) {
-            assertTrue("Improper exclusion", result.containsColumn(TEST_FAMILY1, TEST_Q1));
-            assertTrue("Improper exclusion", result.containsColumn(TEST_FAMILY2, TEST_Q1));
-            assertFalse("Improper inclusion", result.containsColumn(TEST_FAMILY2, TEST_Q2));
-            return result.listCells();
-          }
-          return null;
-        } finally {
-          t.close();
-        }
-      }
-    }, USER_OTHER);
-
   }
 }

@@ -95,7 +95,6 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
         public Object run() throws Exception {
           HTable localTable = null;
           try {
-            get.setACLStrategy(true);
             Result result = null;
             int specialPermCellInsertionFactor = Integer.parseInt(dataGenerator.getArgs()[2]);
             int mod = ((int) keyToRead % userNames.length);
