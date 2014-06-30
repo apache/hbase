@@ -541,7 +541,7 @@ public class CacheConfig {
       }
       LOG.info("Allocating LruBlockCache size=" +
         StringUtils.byteDesc(lruCacheSize) + ", blockSize=" + StringUtils.byteDesc(blockSize));
-      LruBlockCache lruCache = new LruBlockCache(lruCacheSize, blockSize);
+      LruBlockCache lruCache = new LruBlockCache(lruCacheSize, blockSize, true, conf);
       lruCache.setVictimCache(bucketCache);
       if (bucketCache != null && combinedWithLru) {
         GLOBAL_BLOCK_CACHE_INSTANCE = new CombinedBlockCache(lruCache, bucketCache);
