@@ -62,7 +62,8 @@ public class TableSnapshotInputFormatImpl {
   // easy way to delegate access.
 
   private static final String SNAPSHOT_NAME_KEY = "hbase.TableSnapshotInputFormat.snapshot.name";
-  private static final String TABLE_DIR_KEY = "hbase.TableSnapshotInputFormat.table.dir";
+  // key for specifying the root dir of the restored snapshot
+  private static final String RESTORE_DIR_KEY = "hbase.TableSnapshotInputFormat.restore.dir";
 
   /** See {@link #getBestLocations(Configuration, HDFSBlocksDistribution)} */
   private static final String LOCALITY_CUTOFF_MULTIPLIER =
@@ -162,7 +163,7 @@ public class TableSnapshotInputFormatImpl {
       HRegionInfo hri = this.split.getRegionInfo();
       FileSystem fs = FSUtils.getCurrentFileSystem(conf);
 
-      Path tmpRootDir = new Path(conf.get(TABLE_DIR_KEY)); // This is the user specified root
+      Path tmpRootDir = new Path(conf.get(RESTORE_DIR_KEY)); // This is the user specified root
       // directory where snapshot was restored
 
       // create scan
@@ -257,7 +258,9 @@ public class TableSnapshotInputFormatImpl {
     } else {
       throw new IllegalArgumentException("Unable to create scan");
     }
-    Path tableDir = new Path(conf.get(TABLE_DIR_KEY));
+    // the temp dir where the snapshot is restored
+    Path restoreDir = new Path(conf.get(RESTORE_DIR_KEY));
+    Path tableDir = FSUtils.getTableDir(restoreDir, htd.getTableName());
 
     List<InputSplit> splits = new ArrayList<InputSplit>();
     for (SnapshotRegionManifest regionManifest : regionManifests) {
@@ -351,6 +354,6 @@ public class TableSnapshotInputFormatImpl {
     // TODO: restore from record readers to parallelize.
     RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
 
-    conf.set(TABLE_DIR_KEY, restoreDir.toString());
+    conf.set(RESTORE_DIR_KEY, restoreDir.toString());
   }
 }
