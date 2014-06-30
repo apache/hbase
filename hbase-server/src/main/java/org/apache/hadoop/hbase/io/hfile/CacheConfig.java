@@ -406,7 +406,7 @@ public class CacheConfig {
       }
       LOG.info("Allocating LruBlockCache with maximum size " +
         StringUtils.humanReadableInt(lruCacheSize));
-      LruBlockCache lruCache = new LruBlockCache(lruCacheSize, StoreFile.DEFAULT_BLOCKSIZE_SMALL);
+      LruBlockCache lruCache = new LruBlockCache(lruCacheSize, StoreFile.DEFAULT_BLOCKSIZE_SMALL, true, conf);
       lruCache.setVictimCache(bucketCache);
       if (bucketCache != null && combinedWithLru) {
         globalBlockCache = new CombinedBlockCache(lruCache, bucketCache);
