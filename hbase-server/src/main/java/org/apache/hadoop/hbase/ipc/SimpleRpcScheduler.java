@@ -22,6 +22,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -37,18 +39,18 @@ import com.google.common.collect.Lists;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class SimpleRpcScheduler implements RpcScheduler {
+  public static final Log LOG = LogFactory.getLog(SimpleRpcScheduler.class);
+
+  public static final String CALL_QUEUE_READ_SHARE_CONF_KEY = "ipc.server.callqueue.read.share";
+  public static final String CALL_QUEUE_HANDLER_FACTOR_CONF_KEY =
+      "ipc.server.callqueue.handler.factor";
 
   private int port;
-  private final int handlerCount;
-  private final int priorityHandlerCount;
-  private final int replicationHandlerCount;
   private final PriorityFunction priority;
-  final BlockingQueue<CallRunner> callQueue;
-  final BlockingQueue<CallRunner> priorityCallQueue;
-  final BlockingQueue<CallRunner> replicationQueue;
-  private volatile boolean running = false;
-  private final List<Thread> handlers = Lists.newArrayList();
-  private AtomicInteger activeHandlerCount = new AtomicInteger(0);
+  private final RpcExecutor callExecutor;
+  private final RpcExecutor priorityExecutor;
+  private final RpcExecutor replicationExecutor;
+
   /** What level a high priority call is at. */
   private final int highPriorityLevel;
 
@@ -69,17 +71,34 @@ public class SimpleRpcScheduler implements RpcScheduler {
       int highPriorityLevel) {
     int maxQueueLength = conf.getInt("ipc.server.max.callqueue.length",
         handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
-    this.handlerCount = handlerCount;
-    this.priorityHandlerCount = priorityHandlerCount;
-    this.replicationHandlerCount = replicationHandlerCount;
     this.priority = priority;
     this.highPriorityLevel = highPriorityLevel;
-    this.callQueue = new LinkedBlockingQueue<CallRunner>(maxQueueLength);
-    this.priorityCallQueue = priorityHandlerCount > 0
-        ? new LinkedBlockingQueue<CallRunner>(maxQueueLength)
+
+    float callqReadShare = conf.getFloat(CALL_QUEUE_READ_SHARE_CONF_KEY, 0);
+
+    float callQueuesHandlersFactor = conf.getFloat(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 0);
+    int numCallQueues = Math.max(1, (int)Math.round(handlerCount * callQueuesHandlersFactor));
+
+    LOG.info("Using default user call queue, count=" + numCallQueues);
+
+    if (numCallQueues > 1 && callqReadShare > 0) {
+      // multiple read/write queues
+      callExecutor = new RWQueueRpcExecutor("default", handlerCount, numCallQueues,
+          callqReadShare, maxQueueLength);
+    } else if (numCallQueues > 1) {
+      // multiple queues
+      callExecutor = new MultipleQueueRpcExecutor("default", handlerCount,
+          numCallQueues, maxQueueLength);
+    } else {
+      // Single queue
+      callExecutor = new SingleQueueRpcExecutor("default", handlerCount, maxQueueLength);
+    }
+
+    this.priorityExecutor = priorityHandlerCount > 0
+        ? new SingleQueueRpcExecutor("Priority", priorityHandlerCount, maxQueueLength)
         : null;
-    this.replicationQueue = replicationHandlerCount > 0
-        ? new LinkedBlockingQueue<CallRunner>(maxQueueLength)
+    this.replicationExecutor = replicationHandlerCount > 0
+        ? new SingleQueueRpcExecutor("Replication", replicationHandlerCount, maxQueueLength)
         : null;
   }
 
@@ -88,91 +107,53 @@ public class SimpleRpcScheduler implements RpcScheduler {
     this.port = context.getListenerAddress().getPort();
   }
 
-  @Override
+    @Override
   public void start() {
-    running = true;
-    startHandlers(handlerCount, callQueue, null);
-    if (priorityCallQueue != null) {
-      startHandlers(priorityHandlerCount, priorityCallQueue, "Priority.");
-    }
-    if (replicationQueue != null) {
-      startHandlers(replicationHandlerCount, replicationQueue, "Replication.");
-    }
-  }
-
-  private void startHandlers(
-      int handlerCount,
-      final BlockingQueue<CallRunner> callQueue,
-      String threadNamePrefix) {
-    for (int i = 0; i < handlerCount; i++) {
-      Thread t = new Thread(new Runnable() {
-        @Override
-        public void run() {
-          consumerLoop(callQueue);
-        }
-      });
-      t.setDaemon(true);
-      t.setName(Strings.nullToEmpty(threadNamePrefix) + "RpcServer.handler=" + i + ",port=" + port);
-      t.start();
-      handlers.add(t);
-    }
+    callExecutor.start(port);
+    if (priorityExecutor != null) priorityExecutor.start(port);
+    if (replicationExecutor != null) replicationExecutor.start(port);
   }
 
   @Override
   public void stop() {
-    running = false;
-    for (Thread handler : handlers) {
-      handler.interrupt();
-    }
+    callExecutor.stop();
+    if (priorityExecutor != null) priorityExecutor.stop();
+    if (replicationExecutor != null) replicationExecutor.stop();
   }
 
   @Override
   public void dispatch(CallRunner callTask) throws InterruptedException {
     RpcServer.Call call = callTask.getCall();
-    int level = priority.getPriority(call.header, call.param);
-    if (priorityCallQueue != null && level > highPriorityLevel) {
-      priorityCallQueue.put(callTask);
-    } else if (replicationQueue != null && level == HConstants.REPLICATION_QOS) {
-      replicationQueue.put(callTask);
+    int level = priority.getPriority(call.getHeader(), call.param);
+    if (priorityExecutor != null && level > highPriorityLevel) {
+      priorityExecutor.dispatch(callTask);
+    } else if (replicationExecutor != null && level == HConstants.REPLICATION_QOS) {
+      replicationExecutor.dispatch(callTask);
     } else {
-      callQueue.put(callTask); // queue the call; maybe blocked here
+      callExecutor.dispatch(callTask);
     }
   }
 
   @Override
   public int getGeneralQueueLength() {
-    return callQueue.size();
+    return callExecutor.getQueueLength();
   }
 
   @Override
   public int getPriorityQueueLength() {
-    return priorityCallQueue == null ? 0 : priorityCallQueue.size();
+    return priorityExecutor == null ? 0 : priorityExecutor.getQueueLength();
   }
 
   @Override
   public int getReplicationQueueLength() {
-    return replicationQueue == null ? 0 : replicationQueue.size();
+    return replicationExecutor == null ? 0 : replicationExecutor.getQueueLength();
   }
 
   @Override
   public int getActiveRpcHandlerCount() {
-    return activeHandlerCount.get();
-  }
-
-  private void consumerLoop(BlockingQueue<CallRunner> myQueue) {
-    while (running) {
-      try {
-        CallRunner task = myQueue.take();
-        try {
-          activeHandlerCount.incrementAndGet();
-          task.run();
-        } finally {
-          activeHandlerCount.decrementAndGet();
-        }
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-      }
-    }
+    return callExecutor.getActiveHandlerCount() +
+           (priorityExecutor == null ? 0 : priorityExecutor.getActiveHandlerCount()) +
+           (replicationExecutor == null ? 0 : replicationExecutor.getActiveHandlerCount());
   }
 }
 
