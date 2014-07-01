@@ -1070,7 +1070,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    * multiple replicas for the same region, or, if there are multiple racks and the same
    * rack hosts replicas of the same region
    * @param c
-   * @return
+   * @return whether region replicas are currently co-located
    */
   protected boolean areSomeRegionReplicasColocated(Cluster c) {
     return false;

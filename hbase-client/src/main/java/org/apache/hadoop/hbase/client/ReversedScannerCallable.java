@@ -80,7 +80,7 @@ public class ReversedScannerCallable extends ScannerCallable {
 
   /**
    * @deprecated use
-   *             {@link #ReversedScannerCallable(HConnection, TableName, Scan, ScanMetrics, byte[], RpcControllerFactory)}
+   *             {@link #ReversedScannerCallable(ClusterConnection, TableName, Scan, ScanMetrics, byte[], RpcControllerFactory )}
    */
   @Deprecated
   public ReversedScannerCallable(ClusterConnection connection, TableName tableName,

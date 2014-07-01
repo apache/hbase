@@ -74,7 +74,7 @@ public class RackManager {
   /**
    * Same as {@link #getRack(ServerName)} except that a list is passed
    * @param servers
-   * @return
+   * @return list of racks for the given list of servers
    */
   public List<String> getRack(List<ServerName> servers) {
     // just a note - switchMapping caches results (at least the implementation should unless the

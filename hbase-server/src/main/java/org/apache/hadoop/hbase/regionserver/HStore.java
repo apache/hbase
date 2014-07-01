@@ -1573,7 +1573,6 @@ public class HStore implements Store {
    * </pre>
    *
    * @param compactedFiles list of files that were compacted
-   * @param newFile StoreFile that is the result of the compaction
    */
   @VisibleForTesting
   protected void completeCompaction(final Collection<StoreFile> compactedFiles)
@@ -1595,7 +1594,6 @@ public class HStore implements Store {
    * </pre>
    *
    * @param compactedFiles list of files that were compacted
-   * @param newFile StoreFile that is the result of the compaction
    */
   @VisibleForTesting
   protected void completeCompaction(final Collection<StoreFile> compactedFiles, boolean removeFiles)
