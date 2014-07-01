@@ -43,8 +43,6 @@ org.apache.hadoop.hbase.io.hfile.bucket.BucketCacheStats;
 org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator;
 org.apache.hadoop.hbase.io.hfile.bucket.BucketAllocator.Bucket;
-org.apache.hadoop.hbase.io.hfile.slab.SlabCache;
-org.apache.hadoop.hbase.io.hfile.slab.SingleSizeCache;
 org.apache.hadoop.util.StringUtils;
 </%import>
 <div class="tabbable">
@@ -264,17 +262,12 @@ are combined counts. Request count is sum of hits and misses.</p>
     org.apache.hadoop.hbase.io.hfile.BlockCacheUtil.getLoadedCachedBlocksByFile(config, bc);
   AgeSnapshot snapshot = cbsbf.getAgeSnapshot();
 
-  boolean slabCache = bc.getClass().getSimpleName().equals("SlabCache");
-  Map<Integer, SingleSizeCache> sizer = null;
-
   boolean bucketCache = bc.getClass().getSimpleName().equals("BucketCache");
   BucketCacheStats bucketCacheStats = null;
   BucketAllocator bucketAllocator = null;
   Bucket [] buckets = null;
 
-  if (slabCache) {
-    sizer = ((SlabCache)bc).getSizer();
-  } else if (bucketCache) {
+  if (bucketCache) {
     bucketCacheStats = (BucketCacheStats)bc.getStats();
     bucketAllocator = ((BucketCache)bc).getAllocator();
     buckets = bucketAllocator.getBuckets();
@@ -325,8 +318,7 @@ are combined counts. Request count is sum of hits and misses.</p>
         <td>Size of DATA Blocks</td>
     </tr>
 </%if>
-<%doc>Can't do age of block in cache when slab cache</%doc>
-<%if !slabCache %>
+
     <tr>
         <td>Mean</td>
         <td><% String.format("%,d", (long)(snapshot.getMean()/nanosPerSecond)) %></td>
@@ -357,7 +349,7 @@ are combined counts. Request count is sum of hits and misses.</p>
         <td><% String.format("%,d", (long)(snapshot.get99thPercentile()/nanosPerSecond)) %></td>
         <td>99th percentile of age of Blocks in cache (seconds)</td>
     </tr>
-</%if>
+
 <%if bucketCache %>
     <tr>
         <td>Hits per Second</td>
@@ -389,39 +381,6 @@ are combined counts. Request count is sum of hits and misses.</p>
         <td><% bucket.getItemAllocationSize() %></td>
         <td><% bucket.getFreeBytes() %></td>
         <td><% bucket.getUsedBytes() %></td>
-    </tr>
-</%for>
-</table>
-<%elseif slabCache %>
-<p>SlabCache does not keep account of block ages so can not show stats on how long blocks have been cached.</p>
-<h3>SlabCache Slabs</h3>
-<table class="table table-striped">
-    <tr>
-        <th>Block Size</th>
-        <th>Size</th>
-        <th>Free Size</th>
-        <th>Count</th>
-        <th>Evicted</th>
-        <th>Evictions</th>
-        <th>Hits</th>
-        <th>Caching</th>
-        <th>Misses</th>
-        <th>Caching</th>
-        <th>Hit Ratio</th>
-    </tr>
-<%for Map.Entry<Integer, SingleSizeCache> e: sizer.entrySet() %>
-    <tr>
-        <td><% StringUtils.humanReadableInt(e.getKey()) %></td>
-        <td><% StringUtils.humanReadableInt(e.getValue().size()) %></td>
-        <td><% StringUtils.humanReadableInt(e.getValue().getFreeSize()) %></td>
-        <td><% StringUtils.humanReadableInt(e.getValue().getBlockCount()) %></td>
-        <td><% StringUtils.humanReadableInt(e.getValue().getStats().getEvictedCount()) %></td>
-        <td><% StringUtils.humanReadableInt(e.getValue().getStats().getEvictionCount()) %></td>
-        <td><% StringUtils.humanReadableInt(e.getValue().getStats().getHitCount()) %></td>
-        <td><% StringUtils.humanReadableInt(e.getValue().getStats().getHitCachingCount()) %></td>
-        <td><% StringUtils.humanReadableInt(e.getValue().getStats().getMissCount()) %></td>
-        <td><% StringUtils.humanReadableInt(e.getValue().getStats().getMissCachingCount()) %></td>
-        <td><% String.format("%,.2f", e.getValue().getStats().getHitRatio() * 100) %><% "%" %></td>
     </tr>
 </%for>
 </table>
