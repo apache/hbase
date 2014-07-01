@@ -281,9 +281,7 @@ public class TableMapReduceUtil {
   public static void resetCacheConfig(Configuration conf) {
     conf.setFloat(
       HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
-    conf.setFloat(CacheConfig.SLAB_CACHE_OFFHEAP_PERCENTAGE_KEY, 0f);
     conf.setFloat(CacheConfig.BUCKET_CACHE_SIZE_KEY, 0f);
-    conf.setFloat("hbase.offheapcache.percentage", 0f);
     conf.setFloat("hbase.bucketcache.size", 0f);
   }
 

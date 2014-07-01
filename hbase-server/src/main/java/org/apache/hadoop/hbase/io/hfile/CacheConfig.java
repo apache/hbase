@@ -29,8 +29,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
-import org.apache.hadoop.hbase.io.hfile.slab.SlabCache;
-import org.apache.hadoop.hbase.util.DirectMemoryUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -138,19 +136,6 @@ public class CacheConfig {
   public static final int DEFAULT_BUCKET_CACHE_WRITER_THREADS = 3;
   public static final int DEFAULT_BUCKET_CACHE_WRITER_QUEUE = 64;
   public static final float DEFAULT_BUCKET_CACHE_COMBINED_PERCENTAGE = 0.9f;
-
-  /**
-   * Setting this float to a non-null value turns on {@link DoubleBlockCache}
-   * which makes use of the {@link LruBlockCache} and {@link SlabCache}.
-   * 
-   * The float value of between 0 and 1 will be multiplied against the setting for
-   * <code>-XX:MaxDirectMemorySize</code> to figure what size of the offheap allocation to give
-   * over to slab cache.
-   * 
-   * Slab cache has been little used and is likely to be deprecated in the near future.
-   */
-  public static final String SLAB_CACHE_OFFHEAP_PERCENTAGE_KEY =
-    "hbase.offheapcache.percentage";
 
  /**
    * Configuration key to prefetch all blocks of a given file into the block cache
@@ -491,52 +476,31 @@ public class CacheConfig {
     MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
     long lruCacheSize = (long) (mu.getMax() * cachePercentage);
     int blockSize = conf.getInt("hbase.offheapcache.minblocksize", HConstants.DEFAULT_BLOCKSIZE);
-    long slabCacheOffHeapCacheSize =
-      conf.getFloat(SLAB_CACHE_OFFHEAP_PERCENTAGE_KEY, 0) == 0?
-      0:
-      (long) (conf.getFloat(SLAB_CACHE_OFFHEAP_PERCENTAGE_KEY, (float) 0) *
-          DirectMemoryUtils.getDirectMemorySize());
-    if (slabCacheOffHeapCacheSize <= 0) {
-      String bucketCacheIOEngineName = conf.get(BUCKET_CACHE_IOENGINE_KEY, null);
-      float bucketCachePercentage = conf.getFloat(BUCKET_CACHE_SIZE_KEY, 0F);
-      // A percentage of max heap size or a absolute value with unit megabytes
-      long bucketCacheSize = (long) (bucketCachePercentage < 1 ? mu.getMax()
-          * bucketCachePercentage : bucketCachePercentage * 1024 * 1024);
 
-      boolean combinedWithLru = conf.getBoolean(BUCKET_CACHE_COMBINED_KEY,
-          DEFAULT_BUCKET_CACHE_COMBINED);
-      BucketCache bucketCache = null;
-      if (bucketCacheIOEngineName != null && bucketCacheSize > 0) {
-        int writerThreads = conf.getInt(BUCKET_CACHE_WRITER_THREADS_KEY,
-            DEFAULT_BUCKET_CACHE_WRITER_THREADS);
-        int writerQueueLen = conf.getInt(BUCKET_CACHE_WRITER_QUEUE_KEY,
-            DEFAULT_BUCKET_CACHE_WRITER_QUEUE);
-        String persistentPath = conf.get(BUCKET_CACHE_PERSISTENT_PATH_KEY);
-        float combinedPercentage = conf.getFloat(
-            BUCKET_CACHE_COMBINED_PERCENTAGE_KEY,
-            DEFAULT_BUCKET_CACHE_COMBINED_PERCENTAGE);
-        String[] configuredBucketSizes = conf.getStrings(BUCKET_CACHE_BUCKETS_KEY);
-        int[] bucketSizes = null;
-        if (configuredBucketSizes != null) {
-          bucketSizes = new int[configuredBucketSizes.length];
-          for (int i = 0; i < configuredBucketSizes.length; i++) {
-            bucketSizes[i] = Integer.parseInt(configuredBucketSizes[i]);
-          }
-        }
-        if (combinedWithLru) {
-          lruCacheSize = (long) ((1 - combinedPercentage) * bucketCacheSize);
-          bucketCacheSize = (long) (combinedPercentage * bucketCacheSize);
-        }
-        try {
-          int ioErrorsTolerationDuration = conf.getInt(
-              "hbase.bucketcache.ioengine.errors.tolerated.duration",
-              BucketCache.DEFAULT_ERROR_TOLERATION_DURATION);
-          bucketCache = new BucketCache(bucketCacheIOEngineName,
-              bucketCacheSize, blockSize, bucketSizes, writerThreads, writerQueueLen, persistentPath,
-              ioErrorsTolerationDuration);
-        } catch (IOException ioex) {
-          LOG.error("Can't instantiate bucket cache", ioex);
-          throw new RuntimeException(ioex);
+    String bucketCacheIOEngineName = conf.get(BUCKET_CACHE_IOENGINE_KEY, null);
+    float bucketCachePercentage = conf.getFloat(BUCKET_CACHE_SIZE_KEY, 0F);
+    // A percentage of max heap size or a absolute value with unit megabytes
+    long bucketCacheSize = (long) (bucketCachePercentage < 1 ? mu.getMax()
+      * bucketCachePercentage : bucketCachePercentage * 1024 * 1024);
+
+    boolean combinedWithLru = conf.getBoolean(BUCKET_CACHE_COMBINED_KEY,
+      DEFAULT_BUCKET_CACHE_COMBINED);
+    BucketCache bucketCache = null;
+    if (bucketCacheIOEngineName != null && bucketCacheSize > 0) {
+      int writerThreads = conf.getInt(BUCKET_CACHE_WRITER_THREADS_KEY,
+        DEFAULT_BUCKET_CACHE_WRITER_THREADS);
+      int writerQueueLen = conf.getInt(BUCKET_CACHE_WRITER_QUEUE_KEY,
+        DEFAULT_BUCKET_CACHE_WRITER_QUEUE);
+      String persistentPath = conf.get(BUCKET_CACHE_PERSISTENT_PATH_KEY);
+      float combinedPercentage = conf.getFloat(
+        BUCKET_CACHE_COMBINED_PERCENTAGE_KEY,
+        DEFAULT_BUCKET_CACHE_COMBINED_PERCENTAGE);
+      String[] configuredBucketSizes = conf.getStrings(BUCKET_CACHE_BUCKETS_KEY);
+      int[] bucketSizes = null;
+      if (configuredBucketSizes != null) {
+        bucketSizes = new int[configuredBucketSizes.length];
+        for (int i = 0; i < configuredBucketSizes.length; i++) {
+          bucketSizes[i] = Integer.parseInt(configuredBucketSizes[i]);
         }
       }
       LOG.info("Allocating LruBlockCache size=" +
@@ -548,10 +512,26 @@ public class CacheConfig {
       } else {
         GLOBAL_BLOCK_CACHE_INSTANCE = lruCache;
       }
+      try {
+        int ioErrorsTolerationDuration = conf.getInt(
+          "hbase.bucketcache.ioengine.errors.tolerated.duration",
+          BucketCache.DEFAULT_ERROR_TOLERATION_DURATION);
+        bucketCache = new BucketCache(bucketCacheIOEngineName,
+          bucketCacheSize, blockSize, bucketSizes, writerThreads, writerQueueLen, persistentPath,
+          ioErrorsTolerationDuration);
+      } catch (IOException ioex) {
+        LOG.error("Can't instantiate bucket cache", ioex);
+        throw new RuntimeException(ioex);
+      }
+    }
+    LOG.info("Allocating LruBlockCache size=" +
+      StringUtils.byteDesc(lruCacheSize) + ", blockSize=" + StringUtils.byteDesc(blockSize));
+    LruBlockCache lruCache = new LruBlockCache(lruCacheSize, blockSize);
+    lruCache.setVictimCache(bucketCache);
+    if (bucketCache != null && combinedWithLru) {
+      GLOBAL_BLOCK_CACHE_INSTANCE = new CombinedBlockCache(lruCache, bucketCache);
     } else {
-      LOG.warn("SlabCache is deprecated. Consider BucketCache as a replacement.");
-      GLOBAL_BLOCK_CACHE_INSTANCE = new DoubleBlockCache(
-          lruCacheSize, slabCacheOffHeapCacheSize, blockSize, blockSize, conf);
+      GLOBAL_BLOCK_CACHE_INSTANCE = lruCache;
     }
     return GLOBAL_BLOCK_CACHE_INSTANCE;
   }

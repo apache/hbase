@@ -198,15 +198,6 @@ public class TestCacheConfig {
   }
 
   @Test
-  public void testSlabCacheConfig() {
-    this.conf.setFloat(CacheConfig.SLAB_CACHE_OFFHEAP_PERCENTAGE_KEY, 0.1f);
-    CacheConfig cc = new CacheConfig(this.conf);
-    basicBlockCacheOps(cc, true, true);
-    assertTrue(cc.getBlockCache() instanceof DoubleBlockCache);
-    // TODO Assert sizes allocated are right.
-  }
-
-  @Test
   public void testBucketCacheConfig() {
     this.conf.set(CacheConfig.BUCKET_CACHE_IOENGINE_KEY, "offheap");
     this.conf.setInt(CacheConfig.BUCKET_CACHE_SIZE_KEY, 100);

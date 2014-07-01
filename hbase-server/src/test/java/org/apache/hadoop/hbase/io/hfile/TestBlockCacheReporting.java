@@ -70,23 +70,6 @@ public class TestBlockCacheReporting {
   }
 
   @Test
-  public void testSlabCacheConfig() throws JsonGenerationException, JsonMappingException, IOException {
-    this.conf.setFloat(CacheConfig.SLAB_CACHE_OFFHEAP_PERCENTAGE_KEY, 0.1f);
-    CacheConfig cc = new CacheConfig(this.conf);
-    assertTrue(cc.getBlockCache() instanceof DoubleBlockCache);
-    logPerBlock(cc.getBlockCache());
-    final int count = 3;
-    addDataAndHits(cc.getBlockCache(), count);
-    // The below has no asserts.  It is just exercising toString and toJSON code.
-    LOG.info(cc.getBlockCache().getStats());
-    BlockCacheUtil.CachedBlocksByFile cbsbf = logPerBlock(cc.getBlockCache());
-    LOG.info(cbsbf);
-    logPerFile(cbsbf);
-    bucketCacheReport(cc.getBlockCache());
-    LOG.info(BlockCacheUtil.toJSON(cbsbf));
-  }
-
-  @Test
   public void testBucketCache() throws JsonGenerationException, JsonMappingException, IOException {
     this.conf.set(CacheConfig.BUCKET_CACHE_IOENGINE_KEY, "offheap");
     this.conf.setInt(CacheConfig.BUCKET_CACHE_SIZE_KEY, 100);
