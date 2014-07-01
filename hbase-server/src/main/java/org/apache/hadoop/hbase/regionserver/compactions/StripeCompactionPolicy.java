@@ -266,7 +266,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     int minFilesLocal = Math.max(
         allFilesOnly ? sfs.size() : 0, this.config.getStripeCompactMinFiles());
     int maxFilesLocal = Math.max(this.config.getStripeCompactMaxFiles(), minFilesLocal);
-    return stripePolicy.applyCompactionPolicy(sfs, isOffpeak, false, minFilesLocal, maxFilesLocal);
+    return stripePolicy.applyCompactionPolicy(sfs, false, isOffpeak, minFilesLocal, maxFilesLocal);
   }
 
   /**
