@@ -154,6 +154,8 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   private Map<InternalScanner,String> scannerOwners =
       new MapMaker().weakKeys().makeMap();
 
+  List<String> superUsers;
+
   static {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
@@ -202,6 +204,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       // ScanLabelGenerator to be instantiated only with Region Observer.
       scanLabelGenerators = VisibilityUtils.getScanLabelGenerators(this.conf);
     }
+    this.superUsers = getSystemAndSuperUsers();
   }
 
   @Override
@@ -652,8 +655,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       Put p = new Put(Bytes.toBytes(SYSTEM_LABEL_ORDINAL));
       p.addImmutable(LABELS_TABLE_FAMILY, LABEL_QUALIFIER, Bytes.toBytes(SYSTEM_LABEL));
       // Set auth for "system" label for all super users.
-      List<String> superUsers = getSystemAndSuperUsers();
-      for (String superUser : superUsers) {
+      for (String superUser : this.superUsers) {
         p.addImmutable(
             LABELS_TABLE_FAMILY, Bytes.toBytes(superUser), DUMMY_VALUE, LABELS_TABLE_TAGS);
       }
@@ -832,6 +834,12 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   // Checks whether cell contains any tag with type as VISIBILITY_TAG_TYPE.
   // This tag type is reserved and should not be explicitly set by user.
   private boolean checkForReservedVisibilityTagPresence(Cell cell) throws IOException {
+    // Bypass this check when the operation is done by a system/super user.
+    // This is done because, while Replication, the Cells coming to the peer cluster with reserved
+    // typed tags and this is fine and should get added to the peer cluster table
+    if (isSystemOrSuperUser()) {
+      return true;
+    }
     if (cell.getTagsLength() > 0) {
       Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
           cell.getTagsLength());
@@ -1091,9 +1099,8 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   }
 
   private boolean isSystemOrSuperUser() throws IOException {
-    List<String> superUsers = getSystemAndSuperUsers();
     User activeUser = getActiveUser();
-    return superUsers.contains(activeUser.getShortName());
+    return this.superUsers.contains(activeUser.getShortName());
   }
 
   @Override
