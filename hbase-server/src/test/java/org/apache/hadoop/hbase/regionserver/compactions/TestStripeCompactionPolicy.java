@@ -279,6 +279,22 @@ public class TestStripeCompactionPolicy {
   }
 
   @Test
+  public void testSplitOffStripeOffPeak() throws Exception {
+    // for HBASE-11439
+    Configuration conf = HBaseConfiguration.create();
+    conf.setInt(StripeStoreConfig.MIN_FILES_KEY, 2);
+    // Select the last 2 files.
+    StripeCompactionPolicy.StripeInformationProvider si =
+        createStripesWithSizes(0, 0, new Long[] { defaultSplitSize - 2, 1L, 1L });
+    assertEquals(2, createPolicy(conf).selectCompaction(si, al(), false).getRequest().getFiles()
+        .size());
+    // Make sure everything is eligible in offpeak.
+    conf.setFloat("hbase.hstore.compaction.ratio.offpeak", 500f);
+    assertEquals(3, createPolicy(conf).selectCompaction(si, al(), true).getRequest().getFiles()
+        .size());
+  }
+
+  @Test
   public void testSplitOffStripeDropDeletes() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setInt(StripeStoreConfig.MIN_FILES_KEY, 2);
