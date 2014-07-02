@@ -267,6 +267,9 @@ public class HBaseFsck {
 
     try {
       for (HbckInfo hbi : regionInfo.values()) {
+        if (hbi.metaEntry.getTableDesc().isMetaTable()) {
+          continue;
+        }
         tableDir = HTableDescriptor.getTableDir(FSUtils.getRootDir(conf),
             hbi.metaEntry.getTableDesc().getName());
 

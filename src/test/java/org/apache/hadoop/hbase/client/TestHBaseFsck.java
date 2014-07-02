@@ -74,6 +74,18 @@ public class TestHBaseFsck {
 
 
   @Test
+  public void testCheckRegionInfo() throws Exception {
+    HTableDescriptor desc = new HTableDescriptor("testCheckRegionInfo");
+    desc.addFamily(new HColumnDescriptor(Bytes.toBytes("D")));
+    admin.createTable(desc);
+    HBaseFsck fsck = new HBaseFsck(TEST_UTIL.getConfiguration());
+    Map<HRegionInfo, Path> result = fsck.checkRegionInfo();
+
+    assertEquals(0, result.size());
+  }
+
+
+  @Test
   public void testFindMultipleHoles() throws IOException, InterruptedException {
 
     byte[] tableName = Bytes.toBytes("testCreateTableWithRegions");
