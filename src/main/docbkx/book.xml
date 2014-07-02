@@ -4330,7 +4330,20 @@ This option should not normally be used, and it is not in <code>-fixAll</code>.
   <appendix xml:id="compression">
 
     <title >Compression In HBase<indexterm><primary>Compression</primary></indexterm></title>
-    <para>There are a bunch of compression options in HBase.  There is some helpful discussion
+    <para>There are a bunch of compression options in HBase.  Some codecs come with java --
+        e.g. gzip -- and so require no additional installations. Others require native
+        libraries.  The native libraries may be available in your hadoop as is the case
+        with lz4 and it is just a matter of making sure the hadoop native .so is available
+        to HBase.  You may have to do extra work to make the codec accessible; for example,
+        if the codec has an apache-incompatible license that makes it so hadoop cannot bundle
+        the library.</para>
+        <para>Below we
+        discuss what is necessary for the common codecs.  Whatever codec you use, be sure
+        to test it is installed properly and is available on all nodes that make up your cluster.
+        Add any necessary operational step that will ensure checking the codec present when you
+        happen to add new nodes to your cluster. The <xref linkend="compression.test" />
+        discussed below can help check the codec is properly install.</para>
+        <para>As to which codec to use, there is some helpful discussion
         to be found in <link xlink:href="http://search-hadoop.com/m/lL12B1PFVhp1">Documenting Guidance on compression and codecs</link>.
     </para>
 
@@ -4341,11 +4354,25 @@ This option should not normally be used, and it is not in <code>-fixAll</code>.
     To run it, type <code>/bin/hbase org.apache.hadoop.hbase.util.CompressionTest</code>.
     This will emit usage on how to run the tool.
     </para>
-    <note><title>You need to restart regionserver for it to pick up fixed codecs!</title>
+    <note><title>You need to restart regionserver for it to pick up changes!</title>
         <para>Be aware that the regionserver caches the result of the compression check it runs
-            ahead of each region open.  This means
-        that you will have to restart the regionserver for it to notice that you have fixed
-    any codec issues.</para>
+            ahead of each region open.  This means that you will have to restart the regionserver
+            for it to notice that you have fixed any codec issues; e.g. changed symlinks or
+            moved lib locations under HBase.</para>
+    </note>
+    <note xml:id="hbase.native.platform"><title>On the location of native libraries</title>
+        <para>Hadoop looks in <filename>lib/native</filename> for .so files.  HBase looks in
+            <filename>lib/native/PLATFORM</filename>.  See the <command>bin/hbase</command>.
+            View the file and look for <varname>native</varname>.  See how we
+            do the work to find out what platform we are running on running a little java program
+            <classname>org.apache.hadoop.util.PlatformName</classname> to figure it out.
+            We'll then add <filename>./lib/native/PLATFORM</filename> to the
+            <varname>LD_LIBRARY_PATH</varname> environment for when the JVM starts.
+            The JVM will look in here (as well as in any other dirs specified on LD_LIBRARY_PATH)
+            for codec native libs.  If you are unable to figure your 'platform', do:
+            <programlisting>$ ./bin/hbase org.apache.hadoop.util.PlatformName</programlisting>.
+            An example platform would be <varname>Linux-amd64-64</varname>.
+            </para>
     </note>
     </section>
 
@@ -4376,6 +4403,41 @@ This option should not normally be used, and it is not in <code>-fixAll</code>.
     </para>
     </section>
 
+    <section xml:id="gzip.compression">
+    <title>
+    GZIP
+    </title>
+    <para>
+    GZIP will generally compress better than LZO but it will run slower.
+    For some setups, better compression may be preferred ('cold' data).
+    Java will use java's GZIP unless the native Hadoop libs are
+    available on the CLASSPATH; in this case it will use native
+    compressors instead (If the native libs are NOT present,
+    you will see lots of <emphasis>Got brand-new compressor</emphasis>
+    reports in your logs; see <xref linkend="brand.new.compressor" />).
+    </para>
+    </section>
+
+    <section xml:id="lz4.compression">
+    <title>
+        LZ4
+    </title>
+    <para>
+        LZ4 is bundled with Hadoop. Make sure the hadoop .so is
+        accessible when you start HBase.  One means of doing this is after figuring your
+        platform, see <xref linkend="hbase.native.platform" />, make a symlink from HBase
+        to the native Hadoop libraries presuming the two software installs are colocated.
+        For example, if my 'platform' is Linux-amd64-64:
+        <programlisting>$ cd $HBASE_HOME
+$ mkdir lib/native
+$ ln -s $HADOOP_HOME/lib/native lib/native/Linux-amd64-64</programlisting>
+        Use the compression tool to check lz4 installed on all nodes.
+        Start up (or restart) hbase. From here on out you will be able to create
+        and alter tables to enable LZ4 as a compression codec. E.g.:
+        <programlisting>hbase(main):003:0> alter 'TestTable', {NAME => 'info', COMPRESSION => 'LZ4'}</programlisting>
+    </para>
+    </section>
+
     <section xml:id="lzo.compression">
     <title>
     LZO
@@ -4395,20 +4457,6 @@ This option should not normally be used, and it is not in <code>-fixAll</code>.
       for a feature to help protect against failed LZO install.</para>
     </section>
 
-    <section xml:id="gzip.compression">
-    <title>
-    GZIP
-    </title>
-    <para>
-    GZIP will generally compress better than LZO though slower.
-    For some setups, better compression may be preferred.
-    Java will use java's GZIP unless the native Hadoop libs are
-    available on the CLASSPATH; in this case it will use native
-    compressors instead (If the native libs are NOT present,
-    you will see lots of <emphasis>Got brand-new compressor</emphasis>
-    reports in your logs; see <xref linkend="brand.new.compressor" />).
-    </para>
-    </section>
     <section xml:id="snappy.compression">
     <title>
     SNAPPY
