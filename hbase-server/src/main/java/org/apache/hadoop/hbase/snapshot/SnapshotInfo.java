@@ -77,10 +77,12 @@ public final class SnapshotInfo extends Configured implements Tool {
   public static class SnapshotStats {
     /** Information about the file referenced by the snapshot */
     static class FileInfo {
+      private final boolean corrupted;
       private final boolean inArchive;
       private final long size;
 
-      FileInfo(final boolean inArchive, final long size) {
+      FileInfo(final boolean inArchive, final long size, final boolean corrupted) {
+        this.corrupted = corrupted;
         this.inArchive = inArchive;
         this.size = size;
       }
@@ -88,6 +90,11 @@ public final class SnapshotInfo extends Configured implements Tool {
       /** @return true if the file is in the archive */
       public boolean inArchive() {
         return this.inArchive;
+      }
+
+      /** @return true if the file is corrupted */
+      public boolean isCorrupted() {
+        return this.corrupted;
       }
 
       /** @return true if the file is missing */
@@ -99,9 +106,17 @@ public final class SnapshotInfo extends Configured implements Tool {
       public long getSize() {
         return this.size;
       }
+
+      String getStateToString() {
+        if (isCorrupted()) return "CORRUPTED";
+        if (isMissing()) return "NOT FOUND";
+        if (inArchive()) return "archive";
+        return null;
+      }
     }
 
     private AtomicInteger hfileArchiveCount = new AtomicInteger();
+    private AtomicInteger hfilesCorrupted = new AtomicInteger();
     private AtomicInteger hfilesMissing = new AtomicInteger();
     private AtomicInteger hfilesCount = new AtomicInteger();
     private AtomicInteger logsMissing = new AtomicInteger();
@@ -130,7 +145,9 @@ public final class SnapshotInfo extends Configured implements Tool {
 
     /** @return true if the snapshot is corrupted */
     public boolean isSnapshotCorrupted() {
-      return hfilesMissing.get() > 0 || logsMissing.get() > 0;
+      return hfilesMissing.get() > 0 ||
+             logsMissing.get() > 0 ||
+             hfilesCorrupted.get() > 0;
     }
 
     /** @return the number of available store files */
@@ -151,6 +168,11 @@ public final class SnapshotInfo extends Configured implements Tool {
     /** @return the number of missing store files */
     public int getMissingStoreFilesCount() {
       return hfilesMissing.get();
+    }
+
+    /** @return the number of corrupted store files */
+    public int getCorruptedStoreFilesCount() {
+      return hfilesCorrupted.get();
     }
 
     /** @return the number of missing log files */
@@ -194,6 +216,7 @@ public final class SnapshotInfo extends Configured implements Tool {
         final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
       HFileLink link = HFileLink.create(conf, snapshotTable, region.getEncodedName(),
                                         family, storeFile.getName());
+      boolean isCorrupted = false;
       boolean inArchive = false;
       long size = -1;
       try {
@@ -206,10 +229,12 @@ public final class SnapshotInfo extends Configured implements Tool {
           hfileSize.addAndGet(size);
           hfilesCount.incrementAndGet();
         }
+        isCorrupted = (storeFile.hasFileSize() && storeFile.getFileSize() != size);
+        if (isCorrupted) hfilesCorrupted.incrementAndGet();
       } catch (FileNotFoundException e) {
         hfilesMissing.incrementAndGet();
       }
-      return new FileInfo(inArchive, size);
+      return new FileInfo(inArchive, size, isCorrupted);
     }
 
     /**
@@ -228,10 +253,11 @@ public final class SnapshotInfo extends Configured implements Tool {
       } catch (FileNotFoundException e) {
         logsMissing.incrementAndGet();
       }
-      return new FileInfo(false, size);
+      return new FileInfo(false, size, false);
     }
   }
 
+  private boolean printSizeInBytes = false;
   private FileSystem fs;
   private Path rootDir;
 
@@ -266,6 +292,8 @@ public final class SnapshotInfo extends Configured implements Tool {
           FSUtils.setRootDir(conf, sourceDir);
         } else if (cmd.equals("-list-snapshots")) {
           listSnapshots = true;
+        } else if (cmd.equals("-size-in-bytes")) {
+          printSizeInBytes = true;
         } else if (cmd.equals("-h") || cmd.equals("--help")) {
           printUsageAndExit();
         } else {
@@ -379,10 +407,11 @@ public final class SnapshotInfo extends Configured implements Tool {
 
           SnapshotStats.FileInfo info = stats.addStoreFile(regionInfo, family, storeFile);
           if (showFiles) {
+            String state = info.getStateToString();
             System.out.printf("%8s %s/%s/%s/%s %s%n",
-              (info.isMissing() ? "-" : StringUtils.humanReadableInt(info.getSize())),
+              (info.isMissing() ? "-" : fileSizeToString(info.getSize())),
               table, regionInfo.getEncodedName(), family, storeFile.getName(),
-              (info.inArchive() ? "(archive)" : info.isMissing() ? "(NOT FOUND)" : ""));
+              state == null ? "" : "(" + state + ")");
           }
         }
 
@@ -392,10 +421,11 @@ public final class SnapshotInfo extends Configured implements Tool {
           SnapshotStats.FileInfo info = stats.addLogFile(server, logfile);
 
           if (showFiles) {
-            System.out.printf("%8s log %s on server %s %s%n",
-              (info.isMissing() ? "-" : StringUtils.humanReadableInt(info.getSize())),
+            String state = info.getStateToString();
+            System.out.printf("%8s log %s on server %s (%s)%n",
+              (info.isMissing() ? "-" : fileSizeToString(info.getSize())),
               logfile, server,
-              (info.isMissing() ? "(NOT FOUND)" : ""));
+              state == null ? "" : "(" + state + ")");
           }
         }
     });
@@ -406,20 +436,26 @@ public final class SnapshotInfo extends Configured implements Tool {
       System.out.println("**************************************************************");
       System.out.printf("BAD SNAPSHOT: %d hfile(s) and %d log(s) missing.%n",
         stats.getMissingStoreFilesCount(), stats.getMissingLogsCount());
+      System.out.printf("              %d hfile(s) corrupted.%n",
+        stats.getCorruptedStoreFilesCount());
       System.out.println("**************************************************************");
     }
 
     if (showStats) {
       System.out.printf("%d HFiles (%d in archive), total size %s (%.2f%% %s shared with the source table)%n",
         stats.getStoreFilesCount(), stats.getArchivedStoreFilesCount(),
-        StringUtils.humanReadableInt(stats.getStoreFilesSize()),
+        fileSizeToString(stats.getStoreFilesSize()),
         stats.getSharedStoreFilePercentage(),
-        StringUtils.humanReadableInt(stats.getSharedStoreFilesSize())
+        fileSizeToString(stats.getSharedStoreFilesSize())
       );
       System.out.printf("%d Logs, total size %s%n",
-        stats.getLogsCount(), StringUtils.humanReadableInt(stats.getLogsSize()));
+        stats.getLogsCount(), fileSizeToString(stats.getLogsSize()));
       System.out.println();
     }
+  }
+
+  private String fileSizeToString(long size) {
+    return printSizeInBytes ? Long.toString(size) : StringUtils.humanReadableInt(size);
   }
 
   private void printUsageAndExit() {
@@ -428,6 +464,7 @@ public final class SnapshotInfo extends Configured implements Tool {
     System.err.println("  -h|-help                Show this help and exit.");
     System.err.println("  -remote-dir             Root directory that contains the snapshots.");
     System.err.println("  -list-snapshots         List all the available snapshots and exit.");
+    System.err.println("  -size-in-bytes          Print the size of the files in bytes.");
     System.err.println("  -snapshot NAME          Snapshot to examine.");
     System.err.println("  -files                  Files and logs list.");
     System.err.println("  -stats                  Files and logs stats.");
