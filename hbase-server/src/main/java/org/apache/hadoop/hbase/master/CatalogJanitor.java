@@ -294,10 +294,10 @@ public class CatalogJanitor extends Chore {
       // Compare start keys.
       result = Bytes.compareTo(left.getStartKey(), right.getStartKey());
       if (result != 0) return result;
-      // Compare end keys.
-      result = rowEndKeyComparator.compare(left.getEndKey(), right.getEndKey());
+      // Compare end keys, but flip the operands so parent comes first
+      result = rowEndKeyComparator.compare(right.getEndKey(), left.getEndKey());
 
-      return -result; // Flip the result so parent comes first.
+      return result;
     }
   }
 

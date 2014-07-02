@@ -524,7 +524,7 @@ public class NamespaceUpgrade implements Tool {
   new Comparator<FileStatus>() {
     @Override
     public int compare(FileStatus left, FileStatus right) {
-      return -left.compareTo(right);
+      return right.compareTo(left);
     }};
 
   // logic culled from FSTableDescriptors

@@ -378,7 +378,7 @@ public class FSTableDescriptors implements TableDescriptors {
   new Comparator<FileStatus>() {
     @Override
     public int compare(FileStatus left, FileStatus right) {
-      return -left.compareTo(right);
+      return right.compareTo(left);
     }};
 
   /**
