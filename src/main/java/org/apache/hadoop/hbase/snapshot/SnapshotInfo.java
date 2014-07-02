@@ -100,6 +100,12 @@ public final class SnapshotInfo extends Configured implements Tool {
       public long getSize() {
         return this.size;
       }
+
+      String getStateToString() {
+        if (isMissing()) return "NOT FOUND";
+        if (inArchive()) return "archive";
+        return null;
+      }
     }
 
     private int hfileArchiveCount = 0;
@@ -247,6 +253,7 @@ public final class SnapshotInfo extends Configured implements Tool {
     }
   }
 
+  private boolean printSizeInBytes = false;
   private FileSystem fs;
   private Path rootDir;
 
@@ -283,6 +290,8 @@ public final class SnapshotInfo extends Configured implements Tool {
           FSUtils.setRootDir(conf, sourceDir);
         } else if (cmd.equals("-list-snapshots")) {
           listSnapshots = true;
+        } else if (cmd.equals("-size-in-bytes")) {
+          printSizeInBytes = true;
         } else if (cmd.equals("-h") || cmd.equals("--help")) {
           printUsageAndExit();
         } else {
@@ -392,10 +401,11 @@ public final class SnapshotInfo extends Configured implements Tool {
           SnapshotStats.FileInfo info = stats.addStoreFile(region, family, hfile);
 
           if (showFiles) {
+            String state = info.getStateToString();
             System.out.printf("%8s %s/%s/%s/%s %s%n",
-              (info.isMissing() ? "-" : StringUtils.humanReadableInt(info.getSize())),
+              (info.isMissing() ? "-" : fileSizeToString(info.getSize())),
               table, region, family, hfile,
-              (info.inArchive() ? "(archive)" : info.isMissing() ? "(NOT FOUND)" : ""));
+              state == null ? "" : "(" + state + ")");
           }
         }
 
@@ -405,7 +415,7 @@ public final class SnapshotInfo extends Configured implements Tool {
 
           if (showFiles) {
             System.out.printf("%8s recovered.edits %s on region %s%n",
-              StringUtils.humanReadableInt(info.getSize()), logfile, region);
+              fileSizeToString(info.getSize()), logfile, region);
           }
         }
 
@@ -414,10 +424,11 @@ public final class SnapshotInfo extends Configured implements Tool {
           SnapshotStats.FileInfo info = stats.addLogFile(server, logfile);
 
           if (showFiles) {
+            String state = info.getStateToString();
             System.out.printf("%8s log %s on server %s %s%n",
-              (info.isMissing() ? "-" : StringUtils.humanReadableInt(info.getSize())),
+              (info.isMissing() ? "-" : fileSizeToString(info.getSize())),
               logfile, server,
-              (info.isMissing() ? "(NOT FOUND)" : ""));
+              state == null ? "" : "(" + state + ")");
           }
         }
     });
@@ -434,14 +445,18 @@ public final class SnapshotInfo extends Configured implements Tool {
     if (showStats) {
       System.out.printf("%d HFiles (%d in archive), total size %s (%.2f%% %s shared with the source table)%n",
         stats.getStoreFilesCount(), stats.getArchivedStoreFilesCount(),
-        StringUtils.humanReadableInt(stats.getStoreFilesSize()),
+        fileSizeToString(stats.getStoreFilesSize()),
         stats.getSharedStoreFilePercentage(),
-        StringUtils.humanReadableInt(stats.getSharedStoreFilesSize())
+        fileSizeToString(stats.getSharedStoreFilesSize())
       );
       System.out.printf("%d Logs, total size %s%n",
-        stats.getLogsCount(), StringUtils.humanReadableInt(stats.getLogsSize()));
+        stats.getLogsCount(), fileSizeToString(stats.getLogsSize()));
       System.out.println();
     }
+  }
+
+  private String fileSizeToString(long size) {
+    return printSizeInBytes ? Long.toString(size) : StringUtils.humanReadableInt(size);
   }
 
   private void printUsageAndExit() {
