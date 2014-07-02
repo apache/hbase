@@ -93,9 +93,12 @@
 
         <%for HRegionInfo r: onlineRegions %>
         <tr>
-            <td><% r.getRegionNameAsString() %></td>
-            <td><% Bytes.toStringBinary(r.getStartKey()) %></td>
-            <td><% Bytes.toStringBinary(r.getEndKey()) %></td>
+            <td><% HRegionInfo.getRegionNameAsStringForDisplay(r,
+                                        regionServer.getConfiguration()) %></td>
+            <td><% Bytes.toStringBinary(HRegionInfo.getStartKeyForDisplay(r,
+                                        regionServer.getConfiguration())) %></td>
+            <td><% Bytes.toStringBinary(HRegionInfo.getEndKeyForDisplay(r,
+                                        regionServer.getConfiguration())) %></td>
             <td><% r.getReplicaId() %></td>
         </tr>
         </%for>
@@ -119,7 +122,8 @@
         <%java>
             RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
         </%java>
-            <td><% r.getRegionNameAsString() %></td>
+            <td><% HRegionInfo.getRegionNameAsStringForDisplay(r,
+                                           regionServer.getConfiguration()) %></td>
             <%if load != null %>
             <td><% load.getReadRequestsCount() %></td>
             <td><% load.getWriteRequestsCount() %></td>
@@ -151,7 +155,8 @@
         <%java>
             RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
         </%java>
-            <td><% r.getRegionNameAsString() %></td>
+            <td><% HRegionInfo.getRegionNameAsStringForDisplay(r,
+                                           regionServer.getConfiguration()) %></td>
             <%if load != null %>
             <td><% load.getStores() %></td>
             <td><% load.getStorefiles() %></td>
@@ -189,7 +194,8 @@
             ((float) load.getCurrentCompactedKVs() / load.getTotalCompactingKVs())) + "%";
             }
         </%java>
-            <td><% r.getRegionNameAsString() %></td>
+            <td><% HRegionInfo.getRegionNameAsStringForDisplay(r,
+                                           regionServer.getConfiguration()) %></td>
             <%if load != null %>
             <td><% load.getTotalCompactingKVs() %></td>
             <td><% load.getCurrentCompactedKVs() %></td>
@@ -216,7 +222,8 @@
         <%java>
             RegionLoad load = regionServer.createRegionLoad(r.getEncodedName());
         </%java>
-            <td><% r.getRegionNameAsString() %></td>
+            <td><% HRegionInfo.getRegionNameAsStringForDisplay(r,
+                                           regionServer.getConfiguration()) %></td>
             <%if load != null %>
             <td><% load.getMemstoreSizeMB() %>m</td>
             </%if>

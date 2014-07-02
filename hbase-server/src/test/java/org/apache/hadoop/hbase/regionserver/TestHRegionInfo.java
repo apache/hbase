@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -34,10 +35,12 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MD5Hash;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -254,6 +257,71 @@ public class TestHRegionInfo {
 
     assertEquals(expectedHri, convertedHri);
   }
+  @Test
+  public void testRegionDetailsForDisplay() throws IOException {
+    byte[] startKey = new byte[] {0x01, 0x01, 0x02, 0x03};
+    byte[] endKey = new byte[] {0x01, 0x01, 0x02, 0x04};
+    Configuration conf = new Configuration();
+    conf.setBoolean("hbase.display.keys", false);
+    HRegionInfo h = new HRegionInfo(TableName.valueOf("foo"), startKey, endKey);
+    checkEquality(h, conf);
+    // check HRIs with non-default replicaId
+    h = new HRegionInfo(TableName.valueOf("foo"), startKey, endKey, false,
+        System.currentTimeMillis(), 1);
+    checkEquality(h, conf);
+    Assert.assertArrayEquals(HRegionInfo.HIDDEN_END_KEY,
+        HRegionInfo.getEndKeyForDisplay(h, conf));
+    Assert.assertArrayEquals(HRegionInfo.HIDDEN_START_KEY,
+        HRegionInfo.getStartKeyForDisplay(h, conf));
 
+    RegionState state = new RegionState(h, RegionState.State.OPEN);
+    String descriptiveNameForDisplay =
+        HRegionInfo.getDescriptiveNameFromRegionStateForDisplay(state, conf);
+    checkDescriptiveNameEquality(descriptiveNameForDisplay,state.toDescriptiveString(), startKey);
+
+    conf.setBoolean("hbase.display.keys", true);
+    Assert.assertArrayEquals(endKey, HRegionInfo.getEndKeyForDisplay(h, conf));
+    Assert.assertArrayEquals(startKey, HRegionInfo.getStartKeyForDisplay(h, conf));
+    Assert.assertEquals(state.toDescriptiveString(),
+        HRegionInfo.getDescriptiveNameFromRegionStateForDisplay(state, conf));
+  }
+
+  private void checkDescriptiveNameEquality(String descriptiveNameForDisplay, String origDesc,
+      byte[] startKey) {
+    // except for the "hidden-start-key" substring everything else should exactly match
+    String firstPart = descriptiveNameForDisplay.substring(0,
+        descriptiveNameForDisplay.indexOf(new String(HRegionInfo.HIDDEN_START_KEY)));
+    String secondPart = descriptiveNameForDisplay.substring(
+        descriptiveNameForDisplay.indexOf(new String(HRegionInfo.HIDDEN_START_KEY)) + 
+        HRegionInfo.HIDDEN_START_KEY.length);
+    String firstPartOrig = origDesc.substring(0,
+        origDesc.indexOf(Bytes.toStringBinary(startKey)));
+    String secondPartOrig = origDesc.substring(
+        origDesc.indexOf(Bytes.toStringBinary(startKey)) + 
+        Bytes.toStringBinary(startKey).length());
+    assert(firstPart.equals(firstPartOrig));
+    assert(secondPart.equals(secondPartOrig));
+  }
+
+  private void checkEquality(HRegionInfo h, Configuration conf) throws IOException {
+    byte[] modifiedRegionName = HRegionInfo.getRegionNameForDisplay(h, conf);
+    byte[][] modifiedRegionNameParts = HRegionInfo.parseRegionName(modifiedRegionName);
+    byte[][] regionNameParts = HRegionInfo.parseRegionName(h.getRegionName());
+
+    //same number of parts
+    assert(modifiedRegionNameParts.length == regionNameParts.length);
+
+    for (int i = 0; i < regionNameParts.length; i++) {
+      // all parts should match except for [1] where in the modified one,
+      // we should have "hidden_start_key"
+      if (i != 1) {
+        Assert.assertArrayEquals(regionNameParts[i], modifiedRegionNameParts[i]);
+      } else {
+        Assert.assertNotEquals(regionNameParts[i][0], modifiedRegionNameParts[i][0]);
+        Assert.assertArrayEquals(modifiedRegionNameParts[1],
+            HRegionInfo.getStartKeyForDisplay(h, conf));
+      }
+    }
+  }
 }
 

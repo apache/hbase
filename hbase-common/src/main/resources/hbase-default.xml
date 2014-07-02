@@ -837,6 +837,13 @@ possible configurations would overwhelm and obscure the important.
       authentication, and will abort the connection.</description>
   </property>
   <property>
+    <name>hbase.display.keys</name>
+    <value>true</value>
+    <description>When this is set to true the webUI and such will display all start/end keys
+                 as part of the table details, region names, etc. When this is set to false,
+                 the keys are hidden.</description>
+  </property>
+  <property>
     <name>hbase.coprocessor.region.classes</name>
     <value></value>
     <description>A comma-separated list of Coprocessors that are loaded by

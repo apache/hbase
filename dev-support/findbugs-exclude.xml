@@ -261,4 +261,13 @@
     <Bug pattern="FE_FLOATING_POINT_EQUALITY"/>
   </Match>
 
+  <Match>
+    <Class name="org.apache.hadoop.hbase.HRegionInfo"/>
+    <Or>
+      <Method name="getEndKeyForDisplay"/>
+      <Method name="getStartKeyForDisplay"/>
+    </Or>
+    <Bug pattern="MS_EXPOSE_REP"/>
+  </Match>
+
 </FindBugsFilter>

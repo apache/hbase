@@ -283,7 +283,8 @@
     }
 %>
 <tr>
-  <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
+  <td><%= escapeXml(Bytes.toStringBinary(HRegionInfo.getRegionNameForDisplay(regionInfo,
+                    conf))) %></td>
   <%
   if (addr != null) {
     String url = "//" + addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/";
@@ -298,8 +299,10 @@
   <%
   }
   %>
-  <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getStartKey())) %></td>
-  <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getEndKey())) %></td>
+  <td><%= escapeXml(Bytes.toStringBinary(HRegionInfo.getStartKeyForDisplay(regionInfo,
+                    conf))) %></td>
+  <td><%= escapeXml(Bytes.toStringBinary(HRegionInfo.getEndKeyForDisplay(regionInfo,
+                    conf))) %></td>
   <td><%= req%></td>
   <%
   if (withReplica) {

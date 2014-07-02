@@ -85,7 +85,9 @@ if (toRemove > 0) {
             <%else>
                     <tr>
             </%if>
-            <td><% entry.getKey() %></td><td><% entry.getValue().toDescriptiveString() %></td>
+            <td><% entry.getKey() %></td><td>
+            <% HRegionInfo.getDescriptiveNameFromRegionStateForDisplay(
+            entry.getValue(), conf) %></td>
     <td><% (currentTime - entry.getValue().getStamp()) %> </td></tr>
             </%for>
             <tr BGCOLOR="#D7DF01"> <td>Total number of Regions in Transition for more than <% ritThreshold %> milliseconds</td><td> <% numOfRITOverThreshold %></td><td></td>

@@ -33,9 +33,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
@@ -220,6 +222,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   // Current TableName
   private TableName tableName = null;
+  final static String DISPLAY_KEYS_KEY = "hbase.display.keys";
+  public final static byte[] HIDDEN_END_KEY = Bytes.toBytes("hidden-end-key");
+  public final static byte[] HIDDEN_START_KEY = Bytes.toBytes("hidden-start-key");
 
   /** HRegionInfo for first meta region */
   public static final HRegionInfo FIRST_META_REGIONINFO =
@@ -1120,6 +1125,104 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    */
   public byte [] toDelimitedByteArray() throws IOException {
     return ProtobufUtil.toDelimitedByteArray(convert());
+  }
+
+  /**
+   * Get the descriptive name as {@link RegionState} does it but with hidden
+   * startkey optionally
+   * @param state
+   * @param conf
+   * @return descriptive string
+   */
+  public static String getDescriptiveNameFromRegionStateForDisplay(RegionState state,
+      Configuration conf) {
+    if (conf.getBoolean(DISPLAY_KEYS_KEY, true)) return state.toDescriptiveString();
+    String descriptiveStringFromState = state.toDescriptiveString();
+    int idx = descriptiveStringFromState.lastIndexOf(" state=");
+    String regionName = getRegionNameAsStringForDisplay(state.getRegion(), conf);
+    return regionName + descriptiveStringFromState.substring(idx);
+  }
+
+  /**
+   * Get the end key for display. Optionally hide the real end key. 
+   * @param hri
+   * @param conf
+   * @return the endkey
+   */
+  public static byte[] getEndKeyForDisplay(HRegionInfo hri, Configuration conf) {
+    boolean displayKey = conf.getBoolean(DISPLAY_KEYS_KEY, true);
+    if (displayKey) return hri.getEndKey();
+    return HIDDEN_END_KEY;
+  }
+
+  /**
+   * Get the start key for display. Optionally hide the real start key. 
+   * @param hri
+   * @param conf
+   * @return the startkey
+   */
+  public static byte[] getStartKeyForDisplay(HRegionInfo hri, Configuration conf) {
+    boolean displayKey = conf.getBoolean(DISPLAY_KEYS_KEY, true);
+    if (displayKey) return hri.getStartKey();
+    return HIDDEN_START_KEY;
+  }
+
+  /**
+   * Get the region name for display. Optionally hide the start key.
+   * @param hri
+   * @param conf
+   * @return region name as String
+   */
+  public static String getRegionNameAsStringForDisplay(HRegionInfo hri, Configuration conf) {
+    return Bytes.toStringBinary(getRegionNameForDisplay(hri, conf));
+  }
+
+  /**
+   * Get the region name for display. Optionally hide the start key.
+   * @param hri
+   * @param conf
+   * @return region name bytes
+   */
+  public static byte[] getRegionNameForDisplay(HRegionInfo hri, Configuration conf) {
+    boolean displayKey = conf.getBoolean(DISPLAY_KEYS_KEY, true);
+    if (displayKey || hri.getTable().equals(TableName.META_TABLE_NAME)) {
+      return hri.getRegionName();
+    } else {
+      // create a modified regionname with the startkey replaced but preserving
+      // the other parts including the encodedname.
+      try {
+        byte[][]regionNameParts = parseRegionName(hri.getRegionName());
+        regionNameParts[1] = HIDDEN_START_KEY; //replace the real startkey
+        int len = 0;
+        // get the total length
+        for (byte[] b : regionNameParts) {
+          len += b.length;
+        }
+        byte[] encodedRegionName =
+            Bytes.toBytes(encodeRegionName(hri.getRegionName()));
+        len += encodedRegionName.length;
+        //allocate some extra bytes for the delimiters and the last '.'
+        byte[] modifiedName = new byte[len + regionNameParts.length + 1];
+        int lengthSoFar = 0;
+        int loopCount = 0;
+        for (byte[] b : regionNameParts) {
+          System.arraycopy(b, 0, modifiedName, lengthSoFar, b.length);
+          lengthSoFar += b.length;
+          if (loopCount++ == 2) modifiedName[lengthSoFar++] = REPLICA_ID_DELIMITER;
+          else  modifiedName[lengthSoFar++] = HConstants.DELIMITER;
+        }
+        // replace the last comma with '.'
+        modifiedName[lengthSoFar - 1] = ENC_SEPARATOR;
+        System.arraycopy(encodedRegionName, 0, modifiedName, lengthSoFar,
+            encodedRegionName.length);
+        lengthSoFar += encodedRegionName.length; 
+        modifiedName[lengthSoFar] = ENC_SEPARATOR;
+        return modifiedName;
+      } catch (IOException e) {
+        //LOG.warn("Encountered exception " + e);
+        throw new RuntimeException(e);
+      }
+    }
   }
 
   /**
