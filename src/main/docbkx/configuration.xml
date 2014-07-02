@@ -29,228 +29,319 @@
  */
 -->
   <title>Apache HBase Configuration</title>
-  <para>This chapter is the Not-So-Quick start guide to Apache HBase configuration. It goes over
-    system requirements, Hadoop setup, the different Apache HBase run modes, and the various
-    configurations in HBase. Please read this chapter carefully. At a minimum ensure that all <xref
-      linkend="basic.prerequisites" /> have been satisfied. Failure to do so will cause you (and us)
-    grief debugging strange errors and/or data loss.</para>
+  <para>This chapter expands upon the <xref linkend="getting_started" /> chapter to further explain
+    configuration of Apache HBase. Please read this chapter carefully, especially <xref
+      linkend="basic.prerequisites" /> to ensure that your HBase testing and deployment goes
+    smoothly, and prevent data loss.</para>
 
-  <para> Apache HBase uses the same configuration system as Apache Hadoop. To configure a deploy,
-    edit a file of environment variables in <filename>conf/hbase-env.sh</filename> -- this
-    configuration is used mostly by the launcher shell scripts getting the cluster off the ground --
-    and then add configuration to an XML file to do things like override HBase defaults, tell HBase
-    what Filesystem to use, and the location of the ZooKeeper ensemble. <footnote>
-      <para> Be careful editing XML. Make sure you close all elements. Run your file through
-          <command>xmllint</command> or similar to ensure well-formedness of your document after an
-        edit session. </para>
-    </footnote></para>
+  <para> Apache HBase uses the same configuration system as Apache Hadoop. All configuration files
+    are located in the <filename>conf/</filename> directory, which needs to be kept in sync for each
+    node on your cluster.</para>
+  
+  <variablelist>
+    <title>HBase Configuration Files</title>
+    <varlistentry>
+      <term><filename>backup-masters</filename></term>
+      <listitem>
+        <para>Not present by default. A plain-text file which lists hosts on which the Master should
+          start a backup Master process, one host per line.</para>
+      </listitem>
+    </varlistentry>
+    <varlistentry>
+      <term><filename>hadoop-metrics2-hbase.properties</filename></term>
+      <listitem>
+        <para>Used to connect HBase Hadoop's Metrics2 framework. See the <link
+            xlink:href="http://wiki.apache.org/hadoop/HADOOP-6728-MetricsV2">Hadoop Wiki
+            entry</link> for more information on Metrics2. Contains only commented-out examples by
+          default.</para>
+      </listitem>
+    </varlistentry>
+    <varlistentry>
+      <term><filename>hbase-env.cmd</filename> and <filename>hbase-env.sh</filename></term>
+      <listitem>
+        <para>Script for Windows and Linux / Unix environments to set up the working environment for
+        HBase, including the location of Java, Java options, and other environment variables. The
+        file contains many commented-out examples to provide guidance.</para>
+      </listitem>
+    </varlistentry>
+    <varlistentry>
+      <term><filename>hbase-policy.xml</filename></term>
+      <listitem>
+        <para>The default policy configuration file used by RPC servers to make authorization
+          decisions on client requests. Only used if HBase security (<xref
+            linkend="security" />) is enabled.</para>
+      </listitem>
+    </varlistentry>
+    <varlistentry>
+      <term><filename>hbase-site.xml</filename></term>
+      <listitem>
+        <para>The main HBase configuration file. This file specifies configuration options which
+          override HBase's default configuration. You can view (but do not edit) the default
+          configuration file at <filename>docs/hbase-default.xml</filename>. You can also view the
+          entire effective configuration for your cluster (defaults and overrides) in the
+            <guilabel>HBase Configuration</guilabel> tab of the HBase Web UI.</para>
+      </listitem>
+    </varlistentry>
+    <varlistentry>
+      <term><filename>log4j.properties</filename></term>
+      <listitem>
+        <para>Configuration file for HBase logging via <code>log4j</code>.</para>
+      </listitem>
+    </varlistentry>
+    <varlistentry>
+      <term><filename>regionservers</filename></term>
+      <listitem>
+        <para>A plain-text file containing a list of hosts which should run a RegionServer in your
+          HBase cluster. By default this file contains the single entry
+          <literal>localhost</literal>. It should contain a list of hostnames or IP addresses, one
+          per line, and should only contain <literal>localhost</literal> if each node in your
+          cluster will run a RegionServer on its <literal>localhost</literal> interface.</para>
+      </listitem>
+    </varlistentry>
+  </variablelist>
+  
+  <tip>
+    <title>Checking XML Validity</title>
+    <para>When you edit XML, it is a good idea to use an XML-aware editor to be sure that your
+      syntax is correct and your XML is well-formed. You can also use the <command>xmllint</command>
+      utility to check that your XML is well-formed. By default, <command>xmllint</command> re-flows
+      and prints the XML to standard output. To check for well-formedness and only print output if
+      errors exist, use the command <command>xmllint -noout
+        <replaceable>filename.xml</replaceable></command>.</para>
+  </tip>
 
-  <para>When running in distributed mode, after you make an edit to an HBase configuration, make
-    sure you copy the content of the <filename>conf</filename> directory to all nodes of the
-    cluster. HBase will not do this for you. Use <command>rsync</command>. For most configuration, a
-    restart is needed for servers to pick up changes (caveat dynamic config. to be described later
-    below).</para>
+  <warning>
+    <title>Keep Configuration In Sync Across the Cluster</title>
+    <para>When running in distributed mode, after you make an edit to an HBase configuration, make
+      sure you copy the content of the <filename>conf/</filename> directory to all nodes of the
+      cluster. HBase will not do this for you. Use <command>rsync</command>, <command>scp</command>,
+      or another secure mechanism for copying the configuration files to your nodes. For most
+      configuration, a restart is needed for servers to pick up changes An exception is dynamic
+      configuration. to be described later below.</para>
+  </warning>
 
   <section
     xml:id="basic.prerequisites">
     <title>Basic Prerequisites</title>
     <para>This section lists required services and some required system configuration. </para>
 
-    <section
+    <table
       xml:id="java">
       <title>Java</title>
-      <para>HBase requires at least Java 6 from <link
-          xlink:href="http://www.java.com/download/">Oracle</link>. The following table lists which JDK version are
-        compatible with each version of HBase.</para>
-      <informaltable>
-        <tgroup cols="4">
-          <thead>
-            <row>
-              <entry>HBase Version</entry>
-              <entry>JDK 6</entry>
-              <entry>JDK 7</entry>
-              <entry>JDK 8</entry>
-            </row>
-          </thead>
-          <tbody>
-            <row>
-              <entry>1.0</entry>
-              <entry><link xlink:href="http://search-hadoop.com/m/DHED4Zlz0R1">Not Supported</link></entry>
-              <entry>yes</entry>
-              <entry><para>Running with JDK 8 will work but is not well tested.</para></entry>
-            </row>
-            <row>
-              <entry>0.98</entry>
-              <entry>yes</entry>
-              <entry>yes</entry>
-              <entry><para>Running with JDK 8 works but is not well tested. Building with JDK 8
-                would require removal of the deprecated remove() method of the PoolMap class and is
-                under consideration. See ee <link
-                xlink:href="https://issues.apache.org/jira/browse/HBASE-7608">HBASE-7608</link> for
-                more information about JDK 8 support.</para></entry>
-            </row>
-            <row>
-              <entry>0.96</entry>
-              <entry>yes</entry>
-              <entry>yes</entry>
-              <entry></entry>
-            </row>
-            <row>
-              <entry>0.94</entry>
-              <entry>yes</entry>
-              <entry>yes</entry>
-              <entry></entry>
-            </row>
-          </tbody>
-        </tgroup>
-      </informaltable>
-    </section>
+      <textobject>
+        <para>HBase requires at least Java 6 from <link
+            xlink:href="http://www.java.com/download/">Oracle</link>. The following table lists
+          which JDK version are compatible with each version of HBase.</para>
+      </textobject>
+      <tgroup
+        cols="4">
+        <thead>
+          <row>
+            <entry>HBase Version</entry>
+            <entry>JDK 6</entry>
+            <entry>JDK 7</entry>
+            <entry>JDK 8</entry>
+          </row>
+        </thead>
+        <tbody>
+          <row>
+            <entry>1.0</entry>
+            <entry><link
+                xlink:href="http://search-hadoop.com/m/DHED4Zlz0R1">Not Supported</link></entry>
+            <entry>yes</entry>
+            <entry><para>Running with JDK 8 will work but is not well tested.</para></entry>
+          </row>
+          <row>
+            <entry>0.98</entry>
+            <entry>yes</entry>
+            <entry>yes</entry>
+            <entry><para>Running with JDK 8 works but is not well tested. Building with JDK 8 would
+                require removal of the deprecated remove() method of the PoolMap class and is under
+                consideration. See ee <link
+                  xlink:href="https://issues.apache.org/jira/browse/HBASE-7608">HBASE-7608</link>
+                for more information about JDK 8 support.</para></entry>
+          </row>
+          <row>
+            <entry>0.96</entry>
+            <entry>yes</entry>
+            <entry>yes</entry>
+            <entry />
+          </row>
+          <row>
+            <entry>0.94</entry>
+            <entry>yes</entry>
+            <entry>yes</entry>
+            <entry />
+          </row>
+        </tbody>
+      </tgroup>
+    </table>
 
-    <section
+    <variablelist
       xml:id="os">
-      <title>Operating System</title>
-      <section
+      <title>Operating System Utilities</title>
+      <varlistentry
         xml:id="ssh">
-        <title>ssh</title>
-
-        <para><command>ssh</command> must be installed and <command>sshd</command> must be running
-          to use Hadoop's scripts to manage remote Hadoop and HBase daemons. You must be able to ssh
-          to all nodes, including your local node, using passwordless login (Google "ssh
-          passwordless login"). If on mac osx, see the section, <link
-            xlink:href="http://wiki.apache.org/hadoop/Running_Hadoop_On_OS_X_10.5_64-bit_%28Single-Node_Cluster%29">SSH:
-            Setting up Remote Desktop and Enabling Self-Login</link> on the hadoop wiki.</para>
-      </section>
-
-      <section
+        <term>ssh</term>
+        <listitem>
+          <para>HBase uses the Secure Shell (ssh) command and utilities extensively to communicate
+            between cluster nodes. Each server in the cluster must be running <command>ssh</command>
+            so that the Hadoop and HBase daemons can be managed. You must be able to connect to all
+            nodes via SSH, including the local node, from the Master as well as any backup Master,
+            using a shared key rather than a password. You can see the basic methodology for such a
+            set-up in Linux or Unix systems at <xref
+              linkend="passwordless.ssh.quickstart" />. If your cluster nodes use OS X, see the
+            section, <link
+              xlink:href="http://wiki.apache.org/hadoop/Running_Hadoop_On_OS_X_10.5_64-bit_%28Single-Node_Cluster%29">SSH:
+              Setting up Remote Desktop and Enabling Self-Login</link> on the Hadoop wiki.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry
         xml:id="dns">
-        <title>DNS</title>
+        <term>DNS</term>
+        <listitem>
+          <para>HBase uses the local hostname to self-report its IP address. Both forward and
+            reverse DNS resolving must work in versions of HBase previous to 0.92.0.<footnote>
+              <para>The <link
+                  xlink:href="https://github.com/sujee/hadoop-dns-checker">hadoop-dns-checker</link>
+                tool can be used to verify DNS is working correctly on the cluster. The project
+                README file provides detailed instructions on usage. </para>
+            </footnote></para>
 
-        <para>HBase uses the local hostname to self-report its IP address. Both forward and reverse
-          DNS resolving must work in versions of HBase previous to 0.92.0 <footnote>
-            <para>The <link
-                xlink:href="https://github.com/sujee/hadoop-dns-checker">hadoop-dns-checker</link>
-              tool can be used to verify DNS is working correctly on the cluster. The project README
-              file provides detailed instructions on usage. </para>
-          </footnote>.</para>
+          <para>If your server has multiple network interfaces, HBase defaults to using the
+            interface that the primary hostname resolves to. To override this behavior, set the
+              <code>hbase.regionserver.dns.interface</code> property to a different interface. This
+            will only work if each server in your cluster uses the same network interface
+            configuration.</para>
 
-        <para>If your machine has multiple interfaces, HBase will use the interface that the primary
-          hostname resolves to.</para>
-
-        <para>If this is insufficient, you can set
-            <varname>hbase.regionserver.dns.interface</varname> to indicate the primary interface.
-          This only works if your cluster configuration is consistent and every host has the same
-          network interface configuration.</para>
-
-        <para>Another alternative is setting <varname>hbase.regionserver.dns.nameserver</varname> to
-          choose a different nameserver than the system wide default.</para>
-      </section>
-      <section
+          <para>To choose a different DNS nameserver than the system default, set the
+              <varname>hbase.regionserver.dns.nameserver</varname> property to the IP address of
+            that nameserver.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry
         xml:id="loopback.ip">
-        <title>Loopback IP</title>
-        <para>Previous to hbase-0.96.0, HBase expects the loopback IP address to be 127.0.0.1. See <xref
-            linkend="loopback.ip" /></para>
-      </section>
-
-      <section
+        <term>Loopback IP</term>
+        <listitem>
+          <para>Prior to hbase-0.96.0, HBase only used the IP address
+              <systemitem>127.0.0.1</systemitem> to refer to <code>localhost</code>, and this could
+            not be configured. See <xref
+              linkend="loopback.ip" />.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry
         xml:id="ntp">
-        <title>NTP</title>
+        <term>NTP</term>
+        <listitem>
+          <para>The clocks on cluster nodes should be synchronized. A small amount of variation is
+            acceptable, but larger amounts of skew can cause erratic and unexpected behavior. Time
+            synchronization is one of the first things to check if you see unexplained problems in
+            your cluster. It is recommended that you run a Network Time Protocol (NTP) service, or
+            another time-synchronization mechanism, on your cluster, and that all nodes look to the
+            same service for time synchronization. See the <link
+              xlink:href="http://www.tldp.org/LDP/sag/html/basic-ntp-config.html">Basic NTP
+              Configuration</link> at <citetitle>The Linux Documentation Project (TLDP)</citetitle>
+            to set up NTP.</para>
+        </listitem>
+      </varlistentry>
 
-        <para>The clocks on cluster members should be in basic alignments. Some skew is tolerable
-          but wild skew could generate odd behaviors. Run <link
-            xlink:href="http://en.wikipedia.org/wiki/Network_Time_Protocol">NTP</link> on your
-          cluster, or an equivalent.</para>
-
-        <para>If you are having problems querying data, or "weird" cluster operations, check system
-          time!</para>
-      </section>
-
-      <section
+      <varlistentry
         xml:id="ulimit">
-        <title>
-          <varname>ulimit</varname><indexterm>
+        <term>Limits on Number of Files and Processes (<command>ulimit</command>)
+          <indexterm>
             <primary>ulimit</primary>
-          </indexterm> and <varname>nproc</varname><indexterm>
+          </indexterm><indexterm>
             <primary>nproc</primary>
           </indexterm>
-        </title>
+        </term>
 
-        <para>Apache HBase is a database. It uses a lot of files all at the same time. The default
-          ulimit -n -- i.e. user file limit -- of 1024 on most *nix systems is insufficient (On mac
-          os x its 256). Any significant amount of loading will lead you to <xref
-            linkend="trouble.rs.runtime.filehandles" />. You may also notice errors such as the
-          following:</para>
-        <screen>
+        <listitem>
+          <para>Apache HBase is a database. It requires the ability to open a large number of files
+            at once. Many Linux distributions limit the number of files a single user is allowed to
+            open to <literal>1024</literal> (or <literal>256</literal> on older versions of OS X).
+            You can check this limit on your servers by running the command <command>ulimit
+              -n</command> when logged in as the user which runs HBase. See <xref
+              linkend="trouble.rs.runtime.filehandles" /> for some of the problems you may
+            experience if the limit is too low. You may also notice errors such as the
+            following:</para>
+          <screen>
 2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Exception increateBlockOutputStream java.io.EOFException
 2010-04-06 03:04:37,542 INFO org.apache.hadoop.hdfs.DFSClient: Abandoning block blk_-6935524980745310745_1391901
-        </screen>
-        <para> Do yourself a favor and change the upper bound on the number of file descriptors. Set
-          it to north of 10k. The math runs roughly as follows: per ColumnFamily there is at least
-          one StoreFile and possibly up to 5 or 6 if the region is under load. Multiply the average
-          number of StoreFiles per ColumnFamily times the number of regions per RegionServer. For
-          example, assuming that a schema had 3 ColumnFamilies per region with an average of 3
-          StoreFiles per ColumnFamily, and there are 100 regions per RegionServer, the JVM will open
-          3 * 3 * 100 = 900 file descriptors (not counting open jar files, config files, etc.) </para>
-        <para>You should also up the hbase users' <varname>nproc</varname> setting; under load, a
-          low-nproc setting could manifest as <classname>OutOfMemoryError</classname>. <footnote>
-            <para>See Jack Levin's <link
-                xlink:href="">major hdfs issues</link> note up on the user list.</para>
-          </footnote>
-          <footnote>
-            <para>The requirement that a database requires upping of system limits is not peculiar
-              to Apache HBase. See for example the section <emphasis>Setting Shell Limits for the
-                Oracle User</emphasis> in <link
-                xlink:href="http://www.akadia.com/services/ora_linux_install_10g.html"> Short Guide
-                to install Oracle 10 on Linux</link>.</para>
-          </footnote></para>
+          </screen>
+          <para>It is recommended to raise the ulimit to at least 10,000, but more likely 10,240,
+            because the value is usually expressed in multiples of 1024. Each ColumnFamily has at
+            least one StoreFile, and possibly more than 6 StoreFiles if the region is under load.
+            The number of open files required depends upon the number of ColumnFamilies and the
+            number of regions. The following is a rough formula for calculating the potential number
+            of open files on a RegionServer. </para>
+          <example>
+            <title>Calculate the Potential Number of Open Files</title>
+            <screen>(StoreFiles per ColumnFamily) x (regions per RegionServer)</screen>
+          </example>
+          <para>For example, assuming that a schema had 3 ColumnFamilies per region with an average
+            of 3 StoreFiles per ColumnFamily, and there are 100 regions per RegionServer, the JVM
+            will open 3 * 3 * 100 = 900 file descriptors, not counting open JAR files, configuration
+            files, and others. Opening a file does not take many resources, and the risk of allowing
+            a user to open too many files is minimal.</para>
+          <para>Another related setting is the number of processes a user is allowed to run at once.
+            In Linux and Unix, the number of processes is set using the <command>ulimit -u</command>
+            command. This should not be confused with the <command>nproc</command> command, which
+            controls the number of CPUs available to a given user. Under load, a
+              <varname>nproc</varname> that is too low can cause OutOfMemoryError exceptions. See
+            Jack Levin's <link
+              xlink:href="http://thread.gmane.org/gmane.comp.java.hadoop.hbase.user/16374">major
+              hdfs issues</link> thread on the hbase-users mailing list, from 2011.</para>
+          <para>Configuring the fmaximum number of ile descriptors and processes for the user who is
+            running the HBase process is an operating system configuration, rather than an HBase
+            configuration. It is also important to be sure that the settings are changed for the
+            user that actually runs HBase. To see which user started HBase, and that user's ulimit
+            configuration, look at the first line of the HBase log for that instance.<footnote>
+              <para>A useful read setting config on you hadoop cluster is Aaron Kimballs' <link
+                  xlink:href="http://www.cloudera.com/blog/2009/03/configuration-parameters-what-can-you-just-ignore/">Configuration
+                  Parameters: What can you just ignore?</link></para>
+            </footnote></para>
+          <formalpara xml:id="ulimit_ubuntu">
+            <title><command>ulimit</command> Settings on Ubuntu</title>
+            <para>To configure <command>ulimit</command> settings on Ubuntu, edit
+                <filename>/etc/security/limits.conf</filename>, which is a space-delimited file with
+              four columns. Refer to the <link
+                xlink:href="http://manpages.ubuntu.com/manpages/lucid/man5/limits.conf.5.html">man
+                page for limits.conf</link> for details about the format of this file. In the
+              following example, the first line sets both soft and hard limits for the number of
+              open files (<literal>nofile</literal>) to <literal>32768</literal> for the operating
+              system user with the username <literal>hadoop</literal>. The second line sets the
+              number of processes to 32000 for the same user.</para>
+          </formalpara>
+          <screen>
+hadoop  -       nofile  32768
+hadoop  -       nproc   32000
+          </screen>
+          <para>The settings are only applied if the Pluggable Authentication Module (PAM)
+            environment is directed to use them. To configure PAM to use these limits, be sure that
+            the <filename>/etc/pam.d/common-session</filename> file contains the following line:</para>
+          <screen>session required  pam_limits.so</screen>
+        </listitem>
+      </varlistentry>
 
-        <para>To be clear, upping the file descriptors and nproc for the user who is running the
-          HBase process is an operating system configuration, not an HBase configuration. Also, a
-          common mistake is that administrators will up the file descriptors for a particular user
-          but for whatever reason, HBase will be running as some one else. HBase prints in its logs
-          as the first line the ulimit its seeing. Ensure its correct. <footnote>
-            <para>A useful read setting config on you hadoop cluster is Aaron Kimballs' <link
-                xlink:href="http://www.cloudera.com/blog/2009/03/configuration-parameters-what-can-you-just-ignore/">Configuration
-                Parameters: What can you just ignore?</link></para>
-          </footnote></para>
-
-        <section
-          xml:id="ulimit_ubuntu">
-          <title><varname>ulimit</varname> on Ubuntu</title>
-
-          <para>If you are on Ubuntu you will need to make the following changes:</para>
-
-          <para>In the file <filename>/etc/security/limits.conf</filename> add a line like:</para>
-          <programlisting>hadoop  -       nofile  32768</programlisting>
-          <para>Replace <varname>hadoop</varname> with whatever user is running Hadoop and HBase. If
-            you have separate users, you will need 2 entries, one for each user. In the same file
-            set nproc hard and soft limits. For example:</para>
-          <programlisting>hadoop soft/hard nproc 32000</programlisting>
-          <para>In the file <filename>/etc/pam.d/common-session</filename> add as the last line in
-            the file: <programlisting>session required  pam_limits.so</programlisting> Otherwise the
-            changes in <filename>/etc/security/limits.conf</filename> won't be applied.</para>
-
-          <para>Don't forget to log out and back in again for the changes to take effect!</para>
-        </section>
-      </section>
-
-      <section
+      <varlistentry
         xml:id="windows">
-        <title>Windows</title>
+        <term>Windows</term>
 
-        <para>Previous to hbase-0.96.0, Apache HBase was little tested running on Windows. Running a
-          production install of HBase on top of Windows is not recommended.</para>
+        <listitem>
+          <para>Prior to HBase 0.96, testing for running HBase on Microsoft Windows was limited.
+            Running a on Windows nodes is not recommended for production systems.</para>
 
-        <para>If you are running HBase on Windows pre-hbase-0.96.0, you must install <link
-            xlink:href="http://cygwin.com/">Cygwin</link> to have a *nix-like environment for the
-          shell scripts. The full details are explained in the <link
+        <para>To run versions of HBase prior to 0.96 on Microsoft Windows, you must install <link
+            xlink:href="http://cygwin.com/">Cygwin</link> and run HBase within the Cygwin
+          environment. This provides support for Linux/Unix commands and scripts. The full details are explained in the <link
             xlink:href="http://hbase.apache.org/cygwin.html">Windows Installation</link> guide. Also <link
             xlink:href="http://search-hadoop.com/?q=hbase+windows&amp;fc_project=HBase&amp;fc_type=mail+_hash_+dev">search
             our user mailing list</link> to pick up latest fixes figured by Windows users.</para>
         <para>Post-hbase-0.96.0, hbase runs natively on windows with supporting
-            <command>*.cmd</command> scripts bundled. </para>
-      </section>
+            <command>*.cmd</command> scripts bundled. </para></listitem>
+      </varlistentry>
 
-    </section>
+    </variablelist>
     <!--  OS -->
 
     <section
@@ -259,17 +350,18 @@
           xlink:href="http://hadoop.apache.org">Hadoop</link><indexterm>
           <primary>Hadoop</primary>
         </indexterm></title>
-      <para>The below table shows some information about what versions of Hadoop are supported by
-        various HBase versions. Based on the version of HBase, you should select the most
-        appropriate version of Hadoop. We are not in the Hadoop distro selection business. You can
-        use Hadoop distributions from Apache, or learn about vendor distributions of Hadoop at <link
-          xlink:href="http://wiki.apache.org/hadoop/Distributions%20and%20Commercial%20Support" /></para>
+      <para>The following table summarizes the versions of Hadoop supported with each version of
+        HBase. Based on the version of HBase, you should select the most
+        appropriate version of Hadoop. You can use Apache Hadoop, or a vendor's distribution of
+        Hadoop. No distinction is made here. See <link
+          xlink:href="http://wiki.apache.org/hadoop/Distributions%20and%20Commercial%20Support" />
+        for information about vendors of Hadoop.</para>
       <tip>
-        <title>Hadoop 2.x is better than Hadoop 1.x</title>
-        <para>Hadoop 2.x is faster, with more features such as short-circuit reads which will help
-          improve your HBase random read profile as well important bug fixes that will improve your
-          overall HBase experience. You should run Hadoop 2 rather than Hadoop 1. HBase 0.98
-          deprecates use of Hadoop1. HBase 1.0 will not support Hadoop1. </para>
+        <title>Hadoop 2.x is recommended.</title>
+        <para>Hadoop 2.x is faster and includes features, such as short-circuit reads, which will
+          help improve your HBase random read profile. Hadoop 2.x also includes important bug fixes
+          that will improve your overall HBase experience. HBase 0.98 deprecates use of Hadoop 1.x,
+          and HBase 1.0 will not support Hadoop 1.x.</para>
       </tip>
       <para>Use the following legend to interpret this table:</para>
       <simplelist
@@ -618,7 +710,9 @@ Index: pom.xml
         instance of the <emphasis>Hadoop Distributed File System</emphasis> (HDFS).
         Fully-distributed mode can ONLY run on HDFS. See the Hadoop <link
           xlink:href="http://hadoop.apache.org/common/docs/r1.1.1/api/overview-summary.html#overview_description">
-          requirements and instructions</link> for how to set up HDFS.</para>
+          requirements and instructions</link> for how to set up HDFS for Hadoop 1.x. A good
+        walk-through for setting up HDFS on Hadoop 2 is at <link
+          xlink:href="http://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide">http://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide</link>.</para>
 
       <para>Below we describe the different distributed setups. Starting, verification and
         exploration of your install, whether a <emphasis>pseudo-distributed</emphasis> or
@@ -628,207 +722,139 @@ Index: pom.xml
       <section
         xml:id="pseudo">
         <title>Pseudo-distributed</title>
+        <note>
+          <title>Pseudo-Distributed Quickstart</title>
+          <para>A quickstart has been added to the <xref
+              linkend="quickstart" /> chapter. See <xref
+              linkend="quickstart-pseudo" />. Some of the information that was originally in this
+            section has been moved there.</para>
+        </note>
 
         <para>A pseudo-distributed mode is simply a fully-distributed mode run on a single host. Use
           this configuration testing and prototyping on HBase. Do not use this configuration for
           production nor for evaluating HBase performance.</para>
 
-        <para>First, if you want to run on HDFS rather than on the local filesystem, setup your
-          HDFS. You can set up HDFS also in pseudo-distributed mode (TODO: Add pointer to HOWTO doc;
-          the hadoop site doesn't have any any more). Ensure you have a working HDFS before
-          proceeding. </para>
-
-        <para>Next, configure HBase. Edit <filename>conf/hbase-site.xml</filename>. This is the file
-          into which you add local customizations and overrides. At a minimum, you must tell HBase
-          to run in (pseudo-)distributed mode rather than in default standalone mode. To do this,
-          set the <varname>hbase.cluster.distributed</varname> property to true (Its default is
-            <varname>false</varname>). The absolute bare-minimum <filename>hbase-site.xml</filename>
-          is therefore as follows:</para>
-        <programlisting><![CDATA[
-<configuration>
-  <property>
-    <name>hbase.cluster.distributed</name>
-    <value>true</value>
-  </property>
-</configuration>
-]]>
-        </programlisting>
-        <para>With this configuration, HBase will start up an HBase Master process, a ZooKeeper
-          server, and a RegionServer process running against the local filesystem writing to
-          wherever your operating system stores temporary files into a directory named
-            <filename>hbase-YOUR_USER_NAME</filename>.</para>
-
-        <para>Such a setup, using the local filesystem and writing to the operating systems's
-          temporary directory is an ephemeral setup; the Hadoop local filesystem -- which is what
-          HBase uses when it is writing the local filesytem -- would lose data unless the system
-          was shutdown properly in versions of HBase before 0.98.4 and 1.0.0 (see
-          <link xlink:href="https://issues.apache.org/jira/browse/HBASE-11218">HBASE-11218 Data
-          loss in HBase standalone mode</link>). Writing to the operating
-          system's temporary directory can also make for data loss when the machine is restarted as
-          this directory is usually cleared on reboot. For a more permanent setup, see the next
-          example where we make use of an instance of HDFS; HBase data will be written to the Hadoop
-          distributed filesystem rather than to the local filesystem's tmp directory.</para>
-        <para>In this <filename>conf/hbase-site.xml</filename> example, the
-            <varname>hbase.rootdir</varname> property points to the local HDFS instance homed on the
-          node <varname>h-24-30.example.com</varname>.</para>
-        <note>
-          <title>Let HBase create <filename>${hbase.rootdir}</filename></title>
-          <para>Let HBase create the <varname>hbase.rootdir</varname> directory. If you don't,
-            you'll get warning saying HBase needs a migration run because the directory is missing
-            files expected by HBase (it'll create them if you let it).</para>
-        </note>
-        <programlisting>
-&lt;configuration&gt;
-  &lt;property&gt;
-    &lt;name&gt;hbase.rootdir&lt;/name&gt;
-    &lt;value&gt;hdfs://h-24-30.sfo.stumble.net:8020/hbase&lt;/value&gt;
-  &lt;/property&gt;
-  &lt;property&gt;
-    &lt;name&gt;hbase.cluster.distributed&lt;/name&gt;
-    &lt;value&gt;true&lt;/value&gt;
-  &lt;/property&gt;
-&lt;/configuration&gt;
-        </programlisting>
-
-        <para>Now skip to <xref
-            linkend="confirm" /> for how to start and verify your pseudo-distributed install. <footnote>
-            <para>See <xref
-                linkend="pseudo.extras" /> for notes on how to start extra Masters and RegionServers
-              when running pseudo-distributed.</para>
-          </footnote></para>
-
-        <section
-          xml:id="pseudo.extras">
-          <title>Pseudo-distributed Extras</title>
-
-          <section
-            xml:id="pseudo.extras.start">
-            <title>Startup</title>
-            <para>To start up the initial HBase cluster...</para>
-            <screen>% bin/start-hbase.sh</screen>
-            <para>To start up an extra backup master(s) on the same server run...</para>
-            <screen>% bin/local-master-backup.sh start 1</screen>
-            <para>... the '1' means use ports 16001 &amp; 16011, and this backup master's logfile
-              will be at <filename>logs/hbase-${USER}-1-master-${HOSTNAME}.log</filename>. </para>
-            <para>To startup multiple backup masters run...</para>
-            <screen>% bin/local-master-backup.sh start 2 3</screen>
-            <para>You can start up to 9 backup masters (10 total). </para>
-            <para>To start up more regionservers...</para>
-            <screen>% bin/local-regionservers.sh start 1</screen>
-            <para>... where '1' means use ports 16201 &amp; 16301 and its logfile will be at
-                `<filename>logs/hbase-${USER}-1-regionserver-${HOSTNAME}.log</filename>. </para>
-            <para>To add 4 more regionservers in addition to the one you just started by
-              running...</para>
-            <screen>% bin/local-regionservers.sh start 2 3 4 5</screen>
-            <para>This supports up to 99 extra regionservers (100 total). </para>
-          </section>
-          <section
-            xml:id="pseudo.options.stop">
-            <title>Stop</title>
-            <para>Assuming you want to stop master backup # 1, run...</para>
-            <screen>% cat /tmp/hbase-${USER}-1-master.pid |xargs kill -9</screen>
-            <para>Note that bin/local-master-backup.sh stop 1 will try to stop the cluster along
-              with the master. </para>
-            <para>To stop an individual regionserver, run...</para>
-            <screen>% bin/local-regionservers.sh stop 1</screen>
-          </section>
-
-        </section>
-
       </section>
 
+    </section>
 
+    <section
+      xml:id="fully_dist">
+      <title>Fully-distributed</title>
+      <para>By default, HBase runs in standalone mode. Both standalone mode and pseudo-distributed
+        mode are provided for the purposes of small-scale testing. For a production environment,
+        distributed mode is appropriate. In distributed mode, multiple instances of HBase daemons
+        run on multiple servers in the cluster.</para>
+      <para>Just as in pseudo-distributed mode, a fully distributed configuration requires that you
+        set the <code>hbase-cluster.distributed</code> property to <literal>true</literal>.
+        Typically, the <code>hbase.rootdir</code> is configured to point to a highly-available HDFS
+        filesystem. </para>
+      <para>In addition, the cluster is configured so that multiple cluster nodes enlist as
+        RegionServers, ZooKeeper QuorumPeers, and backup HMaster servers. These configuration basics
+        are all demonstrated in <xref
+          linkend="quickstart-fully-distributed" />.</para>
 
+      <formalpara
+        xml:id="regionserver">
+        <title>Distributed RegionServers</title>
+        <para>Typically, your cluster will contain multiple RegionServers all running on different
+          servers, as well as primary and backup Master and Zookeeper daemons. The
+            <filename>conf/regionservers</filename> file on the master server contains a list of
+          hosts whose RegionServers are associated with this cluster. Each host is on a separate
+          line. All hosts listed in this file will have their RegionServer processes started and
+          stopped when the master server starts or stops.</para>
+      </formalpara>
 
+      <formalpara
+        xml:id="hbase.zookeeper">
+        <title>ZooKeeper and HBase</title>
+        <para>See section <xref
+            linkend="zookeeper" /> for ZooKeeper setup for HBase.</para>
+      </formalpara>
 
-      <section
-        xml:id="fully_dist">
-        <title>Fully-distributed</title>
-
-        <para>For running a fully-distributed operation on more than one host, make the following
-          configurations. In <filename>hbase-site.xml</filename>, add the property
-            <varname>hbase.cluster.distributed</varname> and set it to <varname>true</varname> and
-          point the HBase <varname>hbase.rootdir</varname> at the appropriate HDFS NameNode and
-          location in HDFS where you would like HBase to write data. For example, if you namenode
-          were running at namenode.example.org on port 8020 and you wanted to home your HBase in
-          HDFS at <filename>/hbase</filename>, make the following configuration.</para>
-
+      <example>
+        <title>Example Distributed HBase Cluster</title>
+        <para>This is a bare-bones <filename>conf/hbase-site.xml</filename> for a distributed HBase
+          cluster. A cluster that is used for real-world work would contain more custom
+          configuration parameters. Most HBase configuration directives have default values, which
+          are used unless the value is overridden in the <filename>hbase-site.xml</filename>. See <xref
+            linkend="config.files" /> for more information.</para>
         <programlisting><![CDATA[
 <configuration>
-  ...
   <property>
     <name>hbase.rootdir</name>
     <value>hdfs://namenode.example.org:8020/hbase</value>
-    <description>The directory shared by RegionServers.
-    </description>
   </property>
   <property>
     <name>hbase.cluster.distributed</name>
     <value>true</value>
-    <description>The mode the cluster will be in. Possible values are
-      false: standalone and pseudo-distributed setups with managed Zookeeper
-      true: fully-distributed with unmanaged Zookeeper Quorum (see hbase-env.sh)
-    </description>
   </property>
-  ...
+  <property>
+      <name>hbase.zookeeper.quorum</name>
+      <value>node-a.example.com,node-b.example.com,node-c.example.com</value>
+    </property>
 </configuration>
 ]]>
         </programlisting>
+        <para>This is an example <filename>conf/regionservers</filename> file, which contains a list
+          of each node that should run a RegionServer in the cluster. These nodes need HBase
+          installed and they need to use the same contents of the <filename>conf/</filename>
+          directory as the Master server..</para>
+        <programlisting>
+node-a.example.com
+node-b.example.com
+node-c.example.com
+        </programlisting>
+        <para>This is an example <filename>conf/backup-masters</filename> file, which contains a
+          list of each node that should run a backup Master instance. The backup Master instances
+          will sit idle unless the main Master becomes unavailable.</para>
+        <programlisting>
+node-b.example.com
+node-c.example.com
+        </programlisting>
+      </example>
+      <formalpara>
+        <title>Distributed HBase Quickstart</title>
+        <para>See <xref
+            linkend="quickstart-fully-distributed" /> for a walk-through of a simple three-node
+          cluster configuration with multiple ZooKeeper, backup HMaster, and RegionServer
+          instances.</para>
+      </formalpara>
 
-        <section
-          xml:id="regionserver">
-          <title><filename>regionservers</filename></title>
-
-          <para>In addition, a fully-distributed mode requires that you modify
-              <filename>conf/regionservers</filename>. The <xref
-              linkend="regionservers" /> file lists all hosts that you would have running
-              <application>HRegionServer</application>s, one host per line (This file in HBase is
-            like the Hadoop <filename>slaves</filename> file). All servers listed in this file will
-            be started and stopped when HBase cluster start or stop is run.</para>
-        </section>
-
-        <section
-          xml:id="hbase.zookeeper">
-          <title>ZooKeeper and HBase</title>
-          <para>See section <xref
-              linkend="zookeeper" /> for ZooKeeper setup for HBase.</para>
-        </section>
-
-        <section
-          xml:id="hdfs_client_conf">
-          <title>HDFS Client Configuration</title>
-
-          <para>Of note, if you have made <emphasis>HDFS client configuration</emphasis> on your
-            Hadoop cluster -- i.e. configuration you want HDFS clients to use as opposed to
-            server-side configurations -- HBase will not see this configuration unless you do one of
-            the following:</para>
-
-          <itemizedlist>
-            <listitem>
+      <procedure
+        xml:id="hdfs_client_conf">
+        <title>HDFS Client Configuration</title>
+        <step>
+          <para>Of note, if you have made HDFS client configuration on your Hadoop cluster, such as
+            configuration directives for HDFS clients, as opposed to server-side configurations, you
+            must use one of the following methods to enable HBase to see and use these configuration
+            changes:</para>
+          <stepalternatives>
+            <step>
               <para>Add a pointer to your <varname>HADOOP_CONF_DIR</varname> to the
                   <varname>HBASE_CLASSPATH</varname> environment variable in
                   <filename>hbase-env.sh</filename>.</para>
-            </listitem>
+            </step>
 
-            <listitem>
+            <step>
               <para>Add a copy of <filename>hdfs-site.xml</filename> (or
                   <filename>hadoop-site.xml</filename>) or, better, symlinks, under
                   <filename>${HBASE_HOME}/conf</filename>, or</para>
-            </listitem>
+            </step>
 
-            <listitem>
+            <step>
               <para>if only a small set of HDFS client configurations, add them to
                   <filename>hbase-site.xml</filename>.</para>
-            </listitem>
-          </itemizedlist>
-
-          <para>An example of such an HDFS client configuration is
-              <varname>dfs.replication</varname>. If for example, you want to run with a replication
-            factor of 5, hbase will create files with the default of 3 unless you do the above to
-            make the configuration available to HBase.</para>
-        </section>
-      </section>
+            </step>
+          </stepalternatives>
+        </step>
+      </procedure>
+      <para>An example of such an HDFS client configuration is <varname>dfs.replication</varname>.
+        If for example, you want to run with a replication factor of 5, hbase will create files with
+        the default of 3 unless you do the above to make the configuration available to
+        HBase.</para>
     </section>
+  </section>
 
     <section
       xml:id="confirm">
@@ -871,7 +897,7 @@ stopping hbase...............</screen>
         of many machines. If you are running a distributed operation, be sure to wait until HBase
         has shut down completely before stopping the Hadoop daemons.</para>
     </section>
-  </section>
+
   <!--  run modes -->
 
 
