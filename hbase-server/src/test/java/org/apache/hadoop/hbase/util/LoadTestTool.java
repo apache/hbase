@@ -191,7 +191,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   private String superUser;
 
-  private String userNames = "user1, user2, user3, user4";
+  private String userNames;
   //This file is used to read authentication information in secure clusters.
   private String authnFileName;
 
@@ -527,7 +527,7 @@ public class LoadTestTool extends AbstractHBaseTool {
           minColsPerKey, maxColsPerKey, COLUMN_FAMILY);
     }
 
-    if (User.isHBaseSecurityEnabled(conf) && userOwner != null) {
+    if (userOwner != null) {
       LOG.info("Granting permissions for user " + userOwner.getShortName());
       AccessControlProtos.Permission.Action[] actions = {
         AccessControlProtos.Permission.Action.ADMIN, AccessControlProtos.Permission.Action.CREATE,
@@ -543,20 +543,10 @@ public class LoadTestTool extends AbstractHBaseTool {
       // This will be comma separated list of expressions.
       String users[] = userNames.split(",");
       User user = null;
-      if (User.isHBaseSecurityEnabled(conf)) {
-        for (String userStr : users) {
+      for (String userStr : users) {
+        if (User.isHBaseSecurityEnabled(conf)) {
           user = User.create(loginAndReturnUGI(conf, userStr));
-          LOG.info("Granting READ permission for the user " + user.getShortName());
-          AccessControlProtos.Permission.Action[] actions = { AccessControlProtos.Permission.Action.READ };
-          try {
-            AccessControlClient.grant(conf, tableName, user.getShortName(), null, null, actions);
-          } catch (Throwable e) {
-            LOG.fatal("Error in granting READ permission for the user " + user.getShortName(), e);
-            return EXIT_FAILURE;
-          }
-	}
-      } else {
-        for (String userStr : users) {
+        } else {
           user = User.createUserForTesting(conf, userStr, new String[0]);
         }
       }
