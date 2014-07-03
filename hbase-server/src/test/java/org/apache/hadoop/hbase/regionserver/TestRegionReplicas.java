@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.catalog.TestMetaReaderEditor;
+import org.apache.hadoop.hbase.TestMetaTableAccessor;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -184,8 +184,8 @@ public class TestRegionReplicas {
     HTable meta = null;
     try {
       meta = new HTable(HTU.getConfiguration(), TableName.META_TABLE_NAME);
-      TestMetaReaderEditor.assertMetaLocation(meta, hriPrimary.getRegionName()
-          , getRS().getServerName(), -1, 1, false);
+      TestMetaTableAccessor.assertMetaLocation(meta, hriPrimary.getRegionName()
+        , getRS().getServerName(), -1, 1, false);
     } finally {
       if (meta != null ) meta.close();
       closeRegion(hriSecondary);

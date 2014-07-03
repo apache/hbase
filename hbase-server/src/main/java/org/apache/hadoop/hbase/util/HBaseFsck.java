@@ -71,7 +71,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -103,7 +103,7 @@ import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
 import org.apache.hadoop.hbase.util.hbck.TableLockChecker;
-import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKTableStateClientSideReader;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.IOUtils;
@@ -1137,7 +1137,7 @@ public class HBaseFsck extends Configured {
         // add the row directly to meta.
         HbckInfo hi = his.iterator().next();
         HRegionInfo hri = hi.getHdfsHRI(); // hi.metaEntry;
-        Put p = MetaEditor.makePutFromRegionInfo(hri);
+        Put p = MetaTableAccessor.makePutFromRegionInfo(hri);
         puts.add(p);
       }
     }
@@ -1518,7 +1518,7 @@ public class HBaseFsck extends Configured {
     ZooKeeperWatcher zkw = createZooKeeperWatcher();
     ServerName sn = null;
     try {
-      sn = MetaRegionTracker.getMetaRegionLocation(zkw);
+      sn = new MetaTableLocator().getMetaRegionLocation(zkw);
     } finally {
       zkw.close();
     }
@@ -1618,7 +1618,7 @@ public class HBaseFsck extends Configured {
     HRegionInfo hri = new HRegionInfo(hi.metaEntry);
     hri.setOffline(false);
     hri.setSplit(false);
-    Put p = MetaEditor.makePutFromRegionInfo(hri);
+    Put p = MetaTableAccessor.makePutFromRegionInfo(hri);
     mutations.add(p);
 
     meta.mutateRow(mutations);

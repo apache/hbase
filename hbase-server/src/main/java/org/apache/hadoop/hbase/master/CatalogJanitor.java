@@ -40,8 +40,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
@@ -199,7 +198,8 @@ public class CatalogJanitor extends Chore {
           + " from fs because merged region no longer holds references");
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionA);
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, regionB);
-      MetaEditor.deleteMergeQualifiers(server.getCatalogTracker(), mergedRegion);
+      MetaTableAccessor.deleteMergeQualifiers(server.getShortCircuitConnection(),
+        mergedRegion);
       return true;
     }
     return false;
@@ -331,7 +331,7 @@ public class CatalogJanitor extends Chore {
       FileSystem fs = this.services.getMasterFileSystem().getFileSystem();
       if (LOG.isTraceEnabled()) LOG.trace("Archiving parent region: " + parent);
       HFileArchiver.archiveRegion(this.services.getConfiguration(), fs, parent);
-      MetaEditor.deleteRegion(this.server.getCatalogTracker(), parent);
+      MetaTableAccessor.deleteRegion(this.server.getShortCircuitConnection(), parent);
       result = true;
     }
     return result;
@@ -403,9 +403,9 @@ public class CatalogJanitor extends Chore {
       throws IOException {
     // Get merge regions if it is a merged region and already has merge
     // qualifier
-    Pair<HRegionInfo, HRegionInfo> mergeRegions = MetaReader
-        .getRegionsFromMergeQualifier(this.services.getCatalogTracker(),
-            region.getRegionName());
+    Pair<HRegionInfo, HRegionInfo> mergeRegions = MetaTableAccessor
+        .getRegionsFromMergeQualifier(this.services.getShortCircuitConnection(),
+          region.getRegionName());
     if (mergeRegions == null
         || (mergeRegions.getFirst() == null && mergeRegions.getSecond() == null)) {
       // It doesn't have merge qualifier, no need to clean

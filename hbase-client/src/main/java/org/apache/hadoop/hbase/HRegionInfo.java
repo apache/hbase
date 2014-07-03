@@ -1231,7 +1231,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @return A pair of the {@link HRegionInfo} and the {@link ServerName}
    * (or null for server address if no address set in hbase:meta).
    * @throws IOException
-   * @deprecated use MetaReader methods for interacting with meta layouts
+   * @deprecated use MetaTableAccessor methods for interacting with meta layouts
    */
   @Deprecated
   public static Pair<HRegionInfo, ServerName> getHRegionInfoAndServerName(final Result r) {
@@ -1247,7 +1247,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * table Result.
    * @param data a Result object from the catalog table scan
    * @return HRegionInfo or null
-   * @deprecated use MetaReader methods for interacting with meta layouts
+   * @deprecated use MetaTableAccessor methods for interacting with meta layouts
    */
   @Deprecated
   public static HRegionInfo getHRegionInfo(Result data) {
@@ -1260,7 +1260,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param data a Result object from the catalog table scan
    * @return a pair of HRegionInfo or PairOfSameType(null, null) if the region is not a split
    * parent
-   * @deprecated use MetaReader methods for interacting with meta layouts
+   * @deprecated use MetaTableAccessor methods for interacting with meta layouts
    */
   @Deprecated
   public static PairOfSameType<HRegionInfo> getDaughterRegions(Result data) throws IOException {
@@ -1276,7 +1276,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param data a Result object from the catalog table scan
    * @return a pair of HRegionInfo or PairOfSameType(null, null) if the region is not a split
    * parent
-   * @deprecated use MetaReader methods for interacting with meta layouts
+   * @deprecated use MetaTableAccessor methods for interacting with meta layouts
    */
   @Deprecated
   public static PairOfSameType<HRegionInfo> getMergeRegions(Result data) throws IOException {
@@ -1294,7 +1294,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * {@link HConstants#SPLITA_QUALIFIER}, {@link HConstants#SPLITB_QUALIFIER} or
    * {@link HConstants#REGIONINFO_QUALIFIER}.
    * @return An HRegionInfo instance or null.
-   * @deprecated use MetaReader methods for interacting with meta layouts
+   * @deprecated use MetaTableAccessor methods for interacting with meta layouts
    */
   @Deprecated
   public static HRegionInfo getHRegionInfo(final Result r, byte [] qualifier) {
@@ -1305,7 +1305,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
-   * @deprecated use MetaReader methods for interacting with meta layouts
+   * @deprecated use MetaTableAccessor methods for interacting with meta layouts
    */
   @Deprecated
   public static ServerName getServerName(final Result r) {
@@ -1330,7 +1330,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * E.g. the seqNum when the result of {@link #getServerName(Result)} was written.
    * @param r Result to pull the seqNum from
    * @return SeqNum, or HConstants.NO_SEQNUM if there's no value written.
-   * @deprecated use MetaReader methods for interacting with meta layouts
+   * @deprecated use MetaTableAccessor methods for interacting with meta layouts
    */
   @Deprecated
   public static long getSeqNumDuringOpen(final Result r) {

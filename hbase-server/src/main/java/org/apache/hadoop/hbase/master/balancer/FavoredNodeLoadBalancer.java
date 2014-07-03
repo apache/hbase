@@ -74,7 +74,7 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
     List<RegionPlan> plans = new ArrayList<RegionPlan>();
     //perform a scan of the meta to get the latest updates (if any)
     SnapshotOfRegionAssignmentFromMeta snaphotOfRegionAssignment =
-        new SnapshotOfRegionAssignmentFromMeta(super.services.getCatalogTracker());
+        new SnapshotOfRegionAssignmentFromMeta(super.services.getShortCircuitConnection());
     try {
       snaphotOfRegionAssignment.initialize();
     } catch (IOException ie) {

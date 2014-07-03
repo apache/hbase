@@ -26,8 +26,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -42,7 +43,12 @@ public class TestClockSkewDetection {
     final Configuration conf = HBaseConfiguration.create();
     ServerManager sm = new ServerManager(new Server() {
       @Override
-      public CatalogTracker getCatalogTracker() {
+      public HConnection getShortCircuitConnection() {
+        return null;
+      }
+
+      @Override
+      public MetaTableLocator getMetaTableLocator() {
         return null;
       }
 

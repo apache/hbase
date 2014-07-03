@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -930,7 +930,7 @@ public class RegionStates {
 
     try {
       Pair<HRegionInfo, ServerName> p =
-        MetaReader.getRegion(server.getCatalogTracker(), regionName);
+        MetaTableAccessor.getRegion(server.getShortCircuitConnection(), regionName);
       HRegionInfo hri = p == null ? null : p.getFirst();
       if (hri != null) {
         createRegionState(hri);

@@ -73,7 +73,7 @@ public class RackManager {
 
   /**
    * Same as {@link #getRack(ServerName)} except that a list is passed
-   * @param servers
+   * @param servers list of servers we're requesting racks information for
    * @return list of racks for the given list of servers
    */
   public List<String> getRack(List<ServerName> servers) {

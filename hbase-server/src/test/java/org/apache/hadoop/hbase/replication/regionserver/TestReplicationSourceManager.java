@@ -47,8 +47,8 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
 import org.apache.hadoop.hbase.replication.ReplicationStateZKBase;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -395,10 +396,14 @@ public class TestReplicationSourceManager {
     public CoordinatedStateManager getCoordinatedStateManager() {
       return null;
     }
+    @Override
+    public HConnection getShortCircuitConnection() {
+      return null;
+    }
 
     @Override
-    public CatalogTracker getCatalogTracker() {
-      return null; // To change body of implemented methods use File | Settings | File Templates.
+    public MetaTableLocator getMetaTableLocator() {
+      return null;
     }
 
     @Override

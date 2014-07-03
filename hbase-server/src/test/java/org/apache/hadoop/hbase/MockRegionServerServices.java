@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
@@ -92,7 +93,7 @@ class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public void postOpenDeployTasks(HRegion r, CatalogTracker ct)
+  public void postOpenDeployTasks(HRegion r)
       throws KeeperException, IOException {
     addToOnlineRegions(r);
   }
@@ -110,7 +111,7 @@ class MockRegionServerServices implements RegionServerServices {
   public void setRpcServer(RpcServerInterface rpc) {
     this.rpcServer = rpc;
   }
-  
+
   @Override
   public ConcurrentSkipListMap<byte[], Boolean> getRegionsInTransitionInRS() {
     return rit;
@@ -127,7 +128,12 @@ class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public CatalogTracker getCatalogTracker() {
+  public HConnection getShortCircuitConnection() {
+    return null;
+  }
+
+  @Override
+  public MetaTableLocator getMetaTableLocator() {
     return null;
   }
 

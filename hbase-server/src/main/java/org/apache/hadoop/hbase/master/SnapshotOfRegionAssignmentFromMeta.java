@@ -37,9 +37,9 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.catalog.MetaReader.Visitor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.MetaTableAccessor.Visitor;
+import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan;
@@ -55,7 +55,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
   private static final Log LOG = LogFactory.getLog(SnapshotOfRegionAssignmentFromMeta.class
       .getName());
 
-  private CatalogTracker tracker;
+  private final HConnection hConnection;
 
   /** the table name to region map */
   private final Map<TableName, List<HRegionInfo>> tableToRegionMap;
@@ -72,13 +72,13 @@ public class SnapshotOfRegionAssignmentFromMeta {
   private final Set<TableName> disabledTables;
   private final boolean excludeOfflinedSplitParents;
 
-  public SnapshotOfRegionAssignmentFromMeta(CatalogTracker tracker) {
-    this(tracker, new HashSet<TableName>(), false);
+  public SnapshotOfRegionAssignmentFromMeta(HConnection hConnection) {
+    this(hConnection, new HashSet<TableName>(), false);
   }
 
-  public SnapshotOfRegionAssignmentFromMeta(CatalogTracker tracker, Set<TableName> disabledTables,
+  public SnapshotOfRegionAssignmentFromMeta(HConnection hConnection, Set<TableName> disabledTables,
       boolean excludeOfflinedSplitParents) {
-    this.tracker = tracker;
+    this.hConnection = hConnection;
     tableToRegionMap = new HashMap<TableName, List<HRegionInfo>>();
     regionToRegionServerMap = new HashMap<HRegionInfo, ServerName>();
     regionServerToRegionMap = new HashMap<ServerName, List<HRegionInfo>>();
@@ -95,13 +95,13 @@ public class SnapshotOfRegionAssignmentFromMeta {
   public void initialize() throws IOException {
     LOG.info("Start to scan the hbase:meta for the current region assignment " +
 		"snappshot");
-    // TODO: at some point this code could live in the MetaReader
+    // TODO: at some point this code could live in the MetaTableAccessor
     Visitor v = new Visitor() {
       @Override
       public boolean visit(Result result) throws IOException {
         try {
           if (result ==  null || result.isEmpty()) return true;
-          RegionLocations rl = MetaReader.getRegionLocations(result);
+          RegionLocations rl = MetaTableAccessor.getRegionLocations(result);
           if (rl == null) return true;
           HRegionInfo hri = rl.getRegionLocation(0).getRegionInfo();
           if (hri == null) return true;
@@ -141,7 +141,7 @@ public class SnapshotOfRegionAssignmentFromMeta {
       }
     };
     // Scan hbase:meta to pick up user regions
-    MetaReader.fullScan(tracker, v);
+    MetaTableAccessor.fullScan(hConnection, v);
     //regionToRegionServerMap = regions;
     LOG.info("Finished to scan the hbase:meta for the current region assignment" +
       "snapshot");

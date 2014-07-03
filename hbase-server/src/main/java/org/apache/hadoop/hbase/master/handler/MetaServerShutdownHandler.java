@@ -91,7 +91,7 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
         LOG.info("Server " + serverName + " was carrying META. Trying to assign.");
         am.regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
         verifyAndAssignMetaWithRetries();
-      } else if (!this.services.getCatalogTracker().isMetaLocationAvailable()) {
+      } else if (!server.getMetaTableLocator().isLocationAvailable(this.server.getZooKeeper())) {
         // the meta location as per master is null. This could happen in case when meta assignment
         // in previous run failed, while meta znode has been updated to null. We should try to
         // assign the meta again.
@@ -154,14 +154,16 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
       throws InterruptedException, IOException, KeeperException {
     long timeout = this.server.getConfiguration().
         getLong("hbase.catalog.verification.timeout", 1000);
-    if (!this.server.getCatalogTracker().verifyMetaRegionLocation(timeout)) {
+    if (!server.getMetaTableLocator().verifyMetaRegionLocation(server.getShortCircuitConnection(),
+      this.server.getZooKeeper(), timeout)) {
       this.services.getAssignmentManager().assignMeta();
-    } else if (serverName.equals(server.getCatalogTracker().getMetaLocation())) {
+    } else if (serverName.equals(server.getMetaTableLocator().getMetaRegionLocation(
+      this.server.getZooKeeper()))) {
       throw new IOException("hbase:meta is onlined on the dead server "
           + serverName);
     } else {
       LOG.info("Skip assigning hbase:meta, because it is online on the "
-          + server.getCatalogTracker().getMetaLocation());
+          + server.getMetaTableLocator().getMetaRegionLocation(this.server.getZooKeeper()));
     }
   }
 

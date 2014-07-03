@@ -1069,7 +1069,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    * Subclasses should implement this to return true if the cluster has nodes that hosts
    * multiple replicas for the same region, or, if there are multiple racks and the same
    * rack hosts replicas of the same region
-   * @param c
+   * @param c Cluster information
    * @return whether region replicas are currently co-located
    */
   protected boolean areSomeRegionReplicasColocated(Cluster c) {

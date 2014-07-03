@@ -30,6 +30,7 @@
   import="org.apache.hadoop.hbase.ServerLoad"
   import="org.apache.hadoop.hbase.RegionLoad"
   import="org.apache.hadoop.hbase.master.HMaster" 
+  import="org.apache.hadoop.hbase.zookeeper.MetaTableLocator"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.FSUtils"
   import="org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest"
@@ -41,6 +42,7 @@
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   Configuration conf = master.getConfiguration();
   HBaseAdmin hbadmin = new HBaseAdmin(conf);
+  MetaTableLocator metaTableLocator = new MetaTableLocator();
   String fqtn = request.getParameter("name");
   HTable table = new HTable(conf, fqtn);
   String tableHeader;
@@ -51,7 +53,7 @@
   } else {
     tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Requests</th></tr>";
   }
-  ServerName rl = master.getCatalogTracker().getMetaLocation();
+  ServerName rl = metaTableLocator.getMetaRegionLocation(master.getZooKeeper());
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   boolean readOnly = conf.getBoolean("hbase.master.ui.readonly", false);
   Map<String, Integer> frags = null;
@@ -203,7 +205,7 @@
 <%
   // NOTE: Presumes one meta region only.
   HRegionInfo meta = HRegionInfo.FIRST_META_REGIONINFO;
-  ServerName metaLocation = master.getCatalogTracker().waitForMeta(1);
+  ServerName metaLocation = metaTableLocator.waitMetaRegionLocation(master.getZooKeeper(), 1);
   for (int i = 0; i < 1; i++) {
     String url = "//" + metaLocation.getHostname() + ":" + master.getRegionServerInfoPort(metaLocation) + "/";
 %>

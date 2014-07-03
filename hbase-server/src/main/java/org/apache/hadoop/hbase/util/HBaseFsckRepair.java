@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
@@ -175,7 +175,7 @@ public class HBaseFsckRepair {
   public static void fixMetaHoleOnline(Configuration conf,
       HRegionInfo hri) throws IOException {
     HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
-    MetaEditor.addRegionToMeta(meta, hri);
+    MetaTableAccessor.addRegionToMeta(meta, hri);
     meta.close();
   }
 

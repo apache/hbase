@@ -25,7 +25,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.MutationSerialization;
@@ -212,7 +212,7 @@ public class TableMapReduceUtil {
         MutationSerialization.class.getName(), ResultSerialization.class.getName());
     if (partitioner == HRegionPartitioner.class) {
       job.setPartitionerClass(HRegionPartitioner.class);
-      int regions = MetaReader.getRegionCount(HBaseConfiguration.create(job), table);
+      int regions = MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job), table);
       if (job.getNumReduceTasks() > regions) {
         job.setNumReduceTasks(regions);
       }
@@ -278,7 +278,7 @@ public class TableMapReduceUtil {
    */
   public static void limitNumReduceTasks(String table, JobConf job)
   throws IOException {
-    int regions = MetaReader.getRegionCount(HBaseConfiguration.create(job), table);
+    int regions = MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job), table);
     if (job.getNumReduceTasks() > regions)
       job.setNumReduceTasks(regions);
   }
@@ -293,7 +293,7 @@ public class TableMapReduceUtil {
    */
   public static void limitNumMapTasks(String table, JobConf job)
   throws IOException {
-    int regions = MetaReader.getRegionCount(HBaseConfiguration.create(job), table);
+    int regions = MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job), table);
     if (job.getNumMapTasks() > regions)
       job.setNumMapTasks(regions);
   }
@@ -308,7 +308,7 @@ public class TableMapReduceUtil {
    */
   public static void setNumReduceTasks(String table, JobConf job)
   throws IOException {
-    job.setNumReduceTasks(MetaReader.getRegionCount(HBaseConfiguration.create(job), table));
+    job.setNumReduceTasks(MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job), table));
   }
 
   /**
@@ -321,7 +321,7 @@ public class TableMapReduceUtil {
    */
   public static void setNumMapTasks(String table, JobConf job)
   throws IOException {
-    job.setNumMapTasks(MetaReader.getRegionCount(HBaseConfiguration.create(job), table));
+    job.setNumMapTasks(MetaTableAccessor.getRegionCount(HBaseConfiguration.create(job), table));
   }
 
   /**

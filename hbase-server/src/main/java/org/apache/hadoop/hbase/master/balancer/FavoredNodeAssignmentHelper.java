@@ -37,8 +37,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.RackManager;
@@ -85,13 +85,13 @@ public class FavoredNodeAssignmentHelper {
 
   /**
    * Update meta table with favored nodes info
-   * @param regionToFavoredNodes
-   * @param catalogTracker
+   * @param regionToFavoredNodes map of HRegionInfo's to their favored nodes
+   * @param hConnection HConnection to be used
    * @throws IOException
    */
   public static void updateMetaWithFavoredNodesInfo(
       Map<HRegionInfo, List<ServerName>> regionToFavoredNodes,
-      CatalogTracker catalogTracker) throws IOException {
+      HConnection hConnection) throws IOException {
     List<Put> puts = new ArrayList<Put>();
     for (Map.Entry<HRegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
       Put put = makePutFromRegionInfo(entry.getKey(), entry.getValue());
@@ -99,7 +99,7 @@ public class FavoredNodeAssignmentHelper {
         puts.add(put);
       }
     }
-    MetaEditor.putsToMetaTable(catalogTracker, puts);
+    MetaTableAccessor.putsToMetaTable(hConnection, puts);
     LOG.info("Added " + puts.size() + " regions in META");
   }
 
@@ -141,7 +141,7 @@ public class FavoredNodeAssignmentHelper {
   throws IOException {
     Put put = null;
     if (favoredNodeList != null) {
-      put = MetaEditor.makePutFromRegionInfo(regionInfo);
+      put = MetaTableAccessor.makePutFromRegionInfo(regionInfo);
       byte[] favoredNodes = getFavoredNodes(favoredNodeList);
       put.addImmutable(HConstants.CATALOG_FAMILY, FAVOREDNODES_QUALIFIER,
           EnvironmentEdgeManager.currentTimeMillis(), favoredNodes);

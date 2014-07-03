@@ -32,12 +32,13 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
+import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -151,7 +152,12 @@ public class TestHFileLinkCleaner {
     }
 
     @Override
-    public CatalogTracker getCatalogTracker() {
+    public HConnection getShortCircuitConnection() {
+      return null;
+    }
+
+    @Override
+    public MetaTableLocator getMetaTableLocator() {
       return null;
     }
 

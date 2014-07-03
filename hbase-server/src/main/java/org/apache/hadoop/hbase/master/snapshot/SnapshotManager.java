@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Stoppable;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -694,7 +694,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     SnapshotReferenceUtil.verifySnapshot(master.getConfiguration(), fs, manifest);
 
     // Execute the restore/clone operation
-    if (MetaReader.tableExists(master.getCatalogTracker(), tableName)) {
+    if (MetaTableAccessor.tableExists(master.getShortCircuitConnection(), tableName)) {
       if (master.getAssignmentManager().getTableStateManager().isTableState(
           TableName.valueOf(fsSnapshot.getTable()), ZooKeeperProtos.Table.State.ENABLED)) {
         throw new UnsupportedOperationException("Table '" +

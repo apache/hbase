@@ -32,8 +32,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -144,7 +143,7 @@ public class ServerShutdownHandler extends EventHandler {
 
       // Wait on meta to come online; we need it to progress.
       // TODO: Best way to hold strictly here?  We should build this retry logic
-      // into the MetaReader operations themselves.
+      // into the MetaTableAccessor operations themselves.
       // TODO: Is the reading of hbase:meta necessary when the Master has state of
       // cluster in its head?  It should be possible to do without reading hbase:meta
       // in all but one case. On split, the RS updates the hbase:meta
@@ -160,11 +159,11 @@ public class ServerShutdownHandler extends EventHandler {
       Set<HRegionInfo> hris = null;
       while (!this.server.isStopped()) {
         try {
-          this.server.getCatalogTracker().waitForMeta();
+          server.getMetaTableLocator().waitMetaRegionLocation(server.getZooKeeper());
           // Skip getting user regions if the server is stopped.
           if (!this.server.isStopped()) {
             if (ConfigUtil.useZKForAssignment(server.getConfiguration())) {
-              hris = MetaReader.getServerUserRegions(this.server.getCatalogTracker(),
+              hris = MetaTableAccessor.getServerUserRegions(this.server.getShortCircuitConnection(),
                 this.serverName).keySet();
             } else {
               // Not using ZK for assignment, regionStates has everything we want
@@ -235,7 +234,7 @@ public class ServerShutdownHandler extends EventHandler {
           Lock lock = am.acquireRegionLock(encodedName);
           try {
             RegionState rit = regionStates.getRegionTransitionState(hri);
-            if (processDeadRegion(hri, am, server.getCatalogTracker())) {
+            if (processDeadRegion(hri, am)) {
               ServerName addressFromAM = regionStates.getRegionServerOfRegion(hri);
               if (addressFromAM != null && !addressFromAM.equals(this.serverName)) {
                 // If this region is in transition on the dead server, it must be
@@ -336,12 +335,11 @@ public class ServerShutdownHandler extends EventHandler {
    * disabling or if the region has a partially completed split.
    * @param hri
    * @param assignmentManager
-   * @param catalogTracker
    * @return Returns true if specified region should be assigned, false if not.
    * @throws IOException
    */
   public static boolean processDeadRegion(HRegionInfo hri,
-      AssignmentManager assignmentManager, CatalogTracker catalogTracker)
+      AssignmentManager assignmentManager)
   throws IOException {
     boolean tablePresent = assignmentManager.getTableStateManager().isTablePresent(hri.getTable());
     if (!tablePresent) {

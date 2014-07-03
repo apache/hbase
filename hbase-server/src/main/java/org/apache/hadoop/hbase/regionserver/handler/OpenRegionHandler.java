@@ -297,9 +297,7 @@ public class OpenRegionHandler extends EventHandler {
   /**
    * Thread to run region post open tasks. Call {@link #getException()} after
    * the thread finishes to check for exceptions running
-   * {@link RegionServerServices#postOpenDeployTasks(
-   * HRegion, org.apache.hadoop.hbase.catalog.CatalogTracker)}
-   * .
+   * {@link RegionServerServices#postOpenDeployTasks(HRegion)
    */
   static class PostOpenDeployTasksThread extends Thread {
     private Throwable exception = null;
@@ -320,8 +318,7 @@ public class OpenRegionHandler extends EventHandler {
 
     public void run() {
       try {
-        this.services.postOpenDeployTasks(this.region,
-          this.server.getCatalogTracker());
+        this.services.postOpenDeployTasks(this.region);
       } catch (IOException e) {
         server.abort("Exception running postOpenDeployTasks; region=" +
             this.region.getRegionInfo().getEncodedName(), e);

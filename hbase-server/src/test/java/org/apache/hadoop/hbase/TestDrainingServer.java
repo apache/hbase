@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -94,7 +93,6 @@ public class TestDrainingServer {
     final ServerName SERVERNAME_A = ServerName.valueOf("mockserver_a.org", 1000, 8000);
     final ServerName SERVERNAME_B = ServerName.valueOf("mockserver_b.org", 1001, 8000);
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(conf);
-    CatalogTracker catalogTracker = Mockito.mock(CatalogTracker.class);
     final HRegionInfo REGIONINFO = new HRegionInfo(TableName.valueOf("table_test"),
         HConstants.EMPTY_START_ROW, HConstants.EMPTY_START_ROW);
 
@@ -138,7 +136,7 @@ public class TestDrainingServer {
 
     Mockito.when(master.getServerManager()).thenReturn(serverManager);
 
-    am = new AssignmentManager(server, serverManager, catalogTracker,
+    am = new AssignmentManager(server, serverManager,
         balancer, startupMasterExecutor("mockExecutorService"), null, null);
 
     Mockito.when(master.getAssignmentManager()).thenReturn(am);
@@ -165,7 +163,6 @@ public class TestDrainingServer {
   public void testAssignmentManagerDoesntUseDrainedServerWithBulkAssign() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(conf);
-    CatalogTracker catalogTracker = Mockito.mock(CatalogTracker.class);
     AssignmentManager am;
     final HMaster master = Mockito.mock(HMaster.class);
     final Server server = Mockito.mock(Server.class);
@@ -243,7 +240,7 @@ public class TestDrainingServer {
     drainedServers.add(SERVERNAME_C);
     drainedServers.add(SERVERNAME_D);
 
-    am = new AssignmentManager(server, serverManager, catalogTracker,
+    am = new AssignmentManager(server, serverManager,
       balancer, startupMasterExecutor("mockExecutorServiceBulk"), null, null);
     
     Mockito.when(master.getAssignmentManager()).thenReturn(am);

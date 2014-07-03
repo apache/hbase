@@ -101,15 +101,13 @@ def getServerNameForRegion(admin, r)
   if r.isMetaRegion()
     # Hack
     zkw = org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher.new(admin.getConfiguration(), "region_mover", nil)
+    mtl = org.apache.hadoop.hbase.zookeeper.MetaTableLocator.new()
     begin
-      tracker = org.apache.hadoop.hbase.zookeeper.MetaRegionTracker.new(zkw, RubyAbortable.new())
-      tracker.start()
-      while not tracker.isLocationAvailable()
+      while not mtl.isLocationAvailable(zkw)
         sleep 0.1
       end
       # Make a fake servername by appending ','
-      metaServer = tracker.getMetaRegionLocation().toString() + ","
-      tracker.stop()
+      metaServer = mtl.getMetaRegionLocation(zkw).toString() + ","
       return metaServer
     ensure
       zkw.close()

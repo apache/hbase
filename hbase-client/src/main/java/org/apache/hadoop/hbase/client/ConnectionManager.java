@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
@@ -60,7 +61,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFuture;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
@@ -1199,7 +1199,7 @@ class ConnectionManager {
           }
 
           // convert the row result into the HRegionLocation we need!
-          RegionLocations locations = MetaReader.getRegionLocations(regionInfoRow);
+          RegionLocations locations = MetaTableAccessor.getRegionLocations(regionInfoRow);
           if (locations == null || locations.getRegionLocation(replicaId) == null) {
             throw new IOException("HRegionInfo was null in " +
               tableName + ", row=" + regionInfoRow);

@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
@@ -122,7 +122,7 @@ public class TestAssignmentManagerOnCluster {
       HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
-      MetaEditor.addRegionToMeta(meta, hri);
+      MetaTableAccessor.addRegionToMeta(meta, hri);
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
       master.assignRegion(hri);
@@ -166,7 +166,7 @@ public class TestAssignmentManagerOnCluster {
       HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
       final HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
-      MetaEditor.addRegionToMeta(meta, hri);
+      MetaTableAccessor.addRegionToMeta(meta, hri);
 
       master = TEST_UTIL.getHBaseCluster().getMaster();
       Set<ServerName> onlineServers = master.serverManager.getOnlineServers().keySet();
@@ -380,7 +380,7 @@ public class TestAssignmentManagerOnCluster {
       HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
-      MetaEditor.addRegionToMeta(meta, hri);
+      MetaTableAccessor.addRegionToMeta(meta, hri);
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
       master.assignRegion(hri);
@@ -427,7 +427,7 @@ public class TestAssignmentManagerOnCluster {
       HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
-      MetaEditor.addRegionToMeta(meta, hri);
+      MetaTableAccessor.addRegionToMeta(meta, hri);
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
       master.assignRegion(hri);
@@ -471,7 +471,7 @@ public class TestAssignmentManagerOnCluster {
       HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
-      MetaEditor.addRegionToMeta(meta, hri);
+      MetaTableAccessor.addRegionToMeta(meta, hri);
 
       MyLoadBalancer.controledRegion = hri.getEncodedName();
 
@@ -513,7 +513,7 @@ public class TestAssignmentManagerOnCluster {
       HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
-      MetaEditor.addRegionToMeta(meta, hri);
+      MetaTableAccessor.addRegionToMeta(meta, hri);
 
       FileSystem fs = FileSystem.get(conf);
       Path tableDir= FSUtils.getTableDir(FSUtils.getRootDir(conf), table);
@@ -611,7 +611,7 @@ public class TestAssignmentManagerOnCluster {
       HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
-      MetaEditor.addRegionToMeta(meta, hri);
+      MetaTableAccessor.addRegionToMeta(meta, hri);
 
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
       master.assignRegion(hri);
@@ -667,7 +667,7 @@ public class TestAssignmentManagerOnCluster {
       HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
-      MetaEditor.addRegionToMeta(meta, hri);
+      MetaTableAccessor.addRegionToMeta(meta, hri);
       meta.close();
 
       MyRegionObserver.postOpenEnabled.set(true);
@@ -740,7 +740,7 @@ public class TestAssignmentManagerOnCluster {
       HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
-      MetaEditor.addRegionToMeta(meta, hri);
+      MetaTableAccessor.addRegionToMeta(meta, hri);
 
       // Assign the region
       master = (MyMaster)cluster.getMaster();
@@ -814,7 +814,7 @@ public class TestAssignmentManagerOnCluster {
       HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
-      MetaEditor.addRegionToMeta(meta, hri);
+      MetaTableAccessor.addRegionToMeta(meta, hri);
 
       // Assign the region
       master = (MyMaster)cluster.getMaster();

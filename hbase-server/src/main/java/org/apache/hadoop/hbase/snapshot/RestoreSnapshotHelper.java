@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
@@ -45,8 +44,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
@@ -58,7 +57,6 @@ import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionM
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -253,7 +251,7 @@ public class RestoreSnapshotHelper {
     /**
      * Returns the list of new regions added during the on-disk restore.
      * The caller is responsible to add the regions to META.
-     * e.g MetaEditor.addRegionsToMeta(...)
+     * e.g MetaTableAccessor.addRegionsToMeta(...)
      * @return the list of regions to add to META
      */
     public List<HRegionInfo> getRegionsToAdd() {
@@ -286,7 +284,7 @@ public class RestoreSnapshotHelper {
     /**
      * Returns the list of regions removed during the on-disk restore.
      * The caller is responsible to remove the regions from META.
-     * e.g. MetaEditor.deleteRegions(...)
+     * e.g. MetaTableAccessor.deleteRegions(...)
      * @return the list of regions to remove from META
      */
     public List<HRegionInfo> getRegionsToRemove() {
@@ -315,7 +313,7 @@ public class RestoreSnapshotHelper {
       regionsToRestore.add(hri);
     }
 
-    public void updateMetaParentRegions(final CatalogTracker catalogTracker,
+    public void updateMetaParentRegions(HConnection hConnection,
         final List<HRegionInfo> regionInfos) throws IOException {
       if (regionInfos == null || parentsMap.isEmpty()) return;
 
@@ -346,9 +344,9 @@ public class RestoreSnapshotHelper {
         }
 
         LOG.debug("Update splits parent " + regionInfo.getEncodedName() + " -> " + daughters);
-        MetaEditor.addRegionToMeta(catalogTracker, regionInfo,
-            regionsByName.get(daughters.getFirst()),
-            regionsByName.get(daughters.getSecond()));
+        MetaTableAccessor.addRegionToMeta(hConnection, regionInfo,
+          regionsByName.get(daughters.getFirst()),
+          regionsByName.get(daughters.getSecond()));
       }
     }
   }

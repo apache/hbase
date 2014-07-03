@@ -72,8 +72,7 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZNodeClearer;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -135,7 +134,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.ClusterStatusTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
-import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.RecoveringRegionWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -182,8 +181,20 @@ public class HRegionServer extends HasThread implements
 
   protected HeapMemoryManager hMemManager;
 
-  // catalog tracker
-  protected CatalogTracker catalogTracker;
+  /*
+   * Short-circuit (ie. bypassing RPC layer) HConnection to this Server
+   * to be used internally for miscellaneous needs. Initialized at the server startup
+   * and closed when server shuts down. Clients must never close it explicitly.
+   */
+  protected HConnection shortCircuitConnection;
+
+  /*
+   * Long-living meta table locator, which is created when the server is started and stopped
+   * when server shuts down. References to this locator shall be used to perform according
+   * operations in EventHandlers. Primary reason for this decision is to make it mockable
+   * for tests.
+   */
+  protected MetaTableLocator metaTableLocator;
 
   // Watch if a region is out of recovering state from ZooKeeper
   @SuppressWarnings("unused")
@@ -543,14 +554,13 @@ public class HRegionServer extends HasThread implements
   }
 
   /**
-   * Create CatalogTracker.
+   * Create wrapped short-circuit connection to this server.
    * In its own method so can intercept and mock it over in tests.
    * @throws IOException
    */
-  protected CatalogTracker createCatalogTracker() throws IOException {
-    HConnection conn = ConnectionUtils.createShortCircuitHConnection(
+  protected HConnection createShortCircuitConnection() throws IOException {
+    return ConnectionUtils.createShortCircuitHConnection(
       HConnectionManager.getConnection(conf), serverName, rpcServices, rpcServices);
-    return new CatalogTracker(zooKeeper, conf, conn, this);
   }
 
   /**
@@ -596,7 +606,7 @@ public class HRegionServer extends HasThread implements
    * Bring up connection to zk ensemble and then wait until a master for this
    * cluster and then after that, wait until cluster 'up' flag has been set.
    * This is the order in which master does things.
-   * Finally put up a catalog tracker.
+   * Finally open long-living server short-circuit connection.
    * @throws IOException
    * @throws InterruptedException
    */
@@ -625,8 +635,8 @@ public class HRegionServer extends HasThread implements
       this.abort("Failed to retrieve Cluster ID",e);
     }
 
-    // Now we have the cluster ID, start catalog tracker
-    startCatalogTracker();
+    shortCircuitConnection = createShortCircuitConnection();
+    metaTableLocator = new MetaTableLocator();
 
     // watch for snapshots and other procedures
     try {
@@ -701,17 +711,6 @@ public class HRegionServer extends HasThread implements
       , StorefileRefresherChore.DEFAULT_REGIONSERVER_STOREFILE_REFRESH_PERIOD);
     if (storefileRefreshPeriod > 0) {
       this.storefileRefresher = new StorefileRefresherChore(storefileRefreshPeriod, this, this);
-    }
-  }
-
-  /**
-   * Create and start the catalog tracker if not already done.
-   */
-  protected synchronized void startCatalogTracker()
-      throws IOException, InterruptedException {
-    if (catalogTracker == null) {
-      catalogTracker = createCatalogTracker();
-      catalogTracker.start();
     }
   }
 
@@ -859,9 +858,18 @@ public class HRegionServer extends HasThread implements
       closeUserRegions(abortRequested);
       LOG.info("stopping server " + this.serverName);
     }
-    // Interrupt catalog tracker here in case any regions being opened out in
-    // handlers are stuck waiting on meta.
-    if (this.catalogTracker != null) this.catalogTracker.stop();
+
+    // so callers waiting for meta without timeout can stop
+    metaTableLocator.stop();
+    if (this.shortCircuitConnection != null && !shortCircuitConnection.isClosed()) {
+      try {
+        this.shortCircuitConnection.close();
+      } catch (IOException e) {
+        // Although the {@link Closeable} interface throws an {@link
+        // IOException}, in reality, the implementation would never do that.
+        LOG.error("Attempt to close server's short circuit HConnection failed.", e);
+      }
+    }
 
     // Closing the compactSplit thread before closing meta regions
     if (!this.killed && containsMetaTableRegions()) {
@@ -1644,8 +1652,13 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public CatalogTracker getCatalogTracker() {
-    return this.catalogTracker;
+  public HConnection getShortCircuitConnection() {
+    return this.shortCircuitConnection;
+  }
+
+  @Override
+  public MetaTableLocator getMetaTableLocator() {
+    return this.metaTableLocator;
   }
 
   @Override
@@ -1672,7 +1685,7 @@ public class HRegionServer extends HasThread implements
   }
 
   @Override
-  public void postOpenDeployTasks(final HRegion r, final CatalogTracker ct)
+  public void postOpenDeployTasks(final HRegion r)
   throws KeeperException, IOException {
     rpcServices.checkOpen();
     LOG.info("Post open deploy tasks for " + r.getRegionNameAsString());
@@ -1694,9 +1707,9 @@ public class HRegionServer extends HasThread implements
 
     // Update ZK, or META
     if (r.getRegionInfo().isMetaRegion()) {
-      MetaRegionTracker.setMetaLocation(getZooKeeper(), serverName);
+      MetaTableLocator.setMetaLocation(getZooKeeper(), serverName);
     } else if (useZKForAssignment) {
-      MetaEditor.updateRegionLocation(ct, r.getRegionInfo(),
+      MetaTableAccessor.updateRegionLocation(shortCircuitConnection, r.getRegionInfo(),
         this.serverName, openSeqNum);
     }
     if (!useZKForAssignment && !reportRegionStateTransition(

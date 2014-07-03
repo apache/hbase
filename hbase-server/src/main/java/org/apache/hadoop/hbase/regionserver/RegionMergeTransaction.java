@@ -33,10 +33,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
@@ -325,11 +324,13 @@ public class RegionMergeTransaction {
     // rollback
     if (!testing && useCoordinationForAssignment) {
       if (metaEntries.isEmpty()) {
-        MetaEditor.mergeRegions(server.getCatalogTracker(), mergedRegion.getRegionInfo(), region_a
-            .getRegionInfo(), region_b.getRegionInfo(), server.getServerName());
+        MetaTableAccessor.mergeRegions(server.getShortCircuitConnection(),
+          mergedRegion.getRegionInfo(), region_a.getRegionInfo(), region_b.getRegionInfo(),
+          server.getServerName());
       } else {
-        mergeRegionsAndPutMetaEntries(server.getCatalogTracker(), mergedRegion.getRegionInfo(),
-          region_a.getRegionInfo(), region_b.getRegionInfo(), server.getServerName(), metaEntries);
+        mergeRegionsAndPutMetaEntries(server.getShortCircuitConnection(),
+          mergedRegion.getRegionInfo(), region_a.getRegionInfo(), region_b.getRegionInfo(),
+          server.getServerName(), metaEntries);
       }
     } else if (services != null && !useCoordinationForAssignment) {
       if (!services.reportRegionStateTransition(TransitionCode.MERGE_PONR,
@@ -343,11 +344,11 @@ public class RegionMergeTransaction {
     return mergedRegion;
   }
 
-  private void mergeRegionsAndPutMetaEntries(CatalogTracker catalogTracker,
-      HRegionInfo mergedRegion, HRegionInfo regionA, HRegionInfo regionB, ServerName serverName,
-      List<Mutation> metaEntries) throws IOException {
+  private void mergeRegionsAndPutMetaEntries(HConnection hConnection,
+      HRegionInfo mergedRegion, HRegionInfo regionA, HRegionInfo regionB,
+      ServerName serverName, List<Mutation> metaEntries) throws IOException {
     prepareMutationsForMerge(mergedRegion, regionA, regionB, serverName, metaEntries);
-    MetaEditor.mutateMetaTable(catalogTracker, metaEntries);
+    MetaTableAccessor.mutateMetaTable(hConnection, metaEntries);
   }
 
   public void prepareMutationsForMerge(HRegionInfo mergedRegion, HRegionInfo regionA,
@@ -355,13 +356,13 @@ public class RegionMergeTransaction {
     HRegionInfo copyOfMerged = new HRegionInfo(mergedRegion);
 
     // Put for parent
-    Put putOfMerged = MetaEditor.makePutFromRegionInfo(copyOfMerged);
+    Put putOfMerged = MetaTableAccessor.makePutFromRegionInfo(copyOfMerged);
     putOfMerged.add(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER, regionA.toByteArray());
     putOfMerged.add(HConstants.CATALOG_FAMILY, HConstants.MERGEB_QUALIFIER, regionB.toByteArray());
     mutations.add(putOfMerged);
     // Deletes for merging regions
-    Delete deleteA = MetaEditor.makeDeleteFromRegionInfo(regionA);
-    Delete deleteB = MetaEditor.makeDeleteFromRegionInfo(regionB);
+    Delete deleteA = MetaTableAccessor.makeDeleteFromRegionInfo(regionA);
+    Delete deleteB = MetaTableAccessor.makeDeleteFromRegionInfo(regionB);
     mutations.add(deleteA);
     mutations.add(deleteB);
     // The merged is a new region, openSeqNum = 1 is fine.
@@ -579,7 +580,7 @@ public class RegionMergeTransaction {
     if (services != null) {
       try {
         if (useCoordinationForAssignment) {
-          services.postOpenDeployTasks(merged, server.getCatalogTracker());
+          services.postOpenDeployTasks(merged);
         } else if (!services.reportRegionStateTransition(TransitionCode.MERGED,
             mergedRegionInfo, region_a.getRegionInfo(), region_b.getRegionInfo())) {
           throw new IOException("Failed to report merged region to master: "
@@ -753,8 +754,8 @@ public class RegionMergeTransaction {
     if (services == null) return false;
     // Get merge regions if it is a merged region and already has merge
     // qualifier
-    Pair<HRegionInfo, HRegionInfo> mergeRegions = MetaReader
-        .getRegionsFromMergeQualifier(services.getCatalogTracker(), regionName);
+    Pair<HRegionInfo, HRegionInfo> mergeRegions = MetaTableAccessor
+        .getRegionsFromMergeQualifier(services.getShortCircuitConnection(), regionName);
     if (mergeRegions != null &&
         (mergeRegions.getFirst() != null || mergeRegions.getSecond() != null)) {
       // It has merge qualifier

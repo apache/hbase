@@ -64,7 +64,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaMigrationConvertingToPB;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
@@ -117,6 +118,7 @@ import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.RegionServerTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -409,7 +411,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.loadBalancerTracker = new LoadBalancerTracker(zooKeeper, this);
     this.loadBalancerTracker.start();
     this.assignmentManager = new AssignmentManager(this, serverManager,
-      this.catalogTracker, this.balancer, this.service, this.metricsMaster,
+      this.balancer, this.service, this.metricsMaster,
       this.tableLockManager);
     zooKeeper.registerListenerFirst(assignmentManager);
 
@@ -482,8 +484,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
     this.serverManager = createServerManager(this, this);
 
-    // Now we have the cluster ID, start catalog tracker
-    startCatalogTracker();
+    metaTableLocator = new MetaTableLocator();
+    shortCircuitConnection = createShortCircuitConnection();
 
     // Invalidate all write locks held previously
     this.tableLockManager.reapWriteLocks();
@@ -523,7 +525,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.fileSystemManager.removeStaleRecoveringRegionsFromZK(previouslyFailedServers);
 
     // log splitting for hbase:meta server
-    ServerName oldMetaServerLocation = this.catalogTracker.getMetaLocation();
+    ServerName oldMetaServerLocation = metaTableLocator.getMetaRegionLocation(this.getZooKeeper());
     if (oldMetaServerLocation != null && previouslyFailedServers.contains(oldMetaServerLocation)) {
       splitMetaLogBeforeAssignment(oldMetaServerLocation);
       // Note: we can't remove oldMetaServerLocation from previousFailedServers list because it
@@ -575,8 +577,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // Update meta with new PB serialization if required. i.e migrate all HRI to PB serialization
     // in meta. This must happen before we assign all user regions or else the assignment will
     // fail.
-    org.apache.hadoop.hbase.catalog.MetaMigrationConvertingToPB
-      .updateMetaIfNecessary(this);
+    MetaMigrationConvertingToPB.updateMetaIfNecessary(this);
 
     // Fix up assignment manager status
     status.setStatus("Starting assignment manager");
@@ -675,8 +676,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     regionStates.createRegionState(HRegionInfo.FIRST_META_REGIONINFO);
     boolean rit = this.assignmentManager
       .processRegionInTransitionAndBlockUntilAssigned(HRegionInfo.FIRST_META_REGIONINFO);
-    boolean metaRegionLocation = this.catalogTracker.verifyMetaRegionLocation(timeout);
-    ServerName currentMetaServer = this.catalogTracker.getMetaLocation();
+    boolean metaRegionLocation = metaTableLocator.verifyMetaRegionLocation(
+      this.getShortCircuitConnection(), this.getZooKeeper(), timeout);
+    ServerName currentMetaServer = metaTableLocator.getMetaRegionLocation(this.getZooKeeper());
     if (!metaRegionLocation) {
       // Meta location is not verified. It should be in transition, or offline.
       // We will wait for it to be assigned in enableSSHandWaitForMeta below.
@@ -724,7 +726,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     enableServerShutdownHandler(assigned != 0);
 
     LOG.info("hbase:meta assigned=" + assigned + ", rit=" + rit +
-      ", location=" + catalogTracker.getMetaLocation());
+      ", location=" + metaTableLocator.getMetaRegionLocation(this.getZooKeeper()));
     status.setStatus("META assigned.");
   }
 
@@ -764,7 +766,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
 
     if (waitForMeta) {
-      this.catalogTracker.waitForMeta();
+      metaTableLocator.waitMetaRegionLocation(this.getZooKeeper());
       // Above check waits for general meta availability but this does not
       // guarantee that the transition has completed
       this.assignmentManager.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
@@ -1410,7 +1412,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
     LOG.info(getClientIdAuditPrefix() + " enable " + tableName);
     this.service.submit(new EnableTableHandler(this, tableName,
-      catalogTracker, assignmentManager, tableLockManager, false).prepare());
+      assignmentManager, tableLockManager, false).prepare());
     if (cpHost != null) {
       cpHost.postEnableTable(tableName);
    }
@@ -1424,7 +1426,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
     LOG.info(getClientIdAuditPrefix() + " disable " + tableName);
     this.service.submit(new DisableTableHandler(this, tableName,
-      catalogTracker, assignmentManager, tableLockManager, false).prepare());
+      assignmentManager, tableLockManager, false).prepare());
     if (cpHost != null) {
       cpHost.postDisableTable(tableName);
     }
@@ -1486,7 +1488,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (isCatalogTable(tableName)) {
       throw new IOException("Can't modify catalog tables");
     }
-    if (!MetaReader.tableExists(getCatalogTracker(), tableName)) {
+    if (!MetaTableAccessor.tableExists(getShortCircuitConnection(), tableName)) {
       throw new TableNotFoundException(tableName);
     }
     if (!getAssignmentManager().getTableStateManager().

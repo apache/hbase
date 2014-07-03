@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -431,8 +431,8 @@ public class NamespaceUpgrade implements Tool {
                 newRegionDir);
           }
         }
-        meta.put(MetaEditor.makePutFromRegionInfo(newRegionInfo));
-        meta.delete(MetaEditor.makeDeleteFromRegionInfo(oldRegionInfo));
+        meta.put(MetaTableAccessor.makePutFromRegionInfo(newRegionInfo));
+        meta.delete(MetaTableAccessor.makeDeleteFromRegionInfo(oldRegionInfo));
       }
     } finally {
       meta.flushcache();

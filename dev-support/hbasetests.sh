@@ -64,7 +64,7 @@ parallelMaven=1
 # the others
 #The ',' at the end is mandatory
 flakyTests=
-#org.apache.hadoop.hbase.mapreduce.TestTableInputFormatScan,org.apache.hadoop.hbase.catalog.TestMetaReaderEditorNoCluster,org.apache.hadoop.hbase.catalog.TestMetaReaderEditor,org.apache.hadoop.hbase.mapreduce.TestHFileOutputFormat,org.apache.hadoop.hbase.mapred.TestTableMapReduce,org.apache.hadoop.hbase.coprocessor.TestMasterCoprocessorExceptionWithAbort,org.apache.hadoop.hbase.coprocessor.TestMasterCoprocessorExceptionWithRemove,org.apache.hadoop.hbase.client.TestAdmin,org.apache.hadoop.hbase.master.TestMasterFailover,org.apache.hadoop.hbase.regionserver.wal.TestLogRolling,org.apache.hadoop.hbase.master.TestDistributedLogSplitting,org.apache.hadoop.hbase.master.TestMasterRestartAfterDisablingTable,org.apache.hadoop.hbase.TestGlobalMemStoreSize,
+#org.apache.hadoop.hbase.mapreduce.TestTableInputFormatScan,org.apache.hadoop.hbase.catalog.TestMetaTableAccessorNoCluster,org.apache.hadoop.hbase.catalog.TestMetaTableAccessor,org.apache.hadoop.hbase.mapreduce.TestHFileOutputFormat,org.apache.hadoop.hbase.mapred.TestTableMapReduce,org.apache.hadoop.hbase.coprocessor.TestMasterCoprocessorExceptionWithAbort,org.apache.hadoop.hbase.coprocessor.TestMasterCoprocessorExceptionWithRemove,org.apache.hadoop.hbase.client.TestAdmin,org.apache.hadoop.hbase.master.TestMasterFailover,org.apache.hadoop.hbase.regionserver.wal.TestLogRolling,org.apache.hadoop.hbase.master.TestDistributedLogSplitting,org.apache.hadoop.hbase.master.TestMasterRestartAfterDisablingTable,org.apache.hadoop.hbase.TestGlobalMemStoreSize,
 
 ######################################### Internal parameters
 #directory used for surefire & the source code.

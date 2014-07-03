@@ -29,8 +29,6 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.RegionStates;
@@ -100,13 +98,9 @@ public class TestRegionRebalancing {
     admin.createTable(this.desc, Arrays.copyOfRange(HBaseTestingUtility.KEYS,
         1, HBaseTestingUtility.KEYS.length));
     this.table = new HTable(UTIL.getConfiguration(), this.desc.getTableName());
-    CatalogTracker ct = new CatalogTracker(UTIL.getConfiguration());
-    ct.start();
-    try {
-      MetaReader.fullScanMetaAndPrint(ct);
-    } finally {
-      ct.stop();
-    }
+
+    MetaTableAccessor.fullScanMetaAndPrint(admin.getConnection());
+
     assertEquals("Test table should have right number of regions",
       HBaseTestingUtility.KEYS.length,
       this.table.getStartKeys().length);

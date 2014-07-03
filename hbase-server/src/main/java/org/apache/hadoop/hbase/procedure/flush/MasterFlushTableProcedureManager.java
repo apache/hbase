@@ -30,7 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -124,8 +124,9 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
     List<Pair<HRegionInfo, ServerName>> regionsAndLocations = null;
     try {
       regionsAndLocations =
-          MetaReader.getTableRegionsAndLocations(this.master.getCatalogTracker(),
-              TableName.valueOf(desc.getInstance()), false);
+          MetaTableAccessor.getTableRegionsAndLocations(this.master.getZooKeeper(),
+            this.master.getShortCircuitConnection(),
+            TableName.valueOf(desc.getInstance()), false);
     } catch (InterruptedException e1) {
       String msg = "Failed to get regions for '" + desc.getInstance() + "'";
       LOG.error(msg);

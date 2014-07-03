@@ -36,10 +36,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -64,7 +62,6 @@ public class CreateTableHandler extends EventHandler {
   protected final HTableDescriptor hTableDescriptor;
   protected final Configuration conf;
   private final AssignmentManager assignmentManager;
-  private final CatalogTracker catalogTracker;
   private final TableLockManager tableLockManager;
   private final HRegionInfo [] newRegions;
   private final TableLock tableLock;
@@ -78,7 +75,6 @@ public class CreateTableHandler extends EventHandler {
     this.hTableDescriptor = hTableDescriptor;
     this.conf = conf;
     this.newRegions = newRegions;
-    this.catalogTracker = masterServices.getCatalogTracker();
     this.assignmentManager = masterServices.getAssignmentManager();
     this.tableLockManager = masterServices.getTableLockManager();
 
@@ -92,7 +88,8 @@ public class CreateTableHandler extends EventHandler {
     int timeout = conf.getInt("hbase.client.catalog.timeout", 10000);
     // Need hbase:meta availability to create a table
     try {
-      if (catalogTracker.waitForMeta(timeout) == null) {
+      if (server.getMetaTableLocator().waitMetaRegionLocation(
+          server.getZooKeeper(), timeout) == null) {
         throw new NotAllMetaRegionsOnlineException();
       }
     } catch (InterruptedException e) {
@@ -107,7 +104,7 @@ public class CreateTableHandler extends EventHandler {
     boolean success = false;
     try {
       TableName tableName = this.hTableDescriptor.getTableName();
-      if (MetaReader.tableExists(catalogTracker, tableName)) {
+      if (MetaTableAccessor.tableExists(this.server.getShortCircuitConnection(), tableName)) {
         throw new TableExistsException(tableName);
       }
 
@@ -242,7 +239,7 @@ public class CreateTableHandler extends EventHandler {
 
     if (regionInfos != null && regionInfos.size() > 0) {
       // 4. Add regions to META
-      addRegionsToMeta(this.catalogTracker, regionInfos);
+      addRegionsToMeta(regionInfos);
       // 5. Add replicas if needed
       regionInfos = addReplicas(hTableDescriptor, regionInfos);
 
@@ -310,8 +307,8 @@ public class CreateTableHandler extends EventHandler {
   /**
    * Add the specified set of regions to the hbase:meta table.
    */
-  protected void addRegionsToMeta(final CatalogTracker ct, final List<HRegionInfo> regionInfos)
+  protected void addRegionsToMeta(final List<HRegionInfo> regionInfos)
       throws IOException {
-    MetaEditor.addRegionsToMeta(this.catalogTracker, regionInfos);
+    MetaTableAccessor.addRegionsToMeta(this.server.getShortCircuitConnection(), regionInfos);
   }
 }

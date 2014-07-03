@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.NamespaceExistException;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZKNamespaceManager;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -80,8 +80,8 @@ public class TableNamespaceManager {
   }
 
   public void start() throws IOException {
-    if (!MetaReader.tableExists(masterServices.getCatalogTracker(),
-        TableName.NAMESPACE_TABLE_NAME)) {
+    if (!MetaTableAccessor.tableExists(masterServices.getShortCircuitConnection(),
+      TableName.NAMESPACE_TABLE_NAME)) {
       LOG.info("Namespace table not found. Creating...");
       createNamespaceTable(masterServices);
     }

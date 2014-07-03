@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
@@ -168,8 +168,8 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       monitor.rethrowException();
 
       List<Pair<HRegionInfo, ServerName>> regionsAndLocations =
-          MetaReader.getTableRegionsAndLocations(this.server.getCatalogTracker(),
-              snapshotTable, false);
+          MetaTableAccessor.getTableRegionsAndLocations(this.server.getZooKeeper(),
+            this.server.getShortCircuitConnection(), snapshotTable, false);
 
       // run the snapshot
       snapshotRegions(regionsAndLocations);

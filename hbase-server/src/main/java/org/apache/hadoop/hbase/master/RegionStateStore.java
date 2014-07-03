@@ -31,9 +31,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
@@ -62,7 +60,6 @@ public class RegionStateStore {
   private volatile boolean initialized;
 
   private final boolean noPersistence;
-  private final CatalogTracker catalogTracker;
   private final Server server;
 
   /**
@@ -76,7 +73,7 @@ public class RegionStateStore {
   static ServerName getRegionServer(final Result r, int replicaId) {
     Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, getServerNameColumn(replicaId));
     if (cell == null || cell.getValueLength() == 0) {
-      RegionLocations locations = MetaReader.getRegionLocations(r);
+      RegionLocations locations = MetaTableAccessor.getRegionLocations(r);
       if (locations != null) {
         HRegionLocation location = locations.getRegionLocation(replicaId);
         if (location != null) {
@@ -138,7 +135,6 @@ public class RegionStateStore {
     // No need to persist if using ZK but not migrating
     noPersistence = ConfigUtil.useZKForAssignment(conf)
       && !conf.getBoolean("hbase.assignment.usezk.migrating", false);
-    catalogTracker = server.getCatalogTracker();
     this.server = server;
     initialized = false;
   }
@@ -152,7 +148,7 @@ public class RegionStateStore {
       }
       if (metaRegion == null) {
         metaTable = new HTable(TableName.META_TABLE_NAME,
-          catalogTracker.getConnection());
+          server.getShortCircuitConnection());
       }
     }
     initialized = true;
@@ -189,7 +185,7 @@ public class RegionStateStore {
 
     try {
       int replicaId = hri.getReplicaId();
-      Put put = new Put(MetaReader.getMetaKeyForRegion(hri));
+      Put put = new Put(MetaTableAccessor.getMetaKeyForRegion(hri));
       StringBuilder info = new StringBuilder("Updating row ");
       info.append(hri.getRegionNameAsString()).append(" with state=").append(state);
       if (serverName != null && !serverName.equals(oldServer)) {
@@ -200,7 +196,7 @@ public class RegionStateStore {
       if (openSeqNum >= 0) {
         Preconditions.checkArgument(state == State.OPEN
           && serverName != null, "Open region should be on a server");
-        MetaEditor.addLocation(put, serverName, openSeqNum, replicaId);
+        MetaTableAccessor.addLocation(put, serverName, openSeqNum, replicaId);
         info.append("&openSeqNum=").append(openSeqNum);
         info.append("&server=").append(serverName);
       }
@@ -224,7 +220,7 @@ public class RegionStateStore {
             if (metaRegion != null) {
               LOG.info("Meta region shortcut failed", t);
               metaTable = new HTable(TableName.META_TABLE_NAME,
-                catalogTracker.getConnection());
+                server.getShortCircuitConnection());
               metaRegion = null;
             }
           }
@@ -241,11 +237,11 @@ public class RegionStateStore {
 
   void splitRegion(HRegionInfo p,
       HRegionInfo a, HRegionInfo b, ServerName sn) throws IOException {
-    MetaEditor.splitRegion(catalogTracker, p, a, b, sn);
+    MetaTableAccessor.splitRegion(server.getShortCircuitConnection(), p, a, b, sn);
   }
 
   void mergeRegions(HRegionInfo p,
       HRegionInfo a, HRegionInfo b, ServerName sn) throws IOException {
-    MetaEditor.mergeRegions(catalogTracker, p, a, b, sn);
+    MetaTableAccessor.mergeRegions(server.getShortCircuitConnection(), p, a, b, sn);
   }
 }

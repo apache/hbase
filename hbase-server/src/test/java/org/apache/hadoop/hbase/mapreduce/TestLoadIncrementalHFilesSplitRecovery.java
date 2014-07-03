@@ -45,10 +45,9 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -474,11 +473,12 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     dir = buildBulkFiles(tableName, 3);
 
     // Mess it up by leaving a hole in the hbase:meta
-    CatalogTracker ct = new CatalogTracker(util.getConfiguration());
-    List<HRegionInfo> regionInfos = MetaReader.getTableRegions(ct, TableName.valueOf(tableName));
+    HConnection hConnection = HConnectionManager.getConnection(util.getConfiguration());
+    List<HRegionInfo> regionInfos = MetaTableAccessor.getTableRegions(
+      util.getZooKeeperWatcher(), hConnection, TableName.valueOf(tableName));
     for (HRegionInfo regionInfo : regionInfos) {
       if (Bytes.equals(regionInfo.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
-        MetaEditor.deleteRegion(ct, regionInfo);
+        MetaTableAccessor.deleteRegion(hConnection, regionInfo);
         break;
       }
     }

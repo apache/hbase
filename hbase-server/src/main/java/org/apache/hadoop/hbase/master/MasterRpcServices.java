@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
@@ -1086,7 +1086,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       master.checkInitialized();
       Pair<HRegionInfo, ServerName> pair =
-        MetaReader.getRegion(master.getCatalogTracker(), regionName);
+        MetaTableAccessor.getRegion(master.getShortCircuitConnection(), regionName);
       if (pair == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
       HRegionInfo hri = pair.getFirst();
       if (master.cpHost != null) {
@@ -1217,7 +1217,7 @@ public class MasterRpcServices extends RSRpcServices
           + " actual: " + type);
       }
       Pair<HRegionInfo, ServerName> pair =
-        MetaReader.getRegion(master.getCatalogTracker(), regionName);
+        MetaTableAccessor.getRegion(master.getShortCircuitConnection(), regionName);
       if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
       HRegionInfo hri = pair.getFirst();
       if (master.cpHost != null) {
