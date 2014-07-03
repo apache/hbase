@@ -32,8 +32,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.executor.EventType;
@@ -109,7 +109,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
   @Override
   protected void handleTableOperation(List<HRegionInfo> hris) throws IOException {
     MasterFileSystem fileSystemManager = masterServices.getMasterFileSystem();
-    CatalogTracker catalogTracker = masterServices.getCatalogTracker();
+    HConnection conn = masterServices.getShortCircuitConnection();
     FileSystem fs = fileSystemManager.getFileSystem();
     Path rootDir = fileSystemManager.getRootDir();
     TableName tableName = hTableDescriptor.getTableName();
@@ -149,7 +149,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       // that are not correct after the restore.
       List<HRegionInfo> hrisToRemove = new LinkedList<HRegionInfo>();
       if (metaChanges.hasRegionsToRemove()) hrisToRemove.addAll(metaChanges.getRegionsToRemove());
-      MetaEditor.deleteRegions(catalogTracker, hrisToRemove);
+      MetaTableAccessor.deleteRegions(conn, hrisToRemove);
 
       // 4.2 Add the new set of regions to META
       //
@@ -159,11 +159,11 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       // in the snapshot folder.
       hris.clear();
       if (metaChanges.hasRegionsToAdd()) hris.addAll(metaChanges.getRegionsToAdd());
-      MetaEditor.addRegionsToMeta(catalogTracker, hris);
+      MetaTableAccessor.addRegionsToMeta(conn, hris);
       if (metaChanges.hasRegionsToRestore()) {
-        MetaEditor.overwriteRegions(catalogTracker, metaChanges.getRegionsToRestore());
+        MetaTableAccessor.overwriteRegions(conn, metaChanges.getRegionsToRestore());
       }
-      metaChanges.updateMetaParentRegions(catalogTracker, hris);
+      metaChanges.updateMetaParentRegions(this.server.getShortCircuitConnection(), hris);
 
       // At this point the restore is complete. Next step is enabling the table.
       LOG.info("Restore snapshot=" + ClientSnapshotDescriptionUtils.toString(snapshot) +

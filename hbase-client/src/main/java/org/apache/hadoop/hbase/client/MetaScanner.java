@@ -33,11 +33,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 
@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.util.ExceptionUtil;
  * see HBASE-5986, and {@link DefaultMetaScannerVisitor} for details. </p>
  */
 @InterfaceAudience.Private
-//TODO: merge this to MetaReader, get rid of it.
+//TODO: merge this to MetaTableAccessor, get rid of it.
 public class MetaScanner {
   private static final Log LOG = LogFactory.getLog(MetaScanner.class);
   /**
@@ -227,7 +227,7 @@ public class MetaScanner {
    * table Result.
    * @param data a Result object from the catalog table scan
    * @return HRegionInfo or null
-   * @deprecated Use {@link MetaReader#getRegionLocations(Result)}
+   * @deprecated Use {@link org.apache.hadoop.hbase.MetaTableAccessor#getRegionLocations(Result)}
    */
   @Deprecated
   public static HRegionInfo getHRegionInfo(Result data) {
@@ -252,7 +252,7 @@ public class MetaScanner {
             return true;
           }
 
-          RegionLocations locations = MetaReader.getRegionLocations(result);
+          RegionLocations locations = MetaTableAccessor.getRegionLocations(result);
           if (locations == null) return true;
           for (HRegionLocation loc : locations.getRegionLocations()) {
             if (loc != null) {
@@ -285,7 +285,7 @@ public class MetaScanner {
     MetaScannerVisitor visitor = new TableMetaScannerVisitor(tableName) {
       @Override
       public boolean processRowInternal(Result result) throws IOException {
-        RegionLocations locations = MetaReader.getRegionLocations(result);
+        RegionLocations locations = MetaTableAccessor.getRegionLocations(result);
         if (locations == null) return true;
         for (HRegionLocation loc : locations.getRegionLocations()) {
           if (loc != null) {
@@ -309,7 +309,7 @@ public class MetaScanner {
     MetaScannerVisitor visitor = new TableMetaScannerVisitor(tableName) {
       @Override
       public boolean processRowInternal(Result result) throws IOException {
-        RegionLocations locations = MetaReader.getRegionLocations(result);
+        RegionLocations locations = MetaTableAccessor.getRegionLocations(result);
         if (locations == null) return true;
         regions.add(locations);
         return true;

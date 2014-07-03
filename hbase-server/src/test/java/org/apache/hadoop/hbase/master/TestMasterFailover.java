@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.RegionTransition;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableStateManager;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.executor.EventType;
@@ -67,7 +67,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKTableStateManager;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -298,8 +298,10 @@ public class TestMasterFailover {
       zkw, HRegionInfo.FIRST_META_REGIONINFO, hrs.getServerName());
     ProtobufUtil.openRegion(hrs.getRSRpcServices(),
       hrs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
+
+    MetaTableLocator mtl = new MetaTableLocator();
     while (true) {
-      ServerName sn = MetaRegionTracker.getMetaRegionLocation(zkw);
+      ServerName sn = mtl.getMetaRegionLocation(zkw);
       if (sn != null && sn.equals(hrs.getServerName())) {
         break;
       }
@@ -689,8 +691,10 @@ public class TestMasterFailover {
       zkw, HRegionInfo.FIRST_META_REGIONINFO, hrs.getServerName());
     ProtobufUtil.openRegion(hrs.getRSRpcServices(),
       hrs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
+
+    MetaTableLocator mtl = new MetaTableLocator();
     while (true) {
-      ServerName sn = MetaRegionTracker.getMetaRegionLocation(zkw);
+      ServerName sn = mtl.getMetaRegionLocation(zkw);
       if (sn != null && sn.equals(hrs.getServerName())) {
         break;
       }
@@ -1234,7 +1238,7 @@ public class TestMasterFailover {
 
     HRegionInfo hriOffline = new HRegionInfo(offlineTable.getTableName(), null, null);
     createRegion(hriOffline, rootdir, conf, offlineTable);
-    MetaEditor.addRegionToMeta(master.getCatalogTracker(), hriOffline);
+    MetaTableAccessor.addRegionToMeta(master.getShortCircuitConnection(), hriOffline);
 
     log("Regions in hbase:meta and namespace have been created");
 

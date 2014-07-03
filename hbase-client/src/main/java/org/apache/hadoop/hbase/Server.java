@@ -20,7 +20,8 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
@@ -40,9 +41,24 @@ public interface Server extends Abortable, Stoppable {
   ZooKeeperWatcher getZooKeeper();
 
   /**
-   * @return Master's instance of {@link CatalogTracker}
+   * Returns reference to wrapped short-circuit (i.e. local, bypassing RPC layer entirely)
+   * HConnection to this server, which may be used for miscellaneous needs.
+   *
+   * Important note: this method returns reference to connection which is managed
+   * by Server itself, so callers must NOT attempt to close connection obtained.
+   *
+   * See {@link org.apache.hadoop.hbase.client.ConnectionUtils#createShortCircuitHConnection}
+   * for details on short-circuit connections.
    */
-  CatalogTracker getCatalogTracker();
+  HConnection getShortCircuitConnection();
+
+  /**
+   * Returns instance of {@link org.apache.hadoop.hbase.zookeeper.MetaTableLocator}
+   * running inside this server. This MetaServerLocator is started and stopped by server, clients
+   * shouldn't manage it's lifecycle.
+   * @return instance of {@link MetaTableLocator} associated with this server.
+   */
+  MetaTableLocator getMetaTableLocator();
 
   /**
    * @return The unique server name for this server.

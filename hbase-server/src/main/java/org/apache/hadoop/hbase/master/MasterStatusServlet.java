@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.tmpl.master.MasterStatusTmpl;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 
 /**
  * The servlet responsible for rendering the index page of the
@@ -87,12 +88,7 @@ public class MasterStatusServlet extends HttpServlet {
   }
 
   private ServerName getMetaLocationOrNull(HMaster master) {
-    try {
-      return (master.getCatalogTracker() == null) ? null : master.getCatalogTracker().getMetaLocation();
-    } catch (InterruptedException e) {
-      LOG.warn("Unable to get meta location", e);
-      return null;
-    }
+    return master.getMetaTableLocator().getMetaRegionLocation(master.getZooKeeper());
   }
 
   private Map<String, Integer> getFragmentationInfo(

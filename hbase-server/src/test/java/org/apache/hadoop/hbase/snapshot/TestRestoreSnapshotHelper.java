@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -147,8 +146,6 @@ public class TestRestoreSnapshotHelper {
    */
   private RestoreSnapshotHelper getRestoreHelper(final Path rootDir, final Path snapshotDir,
       final SnapshotDescription sd, final HTableDescriptor htdClone) throws IOException {
-    CatalogTracker catalogTracker = Mockito.mock(CatalogTracker.class);
-    HTableDescriptor tableDescriptor = Mockito.mock(HTableDescriptor.class);
     ForeignExceptionDispatcher monitor = Mockito.mock(ForeignExceptionDispatcher.class);
     MonitoredTask status = Mockito.mock(MonitoredTask.class);
 

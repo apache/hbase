@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -1764,18 +1763,13 @@ public class TestAdmin {
     final byte [] nameBytes = Bytes.toBytes(name);
     HTable t = TEST_UTIL.createTable(nameBytes, HConstants.CATALOG_FAMILY);
     TEST_UTIL.createMultiRegions(t, HConstants.CATALOG_FAMILY);
-    CatalogTracker ct = new CatalogTracker(TEST_UTIL.getConfiguration());
-    ct.start();
-    try {
-      HRegionLocation regionLocation = t.getRegionLocation("mmm");
-      HRegionInfo region = regionLocation.getRegionInfo();
-      byte[] regionName = region.getRegionName();
-      Pair<HRegionInfo, ServerName> pair = admin.getRegion(regionName, ct);
-      assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
-      pair = admin.getRegion(region.getEncodedNameAsBytes(), ct);
-      assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
-    } finally {
-      ct.stop();
-    }
+
+    HRegionLocation regionLocation = t.getRegionLocation("mmm");
+    HRegionInfo region = regionLocation.getRegionInfo();
+    byte[] regionName = region.getRegionName();
+    Pair<HRegionInfo, ServerName> pair = admin.getRegion(regionName);
+    assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
+    pair = admin.getRegion(region.getEncodedNameAsBytes());
+    assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
   }
 }

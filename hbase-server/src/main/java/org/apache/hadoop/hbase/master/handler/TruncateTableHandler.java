@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -124,7 +124,8 @@ public class TruncateTableHandler extends DeleteTableHandler {
       }
 
       // 4. Add regions to META
-      MetaEditor.addRegionsToMeta(masterServices.getCatalogTracker(), regionInfos);
+      MetaTableAccessor.addRegionsToMeta(masterServices.getShortCircuitConnection(),
+        regionInfos);
 
       // 5. Trigger immediate assignment of the regions in round-robin fashion
       ModifyRegionUtils.assignRegions(assignmentManager, regionInfos);

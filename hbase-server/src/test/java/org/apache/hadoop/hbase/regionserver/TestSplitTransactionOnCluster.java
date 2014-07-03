@@ -56,8 +56,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -898,8 +897,8 @@ public class TestSplitTransactionOnCluster {
       admin.setBalancerRunning(false, true);
       // Turn off the meta scanner so it don't remove parent on us.
       cluster.getMaster().setCatalogJanitorEnabled(false);
-      boolean tableExists = MetaReader.tableExists(regionServer.getCatalogTracker(),
-          tableName);
+      boolean tableExists = MetaTableAccessor.tableExists(regionServer.getShortCircuitConnection(),
+        tableName);
       assertEquals("The specified table should present.", true, tableExists);
       final HRegion region = findSplittableRegion(regions);
       assertTrue("not able to find a splittable region", region != null);
@@ -910,8 +909,8 @@ public class TestSplitTransactionOnCluster {
       } catch (IOException e) {
 
       }
-      tableExists = MetaReader.tableExists(regionServer.getCatalogTracker(),
-          tableName);
+      tableExists = MetaTableAccessor.tableExists(regionServer.getShortCircuitConnection(),
+        tableName);
       assertEquals("The specified table should present.", true, tableExists);
     } finally {
       if (regions != null) {
@@ -1420,13 +1419,15 @@ public class TestSplitTransactionOnCluster {
       copyOfParent.setOffline(true);
       copyOfParent.setSplit(true);
       // Put for parent
-      Put putParent = MetaEditor.makePutFromRegionInfo(copyOfParent);
-      MetaEditor.addDaughtersToPut(putParent, daughterRegions.getFirst().getRegionInfo(),
+      Put putParent = MetaTableAccessor.makePutFromRegionInfo(copyOfParent);
+      MetaTableAccessor.addDaughtersToPut(putParent, daughterRegions.getFirst().getRegionInfo(),
         daughterRegions.getSecond().getRegionInfo());
       metaEntries.add(putParent);
       // Puts for daughters
-      Put putA = MetaEditor.makePutFromRegionInfo(daughterRegions.getFirst().getRegionInfo());
-      Put putB = MetaEditor.makePutFromRegionInfo(daughterRegions.getSecond().getRegionInfo());
+      Put putA = MetaTableAccessor.makePutFromRegionInfo(
+        daughterRegions.getFirst().getRegionInfo());
+      Put putB = MetaTableAccessor.makePutFromRegionInfo(
+        daughterRegions.getSecond().getRegionInfo());
       st.addLocation(putA, rs.getServerName(), 1);
       st.addLocation(putB, rs.getServerName(), 1);
       metaEntries.add(putA);

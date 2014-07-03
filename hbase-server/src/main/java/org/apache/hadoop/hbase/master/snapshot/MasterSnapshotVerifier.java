@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
@@ -150,8 +150,8 @@ public final class MasterSnapshotVerifier {
    * @throws IOException if we can't reach hbase:meta or read the files from the FS
    */
   private void verifyRegions(final SnapshotManifest manifest) throws IOException {
-    List<HRegionInfo> regions = MetaReader.getTableRegions(this.services.getCatalogTracker(),
-        tableName);
+    List<HRegionInfo> regions = MetaTableAccessor.getTableRegions(
+      this.services.getZooKeeper(), this.services.getShortCircuitConnection(), tableName);
     // Remove the non-default regions
     RegionReplicaUtil.removeNonDefaultRegions(regions);
 

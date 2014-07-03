@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotDisabledException;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnectable;
@@ -331,7 +331,7 @@ class HMerge {
       }
       newRegion.getRegionInfo().setOffline(true);
 
-      MetaEditor.addRegionToMeta(table, newRegion.getRegionInfo());
+      MetaTableAccessor.addRegionToMeta(table, newRegion.getRegionInfo());
 
       if(LOG.isDebugEnabled()) {
         LOG.debug("updated columns in row: "

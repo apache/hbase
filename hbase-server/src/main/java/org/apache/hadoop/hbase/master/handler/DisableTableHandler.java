@@ -31,8 +31,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
@@ -56,17 +55,15 @@ public class DisableTableHandler extends EventHandler {
   private final TableName tableName;
   private final AssignmentManager assignmentManager;
   private final TableLockManager tableLockManager;
-  private final CatalogTracker catalogTracker;
   private final boolean skipTableStateCheck;
   private TableLock tableLock;
 
   public DisableTableHandler(Server server, TableName tableName,
-      CatalogTracker catalogTracker, AssignmentManager assignmentManager,
-      TableLockManager tableLockManager, boolean skipTableStateCheck) {
+      AssignmentManager assignmentManager, TableLockManager tableLockManager,
+      boolean skipTableStateCheck) {
     super(server, EventType.C_M_DISABLE_TABLE);
     this.tableName = tableName;
     this.assignmentManager = assignmentManager;
-    this.catalogTracker = catalogTracker;
     this.tableLockManager = tableLockManager;
     this.skipTableStateCheck = skipTableStateCheck;
   }
@@ -84,7 +81,7 @@ public class DisableTableHandler extends EventHandler {
     boolean success = false;
     try {
       // Check if table exists
-      if (!MetaReader.tableExists(catalogTracker, tableName)) {
+      if (!MetaTableAccessor.tableExists(this.server.getShortCircuitConnection(), tableName)) {
         throw new TableNotFoundException(tableName);
       }
 

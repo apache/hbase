@@ -25,7 +25,6 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.TableLockManager;
@@ -73,11 +72,10 @@ public interface RegionServerServices
    * regionserver
    *
    * @param r Region to open.
-   * @param ct Instance of {@link CatalogTracker}
    * @throws KeeperException
    * @throws IOException
    */
-  void postOpenDeployTasks(final HRegion r, final CatalogTracker ct)
+  void postOpenDeployTasks(final HRegion r)
   throws KeeperException, IOException;
 
   /**
@@ -115,11 +113,6 @@ public interface RegionServerServices
    * @return hbase executor service
    */
   ExecutorService getExecutorService();
-
-  /**
-   * @return The RegionServer's CatalogTracker
-   */
-  CatalogTracker getCatalogTracker();
 
   /**
    * @return set of recovering regions on the hosting region server

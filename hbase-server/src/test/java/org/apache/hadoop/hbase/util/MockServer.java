@@ -27,7 +27,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 /**
@@ -101,7 +102,12 @@ public class MockServer implements Server {
   }
 
   @Override
-  public CatalogTracker getCatalogTracker() {
+  public HConnection getShortCircuitConnection() {
+    return null;
+  }
+
+  @Override
+  public MetaTableLocator getMetaTableLocator() {
     return null;
   }
 

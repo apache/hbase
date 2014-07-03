@@ -48,8 +48,7 @@ import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaMockingUtil;
+import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
@@ -80,6 +79,7 @@ import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -123,6 +123,7 @@ public class TestAssignmentManager {
   private ServerManager serverManager;
   private ZooKeeperWatcher watcher;
   private CoordinatedStateManager cp;
+  private MetaTableLocator mtl;
   private LoadBalancer balancer;
   private HMaster master;
 
@@ -148,7 +149,6 @@ public class TestAssignmentManager {
     this.server = Mockito.mock(Server.class);
     Mockito.when(server.getServerName()).thenReturn(ServerName.valueOf("master,1,1"));
     Mockito.when(server.getConfiguration()).thenReturn(HTU.getConfiguration());
-    Mockito.when(server.getCatalogTracker()).thenReturn(null);
     this.watcher =
       new ZooKeeperWatcher(HTU.getConfiguration(), "mockedServer", this.server, true);
     Mockito.when(server.getZooKeeper()).thenReturn(this.watcher);
@@ -159,7 +159,18 @@ public class TestAssignmentManager {
     cp.initialize(this.server);
     cp.start();
 
+    mtl = Mockito.mock(MetaTableLocator.class);
+
     Mockito.when(server.getCoordinatedStateManager()).thenReturn(cp);
+    Mockito.when(server.getMetaTableLocator()).thenReturn(mtl);
+
+    // Get a connection w/ mocked up common methods.
+    HConnection connection =
+      HConnectionTestingUtility.getMockedConnection(HTU.getConfiguration());
+
+    // Make it so we can get a catalogtracker from servermanager.. .needed
+    // down in guts of server shutdown handler.
+    Mockito.when(server.getShortCircuitConnection()).thenReturn(connection);
 
     // Mock a ServerManager.  Say server SERVERNAME_{A,B} are online.  Also
     // make it so if close or open, we return 'success'.
@@ -385,12 +396,11 @@ public class TestAssignmentManager {
     ExecutorService executor = startupMasterExecutor("testBalanceExecutor");
 
     // We need a mocked catalog tracker.
-    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(server
         .getConfiguration());
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-      this.serverManager, ct, balancer, executor, null, master.getTableLockManager());
+      this.serverManager, balancer, executor, null, master.getTableLockManager());
     am.failoverCleanupDone.set(true);
     try {
       // Make sure our new AM gets callbacks; once registered, can't unregister.
@@ -459,13 +469,11 @@ public class TestAssignmentManager {
     // handling zk callbacks.
     ExecutorService executor = startupMasterExecutor("testShutdownHandler");
 
-    // We need a mocked catalog tracker.
-    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     // Create an AM.
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
         this.server, this.serverManager);
     try {
-      processServerShutdownHandler(ct, am, false);
+      processServerShutdownHandler(am, false);
     } finally {
       executor.shutdown();
       am.shutdown();
@@ -513,7 +521,6 @@ public class TestAssignmentManager {
     // handling zk callbacks.
     ExecutorService executor = startupMasterExecutor("testSSHWhenSplitRegionInProgress");
     // We need a mocked catalog tracker.
-    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     ZKAssign.deleteAllNodes(this.watcher);
 
     // Create an AM.
@@ -533,7 +540,7 @@ public class TestAssignmentManager {
     ZKUtil.createAndWatch(this.watcher, node, data.toByteArray());
 
     try {
-      processServerShutdownHandler(ct, am, regionSplitDone);
+      processServerShutdownHandler(am, regionSplitDone);
       // check znode deleted or not.
       // In both cases the znode should be deleted.
 
@@ -561,14 +568,12 @@ public class TestAssignmentManager {
     // Create and startup an executor. This is used by AssignmentManager
     // handling zk callbacks.
     ExecutorService executor = startupMasterExecutor("testSSHWhenDisableTableInProgress");
-    // We need a mocked catalog tracker.
-    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(server.getConfiguration());
     ZKAssign.deleteAllNodes(this.watcher);
 
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-      this.serverManager, ct, balancer, executor, null, master.getTableLockManager());
+      this.serverManager, balancer, executor, null, master.getTableLockManager());
     // adding region to regions and servers maps.
     am.regionOnline(REGIONINFO, SERVERNAME_A);
     // adding region in pending close.
@@ -590,7 +595,7 @@ public class TestAssignmentManager {
     ZKUtil.createAndWatch(this.watcher, node, data.toByteArray());
 
     try {
-      processServerShutdownHandler(ct, am, false);
+      processServerShutdownHandler(am, false);
       // check znode deleted or not.
       // In both cases the znode should be deleted.
       assertTrue("The znode should be deleted.", ZKUtil.checkExists(this.watcher, node) == -1);
@@ -610,7 +615,7 @@ public class TestAssignmentManager {
     }
   }
 
-  private void processServerShutdownHandler(CatalogTracker ct, AssignmentManager am, boolean splitRegion)
+  private void processServerShutdownHandler(AssignmentManager am, boolean splitRegion)
       throws IOException, ServiceException {
     // Make sure our new AM gets callbacks; once registered, can't unregister.
     // Thats ok because we make a new zk watcher for each test.
@@ -655,8 +660,7 @@ public class TestAssignmentManager {
 
     // Make it so we can get a catalogtracker from servermanager.. .needed
     // down in guts of server shutdown handler.
-    Mockito.when(ct.getConnection()).thenReturn(connection);
-    Mockito.when(this.server.getCatalogTracker()).thenReturn(ct);
+    Mockito.when(this.server.getShortCircuitConnection()).thenReturn(connection);
 
     // Now make a server shutdown handler instance and invoke process.
     // Have it that SERVERNAME_A died.
@@ -704,12 +708,11 @@ public class TestAssignmentManager {
     // default null.
     Mockito.when(this.serverManager.sendRegionClose(SERVERNAME_A, hri, -1)).thenReturn(true);
     // Need a mocked catalog tracker.
-    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(server
         .getConfiguration());
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-      this.serverManager, ct, balancer, null, null, master.getTableLockManager());
+      this.serverManager, balancer, null, null, master.getTableLockManager());
     try {
       // First make sure my mock up basically works.  Unassign a region.
       unassign(am, SERVERNAME_A, hri);
@@ -885,7 +888,6 @@ public class TestAssignmentManager {
     am.getRegionStates().logSplit(SERVERNAME_A); // Assume log splitting is done
     am.getRegionStates().createRegionState(REGIONINFO);
     am.gate.set(false);
-    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
 
     BaseCoordinatedStateManager cp = new ZkCoordinatedStateManager();
     cp.initialize(server);
@@ -899,7 +901,7 @@ public class TestAssignmentManager {
 
     assertFalse(am.processRegionsInTransition(rt, REGIONINFO, orc, zkOrd));
     am.getTableStateManager().setTableState(REGIONINFO.getTable(), Table.State.ENABLED);
-    processServerShutdownHandler(ct, am, false);
+    processServerShutdownHandler(am, false);
     // Waiting for the assignment to get completed.
     while (!am.gate.get()) {
       Thread.sleep(10);
@@ -934,6 +936,13 @@ public class TestAssignmentManager {
     Server server = new HMaster(HTU.getConfiguration(), csm);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
         this.serverManager);
+
+    Whitebox.setInternalState(server, "metaTableLocator", Mockito.mock(MetaTableLocator.class));
+
+    // Make it so we can get a catalogtracker from servermanager.. .needed
+    // down in guts of server shutdown handler.
+    Whitebox.setInternalState(server, "shortCircuitConnection", am.getConnection());
+
     AtomicBoolean gate = new AtomicBoolean(false);
     if (balancer instanceof MockedLoadBalancer) {
       ((MockedLoadBalancer) balancer).setGateVariable(gate);
@@ -982,12 +991,19 @@ public class TestAssignmentManager {
     Whitebox.setInternalState(server, "serverManager", this.serverManager);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
         this.serverManager);
+
+    Whitebox.setInternalState(server, "metaTableLocator", Mockito.mock(MetaTableLocator.class));
+
+    // Make it so we can get a catalogtracker from servermanager.. .needed
+    // down in guts of server shutdown handler.
+    Whitebox.setInternalState(server, "shortCircuitConnection", am.getConnection());
+
     try {
       // set table in enabling state.
       am.getTableStateManager().setTableState(REGIONINFO.getTable(),
         Table.State.ENABLING);
       new EnableTableHandler(server, REGIONINFO.getTable(),
-          am.getCatalogTracker(), am, new NullTableLockManager(), true).prepare()
+          am, new NullTableLockManager(), true).prepare()
           .process();
       assertEquals("Number of assignments should be 1.", 1, assignmentCount);
       assertTrue("Table should be enabled.",
@@ -1024,6 +1040,13 @@ public class TestAssignmentManager {
     Whitebox.setInternalState(server, "serverManager", this.serverManager);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
         this.serverManager);
+
+    Whitebox.setInternalState(server, "metaTableLocator", Mockito.mock(MetaTableLocator.class));
+
+    // Make it so we can get a catalogtracker from servermanager.. .needed
+    // down in guts of server shutdown handler.
+    Whitebox.setInternalState(server, "shortCircuitConnection", am.getConnection());
+
     try {
       TableName tableName = TableName.valueOf("dummyTable");
       // set table in enabling state.
@@ -1043,8 +1066,6 @@ public class TestAssignmentManager {
   @Test
   public void testSSHTimesOutOpeningRegionTransition()
       throws KeeperException, IOException, CoordinatedStateException, ServiceException {
-    // We need a mocked catalog tracker.
-    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     // Create an AM.
     AssignmentManagerWithExtrasForTesting am =
       setUpMockedAssignmentManager(this.server, this.serverManager);
@@ -1061,7 +1082,7 @@ public class TestAssignmentManager {
 
     try {
       am.assignInvoked = false;
-      processServerShutdownHandler(ct, am, false);
+      processServerShutdownHandler(am, false);
       assertTrue(am.assignInvoked);
     } finally {
       am.getRegionStates().regionsInTransition.remove(REGIONINFO.getEncodedName());
@@ -1155,8 +1176,6 @@ public class TestAssignmentManager {
   private AssignmentManagerWithExtrasForTesting setUpMockedAssignmentManager(final Server server,
       final ServerManager manager) throws IOException, KeeperException,
         ServiceException, CoordinatedStateException {
-    // We need a mocked catalog tracker. Its used by our AM instance.
-    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     // Make an RS Interface implementation. Make it so a scanner can go against
     // it and a get to return the single region, REGIONINFO, this test is
     // messing with. Needed when "new master" joins cluster. AM will try and
@@ -1200,12 +1219,11 @@ public class TestAssignmentManager {
       getMockedConnectionAndDecorate(HTU.getConfiguration(), null,
         ri, SERVERNAME_B, REGIONINFO);
     // Make it so we can get the connection from our mocked catalogtracker
-    Mockito.when(ct.getConnection()).thenReturn(connection);
     // Create and startup an executor. Used by AM handling zk callbacks.
     ExecutorService executor = startupMasterExecutor("mockedAMExecutor");
     this.balancer = LoadBalancerFactory.getLoadBalancer(server.getConfiguration());
     AssignmentManagerWithExtrasForTesting am = new AssignmentManagerWithExtrasForTesting(
-      server, manager, ct, this.balancer, executor, new NullTableLockManager());
+      server, connection, manager, this.balancer, executor, new NullTableLockManager());
     return am;
   }
 
@@ -1215,20 +1233,19 @@ public class TestAssignmentManager {
   class AssignmentManagerWithExtrasForTesting extends AssignmentManager {
     // Keep a reference so can give it out below in {@link #getExecutorService}
     private final ExecutorService es;
-    // Ditto for ct
-    private final CatalogTracker ct;
     boolean processRITInvoked = false;
     boolean assignInvoked = false;
     AtomicBoolean gate = new AtomicBoolean(true);
+    private HConnection connection;
 
     public AssignmentManagerWithExtrasForTesting(
-        final Server master, final ServerManager serverManager,
-        final CatalogTracker catalogTracker, final LoadBalancer balancer,
+        final Server master, HConnection connection, final ServerManager serverManager,
+        final LoadBalancer balancer,
         final ExecutorService service, final TableLockManager tableLockManager)
             throws KeeperException, IOException, CoordinatedStateException {
-      super(master, serverManager, catalogTracker, balancer, service, null, tableLockManager);
+      super(master, serverManager, balancer, service, null, tableLockManager);
       this.es = service;
-      this.ct = catalogTracker;
+      this.connection = connection;
     }
 
     @Override
@@ -1282,11 +1299,11 @@ public class TestAssignmentManager {
       return this.es;
     }
 
-    /**
-     * @return CatalogTracker used by this AM (Its a mock).
+    /*
+     * Convenient method to retrieve mocked up connection
      */
-    CatalogTracker getCatalogTracker() {
-      return this.ct;
+    HConnection getConnection() {
+      return this.connection;
     }
   }
 
@@ -1333,12 +1350,11 @@ public class TestAssignmentManager {
     // Region to use in test.
     final HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
     // Need a mocked catalog tracker.
-    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(
       server.getConfiguration());
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-      this.serverManager, ct, balancer, null, null, master.getTableLockManager());
+      this.serverManager, balancer, null, null, master.getTableLockManager());
     RegionStates regionStates = am.getRegionStates();
     try {
       // First set the state of the region to merging
@@ -1367,14 +1383,12 @@ public class TestAssignmentManager {
       CoordinatedStateException {
     // Region to use in test.
     final HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
-    // Need a mocked catalog tracker.
-    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(
       server.getConfiguration());
     final AtomicBoolean zkEventProcessed = new AtomicBoolean(false);
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-      this.serverManager, ct, balancer, null, null, master.getTableLockManager()) {
+      this.serverManager, balancer, null, null, master.getTableLockManager()) {
 
       @Override
       void handleRegion(final RegionTransition rt, OpenRegionCoordination coordination,
@@ -1415,9 +1429,8 @@ public class TestAssignmentManager {
    */
   @Test
   public void testBalanceRegionOfDeletedTable() throws Exception {
-    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     AssignmentManager am = new AssignmentManager(this.server, this.serverManager,
-      ct, balancer, null, null, master.getTableLockManager());
+      balancer, null, null, master.getTableLockManager());
     RegionStates regionStates = am.getRegionStates();
     HRegionInfo hri = REGIONINFO;
     regionStates.createRegionState(hri);
@@ -1443,12 +1456,11 @@ public class TestAssignmentManager {
     this.server.getConfiguration().setInt("hbase.assignment.maximum.attempts", 100);
 
     HRegionInfo hri = REGIONINFO;
-    CatalogTracker ct = Mockito.mock(CatalogTracker.class);
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(
       server.getConfiguration());
     // Create an AM.
     AssignmentManager am = new AssignmentManager(this.server,
-      this.serverManager, ct, balancer, null, null, master.getTableLockManager());
+      this.serverManager, balancer, null, null, master.getTableLockManager());
     RegionStates regionStates = am.getRegionStates();
     try {
       am.regionPlans.put(REGIONINFO.getEncodedName(),

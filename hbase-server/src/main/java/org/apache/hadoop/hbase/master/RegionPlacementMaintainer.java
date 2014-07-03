@@ -47,9 +47,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -141,7 +141,7 @@ public class RegionPlacementMaintainer {
   public SnapshotOfRegionAssignmentFromMeta getRegionAssignmentSnapshot()
   throws IOException {
     SnapshotOfRegionAssignmentFromMeta currentAssignmentShapshot =
-      new SnapshotOfRegionAssignmentFromMeta(new CatalogTracker(this.conf));
+      new SnapshotOfRegionAssignmentFromMeta(HConnectionManager.getConnection(conf));
     currentAssignmentShapshot.initialize();
     return currentAssignmentShapshot;
   }

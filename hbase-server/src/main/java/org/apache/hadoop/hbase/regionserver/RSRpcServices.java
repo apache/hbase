@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
@@ -1206,8 +1206,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           }
           // See HBASE-5094. Cross check with hbase:meta if still this RS is owning
           // the region.
-          Pair<HRegionInfo, ServerName> p = MetaReader.getRegion(
-            regionServer.catalogTracker, region.getRegionName());
+          Pair<HRegionInfo, ServerName> p = MetaTableAccessor.getRegion(
+            regionServer.getShortCircuitConnection(), region.getRegionName());
           if (regionServer.serverName.equals(p.getSecond())) {
             Boolean closing = regionServer.regionsInTransitionInRS.get(region.getEncodedNameAsBytes());
             // Map regionsInTransitionInRSOnly has an entry for a region only if the region

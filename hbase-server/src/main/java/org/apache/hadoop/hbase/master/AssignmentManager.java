@@ -61,9 +61,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.TableStateManager;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
@@ -101,7 +100,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Triple;
-import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
@@ -138,8 +137,6 @@ public class AssignmentManager extends ZooKeeperListener {
   private ServerManager serverManager;
 
   private boolean shouldAssignRegionsWithFavoredNodes;
-
-  private CatalogTracker catalogTracker;
 
   private LoadBalancer balancer;
 
@@ -254,22 +251,23 @@ public class AssignmentManager extends ZooKeeperListener {
   /**
    * Constructs a new assignment manager.
    *
-   * @param server
-   * @param serverManager
-   * @param catalogTracker
-   * @param service
+   * @param server instance of HMaster this AM running inside
+   * @param serverManager serverManager for associated HMaster
+   * @param balancer implementation of {@link LoadBalancer}
+   * @param service Executor service
+   * @param metricsMaster metrics manager
+   * @param tableLockManager TableLock manager
    * @throws KeeperException
    * @throws IOException
    */
   public AssignmentManager(Server server, ServerManager serverManager,
-      CatalogTracker catalogTracker, final LoadBalancer balancer,
+      final LoadBalancer balancer,
       final ExecutorService service, MetricsMaster metricsMaster,
       final TableLockManager tableLockManager) throws KeeperException,
         IOException, CoordinatedStateException {
     super(server.getZooKeeper());
     this.server = server;
     this.serverManager = serverManager;
-    this.catalogTracker = catalogTracker;
     this.executorService = service;
     this.regionStateStore = new RegionStateStore(server);
     this.regionsToReopen = Collections.synchronizedMap
@@ -404,7 +402,8 @@ public class AssignmentManager extends ZooKeeperListener {
   public Pair<Integer, Integer> getReopenStatus(TableName tableName)
       throws IOException {
     List <HRegionInfo> hris =
-      MetaReader.getTableRegions(this.server.getCatalogTracker(), tableName, true);
+      MetaTableAccessor.getTableRegions(this.watcher, this.server.getShortCircuitConnection(),
+        tableName, true);
     Integer pending = 0;
     for (HRegionInfo hri : hris) {
       String name = hri.getEncodedName();
@@ -759,7 +758,7 @@ public class AssignmentManager extends ZooKeeperListener {
       if (regionInfo.isMetaRegion()) {
         // If it's meta region, reset the meta location.
         // So that master knows the right meta region server.
-        MetaRegionTracker.setMetaLocation(watcher, sn);
+        MetaTableLocator.setMetaLocation(watcher, sn);
       } else {
         // No matter the previous server is online or offline,
         // we need to reset the last region server of the region.
@@ -1129,7 +1128,8 @@ public class AssignmentManager extends ZooKeeperListener {
       regionToFavoredNodes.put(region,
           ((FavoredNodeLoadBalancer)this.balancer).getFavoredNodes(region));
     }
-    FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(regionToFavoredNodes, catalogTracker);
+    FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(regionToFavoredNodes,
+      this.server.getShortCircuitConnection());
   }
 
   /**
@@ -1152,7 +1152,8 @@ public class AssignmentManager extends ZooKeeperListener {
         } else {
           try {
             byte [] name = rt.getRegionName();
-            Pair<HRegionInfo, ServerName> p = MetaReader.getRegion(catalogTracker, name);
+            Pair<HRegionInfo, ServerName> p = MetaTableAccessor.getRegion(
+              this.server.getShortCircuitConnection(), name);
             regionInfo = p.getFirst();
           } catch (IOException e) {
             LOG.info("Exception reading hbase:meta doing HBCK repair operation", e);
@@ -1935,13 +1936,15 @@ public class AssignmentManager extends ZooKeeperListener {
       final HRegionInfo region, final ServerName sn) {
     try {
       if (region.isMetaRegion()) {
-        ServerName server = catalogTracker.getMetaLocation();
+        ServerName server = this.server.getMetaTableLocator().
+          getMetaRegionLocation(this.server.getZooKeeper());
         return regionStates.isServerDeadAndNotProcessed(server);
       }
       while (!server.isStopped()) {
         try {
-          catalogTracker.waitForMeta();
-          Result r = MetaReader.getRegionResult(catalogTracker, region.getRegionName());
+          this.server.getMetaTableLocator().waitMetaRegionLocation(server.getZooKeeper());
+          Result r = MetaTableAccessor.getRegionResult(server.getShortCircuitConnection(),
+            region.getRegionName());
           if (r == null || r.isEmpty()) return false;
           ServerName server = HRegionInfo.getServerName(r);
           return regionStates.isServerDeadAndNotProcessed(server);
@@ -2554,7 +2557,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @throws KeeperException
    */
   public void assignMeta() throws KeeperException {
-    MetaRegionTracker.deleteMetaLocation(this.watcher);
+    this.server.getMetaTableLocator().deleteMetaLocation(this.watcher);
     assign(HRegionInfo.FIRST_META_REGIONINFO, true);
   }
 
@@ -2754,7 +2757,7 @@ public class AssignmentManager extends ZooKeeperListener {
       ZooKeeperProtos.Table.State.ENABLING);
 
     // Region assignment from META
-    List<Result> results = MetaReader.fullScan(this.catalogTracker);
+    List<Result> results = MetaTableAccessor.fullScanOfMeta(server.getShortCircuitConnection());
     // Get any new but slow to checkin region server that joined the cluster
     Set<ServerName> onlineServers = serverManager.getOnlineServers().keySet();
     // Set of offline servers to be returned
@@ -2765,7 +2768,7 @@ public class AssignmentManager extends ZooKeeperListener {
         LOG.debug("null result from meta - ignoring but this is strange.");
         continue;
       }
-      RegionLocations rl =  MetaReader.getRegionLocations(result);
+      RegionLocations rl =  MetaTableAccessor.getRegionLocations(result);
       if (rl == null) continue;
       HRegionLocation[] locations = rl.getRegionLocations();
       if (locations == null) continue;
@@ -2826,7 +2829,7 @@ public class AssignmentManager extends ZooKeeperListener {
         LOG.info("The table " + tableName
             + " is in DISABLING state.  Hence recovering by moving the table"
             + " to DISABLED state.");
-        new DisableTableHandler(this.server, tableName, catalogTracker,
+        new DisableTableHandler(this.server, tableName,
             this, tableLockManager, true).prepare().process();
       }
     }
@@ -2853,7 +2856,7 @@ public class AssignmentManager extends ZooKeeperListener {
         // enableTable in sync way during master startup,
         // no need to invoke coprocessor
         EnableTableHandler eth = new EnableTableHandler(this.server, tableName,
-          catalogTracker, this, tableLockManager, true);
+          this, tableLockManager, true);
         try {
           eth.prepare();
         } catch (TableNotFoundException e) {

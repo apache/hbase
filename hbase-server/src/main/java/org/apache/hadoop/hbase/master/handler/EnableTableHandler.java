@@ -34,8 +34,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -60,26 +59,24 @@ public class EnableTableHandler extends EventHandler {
   private final TableName tableName;
   private final AssignmentManager assignmentManager;
   private final TableLockManager tableLockManager;
-  private final CatalogTracker catalogTracker;
   private boolean skipTableStateCheck = false;
   private TableLock tableLock;
   private MasterServices services;
 
   public EnableTableHandler(Server server, TableName tableName,
-      CatalogTracker catalogTracker, AssignmentManager assignmentManager,
-      TableLockManager tableLockManager, boolean skipTableStateCheck) {
+      AssignmentManager assignmentManager, TableLockManager tableLockManager,
+      boolean skipTableStateCheck) {
     super(server, EventType.C_M_ENABLE_TABLE);
     this.tableName = tableName;
-    this.catalogTracker = catalogTracker;
     this.assignmentManager = assignmentManager;
     this.tableLockManager = tableLockManager;
     this.skipTableStateCheck = skipTableStateCheck;
   }
 
   public EnableTableHandler(MasterServices services, TableName tableName,
-      CatalogTracker catalogTracker, AssignmentManager assignmentManager,
+      AssignmentManager assignmentManager,
       TableLockManager tableLockManager, boolean skipTableStateCheck) {
-    this((Server)services, tableName, catalogTracker, assignmentManager, tableLockManager,
+    this((Server)services, tableName, assignmentManager, tableLockManager,
         skipTableStateCheck);
     this.services = services;
   }
@@ -94,7 +91,7 @@ public class EnableTableHandler extends EventHandler {
     boolean success = false;
     try {
       // Check if table exists
-      if (!MetaReader.tableExists(catalogTracker, tableName)) {
+      if (!MetaTableAccessor.tableExists(this.server.getShortCircuitConnection(), tableName)) {
         // retainAssignment is true only during recovery.  In normal case it is false
         if (!this.skipTableStateCheck) {
           throw new TableNotFoundException(tableName);
@@ -192,8 +189,9 @@ public class EnableTableHandler extends EventHandler {
     ServerManager serverManager = ((HMaster)this.server).getServerManager();
     // Get the regions of this table. We're done when all listed
     // tables are onlined.
-    List<Pair<HRegionInfo, ServerName>> tableRegionsAndLocations = MetaReader
-        .getTableRegionsAndLocations(this.catalogTracker, tableName, true);
+    List<Pair<HRegionInfo, ServerName>> tableRegionsAndLocations = MetaTableAccessor
+      .getTableRegionsAndLocations(this.server.getZooKeeper(),
+           this.server.getShortCircuitConnection(), tableName, true);
     int countOfRegionsInTable = tableRegionsAndLocations.size();
     Map<HRegionInfo, ServerName> regionsToAssign =
         regionsToAssignWithServerName(tableRegionsAndLocations);

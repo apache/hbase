@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -218,7 +218,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
     // Need to create the new system table for labels here
     MasterServices master = ctx.getEnvironment().getMasterServices();
-    if (!MetaReader.tableExists(master.getCatalogTracker(), LABELS_TABLE_NAME)) {
+    if (!MetaTableAccessor.tableExists(master.getShortCircuitConnection(), LABELS_TABLE_NAME)) {
       HTableDescriptor labelsTable = new HTableDescriptor(LABELS_TABLE_NAME);
       HColumnDescriptor labelsColumn = new HColumnDescriptor(LABELS_TABLE_FAMILY);
       labelsColumn.setBloomFilterType(BloomType.NONE);

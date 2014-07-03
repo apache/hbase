@@ -125,7 +125,7 @@ public class TestEndToEndSplitTransaction {
     // 3. finish phase II
     // note that this replicates some code from SplitTransaction
     // 2nd daughter first
-    server.postOpenDeployTasks(regions.getSecond(), server.getCatalogTracker());
+    server.postOpenDeployTasks(regions.getSecond());
     // Add to online regions
     server.addToOnlineRegions(regions.getSecond());
     // THIS is the crucial point:
@@ -135,7 +135,7 @@ public class TestEndToEndSplitTransaction {
     assertTrue(test(con, tableName, lastRow, server));
 
     // first daughter second
-    server.postOpenDeployTasks(regions.getFirst(), server.getCatalogTracker());
+    server.postOpenDeployTasks(regions.getFirst());
     // Add to online regions
     server.addToOnlineRegions(regions.getFirst());
     assertTrue(test(con, tableName, firstRow, server));
@@ -293,7 +293,7 @@ public class TestEndToEndSplitTransaction {
   }
 
   /**
-   * Checks regions using MetaScanner, MetaReader and HTable methods
+   * Checks regions using MetaScanner, MetaTableAccessor and HTable methods
    */
   static class RegionChecker extends Chore {
     Configuration conf;

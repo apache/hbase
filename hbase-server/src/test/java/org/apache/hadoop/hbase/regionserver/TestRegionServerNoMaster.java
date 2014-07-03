@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
@@ -43,7 +43,7 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -111,8 +111,9 @@ public class TestRegionServerNoMaster {
       zkw, HRegionInfo.FIRST_META_REGIONINFO, hrs.getServerName());
     ProtobufUtil.openRegion(hrs.getRSRpcServices(),
       hrs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
+    MetaTableLocator mtl = new MetaTableLocator();
     while (true) {
-      ServerName sn = MetaRegionTracker.getMetaRegionLocation(zkw);
+      ServerName sn = mtl.getMetaRegionLocation(zkw);
       if (sn != null && sn.equals(hrs.getServerName())) {
         break;
       }
@@ -301,7 +302,7 @@ public class TestRegionServerNoMaster {
     try {
       // we re-opened meta so some of its data is lost
       ServerName sn = getRS().getServerName();
-      MetaEditor.updateRegionLocation(getRS().catalogTracker,
+      MetaTableAccessor.updateRegionLocation(getRS().getShortCircuitConnection(),
         hri, sn, getRS().getRegion(regionName).getOpenSeqNum());
       // fake region to be closing now, need to clear state afterwards
       getRS().regionsInTransitionInRS.put(hri.getEncodedNameAsBytes(), Boolean.FALSE);

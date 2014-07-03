@@ -44,8 +44,7 @@ import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaMockingUtil;
+import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
@@ -54,7 +53,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -159,7 +158,7 @@ public class TestMasterNoCluster {
     final MockRegionServer rs2 = new MockRegionServer(conf, sn2);
     // Put some data into the servers.  Make it look like sn0 has the metaH
     // Put data into sn2 so it looks like it has a few regions for a table named 't'.
-    MetaRegionTracker.setMetaLocation(rs0.getZooKeeper(), rs0.getServerName());
+    MetaTableLocator.setMetaLocation(rs0.getZooKeeper(), rs0.getServerName());
     final TableName tableName = TableName.valueOf("t");
     Result [] results = new Result [] {
       MetaMockingUtil.getMetaTableRowResult(
@@ -206,15 +205,17 @@ public class TestMasterNoCluster {
       }
 
       @Override
-      protected CatalogTracker createCatalogTracker() throws IOException {
-        // Insert a mock for the connection used by the CatalogTracker.  Any
-        // regionserver should do.  Use TESTUTIL.getConfiguration rather than
+      public HConnection getShortCircuitConnection() {
+        // Insert a mock for the connection, use TESTUTIL.getConfiguration rather than
         // the conf from the master; the conf will already have an HConnection
         // associate so the below mocking of a connection will fail.
-        HConnection connection =
-          HConnectionTestingUtility.getMockedConnectionAndDecorate(TESTUTIL.getConfiguration(),
-            rs0, rs0, rs0.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
-        return new CatalogTracker(getZooKeeper(), getConfiguration(), connection, this);
+        try {
+          return HConnectionTestingUtility.getMockedConnectionAndDecorate(
+            TESTUTIL.getConfiguration(), rs0, rs0, rs0.getServerName(),
+            HRegionInfo.FIRST_META_REGIONINFO);
+        } catch (IOException e) {
+          return null;
+        }
       }
 
       @Override
@@ -285,15 +286,17 @@ public class TestMasterNoCluster {
       }
 
       @Override
-      protected CatalogTracker createCatalogTracker() throws IOException {
-        // Insert a mock for the connection used by the CatalogTracker.  Any
-        // regionserver should do.  Use TESTUTIL.getConfiguration rather than
+      public HConnection getShortCircuitConnection() {
+        // Insert a mock for the connection, use TESTUTIL.getConfiguration rather than
         // the conf from the master; the conf will already have an HConnection
         // associate so the below mocking of a connection will fail.
-        HConnection connection =
-          HConnectionTestingUtility.getMockedConnectionAndDecorate(TESTUTIL.getConfiguration(),
-            rs0, rs0, rs0.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
-        return new CatalogTracker(getZooKeeper(), getConfiguration(), connection, this);
+        try {
+          return HConnectionTestingUtility.getMockedConnectionAndDecorate(
+            TESTUTIL.getConfiguration(), rs0, rs0, rs0.getServerName(),
+            HRegionInfo.FIRST_META_REGIONINFO);
+        } catch (IOException e) {
+          return null;
+        }
       }
 
       @Override

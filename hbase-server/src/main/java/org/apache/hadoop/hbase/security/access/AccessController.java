@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -1117,8 +1117,8 @@ public class AccessController extends BaseRegionObserver
   @Override
   public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx)
       throws IOException {
-    if (!MetaReader.tableExists(ctx.getEnvironment().getMasterServices().getCatalogTracker(),
-        AccessControlLists.ACL_TABLE_NAME)) {
+    if (!MetaTableAccessor.tableExists(ctx.getEnvironment().getMasterServices()
+      .getShortCircuitConnection(), AccessControlLists.ACL_TABLE_NAME)) {
       // initialize the ACL storage table
       AccessControlLists.init(ctx.getEnvironment().getMasterServices());
     } else {

@@ -54,7 +54,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Waiter.Predicate;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -2021,7 +2020,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       int j = (i + 1) % startKeys.length;
       HRegionInfo hri = new HRegionInfo(table.getName(),
         startKeys[i], startKeys[j]);
-      MetaEditor.addRegionToMeta(meta, hri);
+      MetaTableAccessor.addRegionToMeta(meta, hri);
       newRegions.add(hri);
       count++;
     }
@@ -2073,7 +2072,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       int j = (i + 1) % startKeys.length;
       HRegionInfo hri = new HRegionInfo(htd.getTableName(), startKeys[i],
           startKeys[j]);
-      MetaEditor.addRegionToMeta(meta, hri);
+      MetaTableAccessor.addRegionToMeta(meta, hri);
       newRegions.add(hri);
     }
 
@@ -2087,7 +2086,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws IOException When reading the rows fails.
    */
   public List<byte[]> getMetaTableRows() throws IOException {
-    // TODO: Redo using MetaReader class
+    // TODO: Redo using MetaTableAccessor class
     HTable t = new HTable(new Configuration(this.conf), TableName.META_TABLE_NAME);
     List<byte[]> rows = new ArrayList<byte[]>();
     ResultScanner s = t.getScanner(new Scan());
@@ -2107,7 +2106,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws IOException When reading the rows fails.
    */
   public List<byte[]> getMetaTableRows(TableName tableName) throws IOException {
-    // TODO: Redo using MetaReader.
+    // TODO: Redo using MetaTableAccessor.
     HTable t = new HTable(new Configuration(this.conf), TableName.META_TABLE_NAME);
     List<byte[]> rows = new ArrayList<byte[]>();
     ResultScanner s = t.getScanner(new Scan());

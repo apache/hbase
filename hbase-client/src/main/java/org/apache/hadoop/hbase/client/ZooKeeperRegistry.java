@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKTableStateClientSideReader;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -57,7 +57,7 @@ class ZooKeeperRegistry implements Registry {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Looking up meta region location in ZK," + " connection=" + this);
       }
-      ServerName servername = MetaRegionTracker.blockUntilAvailable(zkw, hci.rpcTimeout);
+      ServerName servername = new MetaTableLocator().blockUntilAvailable(zkw, hci.rpcTimeout);
       if (LOG.isTraceEnabled()) {
         LOG.trace("Looked up meta region location, connection=" + this +
           "; serverName=" + ((servername == null) ? "null" : servername));

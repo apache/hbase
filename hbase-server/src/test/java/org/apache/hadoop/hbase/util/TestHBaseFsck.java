@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -93,7 +93,7 @@ import org.apache.hadoop.hbase.util.HBaseFsck.PrintingErrorReporter;
 import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
-import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -226,7 +226,7 @@ public class TestHBaseFsck {
       }
     }
     regionStates.regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
-    MetaRegionTracker.deleteMetaLocation(cluster.getMaster().getZooKeeper());
+    new MetaTableLocator().deleteMetaLocation(cluster.getMaster().getZooKeeper());
     assertFalse(regionStates.isRegionOnline(HRegionInfo.FIRST_META_REGIONINFO));
     HBaseFsck hbck = doFsck(conf, true);
     assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.UNKNOWN, ERROR_CODE.NO_META_REGION,
@@ -242,7 +242,7 @@ public class TestHBaseFsck {
       throws IOException {
     HTable meta = new HTable(conf, TableName.META_TABLE_NAME, executorService);
     HRegionInfo hri = new HRegionInfo(htd.getTableName(), startKey, endKey);
-    MetaEditor.addRegionToMeta(meta, hri);
+    MetaTableAccessor.addRegionToMeta(meta, hri);
     meta.close();
     return hri;
   }
@@ -1321,7 +1321,7 @@ public class TestHBaseFsck {
       hri.setOffline(true);
       hri.setSplit(true);
 
-      MetaEditor.addRegionToMeta(meta, hri, a, b);
+      MetaTableAccessor.addRegionToMeta(meta, hri, a, b);
       meta.flushCommits();
       TEST_UTIL.getHBaseAdmin().flush(TableName.META_TABLE_NAME.getName());
 

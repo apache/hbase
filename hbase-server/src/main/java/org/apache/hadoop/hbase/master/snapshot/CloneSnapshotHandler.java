@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.TableExistsException;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -139,10 +138,10 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
   }
 
   @Override
-  protected void addRegionsToMeta(final CatalogTracker ct, final List<HRegionInfo> regionInfos)
+  protected void addRegionsToMeta(final List<HRegionInfo> regionInfos)
       throws IOException {
-    super.addRegionsToMeta(ct, regionInfos);
-    metaChanges.updateMetaParentRegions(ct, regionInfos);
+    super.addRegionsToMeta(regionInfos);
+    metaChanges.updateMetaParentRegions(this.server.getShortCircuitConnection(), regionInfos);
   }
 
   @Override

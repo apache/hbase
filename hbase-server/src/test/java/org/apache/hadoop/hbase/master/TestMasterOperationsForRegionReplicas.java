@@ -42,11 +42,11 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaReader;
-import org.apache.hadoop.hbase.catalog.MetaReader.Visitor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.MetaTableAccessor.Visitor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
@@ -62,10 +62,11 @@ public class TestMasterOperationsForRegionReplicas {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static HBaseAdmin admin;
   private static int numSlaves = 2;
+  private static Configuration conf;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
+    conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     TEST_UTIL.startMiniCluster(numSlaves);
     admin = new HBaseAdmin(conf);
@@ -90,9 +91,9 @@ public class TestMasterOperationsForRegionReplicas {
       desc.addFamily(new HColumnDescriptor("family"));
       admin.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), numRegions);
 
-      CatalogTracker ct = new CatalogTracker(TEST_UTIL.getConfiguration());
-      validateNumberOfRowsInMeta(table, numRegions, ct);
-      List<HRegionInfo> hris = MetaReader.getTableRegions(ct, table);
+      validateNumberOfRowsInMeta(table, numRegions, admin.getConnection());
+      List<HRegionInfo> hris = MetaTableAccessor.getTableRegions(TEST_UTIL.getZooKeeperWatcher(),
+        admin.getConnection(), table);
       assert(hris.size() == numRegions * numReplica);
     } finally {
       admin.disableTable(table);
@@ -111,10 +112,10 @@ public class TestMasterOperationsForRegionReplicas {
       desc.addFamily(new HColumnDescriptor("family"));
       admin.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), numRegions);
       TEST_UTIL.waitTableEnabled(table.getName());
-      CatalogTracker ct = new CatalogTracker(TEST_UTIL.getConfiguration());
-      validateNumberOfRowsInMeta(table, numRegions, ct);
+      validateNumberOfRowsInMeta(table, numRegions, admin.getConnection());
 
-      List<HRegionInfo> hris = MetaReader.getTableRegions(ct, table);
+      List<HRegionInfo> hris = MetaTableAccessor.getTableRegions(TEST_UTIL.getZooKeeperWatcher(),
+        admin.getConnection(), table);
       assert(hris.size() == numRegions * numReplica);
       // check that the master created expected number of RegionState objects
       for (int i = 0; i < numRegions; i++) {
@@ -126,10 +127,10 @@ public class TestMasterOperationsForRegionReplicas {
         }
       }
 
-      List<Result> metaRows = MetaReader.fullScan(ct);
+      List<Result> metaRows = MetaTableAccessor.fullScanOfMeta(admin.getConnection());
       int numRows = 0;
       for (Result result : metaRows) {
-        RegionLocations locations = MetaReader.getRegionLocations(result);
+        RegionLocations locations = MetaTableAccessor.getRegionLocations(result);
         HRegionInfo hri = locations.getRegionLocation().getRegionInfo();
         if (!hri.getTable().equals(table)) continue;
         numRows += 1;
@@ -142,7 +143,8 @@ public class TestMasterOperationsForRegionReplicas {
 
       // The same verification of the meta as above but with the SnapshotOfRegionAssignmentFromMeta
       // class
-      validateFromSnapshotFromMeta(TEST_UTIL, table, numRegions, numReplica, ct);
+      validateFromSnapshotFromMeta(TEST_UTIL, table, numRegions, numReplica,
+        admin.getConnection());
 
       // Now kill the master, restart it and see if the assignments are kept
       ServerName master = TEST_UTIL.getHBaseClusterInterface().getClusterStatus().getMaster();
@@ -158,7 +160,8 @@ public class TestMasterOperationsForRegionReplicas {
           assert (state != null);
         }
       }
-      validateFromSnapshotFromMeta(TEST_UTIL, table, numRegions, numReplica, ct);
+      validateFromSnapshotFromMeta(TEST_UTIL, table, numRegions, numReplica,
+        admin.getConnection());
 
       // Now shut the whole cluster down, and verify the assignments are kept so that the
       // availability constraints are met.
@@ -166,16 +169,19 @@ public class TestMasterOperationsForRegionReplicas {
       TEST_UTIL.shutdownMiniHBaseCluster();
       TEST_UTIL.startMiniHBaseCluster(1, numSlaves);
       TEST_UTIL.waitTableEnabled(table.getName());
-      ct = new CatalogTracker(TEST_UTIL.getConfiguration());
-      validateFromSnapshotFromMeta(TEST_UTIL, table, numRegions, numReplica, ct);
+      admin.close();
+      admin = new HBaseAdmin(conf); 
+      validateFromSnapshotFromMeta(TEST_UTIL, table, numRegions, numReplica,
+        admin.getConnection());
 
       // Now shut the whole cluster down, and verify regions are assigned even if there is only
       // one server running
       TEST_UTIL.shutdownMiniHBaseCluster();
       TEST_UTIL.startMiniHBaseCluster(1, 1);
       TEST_UTIL.waitTableEnabled(table.getName());
-      ct = new CatalogTracker(TEST_UTIL.getConfiguration());
-      validateSingleRegionServerAssignment(ct, numRegions, numReplica);
+      admin.close();
+      admin = new HBaseAdmin(conf);
+      validateSingleRegionServerAssignment(admin.getConnection(), numRegions, numReplica);
       for (int i = 1; i < numSlaves; i++) { //restore the cluster
         TEST_UTIL.getMiniHBaseCluster().startRegionServer();
       }
@@ -202,7 +208,8 @@ public class TestMasterOperationsForRegionReplicas {
           .getAssignmentManager().getRegionStates().getRegionsOfTable(table);
       assert(regions.size() == numRegions * numReplica);
       //also make sure the meta table has the replica locations removed
-      hris = MetaReader.getTableRegions(ct, table);
+      hris = MetaTableAccessor.getTableRegions(TEST_UTIL.getZooKeeperWatcher(),
+        admin.getConnection(), table);
       assert(hris.size() == numRegions * numReplica);
       //just check that the number of default replica regions in the meta table are the same
       //as the number of regions the table was created with, and the count of the
@@ -236,21 +243,24 @@ public class TestMasterOperationsForRegionReplicas {
       desc.addFamily(new HColumnDescriptor("family"));
       admin.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), numRegions);
       TEST_UTIL.waitTableEnabled(table.getName());
-      CatalogTracker ct = new CatalogTracker(TEST_UTIL.getConfiguration());
       Set<byte[]> tableRows = new HashSet<byte[]>();
-      List<HRegionInfo> hris = MetaReader.getTableRegions(ct, table);
+      List<HRegionInfo> hris = MetaTableAccessor.getTableRegions(TEST_UTIL.getZooKeeperWatcher(),
+        admin.getConnection(), table);
       for (HRegionInfo hri : hris) {
         tableRows.add(hri.getRegionName());
       }
       admin.disableTable(table);
       // now delete one replica info from all the rows
       // this is to make the meta appear to be only partially updated
-      HTable metaTable = new HTable(TableName.META_TABLE_NAME, ct.getConnection());
+      HTable metaTable = new HTable(TableName.META_TABLE_NAME, admin.getConnection());
       for (byte[] row : tableRows) {
         Delete deleteOneReplicaLocation = new Delete(row);
-        deleteOneReplicaLocation.deleteColumns(HConstants.CATALOG_FAMILY, MetaReader.getServerColumn(1));
-        deleteOneReplicaLocation.deleteColumns(HConstants.CATALOG_FAMILY, MetaReader.getSeqNumColumn(1));
-        deleteOneReplicaLocation.deleteColumns(HConstants.CATALOG_FAMILY, MetaReader.getStartCodeColumn(1));
+        deleteOneReplicaLocation.deleteColumns(HConstants.CATALOG_FAMILY,
+          MetaTableAccessor.getServerColumn(1));
+        deleteOneReplicaLocation.deleteColumns(HConstants.CATALOG_FAMILY,
+          MetaTableAccessor.getSeqNumColumn(1));
+        deleteOneReplicaLocation.deleteColumns(HConstants.CATALOG_FAMILY,
+          MetaTableAccessor.getStartCodeColumn(1));
         metaTable.delete(deleteOneReplicaLocation);
       }
       metaTable.close();
@@ -275,8 +285,8 @@ public class TestMasterOperationsForRegionReplicas {
     return strBuf.toString();
   }
 
-  private void validateNumberOfRowsInMeta(final TableName table, int numRegions, CatalogTracker ct)
-      throws IOException {
+  private void validateNumberOfRowsInMeta(final TableName table, int numRegions,
+      HConnection hConnection) throws IOException {
     assert(admin.tableExists(table));
     final AtomicInteger count = new AtomicInteger();
     Visitor visitor = new Visitor() {
@@ -286,13 +296,14 @@ public class TestMasterOperationsForRegionReplicas {
         return true;
       }
     };
-    MetaReader.fullScan(ct, visitor);
+    MetaTableAccessor.fullScan(hConnection, visitor);
     assert(count.get() == numRegions);
   }
 
-  private void validateFromSnapshotFromMeta(HBaseTestingUtility util, TableName table, int numRegions,
-      int numReplica, CatalogTracker ct) throws IOException {
-    SnapshotOfRegionAssignmentFromMeta snapshot = new SnapshotOfRegionAssignmentFromMeta(ct);
+  private void validateFromSnapshotFromMeta(HBaseTestingUtility util, TableName table,
+      int numRegions, int numReplica, HConnection hConnection) throws IOException {
+    SnapshotOfRegionAssignmentFromMeta snapshot = new SnapshotOfRegionAssignmentFromMeta(
+      hConnection);
     snapshot.initialize();
     Map<HRegionInfo, ServerName> regionToServerMap = snapshot.getRegionToRegionServerMap();
     assert(regionToServerMap.size() == numRegions * numReplica + 1); //'1' for the namespace
@@ -316,9 +327,10 @@ public class TestMasterOperationsForRegionReplicas {
     }
   }
 
-  private void validateSingleRegionServerAssignment(CatalogTracker ct, int numRegions,
+  private void validateSingleRegionServerAssignment(HConnection hConnection, int numRegions,
       int numReplica) throws IOException {
-    SnapshotOfRegionAssignmentFromMeta snapshot = new SnapshotOfRegionAssignmentFromMeta(ct);
+    SnapshotOfRegionAssignmentFromMeta snapshot = new SnapshotOfRegionAssignmentFromMeta(
+      hConnection);
     snapshot.initialize();
     Map<HRegionInfo, ServerName>  regionToServerMap = snapshot.getRegionToRegionServerMap();
     assertEquals(regionToServerMap.size(), numRegions * numReplica + 1); //'1' for the namespace

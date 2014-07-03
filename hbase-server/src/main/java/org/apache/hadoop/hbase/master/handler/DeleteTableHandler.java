@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -133,7 +133,7 @@ public class DeleteTableHandler extends TableEventHandler {
       throws IOException, CoordinatedStateException {
     // 1. Remove regions from META
     LOG.debug("Deleting regions from META");
-    MetaEditor.deleteRegions(this.server.getCatalogTracker(), regions);
+    MetaTableAccessor.deleteRegions(this.server.getShortCircuitConnection(), regions);
 
     // -----------------------------------------------------------------------
     // NOTE: At this point we still have data on disk, but nothing in hbase:meta

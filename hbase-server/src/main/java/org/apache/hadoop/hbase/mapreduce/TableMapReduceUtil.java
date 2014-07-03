@@ -43,7 +43,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -635,7 +635,7 @@ public class TableMapReduceUtil {
     job.setOutputValueClass(Writable.class);
     if (partitioner == HRegionPartitioner.class) {
       job.setPartitionerClass(HRegionPartitioner.class);
-      int regions = MetaReader.getRegionCount(conf, table);
+      int regions = MetaTableAccessor.getRegionCount(conf, table);
       if (job.getNumReduceTasks() > regions) {
         job.setNumReduceTasks(regions);
       }
@@ -660,7 +660,7 @@ public class TableMapReduceUtil {
    */
   public static void limitNumReduceTasks(String table, Job job)
   throws IOException {
-    int regions = MetaReader.getRegionCount(job.getConfiguration(), table);
+    int regions = MetaTableAccessor.getRegionCount(job.getConfiguration(), table);
     if (job.getNumReduceTasks() > regions)
       job.setNumReduceTasks(regions);
   }
@@ -675,7 +675,7 @@ public class TableMapReduceUtil {
    */
   public static void setNumReduceTasks(String table, Job job)
   throws IOException {
-    job.setNumReduceTasks(MetaReader.getRegionCount(job.getConfiguration(), table));
+    job.setNumReduceTasks(MetaTableAccessor.getRegionCount(job.getConfiguration(), table));
   }
 
   /**

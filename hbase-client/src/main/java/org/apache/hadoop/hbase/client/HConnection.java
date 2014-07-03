@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
@@ -49,7 +48,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
  * connections are managed at a lower level.
  *
  * <p>HConnections are used by {@link HTable} mostly but also by
- * {@link HBaseAdmin}, and {@link CatalogTracker}.  HConnection instances can be shared.  Sharing
+ * {@link HBaseAdmin}, and {@link org.apache.hadoop.hbase.zookeeper.MetaTableLocator}.
+ * HConnection instances can be shared.  Sharing
  * is usually what you want because rather than each HConnection instance
  * having to do its own discovery of regions out on the cluster, instead, all
  * clients get to share the one cache of locations.  {@link HConnectionManager} does the

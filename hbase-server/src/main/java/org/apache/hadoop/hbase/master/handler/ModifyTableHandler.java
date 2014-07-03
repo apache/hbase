@@ -31,8 +31,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.catalog.MetaReader;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -93,7 +92,7 @@ public class ModifyTableHandler extends TableEventHandler {
       TableName table) throws IOException {
     if (newReplicaCount >= oldReplicaCount) return;
     Set<byte[]> tableRows = new HashSet<byte[]>();
-    Scan scan = MetaReader.getScanForTableName(table);
+    Scan scan = MetaTableAccessor.getScanForTableName(table);
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     HTable htable = null;
     try {
@@ -102,8 +101,8 @@ public class ModifyTableHandler extends TableEventHandler {
       for (Result result : resScanner) {
         tableRows.add(result.getRow());
       }
-      MetaEditor.removeRegionReplicasFromMeta(tableRows, newReplicaCount,
-          oldReplicaCount - newReplicaCount, masterServices.getCatalogTracker());
+      MetaTableAccessor.removeRegionReplicasFromMeta(tableRows, newReplicaCount,
+          oldReplicaCount - newReplicaCount, masterServices.getShortCircuitConnection());
     } finally {
       if (htable != null) {
         htable.close();

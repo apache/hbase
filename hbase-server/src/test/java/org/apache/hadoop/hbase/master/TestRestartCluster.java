@@ -29,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -159,8 +158,8 @@ public class TestRestartCluster {
 
     // We don't have to use SnapshotOfRegionAssignmentFromMeta.
     // We use it here because AM used to use it to load all user region placements
-    CatalogTracker ct = new CatalogTracker(UTIL.getConfiguration());
-    SnapshotOfRegionAssignmentFromMeta snapshot = new SnapshotOfRegionAssignmentFromMeta(ct);
+    SnapshotOfRegionAssignmentFromMeta snapshot = new SnapshotOfRegionAssignmentFromMeta(
+      master.getShortCircuitConnection());
     snapshot.initialize();
     Map<HRegionInfo, ServerName> regionToRegionServerMap
       = snapshot.getRegionToRegionServerMap();
@@ -226,8 +225,7 @@ public class TestRestartCluster {
       Threads.sleep(100);
     }
 
-    ct = new CatalogTracker(UTIL.getConfiguration());
-    snapshot =new SnapshotOfRegionAssignmentFromMeta(ct);
+    snapshot =new SnapshotOfRegionAssignmentFromMeta(master.getShortCircuitConnection());
     snapshot.initialize();
     Map<HRegionInfo, ServerName> newRegionToRegionServerMap =
       snapshot.getRegionToRegionServerMap();

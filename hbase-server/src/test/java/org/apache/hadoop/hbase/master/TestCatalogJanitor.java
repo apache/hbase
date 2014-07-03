@@ -50,8 +50,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableDescriptors;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaMockingUtil;
+import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
@@ -75,6 +74,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Triple;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -97,7 +97,6 @@ public class TestCatalogJanitor {
   class MockServer implements Server {
     private final HConnection connection;
     private final Configuration c;
-    private final CatalogTracker ct;
 
     MockServer(final HBaseTestingUtility htu)
     throws NotAllMetaRegionsOnlineException, IOException, InterruptedException {
@@ -137,16 +136,18 @@ public class TestCatalogJanitor {
       FileSystem fs = FileSystem.get(this.c);
       Path rootdir = FSUtils.getRootDir(this.c);
       FSUtils.setRootDir(this.c, rootdir);
-      this.ct = Mockito.mock(CatalogTracker.class);
       AdminProtos.AdminService.BlockingInterface hri =
         Mockito.mock(AdminProtos.AdminService.BlockingInterface.class);
-      Mockito.when(this.ct.getConnection()).thenReturn(this.connection);
-      Mockito.when(ct.waitForMetaServerConnection(Mockito.anyLong())).thenReturn(hri);
     }
 
     @Override
-    public CatalogTracker getCatalogTracker() {
-      return this.ct;
+    public HConnection getShortCircuitConnection() {
+      return this.connection;
+    }
+
+    @Override
+    public MetaTableLocator getMetaTableLocator() {
+      return null;
     }
 
     @Override
@@ -186,9 +187,6 @@ public class TestCatalogJanitor {
 
     @Override
     public void stop(String why) {
-      if (this.ct != null) {
-        this.ct.stop();
-      }
       if (this.connection != null) {
         HConnectionManager.deleteConnection(this.connection.getConfiguration());
       }
@@ -254,7 +252,12 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public CatalogTracker getCatalogTracker() {
+    public MetaTableLocator getMetaTableLocator() {
+      return null;
+    }
+
+    @Override
+    public HConnection getShortCircuitConnection() {
       return null;
     }
 

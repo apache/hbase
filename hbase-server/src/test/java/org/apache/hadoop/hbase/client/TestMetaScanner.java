@@ -24,7 +24,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -34,14 +33,13 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.catalog.CatalogTracker;
-import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.apache.hadoop.hbase.util.Threads;
@@ -50,6 +48,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
 @Category(MediumTests.class)
 public class TestMetaScanner {
   final Log LOG = LogFactory.getLog(getClass());
@@ -127,8 +126,6 @@ public class TestMetaScanner {
         TableName.valueOf("testConcurrentMetaScannerAndCatalogJanitor");
     final byte[] FAMILY = Bytes.toBytes("family");
     TEST_UTIL.createTable(TABLENAME, FAMILY);
-    final CatalogTracker catalogTracker = mock(CatalogTracker.class);
-    when(catalogTracker.getConnection()).thenReturn(TEST_UTIL.getHBaseAdmin().getConnection());
 
     class RegionMetaSplitter extends StoppableImplementation implements Runnable {
       Random random = new Random();
@@ -169,7 +166,8 @@ public class TestMetaScanner {
               Bytes.toBytes(midKey),
               end);
 
-            MetaEditor.splitRegion(catalogTracker, parent, splita, splitb, ServerName.valueOf("fooserver", 1, 0));
+            MetaTableAccessor.splitRegion(TEST_UTIL.getHBaseAdmin().getConnection(),
+              parent, splita, splitb, ServerName.valueOf("fooserver", 1, 0));
 
             Threads.sleep(random.nextInt(200));
           } catch (Throwable e) {
