@@ -628,10 +628,10 @@ checkFindbugsWarnings () {
       $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.xml | $AWK '{print $1}'`
     echo "Found $newFindbugsWarnings Findbugs warnings ($file)"
     findbugsWarnings=$((findbugsWarnings+newFindbugsWarnings))
-    $FINDBUGS_HOME/bin/convertXmlToText -html \
-      $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.xml \
-      $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.html
-    JIRA_COMMENT_FOOTER="Findbugs warnings: $BUILD_URL/artifact/trunk/patchprocess/newPatchFindbugsWarnings${module_suffix}.html
+    echo "$FINDBUGS_HOME/bin/convertXmlToText -html  $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.xml $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.html"
+    $FINDBUGS_HOME/bin/convertXmlToText -html  $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.xml $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.html
+    file $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.xml $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.html
+    JIRA_COMMENT_FOOTER="Findbugs warnings: $BUILD_URL/artifact/patchprocess/newPatchFindbugsWarnings${module_suffix}.html
 $JIRA_COMMENT_FOOTER"
   done
 
