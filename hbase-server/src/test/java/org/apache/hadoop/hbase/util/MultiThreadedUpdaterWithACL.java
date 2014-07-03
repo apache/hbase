@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -116,7 +117,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
           try {
             int mod = ((int) rowKeyBase % userNames.length);
             if (userVsTable.get(userNames[mod]) == null) {
-              localTable = connection.getTable(tableName);
+              localTable = new HTable(conf, tableName);
               userVsTable.put(userNames[mod], localTable);
               res = localTable.get(get);
             } else {
@@ -225,7 +226,7 @@ public class MultiThreadedUpdaterWithACL extends MultiThreadedUpdater {
       public Object run() throws Exception {
         try {
           if (table == null) {
-            table = connection.getTable(tableName);
+            table = new HTable(conf, tableName);
           }
           if (m instanceof Increment) {
             table.increment((Increment) m);

@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
@@ -125,7 +126,7 @@ public class MultiThreadedWriterWithACL extends MultiThreadedWriter {
       public Object run() throws Exception {
         try {
           if (table == null) {
-            table = connection.getTable(tableName);
+            table = new HTable(conf, tableName);
           }
           table.put(put);
         } catch (IOException e) {
