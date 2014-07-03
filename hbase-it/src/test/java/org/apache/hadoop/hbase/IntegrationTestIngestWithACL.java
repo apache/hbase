@@ -58,6 +58,7 @@ public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
     conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
     conf.set("hbase.coprocessor.master.classes", AccessController.class.getName());
     conf.set("hbase.coprocessor.region.classes", AccessController.class.getName());
+    conf.setBoolean("hbase.security.access.early_out", false);
     // conf.set("hbase.superuser", "admin");
     super.setUpCluster();
   }

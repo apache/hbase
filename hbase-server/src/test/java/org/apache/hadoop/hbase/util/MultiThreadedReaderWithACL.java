@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.security.User;
@@ -99,7 +100,7 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
             int specialPermCellInsertionFactor = Integer.parseInt(dataGenerator.getArgs()[2]);
             int mod = ((int) keyToRead % userNames.length);
             if (userVsTable.get(userNames[mod]) == null) {
-              localTable = connection.getTable(tableName);
+              localTable = new HTable(conf, tableName);
               userVsTable.put(userNames[mod], localTable);
               result = localTable.get(get);
             } else {
@@ -107,7 +108,6 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
               result = localTable.get(get);
             }
             boolean isNullExpected = ((((int) keyToRead % specialPermCellInsertionFactor)) == 0);
-            LOG.info("Read happening from ACL " + isNullExpected);
             long end = System.nanoTime();
             verifyResultsAndUpdateMetrics(verify, get, end - start, result, localTable, isNullExpected);
           } catch (IOException e) {
