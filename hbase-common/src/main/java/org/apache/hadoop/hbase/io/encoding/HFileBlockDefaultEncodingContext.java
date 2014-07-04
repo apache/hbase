@@ -187,7 +187,6 @@ public class HFileBlockDefaultEncodingContext implements
         Preconditions.checkState(ivLength <= Byte.MAX_VALUE, "IV length out of range");
         cryptoByteStream.write(ivLength);
         if (ivLength > 0) {
-          Encryption.incrementIv(iv);
           encryptor.setIv(iv);
           cryptoByteStream.write(iv);
         }
@@ -196,6 +195,9 @@ public class HFileBlockDefaultEncodingContext implements
         Encryption.encrypt(cryptoByteStream, in, encryptor);
 
         onDiskBytesWithHeader = cryptoByteStream.toByteArray();
+
+        // Increment the IV given the final block size
+        Encryption.incrementIv(iv, 1 + (onDiskBytesWithHeader.length / encryptor.getBlockSize()));
 
       } else {
 
