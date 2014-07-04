@@ -345,6 +345,7 @@ checkCompilationErrors() {
     Compilation errors resume:
     $ERRORS
     "
+    submitJiraComment 1
     cleanupAndExit 1
   fi
 }
