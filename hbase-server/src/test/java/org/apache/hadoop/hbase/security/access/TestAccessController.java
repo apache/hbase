@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -94,10 +95,8 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.TestTableName;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -2124,6 +2123,32 @@ public class TestAccessController extends SecureTestUtil {
 
     // User B should now be allowed also
     verifyAllowed(execEndpointAction, userA, userB);
+  }
+
+  @Test
+  public void testReservedCellTags() throws Exception {
+    AccessTestAction putWithReservedTag = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          KeyValue kv = new KeyValue(TEST_ROW, TEST_FAMILY, TEST_QUALIFIER,
+            HConstants.LATEST_TIMESTAMP, HConstants.EMPTY_BYTE_ARRAY,
+            new Tag[] { new Tag(AccessControlLists.ACL_TAG_TYPE, 
+              ProtobufUtil.toUsersAndPermissions(USER_OWNER.getShortName(),
+                new Permission(Permission.Action.READ)).toByteArray()) });
+          t.put(new Put(TEST_ROW).add(kv));
+        } finally {
+          t.close();
+        }
+        return null;
+      }
+    };
+
+    // Current user is superuser
+    verifyAllowed(putWithReservedTag, User.getCurrent());
+    // No other user should be allowed
+    verifyDenied(putWithReservedTag, USER_OWNER, USER_ADMIN, USER_CREATE, USER_RW, USER_RO);
   }
 
 }
