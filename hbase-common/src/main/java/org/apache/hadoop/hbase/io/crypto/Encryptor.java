@@ -43,6 +43,12 @@ public interface Encryptor {
   public int getIvLength();
 
   /**
+   * Get the cipher's internal block size
+   * @return the cipher's internal block size
+   */
+  public int getBlockSize();
+
+  /**
    * Get the initialization vector
    */
   public byte[] getIv();
@@ -63,5 +69,4 @@ public interface Encryptor {
    * Reset state, reinitialize with the key and iv
    */
   void reset();
-
 }

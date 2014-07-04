@@ -61,6 +61,11 @@ public class AESEncryptor implements Encryptor {
   }
 
   @Override
+  public int getBlockSize() {
+    return AES.BLOCK_SIZE;
+  }
+
+  @Override
   public byte[] getIv() {
     return iv;
   }
