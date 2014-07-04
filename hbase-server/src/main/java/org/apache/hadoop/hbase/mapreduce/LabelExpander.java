@@ -25,6 +25,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,10 +39,12 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.ExpressionExpander;
 import org.apache.hadoop.hbase.security.visibility.ExpressionParser;
+import org.apache.hadoop.hbase.security.visibility.InvalidLabelException;
 import org.apache.hadoop.hbase.security.visibility.ParseException;
 import org.apache.hadoop.hbase.security.visibility.VisibilityUtils;
 import org.apache.hadoop.hbase.security.visibility.expression.ExpressionNode;
@@ -49,7 +52,6 @@ import org.apache.hadoop.hbase.security.visibility.expression.LeafExpressionNode
 import org.apache.hadoop.hbase.security.visibility.expression.NonLeafExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.Operator;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.io.WritableUtils;
 
 /**
  * An utility class that helps the mapper and reducers used with visibility to
@@ -71,32 +73,37 @@ public class LabelExpander {
 
   // TODO : The code repeats from that in Visibility Controller.. Refactoring
   // may be needed
-  public List<Tag> createVisibilityTags(String visibilityLabelsExp) throws IOException,
-      BadTsvLineException {
+  private List<Tag> createVisibilityTags(String visibilityLabelsExp) throws IOException,
+      ParseException, InvalidLabelException {
     ExpressionNode node = null;
-    try {
-      node = parser.parse(visibilityLabelsExp);
-    } catch (ParseException e) {
-      throw new BadTsvLineException(e.getMessage());
-    }
+    node = parser.parse(visibilityLabelsExp);
     node = expander.expand(node);
     List<Tag> tags = new ArrayList<Tag>();
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
+    List<Integer> labelOrdinals = new ArrayList<Integer>();
+    // We will be adding this tag before the visibility tags and the presence of
+    // this
+    // tag indicates we are supporting deletes with cell visibility
+    tags.add(VisibilityUtils.VIS_SERIALIZATION_TAG);
     if (node.isSingleNode()) {
-      writeLabelOrdinalsToStream(node, dos);
+      getLabelOrdinals(node, labelOrdinals);
+      writeLabelOrdinalsToStream(labelOrdinals, dos);
       tags.add(new Tag(VisibilityUtils.VISIBILITY_TAG_TYPE, baos.toByteArray()));
       baos.reset();
     } else {
       NonLeafExpressionNode nlNode = (NonLeafExpressionNode) node;
       if (nlNode.getOperator() == Operator.OR) {
         for (ExpressionNode child : nlNode.getChildExps()) {
-          writeLabelOrdinalsToStream(child, dos);
+          getLabelOrdinals(child, labelOrdinals);
+          writeLabelOrdinalsToStream(labelOrdinals, dos);
           tags.add(new Tag(VisibilityUtils.VISIBILITY_TAG_TYPE, baos.toByteArray()));
           baos.reset();
+          labelOrdinals.clear();
         }
       } else {
-        writeLabelOrdinalsToStream(nlNode, dos);
+        getLabelOrdinals(nlNode, labelOrdinals);
+        writeLabelOrdinalsToStream(labelOrdinals, dos);
         tags.add(new Tag(VisibilityUtils.VISIBILITY_TAG_TYPE, baos.toByteArray()));
         baos.reset();
       }
@@ -104,34 +111,38 @@ public class LabelExpander {
     return tags;
   }
 
-  private void writeLabelOrdinalsToStream(ExpressionNode node, DataOutputStream dos)
-      throws IOException, BadTsvLineException {
+  private void writeLabelOrdinalsToStream(List<Integer> labelOrdinals, DataOutputStream dos)
+      throws IOException {
+    Collections.sort(labelOrdinals);
+    for (Integer labelOrdinal : labelOrdinals) {
+      StreamUtils.writeRawVInt32(dos, labelOrdinal);
+    }
+  }
+
+  private void getLabelOrdinals(ExpressionNode node, List<Integer> labelOrdinals)
+      throws IOException, InvalidLabelException {
     if (node.isSingleNode()) {
       String identifier = null;
       int labelOrdinal = 0;
       if (node instanceof LeafExpressionNode) {
         identifier = ((LeafExpressionNode) node).getIdentifier();
-        if (this.labels.get(identifier) != null) {
-          labelOrdinal = this.labels.get(identifier);
-        }
+        labelOrdinal = this.labels.get(identifier);
       } else {
         // This is a NOT node.
         LeafExpressionNode lNode = (LeafExpressionNode) ((NonLeafExpressionNode) node)
             .getChildExps().get(0);
         identifier = lNode.getIdentifier();
-        if (this.labels.get(identifier) != null) {
-          labelOrdinal = this.labels.get(identifier);
-          labelOrdinal = -1 * labelOrdinal; // Store NOT node as -ve ordinal.
-        }
+        labelOrdinal = this.labels.get(identifier);
+        labelOrdinal = -1 * labelOrdinal; // Store NOT node as -ve ordinal.
       }
       if (labelOrdinal == 0) {
-        throw new BadTsvLineException("Invalid visibility label " + identifier);
+        throw new InvalidLabelException("Invalid visibility label " + identifier);
       }
-      WritableUtils.writeVInt(dos, labelOrdinal);
+      labelOrdinals.add(labelOrdinal);
     } else {
       List<ExpressionNode> childExps = ((NonLeafExpressionNode) node).getChildExps();
       for (ExpressionNode child : childExps) {
-        writeLabelOrdinalsToStream(child, dos);
+        getLabelOrdinals(child, labelOrdinals);
       }
     }
   }
@@ -190,6 +201,7 @@ public class LabelExpander {
    * @return KeyValue from the cell visibility expr
    * @throws IOException
    * @throws BadTsvLineException
+   * @throws ParseException 
    */
   public KeyValue createKVFromCellVisibilityExpr(int rowKeyOffset, int rowKeyLength, byte[] family,
       int familyOffset, int familyLength, byte[] qualifier, int qualifierOffset,
@@ -201,10 +213,14 @@ public class LabelExpander {
     KeyValue kv = null;
     if (cellVisibilityExpr != null) {
       // Apply the expansion and parsing here
-      List<Tag> visibilityTags = createVisibilityTags(cellVisibilityExpr);
-      kv = new KeyValue(lineBytes, rowKeyOffset, rowKeyLength, family, familyOffset, familyLength,
-          qualifier, qualifierOffset, qualifierLength, ts, KeyValue.Type.Put, lineBytes, columnOffset,
-          columnLength, visibilityTags);
+      try {
+        List<Tag> visibilityTags = createVisibilityTags(cellVisibilityExpr);
+        kv = new KeyValue(lineBytes, rowKeyOffset, rowKeyLength, family, familyOffset,
+            familyLength, qualifier, qualifierOffset, qualifierLength, ts, KeyValue.Type.Put,
+            lineBytes, columnOffset, columnLength, visibilityTags);
+      } catch (ParseException e) {
+        throw new BadTsvLineException("Parse Exception " + e.getMessage());
+      }
     } else {
       kv = new KeyValue(lineBytes, rowKeyOffset, rowKeyLength, family, familyOffset, familyLength,
           qualifier, qualifierOffset, qualifierLength, ts, KeyValue.Type.Put, lineBytes, columnOffset,

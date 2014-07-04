@@ -2079,8 +2079,8 @@ public class HRegion implements HeapSize { // , Writable{
           get.setMaxVersions(count);
           get.addColumn(family, qual);
           if (coprocessorHost != null) {
-            if (!coprocessorHost.prePrepareTimeStampForDeleteVersion(mutation, cell, byteNow,
-                get)) {
+            if (!coprocessorHost.prePrepareTimeStampForDeleteVersion(mutation, cell,
+                byteNow, get)) {
               updateDeleteLatestVersionTimeStamp(kv, get, count, byteNow);
             }
           } else {
@@ -4759,7 +4759,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @param withCoprocessor invoke coprocessor or not. We don't want to
    * always invoke cp for this private method.
    */
-  private List<Cell> get(Get get, boolean withCoprocessor)
+  public List<Cell> get(Get get, boolean withCoprocessor)
   throws IOException {
 
     List<Cell> results = new ArrayList<Cell>();

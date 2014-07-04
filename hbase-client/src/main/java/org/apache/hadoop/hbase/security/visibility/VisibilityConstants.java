@@ -40,4 +40,13 @@ public final class VisibilityConstants {
   /** Qualifier for the internal storage table for visibility labels */
   public static final byte[] LABEL_QUALIFIER = new byte[1];
 
+  /**
+   * Visibility serialization version format. It indicates the visibility labels
+   * are sorted based on ordinal
+   **/
+  public static final byte VISIBILITY_SERIALIZATION_VERSION = 1;
+  /** Byte representation of the visibility_serialization_version **/
+  public static final byte[] SORTED_ORDINAL_SERIALIZATION_FORMAT = Bytes
+      .toBytes(VISIBILITY_SERIALIZATION_VERSION);
+
 }

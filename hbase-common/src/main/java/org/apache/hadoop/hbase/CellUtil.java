@@ -428,6 +428,14 @@ public final class CellUtil {
     return cell.getTypeByte() == Type.DeleteFamilyVersion.getCode();
   }
 
+  public static boolean isDeleteColumns(final Cell cell) {
+    return cell.getTypeByte() == Type.DeleteColumn.getCode();
+  }
+
+  public static boolean isDeleteColumnVersion(final Cell cell) {
+    return cell.getTypeByte() == Type.Delete.getCode();
+  }
+
   /**
    *
    * @return True if this cell is a delete family or column type.
