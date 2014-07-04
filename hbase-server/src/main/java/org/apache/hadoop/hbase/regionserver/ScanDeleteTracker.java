@@ -45,14 +45,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 public class ScanDeleteTracker implements DeleteTracker {
 
-  private boolean hasFamilyStamp = false;
-  private long familyStamp = 0L;
-  private SortedSet<Long> familyVersionStamps = new TreeSet<Long>();
-  private byte [] deleteBuffer = null;
-  private int deleteOffset = 0;
-  private int deleteLength = 0;
-  private byte deleteType = 0;
-  private long deleteTimestamp = 0L;
+  protected boolean hasFamilyStamp = false;
+  protected long familyStamp = 0L;
+  protected SortedSet<Long> familyVersionStamps = new TreeSet<Long>();
+  protected byte [] deleteBuffer = null;
+  protected int deleteOffset = 0;
+  protected int deleteLength = 0;
+  protected byte deleteType = 0;
+  protected long deleteTimestamp = 0L;
 
   /**
    * Constructor for ScanDeleteTracker
@@ -65,7 +65,7 @@ public class ScanDeleteTracker implements DeleteTracker {
    * Add the specified KeyValue to the list of deletes to check against for
    * this row operation.
    * <p>
-   * This is called when a Delete is encountered in a StoreFile.
+   * This is called when a Delete is encountered.
    * @param cell - the delete cell
    */
   @Override

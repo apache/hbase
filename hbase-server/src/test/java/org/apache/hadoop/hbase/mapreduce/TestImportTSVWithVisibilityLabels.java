@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
+import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.security.visibility.ScanLabelGenerator;
 import org.apache.hadoop.hbase.security.visibility.SimpleScanLabelGenerator;
 import org.apache.hadoop.hbase.security.visibility.VisibilityClient;
@@ -159,6 +161,58 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     util.createTable(tableName, FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1);
     util.deleteTable(tableName);
+  }
+
+  @Test
+  public void testMROnTableWithDeletes() throws Exception {
+    String tableName = "test-" + UUID.randomUUID();
+
+    // Prepare the arguments required for the test.
+    String[] args = new String[] {
+        "-D" + ImportTsv.MAPPER_CONF_KEY + "=org.apache.hadoop.hbase.mapreduce.TsvImporterMapper",
+        "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
+        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName };
+    String data = "KEY\u001bVALUE1\u001bVALUE2\u001bsecret&private\n";
+    util.createTable(tableName, FAMILY);
+    doMROnTableTest(util, FAMILY, data, args, 1);
+    issueDeleteAndVerifyData(tableName);
+    util.deleteTable(tableName);
+  }
+
+  private void issueDeleteAndVerifyData(String tableName) throws IOException {
+    LOG.debug("Validating table after delete.");
+    HTable table = new HTable(conf, tableName);
+    boolean verified = false;
+    long pause = conf.getLong("hbase.client.pause", 5 * 1000);
+    int numRetries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
+    for (int i = 0; i < numRetries; i++) {
+      try {
+        Delete d = new Delete(Bytes.toBytes("KEY"));
+        d.deleteFamily(Bytes.toBytes(FAMILY));
+        d.setCellVisibility(new CellVisibility("private&secret"));
+        table.delete(d);
+
+        Scan scan = new Scan();
+        // Scan entire family.
+        scan.addFamily(Bytes.toBytes(FAMILY));
+        scan.setAuthorizations(new Authorizations("secret", "private"));
+        ResultScanner resScanner = table.getScanner(scan);
+        Result[] next = resScanner.next(5);
+        assertEquals(0, next.length);
+        verified = true;
+        break;
+      } catch (NullPointerException e) {
+        // If here, a cell was empty. Presume its because updates came in
+        // after the scanner had been opened. Wait a while and retry.
+      }
+      try {
+        Thread.sleep(pause);
+      } catch (InterruptedException e) {
+        // continue
+      }
+    }
+    table.close();
+    assertTrue(verified);
   }
 
   @Test

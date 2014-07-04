@@ -427,6 +427,14 @@ public final class CellUtil {
     };
   }
 
+  public static boolean isDeleteColumns(final Cell cell) {
+    return cell.getTypeByte() == Type.DeleteColumn.getCode();
+  }
+
+  public static boolean isDeleteColumnVersion(final Cell cell) {
+    return cell.getTypeByte() == Type.Delete.getCode();
+  }
+
   /**
    * Returns true if the first range start1...end1 overlaps with the second range
    * start2...end2, assuming the byte arrays represent row keys

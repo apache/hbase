@@ -45,7 +45,7 @@ public interface DeleteTracker {
   /**
    * Check if the specified cell buffer has been deleted by a previously
    * seen delete.
-   * @param cell - current cell to check if deleted by a previously deleted cell
+   * @param cell - current cell to check if deleted by a previously seen delete
    * @return deleteResult The result tells whether the KeyValue is deleted and why
    */
   DeleteResult isDeleted(Cell cell);
