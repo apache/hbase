@@ -536,16 +536,24 @@ public final class Encryption {
   }
 
   public static void incrementIv(byte[] iv) {
+    incrementIv(iv, 1);
+  }
+
+  public static void incrementIv(byte[] iv, int v) {
     int length = iv.length;
     boolean carry = true;
-    for (int i = 0; i < length; i++) {
-      if (carry) {
-        iv[i] = (byte) ((iv[i] + 1) & 0xFF);
-        carry = 0 == iv[i];
-      } else {
-        break;
+    // TODO: Optimize for v > 1, e.g. 16, 32
+    do {
+      for (int i = 0; i < length; i++) {
+        if (carry) {
+          iv[i] = (byte) ((iv[i] + 1) & 0xFF);
+          carry = 0 == iv[i];
+        } else {
+          break;
+        }
       }
-    }
+      v--;
+    } while (v > 0);
   }
 
 }

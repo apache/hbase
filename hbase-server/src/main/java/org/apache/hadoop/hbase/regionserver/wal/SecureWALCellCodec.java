@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -39,8 +40,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  * A WALCellCodec that encrypts the WALedits.
  */
 public class SecureWALCellCodec extends WALCellCodec {
-
-  private static final SecureRandom RNG = new SecureRandom();
 
   private Encryptor encryptor;
   private Decryptor decryptor;
@@ -139,7 +138,24 @@ public class SecureWALCellCodec extends WALCellCodec {
   static class EncryptedKvEncoder extends KeyValueCodec.KeyValueEncoder {
 
     private Encryptor encryptor;
-    private byte[] iv;
+    private final ThreadLocal<byte[]> iv = new ThreadLocal<byte[]>() {
+      @Override
+      protected byte[] initialValue() {
+        byte[] iv = new byte[encryptor.getIvLength()];
+        new SecureRandom().nextBytes(iv);
+        return iv;
+      }
+    };
+
+    protected byte[] nextIv() {
+      byte[] b = iv.get(), ret = new byte[b.length];
+      System.arraycopy(b, 0, ret, 0, b.length);
+      return ret;
+    }
+
+    protected void incrementIv(int v) {
+      Encryption.incrementIv(iv.get(), 1 + (v / encryptor.getBlockSize()));
+    }
 
     public EncryptedKvEncoder(OutputStream os) {
       super(os);
@@ -148,7 +164,6 @@ public class SecureWALCellCodec extends WALCellCodec {
     public EncryptedKvEncoder(OutputStream os, Encryptor encryptor) {
       super(os);
       this.encryptor = encryptor;
-      iv = new byte[encryptor.getIvLength()];
     }
 
     @Override
@@ -159,7 +174,7 @@ public class SecureWALCellCodec extends WALCellCodec {
       byte[] kvBuffer = kv.getBuffer();
       int offset = kv.getOffset();
 
-      RNG.nextBytes(iv);
+      byte[] iv = nextIv();
       encryptor.setIv(iv);
       encryptor.reset();
 
@@ -196,6 +211,9 @@ public class SecureWALCellCodec extends WALCellCodec {
 
       StreamUtils.writeRawVInt32(out, baos.size());
       baos.writeTo(out);
+
+      // Increment IV given the final payload length
+      incrementIv(baos.size());
     }
 
   }
