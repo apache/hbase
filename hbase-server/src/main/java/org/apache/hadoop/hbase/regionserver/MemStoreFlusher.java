@@ -733,6 +733,11 @@ class MemStoreFlusher implements FlushRequester {
     }
 
     @Override
+    public int hashCode() {
+      return (int) getDelay(TimeUnit.MILLISECONDS);
+    }
+
+   @Override
     public boolean equals(Object obj) {
       if (this == obj) {
         return true;

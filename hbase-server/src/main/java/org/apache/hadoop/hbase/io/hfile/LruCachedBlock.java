@@ -102,6 +102,11 @@ public class LruCachedBlock implements HeapSize, Comparable<LruCachedBlock> {
   }
 
   @Override
+  public int hashCode() {
+    return (int)(accessTime ^ (accessTime >>> 32));
+  }
+
+  @Override
   public boolean equals(Object obj) {
     if (this == obj) {
       return true;

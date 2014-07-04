@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.mapred;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -137,5 +138,14 @@ public class TableSplit implements InputSplit, Comparable<TableSplit> {
       Bytes.equals(m_startRow, other.m_startRow) &&
       Bytes.equals(m_endRow, other.m_endRow) &&
       m_regionLocation.equals(other.m_regionLocation);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = m_tableName != null ? m_tableName.hashCode() : 0;
+    result = 31 * result + Arrays.hashCode(m_startRow);
+    result = 31 * result + Arrays.hashCode(m_endRow);
+    result = 31 * result + (m_regionLocation != null ? m_regionLocation.hashCode() : 0);
+    return result;
   }
 }

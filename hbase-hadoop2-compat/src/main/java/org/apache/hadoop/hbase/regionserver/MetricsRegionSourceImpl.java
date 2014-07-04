@@ -158,6 +158,11 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   }
 
   @Override
+  public int hashCode() {
+    return this.regionWrapper.getRegionName().hashCode();
+  }
+
+  @Override
   public boolean equals(Object obj) {
     if (obj == this) return true;
     if (!(obj instanceof MetricsRegionSourceImpl)) return false;

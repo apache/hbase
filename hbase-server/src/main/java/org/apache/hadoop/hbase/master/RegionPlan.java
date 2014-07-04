@@ -117,6 +117,11 @@ public class RegionPlan implements Comparable<RegionPlan> {
   }
 
   @Override
+  public int hashCode() {
+    return getRegionName().hashCode();
+  }
+
+  @Override
   public boolean equals(Object obj) {
     if (this == obj) {
       return true;
