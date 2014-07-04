@@ -30,6 +30,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -75,6 +76,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
@@ -93,6 +95,7 @@ import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.Visibil
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsService;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.DeleteTracker;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -149,7 +152,6 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   private boolean acOn = false;
   private Configuration conf;
   private volatile boolean initialized = false;
-
   /** Mapping of scanner instances to the user who created them */
   private Map<InternalScanner,String> scannerOwners =
       new MapMaker().weakKeys().makeMap();
@@ -165,6 +167,13 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       // We write to a byte array. No Exception can happen.
     }
     LABELS_TABLE_TAGS[0] = new Tag(VisibilityUtils.VISIBILITY_TAG_TYPE, baos.toByteArray());
+  }
+
+  // Add to this list if there are any reserved tag types
+  private static ArrayList<Byte> reservedVisTagTypes = new ArrayList<Byte>();
+  static {
+    reservedVisTagTypes.add(VisibilityUtils.VISIBILITY_TAG_TYPE);
+    reservedVisTagTypes.add(VisibilityUtils.VISIBILITY_EXP_SERIALIZATION_TAG_TYPE);
   }
 
   @Override
@@ -690,10 +699,8 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
             new OperationStatus(SANITY_CHECK_FAILURE, de.getMessage()));
         continue;
       }
-      if (m instanceof Put) {
-        Put p = (Put) m;
         boolean sanityFailure = false;
-        for (CellScanner cellScanner = p.cellScanner(); cellScanner.advance();) {
+        for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
           if (!checkForReservedVisibilityTagPresence(cellScanner.current())) {
             miniBatchOp.setOperationStatus(i, new OperationStatus(SANITY_CHECK_FAILURE,
                 "Mutation contains cell with reserved type tag"));
@@ -707,7 +714,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
             List<Tag> visibilityTags = labelCache.get(labelsExp);
             if (visibilityTags == null) {
               try {
-                visibilityTags = createVisibilityTags(labelsExp);
+                visibilityTags = createVisibilityTags(labelsExp, true);
               } catch (ParseException e) {
                 miniBatchOp.setOperationStatus(i,
                     new OperationStatus(SANITY_CHECK_FAILURE, e.getMessage()));
@@ -719,7 +726,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
             if (visibilityTags != null) {
               labelCache.put(labelsExp, visibilityTags);
               List<Cell> updatedCells = new ArrayList<Cell>();
-              for (CellScanner cellScanner = p.cellScanner(); cellScanner.advance();) {
+              for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
                 Cell cell = cellScanner.current();
                 List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
                     cell.getTagsLength());
@@ -732,20 +739,69 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
                     cell.getValueLength(), tags);
                 updatedCells.add(updatedCell);
               }
-              p.getFamilyCellMap().clear();
-              // Clear and add new Cells to the Mutation.
-              for (Cell cell : updatedCells) {
+            m.getFamilyCellMap().clear();
+            // Clear and add new Cells to the Mutation.
+            for (Cell cell : updatedCells) {
+              if (m instanceof Put) {
+                Put p = (Put) m;
                 p.add(cell);
+              } else if (m instanceof Delete) {
+                // TODO : Cells without visibility tags would be handled in follow up issue
+                Delete d = (Delete) m;
+                d.addDeleteMarker(cell);
               }
             }
           }
         }
-      } else if (cellVisibility != null) {
-        // CellVisibility in a Delete is not legal! Fail the operation
-        miniBatchOp.setOperationStatus(i, new OperationStatus(SANITY_CHECK_FAILURE,
-            "CellVisibility cannot be set on Delete mutation"));
       }
     }
+  }
+
+  @Override
+  public void prePrepareTimeStampForDeleteVersion(
+      ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation delete, Cell cell,
+      byte[] byteNow, Get get) throws IOException {
+    KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+    CellVisibility cellVisibility = null;
+    try {
+      cellVisibility = delete.getCellVisibility();
+    } catch (DeserializationException de) {
+      throw new IOException("Invalid cell visibility specified " + delete, de);
+    }
+    // The check for checkForReservedVisibilityTagPresence happens in preBatchMutate happens.
+    // It happens for every mutation and that would be enough.
+    List<Tag> visibilityTags = new ArrayList<Tag>();
+    if (cellVisibility != null) {
+      String labelsExp = cellVisibility.getExpression();
+      try {
+        visibilityTags = createVisibilityTags(labelsExp, false);
+      } catch (ParseException e) {
+        throw new IOException("Invalid cell visibility expression " + labelsExp, e);
+      } catch (InvalidLabelException e) {
+        throw new IOException("Invalid cell visibility specified " + labelsExp, e);
+      }
+    }
+    get.setFilter(new DeleteVersionVisibilityExpressionFilter(visibilityTags));
+    List<Cell> result = ctx.getEnvironment().getRegion().get(get, false);
+
+    if (result.size() < get.getMaxVersions()) {
+      // Nothing to delete
+      kv.updateLatestStamp(Bytes.toBytes(Long.MIN_VALUE));
+      return;
+    }
+    if (result.size() > get.getMaxVersions()) {
+      throw new RuntimeException("Unexpected size: " + result.size()
+          + ". Results more than the max versions obtained.");
+    }
+    KeyValue getkv = KeyValueUtil.ensureKeyValue(result.get(get.getMaxVersions() - 1));
+    Bytes.putBytes(kv.getBuffer(), kv.getTimestampOffset(), getkv.getBuffer(),
+        getkv.getTimestampOffset(), Bytes.SIZEOF_LONG);
+    // We are bypassing here because in the HRegion.updateDeleteLatestVersionTimeStamp we would
+    // update with the current timestamp after again doing a get. As the hook as already determined
+    // the needed timestamp we need to bypass here.
+    // TODO : See if HRegion.updateDeleteLatestVersionTimeStamp() could be
+    // called only if the hook is not called.
+    ctx.bypass();
   }
 
   @Override
@@ -844,7 +900,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
           cell.getTagsLength());
       while (tagsItr.hasNext()) {
-        if (tagsItr.next().getType() == VisibilityUtils.VISIBILITY_TAG_TYPE) {
+        if (reservedVisTagTypes.contains(tagsItr.next().getType())) {
           return false;
         }
       }
@@ -852,28 +908,38 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     return true;
   }
 
-  private List<Tag> createVisibilityTags(String visibilityLabelsExp) throws IOException,
-      ParseException, InvalidLabelException {
+  private List<Tag> createVisibilityTags(String visibilityLabelsExp, boolean addSerializationTag)
+      throws IOException, ParseException, InvalidLabelException {
     ExpressionNode node = null;
     node = this.expressionParser.parse(visibilityLabelsExp);
     node = this.expressionExpander.expand(node);
     List<Tag> tags = new ArrayList<Tag>();
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
+    List<Integer> labelOrdinals = new ArrayList<Integer>();
+    // We will be adding this tag before the visibility tags and the presence of this
+    // tag indicates we are supporting deletes with cell visibility
+    if (addSerializationTag) {
+      tags.add(VisibilityUtils.VIS_SERIALIZATION_TAG);
+    }
     if (node.isSingleNode()) {
-      writeLabelOrdinalsToStream(node, dos);
+      getLabelOrdinals(node, labelOrdinals);
+      writeLabelOrdinalsToStream(labelOrdinals, dos);
       tags.add(new Tag(VisibilityUtils.VISIBILITY_TAG_TYPE, baos.toByteArray()));
       baos.reset();
     } else {
       NonLeafExpressionNode nlNode = (NonLeafExpressionNode) node;
       if (nlNode.getOperator() == Operator.OR) {
         for (ExpressionNode child : nlNode.getChildExps()) {
-          writeLabelOrdinalsToStream(child, dos);
+          getLabelOrdinals(child, labelOrdinals);
+          writeLabelOrdinalsToStream(labelOrdinals, dos);
           tags.add(new Tag(VisibilityUtils.VISIBILITY_TAG_TYPE, baos.toByteArray()));
           baos.reset();
+          labelOrdinals.clear();
         }
       } else {
-        writeLabelOrdinalsToStream(nlNode, dos);
+        getLabelOrdinals(nlNode, labelOrdinals);
+        writeLabelOrdinalsToStream(labelOrdinals, dos);
         tags.add(new Tag(VisibilityUtils.VISIBILITY_TAG_TYPE, baos.toByteArray()));
         baos.reset();
       }
@@ -881,7 +947,15 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     return tags;
   }
 
-  private void writeLabelOrdinalsToStream(ExpressionNode node, DataOutputStream dos)
+  private void writeLabelOrdinalsToStream(List<Integer> labelOrdinals, DataOutputStream dos)
+      throws IOException {
+    Collections.sort(labelOrdinals);
+    for (Integer labelOrdinal : labelOrdinals) {
+      StreamUtils.writeRawVInt32(dos, labelOrdinal);
+    }
+  }
+
+  private void getLabelOrdinals(ExpressionNode node, List<Integer> labelOrdinals)
       throws IOException, InvalidLabelException {
     if (node.isSingleNode()) {
       String identifier = null;
@@ -904,11 +978,11 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       if (labelOrdinal == 0) {
         throw new InvalidLabelException("Invalid visibility label " + identifier);
       }
-      StreamUtils.writeRawVInt32(dos, labelOrdinal);
+      labelOrdinals.add(labelOrdinal);
     } else {
       List<ExpressionNode> childExps = ((NonLeafExpressionNode) node).getChildExps();
       for (ExpressionNode child : childExps) {
-        writeLabelOrdinalsToStream(child, dos);
+        getLabelOrdinals(child, labelOrdinals);
       }
     }
   }
@@ -949,6 +1023,22 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     return false;
   }
 
+  @Override
+  public DeleteTracker postInstantiateDeleteTracker(
+      ObserverContext<RegionCoprocessorEnvironment> ctx, DeleteTracker delTracker)
+      throws IOException {
+    HRegion region = ctx.getEnvironment().getRegion();
+    TableName table = region.getRegionInfo().getTable();
+    if (table.isSystemTable()) {
+      return delTracker;
+    }
+    // We are creating a new type of delete tracker here which is able to track
+    // the timestamps and also the
+    // visibility tags per cell. The covering cells are determined not only
+    // based on the delete type and ts
+    // but also on the visibility expression matching.
+    return new VisibilityScanDeleteTracker();
+  }
   @Override
   public RegionScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Scan scan, final RegionScanner s) throws IOException {
@@ -1126,7 +1216,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       }
     }
     try {
-      tags.addAll(createVisibilityTags(cellVisibility.getExpression()));
+      tags.addAll(createVisibilityTags(cellVisibility.getExpression(), true));
     } catch (ParseException e) {
       throw new IOException(e);
     }
@@ -1413,6 +1503,24 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       if (!auths.contains(SYSTEM_LABEL)) {
         throw new AccessDeniedException("User '" + user.getShortName()
             + "' is not authorized to perform this action.");
+      }
+    }
+  }
+
+  static class DeleteVersionVisibilityExpressionFilter extends FilterBase {
+    private List<Tag> visibilityTags;
+
+    public DeleteVersionVisibilityExpressionFilter(List<Tag> visibilityTags) {
+      this.visibilityTags = visibilityTags;
+    }
+
+    @Override
+    public ReturnCode filterKeyValue(Cell kv) throws IOException {
+      boolean matchFound = VisibilityUtils.checkForMatchingVisibilityTags(kv, visibilityTags);
+      if (matchFound) {
+        return ReturnCode.INCLUDE;
+      } else {
+        return ReturnCode.SKIP;
       }
     }
   }
