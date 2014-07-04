@@ -19,9 +19,11 @@
 package org.apache.hadoop.hbase.security.token;
 
 import javax.crypto.SecretKey;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
@@ -60,6 +62,14 @@ public class AuthenticationKey implements Writable {
 
   SecretKey getKey() {
     return secret;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = id;
+    result = 31 * result + (int) (expirationDate ^ (expirationDate >>> 32));
+    result = 31 * result + ((secret == null) ? 0 : Arrays.hashCode(secret.getEncoded()));
+    return result;
   }
 
   @Override

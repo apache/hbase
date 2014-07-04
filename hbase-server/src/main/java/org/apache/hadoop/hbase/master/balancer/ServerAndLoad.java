@@ -51,6 +51,13 @@ class ServerAndLoad implements Comparable<ServerAndLoad>, Serializable {
   }
 
   @Override
+  public int hashCode() {
+    int result = load;
+    result = 31 * result + ((sn == null) ? 0 : sn.hashCode());
+    return result;
+  }
+
+  @Override
   public boolean equals(Object o) {
     if (o instanceof ServerAndLoad) {
       ServerAndLoad sl = (ServerAndLoad) o;

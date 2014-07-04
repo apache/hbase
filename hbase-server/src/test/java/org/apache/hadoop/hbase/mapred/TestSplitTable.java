@@ -18,7 +18,8 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.SmallTests;
@@ -60,29 +61,31 @@ public class TestSplitTable {
   @Test
   @SuppressWarnings("deprecation")
   public void testSplitTableEquals() {
-    assertFalse(new TableSplit(Bytes.toBytes("tableA"), Bytes.toBytes("aaa"),
-        Bytes.toBytes("ddd"), "locationA").equals(new TableSplit(Bytes
-        .toBytes("tableB"), Bytes.toBytes("aaa"), Bytes.toBytes("ddd"),
-        "locationA")));
+    byte[] tableA = Bytes.toBytes("tableA");
+    byte[] aaa = Bytes.toBytes("aaa");
+    byte[] ddd = Bytes.toBytes("ddd");
+    String locationA = "locationA";
 
-    assertFalse(new TableSplit(Bytes.toBytes("tableA"), Bytes.toBytes("aaa"),
-        Bytes.toBytes("ddd"), "locationA").equals(new TableSplit(Bytes
-        .toBytes("tableA"), Bytes.toBytes("bbb"), Bytes.toBytes("ddd"),
-        "locationA")));
+    TableSplit tablesplit = new TableSplit(tableA, aaa, ddd, locationA);
 
-    assertFalse(new TableSplit(Bytes.toBytes("tableA"), Bytes.toBytes("aaa"),
-        Bytes.toBytes("ddd"), "locationA").equals(new TableSplit(Bytes
-        .toBytes("tableA"), Bytes.toBytes("aaa"), Bytes.toBytes("eee"),
-        "locationA")));
+    TableSplit tableB = new TableSplit(Bytes.toBytes("tableB"), aaa, ddd, locationA);
+    assertNotEquals(tablesplit.hashCode(), tableB.hashCode());
+    assertNotEquals(tablesplit, tableB);
 
-    assertFalse(new TableSplit(Bytes.toBytes("tableA"), Bytes.toBytes("aaa"),
-        Bytes.toBytes("ddd"), "locationA").equals(new TableSplit(Bytes
-        .toBytes("tableA"), Bytes.toBytes("aaa"), Bytes.toBytes("ddd"),
-        "locationB")));
+    TableSplit startBbb = new TableSplit(tableA, Bytes.toBytes("bbb"), ddd, locationA);
+    assertNotEquals(tablesplit.hashCode(), startBbb.hashCode());
+    assertNotEquals(tablesplit, startBbb);
 
-    assertTrue(new TableSplit(Bytes.toBytes("tableA"), Bytes.toBytes("aaa"),
-        Bytes.toBytes("ddd"), "locationA").equals(new TableSplit(Bytes
-        .toBytes("tableA"), Bytes.toBytes("aaa"), Bytes.toBytes("ddd"),
-        "locationA")));
+    TableSplit endEee = new TableSplit(tableA, aaa, Bytes.toBytes("eee"), locationA);
+    assertNotEquals(tablesplit.hashCode(), endEee.hashCode());
+    assertNotEquals(tablesplit, endEee);
+
+    TableSplit locationB = new TableSplit(tableA, aaa, ddd, "locationB");
+    assertNotEquals(tablesplit.hashCode(), locationB.hashCode());
+    assertNotEquals(tablesplit, locationB);
+
+    TableSplit same = new TableSplit(tableA, aaa, ddd, locationA);
+    assertEquals(tablesplit.hashCode(), same.hashCode());
+    assertEquals(tablesplit, same);
   }
 }

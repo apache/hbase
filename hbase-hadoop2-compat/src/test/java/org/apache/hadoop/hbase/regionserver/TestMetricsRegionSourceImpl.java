@@ -22,12 +22,13 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 public class TestMetricsRegionSourceImpl {
 
   @Test
-  public void testCompareTo() throws Exception {
+  public void testCompareToHashCodeEquals() throws Exception {
     MetricsRegionServerSourceFactory fact = CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class);
 
     MetricsRegionSource one = fact.createRegion(new RegionWrapperStub("TEST"));
@@ -35,6 +36,8 @@ public class TestMetricsRegionSourceImpl {
     MetricsRegionSource two = fact.createRegion(new RegionWrapperStub("TWO"));
 
     assertEquals(0, one.compareTo(oneClone));
+    assertEquals(one.hashCode(), oneClone.hashCode());
+    assertNotEquals(one, two);
 
     assertTrue( one.compareTo(two) < 0);
     assertTrue( two.compareTo(one) > 0);
