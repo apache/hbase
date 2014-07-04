@@ -123,10 +123,6 @@ public class TestHBaseFsckFixRegionInfo {
 
         // rewrite the original .regioninfo
         hriModified.writeToDisk(conf);
-        System.out.println("SUCCESSFULLY CORRUPTED:"
-            + !hriOriginal.toString().equals(hriModified.toString()));
-        System.out.println("Original " + hriOriginal.toString());
-        System.out.println("Modified: " + hriModified.toString());
         modifyCount++;
       }
     }

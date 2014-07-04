@@ -617,7 +617,7 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
     try {
       // Write HRI to a file in case we need to recover .META.
       status.setStatus("Writing region info on filesystem");
-      checkRegioninfoOnFilesystem();
+      writeRegioninfoOnFilesystem();
 
       // Remove temporary data left over from old regions
       status.setStatus("Cleaning up temporary data from old regions");
@@ -756,7 +756,7 @@ public class HRegion implements HeapSize, ConfigurationObserver, HRegionIf {
    * mangled regions.
    * @throws IOException
    */
-  private void checkRegioninfoOnFilesystem() throws IOException {
+  private void writeRegioninfoOnFilesystem() throws IOException {
     // Name of this file has two leading and trailing underscores so it doesn't
     // clash w/ a store/family name.  There is possibility, but assumption is
     // that its slim (don't want to use control character in filename because

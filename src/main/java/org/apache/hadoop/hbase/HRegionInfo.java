@@ -708,13 +708,12 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * This method writes the .regioninfo file. This method is synchronized so that no two threads
    * attempt to write the same .regioninfo file at the same time.
    * @param conf
-   * @return true if the write was successful
    * @throws IOException
    */
-  public synchronized boolean writeToDisk(Configuration conf) throws IOException {
+  public synchronized void writeToDisk(Configuration conf) throws IOException {
     Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
     FileSystem fs = rootDir.getFileSystem(conf);
-    return writeToDisk(conf, fs);
+    writeToDisk(conf, fs);
   }
 
   /**
@@ -722,34 +721,34 @@ public class HRegionInfo extends VersionedWritable implements WritableComparable
    * attempt to write the same .regioninfo file at the same time.
    * @param conf
    * @param fs
-   * @return true if the write is successful
    * @throws IOException
    */
-  public synchronized boolean writeToDisk(Configuration conf, FileSystem fs) throws IOException {
+  public synchronized void writeToDisk(Configuration conf, FileSystem fs) throws IOException {
     Path tableDir =
         HTableDescriptor.getTableDir(FSUtils.getRootDir(conf), this.getTableDesc().getName());
     Path regionPath = HRegion.getRegionDir(tableDir, this.getEncodedName());
     Path regionInfoPath = new Path(regionPath, HRegion.REGIONINFO_FILE);
-    FSDataOutputStream out = fs.create(regionInfoPath, true);
-    boolean successfulWrite = true;
     try {
-      // we write to file the information necessary to reconstruct this HRegionInfo via readFields()
-      // this.toString() calls tableDesc.toString(), so this file will contain back-up information
-      // for the table
-      write(out);
-      out.write(NEWLINE);
-      out.write(NEWLINE);
-      out.write(Bytes.toBytes(this.toString()));
-      LOG.debug("Rewrote .regioninfo file of " + this.getRegionNameAsString() + " at "
-          + regionInfoPath);
+      FSDataOutputStream out = fs.create(regionInfoPath);
+      try {
+        // we write to file the information necessary to reconstruct this HRegionInfo via
+        // readFields()
+        // this.toString() calls tableDesc.toString(), so this file will contain back-up information
+        // for the table
+        write(out);
+        out.write(NEWLINE);
+        out.write(NEWLINE);
+        out.write(Bytes.toBytes(this.toString()));
+        LOG.debug("Rewrote .regioninfo file of " + this.getRegionNameAsString() + " at "
+            + regionInfoPath);
+      } finally {
+        out.close();
+        LOG.debug(".regioninfo File Contents: " + this.toString());
+      }
     } catch (IOException e) {
-      successfulWrite = false;
       LOG.error("Could not rewrite the .regioninfo of " + this.getRegionNameAsString() + " at "
           + regionInfoPath, e);
-    } finally {
-      out.close();
-      LOG.debug(".regioninfo File Contents: " + this.toString());
+      throw e;
     }
-    return successfulWrite;
   }
 }

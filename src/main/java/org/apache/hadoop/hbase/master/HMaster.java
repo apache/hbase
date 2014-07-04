@@ -42,6 +42,7 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -112,6 +113,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ExceptionUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.InfoServer;
@@ -1670,38 +1672,32 @@ HMasterRegionInterface, Watcher, StoppableMaster {
    * This method rewrites all .regioninfo files for all regions belonging to the Table whose name is
    * tableName
    * @param tableName
-   * @return true if all .regioninfo files that belong to the table are successfully rewritten.
    * @throws IOException
    * @throws ExecutionException
    * @throws InterruptedException
    */
-  public boolean writeRegionInfo(byte[] tableName) throws Exception {
+  public void writeRegionInfo(byte[] tableName) throws IOException, InterruptedException{
     List<Pair<HRegionInfo, HServerAddress>> tableRegions = getTableRegions(tableName);
     ExecutorService executor = Executors.newCachedThreadPool();
-    List<Future<Boolean>> futures = new ArrayList<>();
+    List<Future<Void>> futures = new ArrayList<>();
     for (final Pair<HRegionInfo, HServerAddress> entry : tableRegions) {
-      Callable<Boolean> writer = new Callable<Boolean>() {
+      Callable<Void> writer = new Callable<Void>() {
         
-        // return true if the write is successful
-        public Boolean call() {
+        public Void call() throws IOException {
           HRegionInfo hri = entry.getFirst();
-          try {
-            return hri.writeToDisk(conf);
-          } catch (IOException e) {
-            LOG.error("Failed to write .regioninfo for Region: " + hri.getRegionNameAsString(), e);
-            return false;
-          }
+            hri.writeToDisk(conf);
+          return null;
         }
       };
-      Future<Boolean> future = executor.submit(writer);
-      futures.add(future);
+      futures.add(executor.submit(writer));
     }
-    for (Future<Boolean> f : futures) {
-      if (!f.get()) { // if any write was not successful
-        return false;
+    for (Future<Void> f : futures) {
+      try {
+        f.get();
+      } catch (ExecutionException e) {
+        throw ExceptionUtils.toIOException(e.getCause());
       }
     }
-    return true;
   }
 
   @Override
