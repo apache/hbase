@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -152,6 +153,7 @@ public class AccessController extends BaseRegionObserver
   private static final Log AUDITLOG =
     LogFactory.getLog("SecurityLogger."+AccessController.class.getName());
   private static final String CHECK_COVERING_PERM = "check_covering_perm";
+  private static final String TAG_CHECK_PASSED = "tag_check_passed";
   private static final byte[] TRUE = Bytes.toBytes(true);
 
   TableAuthManager authManager = null;
@@ -167,7 +169,11 @@ public class AccessController extends BaseRegionObserver
   private Map<InternalScanner,String> scannerOwners =
       new MapMaker().weakKeys().makeMap();
 
+  // Provider for mapping principal names to Users
   private UserProvider userProvider;
+
+  // The list of users with superuser authority
+  private List<String> superusers;
 
   // if we are able to support cell ACLs
   boolean cellFeaturesEnabled;
@@ -745,7 +751,7 @@ public class AccessController extends BaseRegionObserver
     return cellGrants > 0;
   }
 
-  private void addCellPermissions(final byte[] perms, Map<byte[], List<Cell>> familyMap) {
+  private static void addCellPermissions(final byte[] perms, Map<byte[], List<Cell>> familyMap) {
     // Iterate over the entries in the familyMap, replacing the cells therein
     // with new cells including the ACL data
     for (Map.Entry<byte[], List<Cell>> e: familyMap.entrySet()) {
@@ -772,6 +778,32 @@ public class AccessController extends BaseRegionObserver
       // This is supposed to be safe, won't CME
       e.setValue(newCells);
     }
+  }
+
+  // Checks whether incoming cells contain any tag with type as ACL_TAG_TYPE. This tag
+  // type is reserved and should not be explicitly set by user.
+  private void checkForReservedTagPresence(User user, Mutation m) throws IOException {
+    // Superusers are allowed to store cells unconditionally.
+    if (superusers.contains(user.getShortName())) {
+      return;
+    }
+    // We already checked (prePut vs preBatchMutation)
+    if (m.getAttribute(TAG_CHECK_PASSED) != null) {
+      return;
+    }
+    for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
+      Cell cell = cellScanner.current();
+      if (cell.getTagsLength() > 0) {
+        Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
+          cell.getTagsLength());
+        while (tagsItr.hasNext()) {
+          if (tagsItr.next().getType() == AccessControlLists.ACL_TAG_TYPE) {
+            throw new AccessDeniedException("Mutation contains cell with reserved type tag");
+          }
+        }
+      }
+    }
+    m.setAttribute(TAG_CHECK_PASSED, TRUE);
   }
 
   /* ---- MasterObserver implementation ---- */
@@ -809,6 +841,11 @@ public class AccessController extends BaseRegionObserver
 
     // set the user-provider.
     this.userProvider = UserProvider.instantiate(env.getConfiguration());
+
+    // set up the list of users with superuser privilege
+    User user = userProvider.getCurrent();
+    superusers = Lists.asList(user.getShortName(),
+      conf.getStrings(AccessControlLists.SUPERUSER_CONF_KEY, new String[0]));
 
     // If zk is null or IOException while obtaining auth manager,
     // throw RuntimeException so that the coprocessor is unloaded.
@@ -1426,9 +1463,10 @@ public class AccessController extends BaseRegionObserver
     // HBase value. A new ACL in a new Put applies to that Put. It doesn't
     // change the ACL of any previous Put. This allows simple evolution of
     // security policy over time without requiring expensive updates.
+    User user = getActiveUser();
+    checkForReservedTagPresence(user, put);
     RegionCoprocessorEnvironment env = c.getEnvironment();
     Map<byte[],? extends Collection<Cell>> families = put.getFamilyCellMap();
-    User user = getActiveUser();
     AuthResult authResult = permissionGranted(OpType.PUT, user, env, families, Action.WRITE);
     logResult(authResult);
     if (!authResult.isAllowed()) {
@@ -1438,6 +1476,7 @@ public class AccessController extends BaseRegionObserver
         throw new AccessDeniedException("Insufficient permissions " + authResult.toContextString());
       }
     }
+    // Add cell ACLs from the operation to the cells themselves
     byte[] bytes = put.getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL);
     if (bytes != null) {
       if (cellFeaturesEnabled) {
@@ -1493,7 +1532,13 @@ public class AccessController extends BaseRegionObserver
         if (m.getAttribute(CHECK_COVERING_PERM) != null) {
           // We have a failure with table, cf and q perm checks and now giving a chance for cell
           // perm check
-          OpType opType = (m instanceof Put) ? OpType.PUT : OpType.DELETE;
+          OpType opType;
+          if (m instanceof Put) {
+            checkForReservedTagPresence(getActiveUser(), m);
+            opType = OpType.PUT;
+          } else {
+            opType = OpType.DELETE;
+          }
           AuthResult authResult = null;
           if (checkCoveringPermission(opType, c.getEnvironment(), m.getRow(), m.getFamilyCellMap(),
               m.getTimeStamp(), Action.WRITE)) {
@@ -1529,9 +1574,10 @@ public class AccessController extends BaseRegionObserver
       final ByteArrayComparable comparator, final Put put,
       final boolean result) throws IOException {
     // Require READ and WRITE permissions on the table, CF, and KV to update
+    User user = getActiveUser();
+    checkForReservedTagPresence(user, put);
     RegionCoprocessorEnvironment env = c.getEnvironment();
     Map<byte[],? extends Collection<byte[]>> families = makeFamilyMap(family, qualifier);
-    User user = getActiveUser();
     AuthResult authResult = permissionGranted(OpType.CHECK_AND_PUT, user, env, families,
       Action.READ, Action.WRITE);
     logResult(authResult);
@@ -1665,9 +1711,10 @@ public class AccessController extends BaseRegionObserver
   public Result preAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append)
       throws IOException {
     // Require WRITE permission to the table, CF, and the KV to be appended
+    User user = getActiveUser();
+    checkForReservedTagPresence(user, append);
     RegionCoprocessorEnvironment env = c.getEnvironment();
     Map<byte[],? extends Collection<Cell>> families = append.getFamilyCellMap();
-    User user = getActiveUser();
     AuthResult authResult = permissionGranted(OpType.APPEND, user, env, families, Action.WRITE);
     logResult(authResult);
     if (!authResult.isAllowed()) {
@@ -1718,9 +1765,10 @@ public class AccessController extends BaseRegionObserver
       throws IOException {
     // Require WRITE permission to the table, CF, and the KV to be replaced by
     // the incremented value
+    User user = getActiveUser();
+    checkForReservedTagPresence(user, increment);
     RegionCoprocessorEnvironment env = c.getEnvironment();
     Map<byte[],? extends Collection<Cell>> families = increment.getFamilyCellMap();
-    User user = getActiveUser();
     AuthResult authResult = permissionGranted(OpType.INCREMENT, user, env, families,
       Action.WRITE);
     logResult(authResult);
@@ -2195,11 +2243,6 @@ public class AccessController extends BaseRegionObserver
       throw new IOException("Unable to obtain the current user, " +
         "authorization checks for internal operations will not work correctly!");
     }
-
-    String currentUser = user.getShortName();
-    List<String> superusers = Lists.asList(currentUser, conf.getStrings(
-      AccessControlLists.SUPERUSER_CONF_KEY, new String[0]));
-
     User activeUser = getActiveUser();
     if (!(superusers.contains(activeUser.getShortName()))) {
       throw new AccessDeniedException("User '" + (user != null ? user.getShortName() : "null") +
