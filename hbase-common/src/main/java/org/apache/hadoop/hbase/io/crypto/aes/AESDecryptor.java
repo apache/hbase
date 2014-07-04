@@ -59,6 +59,11 @@ public class AESDecryptor implements Decryptor {
   }
 
   @Override
+  public int getBlockSize() {
+    return AES.BLOCK_SIZE;
+  }
+
+  @Override
   public void setIv(byte[] iv) {
     Preconditions.checkNotNull(iv, "IV cannot be null");
     Preconditions.checkArgument(iv.length == AES.IV_LENGTH, "Invalid IV length");

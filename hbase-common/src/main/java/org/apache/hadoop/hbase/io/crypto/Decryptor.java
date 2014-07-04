@@ -43,6 +43,12 @@ public interface Decryptor {
   public int getIvLength();
 
   /**
+   * Get the cipher's internal block size
+   * @return the cipher's internal block size
+   */
+  public int getBlockSize();
+
+  /**
    * Set the initialization vector
    * @param iv
    */

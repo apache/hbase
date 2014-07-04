@@ -53,6 +53,7 @@ public class AES extends Cipher {
 
   public static final int KEY_LENGTH = 16;
   public static final int KEY_LENGTH_BITS = KEY_LENGTH * 8;
+  public static final int BLOCK_SIZE = 16;
   public static final int IV_LENGTH = 16;
 
   public static final String CIPHER_MODE_KEY = "hbase.crypto.algorithm.aes.mode";
