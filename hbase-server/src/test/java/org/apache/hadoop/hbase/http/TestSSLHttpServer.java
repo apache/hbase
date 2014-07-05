@@ -96,7 +96,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
 
   @AfterClass
   public static void cleanup() throws Exception {
-    server.stop();
+    if (server != null) server.stop();
     FileUtil.fullyDelete(new File(BASEDIR));
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
     clientSslFactory.destroy();

@@ -28,18 +28,18 @@ For example:
     hbase> user_permission
     hbase> user_permission 'table1'
     hbase> user_permission 'namespace1:table1'
-    hbase> user_permission '*'
+    hbase> user_permission '.*'
     hbase> user_permission '^[A-C].*'
 EOF
       end
 
-      def command(table=nil)
+      def command(table_regex=".*")
         #format_simple_command do
-        #admin.user_permission(table)
+        #admin.user_permission(table_regex)
         now = Time.now
         formatter.header(["User", "Table,Family,Qualifier:Permission"])
 
-        count = security_admin.user_permission(table) do |user, permission|
+        count = security_admin.user_permission(table_regex) do |user, permission|
           formatter.row([ user, permission])
         end
 
