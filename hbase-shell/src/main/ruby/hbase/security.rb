@@ -151,60 +151,10 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     def user_permission(table_regex=nil)
       security_available?
-
-      begin
-        meta_table = org.apache.hadoop.hbase.client.HTable.new(@config,
-          org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME)
-        service = meta_table.coprocessorService(
-          org.apache.hadoop.hbase.HConstants::EMPTY_START_ROW)
-
-        protocol = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos::
-          AccessControlService.newBlockingStub(service)
-
-        if (table_regex == '')
-          table_regex = nil
-        end
-
-        # handle simple glob '*' but if '.' is passed before '*' then assume regex
-        if /\*/.match(table_regex) && !/\.\*/.match(table_regex)
-          table_regex = table_regex.gsub(/\*/, '.*')
-        end
-
-        all_perms = []
-        tables = []
-
-        if table_regex != nil
-
-          htds = @admin.listTables(table_regex)
-          htds.each { |t|
-            tables << t.getTableName().toString()
-          }
-
-          tables.each { |t|
-            if (isNamespace?(t))
-              # Namespace should exist first.
-              namespace_name = t[1...t.length]
-              raise(ArgumentError, "Can't find a namespace: #{namespace_name}") unless namespace_exists?(namespace_name)
-              perms = org.apache.hadoop.hbase.protobuf.ProtobufUtil.getUserPermissions(
-                protocol, org.apache.hadoop.hbase.TableName.valueOf(t))
-            else
-              raise(ArgumentError, "Can't find table: #{t}") unless exists?(t)
-              perms = org.apache.hadoop.hbase.protobuf.ProtobufUtil.getUserPermissions(
-                protocol, org.apache.hadoop.hbase.TableName.valueOf(t))
-            end
-            all_perms << perms
-          }
-        else
-          perms = org.apache.hadoop.hbase.protobuf.ProtobufUtil.getUserPermissions(protocol)
-          all_perms << perms
-        end
-      ensure
-        meta_table.close()
-      end
+      all_perms = org.apache.hadoop.hbase.security.access.AccessControlClient.getUserPermissions(@config,table_regex)
       res = {}
       count  = 0
-      all_perms.each do |this_perms|
-        this_perms.each do |value|
+      all_perms.each do |value|
           user_name = String.from_java_bytes(value.getUser)
           table = (value.getTableName != nil) ? value.getTableName.getNameAsString() : ''
           family = (value.getFamily != nil) ? 
@@ -223,7 +173,6 @@ module Hbase
             res[user_name][family + ":" +qualifier] = action
           end
           count += 1
-        end
       end
 
       return ((block_given?) ? count : res)
