@@ -95,6 +95,7 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.TestTableName;
+import org.apache.hadoop.hbase.security.access.AccessControlClient;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -242,6 +243,11 @@ public class TestAccessController extends SecureTestUtil {
       Permission.Action.READ);
 
     assertEquals(4, AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName()).size());
+    try {
+      assertEquals(4, AccessControlClient.getUserPermissions(conf, TEST_TABLE.toString()).size());
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.getUserPermissions. " + e.getStackTrace());
+    }
   }
 
   @After

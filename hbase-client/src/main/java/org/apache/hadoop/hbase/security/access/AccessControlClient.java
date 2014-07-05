@@ -18,18 +18,24 @@
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
+import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
@@ -38,6 +44,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantReque
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService.BlockingInterface;
 
 import com.google.protobuf.ByteString;
 
@@ -176,4 +183,46 @@ public class AccessControlClient {
       }
     }
   }
+
+  /**
+   * List all the userPermissions matching the given pattern.
+   * @param conf
+   * @param tableRegex The regular expression string to match against
+   * @return - returns an array of UserPermissions
+   * @throws Throwable
+   */
+  public static List<UserPermission> getUserPermissions(Configuration conf, String tableRegex)
+      throws Throwable {
+    List<UserPermission> permList = new ArrayList<UserPermission>();
+    HTable ht = null;
+    HBaseAdmin ha = null;
+    try {
+      TableName aclTableName =
+          TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "acl");
+      ha = new HBaseAdmin(conf);
+      ht = new HTable(conf, aclTableName.getName());
+      CoprocessorRpcChannel service = ht.coprocessorService(HConstants.EMPTY_START_ROW);
+      BlockingInterface protocol =
+          AccessControlProtos.AccessControlService.newBlockingStub(service);
+      HTableDescriptor[] htds = null;
+      
+      if (tableRegex != null) {
+        htds = ha.listTables(Pattern.compile(tableRegex));
+        for (HTableDescriptor hd: htds) {
+          permList.addAll(ProtobufUtil.getUserPermissions(protocol, hd.getTableName()));
+        }
+      } else {
+        permList = ProtobufUtil.getUserPermissions(protocol);
+      }
+    } finally {
+      if (ht != null) {
+        ht.close();
+      }
+      if (ha != null) {
+        ha.close();
+      }
+    }
+    return permList;
+  }
+
 }
