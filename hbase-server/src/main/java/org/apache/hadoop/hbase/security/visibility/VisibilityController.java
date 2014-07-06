@@ -57,8 +57,10 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -75,6 +77,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -1191,6 +1194,28 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   private boolean isSystemOrSuperUser() throws IOException {
     User activeUser = getActiveUser();
     return this.superUsers.contains(activeUser.getShortName());
+  }
+
+  @Override
+  public Result preAppend(ObserverContext<RegionCoprocessorEnvironment> e, Append append)
+      throws IOException {
+    for (CellScanner cellScanner = append.cellScanner(); cellScanner.advance();) {
+      if (!checkForReservedVisibilityTagPresence(cellScanner.current())) {
+        throw new FailedSanityCheckException("Append contains cell with reserved type tag");
+      }
+    }
+    return null;
+  }
+
+  @Override
+  public Result preIncrement(ObserverContext<RegionCoprocessorEnvironment> e, Increment increment)
+      throws IOException {
+    for (CellScanner cellScanner = increment.cellScanner(); cellScanner.advance();) {
+      if (!checkForReservedVisibilityTagPresence(cellScanner.current())) {
+        throw new FailedSanityCheckException("Increment contains cell with reserved type tag");
+      }
+    }
+    return null;
   }
 
   @Override
