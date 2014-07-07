@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.client.TMultiResponse;
 import org.apache.hadoop.hbase.client.TRowMutations;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
+import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.ScannerResult;
 import org.apache.hadoop.hbase.ipc.ThriftHRegionInterface;
 import org.apache.hadoop.hbase.ipc.thrift.exceptions.ThriftHBaseException;
@@ -107,8 +108,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<HRegionInfo> getRegionInfo(final byte[] regionName) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<HRegionInfo>() {
       @Override public HRegionInfo call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           HRegionInfo r = server.getRegionInfo(regionName);
           LOG.debug("Printing the result of getClosestRowOrBefore : " + r);
@@ -123,9 +126,11 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
   @Override
   public ListenableFuture<Result> getClosestRowBefore(final byte[] regionName, final byte[] row,
       final byte[] family) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Result>(){
 
       @Override public Result call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           Result r =  server.getClosestRowBefore(regionName, row, family);
           if (r == null) {
@@ -143,8 +148,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Void> flushRegion(final byte[] regionName) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return writeService.submit(new Callable<Void>() {
       @Override public Void call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           server.flushRegion(regionName);
         } catch (Exception e) {
@@ -157,8 +164,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Void> flushRegion(final byte[] regionName, final long ifOlderThanTS) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return writeService.submit(new Callable<Void>() {
       @Override public Void call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           server.flushRegion(regionName, ifOlderThanTS);
         } catch (IllegalArgumentException e) {
@@ -173,8 +182,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Long> getLastFlushTime(final byte[] regionName) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Long>() {
       @Override public Long call() throws Exception {
+        HRegionServer.callContext.set(call);
         return server.getLastFlushTime(regionName);
       }
     });
@@ -182,8 +193,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Map<byte[], Long>> getLastFlushTimes() {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Map<byte[], Long>>() {
       @Override public Map<byte[], Long> call() throws Exception {
+        HRegionServer.callContext.set(call);
         MapWritable mapWritable = server.getLastFlushTimes();
         Map<byte[], Long> map = new HashMap<>();
 
@@ -198,8 +211,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Long> getCurrentTimeMillis() {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Long>() {
       @Override public Long call() throws Exception {
+        HRegionServer.callContext.set(call);
         return server.getCurrentTimeMillis();
       }
     });
@@ -207,8 +222,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Long> getStartCode() {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Long>() {
       @Override public Long call() throws Exception {
+        HRegionServer.callContext.set(call);
         return server.getStartCode();
       }
     });
@@ -216,8 +233,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<List<String>> getStoreFileList(final byte[] regionName, final byte[] columnFamily) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<List<String>>() {
       @Override public List<String> call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.getStoreFileList(regionName, columnFamily);
         } catch (IllegalArgumentException e) {
@@ -230,8 +249,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
   @Override
   public ListenableFuture<List<String>> getStoreFileListForColumnFamilies(final byte[] regionName,
       final List<byte[]> columnFamilies) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<List<String>>() {
       @Override public List<String> call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           byte[][] columnFamiliesArray = new byte[columnFamilies.size()][];
           return server.getStoreFileList(regionName, columnFamilies.toArray(columnFamiliesArray));
@@ -244,8 +265,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<List<String>> getStoreFileListForAllColumnFamilies(final byte[] regionName) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<List<String>>() {
       @Override public List<String> call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.getStoreFileList(regionName);
         } catch (IllegalArgumentException e) {
@@ -257,8 +280,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<List<String>> getHLogsList(final boolean rollCurrentHLog) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<List<String>>() {
       @Override public List<String> call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.getHLogsList(rollCurrentHLog);
         } catch (IOException e) {
@@ -270,8 +295,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Result> get(final byte[] regionName, final Get get) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Result>() {
       @Override public Result call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.get(regionName, get);
         } catch (IOException e) {
@@ -284,8 +311,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<List<Result>> getRows(final byte[] regionName, final List<Get> gets) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<List<Result>>() {
       @Override public List<Result> call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           List<Result> resultList = new ArrayList<>();
           Collections.addAll(resultList, server.get(regionName, gets));
@@ -299,8 +328,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Boolean> exists(final byte[] regionName, final Get get){
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Boolean>() {
       @Override public Boolean call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.exists(regionName, get);
         } catch (IOException e) {
@@ -313,9 +344,11 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Void> put(final byte[] regionName, final Put put) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
 
     return writeService.submit(new Callable<Void>() {
       @Override public Void call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           server.put(regionName, put);
         } catch (IOException e) {
@@ -328,8 +361,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Integer> putRows(final byte[] regionName, final List<Put> puts) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return writeService.submit(new Callable<Integer>() {
       @Override public Integer call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.put(regionName, puts);
         } catch (IOException e) {
@@ -341,8 +376,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Void> processDelete(final byte[] regionName, final Delete delete)  {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return writeService.submit(new Callable<Void>() {
       @Override public Void call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           server.delete(regionName, delete);
         } catch (IOException e) {
@@ -355,8 +392,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Integer> processListOfDeletes(final byte[] regionName, final List<Delete> deletes) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return writeService.submit(new Callable<Integer>() {
       @Override public Integer call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.delete(regionName, deletes);
         } catch (IOException e) {
@@ -369,9 +408,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
   @Override
   public ListenableFuture<Boolean> checkAndPut(final byte[] regionName, final byte[] row, final byte[] family,
       final byte[] qualifier, final byte[] value, final Put put) {
-
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return writeService.submit(new Callable<Boolean>() {
       @Override public Boolean call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.checkAndPut(regionName, row, family, qualifier, value, put);
         } catch (IOException e) {
@@ -384,9 +424,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
   @Override
   public ListenableFuture<Boolean> checkAndDelete(final byte[] regionName, final byte[] row,
       final byte[] family, final byte[] qualifier, final byte[] value, final Delete delete) {
-
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return writeService.submit(new Callable<Boolean>() {
       @Override public Boolean call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.checkAndDelete(regionName, row, family, qualifier, value,
               delete);
@@ -400,9 +441,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
   @Override
   public ListenableFuture<Long> incrementColumnValue(final byte[] regionName, final byte[] row,
       final byte[] family, final byte[] qualifier, final long amount, final boolean writeToWAL) {
-
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return writeService.submit(new Callable<Long>() {
       @Override public Long call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.incrementColumnValue(regionName, row, family, qualifier, amount, writeToWAL);
         } catch (IOException e) {
@@ -414,8 +456,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Long> openScanner(final byte[] regionName, final Scan scan) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Long>() {
       @Override public Long call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.openScanner(regionName, scan);
         } catch (IOException e) {
@@ -427,9 +471,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Void> mutateRow(final byte[] regionName, final TRowMutations arm) {
-
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return writeService.submit(new Callable<Void>() {
       @Override public Void call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           server.mutateRow(regionName, RowMutations.Builder.createFromTRowMutations(arm));
         } catch (IOException e) {
@@ -442,8 +487,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Void> mutateRows(final byte[] regionName, final List<TRowMutations> armList) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return writeService.submit(new Callable<Void>() {
       @Override public Void call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           List<RowMutations> rowMutations = new ArrayList<>();
           for (TRowMutations mutation : armList) {
@@ -461,8 +508,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
   @Override
   @Deprecated
   public ListenableFuture<Result> next(final long scannerId) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Result>() {
       @Override public Result call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.next(scannerId);
         } catch (IOException e) {
@@ -474,13 +523,15 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<List<Result>> nextRows(final long scannerId, final int numberOfRows) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<List<Result>>() {
       @Override public List<Result> call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           Result[] result = server.nextInternal(scannerId, numberOfRows);
           List<Result> resultList = new ArrayList<>(result.length);
-          for (int i = 0; i < result.length; i ++) {
-            resultList.add(addThriftRegionInfoQualifierIfNeeded(result[i]));
+          for (Result aResult : result) {
+            resultList.add(addThriftRegionInfoQualifierIfNeeded(aResult));
           }
           return resultList;
         } catch (IOException e) {
@@ -492,8 +543,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Void> close(final long scannerId) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Void>() {
       @Override public Void call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           server.close(scannerId);
         } catch (IOException e) {
@@ -506,8 +559,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<RowLock> lockRow(final byte[] regionName, final byte[] row) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<RowLock>() {
       @Override public RowLock call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return new RowLock(row, server.lockRow(regionName, row));
         } catch (IOException e) {
@@ -519,8 +574,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Void> unlockRow(final byte[] regionName, final long lockId) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Void>() {
       @Override public Void call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           server.unlockRow(regionName, lockId);
         } catch (IOException e) {
@@ -533,9 +590,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<List<HRegionInfo>> getRegionsAssignment() {
-
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<List<HRegionInfo>>() {
       @Override public List<HRegionInfo> call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return Arrays.asList(server.getRegionsAssignment());
         } catch (IOException e) {
@@ -547,8 +605,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<HServerInfo> getHServerInfo() {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<HServerInfo>() {
       @Override public HServerInfo call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.getHServerInfo();
         } catch (IOException e) {
@@ -560,8 +620,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<TMultiResponse> multiAction(final MultiAction multi) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return writeService.submit(new Callable<TMultiResponse>() {
       @Override public TMultiResponse call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return TMultiResponse.Builder.createFromMultiResponse(server
               .multiAction(multi));
@@ -574,9 +636,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<MultiPutResponse> multiPut(final MultiPut puts) {
-
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return writeService.submit(new Callable<MultiPutResponse>() {
       @Override public MultiPutResponse call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.multiPut(puts);
         } catch (IOException e) {
@@ -589,8 +652,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
   @Override
   public ListenableFuture<Void> bulkLoadHFile(final String hfilePath, final byte[] regionName,
       final byte[] familyName) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return writeService.submit(new Callable<Void>() {
       @Override public Void call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           server.bulkLoadHFile(hfilePath, regionName, familyName);
         } catch (IOException e) {
@@ -604,8 +669,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
   @Override
   public ListenableFuture<Void> bulkLoadHFile(final String hfilePath, final byte[] regionName,
       final byte[] familyName, final boolean assignSeqNum) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return writeService.submit(new Callable<Void>() {
       @Override public Void call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           server.bulkLoadHFile(hfilePath, regionName, familyName, assignSeqNum);
         } catch (IOException e) {
@@ -618,9 +685,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Void> closeRegion(final HRegionInfo hri, final boolean reportWhenCompleted) {
-
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Void>() {
       @Override public Void call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           server.closeRegion(hri, reportWhenCompleted);
         } catch (IOException e) {
@@ -633,8 +701,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Integer> updateFavoredNodes(final AssignmentPlan plan) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Integer>() {
       @Override public Integer call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.updateFavoredNodes(plan);
         } catch (IOException e) {
@@ -646,8 +716,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Void> updateConfiguration() {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Void>() {
       @Override public Void call() throws Exception {
+        HRegionServer.callContext.set(call);
         server.updateConfiguration();
         return null;
       }
@@ -656,8 +728,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Void> stop(final String why) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Void>() {
       @Override public Void call() throws Exception {
+        HRegionServer.callContext.set(call);
         server.stop(why);
         return null;
       }
@@ -666,8 +740,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<String> getStopReason() {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<String>() {
       @Override public String call() throws Exception {
+        HRegionServer.callContext.set(call);
         return server.getStopReason();
       }
     });
@@ -675,8 +751,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Void> setNumHDFSQuorumReadThreads(final int maxThreads) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Void>() {
       @Override public Void call() throws Exception {
+        HRegionServer.callContext.set(call);
         server.setNumHDFSQuorumReadThreads(maxThreads);
         return null;
       }
@@ -692,8 +770,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Boolean> isStopped() {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Boolean>() {
       @Override public Boolean call() throws Exception {
+        HRegionServer.callContext.set(call);
         return server.isStopped();
       }
     });
@@ -701,9 +781,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Void> stopForRestart() {
-
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Void>() {
       @Override public Void call() throws Exception {
+        HRegionServer.callContext.set(call);
         server.stopForRestart();
         return null;
       }
@@ -717,8 +798,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<String> getConfProperty(final String paramName) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<String>() {
       @Override public String call() throws Exception {
+        HRegionServer.callContext.set(call);
         return server.getConfProperty(paramName);
       }
     });
@@ -726,8 +809,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<List<Bucket>> getHistogram(final byte[] regionName) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<List<Bucket>>() {
       @Override public List<Bucket> call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           List<Bucket> buckets = server.getHistogram(regionName);
           if (buckets == null) return new ArrayList<Bucket>();
@@ -741,8 +826,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<List<Bucket>> getHistogramForStore(final byte[] regionName, final byte[] family) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<List<Bucket>>() {
       @Override public List<Bucket> call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           List<Bucket> buckets = server.getHistogramForStore(regionName, family);
           if (buckets == null) return new ArrayList<Bucket>();
@@ -758,9 +845,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
   public ListenableFuture<byte[]> callEndpoint(final String epName, final String methodName,
       final List<byte[]> params, final byte[] regionName, final byte[] startRow,
       final byte[] stopRow) {
-
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<byte[]>() {
       @Override public byte[] call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.callEndpoint(epName, methodName, params, regionName,
               startRow, stopRow);
@@ -773,8 +861,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<List<List<Bucket>>> getHistograms(final List<byte[]> regionNames) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<List<List<Bucket>>>() {
       @Override public List<List<Bucket>> call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.getHistograms(regionNames);
         } catch (IOException e) {
@@ -787,9 +877,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
   @Override
   public ListenableFuture<HRegionLocation> getLocation(
       final byte[] table, final byte[] row, final boolean reload)  {
-
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<HRegionLocation>() {
       @Override public HRegionLocation call() throws Exception {
+        HRegionServer.callContext.set(call);
         try {
           return server.getLocation(table, row, reload);
         } catch (IOException e) {
@@ -802,9 +893,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
   @Override
   public ListenableFuture<ScannerResult> scanOpen(
       final byte[] regionName, final Scan scan, final int numberOfRows) {
-
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<ScannerResult>() {
       @Override public ScannerResult call() throws Exception {
+        HRegionServer.callContext.set(call);
         return server.scanOpen(regionName, scan, numberOfRows);
       }
     });
@@ -812,9 +904,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<ScannerResult> scanNext(final long id, final int numberOfRows) {
-
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<ScannerResult>() {
       @Override public ScannerResult call() throws Exception {
+        HRegionServer.callContext.set(call);
         return server.scanNext(id, numberOfRows);
       }
     });
@@ -822,8 +915,10 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
 
   @Override
   public ListenableFuture<Boolean> scanClose(final long id) {
+    final HBaseServer.Call call = HRegionServer.callContext.get();
     return readService.submit(new Callable<Boolean>() {
       @Override public Boolean call() throws Exception {
+        HRegionServer.callContext.set(call);
         return server.scanClose(id);
       }
     });
