@@ -353,6 +353,11 @@ public final class HConstants {
 
   /** Default value for cluster ID */
   public static final String CLUSTER_ID_DEFAULT = "default-cluster";
+  
+  /** Parameter name for # days to keep MVCC values during a major compaction */
+  public static final String KEEP_SEQID_PERIOD = "hbase.hstore.compaction.keep.seqId.period";
+  /** At least to keep MVCC values in hfiles for 5 days */
+  public static final int MIN_KEEP_SEQID_PERIOD = 5;
 
   // Always store the location of the root table's HRegion.
   // This HRegion is never split.

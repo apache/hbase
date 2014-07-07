@@ -3055,7 +3055,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
   }
 
-  private static <T> String safeGetAsStr(List<T> lst, int i) {
+  public static <T> String safeGetAsStr(List<T> lst, int i) {
     if (0 <= i && i < lst.size()) {
       return lst.get(i).toString();
     } else {

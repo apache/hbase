@@ -241,7 +241,7 @@ public class TestDefaultMemStore extends TestCase {
         mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
 
     KeyValue kv1 = new KeyValue(row, f, q1, v);
-    kv1.setMvccVersion(w.getWriteNumber());
+    kv1.setSequenceId(w.getWriteNumber());
     memstore.add(kv1);
 
     KeyValueScanner s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
@@ -254,7 +254,7 @@ public class TestDefaultMemStore extends TestCase {
 
     w = mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
     KeyValue kv2 = new KeyValue(row, f, q2, v);
-    kv2.setMvccVersion(w.getWriteNumber());
+    kv2.setSequenceId(w.getWriteNumber());
     memstore.add(kv2);
 
     s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
@@ -285,11 +285,11 @@ public class TestDefaultMemStore extends TestCase {
         mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
 
     KeyValue kv11 = new KeyValue(row, f, q1, v1);
-    kv11.setMvccVersion(w.getWriteNumber());
+    kv11.setSequenceId(w.getWriteNumber());
     memstore.add(kv11);
 
     KeyValue kv12 = new KeyValue(row, f, q2, v1);
-    kv12.setMvccVersion(w.getWriteNumber());
+    kv12.setSequenceId(w.getWriteNumber());
     memstore.add(kv12);
     mvcc.completeMemstoreInsert(w);
 
@@ -300,11 +300,11 @@ public class TestDefaultMemStore extends TestCase {
     // START INSERT 2: Write both columns val2
     w = mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
     KeyValue kv21 = new KeyValue(row, f, q1, v2);
-    kv21.setMvccVersion(w.getWriteNumber());
+    kv21.setSequenceId(w.getWriteNumber());
     memstore.add(kv21);
 
     KeyValue kv22 = new KeyValue(row, f, q2, v2);
-    kv22.setMvccVersion(w.getWriteNumber());
+    kv22.setSequenceId(w.getWriteNumber());
     memstore.add(kv22);
 
     // BEFORE COMPLETING INSERT 2, SEE FIRST KVS
@@ -337,11 +337,11 @@ public class TestDefaultMemStore extends TestCase {
         mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
 
     KeyValue kv11 = new KeyValue(row, f, q1, v1);
-    kv11.setMvccVersion(w.getWriteNumber());
+    kv11.setSequenceId(w.getWriteNumber());
     memstore.add(kv11);
 
     KeyValue kv12 = new KeyValue(row, f, q2, v1);
-    kv12.setMvccVersion(w.getWriteNumber());
+    kv12.setSequenceId(w.getWriteNumber());
     memstore.add(kv12);
     mvcc.completeMemstoreInsert(w);
 
@@ -353,7 +353,7 @@ public class TestDefaultMemStore extends TestCase {
     w = mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
     KeyValue kvDel = new KeyValue(row, f, q2, kv11.getTimestamp(),
         KeyValue.Type.DeleteColumn);
-    kvDel.setMvccVersion(w.getWriteNumber());
+    kvDel.setSequenceId(w.getWriteNumber());
     memstore.add(kvDel);
 
     // BEFORE COMPLETING DELETE, SEE FIRST KVS
@@ -414,7 +414,7 @@ public class TestDefaultMemStore extends TestCase {
         byte[] v = Bytes.toBytes(i);
 
         KeyValue kv = new KeyValue(row, f, q1, i, v);
-        kv.setMvccVersion(w.getWriteNumber());
+        kv.setSequenceId(w.getWriteNumber());
         memstore.add(kv);
         mvcc.completeMemstoreInsert(w);
 
@@ -827,7 +827,7 @@ public class TestDefaultMemStore extends TestCase {
     KeyValue kv2 = KeyValueTestUtil.create("r", "f", "q", 101, "v");
     KeyValue kv3 = KeyValueTestUtil.create("r", "f", "q", 102, "v");
 
-    kv1.setMvccVersion(1); kv2.setMvccVersion(1);kv3.setMvccVersion(1);
+    kv1.setSequenceId(1); kv2.setSequenceId(1);kv3.setSequenceId(1);
     l.add(kv1); l.add(kv2); l.add(kv3);
 
     this.memstore.upsert(l, 2);// readpoint is 2
@@ -835,7 +835,7 @@ public class TestDefaultMemStore extends TestCase {
     assert(newSize > oldSize);
 
     KeyValue kv4 = KeyValueTestUtil.create("r", "f", "q", 104, "v");
-    kv4.setMvccVersion(1);
+    kv4.setSequenceId(1);
     l.clear(); l.add(kv4);
     this.memstore.upsert(l, 3);
     assertEquals(newSize, this.memstore.size.get());
@@ -877,7 +877,7 @@ public class TestDefaultMemStore extends TestCase {
       // test the case that the timeOfOldestEdit is updated after a KV upsert
       List<Cell> l = new ArrayList<Cell>();
       KeyValue kv1 = KeyValueTestUtil.create("r", "f", "q", 100, "v");
-      kv1.setMvccVersion(100);
+      kv1.setSequenceId(100);
       l.add(kv1);
       memstore.upsert(l, 1000);
       t = memstore.timeOfOldestEdit();

@@ -633,12 +633,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * constructing MultiResponse to save a possible loop if caller doesn't need MultiResponse.
    * @param region
    * @param mutations
+   * @param replaySeqId
    * @return an array of OperationStatus which internally contains the OperationStatusCode and the
    *         exceptionMessage if any
    * @throws IOException
    */
   private OperationStatus [] doReplayBatchOp(final HRegion region,
-      final List<HLogSplitter.MutationReplay> mutations) throws IOException {
+      final List<HLogSplitter.MutationReplay> mutations, long replaySeqId) throws IOException {
     HLogSplitter.MutationReplay[] mArray = new HLogSplitter.MutationReplay[mutations.size()];
 
     long before = EnvironmentEdgeManager.currentTimeMillis();
@@ -657,7 +658,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       if (!region.getRegionInfo().isMetaTable()) {
         regionServer.cacheFlusher.reclaimMemStoreMemory();
       }
-      return region.batchReplay(mArray);
+      return region.batchReplay(mArray, replaySeqId);
     } finally {
       if (regionServer.metricsRegionServer != null) {
         long after = EnvironmentEdgeManager.currentTimeMillis();
@@ -1330,7 +1331,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         entries.get(0).getKey().getEncodedRegionName().toStringUtf8());
       RegionCoprocessorHost coprocessorHost = region.getCoprocessorHost();
       List<Pair<HLogKey, WALEdit>> walEntries = new ArrayList<Pair<HLogKey, WALEdit>>();
-      List<HLogSplitter.MutationReplay> mutations = new ArrayList<HLogSplitter.MutationReplay>();
       // when tag is enabled, we need tag replay edits with log sequence number
       boolean needAddReplayTag = (HFile.getFormatVersion(regionServer.conf) >= 3);
       for (WALEntry entry : entries) {
@@ -1354,18 +1354,22 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           }
           walEntries.add(walEntry);
         }
-        mutations.addAll(edits);
-      }
-
-      if (!mutations.isEmpty()) {
-        OperationStatus[] result = doReplayBatchOp(region, mutations);
-        // check if it's a partial success
-        for (int i = 0; result != null && i < result.length; i++) {
-          if (result[i] != OperationStatus.SUCCESS) {
-            throw new IOException(result[i].getExceptionMsg());
+        if(edits!=null && !edits.isEmpty()) {
+          long replaySeqId = (entry.getKey().hasOrigSequenceNumber()) ? 
+            entry.getKey().getOrigSequenceNumber() : entry.getKey().getLogSequenceNumber();
+          OperationStatus[] result = doReplayBatchOp(region, edits, replaySeqId);
+          // check if it's a partial success
+          for (int i = 0; result != null && i < result.length; i++) {
+            if (result[i] != OperationStatus.SUCCESS) {
+              throw new IOException(result[i].getExceptionMsg());
+            }
           }
         }
       }
+      
+      //sync wal at the end because ASYNC_WAL is used above
+      region.syncWal();
+
       if (coprocessorHost != null) {
         for (Pair<HLogKey, WALEdit> wal : walEntries) {
           coprocessorHost.postWALRestore(region.getRegionInfo(), wal.getFirst(),

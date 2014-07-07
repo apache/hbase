@@ -271,7 +271,7 @@ public class DefaultMemStore implements MemStore {
     assert alloc.getBytes() != null;
     alloc.put(0, kv.getBuffer(), kv.getOffset(), len);
     KeyValue newKv = new KeyValue(alloc.getBytes(), alloc.getOffset(), len);
-    newKv.setMvccVersion(kv.getMvccVersion());
+    newKv.setSequenceId(kv.getMvccVersion());
     return newKv;
   }
 

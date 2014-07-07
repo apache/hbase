@@ -50,7 +50,7 @@ public class TestByteRangeWithKVSerialization {
     long mvcc = pbr.getVLong();
     KeyValue kv = new KeyValue(pbr.getBytes(), kvStartPos,
         (int) KeyValue.getKeyValueDataStructureSize(keyLen, valLen, tagsLen));
-    kv.setMvccVersion(mvcc);
+    kv.setSequenceId(mvcc);
     return kv;
   }
 
@@ -65,7 +65,7 @@ public class TestByteRangeWithKVSerialization {
     Tag[] tags = new Tag[] { new Tag((byte) 1, "tag1") };
     for (int i = 0; i < kvCount; i++) {
       KeyValue kv = new KeyValue(Bytes.toBytes(i), FAMILY, QUALIFIER, i, VALUE, tags);
-      kv.setMvccVersion(i);
+      kv.setSequenceId(i);
       kvs.add(kv);
       totalSize += kv.getLength() + Bytes.SIZEOF_LONG;
     }

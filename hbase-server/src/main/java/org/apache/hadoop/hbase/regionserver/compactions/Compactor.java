@@ -58,6 +58,9 @@ public abstract class Compactor {
 
   private int compactionKVMax;
   protected Compression.Algorithm compactionCompression;
+  
+  /** specify how many days to keep MVCC values during major compaction **/ 
+  protected int keepSeqIdPeriod;
 
   //TODO: depending on Store is not good but, realistically, all compactors currently do.
   Compactor(final Configuration conf, final Store store) {
@@ -67,6 +70,8 @@ public abstract class Compactor {
       this.conf.getInt(HConstants.COMPACTION_KV_MAX, HConstants.COMPACTION_KV_MAX_DEFAULT);
     this.compactionCompression = (this.store.getFamily() == null) ?
         Compression.Algorithm.NONE : this.store.getFamily().getCompactionCompression();
+    this.keepSeqIdPeriod = Math.max(this.conf.getInt(HConstants.KEEP_SEQID_PERIOD, 
+      HConstants.MIN_KEEP_SEQID_PERIOD), HConstants.MIN_KEEP_SEQID_PERIOD);
   }
 
   /**
@@ -92,19 +97,30 @@ public abstract class Compactor {
     public long maxMVCCReadpoint = 0;
     /** Max tags length**/
     public int maxTagsLength = 0;
+    /** Min SeqId to keep during a major compaction **/
+    public long minSeqIdToKeep = 0;
   }
 
   /**
    * Extracts some details about the files to compact that are commonly needed by compactors.
    * @param filesToCompact Files.
-   * @param calculatePutTs Whether earliest put TS is needed.
+   * @param allFiles Whether all files are included for compaction
    * @return The result.
    */
   protected FileDetails getFileDetails(
-      Collection<StoreFile> filesToCompact, boolean calculatePutTs) throws IOException {
+      Collection<StoreFile> filesToCompact, boolean allFiles) throws IOException {
     FileDetails fd = new FileDetails();
+    long oldestHFileTimeStampToKeepMVCC = System.currentTimeMillis() - 
+      (1000L * 60 * 60 * 24 * this.keepSeqIdPeriod);  
 
     for (StoreFile file : filesToCompact) {
+      if(allFiles && (file.getModificationTimeStamp() < oldestHFileTimeStampToKeepMVCC)) {
+        // when isAllFiles is true, all files are compacted so we can calculate the smallest 
+        // MVCC value to keep
+        if(fd.minSeqIdToKeep < file.getMaxMemstoreTS()) {
+          fd.minSeqIdToKeep = file.getMaxMemstoreTS();
+        }
+      }
       long seqNum = file.getMaxSequenceId();
       fd.maxSeqId = Math.max(fd.maxSeqId, seqNum);
       StoreFile.Reader r = file.getReader();
@@ -130,7 +146,7 @@ public abstract class Compactor {
       // If required, calculate the earliest put timestamp of all involved storefiles.
       // This is used to remove family delete marker during compaction.
       long earliestPutTs = 0;
-      if (calculatePutTs) {
+      if (allFiles) {
         tmp = fileInfo.get(StoreFile.EARLIEST_PUT_TS);
         if (tmp == null) {
           // There's a file with no information, must be an old one
@@ -148,7 +164,7 @@ public abstract class Compactor {
           ", size=" + StringUtils.humanReadableInt(r.length()) +
           ", encoding=" + r.getHFileReader().getDataBlockEncoding() +
           ", seqNum=" + seqNum +
-          (calculatePutTs ? ", earliestPutTs=" + earliestPutTs: ""));
+          (allFiles ? ", earliestPutTs=" + earliestPutTs: ""));
       }
     }
     return fd;
@@ -202,10 +218,11 @@ public abstract class Compactor {
    * @param scanner Where to read from.
    * @param writer Where to write to.
    * @param smallestReadPoint Smallest read point.
+   * @param cleanSeqId When true, remove seqId(used to be mvcc) value which is <= smallestReadPoint
    * @return Whether compaction ended; false if it was interrupted for some reason.
    */
   protected boolean performCompaction(InternalScanner scanner,
-      CellSink writer, long smallestReadPoint) throws IOException {
+      CellSink writer, long smallestReadPoint, boolean cleanSeqId) throws IOException {
     int bytesWritten = 0;
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
@@ -218,8 +235,8 @@ public abstract class Compactor {
       // output to writer:
       for (Cell c : kvs) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(c);
-        if (kv.getMvccVersion() <= smallestReadPoint) {
-          kv.setMvccVersion(0);
+        if (cleanSeqId && kv.getSequenceId() <= smallestReadPoint) {
+          kv.setSequenceId(0);
         }
         writer.append(kv);
         ++progress.currentCompactedKVs;

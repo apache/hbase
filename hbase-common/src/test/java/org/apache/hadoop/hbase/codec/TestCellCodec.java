@@ -70,7 +70,7 @@ public class TestCellCodec {
     Codec.Encoder encoder = codec.getEncoder(dos);
     final KeyValue kv =
       new KeyValue(Bytes.toBytes("r"), Bytes.toBytes("f"), Bytes.toBytes("q"), Bytes.toBytes("v"));
-    kv.setMvccVersion(Long.MAX_VALUE);
+    kv.setSequenceId(Long.MAX_VALUE);
     encoder.write(kv);
     encoder.flush();
     dos.close();

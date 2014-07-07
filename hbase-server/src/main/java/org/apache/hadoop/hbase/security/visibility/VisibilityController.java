@@ -1255,7 +1255,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     	newKv.getTimestamp(), KeyValue.Type.codeToType(newKv.getTypeByte()),
     	newKv.getValueArray(), newKv.getValueOffset(), newKv.getValueLength(), tags);
     // Preserve mvcc data
-    rewriteKv.setMvccVersion(newKv.getMvccVersion());
+    rewriteKv.setSequenceId(newKv.getMvccVersion());
     return rewriteKv;
   }
 

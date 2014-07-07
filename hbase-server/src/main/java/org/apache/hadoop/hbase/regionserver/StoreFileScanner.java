@@ -211,15 +211,6 @@ public class StoreFileScanner implements KeyValueScanner {
       return false;
     }
 
-    // For the optimisation in HBASE-4346, we set the KV's memstoreTS to
-    // 0, if it is older than all the scanners' read points. It is possible
-    // that a newer KV's memstoreTS was reset to 0. But, there is an
-    // older KV which was not reset to 0 (because it was
-    // not old enough during flush). Make sure that we set it correctly now,
-    // so that the comparision order does not change.
-    if (cur.getMvccVersion() <= readPt) {
-      KeyValueUtil.ensureKeyValue(cur).setMvccVersion(0);
-    }
     return true;
   }
 

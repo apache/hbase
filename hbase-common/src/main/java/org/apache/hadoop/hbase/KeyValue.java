@@ -284,15 +284,23 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   // used to achieve atomic operations in the memstore.
   @Override
   public long getMvccVersion() {
-    return mvcc;
+    return this.getSequenceId();
   }
 
-  public void setMvccVersion(long mvccVersion){
-    this.mvcc = mvccVersion;
+  /**
+   * used to achieve atomic operations in the memstore.
+   */
+  @Override
+  public long getSequenceId() {
+    return seqId;
+  }
+
+  public void setSequenceId(long seqId) {
+    this.seqId = seqId;
   }
 
   // multi-version concurrency control version.  default value is 0, aka do not care.
-  private long mvcc = 0;  // this value is not part of a serialized KeyValue (not in HFiles)
+  private long seqId = 0;
 
   /** Dragon time over, return to normal business */
 
@@ -1083,7 +1091,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     // Important to clone the memstoreTS as well - otherwise memstore's
     // update-in-place methods (eg increment) will end up creating
     // new entries
-    ret.setMvccVersion(mvcc);
+    ret.setSequenceId(seqId);
     return ret;
   }
 
@@ -1094,7 +1102,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    */
   public KeyValue shallowCopy() {
     KeyValue shallowCopy = new KeyValue(this.bytes, this.offset, this.length);
-    shallowCopy.setMvccVersion(this.mvcc);
+    shallowCopy.setSequenceId(this.seqId);
     return shallowCopy;
   }
 
@@ -1108,8 +1116,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     if (this.bytes == null || this.bytes.length == 0) {
       return "empty";
     }
-    return keyToString(this.bytes, this.offset + ROW_OFFSET, getKeyLength()) +
-      "/vlen=" + getValueLength() + "/mvcc=" + mvcc;
+    return keyToString(this.bytes, this.offset + ROW_OFFSET, getKeyLength()) + "/vlen="
+      + getValueLength() + "/seqid=" + seqId;
   }
 
   /**

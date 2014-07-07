@@ -54,6 +54,7 @@ public class DefaultCompactor extends Compactor {
 
     StoreFile.Writer writer = null;
     List<Path> newFiles = new ArrayList<Path>();
+    boolean cleanSeqId = false;
     try {
       InternalScanner scanner = null;
       try {
@@ -71,9 +72,13 @@ public class DefaultCompactor extends Compactor {
         }
         // Create the writer even if no kv(Empty store file is also ok),
         // because we need record the max seq id for the store file, see HBASE-6059
+        if(fd.minSeqIdToKeep > 0) {
+          smallestReadPoint = Math.min(fd.minSeqIdToKeep, smallestReadPoint);
+          cleanSeqId = true;
+        }
         writer = store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true,
             fd.maxMVCCReadpoint >= smallestReadPoint, fd.maxTagsLength > 0);
-        boolean finished = performCompaction(scanner, writer, smallestReadPoint);
+        boolean finished = performCompaction(scanner, writer, smallestReadPoint, cleanSeqId);
         if (!finished) {
           writer.close();
           store.getFileSystem().delete(writer.getPath(), false);

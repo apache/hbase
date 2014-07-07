@@ -246,7 +246,7 @@ public class MultiVersionConsistencyControl {
 
   public static class WriteEntry {
     private long writeNumber;
-    private boolean completed = false;
+    private volatile boolean completed = false;
 
     WriteEntry(long writeNumber) {
       this.writeNumber = writeNumber;
