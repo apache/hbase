@@ -897,6 +897,16 @@ public final class WALProtos {
      * <code>optional uint64 nonce = 10;</code>
      */
     long getNonce();
+
+    // optional uint64 orig_sequence_number = 11;
+    /**
+     * <code>optional uint64 orig_sequence_number = 11;</code>
+     */
+    boolean hasOrigSequenceNumber();
+    /**
+     * <code>optional uint64 orig_sequence_number = 11;</code>
+     */
+    long getOrigSequenceNumber();
   }
   /**
    * Protobuf type {@code WALKey}
@@ -1015,6 +1025,11 @@ public final class WALProtos {
             case 80: {
               bitField0_ |= 0x00000080;
               nonce_ = input.readUInt64();
+              break;
+            }
+            case 88: {
+              bitField0_ |= 0x00000100;
+              origSequenceNumber_ = input.readUInt64();
               break;
             }
           }
@@ -1323,6 +1338,22 @@ public final class WALProtos {
       return nonce_;
     }
 
+    // optional uint64 orig_sequence_number = 11;
+    public static final int ORIG_SEQUENCE_NUMBER_FIELD_NUMBER = 11;
+    private long origSequenceNumber_;
+    /**
+     * <code>optional uint64 orig_sequence_number = 11;</code>
+     */
+    public boolean hasOrigSequenceNumber() {
+      return ((bitField0_ & 0x00000100) == 0x00000100);
+    }
+    /**
+     * <code>optional uint64 orig_sequence_number = 11;</code>
+     */
+    public long getOrigSequenceNumber() {
+      return origSequenceNumber_;
+    }
+
     private void initFields() {
       encodedRegionName_ = com.google.protobuf.ByteString.EMPTY;
       tableName_ = com.google.protobuf.ByteString.EMPTY;
@@ -1334,6 +1365,7 @@ public final class WALProtos {
       clusterIds_ = java.util.Collections.emptyList();
       nonceGroup_ = 0L;
       nonce_ = 0L;
+      origSequenceNumber_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -1411,6 +1443,9 @@ public final class WALProtos {
       if (((bitField0_ & 0x00000080) == 0x00000080)) {
         output.writeUInt64(10, nonce_);
       }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        output.writeUInt64(11, origSequenceNumber_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -1459,6 +1494,10 @@ public final class WALProtos {
       if (((bitField0_ & 0x00000080) == 0x00000080)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt64Size(10, nonce_);
+      }
+      if (((bitField0_ & 0x00000100) == 0x00000100)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(11, origSequenceNumber_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1527,6 +1566,11 @@ public final class WALProtos {
         result = result && (getNonce()
             == other.getNonce());
       }
+      result = result && (hasOrigSequenceNumber() == other.hasOrigSequenceNumber());
+      if (hasOrigSequenceNumber()) {
+        result = result && (getOrigSequenceNumber()
+            == other.getOrigSequenceNumber());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -1579,6 +1623,10 @@ public final class WALProtos {
       if (hasNonce()) {
         hash = (37 * hash) + NONCE_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getNonce());
+      }
+      if (hasOrigSequenceNumber()) {
+        hash = (37 * hash) + ORIG_SEQUENCE_NUMBER_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getOrigSequenceNumber());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -1728,6 +1776,8 @@ public final class WALProtos {
         bitField0_ = (bitField0_ & ~0x00000100);
         nonce_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000200);
+        origSequenceNumber_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000400);
         return this;
       }
 
@@ -1810,6 +1860,10 @@ public final class WALProtos {
           to_bitField0_ |= 0x00000080;
         }
         result.nonce_ = nonce_;
+        if (((from_bitField0_ & 0x00000400) == 0x00000400)) {
+          to_bitField0_ |= 0x00000100;
+        }
+        result.origSequenceNumber_ = origSequenceNumber_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1901,6 +1955,9 @@ public final class WALProtos {
         }
         if (other.hasNonce()) {
           setNonce(other.getNonce());
+        }
+        if (other.hasOrigSequenceNumber()) {
+          setOrigSequenceNumber(other.getOrigSequenceNumber());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -2973,6 +3030,39 @@ public final class WALProtos {
       public Builder clearNonce() {
         bitField0_ = (bitField0_ & ~0x00000200);
         nonce_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // optional uint64 orig_sequence_number = 11;
+      private long origSequenceNumber_ ;
+      /**
+       * <code>optional uint64 orig_sequence_number = 11;</code>
+       */
+      public boolean hasOrigSequenceNumber() {
+        return ((bitField0_ & 0x00000400) == 0x00000400);
+      }
+      /**
+       * <code>optional uint64 orig_sequence_number = 11;</code>
+       */
+      public long getOrigSequenceNumber() {
+        return origSequenceNumber_;
+      }
+      /**
+       * <code>optional uint64 orig_sequence_number = 11;</code>
+       */
+      public Builder setOrigSequenceNumber(long value) {
+        bitField0_ |= 0x00000400;
+        origSequenceNumber_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 orig_sequence_number = 11;</code>
+       */
+      public Builder clearOrigSequenceNumber() {
+        bitField0_ = (bitField0_ & ~0x00000400);
+        origSequenceNumber_ = 0L;
         onChanged();
         return this;
       }
@@ -5176,24 +5266,24 @@ public final class WALProtos {
     java.lang.String[] descriptorData = {
       "\n\tWAL.proto\032\013HBase.proto\"Y\n\tWALHeader\022\027\n" +
       "\017has_compression\030\001 \001(\010\022\026\n\016encryption_key" +
-      "\030\002 \001(\014\022\033\n\023has_tag_compression\030\003 \001(\010\"\202\002\n\006" +
+      "\030\002 \001(\014\022\033\n\023has_tag_compression\030\003 \001(\010\"\240\002\n\006" +
       "WALKey\022\033\n\023encoded_region_name\030\001 \002(\014\022\022\n\nt" +
       "able_name\030\002 \002(\014\022\033\n\023log_sequence_number\030\003" +
       " \002(\004\022\022\n\nwrite_time\030\004 \002(\004\022\035\n\ncluster_id\030\005" +
       " \001(\0132\005.UUIDB\002\030\001\022\034\n\006scopes\030\006 \003(\0132\014.Family" +
       "Scope\022\032\n\022following_kv_count\030\007 \001(\r\022\032\n\013clu" +
       "ster_ids\030\010 \003(\0132\005.UUID\022\022\n\nnonceGroup\030\t \001(" +
-      "\004\022\r\n\005nonce\030\n \001(\004\"=\n\013FamilyScope\022\016\n\006famil",
-      "y\030\001 \002(\014\022\036\n\nscope_type\030\002 \002(\0162\n.ScopeType\"" +
-      "\251\001\n\024CompactionDescriptor\022\022\n\ntable_name\030\001" +
-      " \002(\014\022\033\n\023encoded_region_name\030\002 \002(\014\022\023\n\013fam" +
-      "ily_name\030\003 \002(\014\022\030\n\020compaction_input\030\004 \003(\t" +
-      "\022\031\n\021compaction_output\030\005 \003(\t\022\026\n\016store_hom" +
-      "e_dir\030\006 \002(\t\"\014\n\nWALTrailer*F\n\tScopeType\022\033" +
-      "\n\027REPLICATION_SCOPE_LOCAL\020\000\022\034\n\030REPLICATI" +
-      "ON_SCOPE_GLOBAL\020\001B?\n*org.apache.hadoop.h" +
-      "base.protobuf.generatedB\tWALProtosH\001\210\001\000\240" +
-      "\001\001"
+      "\004\022\r\n\005nonce\030\n \001(\004\022\034\n\024orig_sequence_number",
+      "\030\013 \001(\004\"=\n\013FamilyScope\022\016\n\006family\030\001 \002(\014\022\036\n" +
+      "\nscope_type\030\002 \002(\0162\n.ScopeType\"\251\001\n\024Compac" +
+      "tionDescriptor\022\022\n\ntable_name\030\001 \002(\014\022\033\n\023en" +
+      "coded_region_name\030\002 \002(\014\022\023\n\013family_name\030\003" +
+      " \002(\014\022\030\n\020compaction_input\030\004 \003(\t\022\031\n\021compac" +
+      "tion_output\030\005 \003(\t\022\026\n\016store_home_dir\030\006 \002(" +
+      "\t\"\014\n\nWALTrailer*F\n\tScopeType\022\033\n\027REPLICAT" +
+      "ION_SCOPE_LOCAL\020\000\022\034\n\030REPLICATION_SCOPE_G" +
+      "LOBAL\020\001B?\n*org.apache.hadoop.hbase.proto" +
+      "buf.generatedB\tWALProtosH\001\210\001\000\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -5211,7 +5301,7 @@ public final class WALProtos {
           internal_static_WALKey_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_WALKey_descriptor,
-              new java.lang.String[] { "EncodedRegionName", "TableName", "LogSequenceNumber", "WriteTime", "ClusterId", "Scopes", "FollowingKvCount", "ClusterIds", "NonceGroup", "Nonce", });
+              new java.lang.String[] { "EncodedRegionName", "TableName", "LogSequenceNumber", "WriteTime", "ClusterId", "Scopes", "FollowingKvCount", "ClusterIds", "NonceGroup", "Nonce", "OrigSequenceNumber", });
           internal_static_FamilyScope_descriptor =
             getDescriptor().getMessageTypes().get(2);
           internal_static_FamilyScope_fieldAccessorTable = new

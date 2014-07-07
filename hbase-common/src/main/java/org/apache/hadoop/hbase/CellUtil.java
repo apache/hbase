@@ -167,7 +167,7 @@ public final class CellUtil {
       final long timestamp, final byte type, final byte[] value, final long memstoreTS) {
     KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp,
         KeyValue.Type.codeToType(type), value);
-    keyValue.setMvccVersion(memstoreTS);
+    keyValue.setSequenceId(memstoreTS);
     return keyValue;
   }
 
@@ -175,7 +175,7 @@ public final class CellUtil {
       final long timestamp, final byte type, final byte[] value, byte[] tags, final long memstoreTS) {
     KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp,
         KeyValue.Type.codeToType(type), value, tags);
-    keyValue.setMvccVersion(memstoreTS);
+    keyValue.setSequenceId(memstoreTS);
     return keyValue;
   }
 

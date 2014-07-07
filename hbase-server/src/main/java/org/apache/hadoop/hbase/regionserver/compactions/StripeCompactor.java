@@ -90,6 +90,7 @@ public class StripeCompactor extends Compactor {
 
     boolean finished = false;
     InternalScanner scanner = null;
+    boolean cleanSeqId = false;
     try {
       // Get scanner to use.
       ScanType coprocScanType = ScanType.COMPACT_RETAIN_DELETES;
@@ -108,6 +109,10 @@ public class StripeCompactor extends Compactor {
       }
 
       // Create the writer factory for compactions.
+      if(fd.minSeqIdToKeep > 0) {
+        smallestReadPoint = Math.min(fd.minSeqIdToKeep, smallestReadPoint);
+        cleanSeqId = true;
+      }
       final boolean needMvcc = fd.maxMVCCReadpoint >= smallestReadPoint;
       final Compression.Algorithm compression = store.getFamily().getCompactionCompression();
       StripeMultiFileWriter.WriterFactory factory = new StripeMultiFileWriter.WriterFactory() {
@@ -122,7 +127,7 @@ public class StripeCompactor extends Compactor {
       // It is ok here if storeScanner is null.
       StoreScanner storeScanner = (scanner instanceof StoreScanner) ? (StoreScanner)scanner : null;
       mw.init(storeScanner, factory, store.getComparator());
-      finished = performCompaction(scanner, mw, smallestReadPoint);
+      finished = performCompaction(scanner, mw, smallestReadPoint, cleanSeqId);
       if (!finished) {
         throw new InterruptedIOException( "Aborting compaction of store " + store +
             " in region " + store.getRegionInfo().getRegionNameAsString() +

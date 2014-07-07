@@ -75,7 +75,7 @@ public class KeyValueUtil {
   public static KeyValue copyToNewKeyValue(final Cell cell) {
     byte[] bytes = copyToNewByteArray(cell);
     KeyValue kvCell = new KeyValue(bytes, 0, bytes.length);
-    kvCell.setMvccVersion(cell.getMvccVersion());
+    kvCell.setSequenceId(cell.getMvccVersion());
     return kvCell;
   }
 
@@ -175,7 +175,7 @@ public class KeyValueUtil {
     keyValue = new KeyValue(bb.array(), underlyingArrayOffset, kvLength);
     if (includesMvccVersion) {
       long mvccVersion = ByteBufferUtils.readVLong(bb);
-      keyValue.setMvccVersion(mvccVersion);
+      keyValue.setSequenceId(mvccVersion);
     }
     return keyValue;
   }

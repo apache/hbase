@@ -125,7 +125,7 @@ public class EncodedDataBlock {
             (int) KeyValue.getKeyValueDataStructureSize(klen, vlen, tagsLen));
         if (meta.isIncludesMvcc()) {
           long mvccVersion = ByteBufferUtils.readVLong(decompressedData);
-          kv.setMvccVersion(mvccVersion);
+          kv.setSequenceId(mvccVersion);
         }
         return kv;
       }
@@ -244,7 +244,7 @@ public class EncodedDataBlock {
         }
         kv = new KeyValue(in.array(), kvOffset, (int) KeyValue.getKeyValueDataStructureSize(
             klength, vlength, tagsLength));
-        kv.setMvccVersion(memstoreTS);
+        kv.setSequenceId(memstoreTS);
         this.dataBlockEncoder.encode(kv, encodingCtx, out);
       }
       BufferGrabbingByteArrayOutputStream stream = new BufferGrabbingByteArrayOutputStream();

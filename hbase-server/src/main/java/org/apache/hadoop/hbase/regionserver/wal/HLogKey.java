@@ -119,6 +119,7 @@ public class HLogKey implements WritableComparable<HLogKey>, SequenceNumber {
   private byte [] encodedRegionName;
   private TableName tablename;
   private long logSeqNum;
+  private long origLogSeqNum = 0;
   private CountDownLatch seqNumAssignedLatch = new CountDownLatch(1);
   // Time at which this edit was written.
   private long writeTime;
@@ -253,6 +254,22 @@ public class HLogKey implements WritableComparable<HLogKey>, SequenceNumber {
   void setLogSeqNum(final long sequence) {
     this.logSeqNum = sequence;
     this.seqNumAssignedLatch.countDown();
+  }
+  
+  /**
+   * Used to set original seq Id for HLogKey during wal replay
+   * @param seqId
+   */
+  public void setOrigLogSeqNum(final long seqId) {
+    this.origLogSeqNum = seqId;
+  }
+  
+  /**
+   * Return a positive long if current HLogKey is created from a replay edit
+   * @return original sequence number of the WALEdit
+   */
+  public long getOrigLogSeqNum() {
+    return this.origLogSeqNum;
   }
   
   /**
@@ -536,6 +553,9 @@ public class HLogKey implements WritableComparable<HLogKey>, SequenceNumber {
     }
     builder.setLogSequenceNumber(this.logSeqNum);
     builder.setWriteTime(writeTime);
+    if(this.origLogSeqNum > 0) {
+      builder.setOrigSequenceNumber(this.origLogSeqNum);
+    }
     if (this.nonce != HConstants.NO_NONCE) {
       builder.setNonce(nonce);
     }
@@ -599,5 +619,8 @@ public class HLogKey implements WritableComparable<HLogKey>, SequenceNumber {
     }
     this.logSeqNum = walKey.getLogSequenceNumber();
     this.writeTime = walKey.getWriteTime();
+    if(walKey.hasOrigSequenceNumber()) {
+      this.origLogSeqNum = walKey.getOrigSequenceNumber();
+    }
   }
 }

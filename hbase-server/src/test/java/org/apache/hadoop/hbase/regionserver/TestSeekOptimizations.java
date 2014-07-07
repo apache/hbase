@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.apache.hadoop.hbase.HBaseTestingUtility.assertKVListsEqual;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -448,6 +447,33 @@ public class TestSeekOptimizations {
         StoreScanner.LAZY_SEEK_ENABLED_BY_DEFAULT);
   }
 
+
+  public void assertKVListsEqual(String additionalMsg,
+      final List<? extends Cell> expected,
+      final List<? extends Cell> actual) {
+    final int eLen = expected.size();
+    final int aLen = actual.size();
+    final int minLen = Math.min(eLen, aLen);
+
+    int i;
+    for (i = 0; i < minLen
+        && KeyValue.COMPARATOR.compareOnlyKeyPortion(expected.get(i), actual.get(i)) == 0;
+        ++i) {}
+
+    if (additionalMsg == null) {
+      additionalMsg = "";
+    }
+    if (!additionalMsg.isEmpty()) {
+      additionalMsg = ". " + additionalMsg;
+    }
+
+    if (eLen != aLen || i != minLen) {
+      throw new AssertionError(
+          "Expected and actual KV arrays differ at position " + i + ": " +
+          HBaseTestingUtility.safeGetAsStr(expected, i) + " (length " + eLen +") vs. " +
+          HBaseTestingUtility.safeGetAsStr(actual, i) + " (length " + aLen + ")" + additionalMsg);
+    }
+  }
 
 }
 

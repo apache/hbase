@@ -2155,6 +2155,7 @@ public class HRegion implements HeapSize { // , Writable{
     /** This method is potentially expensive and should only be used for non-replay CP path. */
     public abstract Mutation[] getMutationsForCoprocs();
     public abstract boolean isInReplay();
+    public abstract long getReplaySequenceId();
 
     public boolean isDone() {
       return nextIndexToProcess == operations.length;
@@ -2194,11 +2195,18 @@ public class HRegion implements HeapSize { // , Writable{
     public boolean isInReplay() {
       return false;
     }
+    
+    @Override
+    public long getReplaySequenceId() {
+      return 0;
+    }
   }
 
   private static class ReplayBatch extends BatchOperationInProgress<HLogSplitter.MutationReplay> {
-    public ReplayBatch(MutationReplay[] operations) {
+    private long replaySeqId = 0;
+    public ReplayBatch(MutationReplay[] operations, long seqId) {
       super(operations);
+      this.replaySeqId = seqId;
     }
 
     @Override
@@ -2226,6 +2234,11 @@ public class HRegion implements HeapSize { // , Writable{
     public boolean isInReplay() {
       return true;
     }
+    
+    @Override
+    public long getReplaySequenceId() {
+      return this.replaySeqId;
+    }
   }
 
   /**
@@ -2252,13 +2265,14 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * Replay a batch of mutations.
    * @param mutations mutations to replay.
+   * @param replaySeqId SeqId for current mutations
    * @return an array of OperationStatus which internally contains the
    *         OperationStatusCode and the exceptionMessage if any.
    * @throws IOException
    */
-  public OperationStatus[] batchReplay(HLogSplitter.MutationReplay[] mutations)
+  public OperationStatus[] batchReplay(HLogSplitter.MutationReplay[] mutations, long replaySeqId)
       throws IOException {
-    return batchMutate(new ReplayBatch(mutations));
+    return batchMutate(new ReplayBatch(mutations, replaySeqId));
   }
 
   /**
@@ -2475,7 +2489,7 @@ public class HRegion implements HeapSize { // , Writable{
       // ------------------------------------
       // STEP 2. Update any LATEST_TIMESTAMP timestamps
       // ----------------------------------
-      for (int i = firstIndex; i < lastIndexExclusive; i++) {
+      for (int i = firstIndex; !isInReplay && i < lastIndexExclusive; i++) {
         // skip invalid
         if (batchOp.retCodeDetails[i].getOperationStatusCode()
             != OperationStatusCode.NOT_RUN) continue;
@@ -2485,16 +2499,18 @@ public class HRegion implements HeapSize { // , Writable{
           updateKVTimestamps(familyMaps[i].values(), byteNow);
           noOfPuts++;
         } else {
-          if (!isInReplay) {
-            prepareDeleteTimestamps(mutation, familyMaps[i], byteNow);
-          }
+          prepareDeleteTimestamps(mutation, familyMaps[i], byteNow);
           noOfDeletes++;
         }
       }
 
       lock(this.updatesLock.readLock(), numReadyToWrite);
       locked = true;
-      mvccNum = MultiVersionConsistencyControl.getPreAssignedWriteNumber(this.sequenceId);
+      if(isInReplay) {
+        mvccNum = batchOp.getReplaySequenceId();
+      } else {
+        mvccNum = MultiVersionConsistencyControl.getPreAssignedWriteNumber(this.sequenceId);
+      }
       //
       // ------------------------------------
       // Acquire the latest mvcc number
@@ -2591,6 +2607,9 @@ public class HRegion implements HeapSize { // , Writable{
         walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
             this.htableDescriptor.getTableName(), HLog.NO_SEQUENCE_ID, now,
             mutation.getClusterIds(), currentNonceGroup, currentNonce);
+        if(isInReplay) {
+          walKey.setOrigLogSeqNum(batchOp.getReplaySequenceId());
+        }
         txid = this.log.appendNoSync(this.htableDescriptor, this.getRegionInfo(), walKey, walEdit,
           getSequenceId(), true, memstoreCells);
       }
@@ -2952,7 +2971,7 @@ public class HRegion implements HeapSize { // , Writable{
       Store store = getStore(family);
       for (Cell cell: cells) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        kv.setMvccVersion(mvccNum);
+        kv.setSequenceId(mvccNum);
         Pair<Long, Cell> ret = store.add(kv);
         size += ret.getFirst();
         memstoreCells.add(KeyValueUtil.ensureKeyValue(ret.getSecond()));
@@ -3213,6 +3232,7 @@ public class HRegion implements HeapSize { // , Writable{
     try {
       reader = HLogFactory.createReader(fs, edits, conf);
       long currentEditSeqId = -1;
+      long currentReplaySeqId = -1;
       long firstSeqIdInLog = -1;
       long skippedEdits = 0;
       long editsCount = 0;
@@ -3275,6 +3295,8 @@ public class HRegion implements HeapSize { // , Writable{
             firstSeqIdInLog = key.getLogSeqNum();
           }
           currentEditSeqId = key.getLogSeqNum();
+          currentReplaySeqId = (key.getOrigLogSeqNum() > 0) ? 
+            key.getOrigLogSeqNum() : currentEditSeqId;
           boolean flush = false;
           for (KeyValue kv: val.getKeyValues()) {
             // Check this edit is for me. Also, guard against writing the special
@@ -3309,6 +3331,7 @@ public class HRegion implements HeapSize { // , Writable{
               skippedEdits++;
               continue;
             }
+            kv.setSequenceId(currentReplaySeqId);
             // Once we are over the limit, restoreEdit will keep returning true to
             // flush -- but don't flush until we've played all the kvs that make up
             // the WALEdit.
@@ -4922,7 +4945,7 @@ public class HRegion implements HeapSize { // , Writable{
           writeEntry = mvcc.beginMemstoreInsertWithSeqNum(mvccNum);
           // 6. Apply to memstore
           for (KeyValue kv : mutations) {
-            kv.setMvccVersion(mvccNum);
+            kv.setSequenceId(mvccNum);
             Store store = getStore(kv);
             if (store == null) {
               checkFamily(CellUtil.cloneFamily(kv));
@@ -5168,7 +5191,7 @@ public class HRegion implements HeapSize { // , Writable{
                 // so only need to update the timestamp to 'now'
                 newKV.updateLatestStamp(Bytes.toBytes(now));
              }
-              newKV.setMvccVersion(mvccNum);
+              newKV.setSequenceId(mvccNum);
               // Give coprocessors a chance to update the new cell
               if (coprocessorHost != null) {
                 newKV = KeyValueUtil.ensureKeyValue(coprocessorHost.postMutationBeforeWAL(
@@ -5382,7 +5405,7 @@ public class HRegion implements HeapSize { // , Writable{
                 System.arraycopy(kv.getTagsArray(), kv.getTagsOffset(), newKV.getTagsArray(),
                     newKV.getTagsOffset() + oldCellTagsLen, incCellTagsLen);
               }
-              newKV.setMvccVersion(mvccNum);
+              newKV.setSequenceId(mvccNum);
               // Give coprocessors a chance to update the new cell
               if (coprocessorHost != null) {
                 newKV = KeyValueUtil.ensureKeyValue(coprocessorHost.postMutationBeforeWAL(
@@ -6219,5 +6242,15 @@ public class HRegion implements HeapSize { // , Writable{
     wal.appendNoSync(getTableDesc(), getRegionInfo(), key,
       WALEdit.EMPTY_WALEDIT, this.sequenceId, false, cells);
     return key;
+  }
+  
+  /**
+   * Explictly sync wal
+   * @throws IOException
+   */
+  public void syncWal() throws IOException {
+    if(this.log != null) {
+      this.log.sync();
+    }
   }
 }

@@ -123,6 +123,11 @@ public class PrefixTreeCell implements Cell, Comparable<Cell> {
   }
 
   @Override
+  public long getSequenceId() {
+    return getMvccVersion();
+  }
+
+  @Override
   public int getValueLength() {
     return valueLength;
   }

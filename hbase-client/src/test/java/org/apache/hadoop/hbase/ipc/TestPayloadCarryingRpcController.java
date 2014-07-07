@@ -144,6 +144,12 @@ public class TestPayloadCarryingRpcController {
               }
 
               @Override
+              public long getSequenceId() {
+                // unused
+                return 0;
+              }
+
+              @Override
               public byte[] getValueArray() {
                 return Bytes.toBytes(this.i);
               }

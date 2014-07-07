@@ -91,9 +91,9 @@ class FSWALEntry extends HLog.Entry {
    */
   long stampRegionSequenceId() {
     long regionSequenceId = this.regionSequenceIdReference.incrementAndGet();
-    if(memstoreKVs != null && !memstoreKVs.isEmpty()) {
+    if (!this.getEdit().isReplay() && memstoreKVs != null && !memstoreKVs.isEmpty()) {
       for(KeyValue kv : this.memstoreKVs){
-        kv.setMvccVersion(regionSequenceId);
+        kv.setSequenceId(regionSequenceId);
       }
     }
     HLogKey key = getKey();

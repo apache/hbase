@@ -1906,7 +1906,7 @@ public class AccessController extends BaseRegionObserver
       newKv.getValueArray(), newKv.getValueOffset(), newKv.getValueLength(),
       tags);
     // Preserve mvcc data
-    rewriteKv.setMvccVersion(newKv.getMvccVersion());
+    rewriteKv.setSequenceId(newKv.getMvccVersion());
     return rewriteKv;
   }
 

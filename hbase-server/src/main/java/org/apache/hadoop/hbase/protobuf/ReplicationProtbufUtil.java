@@ -106,6 +106,9 @@ public class ReplicationProtbufUtil {
         uuidBuilder.setMostSigBits(clusterId.getMostSignificantBits());
         keyBuilder.addClusterIds(uuidBuilder.build());
       }
+      if(key.getOrigLogSeqNum() > 0) {
+        keyBuilder.setOrigSequenceNumber(key.getOrigLogSeqNum());
+      }
       WALEdit edit = entry.getEdit();
       NavigableMap<byte[], Integer> scopes = key.getScopes();
       if (scopes != null && !scopes.isEmpty()) {

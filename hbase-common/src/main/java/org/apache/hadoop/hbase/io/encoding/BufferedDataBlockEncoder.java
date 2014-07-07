@@ -232,6 +232,11 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
+    public long getSequenceId() {
+      return memstoreTS;
+    }
+
+    @Override
     public byte[] getValueArray() {
       return currentBuffer.array();
     }
@@ -418,6 +423,11 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     @Override
     public long getMvccVersion() {
+      return memstoreTS;
+    }
+
+    @Override
+    public long getSequenceId() {
       return memstoreTS;
     }
 

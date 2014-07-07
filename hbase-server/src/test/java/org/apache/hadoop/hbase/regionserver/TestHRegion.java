@@ -528,6 +528,7 @@ public class TestHRegion {
       }
       long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
       assertEquals(maxSeqId, seqId);
+      region.getMVCC().initialize(seqId);
       Get get = new Get(row);
       Result result = region.get(get);
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
@@ -579,6 +580,7 @@ public class TestHRegion {
       }
       long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
       assertEquals(maxSeqId, seqId);
+      region.getMVCC().initialize(seqId);
       Get get = new Get(row);
       Result result = region.get(get);
       for (long i = minSeqId; i <= maxSeqId; i += 10) {

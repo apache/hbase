@@ -689,7 +689,7 @@ public class TestReversibleScanners {
   private static KeyValue makeKV(int rowNum, int cqNum, byte[] familyName) {
     KeyValue kv = new KeyValue(ROWS[rowNum], familyName, QUALS[cqNum], TS,
         VALUES[rowNum % VALUESIZE]);
-    kv.setMvccVersion(makeMVCC(rowNum, cqNum));
+    kv.setSequenceId(makeMVCC(rowNum, cqNum));
     return kv;
   }
 

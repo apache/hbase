@@ -176,7 +176,7 @@ public class TestHFileBlock {
       totalSize += kv.getLength();
       if (includesMemstoreTS) {
         long memstoreTS = randomizer.nextLong();
-        kv.setMvccVersion(memstoreTS);
+        kv.setSequenceId(memstoreTS);
         totalSize += WritableUtils.getVIntSize(memstoreTS);
       }
       hbw.write(kv);

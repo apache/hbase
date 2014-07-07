@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -1863,6 +1864,10 @@ public class HLogSplitter {
     public MutationReplay(MutationType type, Mutation mutation, long nonceGroup, long nonce) {
       this.type = type;
       this.mutation = mutation;
+      if(this.mutation.getDurability() != Durability.SKIP_WAL) {
+        // using ASYNC_WAL for relay
+        this.mutation.setDurability(Durability.ASYNC_WAL);
+      }
       this.nonceGroup = nonceGroup;
       this.nonce = nonce;
     }
@@ -1875,10 +1880,10 @@ public class HLogSplitter {
 
  /**
   * Tag original sequence number for each edit to be replayed
-  * @param entry
+  * @param seqId
   * @param cell
   */
-  private static Cell tagReplayLogSequenceNumber(WALEntry entry, Cell cell) {
+  private static Cell tagReplayLogSequenceNumber(long seqId, Cell cell) {
     // Tag puts with original sequence number if there is no LOG_REPLAY_TAG yet
     boolean needAddRecoveryTag = true;
     if (cell.getTagsLength() > 0) {
@@ -1891,8 +1896,7 @@ public class HLogSplitter {
     }
     if (needAddRecoveryTag) {
       List<Tag> newTags = new ArrayList<Tag>();
-      Tag replayTag = new Tag(TagType.LOG_REPLAY_TAG_TYPE, Bytes.toBytes(entry.getKey()
-          .getLogSequenceNumber()));
+      Tag replayTag = new Tag(TagType.LOG_REPLAY_TAG_TYPE, Bytes.toBytes(seqId));
       newTags.add(replayTag);
       return KeyValue.cloneAndAddTags(cell, newTags);
     }
@@ -1918,6 +1922,8 @@ public class HLogSplitter {
       return new ArrayList<MutationReplay>();
     }
 
+    long replaySeqId = (entry.getKey().hasOrigSequenceNumber()) ? 
+      entry.getKey().getOrigSequenceNumber() : entry.getKey().getLogSequenceNumber();
     int count = entry.getAssociatedCellCount();
     List<MutationReplay> mutations = new ArrayList<MutationReplay>();
     Cell previousCell = null;
@@ -1958,7 +1964,7 @@ public class HLogSplitter {
       } else {
         Cell tmpNewCell = cell;
         if (addLogReplayTag) {
-          tmpNewCell = tagReplayLogSequenceNumber(entry, cell);
+          tmpNewCell = tagReplayLogSequenceNumber(replaySeqId, cell);
         }
         ((Put) m).add(KeyValueUtil.ensureKeyValue(tmpNewCell));
       }
@@ -1973,8 +1979,8 @@ public class HLogSplitter {
         clusterIds.add(new UUID(uuid.getMostSigBits(), uuid.getLeastSigBits()));
       }
       key = new HLogKey(walKey.getEncodedRegionName().toByteArray(), TableName.valueOf(walKey
-              .getTableName().toByteArray()), walKey.getLogSequenceNumber(), 
-              walKey.getWriteTime(), clusterIds, walKey.getNonceGroup(), walKey.getNonce());
+              .getTableName().toByteArray()), replaySeqId, walKey.getWriteTime(), clusterIds, 
+              walKey.getNonceGroup(), walKey.getNonce());
       logEntry.setFirst(key);
       logEntry.setSecond(val);
     }
