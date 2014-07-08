@@ -24,7 +24,7 @@ import java.security.SecureRandom;
 
 import javax.crypto.spec.SecretKeySpec;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
@@ -57,7 +57,7 @@ public class SecureProtobufLogWriter extends ProtobufLogWriter {
       byte[] keyBytes = new byte[cipher.getKeyLength()];
       rng.nextBytes(keyBytes);
       Key key = new SecretKeySpec(keyBytes, cipher.getName());
-      builder.setEncryptionKey(HBaseZeroCopyByteString.wrap(EncryptionUtil.wrapKey(conf,
+      builder.setEncryptionKey(ByteStringer.wrap(EncryptionUtil.wrapKey(conf,
           conf.get(HConstants.CRYPTO_WAL_KEY_NAME_CONF_KEY,
               conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
                   User.getCurrent().getShortName())),

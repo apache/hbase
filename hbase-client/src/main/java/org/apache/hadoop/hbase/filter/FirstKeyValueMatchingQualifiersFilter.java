@@ -18,20 +18,20 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import java.util.Set;
-import java.util.TreeSet;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.HBaseZeroCopyByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * The filter looks for the given columns in KeyValue. Once there is a match for
@@ -86,7 +86,7 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
     FilterProtos.FirstKeyValueMatchingQualifiersFilter.Builder builder =
       FilterProtos.FirstKeyValueMatchingQualifiersFilter.newBuilder();
     for (byte[] qualifier : qualifiers) {
-      if (qualifier != null) builder.addQualifiers(HBaseZeroCopyByteString.wrap(qualifier));
+      if (qualifier != null) builder.addQualifiers(ByteStringer.wrap(qualifier));
     }
     return builder.build().toByteArray();
   }

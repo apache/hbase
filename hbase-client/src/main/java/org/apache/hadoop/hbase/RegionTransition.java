@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -104,10 +104,10 @@ public class RegionTransition {
       org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder().
         setHostName(sn.getHostname()).setPort(sn.getPort()).setStartCode(sn.getStartcode()).build();
     ZooKeeperProtos.RegionTransition.Builder builder = ZooKeeperProtos.RegionTransition.newBuilder().
-      setEventTypeCode(type.getCode()).setRegionName(HBaseZeroCopyByteString.wrap(regionName)).
+      setEventTypeCode(type.getCode()).setRegionName(ByteStringer.wrap(regionName)).
         setServerName(pbsn);
     builder.setCreateTime(System.currentTimeMillis());
-    if (payload != null) builder.setPayload(HBaseZeroCopyByteString.wrap(payload));
+    if (payload != null) builder.setPayload(ByteStringer.wrap(payload));
     return new RegionTransition(builder.build());
   }
 

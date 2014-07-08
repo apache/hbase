@@ -20,7 +20,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -98,7 +98,7 @@ public class PrefixFilter extends FilterBase {
   public byte [] toByteArray() {
     FilterProtos.PrefixFilter.Builder builder =
       FilterProtos.PrefixFilter.newBuilder();
-    if (this.prefix != null) builder.setPrefix(HBaseZeroCopyByteString.wrap(this.prefix));
+    if (this.prefix != null) builder.setPrefix(ByteStringer.wrap(this.prefix));
     return builder.build().toByteArray();
   }
 

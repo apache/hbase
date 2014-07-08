@@ -45,7 +45,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
@@ -1299,11 +1299,11 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   public ColumnFamilySchema convert() {
     ColumnFamilySchema.Builder builder = ColumnFamilySchema.newBuilder();
-    builder.setName(HBaseZeroCopyByteString.wrap(getName()));
+    builder.setName(ByteStringer.wrap(getName()));
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e: this.values.entrySet()) {
       BytesBytesPair.Builder aBuilder = BytesBytesPair.newBuilder();
-      aBuilder.setFirst(HBaseZeroCopyByteString.wrap(e.getKey().get()));
-      aBuilder.setSecond(HBaseZeroCopyByteString.wrap(e.getValue().get()));
+      aBuilder.setFirst(ByteStringer.wrap(e.getKey().get()));
+      aBuilder.setSecond(ByteStringer.wrap(e.getValue().get()));
       builder.addAttributes(aBuilder.build());
     }
     for (Map.Entry<String, String> e : this.configuration.entrySet()) {

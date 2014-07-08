@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -81,7 +81,7 @@ public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
 
     final ClientProtos.CoprocessorServiceCall call =
         ClientProtos.CoprocessorServiceCall.newBuilder()
-            .setRow(HBaseZeroCopyByteString.wrap(row))
+            .setRow(ByteStringer.wrap(row))
             .setServiceName(method.getService().getFullName())
             .setMethodName(method.getName())
             .setRequest(request.toByteString()).build();

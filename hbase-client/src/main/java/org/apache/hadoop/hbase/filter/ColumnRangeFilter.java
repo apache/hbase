@@ -21,7 +21,9 @@ package org.apache.hadoop.hbase.filter;
 
 import static org.apache.hadoop.hbase.util.Bytes.len;
 
-import java.util.ArrayList;
+import com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.util.ByteStringer;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -31,9 +33,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.common.base.Preconditions;
-import com.google.protobuf.HBaseZeroCopyByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.util.ArrayList;
 
 /**
  * This filter is used for selecting only those keys with columns that are
@@ -173,9 +173,9 @@ public class ColumnRangeFilter extends FilterBase {
   public byte [] toByteArray() {
     FilterProtos.ColumnRangeFilter.Builder builder =
       FilterProtos.ColumnRangeFilter.newBuilder();
-    if (this.minColumn != null) builder.setMinColumn(HBaseZeroCopyByteString.wrap(this.minColumn));
+    if (this.minColumn != null) builder.setMinColumn(ByteStringer.wrap(this.minColumn));
     builder.setMinColumnInclusive(this.minColumnInclusive);
-    if (this.maxColumn != null) builder.setMaxColumn(HBaseZeroCopyByteString.wrap(this.maxColumn));
+    if (this.maxColumn != null) builder.setMaxColumn(ByteStringer.wrap(this.maxColumn));
     builder.setMaxColumnInclusive(this.maxColumnInclusive);
     return builder.build().toByteArray();
   }

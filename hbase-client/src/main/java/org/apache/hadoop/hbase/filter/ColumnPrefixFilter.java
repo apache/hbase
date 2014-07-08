@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.filter;
 
 import java.util.ArrayList;
 
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
@@ -30,7 +31,6 @@ import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.HBaseZeroCopyByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
@@ -95,7 +95,7 @@ public class ColumnPrefixFilter extends FilterBase {
   public byte [] toByteArray() {
     FilterProtos.ColumnPrefixFilter.Builder builder =
       FilterProtos.ColumnPrefixFilter.newBuilder();
-    if (this.prefix != null) builder.setPrefix(HBaseZeroCopyByteString.wrap(this.prefix));
+    if (this.prefix != null) builder.setPrefix(ByteStringer.wrap(this.prefix));
     return builder.build().toByteArray();
   }
 

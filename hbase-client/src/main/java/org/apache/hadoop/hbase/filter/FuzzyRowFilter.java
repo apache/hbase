@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
@@ -29,11 +26,13 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Filters data based on fuzzy row key. Performs fast-forwards during scanning.
@@ -147,8 +146,8 @@ public class FuzzyRowFilter extends FilterBase {
       FilterProtos.FuzzyRowFilter.newBuilder();
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
       BytesBytesPair.Builder bbpBuilder = BytesBytesPair.newBuilder();
-      bbpBuilder.setFirst(HBaseZeroCopyByteString.wrap(fuzzyData.getFirst()));
-      bbpBuilder.setSecond(HBaseZeroCopyByteString.wrap(fuzzyData.getSecond()));
+      bbpBuilder.setFirst(ByteStringer.wrap(fuzzyData.getFirst()));
+      bbpBuilder.setSecond(ByteStringer.wrap(fuzzyData.getSecond()));
       builder.addFuzzyKeysData(bbpBuilder);
     }
     return builder.build().toByteArray();

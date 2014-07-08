@@ -1238,7 +1238,6 @@ public class HFileBlock implements Cacheable {
       } else {
         // Positional read. Better for random reads; or when the streamLock is already locked.
         int extraSize = peekIntoNextBlock ? hdrSize : 0;
-
         int ret = istream.read(fileOffset, dest, destOffset, size + extraSize);
         if (ret < size) {
           throw new IOException("Positional read of " + size + " bytes " +
@@ -1252,8 +1251,7 @@ public class HFileBlock implements Cacheable {
       }
 
       assert peekIntoNextBlock;
-      return Bytes.toInt(dest, destOffset + size + BlockType.MAGIC_LENGTH) +
-          hdrSize;
+      return Bytes.toInt(dest, destOffset + size + BlockType.MAGIC_LENGTH) + hdrSize;
     }
 
   }

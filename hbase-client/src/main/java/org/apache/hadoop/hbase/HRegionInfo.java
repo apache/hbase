@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -46,7 +47,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.io.DataInputBuffer;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
@@ -988,10 +988,10 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     builder.setTableName(ProtobufUtil.toProtoTableName(info.getTable()));
     builder.setRegionId(info.getRegionId());
     if (info.getStartKey() != null) {
-      builder.setStartKey(HBaseZeroCopyByteString.wrap(info.getStartKey()));
+      builder.setStartKey(ByteStringer.wrap(info.getStartKey()));
     }
     if (info.getEndKey() != null) {
-      builder.setEndKey(HBaseZeroCopyByteString.wrap(info.getEndKey()));
+      builder.setEndKey(ByteStringer.wrap(info.getEndKey()));
     }
     builder.setOffline(info.isOffline());
     builder.setSplit(info.isSplit());

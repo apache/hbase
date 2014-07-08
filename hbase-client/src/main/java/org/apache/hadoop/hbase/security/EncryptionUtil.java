@@ -26,7 +26,7 @@ import java.security.SecureRandom;
 
 import javax.crypto.spec.SecretKeySpec;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -83,15 +83,15 @@ public class EncryptionUtil {
     if (cipher.getIvLength() > 0) {
       iv = new byte[cipher.getIvLength()];
       RNG.nextBytes(iv);
-      builder.setIv(HBaseZeroCopyByteString.wrap(iv));
+      builder.setIv(ByteStringer.wrap(iv));
     }
     byte[] keyBytes = key.getEncoded();
     builder.setLength(keyBytes.length);
-    builder.setHash(HBaseZeroCopyByteString.wrap(Encryption.hash128(keyBytes)));
+    builder.setHash(ByteStringer.wrap(Encryption.hash128(keyBytes)));
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     Encryption.encryptWithSubjectKey(out, new ByteArrayInputStream(keyBytes), subject,
       conf, cipher, iv);
-    builder.setData(HBaseZeroCopyByteString.wrap(out.toByteArray()));
+    builder.setData(ByteStringer.wrap(out.toByteArray()));
     // Build and return the protobuf message
     out.reset();
     builder.build().writeDelimitedTo(out);

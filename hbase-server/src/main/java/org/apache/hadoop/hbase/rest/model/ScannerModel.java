@@ -75,7 +75,7 @@ import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import com.sun.jersey.api.json.JSONConfiguration;
 import com.sun.jersey.api.json.JSONJAXBContext;
 import com.sun.jersey.api.json.JSONMarshaller;
@@ -781,13 +781,13 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   public byte[] createProtobufOutput() {
     Scanner.Builder builder = Scanner.newBuilder();
     if (!Bytes.equals(startRow, HConstants.EMPTY_START_ROW)) {
-      builder.setStartRow(HBaseZeroCopyByteString.wrap(startRow));
+      builder.setStartRow(ByteStringer.wrap(startRow));
     }
     if (!Bytes.equals(endRow, HConstants.EMPTY_START_ROW)) {
-      builder.setEndRow(HBaseZeroCopyByteString.wrap(endRow));
+      builder.setEndRow(ByteStringer.wrap(endRow));
     }
     for (byte[] column: columns) {
-      builder.addColumns(HBaseZeroCopyByteString.wrap(column));
+      builder.addColumns(ByteStringer.wrap(column));
     }
     if (startTime != 0) {
       builder.setStartTime(startTime);
