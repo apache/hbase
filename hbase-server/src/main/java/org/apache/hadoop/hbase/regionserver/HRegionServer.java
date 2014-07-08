@@ -926,7 +926,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       cacheConfig.getBlockCache().shutdown();
     }
 
-    movedRegionsCleaner.stop("Region Server stopping");
+    if (movedRegionsCleaner != null) {
+      movedRegionsCleaner.stop("Region Server stopping");
+    }
 
     // Send interrupts to wake up threads if sleeping so they notice shutdown.
     // TODO: Should we check they are alive? If OOME could have exited already
@@ -944,7 +946,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     }
 
     // Stop the snapshot and other procedure handlers, forcefully killing all running tasks
-    rspmHost.stop(this.abortRequested || this.killed);
+    if (rspmHost != null) {
+      rspmHost.stop(this.abortRequested || this.killed);
+    }
 
     if (this.killed) {
       // Just skip out w/o closing regions.  Used when testing.
@@ -988,8 +992,12 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     if (this.rssStub != null) {
       this.rssStub = null;
     }
-    this.rpcClient.stop();
-    this.leases.close();
+    if (this.rpcClient != null) {
+      this.rpcClient.stop();
+    }
+    if (this.leases != null) {
+      this.leases.close();
+    }
     if (this.pauseMonitor != null) {
       this.pauseMonitor.stop();
     }
@@ -1006,7 +1014,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     // We may have failed to delete the znode at the previous step, but
     //  we delete the file anyway: a second attempt to delete the znode is likely to fail again.
     ZNodeClearer.deleteMyEphemeralNodeOnDisk();
-    this.zooKeeper.close();
+    if (this.zooKeeper != null) {
+      this.zooKeeper.close();
+    }
     LOG.info("stopping server " + this.serverNameFromMasterPOV +
       "; zookeeper connection closed.");
 
@@ -1875,9 +1885,15 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     if (this.nonceManagerChore != null) {
       Threads.shutdown(this.nonceManagerChore.getThread());
     }
-    Threads.shutdown(this.compactionChecker.getThread());
-    Threads.shutdown(this.periodicFlusher.getThread());
-    this.cacheFlusher.join();
+    if (this.compactionChecker != null) {
+      Threads.shutdown(this.compactionChecker.getThread());
+    }
+    if (this.periodicFlusher != null) {
+      Threads.shutdown(this.periodicFlusher.getThread());
+    }
+    if (this.cacheFlusher != null) {
+      this.cacheFlusher.join();
+    }
     if (this.healthCheckChore != null) {
       Threads.shutdown(this.healthCheckChore.getThread());
     }
