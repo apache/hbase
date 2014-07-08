@@ -54,6 +54,7 @@ public interface WALObserver extends Coprocessor {
    * @return true if default behavior should be bypassed, false otherwise
    * @throws IOException
    */
+  // TODO: return value is not used
   boolean preWALWrite(ObserverContext<WALCoprocessorEnvironment> ctx,
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException;
 
