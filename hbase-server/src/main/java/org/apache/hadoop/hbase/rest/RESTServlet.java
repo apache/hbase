@@ -56,7 +56,7 @@ public class RESTServlet implements Constants {
 
   /**
    * @param conf Existing configuration to use in rest servlet
-   * @param realUser the login user
+   * @param userProvider the login user provider
    * @return the RESTServlet singleton instance
    * @throws IOException
    */
