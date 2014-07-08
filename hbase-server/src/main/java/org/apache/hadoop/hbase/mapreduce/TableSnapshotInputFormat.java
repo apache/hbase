@@ -73,14 +73,14 @@ import com.google.common.annotations.VisibleForTesting;
  * from each RecordReader. An internal RegionScanner is used to execute the {@link Scan} obtained
  * from the user.
  * <p>
- * HBase owns all the data and snapshot files on the filesystem. Only the HBase user can read from
- * snapshot files and data files. HBase also enforces security because all the requests are handled
- * by the server layer, and the user cannot read from the data files directly. To read from snapshot
- * files directly from the file system, the user who is running the MR job must have sufficient
- * permissions to access snapshot and reference files. This means that to run mapreduce over
- * snapshot files, the MR job has to be run as the HBase user or the user must have group or other
- * priviledges in the filesystem (See HBASE-8369). Note that, given other users access to read from
- * snapshot/data files will completely circumvent the access control enforced by HBase.
+ * HBase owns all the data and snapshot files on the filesystem. Only the 'hbase' user can read from
+ * snapshot files and data files.
+ * To read from snapshot files directly from the file system, the user who is running the MR job
+ * must have sufficient permissions to access snapshot and reference files.
+ * This means that to run mapreduce over snapshot files, the MR job has to be run as the HBase
+ * user or the user must have group or other privileges in the filesystem (See HBASE-8369).
+ * Note that, given other users access to read from snapshot/data files will completely circumvent
+ * the access control enforced by HBase.
  * @see TableSnapshotScanner
  */
 @InterfaceAudience.Public
