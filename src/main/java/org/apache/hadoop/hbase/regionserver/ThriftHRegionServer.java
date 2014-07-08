@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -54,7 +53,6 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TMultiResponse;
 import org.apache.hadoop.hbase.client.TRowMutations;
-import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram;
 import org.apache.hadoop.hbase.io.hfile.histogram.HFileHistogram.Bucket;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.ScannerResult;
@@ -69,7 +67,6 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Writable;
 
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
 /**
@@ -762,10 +759,14 @@ public class ThriftHRegionServer implements ThriftHRegionInterface.Async {
   }
 
   @Override
-  public ListenableFuture<Void> setHDFSQuorumReadTimeoutMillis(long timeoutMillis) {
-    server.setHDFSQuorumReadTimeoutMillis(timeoutMillis);
-    return null;
-
+  public ListenableFuture<Void> setHDFSQuorumReadTimeoutMillis(
+      final long timeoutMillis) {
+    return readService.submit(new Callable<Void>() {
+      @Override public Void call() throws Exception {
+        server.setHDFSQuorumReadTimeoutMillis(timeoutMillis);
+        return null;
+      }
+    });
   }
 
   @Override
