@@ -19,14 +19,13 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -111,9 +110,9 @@ public class TestBatchCoprocessorEndpoint {
     ColumnAggregationWithNullResponseProtos.SumRequest.Builder builder =
         ColumnAggregationWithNullResponseProtos.SumRequest
         .newBuilder();
-    builder.setFamily(HBaseZeroCopyByteString.wrap(TEST_FAMILY));
+    builder.setFamily(ByteStringer.wrap(TEST_FAMILY));
     if (TEST_QUALIFIER != null && TEST_QUALIFIER.length > 0) {
-      builder.setQualifier(HBaseZeroCopyByteString.wrap(TEST_QUALIFIER));
+      builder.setQualifier(ByteStringer.wrap(TEST_QUALIFIER));
     }
     Map<byte[], ColumnAggregationWithNullResponseProtos.SumResponse> results =
         table.batchCoprocessorService(
@@ -149,9 +148,9 @@ public class TestBatchCoprocessorEndpoint {
       Throwable {
     ColumnAggregationProtos.SumRequest.Builder builder = ColumnAggregationProtos.SumRequest
         .newBuilder();
-    builder.setFamily(HBaseZeroCopyByteString.wrap(family));
+    builder.setFamily(ByteStringer.wrap(family));
     if (qualifier != null && qualifier.length > 0) {
-      builder.setQualifier(HBaseZeroCopyByteString.wrap(qualifier));
+      builder.setQualifier(ByteStringer.wrap(qualifier));
     }
     return table.batchCoprocessorService(
         ColumnAggregationProtos.ColumnAggregationService.getDescriptor().findMethodByName("sum"),
@@ -238,9 +237,9 @@ public class TestBatchCoprocessorEndpoint {
     ColumnAggregationWithErrorsProtos.SumRequest.Builder builder =
         ColumnAggregationWithErrorsProtos.SumRequest
         .newBuilder();
-    builder.setFamily(HBaseZeroCopyByteString.wrap(TEST_FAMILY));
+    builder.setFamily(ByteStringer.wrap(TEST_FAMILY));
     if (TEST_QUALIFIER != null && TEST_QUALIFIER.length > 0) {
-      builder.setQualifier(HBaseZeroCopyByteString.wrap(TEST_QUALIFIER));
+      builder.setQualifier(ByteStringer.wrap(TEST_QUALIFIER));
     }
 
     boolean hasError = false;

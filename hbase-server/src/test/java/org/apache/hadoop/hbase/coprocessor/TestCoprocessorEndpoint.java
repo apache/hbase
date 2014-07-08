@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -125,9 +125,9 @@ public class TestCoprocessorEndpoint {
               new BlockingRpcCallback<ColumnAggregationProtos.SumResponse>();
           ColumnAggregationProtos.SumRequest.Builder builder =
             ColumnAggregationProtos.SumRequest.newBuilder();
-          builder.setFamily(HBaseZeroCopyByteString.wrap(family));
+          builder.setFamily(ByteStringer.wrap(family));
           if (qualifier != null && qualifier.length > 0) {
-            builder.setQualifier(HBaseZeroCopyByteString.wrap(qualifier));
+            builder.setQualifier(ByteStringer.wrap(qualifier));
           }
           instance.sum(null, builder.build(), rpcCallback);
           return rpcCallback.get().getSum();

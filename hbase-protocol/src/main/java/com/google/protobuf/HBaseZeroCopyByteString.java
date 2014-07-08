@@ -64,5 +64,4 @@ public final class HBaseZeroCopyByteString extends LiteralByteString {
     throw new UnsupportedOperationException("Need a LiteralByteString, got a "
                                             + buf.getClass().getName());
   }
-
 }

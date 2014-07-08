@@ -28,7 +28,7 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.TableInfoMessage.TableInfo;
@@ -134,8 +134,8 @@ public class TableInfoModel implements Serializable, ProtobufMessageHandler {
       TableInfo.Region.Builder regionBuilder = TableInfo.Region.newBuilder();
       regionBuilder.setName(aRegion.getName());
       regionBuilder.setId(aRegion.getId());
-      regionBuilder.setStartKey(HBaseZeroCopyByteString.wrap(aRegion.getStartKey()));
-      regionBuilder.setEndKey(HBaseZeroCopyByteString.wrap(aRegion.getEndKey()));
+      regionBuilder.setStartKey(ByteStringer.wrap(aRegion.getStartKey()));
+      regionBuilder.setEndKey(ByteStringer.wrap(aRegion.getEndKey()));
       regionBuilder.setLocation(aRegion.getLocation());
       builder.addRegions(regionBuilder);
     }

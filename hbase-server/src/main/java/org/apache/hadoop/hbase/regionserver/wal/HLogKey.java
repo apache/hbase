@@ -35,8 +35,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 
 
-import com.google.protobuf.HBaseZeroCopyByteString;
-
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -543,8 +542,8 @@ public class HLogKey implements WritableComparable<HLogKey>, SequenceNumber {
   throws IOException {
     WALKey.Builder builder = WALKey.newBuilder();
     if (compressionContext == null) {
-      builder.setEncodedRegionName(HBaseZeroCopyByteString.wrap(this.encodedRegionName));
-      builder.setTableName(HBaseZeroCopyByteString.wrap(this.tablename.getName()));
+      builder.setEncodedRegionName(ByteStringer.wrap(this.encodedRegionName));
+      builder.setTableName(ByteStringer.wrap(this.tablename.getName()));
     } else {
       builder.setEncodedRegionName(compressor.compress(this.encodedRegionName,
         compressionContext.regionDict));
@@ -570,8 +569,7 @@ public class HLogKey implements WritableComparable<HLogKey>, SequenceNumber {
     }
     if (scopes != null) {
       for (Map.Entry<byte[], Integer> e : scopes.entrySet()) {
-        ByteString family = (compressionContext == null) ?
-            HBaseZeroCopyByteString.wrap(e.getKey())
+        ByteString family = (compressionContext == null) ? ByteStringer.wrap(e.getKey())
             : compressor.compress(e.getKey(), compressionContext.familyDict);
         builder.addScopes(FamilyScope.newBuilder()
             .setFamily(family).setScopeType(ScopeType.valueOf(e.getValue())));

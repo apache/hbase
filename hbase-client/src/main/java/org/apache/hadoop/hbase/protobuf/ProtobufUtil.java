@@ -123,6 +123,7 @@ import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
@@ -859,17 +860,17 @@ public final class ProtobufUtil {
       NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
       for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
         attributeBuilder.setName(attribute.getKey());
-        attributeBuilder.setValue(HBaseZeroCopyByteString.wrap(attribute.getValue()));
+        attributeBuilder.setValue(ByteStringer.wrap(attribute.getValue()));
         scanBuilder.addAttribute(attributeBuilder.build());
       }
     }
     byte[] startRow = scan.getStartRow();
     if (startRow != null && startRow.length > 0) {
-      scanBuilder.setStartRow(HBaseZeroCopyByteString.wrap(startRow));
+      scanBuilder.setStartRow(ByteStringer.wrap(startRow));
     }
     byte[] stopRow = scan.getStopRow();
     if (stopRow != null && stopRow.length > 0) {
-      scanBuilder.setStopRow(HBaseZeroCopyByteString.wrap(stopRow));
+      scanBuilder.setStopRow(ByteStringer.wrap(stopRow));
     }
     if (scan.hasFilter()) {
       scanBuilder.setFilter(ProtobufUtil.toFilter(scan.getFilter()));
@@ -878,12 +879,12 @@ public final class ProtobufUtil {
       Column.Builder columnBuilder = Column.newBuilder();
       for (Map.Entry<byte[],NavigableSet<byte []>>
           family: scan.getFamilyMap().entrySet()) {
-        columnBuilder.setFamily(HBaseZeroCopyByteString.wrap(family.getKey()));
+        columnBuilder.setFamily(ByteStringer.wrap(family.getKey()));
         NavigableSet<byte []> qualifiers = family.getValue();
         columnBuilder.clearQualifier();
         if (qualifiers != null && qualifiers.size() > 0) {
           for (byte [] qualifier: qualifiers) {
-            columnBuilder.addQualifier(HBaseZeroCopyByteString.wrap(qualifier));
+            columnBuilder.addQualifier(ByteStringer.wrap(qualifier));
           }
         }
         scanBuilder.addColumn(columnBuilder.build());
@@ -997,7 +998,7 @@ public final class ProtobufUtil {
       final Get get) throws IOException {
     ClientProtos.Get.Builder builder =
       ClientProtos.Get.newBuilder();
-    builder.setRow(HBaseZeroCopyByteString.wrap(get.getRow()));
+    builder.setRow(ByteStringer.wrap(get.getRow()));
     builder.setCacheBlocks(get.getCacheBlocks());
     builder.setMaxVersions(get.getMaxVersions());
     if (get.getFilter() != null) {
@@ -1016,7 +1017,7 @@ public final class ProtobufUtil {
       NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
       for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
         attributeBuilder.setName(attribute.getKey());
-        attributeBuilder.setValue(HBaseZeroCopyByteString.wrap(attribute.getValue()));
+        attributeBuilder.setValue(ByteStringer.wrap(attribute.getValue()));
         builder.addAttribute(attributeBuilder.build());
       }
     }
@@ -1025,11 +1026,11 @@ public final class ProtobufUtil {
       Map<byte[], NavigableSet<byte[]>> families = get.getFamilyMap();
       for (Map.Entry<byte[], NavigableSet<byte[]>> family: families.entrySet()) {
         NavigableSet<byte[]> qualifiers = family.getValue();
-        columnBuilder.setFamily(HBaseZeroCopyByteString.wrap(family.getKey()));
+        columnBuilder.setFamily(ByteStringer.wrap(family.getKey()));
         columnBuilder.clearQualifier();
         if (qualifiers != null && qualifiers.size() > 0) {
           for (byte[] qualifier: qualifiers) {
-            columnBuilder.addQualifier(HBaseZeroCopyByteString.wrap(qualifier));
+            columnBuilder.addQualifier(ByteStringer.wrap(qualifier));
           }
         }
         builder.addColumn(columnBuilder.build());
@@ -1062,7 +1063,7 @@ public final class ProtobufUtil {
    */
   public static MutationProto toMutation(
     final Increment increment, final MutationProto.Builder builder, long nonce) {
-    builder.setRow(HBaseZeroCopyByteString.wrap(increment.getRow()));
+    builder.setRow(ByteStringer.wrap(increment.getRow()));
     builder.setMutateType(MutationType.INCREMENT);
     builder.setDurability(toDurability(increment.getDurability()));
     if (nonce != HConstants.NO_NONCE) {
@@ -1079,18 +1080,18 @@ public final class ProtobufUtil {
     ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
     for (Map.Entry<byte[], List<Cell>> family: increment.getFamilyCellMap().entrySet()) {
-      columnBuilder.setFamily(HBaseZeroCopyByteString.wrap(family.getKey()));
+      columnBuilder.setFamily(ByteStringer.wrap(family.getKey()));
       columnBuilder.clearQualifierValue();
       List<Cell> values = family.getValue();
       if (values != null && values.size() > 0) {
         for (Cell cell: values) {
           KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-          valueBuilder.setQualifier(HBaseZeroCopyByteString.wrap(
+          valueBuilder.setQualifier(ByteStringer.wrap(
               kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
-          valueBuilder.setValue(HBaseZeroCopyByteString.wrap(
+          valueBuilder.setValue(ByteStringer.wrap(
               kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
           if (kv.getTagsLength() > 0) {
-            valueBuilder.setTags(HBaseZeroCopyByteString.wrap(kv.getTagsArray(),
+            valueBuilder.setTags(ByteStringer.wrap(kv.getTagsArray(),
                 kv.getTagsOffset(), kv.getTagsLength()));
           }
           columnBuilder.addQualifierValue(valueBuilder.build());
@@ -1103,7 +1104,7 @@ public final class ProtobufUtil {
       NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
       for (Map.Entry<String, byte[]> attribute : attributes.entrySet()) {
         attributeBuilder.setName(attribute.getKey());
-        attributeBuilder.setValue(HBaseZeroCopyByteString.wrap(attribute.getValue()));
+        attributeBuilder.setValue(ByteStringer.wrap(attribute.getValue()));
         builder.addAttribute(attributeBuilder.build());
       }
     }
@@ -1144,16 +1145,16 @@ public final class ProtobufUtil {
     QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
     for (Map.Entry<byte[],List<Cell>> family: mutation.getFamilyCellMap().entrySet()) {
       columnBuilder.clear();
-      columnBuilder.setFamily(HBaseZeroCopyByteString.wrap(family.getKey()));
+      columnBuilder.setFamily(ByteStringer.wrap(family.getKey()));
       for (Cell cell: family.getValue()) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        valueBuilder.setQualifier(HBaseZeroCopyByteString.wrap(
+        valueBuilder.setQualifier(ByteStringer.wrap(
             kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
-        valueBuilder.setValue(HBaseZeroCopyByteString.wrap(
+        valueBuilder.setValue(ByteStringer.wrap(
             kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
         valueBuilder.setTimestamp(kv.getTimestamp());
         if(cell.getTagsLength() > 0) {
-          valueBuilder.setTags(HBaseZeroCopyByteString.wrap(kv.getTagsArray(), kv.getTagsOffset(),
+          valueBuilder.setTags(ByteStringer.wrap(kv.getTagsArray(), kv.getTagsOffset(),
               kv.getTagsLength()));
         }
         if (type == MutationType.DELETE) {
@@ -1214,7 +1215,7 @@ public final class ProtobufUtil {
    */
   private static MutationProto.Builder getMutationBuilderAndSetCommonFields(final MutationType type,
       final Mutation mutation, MutationProto.Builder builder) {
-    builder.setRow(HBaseZeroCopyByteString.wrap(mutation.getRow()));
+    builder.setRow(ByteStringer.wrap(mutation.getRow()));
     builder.setMutateType(type);
     builder.setDurability(toDurability(mutation.getDurability()));
     builder.setTimestamp(mutation.getTimeStamp());
@@ -1223,7 +1224,7 @@ public final class ProtobufUtil {
       NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
       for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
         attributeBuilder.setName(attribute.getKey());
-        attributeBuilder.setValue(HBaseZeroCopyByteString.wrap(attribute.getValue()));
+        attributeBuilder.setValue(ByteStringer.wrap(attribute.getValue()));
         builder.addAttribute(attributeBuilder.build());
       }
     }
@@ -1369,7 +1370,7 @@ public final class ProtobufUtil {
   public static ComparatorProtos.Comparator toComparator(ByteArrayComparable comparator) {
     ComparatorProtos.Comparator.Builder builder = ComparatorProtos.Comparator.newBuilder();
     builder.setName(comparator.getClass().getName());
-    builder.setSerializedComparator(HBaseZeroCopyByteString.wrap(comparator.toByteArray()));
+    builder.setSerializedComparator(ByteStringer.wrap(comparator.toByteArray()));
     return builder.build();
   }
 
@@ -1431,7 +1432,7 @@ public final class ProtobufUtil {
   public static FilterProtos.Filter toFilter(Filter filter) throws IOException {
     FilterProtos.Filter.Builder builder = FilterProtos.Filter.newBuilder();
     builder.setName(filter.getClass().getName());
-    builder.setSerializedFilter(HBaseZeroCopyByteString.wrap(filter.toByteArray()));
+    builder.setSerializedFilter(ByteStringer.wrap(filter.toByteArray()));
     return builder.build();
   }
 
@@ -1901,10 +1902,10 @@ public final class ProtobufUtil {
             AccessControlProtos.TablePermission.newBuilder();
         builder.setTableName(ProtobufUtil.toProtoTableName(tablePerm.getTableName()));
         if (tablePerm.hasFamily()) {
-          builder.setFamily(HBaseZeroCopyByteString.wrap(tablePerm.getFamily()));
+          builder.setFamily(ByteStringer.wrap(tablePerm.getFamily()));
         }
         if (tablePerm.hasQualifier()) {
-          builder.setQualifier(HBaseZeroCopyByteString.wrap(tablePerm.getQualifier()));
+          builder.setQualifier(ByteStringer.wrap(tablePerm.getQualifier()));
         }
         Permission.Action actions[] = perm.getActions();
         if (actions != null) {
@@ -2000,7 +2001,7 @@ public final class ProtobufUtil {
    */
   public static AccessControlProtos.UserPermission toUserPermission(UserPermission perm) {
     return AccessControlProtos.UserPermission.newBuilder()
-        .setUser(HBaseZeroCopyByteString.wrap(perm.getUser()))
+        .setUser(ByteStringer.wrap(perm.getUser()))
         .setPermission(toPermission(perm))
         .build();
   }
@@ -2256,7 +2257,7 @@ public final class ProtobufUtil {
     AccessControlProtos.GetUserPermissionsRequest.Builder builder =
       AccessControlProtos.GetUserPermissionsRequest.newBuilder();
     if (namespace != null) {
-      builder.setNamespaceName(HBaseZeroCopyByteString.wrap(namespace));
+      builder.setNamespaceName(ByteStringer.wrap(namespace));
     }
     builder.setType(AccessControlProtos.Permission.Type.Namespace);
     AccessControlProtos.GetUserPermissionsRequest request = builder.build();
@@ -2300,8 +2301,8 @@ public final class ProtobufUtil {
    */
   public static AuthenticationProtos.Token toToken(Token<AuthenticationTokenIdentifier> token) {
     AuthenticationProtos.Token.Builder builder = AuthenticationProtos.Token.newBuilder();
-    builder.setIdentifier(HBaseZeroCopyByteString.wrap(token.getIdentifier()));
-    builder.setPassword(HBaseZeroCopyByteString.wrap(token.getPassword()));
+    builder.setIdentifier(ByteStringer.wrap(token.getIdentifier()));
+    builder.setPassword(ByteStringer.wrap(token.getPassword()));
     if (token.getService() != null) {
       builder.setService(ByteString.copyFromUtf8(token.getService().toString()));
     }
@@ -2398,15 +2399,15 @@ public final class ProtobufUtil {
     // Doing this is going to kill us if we do it for all data passed.
     // St.Ack 20121205
     CellProtos.Cell.Builder kvbuilder = CellProtos.Cell.newBuilder();
-    kvbuilder.setRow(HBaseZeroCopyByteString.wrap(kv.getRowArray(), kv.getRowOffset(),
+    kvbuilder.setRow(ByteStringer.wrap(kv.getRowArray(), kv.getRowOffset(),
         kv.getRowLength()));
-    kvbuilder.setFamily(HBaseZeroCopyByteString.wrap(kv.getFamilyArray(),
+    kvbuilder.setFamily(ByteStringer.wrap(kv.getFamilyArray(),
         kv.getFamilyOffset(), kv.getFamilyLength()));
-    kvbuilder.setQualifier(HBaseZeroCopyByteString.wrap(kv.getQualifierArray(),
+    kvbuilder.setQualifier(ByteStringer.wrap(kv.getQualifierArray(),
         kv.getQualifierOffset(), kv.getQualifierLength()));
     kvbuilder.setCellType(CellProtos.CellType.valueOf(kv.getTypeByte()));
     kvbuilder.setTimestamp(kv.getTimestamp());
-    kvbuilder.setValue(HBaseZeroCopyByteString.wrap(kv.getValueArray(), kv.getValueOffset(),
+    kvbuilder.setValue(ByteStringer.wrap(kv.getValueArray(), kv.getValueOffset(),
         kv.getValueLength()));
     return kvbuilder.build();
   }
@@ -2485,9 +2486,9 @@ public final class ProtobufUtil {
     // input / output paths are relative to the store dir
     // store dir is relative to region dir
     CompactionDescriptor.Builder builder = CompactionDescriptor.newBuilder()
-        .setTableName(HBaseZeroCopyByteString.wrap(info.getTableName()))
-        .setEncodedRegionName(HBaseZeroCopyByteString.wrap(info.getEncodedNameAsBytes()))
-        .setFamilyName(HBaseZeroCopyByteString.wrap(family))
+        .setTableName(ByteStringer.wrap(info.getTableName()))
+        .setEncodedRegionName(ByteStringer.wrap(info.getEncodedNameAsBytes()))
+        .setFamilyName(ByteStringer.wrap(family))
         .setStoreHomeDir(storeDir.getName()); //make relative
     for (Path inputPath : inputPaths) {
       builder.addCompactionInput(inputPath.getName()); //relative path
@@ -2565,8 +2566,8 @@ public final class ProtobufUtil {
 
   public static HBaseProtos.TableName toProtoTableName(TableName tableName) {
     return HBaseProtos.TableName.newBuilder()
-        .setNamespace(HBaseZeroCopyByteString.wrap(tableName.getNamespace()))
-        .setQualifier(HBaseZeroCopyByteString.wrap(tableName.getQualifier())).build();
+        .setNamespace(ByteStringer.wrap(tableName.getNamespace()))
+        .setQualifier(ByteStringer.wrap(tableName.getQualifier())).build();
   }
 
   public static TableName[] getTableNameArray(List<HBaseProtos.TableName> tableNamesList) {

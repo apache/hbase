@@ -17,22 +17,20 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.TreeSet;
-
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.TreeSet;
 
 /**
  * This filter is used for selecting only those keys with columns that matches
@@ -114,7 +112,7 @@ public class MultipleColumnPrefixFilter extends FilterBase {
     FilterProtos.MultipleColumnPrefixFilter.Builder builder =
       FilterProtos.MultipleColumnPrefixFilter.newBuilder();
     for (byte [] element : sortedPrefixes) {
-      if (element != null) builder.addSortedPrefixes(HBaseZeroCopyByteString.wrap(element));
+      if (element != null) builder.addSortedPrefixes(ByteStringer.wrap(element));
     }
     return builder.build().toByteArray();
   }

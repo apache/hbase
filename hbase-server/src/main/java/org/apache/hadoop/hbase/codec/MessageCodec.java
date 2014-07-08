@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -44,15 +44,15 @@ public class MessageCodec implements Codec {
       CellProtos.Cell.Builder builder = CellProtos.Cell.newBuilder();
       // This copies bytes from Cell to ByteString.  I don't see anyway around the copy.
       // ByteString is final.
-      builder.setRow(HBaseZeroCopyByteString.wrap(cell.getRowArray(), cell.getRowOffset(),
+      builder.setRow(ByteStringer.wrap(cell.getRowArray(), cell.getRowOffset(),
           cell.getRowLength()));
-      builder.setFamily(HBaseZeroCopyByteString.wrap(cell.getFamilyArray(), cell.getFamilyOffset(),
+      builder.setFamily(ByteStringer.wrap(cell.getFamilyArray(), cell.getFamilyOffset(),
           cell.getFamilyLength()));
-      builder.setQualifier(HBaseZeroCopyByteString.wrap(cell.getQualifierArray(),
+      builder.setQualifier(ByteStringer.wrap(cell.getQualifierArray(),
           cell.getQualifierOffset(), cell.getQualifierLength()));
       builder.setTimestamp(cell.getTimestamp());
       builder.setCellType(CellProtos.CellType.valueOf(cell.getTypeByte()));
-      builder.setValue(HBaseZeroCopyByteString.wrap(cell.getValueArray(), cell.getValueOffset(),
+      builder.setValue(ByteStringer.wrap(cell.getValueArray(), cell.getValueOffset(),
           cell.getValueLength()));
       CellProtos.Cell pbcell = builder.build();
       pbcell.writeDelimitedTo(this.out);
