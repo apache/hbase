@@ -287,7 +287,7 @@ public class ThriftServerRunner implements Runnable {
     if (qop != null) {
       if (!qop.equals("auth") && !qop.equals("auth-int")
           && !qop.equals("auth-conf")) {
-        throw new IOException("Invalid hbase.thrift.security.qop: " + qop
+        throw new IOException("Invalid " + THRIFT_QOP_KEY + ": " + qop
           + ", it must be 'auth', 'auth-int', or 'auth-conf'");
       }
       if (!securityEnabled) {
