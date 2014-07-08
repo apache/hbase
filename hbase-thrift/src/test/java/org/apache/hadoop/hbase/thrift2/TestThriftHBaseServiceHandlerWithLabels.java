@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.visibility.ScanLabelGenerator;
 import org.apache.hadoop.hbase.security.visibility.SimpleScanLabelGenerator;
 import org.apache.hadoop.hbase.security.visibility.VisibilityClient;
@@ -142,6 +143,7 @@ public static void beforeClass() throws Exception {
     tableDescriptor.addFamily(family);
   }
   admin.createTable(tableDescriptor);
+  admin.close();
   setAuths();
 }
 
@@ -179,8 +181,8 @@ public void setup() throws Exception {
 
 }
 
-private ThriftHBaseServiceHandler createHandler() {
-  return new ThriftHBaseServiceHandler(UTIL.getConfiguration());
+private ThriftHBaseServiceHandler createHandler() throws IOException {
+  return new ThriftHBaseServiceHandler(conf, UserProvider.instantiate(conf));
 }
 
 @Test

@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.filter.ParseFilter;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.TAppend;
@@ -62,6 +63,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -137,6 +139,7 @@ public class TestThriftHBaseServiceHandler {
       tableDescriptor.addFamily(family);
     }
     admin.createTable(tableDescriptor);
+    admin.close();
   }
 
   @AfterClass
@@ -149,8 +152,13 @@ public class TestThriftHBaseServiceHandler {
 
   }
 
-  private ThriftHBaseServiceHandler createHandler() {
-    return new ThriftHBaseServiceHandler(UTIL.getConfiguration());
+  private ThriftHBaseServiceHandler createHandler() throws TException {
+    try {
+      Configuration conf = UTIL.getConfiguration();
+      return new ThriftHBaseServiceHandler(conf, UserProvider.instantiate(conf));
+    } catch (IOException ie) {
+      throw new TException(ie);
+    }
   }
 
   @Test
@@ -768,8 +776,9 @@ public class TestThriftHBaseServiceHandler {
   public void testMetrics() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     ThriftMetrics metrics = getMetrics(conf);
+    ThriftHBaseServiceHandler hbaseHandler = createHandler();
     THBaseService.Iface handler =
-        ThriftHBaseServiceHandler.newInstance(conf, metrics);
+        ThriftHBaseServiceHandler.newInstance(hbaseHandler, metrics);
     byte[] rowName = "testMetrics".getBytes();
     ByteBuffer table = wrap(tableAname);
 

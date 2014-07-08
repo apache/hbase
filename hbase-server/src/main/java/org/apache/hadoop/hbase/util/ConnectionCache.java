@@ -108,6 +108,13 @@ public class ConnectionCache {
   }
 
   /**
+   * Get the current thread local effective user
+   */
+  public String getEffectiveUser() {
+    return effectiveUserNames.get();
+  }
+
+  /**
    * Caller doesn't close the admin afterwards.
    * We need to manage it and close it properly.
    */
@@ -115,7 +122,7 @@ public class ConnectionCache {
   public HBaseAdmin getAdmin() throws IOException {
     ConnectionInfo connInfo = getCurrentConnection();
     if (connInfo.admin == null) {
-      Lock lock = locker.acquireLock(effectiveUserNames.get());
+      Lock lock = locker.acquireLock(getEffectiveUser());
       try {
         if (connInfo.admin == null) {
           connInfo.admin = new HBaseAdmin(connInfo.connection);
@@ -140,7 +147,7 @@ public class ConnectionCache {
    * If none or timed out, create a new one.
    */
   ConnectionInfo getCurrentConnection() throws IOException {
-    String userName = effectiveUserNames.get();
+    String userName = getEffectiveUser();
     ConnectionInfo connInfo = connections.get(userName);
     if (connInfo == null || !connInfo.updateAccessTime()) {
       Lock lock = locker.acquireLock(userName);

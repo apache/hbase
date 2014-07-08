@@ -22,11 +22,20 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.security.PrivilegedAction;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.sasl.AuthorizeCallback;
+import javax.security.sasl.Sasl;
+import javax.security.sasl.SaslServer;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -42,14 +51,23 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.filter.ParseFilter;
+import org.apache.hadoop.hbase.security.SecurityUtil;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.thrift.CallQueue;
 import org.apache.hadoop.hbase.thrift.CallQueue.Call;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.hadoop.hbase.util.InfoServer;
+import org.apache.hadoop.hbase.util.Strings;
+import org.apache.hadoop.net.DNS;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.SaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.thrift.TException;
+import org.apache.thrift.TProcessor;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
+import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.server.THsHaServer;
 import org.apache.thrift.server.TNonblockingServer;
@@ -58,6 +76,7 @@ import org.apache.thrift.server.TThreadPoolServer;
 import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TNonblockingServerSocket;
 import org.apache.thrift.transport.TNonblockingServerTransport;
+import org.apache.thrift.transport.TSaslServerTransport;
 import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TServerTransport;
 import org.apache.thrift.transport.TTransportException;
@@ -74,8 +93,20 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 public class ThriftServer {
   private static final Log log = LogFactory.getLog(ThriftServer.class);
 
-  public static final String DEFAULT_LISTEN_PORT = "9090";
+  /**
+   * Thrift quality of protection configuration key. Valid values can be:
+   * auth-conf: authentication, integrity and confidentiality checking
+   * auth-int: authentication and integrity checking
+   * auth: authentication only
+   *
+   * This is used to authenticate the callers and support impersonation.
+   * The thrift server and the HBase cluster must run in secure mode.
+   */
+  static final String THRIFT_QOP_KEY = "hbase.thrift.security.qop";
 
+  public static final int DEFAULT_LISTEN_PORT = 9090;
+
+  
   public ThriftServer() {
   }
 
@@ -125,12 +156,50 @@ public class ThriftServer {
     }
   }
 
-  private static TTransportFactory getTTransportFactory(boolean framed, int frameSize) {
+  private static TTransportFactory getTTransportFactory(
+      String qop, String name, String host, boolean framed, int frameSize) {
     if (framed) {
+      if (qop != null) {
+        throw new RuntimeException("Thrift server authentication"
+          + " doesn't work with framed transport yet");
+      }
       log.debug("Using framed transport");
       return new TFramedTransport.Factory(frameSize);
-    } else {
+    } else if (qop == null) {
       return new TTransportFactory();
+    } else {
+      Map<String, String> saslProperties = new HashMap<String, String>();
+      saslProperties.put(Sasl.QOP, qop);
+      TSaslServerTransport.Factory saslFactory = new TSaslServerTransport.Factory();
+      saslFactory.addServerDefinition("GSSAPI", name, host, saslProperties,
+        new SaslGssCallbackHandler() {
+          @Override
+          public void handle(Callback[] callbacks)
+              throws UnsupportedCallbackException {
+            AuthorizeCallback ac = null;
+            for (Callback callback : callbacks) {
+              if (callback instanceof AuthorizeCallback) {
+                ac = (AuthorizeCallback) callback;
+              } else {
+                throw new UnsupportedCallbackException(callback,
+                    "Unrecognized SASL GSSAPI Callback");
+              }
+            }
+            if (ac != null) {
+              String authid = ac.getAuthenticationID();
+              String authzid = ac.getAuthorizationID();
+              if (!authid.equals(authzid)) {
+                ac.setAuthorized(false);
+              } else {
+                ac.setAuthorized(true);
+                String userName = SecurityUtil.getUserFromPrincipal(authzid);
+                log.info("Effective user: " + userName);
+                ac.setAuthorizedID(userName);
+              }
+            }
+          }
+        });
+      return saslFactory;
     }
   }
 
@@ -150,7 +219,7 @@ public class ThriftServer {
     }
   }
 
-  private static TServer getTNonBlockingServer(TProtocolFactory protocolFactory, THBaseService.Processor processor,
+  private static TServer getTNonBlockingServer(TProtocolFactory protocolFactory, TProcessor processor,
       TTransportFactory transportFactory, InetSocketAddress inetSocketAddress) throws TTransportException {
     TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(inetSocketAddress);
     log.info("starting HBase Nonblocking Thrift server on " + inetSocketAddress.toString());
@@ -162,7 +231,7 @@ public class ThriftServer {
   }
 
   private static TServer getTHsHaServer(TProtocolFactory protocolFactory,
-      THBaseService.Processor processor, TTransportFactory transportFactory,
+      TProcessor processor, TTransportFactory transportFactory,
       InetSocketAddress inetSocketAddress, ThriftMetrics metrics)
       throws TTransportException {
     TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(inetSocketAddress);
@@ -188,7 +257,7 @@ public class ThriftServer {
             Long.MAX_VALUE, TimeUnit.SECONDS, callQueue, tfb.build());
   }
 
-  private static TServer getTThreadPoolServer(TProtocolFactory protocolFactory, THBaseService.Processor processor,
+  private static TServer getTThreadPoolServer(TProtocolFactory protocolFactory, TProcessor processor,
       TTransportFactory transportFactory, InetSocketAddress inetSocketAddress) throws TTransportException {
     TServerTransport serverTransport = new TServerSocket(inetSocketAddress);
     log.info("starting HBase ThreadPool Thrift server on " + inetSocketAddress.toString());
@@ -242,9 +311,47 @@ public class ThriftServer {
     // Get port to bind to
     int listenPort = 0;
     try {
-      listenPort = Integer.parseInt(cmd.getOptionValue("port", DEFAULT_LISTEN_PORT));
+      if (cmd.hasOption("port")) {
+        listenPort = Integer.parseInt(cmd.getOptionValue("port"));
+      } else {
+        listenPort = conf.getInt("hbase.regionserver.thrift.port", DEFAULT_LISTEN_PORT);
+      }
     } catch (NumberFormatException e) {
       throw new RuntimeException("Could not parse the value provided for the port option", e);
+    }
+
+    // Local hostname and user name,
+    // used only if QOP is configured.
+    String host = null;
+    String name = null;
+
+    UserProvider userProvider = UserProvider.instantiate(conf);
+    // login the server principal (if using secure Hadoop)
+    boolean securityEnabled = userProvider.isHadoopSecurityEnabled()
+      && userProvider.isHBaseSecurityEnabled();
+    if (securityEnabled) {
+      host = Strings.domainNamePointerToHostName(DNS.getDefaultHost(
+        conf.get("hbase.thrift.dns.interface", "default"),
+        conf.get("hbase.thrift.dns.nameserver", "default")));
+      userProvider.login("hbase.thrift.keytab.file",
+        "hbase.thrift.kerberos.principal", host);
+    }
+
+    UserGroupInformation realUser = userProvider.getCurrent().getUGI();
+    String qop = conf.get(THRIFT_QOP_KEY);
+    if (qop != null) {
+      if (!qop.equals("auth") && !qop.equals("auth-int")
+          && !qop.equals("auth-conf")) {
+        throw new IOException("Invalid " + THRIFT_QOP_KEY + ": " + qop
+          + ", it must be 'auth', 'auth-int', or 'auth-conf'");
+      }
+      if (!securityEnabled) {
+        throw new IOException("Thrift server must"
+          + " run in secure mode to support authentication");
+      }
+      // Extract the name from the principal
+      name = SecurityUtil.getUserFromPrincipal(
+        conf.get("hbase.thrift.kerberos.principal"));
     }
 
     boolean nonblocking = cmd.hasOption("nonblocking");
@@ -267,17 +374,35 @@ public class ThriftServer {
     boolean compact = cmd.hasOption("compact") ||
         conf.getBoolean("hbase.regionserver.thrift.compact", false);
     TProtocolFactory protocolFactory = getTProtocolFactory(compact);
+    final ThriftHBaseServiceHandler hbaseHandler =
+      new ThriftHBaseServiceHandler(conf, userProvider);
     THBaseService.Iface handler =
-        ThriftHBaseServiceHandler.newInstance(conf, metrics);
-    THBaseService.Processor processor = new THBaseService.Processor(handler);
+      ThriftHBaseServiceHandler.newInstance(hbaseHandler, metrics);
+    final THBaseService.Processor p = new THBaseService.Processor(handler);
     conf.setBoolean("hbase.regionserver.thrift.compact", compact);
+    TProcessor processor = p;
 
     boolean framed = cmd.hasOption("framed") ||
         conf.getBoolean("hbase.regionserver.thrift.framed", false) || nonblocking || hsha;
-    TTransportFactory transportFactory = getTTransportFactory(framed,
+    TTransportFactory transportFactory = getTTransportFactory(qop, name, host, framed,
         conf.getInt("hbase.regionserver.thrift.framed.max_frame_size_in_mb", 2) * 1024 * 1024);
     InetSocketAddress inetSocketAddress = bindToPort(cmd.getOptionValue("bind"), listenPort);
     conf.setBoolean("hbase.regionserver.thrift.framed", framed);
+    if (qop != null) {
+      // Create a processor wrapper, to get the caller
+      processor = new TProcessor() {
+        @Override
+        public boolean process(TProtocol inProt,
+            TProtocol outProt) throws TException {
+          TSaslServerTransport saslServerTransport =
+            (TSaslServerTransport)inProt.getTransport();
+          SaslServer saslServer = saslServerTransport.getSaslServer();
+          String principal = saslServer.getAuthorizationID();
+          hbaseHandler.setEffectiveUser(principal);
+          return p.process(inProt, outProt);
+        }
+      };
+    }
 
     // check for user-defined info server port setting, if so override the conf
     try {
@@ -309,6 +434,15 @@ public class ThriftServer {
     } else {
       server = getTThreadPoolServer(protocolFactory, processor, transportFactory, inetSocketAddress);
     }
-    server.serve();
+
+    final TServer tserver = server;
+    realUser.doAs(
+      new PrivilegedAction<Object>() {
+        @Override
+        public Object run() {
+          tserver.serve();
+          return null;
+        }
+      });
   }
 }

@@ -30,30 +30,41 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.HTableFactory;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTablePool;
 import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.RowMutations;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.*;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ConnectionCache;
 import org.apache.thrift.TException;
+
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 
 /**
  * This class is a glue object that connects Thrift RPC calls to the HBase client API primarily
  * defined in the HTableInterface.
  */
 @InterfaceAudience.Private
+@SuppressWarnings("deprecation")
 public class ThriftHBaseServiceHandler implements THBaseService.Iface {
 
   // TODO: Size of pool configuraple
-  private final HTablePool htablePool;
+  private final Cache<String, HTablePool> htablePools;
+  private final Callable<? extends HTablePool> htablePoolCreater;
   private static final Log LOG = LogFactory.getLog(ThriftHBaseServiceHandler.class);
 
   // nextScannerId and scannerMap are used to manage scanner state
@@ -62,8 +73,15 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
   private final Map<Integer, ResultScanner> scannerMap =
       new ConcurrentHashMap<Integer, ResultScanner>();
 
-  public static THBaseService.Iface newInstance(Configuration conf, ThriftMetrics metrics) {
-    THBaseService.Iface handler = new ThriftHBaseServiceHandler(conf);
+  private final ConnectionCache connectionCache;
+  private final HTableFactory tableFactory;
+  private final int maxPoolSize;
+
+  static final String CLEANUP_INTERVAL = "hbase.thrift.connection.cleanup-interval";
+  static final String MAX_IDLETIME = "hbase.thrift.connection.max-idletime";
+
+  public static THBaseService.Iface newInstance(
+      THBaseService.Iface handler, ThriftMetrics metrics) {
     return (THBaseService.Iface) Proxy.newProxyInstance(handler.getClass().getClassLoader(),
       new Class[] { THBaseService.Iface.class }, new THBaseServiceMetricsProxy(handler, metrics));
   }
@@ -98,13 +116,41 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     return System.nanoTime();
   }
 
-  ThriftHBaseServiceHandler(Configuration conf) {
-    int maxPoolSize = conf.getInt("hbase.thrift.htablepool.size.max", 1000);
-    htablePool = new HTablePool(conf, maxPoolSize);
+  ThriftHBaseServiceHandler(final Configuration conf,
+      final UserProvider userProvider) throws IOException {
+    int cleanInterval = conf.getInt(CLEANUP_INTERVAL, 10 * 1000);
+    int maxIdleTime = conf.getInt(MAX_IDLETIME, 10 * 60 * 1000);
+    connectionCache = new ConnectionCache(
+      conf, userProvider, cleanInterval, maxIdleTime);
+    tableFactory = new HTableFactory() {
+      @Override
+      public HTableInterface createHTableInterface(Configuration config,
+          byte[] tableName) {
+        try {
+          return connectionCache.getTable(Bytes.toString(tableName));
+        } catch (IOException ioe) {
+          throw new RuntimeException(ioe);
+        }
+      }
+    };
+    htablePools = CacheBuilder.newBuilder().expireAfterAccess(
+      maxIdleTime, TimeUnit.MILLISECONDS).softValues().concurrencyLevel(4).build();
+    maxPoolSize = conf.getInt("hbase.thrift.htablepool.size.max", 1000);
+    htablePoolCreater = new Callable<HTablePool>() {
+      public HTablePool call() {
+        return new HTablePool(conf, maxPoolSize, tableFactory);
+      }
+    };
   }
 
   private HTableInterface getTable(ByteBuffer tableName) {
-    return htablePool.getTable(byteBufferToByteArray(tableName));
+    String currentUser = connectionCache.getEffectiveUser();
+    try {
+      HTablePool htablePool = htablePools.get(currentUser, htablePoolCreater);
+      return htablePool.getTable(byteBufferToByteArray(tableName));
+    } catch (ExecutionException ee) {
+      throw new RuntimeException(ee);
+    }
   }
 
   private void closeTable(HTableInterface table) throws TIOError {
@@ -139,6 +185,10 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
    */
   private ResultScanner getScanner(int id) {
     return scannerMap.get(id);
+  }
+
+  void setEffectiveUser(String effectiveUser) {
+    connectionCache.setEffectiveUser(effectiveUser);
   }
 
   /**
