@@ -160,15 +160,32 @@ EOF
 
     #----------------------------------------------------------------------------------------------
     # Delete a cell
-    def _delete_internal(row, column, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
-      _deleteall_internal(row, column, timestamp)
+    def _delete_internal(row, column, 
+    			timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
+      _deleteall_internal(row, column, timestamp, args)
     end
 
     #----------------------------------------------------------------------------------------------
     # Delete a row
-    def _deleteall_internal(row, column = nil, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
+    def _deleteall_internal(row, column = nil, 
+    		timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
       raise ArgumentError, "Row Not Found" if _get_internal(row).nil?
+      temptimestamp = timestamp
+      if temptimestamp.kind_of?(Hash)
+      	  timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP
+      end
       d = org.apache.hadoop.hbase.client.Delete.new(row.to_s.to_java_bytes, timestamp)
+      if temptimestamp.kind_of?(Hash)
+      	temptimestamp.each do |k, v|
+      	  if v.kind_of?(String)
+      	  	set_cell_visibility(d, v) if v
+      	  end
+      	 end 
+      end
+      if args.any?
+         visibility = args[VISIBILITY]
+         set_cell_visibility(d, visibility) if visibility
+      end
       if column
         family, qualifier = parse_column_name(column)
         d.deleteColumns(family, qualifier, timestamp)
