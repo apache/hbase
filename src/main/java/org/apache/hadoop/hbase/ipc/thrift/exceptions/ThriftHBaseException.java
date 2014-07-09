@@ -32,6 +32,7 @@ import com.facebook.swift.codec.ThriftStruct;
 import com.google.common.base.Objects;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.util.Bytes;
 
 @ThriftStruct
@@ -44,6 +45,7 @@ public class ThriftHBaseException extends Exception {
   private String message;
   private String exceptionClass;
   private byte[] serializedServerJavaEx;
+  private long waitMillis = 0;
 
   /**
    * Swift Contructor used for serialization
@@ -51,14 +53,17 @@ public class ThriftHBaseException extends Exception {
    * @param message - the message of the exception
    * @param exceptionClass - the class of which instance the exception is
    * @param serializedServerJavaEx - serialized java exception
+   * @param waitMillis - required waiting milliseconds for RegionException
    */
   @ThriftConstructor
   public ThriftHBaseException(@ThriftField(1) String message,
       @ThriftField(2) String exceptionClass,
-      @ThriftField(3) byte[] serializedServerJavaEx) {
-    this.message = message;
-    this.exceptionClass = exceptionClass;
-    this.serializedServerJavaEx = serializedServerJavaEx;
+      @ThriftField(3) byte[] serializedServerJavaEx,
+      @ThriftField(4) long waitMillis) {
+      this.message = message;
+      this.exceptionClass = exceptionClass;
+      this.serializedServerJavaEx = serializedServerJavaEx;
+      this.waitMillis = waitMillis;
   }
 
   public ThriftHBaseException(){}
@@ -71,6 +76,9 @@ public class ThriftHBaseException extends Exception {
       this.message = serverJavaException.getMessage();
       this.exceptionClass = serverJavaException.getClass().getCanonicalName();
       serializedServerJavaEx = out.toByteArray();
+      if (serverJavaException instanceof RegionException) {
+        waitMillis = ((RegionException)serverJavaException).getBackoffTimeMillis();
+      }
     } catch (IOException e) {
       // Should never happen in reality
       LOG.error("Exception happened during serialization of java server exception");
@@ -105,9 +113,14 @@ public class ThriftHBaseException extends Exception {
     return serializedServerJavaEx;
   }
 
+  @ThriftField(4)
+  public long getWaitMilli() {
+    return waitMillis;
+  }
+
   @Override
   public int hashCode() {
-    return Objects.hashCode(message, exceptionClass, serializedServerJavaEx);
+    return Objects.hashCode(message, exceptionClass, serializedServerJavaEx, waitMillis);
   }
 
   @Override
@@ -138,6 +151,10 @@ public class ThriftHBaseException extends Exception {
       return false;
     }
 
+    if (this.getWaitMilli() != otherException.getWaitMilli()) {
+      return false;
+    }
+
     return true;
   }
 
@@ -145,6 +162,7 @@ public class ThriftHBaseException extends Exception {
   public String toString() {
     return getClass() + " [message=" + message + ", exceptionClass="
         + exceptionClass + ", serializedServerJavaEx Hash="
-        + Arrays.toString(serializedServerJavaEx).hashCode() + "]";
+        + Arrays.toString(serializedServerJavaEx).hashCode()
+        + ", waitMillis=" + waitMillis + "]";
   }
 }

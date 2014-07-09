@@ -146,6 +146,7 @@ exception ThriftHBaseException {
   1: string message;
   2: string exceptionClass;
   3: binary serializedServerJavaEx;
+  4: i64 waitMillis;
 }
 
 struct MultiAction {

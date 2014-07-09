@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.ipc.HBaseRPCOptions;
 import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.ThriftHRegionInterface;
@@ -52,16 +53,19 @@ public class TestThriftExceptions {
    */
   @Test
   public void testSerialization() throws Exception {
-    IOException ioe = new IOException("FooBar");
-    ThriftHBaseException thriftHBaseException = new ThriftHBaseException(ioe);
-    byte[] thriftHBaseExceptionBytes =
-      Bytes.writeThriftBytes(thriftHBaseException, ThriftHBaseException.class);
+    IOException[] ioeList = {new IOException("FooBar"),
+                             new RegionException("FooBar", 2000)};
+    for(IOException ioe : ioeList) {
+      ThriftHBaseException thriftHBaseException = new ThriftHBaseException(ioe);
+      byte[] thriftHBaseExceptionBytes =
+        Bytes.writeThriftBytes(thriftHBaseException, ThriftHBaseException.class);
 
-    ThriftHBaseException deserThriftHBaseException =
-      Bytes.readThriftBytes(thriftHBaseExceptionBytes,
-                            ThriftHBaseException.class);
+      ThriftHBaseException deserThriftHBaseException =
+        Bytes.readThriftBytes(thriftHBaseExceptionBytes,
+          ThriftHBaseException.class);
 
-    assertEquals(deserThriftHBaseException, thriftHBaseException);
+      assertEquals(deserThriftHBaseException, thriftHBaseException);
+    }
   }
 
 
