@@ -30,21 +30,25 @@ marked with the time 'ts1', do:
 
   hbase> delete 'ns1:t1', 'r1', 'c1', ts1
   hbase> delete 't1', 'r1', 'c1', ts1
+  hbase> delete 't1', 'r1', 'c1', ts1, {VISIBILITY=>'PRIVATE|SECRET'}
 
 The same command can also be run on a table reference. Suppose you had a reference
 t to table 't1', the corresponding command would be:
 
   hbase> t.delete 'r1', 'c1',  ts1
+  hbase> t.delete 'r1', 'c1',  ts1, {VISIBILITY=>'PRIVATE|SECRET'}
 EOF
       end
 
-      def command(table, row, column, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
-        delete(table(table), row, column, timestamp)
+      def command(table, row, column, 
+      				timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
+        delete(table(table), row, column, timestamp, args)
       end
 
-      def delete(table, row, column, timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
+      def delete(table, row, column, 
+      				timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
         format_simple_command do
-          table._delete_internal(row, column, timestamp)
+          table._delete_internal(row, column, timestamp, args)
         end
       end
     end

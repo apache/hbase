@@ -29,6 +29,7 @@ a column and timestamp. Examples:
   hbase> deleteall 't1', 'r1'
   hbase> deleteall 't1', 'r1', 'c1'
   hbase> deleteall 't1', 'r1', 'c1', ts1
+  hbase> deleteall 't1', 'r1', 'c1', ts1, {VISIBILITY=>'PRIVATE|SECRET'}
 
 The same commands also can be run on a table reference. Suppose you had a reference
 t to table 't1', the corresponding command would be:
@@ -36,18 +37,19 @@ t to table 't1', the corresponding command would be:
   hbase> t.deleteall 'r1'
   hbase> t.deleteall 'r1', 'c1'
   hbase> t.deleteall 'r1', 'c1', ts1
+  hbase> t.deleteall 'r1', 'c1', ts1, {VISIBILITY=>'PRIVATE|SECRET'}
 EOF
       end
 
       def command(table, row, column = nil,
-                  timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
-        deleteall(table(table), row, column, timestamp)
+                  timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
+        deleteall(table(table), row, column, timestamp, args)
       end
 
       def deleteall(table, row, column = nil,
-                    timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP)
+                    timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
         format_simple_command do
-          table._deleteall_internal(row, column, timestamp)
+          table._deleteall_internal(row, column, timestamp, args)
         end
       end
     end
