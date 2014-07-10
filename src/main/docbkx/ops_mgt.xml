@@ -188,20 +188,50 @@ private static final int ERROR_EXIT_CODE = 4;</programlisting>
     <section
       xml:id="driver">
       <title>Driver</title>
-      <para>There is a <code>Driver</code> class that is executed by the HBase jar can be used to
-        invoke frequently accessed utilities. For example,</para>
-      <screen>HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-VERSION.jar
-
-An example program must be given as the first argument.
-Valid program names are:
-  completebulkload: Complete a bulk data load.
-  copytable: Export a table from local cluster to peer cluster
-  export: Write table data to HDFS.
-  import: Import data written by Export.
-  importtsv: Import data in TSV format.
-  rowcounter: Count rows in HBase table
-  verifyrep: Compare the data from tables in two different clusters. WARNING: It doesn't work for incrementColumnValues'd cells since the timestamp is chan
+      <para>Several frequently-accessed utilities are provided as <code>Driver</code> classes, and executed by
+        the <filename>bin/hbase</filename> command. These utilities represent MapReduce jobs which
+        run on your cluster. They are run in the following way, replacing
+          <replaceable>UtilityName</replaceable> with the utility you want to run. This command
+        assumes you have set the environment variable <literal>HBASE_HOME</literal> to the directory
+        where HBase is unpacked on your server.</para>
+      <screen>
+${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.mapreduce.<replaceable>UtilityName</replaceable>        
       </screen>
+      <para>The following utilities are available:</para>
+      <variablelist>
+        <varlistentry>
+          <term><command>LoadIncrementalHFiles</command></term>
+          <listitem><para>Complete a bulk data load.</para></listitem>
+        </varlistentry>
+        <varlistentry>
+          <term><command>CopyTable</command></term>
+          <listitem><para>Export a table from the local cluster to a peer cluster.</para></listitem>
+        </varlistentry>
+        <varlistentry>
+          <term><command>Export</command></term>
+          <listitem><para>Write table data to HDFS.</para></listitem>
+        </varlistentry>
+        <varlistentry>
+          <term><command>Import</command></term>
+          <listitem><para>Import data written by a previous <command>Export</command> operation.</para></listitem>
+        </varlistentry>
+        <varlistentry>
+          <term><command>ImportTsv</command></term>
+          <listitem><para>Import data in TSV format.</para></listitem>
+        </varlistentry>
+        <varlistentry>
+          <term><command>RowCounter</command></term>
+          <listitem><para>Count rows in an HBase table.</para></listitem>
+        </varlistentry>
+        <varlistentry>
+          <term><command>replication.VerifyReplication</command></term>
+          <listitem><para>Compare the data from tables in two different clusters. WARNING: It
+            doesn't work for incrementColumnValues'd cells since the timestamp is changed. Note that
+          this command is in a different package than the others.</para></listitem>
+        </varlistentry>
+      </variablelist>
+      <para>Each command except <command>RowCounter</command> accepts a single
+        <literal>--help</literal> argument to print usage instructions.</para>
     </section>
     <section
       xml:id="hbck">
@@ -266,66 +296,45 @@ Valid program names are:
       <para> CopyTable is a utility that can copy part or of all of a table, either to the same
         cluster or another cluster. The target table must first exist. The usage is as
         follows:</para>
-      <screen>$ bin/hbase org.apache.hadoop.hbase.mapreduce.CopyTable [--starttime=X] [--endtime=Y] [--new.name=NEW] [--peer.adr=ADR] tablename
-</screen>
 
-      <variablelist>
-        <title>Options</title>
-        <varlistentry>
-          <term>starttime</term>
-          <listitem>
-            <para>Beginning of the time range. Without endtime means starttime to forever.</para>
-          </listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>endtime</term>
-          <listitem>
-            <para>End of the time range. Without endtime means starttime to forever.</para>
-          </listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>versions</term>
-          <listitem>
-            <para>Number of cell versions to copy.</para>
-          </listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>new.name</term>
-          <listitem>
-            <para>New table's name.</para>
-          </listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>peer.adr</term>
-          <listitem>
-            <para>Address of the peer cluster given in the format
-              hbase.zookeeper.quorum:hbase.zookeeper.client.port:zookeeper.znode.parent</para>
-          </listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>families</term>
-          <listitem>
-            <para>Comma-separated list of ColumnFamilies to copy.</para>
-          </listitem>
-        </varlistentry>
-        <varlistentry>
-          <term>all.cells</term>
-          <listitem>
-            <para>Also copy delete markers and uncollected deleted cells (advanced option).</para>
-          </listitem>
-        </varlistentry>
-      </variablelist>
-      <itemizedlist>
-        <title>Args:</title>
-        <listitem>
-          <para>tablename Name of table to copy.</para>
-        </listitem>
-      </itemizedlist>
-      <para>Example of copying 'TestTable' to a cluster that uses replication for a 1 hour
-        window:</para>
-      <screen>$ bin/hbase org.apache.hadoop.hbase.mapreduce.CopyTable
---starttime=1265875194289 --endtime=1265878794289
---peer.adr=server1,server2,server3:2181:/hbase TestTable</screen>
+      <screen>
+$ <userinput>./bin/hbase org.apache.hadoop.hbase.mapreduce.CopyTable --help </userinput>       
+/bin/hbase org.apache.hadoop.hbase.mapreduce.CopyTable --help
+Usage: CopyTable [general options] [--starttime=X] [--endtime=Y] [--new.name=NEW] [--peer.adr=ADR] &lt;tablename&gt;
+
+Options:
+ rs.class     hbase.regionserver.class of the peer cluster, 
+              specify if different from current cluster
+ rs.impl      hbase.regionserver.impl of the peer cluster,
+ startrow     the start row
+ stoprow      the stop row
+ starttime    beginning of the time range (unixtime in millis)
+              without endtime means from starttime to forever
+ endtime      end of the time range.  Ignored if no starttime specified.
+ versions     number of cell versions to copy
+ new.name     new table's name
+ peer.adr     Address of the peer cluster given in the format
+              hbase.zookeeer.quorum:hbase.zookeeper.client.port:zookeeper.znode.parent
+ families     comma-separated list of families to copy
+              To copy from cf1 to cf2, give sourceCfName:destCfName.
+              To keep the same name, just give "cfName"
+ all.cells    also copy delete markers and deleted cells
+
+Args:
+ tablename    Name of the table to copy
+
+Examples:
+ To copy 'TestTable' to a cluster that uses replication for a 1 hour window:
+ $ bin/hbase org.apache.hadoop.hbase.mapreduce.CopyTable --starttime=1265875194289 --endtime=1265878794289 --peer.adr=server1,server2,server3:2181:/hbase --families=myOldCf:myNewCf,cf2,cf3 TestTable
+
+For performance consider the following general options:
+  It is recommended that you set the following to >=100. A higher value uses more memory but
+  decreases the round trip time to the server and may increase performance.
+    -Dhbase.client.scanner.caching=100
+  The following should always be set to false, to prevent writing data twice, which may produce
+  inaccurate results.
+    -Dmapred.map.tasks.speculative.execution=false       
+      </screen>
       <note>
         <title>Scanner Caching</title>
         <para>Caching for the input Scan is configured via <code>hbase.client.scanner.caching</code>

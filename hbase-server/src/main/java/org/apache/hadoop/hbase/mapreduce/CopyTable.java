@@ -159,9 +159,13 @@ public class CopyTable extends Configured implements Tool {
     System.err.println(" $ bin/hbase " +
         "org.apache.hadoop.hbase.mapreduce.CopyTable --starttime=1265875194289 --endtime=1265878794289 " +
         "--peer.adr=server1,server2,server3:2181:/hbase --families=myOldCf:myNewCf,cf2,cf3 TestTable ");
-    System.err.println("For performance consider the following general options:\n"
-        + "-Dhbase.client.scanner.caching=100\n"
-        + "-Dmapreduce.map.speculative=false");
+    System.err.println("For performance consider the following general option:\n"
+        + "  It is recommended that you set the following to >=100. A higher value uses more memory but\n"
+        + "  decreases the round trip time to the server and may increase performance.\n"
+        + "    -Dhbase.client.scanner.caching=100\n"
+        + "  The following should always be set to false, to prevent writing data twice, which may produce \n"
+        + "  inaccurate results.\n"
+        + "    -Dmapreduce.map.speculative=false");
   }
 
   private static boolean doCommandLine(final String[] args) {
