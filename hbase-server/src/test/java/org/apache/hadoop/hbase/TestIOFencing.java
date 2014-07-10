@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,6 +34,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -42,6 +45,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -51,6 +55,8 @@ import org.apache.hadoop.hdfs.server.namenode.LeaseManager;
 import org.apache.log4j.Level;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.common.collect.Lists;
 
 /**
  * Test for the case where a regionserver going down has enough cycles to do damage to regions
@@ -215,7 +221,8 @@ public class TestIOFencing {
    */
   @Test
   public void testFencingAroundCompaction() throws Exception {
-    doTest(BlockCompactionsInPrepRegion.class);
+    doTest(BlockCompactionsInPrepRegion.class, false);
+    doTest(BlockCompactionsInPrepRegion.class, true);
   }
 
   /**
@@ -226,12 +233,13 @@ public class TestIOFencing {
    */
   @Test
   public void testFencingAroundCompactionAfterWALSync() throws Exception {
-    doTest(BlockCompactionsInCompletionRegion.class);
+    doTest(BlockCompactionsInCompletionRegion.class, false);
+    doTest(BlockCompactionsInCompletionRegion.class, true);
   }
 
-  public void doTest(Class<?> regionClass) throws Exception {
+  public void doTest(Class<?> regionClass, boolean distributedLogReplay) throws Exception {
     Configuration c = TEST_UTIL.getConfiguration();
-    c.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
+    c.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, distributedLogReplay);
     // Insert our custom region
     c.setClass(HConstants.REGION_IMPL, regionClass, HRegion.class);
     c.setBoolean("dfs.support.append", true);
@@ -264,6 +272,16 @@ public class TestIOFencing {
       // Load some rows
       TEST_UTIL.loadNumericRows(table, FAMILY, 0, FIRST_BATCH_COUNT);
 
+      // add a compaction from an older (non-existing) region to see whether we successfully skip
+      // those entries
+      HRegionInfo oldHri = new HRegionInfo(table.getName(),
+        HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+      CompactionDescriptor compactionDescriptor = ProtobufUtil.toCompactionDescriptor(oldHri,
+        FAMILY, Lists.newArrayList(new Path("/a")), Lists.newArrayList(new Path("/b")),
+        new Path("store_dir"));
+      HLogUtil.writeCompactionMarker(compactingRegion.getLog(), table.getTableDescriptor(),
+        oldHri, compactionDescriptor, new AtomicLong(Long.MAX_VALUE-100));
+
       // Wait till flush has happened, otherwise there won't be multiple store files
       long startWaitTime = System.currentTimeMillis();
       while (compactingRegion.getLastFlushTime() <= lastFlushTime ||
@@ -281,18 +299,24 @@ public class TestIOFencing {
       compactingRegion.waitForCompactionToBlock();
       LOG.info("Starting a new server");
       RegionServerThread newServerThread = TEST_UTIL.getMiniHBaseCluster().startRegionServer();
-      HRegionServer newServer = newServerThread.getRegionServer();
+      final HRegionServer newServer = newServerThread.getRegionServer();
       LOG.info("Killing region server ZK lease");
       TEST_UTIL.expireRegionServerSession(0);
       CompactionBlockerRegion newRegion = null;
       startWaitTime = System.currentTimeMillis();
-      while (newRegion == null) {
-        LOG.info("Waiting for the new server to pick up the region " + Bytes.toString(REGION_NAME));
-        Thread.sleep(1000);
-        newRegion = (CompactionBlockerRegion)newServer.getOnlineRegion(REGION_NAME);
-        assertTrue("Timed out waiting for new server to open region",
-          System.currentTimeMillis() - startWaitTime < 300000);
-      }
+      LOG.info("Waiting for the new server to pick up the region " + Bytes.toString(REGION_NAME));
+
+      // wait for region to be assigned and to go out of log replay if applicable
+      Waiter.waitFor(c, 60000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          HRegion newRegion = newServer.getOnlineRegion(REGION_NAME);
+          return newRegion != null && !newRegion.isRecovering();
+        }
+      });
+
+      newRegion = (CompactionBlockerRegion)newServer.getOnlineRegion(REGION_NAME);
+
       LOG.info("Allowing compaction to proceed");
       compactingRegion.allowCompactions();
       while (compactingRegion.compactCount == 0) {

@@ -80,7 +80,6 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -92,6 +91,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRespo
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
@@ -241,7 +241,7 @@ public class HLogSplitter {
     List<Path> splits = new ArrayList<Path>();
     if (logfiles != null && logfiles.length > 0) {
       for (FileStatus logfile: logfiles) {
-        HLogSplitter s = new HLogSplitter(conf, rootDir, fs, null, null, null, 
+        HLogSplitter s = new HLogSplitter(conf, rootDir, fs, null, null, null,
           RecoveryMode.LOG_SPLITTING);
         if (s.splitLogFile(logfile, null)) {
           finishSplitLogFile(rootDir, oldLogDir, logfile.getPath(), conf);
@@ -811,6 +811,7 @@ public class HLogSplitter {
       k.internEncodedRegionName(this.encodedRegionName);
     }
 
+    @Override
     public long heapSize() {
       return heapInBuffer;
     }
@@ -825,6 +826,7 @@ public class HLogSplitter {
       outputSink = sink;
     }
 
+    @Override
     public void run()  {
       try {
         doRun();
@@ -1060,6 +1062,7 @@ public class HLogSplitter {
         TimeUnit.SECONDS, new ThreadFactory() {
           private int count = 1;
 
+          @Override
           public Thread newThread(Runnable r) {
             Thread t = new Thread(r, "split-log-closeStream-" + count++);
             return t;
@@ -1070,6 +1073,7 @@ public class HLogSplitter {
       for (final Map.Entry<byte[], SinkWriter> writersEntry : writers.entrySet()) {
         LOG.debug("Submitting close of " + ((WriterAndPath)writersEntry.getValue()).p);
         completionService.submit(new Callable<Void>() {
+          @Override
           public Void call() throws Exception {
             WriterAndPath wap = (WriterAndPath) writersEntry.getValue();
             LOG.debug("Closing " + wap.p);
@@ -1242,6 +1246,7 @@ public class HLogSplitter {
       return (new WriterAndPath(regionedits, w));
     }
 
+    @Override
     void append(RegionEntryBuffer buffer) throws IOException {
       List<Entry> entries = buffer.entryBuffer;
       if (entries.isEmpty()) {
@@ -1280,6 +1285,7 @@ public class HLogSplitter {
     /**
      * @return a map from encoded region ID to the number of edits written out for that region.
      */
+    @Override
     Map<byte[], Long> getOutputCounts() {
       TreeMap<byte[], Long> ret = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
       synchronized (writers) {
@@ -1368,6 +1374,7 @@ public class HLogSplitter {
       this.logRecoveredEditsOutputSink.setReporter(reporter);
     }
 
+    @Override
     void append(RegionEntryBuffer buffer) throws IOException {
       List<Entry> entries = buffer.entryBuffer;
       if (entries.isEmpty()) {
@@ -1449,19 +1456,40 @@ public class HLogSplitter {
         HConnection hconn = this.getConnectionByTableName(table);
 
         for (KeyValue kv : kvs) {
-          // filtering HLog meta entries
-          // We don't handle HBASE-2231 because we may or may not replay a compaction event.
-          // Details at https://issues.apache.org/jira/browse/HBASE-2231?focusedCommentId=13647143&
-          // page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-13647143
+          byte[] row = kv.getRow();
+          byte[] family = kv.getFamily();
+          boolean isCompactionEntry = false;
           if (CellUtil.matchingFamily(kv, WALEdit.METAFAMILY)) {
-            skippedKVs.add(kv);
-            continue;
+            CompactionDescriptor compaction = WALEdit.getCompaction(kv);
+            if (compaction != null && compaction.hasRegionName()) {
+              try {
+                byte[][] regionName = HRegionInfo.parseRegionName(compaction.getRegionName()
+                  .toByteArray());
+                row = regionName[1]; // startKey of the region
+                family = compaction.getFamilyName().toByteArray();
+                isCompactionEntry = true;
+              } catch (Exception ex) {
+                LOG.warn("Unexpected exception received, ignoring " + ex);
+                skippedKVs.add(kv);
+                continue;
+              }
+            } else {
+              skippedKVs.add(kv);
+              continue;
+            }
           }
 
           try {
             loc =
-                locateRegionAndRefreshLastFlushedSequenceId(hconn, table, kv.getRow(),
+                locateRegionAndRefreshLastFlushedSequenceId(hconn, table, row,
                   encodeRegionNameStr);
+            // skip replaying the compaction if the region is gone
+            if (isCompactionEntry && !encodeRegionNameStr.equalsIgnoreCase(
+              loc.getRegionInfo().getEncodedName())) {
+              LOG.info("Not replaying a compaction marker for an older region: "
+                  + encodeRegionNameStr);
+              needSkip = true;
+            }
           } catch (TableNotFoundException ex) {
             // table has been deleted so skip edits of the table
             LOG.info("Table " + table + " doesn't exist. Skip log replay for region "
@@ -1490,7 +1518,7 @@ public class HLogSplitter {
                   regionMaxSeqIdInStores.get(loc.getRegionInfo().getEncodedName());
             }
             if (maxStoreSequenceIds != null) {
-              Long maxStoreSeqId = maxStoreSequenceIds.get(kv.getFamily());
+              Long maxStoreSeqId = maxStoreSequenceIds.get(family);
               if (maxStoreSeqId == null || maxStoreSeqId >= entry.getKey().getLogSeqNum()) {
                 // skip current kv if column family doesn't exist anymore or already flushed
                 skippedKVs.add(kv);
@@ -1768,6 +1796,7 @@ public class HLogSplitter {
       return result;
     }
 
+    @Override
     Map<byte[], Long> getOutputCounts() {
       TreeMap<byte[], Long> ret = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
       synchronized (writers) {
@@ -1922,7 +1951,7 @@ public class HLogSplitter {
       return new ArrayList<MutationReplay>();
     }
 
-    long replaySeqId = (entry.getKey().hasOrigSequenceNumber()) ? 
+    long replaySeqId = (entry.getKey().hasOrigSequenceNumber()) ?
       entry.getKey().getOrigSequenceNumber() : entry.getKey().getLogSequenceNumber();
     int count = entry.getAssociatedCellCount();
     List<MutationReplay> mutations = new ArrayList<MutationReplay>();
@@ -1979,7 +2008,7 @@ public class HLogSplitter {
         clusterIds.add(new UUID(uuid.getMostSigBits(), uuid.getLeastSigBits()));
       }
       key = new HLogKey(walKey.getEncodedRegionName().toByteArray(), TableName.valueOf(walKey
-              .getTableName().toByteArray()), replaySeqId, walKey.getWriteTime(), clusterIds, 
+              .getTableName().toByteArray()), replaySeqId, walKey.getWriteTime(), clusterIds,
               walKey.getNonceGroup(), walKey.getNonce());
       logEntry.setFirst(key);
       logEntry.setSecond(val);
