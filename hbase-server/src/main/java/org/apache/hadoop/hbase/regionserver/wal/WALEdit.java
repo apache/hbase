@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -145,6 +146,7 @@ public class WALEdit implements Writable, HeapSize {
     return result;
   }
 
+  @Override
   public void readFields(DataInput in) throws IOException {
     kvs.clear();
     if (scopes != null) {
@@ -180,6 +182,7 @@ public class WALEdit implements Writable, HeapSize {
     }
   }
 
+  @Override
   public void write(DataOutput out) throws IOException {
     LOG.warn("WALEdit is being serialized to writable - only expected in test code");
     out.writeInt(VERSION_2);
@@ -222,6 +225,7 @@ public class WALEdit implements Writable, HeapSize {
     return kvs.size();
   }
 
+  @Override
   public long heapSize() {
     long ret = ClassSize.ARRAYLIST;
     for (KeyValue kv : kvs) {
@@ -235,6 +239,7 @@ public class WALEdit implements Writable, HeapSize {
     return ret;
   }
 
+  @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
 
@@ -249,16 +254,27 @@ public class WALEdit implements Writable, HeapSize {
     sb.append(">]");
     return sb.toString();
   }
-  
+
   /**
    * Create a compacion WALEdit
    * @param c
    * @return A WALEdit that has <code>c</code> serialized as its value
    */
-  public static WALEdit createCompaction(final CompactionDescriptor c) {
+  public static WALEdit createCompaction(final HRegionInfo hri, final CompactionDescriptor c) {
     byte [] pbbytes = c.toByteArray();
-    KeyValue kv = new KeyValue(METAROW, METAFAMILY, COMPACTION, System.currentTimeMillis(), pbbytes);
+    KeyValue kv = new KeyValue(getRowForRegion(hri), METAFAMILY, COMPACTION,
+      System.currentTimeMillis(), pbbytes);
     return new WALEdit().add(kv); //replication scope null so that this won't be replicated
+  }
+
+  private static byte[] getRowForRegion(HRegionInfo hri) {
+    byte[] startKey = hri.getStartKey();
+    if (startKey.length == 0) {
+      // empty row key is not allowed in mutations because it is both the start key and the end key
+      // we return the smallest byte[] that is bigger (in lex comparison) than byte[0].
+      return new byte[] {0};
+    }
+    return startKey;
   }
 
   /**
@@ -266,8 +282,8 @@ public class WALEdit implements Writable, HeapSize {
    * @param kv the key value
    * @return deserialized CompactionDescriptor or null.
    */
-  public static CompactionDescriptor getCompaction(KeyValue kv) throws IOException {
-    if (CellUtil.matchingRow(kv, METAROW) && CellUtil.matchingColumn(kv, METAFAMILY, COMPACTION)) {
+  public static CompactionDescriptor getCompaction(Cell kv) throws IOException {
+    if (CellUtil.matchingColumn(kv, METAFAMILY, COMPACTION)) {
       return CompactionDescriptor.parseFrom(kv.getValue());
     }
     return null;

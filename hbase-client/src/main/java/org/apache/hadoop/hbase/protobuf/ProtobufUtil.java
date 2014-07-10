@@ -2495,6 +2495,7 @@ public final class ProtobufUtil {
     for (Path outputPath : outputPaths) {
       builder.addCompactionOutput(outputPath.getName());
     }
+    builder.setRegionName(HBaseZeroCopyByteString.wrap(info.getRegionName()));
     return builder.build();
   }
 

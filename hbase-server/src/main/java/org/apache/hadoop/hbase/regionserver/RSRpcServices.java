@@ -26,8 +26,10 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
@@ -140,6 +142,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
@@ -640,25 +643,37 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    */
   private OperationStatus [] doReplayBatchOp(final HRegion region,
       final List<HLogSplitter.MutationReplay> mutations, long replaySeqId) throws IOException {
-    HLogSplitter.MutationReplay[] mArray = new HLogSplitter.MutationReplay[mutations.size()];
 
     long before = EnvironmentEdgeManager.currentTimeMillis();
     boolean batchContainsPuts = false, batchContainsDelete = false;
     try {
-      int i = 0;
-      for (HLogSplitter.MutationReplay m : mutations) {
+      for (Iterator<HLogSplitter.MutationReplay> it = mutations.iterator(); it.hasNext();) {
+        HLogSplitter.MutationReplay m = it.next();
+
         if (m.type == MutationType.PUT) {
           batchContainsPuts = true;
         } else {
           batchContainsDelete = true;
         }
-        mArray[i++] = m;
+
+        NavigableMap<byte[], List<Cell>> map = m.mutation.getFamilyCellMap();
+        List<Cell> metaCells = map.get(WALEdit.METAFAMILY);
+        if (metaCells != null && !metaCells.isEmpty()) {
+          for (Cell metaCell : metaCells) {
+            CompactionDescriptor compactionDesc = WALEdit.getCompaction(metaCell);
+            if (compactionDesc != null) {
+              region.completeCompactionMarker(compactionDesc);
+            }
+          }
+          it.remove();
+        }
       }
       requestCount.add(mutations.size());
       if (!region.getRegionInfo().isMetaTable()) {
         regionServer.cacheFlusher.reclaimMemStoreMemory();
       }
-      return region.batchReplay(mArray, replaySeqId);
+      return region.batchReplay(mutations.toArray(
+        new HLogSplitter.MutationReplay[mutations.size()]), replaySeqId);
     } finally {
       if (regionServer.metricsRegionServer != null) {
         long after = EnvironmentEdgeManager.currentTimeMillis();
@@ -1355,7 +1370,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           walEntries.add(walEntry);
         }
         if(edits!=null && !edits.isEmpty()) {
-          long replaySeqId = (entry.getKey().hasOrigSequenceNumber()) ? 
+          long replaySeqId = (entry.getKey().hasOrigSequenceNumber()) ?
             entry.getKey().getOrigSequenceNumber() : entry.getKey().getLogSequenceNumber();
           OperationStatus[] result = doReplayBatchOp(region, edits, replaySeqId);
           // check if it's a partial success
@@ -1366,7 +1381,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           }
         }
       }
-      
+
       //sync wal at the end because ASYNC_WAL is used above
       region.syncWal();
 

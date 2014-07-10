@@ -1625,7 +1625,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   boolean shouldFlush() {
     // This is a rough measure.
-    if (this.lastFlushSeqId > 0 
+    if (this.lastFlushSeqId > 0
           && (this.lastFlushSeqId + this.flushPerChanges < this.sequenceId.get())) {
       return true;
     }
@@ -2195,7 +2195,7 @@ public class HRegion implements HeapSize { // , Writable{
     public boolean isInReplay() {
       return false;
     }
-    
+
     @Override
     public long getReplaySequenceId() {
       return 0;
@@ -2234,7 +2234,7 @@ public class HRegion implements HeapSize { // , Writable{
     public boolean isInReplay() {
       return true;
     }
-    
+
     @Override
     public long getReplaySequenceId() {
       return this.replaySeqId;
@@ -3295,7 +3295,7 @@ public class HRegion implements HeapSize { // , Writable{
             firstSeqIdInLog = key.getLogSeqNum();
           }
           currentEditSeqId = key.getLogSeqNum();
-          currentReplaySeqId = (key.getOrigLogSeqNum() > 0) ? 
+          currentReplaySeqId = (key.getOrigLogSeqNum() > 0) ?
             key.getOrigLogSeqNum() : currentEditSeqId;
           boolean flush = false;
           for (KeyValue kv: val.getKeyValues()) {
@@ -6243,7 +6243,7 @@ public class HRegion implements HeapSize { // , Writable{
       WALEdit.EMPTY_WALEDIT, this.sequenceId, false, cells);
     return key;
   }
-  
+
   /**
    * Explictly sync wal
    * @throws IOException
