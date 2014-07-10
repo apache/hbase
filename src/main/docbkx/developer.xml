@@ -1020,17 +1020,20 @@ As you can see from the log, ChaosMonkey started the default PeriodicRandomActio
     The various properties that can be configured and their default values can be found listed in the
     <classname>org.apache.hadoop.hbase.chaos.factories.MonkeyConstants</classname> class. 
     If any chaos monkey configuration is missing from the property file, then the default values are assumed.
-    For example:
-    <console><prompt>$</prompt> <userinput>bin/hbase org.apache.hadoop.hbase.IntegrationTestIngest -m slowDeterministic -monkeyProps monkey.properties</userinput></console>
-    The above command will start the integration tests and chaos monkey passing the properties file <filename>monkey.properties</filename>. 
-    Here is an example chaos monkey file:
-    <programlisting>sdm.action1.period=120000
+    For example:</para>
+    <programlisting>
+$<userinput>bin/hbase org.apache.hadoop.hbase.IntegrationTestIngest -m slowDeterministic -monkeyProps monkey.properties</userinput>
+    </programlisting>
+    <para>The above command will start the integration tests and chaos monkey passing the properties file <filename>monkey.properties</filename>. 
+    Here is an example chaos monkey file:</para>
+    <programlisting>
+sdm.action1.period=120000
 sdm.action2.period=40000
 move.regions.sleep.time=80000
 move.regions.max.time=1000000
 move.regions.sleep.time=80000
-batch.restart.rs.ratio=0.4f</programlisting>
-</para>
+batch.restart.rs.ratio=0.4f
+    </programlisting>
 </section>
 </section>
 </section> <!-- tests -->
@@ -1635,7 +1638,7 @@ If a committer wishes to improve an unacceptable patch, then it should first be 
 <listitem><para>Include the Jira issue id in the commit message, along with a short description of the change and the name of the contributor if it is not you.
 Be sure to get the issue id right, as this causes Jira to link to the change in Subversion (use the issue's &quot;All&quot; tab to see these). </para></listitem>
 <listitem><para>Resolve the issue as fixed, thanking the contributor.
-Always set the &quot;Fix Version&quot; at this point, but please only set a single fix version, the earliest release in which the change will appear. </para></listitem></orderedlist><para><anchor id="Documentation"/> </para>
+Always set the &quot;Fix Version&quot; at this point, but please only set a single fix version, the earliest release in which the change will appear. </para></listitem></orderedlist>
 
           <section xml:id="committer.amending.author">
               <title>Add Amending-Author when a conflict cherrypick backporting</title>
