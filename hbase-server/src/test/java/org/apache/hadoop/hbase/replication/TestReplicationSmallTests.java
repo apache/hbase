@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
@@ -491,10 +492,12 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   public void testCompactionWALEdits() throws Exception {
     WALProtos.CompactionDescriptor compactionDescriptor =
         WALProtos.CompactionDescriptor.getDefaultInstance();
-    WALEdit edit = WALEdit.createCompaction(compactionDescriptor);
+    HRegionInfo hri = new HRegionInfo(htable1.getName(),
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+    WALEdit edit = WALEdit.createCompaction(hri, compactionDescriptor);
     Replication.scopeWALEdits(htable1.getTableDescriptor(), new HLogKey(), edit);
   }
-  
+
   /**
    * Test for HBASE-8663
    * Create two new Tables with colfamilies enabled for replication then run

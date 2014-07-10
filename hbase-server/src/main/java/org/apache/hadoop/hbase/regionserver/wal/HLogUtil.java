@@ -263,7 +263,7 @@ public class HLogUtil {
    */
   public static void writeCompactionMarker(HLog log, HTableDescriptor htd, HRegionInfo info,
       final CompactionDescriptor c, AtomicLong sequenceId) throws IOException {
-    WALEdit e = WALEdit.createCompaction(c);
+    WALEdit e = WALEdit.createCompaction(info, c);
     long now = EnvironmentEdgeManager.currentTimeMillis();
     TableName tn = TableName.valueOf(c.getTableName().toByteArray());
     long txid = log.appendNoSync(info, tn, e, new ArrayList<UUID>(), now, htd, sequenceId,

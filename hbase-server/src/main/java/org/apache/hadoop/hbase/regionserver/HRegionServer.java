@@ -38,6 +38,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NavigableMap;
 import java.util.Random;
 import java.util.Set;
 import java.util.SortedMap;
@@ -191,6 +192,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
@@ -4341,25 +4343,35 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    */
   protected OperationStatus [] doReplayBatchOp(final HRegion region,
       final List<HLogSplitter.MutationReplay> mutations) throws IOException {
-    HLogSplitter.MutationReplay[] mArray = new HLogSplitter.MutationReplay[mutations.size()];
 
     long before = EnvironmentEdgeManager.currentTimeMillis();
     boolean batchContainsPuts = false, batchContainsDelete = false;
     try {
-      int i = 0;
-      for (HLogSplitter.MutationReplay m : mutations) {
+      for (Iterator<HLogSplitter.MutationReplay> it = mutations.iterator(); it.hasNext();) {
+        HLogSplitter.MutationReplay m = it.next();
         if (m.type == MutationType.PUT) {
           batchContainsPuts = true;
         } else {
           batchContainsDelete = true;
         }
-        mArray[i++] = m;
+        NavigableMap<byte[], List<Cell>> map = m.mutation.getFamilyCellMap();
+        List<Cell> metaCells = map.get(WALEdit.METAFAMILY);
+        if (metaCells != null && !metaCells.isEmpty()) {
+          for (Cell metaCell : metaCells) {
+            CompactionDescriptor compactionDesc = WALEdit.getCompaction(metaCell);
+            if (compactionDesc != null) {
+              region.completeCompactionMarker(compactionDesc);
+            }
+          }
+          it.remove();
+        }
       }
       requestCount.add(mutations.size());
       if (!region.getRegionInfo().isMetaTable()) {
         cacheFlusher.reclaimMemStoreMemory();
       }
-      return region.batchReplay(mArray);
+      return region.batchReplay(mutations.toArray(
+        new HLogSplitter.MutationReplay[mutations.size()]));
     } finally {
       long after = EnvironmentEdgeManager.currentTimeMillis();
       if (batchContainsPuts) {

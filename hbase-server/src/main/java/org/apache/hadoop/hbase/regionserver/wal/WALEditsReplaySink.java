@@ -233,8 +233,6 @@ public class WALEditsReplaySink {
         List<KeyValue> kvs = edit.getKeyValues();
         for (KeyValue kv : kvs) {
           // filtering HLog meta entries
-          if (kv.matchingFamily(WALEdit.METAFAMILY)) continue;
-
           setLocation(conn.locateRegion(tableName, kv.getRow()));
           skip = true;
           break;

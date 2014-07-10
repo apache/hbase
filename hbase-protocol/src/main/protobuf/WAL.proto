@@ -91,6 +91,7 @@ message CompactionDescriptor {
   repeated string compaction_input = 4;
   repeated string compaction_output = 5;
   required string store_home_dir = 6;
+  optional bytes  region_name = 7; // full region name
 }
 
 /**

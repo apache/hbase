@@ -605,11 +605,13 @@ public class TestHRegion {
         long time = System.nanoTime();
         WALEdit edit = null;
         if (i == maxSeqId) {
-          edit = WALEdit.createCompaction(CompactionDescriptor.newBuilder()
+          edit = WALEdit.createCompaction(region.getRegionInfo(),
+          CompactionDescriptor.newBuilder()
           .setTableName(ByteString.copyFrom(tableName.getName()))
           .setFamilyName(ByteString.copyFrom(regionName))
           .setEncodedRegionName(ByteString.copyFrom(regionName))
           .setStoreHomeDirBytes(ByteString.copyFrom(Bytes.toBytes(regiondir.toString())))
+          .setRegionName(ByteString.copyFrom(region.getRegionInfo().getRegionName()))
           .build());
         } else {
           edit = new WALEdit();
@@ -701,7 +703,8 @@ public class TestHRegion {
       long time = System.nanoTime();
 
       writer.append(new HLog.Entry(new HLogKey(regionName, tableName, 10, time,
-          HConstants.DEFAULT_CLUSTER_ID), WALEdit.createCompaction(compactionDescriptor)));
+          HConstants.DEFAULT_CLUSTER_ID), WALEdit.createCompaction(region.getRegionInfo(),
+          compactionDescriptor)));
       writer.close();
 
       // close the region now, and reopen again

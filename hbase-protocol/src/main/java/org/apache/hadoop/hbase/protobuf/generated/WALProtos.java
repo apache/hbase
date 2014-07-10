@@ -3635,6 +3635,24 @@ public final class WALProtos {
      */
     com.google.protobuf.ByteString
         getStoreHomeDirBytes();
+
+    // optional bytes region_name = 7;
+    /**
+     * <code>optional bytes region_name = 7;</code>
+     *
+     * <pre>
+     * full region name
+     * </pre>
+     */
+    boolean hasRegionName();
+    /**
+     * <code>optional bytes region_name = 7;</code>
+     *
+     * <pre>
+     * full region name
+     * </pre>
+     */
+    com.google.protobuf.ByteString getRegionName();
   }
   /**
    * Protobuf type {@code CompactionDescriptor}
@@ -3729,6 +3747,11 @@ public final class WALProtos {
             case 50: {
               bitField0_ |= 0x00000008;
               storeHomeDir_ = input.readBytes();
+              break;
+            }
+            case 58: {
+              bitField0_ |= 0x00000010;
+              regionName_ = input.readBytes();
               break;
             }
           }
@@ -3936,6 +3959,30 @@ public final class WALProtos {
       }
     }
 
+    // optional bytes region_name = 7;
+    public static final int REGION_NAME_FIELD_NUMBER = 7;
+    private com.google.protobuf.ByteString regionName_;
+    /**
+     * <code>optional bytes region_name = 7;</code>
+     *
+     * <pre>
+     * full region name
+     * </pre>
+     */
+    public boolean hasRegionName() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>optional bytes region_name = 7;</code>
+     *
+     * <pre>
+     * full region name
+     * </pre>
+     */
+    public com.google.protobuf.ByteString getRegionName() {
+      return regionName_;
+    }
+
     private void initFields() {
       tableName_ = com.google.protobuf.ByteString.EMPTY;
       encodedRegionName_ = com.google.protobuf.ByteString.EMPTY;
@@ -3943,6 +3990,7 @@ public final class WALProtos {
       compactionInput_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       compactionOutput_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       storeHomeDir_ = "";
+      regionName_ = com.google.protobuf.ByteString.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -3990,6 +4038,9 @@ public final class WALProtos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         output.writeBytes(6, getStoreHomeDirBytes());
       }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeBytes(7, regionName_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -4032,6 +4083,10 @@ public final class WALProtos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(6, getStoreHomeDirBytes());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(7, regionName_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -4080,6 +4135,11 @@ public final class WALProtos {
         result = result && getStoreHomeDir()
             .equals(other.getStoreHomeDir());
       }
+      result = result && (hasRegionName() == other.hasRegionName());
+      if (hasRegionName()) {
+        result = result && getRegionName()
+            .equals(other.getRegionName());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -4116,6 +4176,10 @@ public final class WALProtos {
       if (hasStoreHomeDir()) {
         hash = (37 * hash) + STORE_HOME_DIR_FIELD_NUMBER;
         hash = (53 * hash) + getStoreHomeDir().hashCode();
+      }
+      if (hasRegionName()) {
+        hash = (37 * hash) + REGION_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getRegionName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -4246,6 +4310,8 @@ public final class WALProtos {
         bitField0_ = (bitField0_ & ~0x00000010);
         storeHomeDir_ = "";
         bitField0_ = (bitField0_ & ~0x00000020);
+        regionName_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
 
@@ -4302,6 +4368,10 @@ public final class WALProtos {
           to_bitField0_ |= 0x00000008;
         }
         result.storeHomeDir_ = storeHomeDir_;
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.regionName_ = regionName_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -4351,6 +4421,9 @@ public final class WALProtos {
           bitField0_ |= 0x00000020;
           storeHomeDir_ = other.storeHomeDir_;
           onChanged();
+        }
+        if (other.hasRegionName()) {
+          setRegionName(other.getRegionName());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -4779,6 +4852,58 @@ public final class WALProtos {
         return this;
       }
 
+      // optional bytes region_name = 7;
+      private com.google.protobuf.ByteString regionName_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>optional bytes region_name = 7;</code>
+       *
+       * <pre>
+       * full region name
+       * </pre>
+       */
+      public boolean hasRegionName() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      /**
+       * <code>optional bytes region_name = 7;</code>
+       *
+       * <pre>
+       * full region name
+       * </pre>
+       */
+      public com.google.protobuf.ByteString getRegionName() {
+        return regionName_;
+      }
+      /**
+       * <code>optional bytes region_name = 7;</code>
+       *
+       * <pre>
+       * full region name
+       * </pre>
+       */
+      public Builder setRegionName(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000040;
+        regionName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bytes region_name = 7;</code>
+       *
+       * <pre>
+       * full region name
+       * </pre>
+       */
+      public Builder clearRegionName() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        regionName_ = getDefaultInstance().getRegionName();
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:CompactionDescriptor)
     }
 
@@ -5185,15 +5310,15 @@ public final class WALProtos {
       "ster_ids\030\010 \003(\0132\005.UUID\022\022\n\nnonceGroup\030\t \001(" +
       "\004\022\r\n\005nonce\030\n \001(\004\"=\n\013FamilyScope\022\016\n\006famil",
       "y\030\001 \002(\014\022\036\n\nscope_type\030\002 \002(\0162\n.ScopeType\"" +
-      "\251\001\n\024CompactionDescriptor\022\022\n\ntable_name\030\001" +
+      "\276\001\n\024CompactionDescriptor\022\022\n\ntable_name\030\001" +
       " \002(\014\022\033\n\023encoded_region_name\030\002 \002(\014\022\023\n\013fam" +
       "ily_name\030\003 \002(\014\022\030\n\020compaction_input\030\004 \003(\t" +
       "\022\031\n\021compaction_output\030\005 \003(\t\022\026\n\016store_hom" +
-      "e_dir\030\006 \002(\t\"\014\n\nWALTrailer*F\n\tScopeType\022\033" +
-      "\n\027REPLICATION_SCOPE_LOCAL\020\000\022\034\n\030REPLICATI" +
-      "ON_SCOPE_GLOBAL\020\001B?\n*org.apache.hadoop.h" +
-      "base.protobuf.generatedB\tWALProtosH\001\210\001\000\240" +
-      "\001\001"
+      "e_dir\030\006 \002(\t\022\023\n\013region_name\030\007 \001(\014\"\014\n\nWALT" +
+      "railer*F\n\tScopeType\022\033\n\027REPLICATION_SCOPE" +
+      "_LOCAL\020\000\022\034\n\030REPLICATION_SCOPE_GLOBAL\020\001B?" +
+      "\n*org.apache.hadoop.hbase.protobuf.gener" +
+      "atedB\tWALProtosH\001\210\001\000\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -5223,7 +5348,7 @@ public final class WALProtos {
           internal_static_CompactionDescriptor_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_CompactionDescriptor_descriptor,
-              new java.lang.String[] { "TableName", "EncodedRegionName", "FamilyName", "CompactionInput", "CompactionOutput", "StoreHomeDir", });
+              new java.lang.String[] { "TableName", "EncodedRegionName", "FamilyName", "CompactionInput", "CompactionOutput", "StoreHomeDir", "RegionName", });
           internal_static_WALTrailer_descriptor =
             getDescriptor().getMessageTypes().get(4);
           internal_static_WALTrailer_fieldAccessorTable = new

@@ -87,6 +87,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRespo
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
@@ -1440,19 +1441,41 @@ public class HLogSplitter {
         HConnection hconn = this.getConnectionByTableName(table);
 
         for (KeyValue kv : kvs) {
-          // filtering HLog meta entries
-          // We don't handle HBASE-2231 because we may or may not replay a compaction event.
-          // Details at https://issues.apache.org/jira/browse/HBASE-2231?focusedCommentId=13647143&
-          // page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-13647143
+          byte[] row = kv.getRow();
+          byte[] family = kv.getFamily();
+          boolean isCompactionEntry = false;
+	
           if (kv.matchingFamily(WALEdit.METAFAMILY)) {
-            skippedKVs.add(kv);
-            continue;
+            CompactionDescriptor compaction = WALEdit.getCompaction(kv);
+            if (compaction != null && compaction.hasRegionName()) {
+              try {
+                byte[][] regionName = HRegionInfo.parseRegionName(compaction.getRegionName()
+                  .toByteArray());
+                row = regionName[1]; // startKey of the region
+                family = compaction.getFamilyName().toByteArray();
+                isCompactionEntry = true;
+              } catch (Exception ex) {
+                LOG.warn("Unexpected exception received, ignoring " + ex);
+                skippedKVs.add(kv);
+                continue;
+              }
+            } else {
+              skippedKVs.add(kv);
+              continue;
+            }
           }
 
           try {
             loc =
-                locateRegionAndRefreshLastFlushedSequenceId(hconn, table, kv.getRow(),
+                locateRegionAndRefreshLastFlushedSequenceId(hconn, table, row,
                   encodeRegionNameStr);
+            // skip replaying the compaction if the region is gone
+            if (isCompactionEntry && !encodeRegionNameStr.equalsIgnoreCase(
+              loc.getRegionInfo().getEncodedName())) {
+              LOG.info("Not replaying a compaction marker for an older region: "
+                  + encodeRegionNameStr);
+              needSkip = true;
+            }
           } catch (TableNotFoundException ex) {
             // table has been deleted so skip edits of the table
             LOG.info("Table " + table + " doesn't exist. Skip log replay for region "
@@ -1481,7 +1504,7 @@ public class HLogSplitter {
                   regionMaxSeqIdInStores.get(loc.getRegionInfo().getEncodedName());
             }
             if (maxStoreSequenceIds != null) {
-              Long maxStoreSeqId = maxStoreSequenceIds.get(kv.getFamily());
+              Long maxStoreSeqId = maxStoreSequenceIds.get(family);
               if (maxStoreSeqId == null || maxStoreSeqId >= entry.getKey().getLogSeqNum()) {
                 // skip current kv if column family doesn't exist anymore or already flushed
                 skippedKVs.add(kv);

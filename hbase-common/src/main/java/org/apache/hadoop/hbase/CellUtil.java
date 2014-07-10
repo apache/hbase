@@ -340,6 +340,12 @@ public final class CellUtil {
         buf, 0, buf.length);
   }
 
+  public static boolean matchingColumn(final Cell left, final byte[] fam, final byte[] qual) {
+    if (!matchingFamily(left, fam))
+      return false;
+    return matchingQualifier(left, qual);
+  }
+
   public static boolean matchingColumn(final Cell left, final Cell right) {
     if (!matchingFamily(left, right))
       return false;
