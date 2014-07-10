@@ -212,6 +212,12 @@ public final class HConstants {
   /** Default value of REGIONSERVER_USE_HADOOP_RPC boolean flag **/
   public static final boolean DEFAULT_REGIONSERVER_USE_HADOOP_RPC = false;
 
+  /** String representing the name of the config for maximal idle time of a connection **/
+  public static final String SWIFT_CONNECTION_IDLE_MAX_MINUTES = "swift.connection.idle.max";
+
+  /** Default value of SWIFT_CONNECTION_IDLE_MAX_MINUTES*/
+  public static final int SWIFT_CONNECTION_IDLE_MAX_MINUTES_DEFAULT = 10;
+
   /** Boolean flag to represent whether to use THRIFT or not **/
   public static final String REGIONSERVER_USE_THRIFT = "hbase.regionserver.rpc.thrift.enabled";
 

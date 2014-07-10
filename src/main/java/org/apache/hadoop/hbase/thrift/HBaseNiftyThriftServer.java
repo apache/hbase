@@ -111,8 +111,10 @@ public class HBaseNiftyThriftServer {
         conf.getInt(HConstants.SWIFT_WORKER_THREADS,
           HConstants.SWIFT_WORKER_THREADS_DEFAULT))
       .setIdleConnectionTimeout(
-        new Duration(conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
-          HConstants.DEFAULT_HBASE_RPC_TIMEOUT), TimeUnit.MILLISECONDS));
+            new Duration(conf.getInt(
+                HConstants.SWIFT_CONNECTION_IDLE_MAX_MINUTES,
+                HConstants.SWIFT_CONNECTION_IDLE_MAX_MINUTES_DEFAULT),
+                TimeUnit.MINUTES));
 
     if (useHeaderProtocol) {
       server = new ThriftServer(processor, serverConfig.setProtocolName(
