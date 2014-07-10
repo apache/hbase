@@ -2013,7 +2013,7 @@ rs.close();
                 again, it upgrades to this priority. It is thus part of the second group considered
                 during evictions.</para>
             </listitem>
-            <listitem xml_id="hbase.cache.inmemory">
+            <listitem xml:id="hbase.cache.inmemory">
               <para>In-memory access priority: If the block's family was configured to be
                 "in-memory", it will be part of this priority disregarding the number of times it
                 was accessed. Catalog tables are configured like this. This group is the last one
@@ -2166,7 +2166,7 @@ rs.close();
             <title>Enable BucketCache</title>
             <para> To enable BucketCache, set the value of
                 <varname>hbase.offheapcache.percentage</varname> to 0 in the RegionServer's
-                <filename>hbase-site.xml</filename> file. This disables SlabCache.
+                <filename>hbase-site.xml</filename> file. This disables SlabCache.</para>
 
                 <para>Just as for SlabCache, the usual deploy of BucketCache is via a
                     managing class that sets up two caching tiers: an L1 onheap cache
@@ -2180,7 +2180,6 @@ rs.close();
             setting <varname>cacheDataInL1</varname> via <programlisting>(HColumnDescriptor.setCacheDataInL1(true)</programlisting>
             or in the shell, creating or amending column families setting <varname>CACHE_DATA_IN_L1</varname>
             to true: e.g. <programlisting>hbase(main):003:0> create 't', {NAME => 't', CONFIGURATION => {CACHE_DATA_IN_L1 => 'true'}}</programlisting></para>
-    </para>
         <para>The BucketCache deploy can be
             onheap, offheap, or file based. You set which via the
             <varname>hbase.bucketcache.ioengine</varname> setting it to
@@ -3205,7 +3204,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
                 </listitem>
               </varlistentry>
             </variablelist>
-            <table xlink:id="compaction.parameters">
+            <table xml:id="compaction.parameters">
               <title>Parameters Used by Compaction Algorithm</title>
               <textobject>
                 <para>This table contains the main configuration parameters for compaction. This
@@ -3698,32 +3697,52 @@ public enum Consistency {
 	          </para><para>
 			In case a read is performed with <code>Consistency.TIMELINE</code>, then the read RPC will be sent to the primary region server first. After a short interval (<code>hbase.client.primaryCallTimeout.get</code>, 10ms by default), parallel RPC for secondary region replicas will also be sent if the primary does not respond back. After this, the result is returned from whichever RPC is finished first. If the response came back from the primary region replica, we can always know that the data is latest. For this Result.isStale() API has been added to inspect the staleness. If the result is from a secondary region, then Result.isStale() will be set to true. The user can then inspect this field to possibly reason about the data. 
 	          </para><para>
-			In terms of semantics, TIMELINE consistency as implemented by HBase differs from pure eventual consistency in these respects: 
+			In terms of semantics, TIMELINE consistency as implemented by HBase differs from pure eventual
+			consistency in these respects: </para>
 			  <itemizedlist>
-			  <listitem>	
-			Single homed and ordered updates: Region replication or not, on the write side, there is still only 1 defined replica (primary) which can accept writes. This replica is responsible for ordering the edits and preventing conflicts. This guarantees that two different writes are not committed at the same time by different replicas and the data diverges. With this, there is no need to do read-repair or last-timestamp-wins kind of conflict resolution. 
-			  </listitem><listitem>
-			The secondaries also apply the edits in the order that the primary committed them. This way the secondaries will contain a snapshot of the primaries data at any point in time. This is similar to RDBMS replications and even HBase’s own multi-datacenter replication, however in a single cluster. 
-			  </listitem><listitem>
-			On the read side, the client can detect whether the read is coming from up-to-date data or is stale data. Also, the client can issue reads with different consistency requirements on a per-operation basis to ensure its own semantic guarantees. 
-			  </listitem><listitem>
-			The client can still observe edits out-of-order, and can go back in time, if it observes reads from one secondary replica first, then another secondary replica. There is no stickiness to region replicas or a transaction-id based guarantee. If required, this can be implemented later though. 
-	        </listitem>
-			</itemizedlist>
-			</para><para>
-			<inlinemediaobject>
-	            <imageobject>
-	                <imagedata align="middle" valign="middle" fileref="timeline_consistency.png" />
-	            </imageobject>
-	            <textobject>
-	              <phrase>HFile Version 1</phrase>
-	            </textobject>
-	            <caption>
-	                <para>HFile Version 1
-	              </para>
-	            </caption>
-	        </inlinemediaobject>
-		</para><para>
+            <listitem>
+              <para> Single homed and ordered updates: Region replication or not, on the write side,
+                there is still only 1 defined replica (primary) which can accept writes. This
+                replica is responsible for ordering the edits and preventing conflicts. This
+                guarantees that two different writes are not committed at the same time by different
+                replicas and the data diverges. With this, there is no need to do read-repair or
+                last-timestamp-wins kind of conflict resolution. </para>
+            </listitem>
+            <listitem>
+              <para> The secondaries also apply the edits in the order that the primary committed
+                them. This way the secondaries will contain a snapshot of the primaries data at any
+                point in time. This is similar to RDBMS replications and even HBase’s own
+                multi-datacenter replication, however in a single cluster. </para>
+            </listitem>
+            <listitem>
+              <para> On the read side, the client can detect whether the read is coming from
+                up-to-date data or is stale data. Also, the client can issue reads with different
+                consistency requirements on a per-operation basis to ensure its own semantic
+                guarantees. </para>
+            </listitem>
+            <listitem>
+              <para> The client can still observe edits out-of-order, and can go back in time, if it
+                observes reads from one secondary replica first, then another secondary replica.
+                There is no stickiness to region replicas or a transaction-id based guarantee. If
+                required, this can be implemented later though. </para>
+            </listitem>
+          </itemizedlist>
+			
+        <figure>
+          <title>HFile Version 1</title>
+          <mediaobject>
+            <imageobject>
+              <imagedata
+                align="center"
+                valign="middle"
+                fileref="timeline_consistency.png" />
+            </imageobject>
+            <textobject>
+              <phrase>HFile Version 1</phrase>
+            </textobject>
+          </mediaobject>
+        </figure>
+		<para>
 
 			To better understand the TIMELINE semantics, lets look at the above diagram. Lets say that there are two clients, and the first one writes x=1 at first, then x=2 and x=3 later. As above, all writes are handled by the primary region replica. The writes are saved in the write ahead log (WAL), and replicated to the other replicas asynchronously. In the above diagram, notice that replica_id=1 received 2 updates, and it’s data shows that x=2, while the replica_id=2 only received a single update, and its data shows that x=1. 
 		</para><para>
@@ -3733,24 +3752,45 @@ public enum Consistency {
 	</section>
 	<section>
 		<title>Tradeoffs</title>
-		<para>
-			Having secondary regions hosted for read availability comes with some tradeoffs which should be carefully evaluated per use case. The main advantages of this design are 
-			<itemizedlist>
-			<listitem>High availability for read-only tables.</listitem>
-			<listitem>High availability for stale reads</listitem>
-			<listitem>Ability to do very low latency reads with very high percentile (99.9%+) latencies for stale reads</listitem>
-		</itemizedlist>
-		</para><para>
-			The downsides for this feature are
-			<itemizedlist>
-			<listitem>Double / Triple memstore usage (depending on region replication count) for tables with region replication > 1</listitem>
-			<listitem>Increased block cache usage</listitem>
-			<listitem>Extra network traffic for log replication </listitem>
-			<listitem>Extra backup RPCs for replicas</listitem>
-		</itemizedlist>
-			To serve the region data from multiple replicas, HBase opens the regions in secondary mode in the region servers. The regions opened in secondary mode will share the same data files with the primary region replica, however each secondary region replica will have its own memstore to keep the unflushed data (only primary region can do flushes). Also to serve reads from secondary regions, the blocks of data files may be also cached in the block caches for the secondary regions.
-			</para>
+        <para> Having secondary regions hosted for read availability comes with some tradeoffs which
+          should be carefully evaluated per use case. Following are advantages and
+          disadvantages.</para>
+        <itemizedlist>
+          <title>Advantages</title>
+          <listitem>
+            <para>High availability for read-only tables.</para>
+          </listitem>
+          <listitem>
+            <para>High availability for stale reads</para>
+          </listitem>
+          <listitem>
+            <para>Ability to do very low latency reads with very high percentile (99.9%+) latencies
+              for stale reads</para>
+          </listitem>
+        </itemizedlist>
 
+        <itemizedlist>
+          <title>Disadvantages</title>
+          <listitem>
+            <para>Double / Triple memstore usage (depending on region replication count) for tables
+              with region replication &gt; 1</para>
+          </listitem>
+          <listitem>
+            <para>Increased block cache usage</para>
+          </listitem>
+          <listitem>
+            <para>Extra network traffic for log replication </para>
+          </listitem>
+          <listitem>
+            <para>Extra backup RPCs for replicas</para>
+          </listitem>
+        </itemizedlist>
+        <para>To serve the region data from multiple replicas, HBase opens the regions in secondary
+          mode in the region servers. The regions opened in secondary mode will share the same data
+          files with the primary region replica, however each secondary region replica will have its
+          own memstore to keep the unflushed data (only primary region can do flushes). Also to
+          serve reads from secondary regions, the blocks of data files may be also cached in the
+          block caches for the secondary regions. </para>
 		</section>
 		<section>
 			<title>Configuration properties</title>
@@ -3769,13 +3809,17 @@ public enum Consistency {
 </property>
 ]]></programlisting>
 
-	One thing to keep in mind also is that, region replica placement policy is only enforced by the <code>StochasticLoadBalancer</code> which is the default balancer. If you are using a custom load balancer property in hbase-site.xml (<code>hbase.master.loadbalancer.class</code>) replicas of regions might end up being hosted in the same server. 
-
+          <para> One thing to keep in mind also is that, region replica placement policy is only
+            enforced by the <code>StochasticLoadBalancer</code> which is the default balancer. If
+            you are using a custom load balancer property in hbase-site.xml
+              (<code>hbase.master.loadbalancer.class</code>) replicas of regions might end up being
+            hosted in the same server.</para>
 			</section>
 			<section>
 				<title>Client side properties</title>
-			Ensure to set the following for all clients (and servers) that will use region replicas. 
-			<programlisting><![CDATA[
+          <para> Ensure to set the following for all clients (and servers) that will use region
+            replicas. </para>			
+			  <programlisting><![CDATA[
 <property>
     <name>hbase.ipc.client.allowsInterrupt</name>
     <value>true</value>
@@ -3833,46 +3877,57 @@ htd.setRegionReplication(2);
 admin.createTable(htd); 
 ]]></programlisting>
 
-			You can also use setRegionReplication() and alter table to increase, decrease the region replication for a table. 
+          <para>You can also use <code>setRegionReplication()</code> and alter table to increase, decrease the
+            region replication for a table.</para> 
 	</section>
 	</section>
 	<section>
 		<title>Region splits and merges</title>
-			Region splits and merges are not compatible with regions with replicas yet. So you have to pre-split the table, and disable the region splits. Also you should not execute region merges on tables with region replicas. To disable region splits you can use DisabledRegionSplitPolicy as the split policy.
+        <para>Region splits and merges are not compatible with regions with replicas yet. So you
+          have to pre-split the table, and disable the region splits. Also you should not execute
+          region merges on tables with region replicas. To disable region splits you can use
+          DisabledRegionSplitPolicy as the split policy.</para>
 	</section>
 	<section>
 		<title>User Interface</title>
-			In the masters user interface, the region replicas of a table are also shown together with the primary regions. You can notice that the replicas of a region will share the same start and end keys and the same region name prefix. The only difference would be the appended replica_id (which is encoded as hex), and the region encoded name will be different. You can also see the replica ids shown explicitly in the UI.
+        <para> In the masters user interface, the region replicas of a table are also shown together
+          with the primary regions. You can notice that the replicas of a region will share the same
+          start and end keys and the same region name prefix. The only difference would be the
+          appended replica_id (which is encoded as hex), and the region encoded name will be
+          different. You can also see the replica ids shown explicitly in the UI. </para>	
 	</section>
 			<section>
 				<title>API and Usage</title>
 				<section>
 					<title>Shell</title>
-			You can do reads in shell using a the Consistency.TIMELINE semantics as follows
-	<programlisting><![CDATA[
+          <para> You can do reads in shell using a the Consistency.TIMELINE semantics as follows
+          </para>	
+				  <programlisting><![CDATA[
 hbase(main):001:0> get 't1','r6', {CONSISTENCY => "TIMELINE"}
 ]]></programlisting>
-			You can simulate a region server pausing or becoming unavailable and do a read from the secondary replica:
-	<programlisting><![CDATA[
+          <para> You can simulate a region server pausing or becoming unavailable and do a read from
+            the secondary replica: </para>	
+				  <programlisting><![CDATA[
 $ kill -STOP <pid or primary region server>
 
 hbase(main):001:0> get 't1','r6', {CONSISTENCY => "TIMELINE"}
 ]]></programlisting>
-			Using scans is also similar
-	<programlisting><![CDATA[
+          <para> Using scans is also similar </para>	
+				  <programlisting><![CDATA[
 hbase> scan 't1', {CONSISTENCY => 'TIMELINE'}
 ]]></programlisting>
 		</section>
 		<section>
 			<title>Java</title>
-			You can set set the consistency for Gets and Scans and do requests as follows. 
+          <para>You can set set the consistency for Gets and Scans and do requests as
+            follows.</para> 
 	<programlisting><![CDATA[
 Get get = new Get(row);
 get.setConsistency(Consistency.TIMELINE);
 ...
 Result result = table.get(get); 
 ]]></programlisting>
-			You can also pass multiple gets: 
+          <para>You can also pass multiple gets: </para>
 	<programlisting><![CDATA[
 Get get1 = new Get(row);
 get1.setConsistency(Consistency.TIMELINE);
@@ -3882,14 +3937,15 @@ gets.add(get1);
 ...
 Result[] results = table.get(gets); 
 ]]></programlisting>
-			And Scans: 
+          <para>And Scans: </para>
 	<programlisting><![CDATA[
 Scan scan = new Scan();
 scan.setConsistency(Consistency.TIMELINE);
 ...
 ResultScanner scanner = table.getScanner(scan);
 ]]></programlisting>
-			You can inspect whether the results are coming from primary region or not by calling the Result.isStale() method: 
+          <para>You can inspect whether the results are coming from primary region or not by calling
+            the Result.isStale() method: </para>
 
 	<programlisting><![CDATA[
 Result result = table.get(get); 
@@ -3902,11 +3958,20 @@ if (result.isStale()) {
 
 	<section>
 		<title>Resources</title>
-		<orderedlist>
-		<listitem>More information about the design and implementation can be found at the jira issue: <link xlink:href="https://issues.apache.org/jira/browse/HBASE-10070">HBASE-10070</link></listitem>
+        <orderedlist>
+          <listitem>
+            <para>More information about the design and implementation can be found at the jira
+              issue: <link
+                xlink:href="https://issues.apache.org/jira/browse/HBASE-10070">HBASE-10070</link></para>
+          </listitem>
 
-		<listitem>HBaseCon 2014 <link xlink:href="http://hbasecon.com/sessions/#session15">talk</link> also contains some details and <link xlink:href="http://www.slideshare.net/enissoz/hbase-high-availability-for-reads-with-time">slides</link>.</listitem>
-		</orderedlist>
+          <listitem>
+            <para>HBaseCon 2014 <link
+                xlink:href="http://hbasecon.com/sessions/#session15">talk</link> also contains some
+              details and <link
+                xlink:href="http://www.slideshare.net/enissoz/hbase-high-availability-for-reads-with-time">slides</link>.</para>
+          </listitem>
+        </orderedlist>
 	    </section>
 	</section>
 
