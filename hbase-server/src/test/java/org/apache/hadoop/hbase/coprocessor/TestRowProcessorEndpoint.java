@@ -41,9 +41,11 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.IsolationLevel;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.RowProcessorClient;
@@ -328,7 +330,7 @@ public class TestRowProcessorEndpoint {
 
       @Override
       public void process(long now, HRegion region,
-          List<KeyValue> mutations, WALEdit walEdit) throws IOException {
+          List<Mutation> mutations, WALEdit walEdit) throws IOException {
         // Scan current counter
         List<Cell> kvs = new ArrayList<Cell>();
         Scan scan = new Scan(row, row);
@@ -345,9 +347,11 @@ public class TestRowProcessorEndpoint {
         expectedCounter += 1;
 
 
+        Put p = new Put(row);
         KeyValue kv =
             new KeyValue(row, FAM, COUNTER, now, Bytes.toBytes(counter));
-        mutations.add(kv);
+        p.add(kv);
+        mutations.add(p);
         walEdit.add(kv);
 
         // We can also inject some meta data to the walEdit
@@ -410,7 +414,7 @@ public class TestRowProcessorEndpoint {
 
       @Override
       public void process(long now, HRegion region,
-          List<KeyValue> mutations, WALEdit walEdit) throws IOException {
+          List<Mutation> mutations, WALEdit walEdit) throws IOException {
         List<Cell> kvs = new ArrayList<Cell>();
         { // First scan to get friends of the person
           Scan scan = new Scan(row, row);
@@ -494,7 +498,7 @@ public class TestRowProcessorEndpoint {
 
       @Override
       public void process(long now, HRegion region,
-          List<KeyValue> mutations, WALEdit walEdit) throws IOException {
+          List<Mutation> mutations, WALEdit walEdit) throws IOException {
 
         // Override the time to avoid race-condition in the unit test caused by
         // inacurate timer on some machines
@@ -524,15 +528,19 @@ public class TestRowProcessorEndpoint {
         for (int i = 0; i < kvs.size(); ++i) {
           for (Cell kv : kvs.get(i)) {
             // Delete from the current row and add to the other row
+            Delete d = new Delete(rows[i]);
             KeyValue kvDelete =
                 new KeyValue(rows[i], CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv), 
                     kv.getTimestamp(), KeyValue.Type.Delete);
+            d.addDeleteMarker(kvDelete);
+            Put p = new Put(rows[1 - i]);
             KeyValue kvAdd =
                 new KeyValue(rows[1 - i], CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv),
                     now, CellUtil.cloneValue(kv));
-            mutations.add(kvDelete);
+            p.add(kvAdd);
+            mutations.add(d);
             walEdit.add(kvDelete);
-            mutations.add(kvAdd);
+            mutations.add(p);
             walEdit.add(kvAdd);
           }
         }
@@ -584,7 +592,7 @@ public class TestRowProcessorEndpoint {
 
       @Override
       public void process(long now, HRegion region,
-          List<KeyValue> mutations, WALEdit walEdit) throws IOException {
+          List<Mutation> mutations, WALEdit walEdit) throws IOException {
         try {
           // Sleep for a long time so it timeout
           Thread.sleep(100 * 1000L);

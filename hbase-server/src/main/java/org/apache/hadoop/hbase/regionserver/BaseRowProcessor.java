@@ -38,7 +38,15 @@ implements RowProcessor<S,T> {
   }
 
   @Override
-  public void postProcess(HRegion region, WALEdit walEdit) throws IOException {
+  public void preBatchMutate(HRegion region, WALEdit walEdit) throws IOException {
+  }
+
+  @Override
+  public void postBatchMutate(HRegion region) throws IOException {
+  }
+
+  @Override
+  public void postProcess(HRegion region, WALEdit walEdit, boolean success) throws IOException {
   }
 
   @Override

@@ -23,8 +23,8 @@ import java.util.List;
 import java.util.UUID;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
 import com.google.protobuf.Message;
@@ -83,7 +83,7 @@ public interface RowProcessor<S extends Message, T extends Message> {
    */
   void process(long now,
                HRegion region,
-               List<KeyValue> mutations,
+               List<Mutation> mutations,
                WALEdit walEdit) throws IOException;
 
   /**
@@ -95,13 +95,31 @@ public interface RowProcessor<S extends Message, T extends Message> {
   void preProcess(HRegion region, WALEdit walEdit) throws IOException;
 
   /**
-   * The hook to be executed after process().
+   * The hook to be executed after the process() but before applying the Mutations to region. Also
+   * by the time this hook is been called, mvcc transaction is started.
+   * @param region
+   * @param walEdit the output WAL edits to apply to write ahead log
+   * @throws IOException
+   */
+  void preBatchMutate(HRegion region, WALEdit walEdit) throws IOException;
+
+  /**
+   * The hook to be executed after the process() and applying the Mutations to region. The
+   * difference of this one with {@link #postProcess(HRegion, WALEdit, boolean)} is this hook will
+   * be executed before the mvcc transaction completion.
+   * @param region
+   * @throws IOException
+   */
+  void postBatchMutate(HRegion region) throws IOException;
+
+  /**
+   * The hook to be executed after process() and applying the Mutations to region.
    *
    * @param region the HRegion
    * @param walEdit the output WAL edits to apply to write ahead log
+   * @param success true if batch operation is successful otherwise false.
    */
-  void postProcess(HRegion region, WALEdit walEdit) throws IOException;
-
+  void postProcess(HRegion region, WALEdit walEdit, boolean success) throws IOException;
 
   /**
    * @return The cluster ids that have the change.
