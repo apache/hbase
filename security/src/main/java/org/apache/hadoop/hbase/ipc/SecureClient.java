@@ -293,8 +293,11 @@ public class SecureClient extends HBaseClient {
               if (rand == null) {
                 rand = new Random();
               }
-              handleSaslConnectionFailure(numRetries++, MAX_RETRIES, ex, rand,
-                   ticket);
+              try {
+                handleSaslConnectionFailure(numRetries++, MAX_RETRIES, ex, rand, ticket);
+              } catch (InterruptedException e) {
+                throw new IOException(e);
+              }
               continue;
             }
             if (continueSasl) {
