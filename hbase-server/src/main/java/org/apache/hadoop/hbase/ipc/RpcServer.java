@@ -30,6 +30,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.StandardSocketOptions;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
@@ -752,7 +753,7 @@ public class RpcServer implements RpcServerInterface {
       while ((channel = server.accept()) != null) {
         try {
           channel.configureBlocking(false);
-          channel.socket().setTcpNoDelay(tcpNoDelay);
+          channel.setOption(StandardSocketOptions.TCP_NODELAY, tcpNoDelay);
           channel.socket().setKeepAlive(tcpKeepAlive);
         } catch (IOException ioe) {
           channel.close();
