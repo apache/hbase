@@ -29,7 +29,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus;
@@ -721,7 +721,7 @@ public class StorageClusterStatusModel
       for (Node.Region region: node.regions) {
         StorageClusterStatus.Region.Builder regionBuilder =
           StorageClusterStatus.Region.newBuilder();
-        regionBuilder.setName(HBaseZeroCopyByteString.wrap(region.name));
+        regionBuilder.setName(ByteStringer.wrap(region.name));
         regionBuilder.setStores(region.stores);
         regionBuilder.setStorefiles(region.storefiles);
         regionBuilder.setStorefileSizeMB(region.storefileSizeMB);

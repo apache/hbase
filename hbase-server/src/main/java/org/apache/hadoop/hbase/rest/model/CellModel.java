@@ -28,7 +28,7 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlValue;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -184,8 +184,8 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   @Override
   public byte[] createProtobufOutput() {
     Cell.Builder builder = Cell.newBuilder();
-    builder.setColumn(HBaseZeroCopyByteString.wrap(getColumn()));
-    builder.setData(HBaseZeroCopyByteString.wrap(getValue()));
+    builder.setColumn(ByteStringer.wrap(getColumn()));
+    builder.setData(ByteStringer.wrap(getValue()));
     if (hasUserTimestamp()) {
       builder.setTimestamp(getTimestamp());
     }

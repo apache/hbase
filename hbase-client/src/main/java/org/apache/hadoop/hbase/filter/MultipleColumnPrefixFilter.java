@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.filter;
 
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -114,7 +114,7 @@ public class MultipleColumnPrefixFilter extends FilterBase {
     FilterProtos.MultipleColumnPrefixFilter.Builder builder =
       FilterProtos.MultipleColumnPrefixFilter.newBuilder();
     for (byte [] element : sortedPrefixes) {
-      if (element != null) builder.addSortedPrefixes(HBaseZeroCopyByteString.wrap(element));
+      if (element != null) builder.addSortedPrefixes(ByteStringer.wrap(element));
     }
     return builder.build().toByteArray();
   }

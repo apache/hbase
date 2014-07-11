@@ -34,7 +34,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -1432,8 +1432,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     builder.setTableName(ProtobufUtil.toProtoTableName(getTableName()));
     for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e: this.values.entrySet()) {
       BytesBytesPair.Builder aBuilder = BytesBytesPair.newBuilder();
-      aBuilder.setFirst(HBaseZeroCopyByteString.wrap(e.getKey().get()));
-      aBuilder.setSecond(HBaseZeroCopyByteString.wrap(e.getValue().get()));
+      aBuilder.setFirst(ByteStringer.wrap(e.getKey().get()));
+      aBuilder.setSecond(ByteStringer.wrap(e.getValue().get()));
       builder.addAttributes(aBuilder.build());
     }
     for (HColumnDescriptor hcd: getColumnFamilies()) {

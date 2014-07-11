@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -93,10 +93,10 @@ public class AccessControlClient {
           permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
 
           if (family != null) {
-            permissionBuilder.setFamily(HBaseZeroCopyByteString.wrap(family));
+            permissionBuilder.setFamily(ByteStringer.wrap(family));
           }
           if (qual != null) {
-            permissionBuilder.setQualifier(HBaseZeroCopyByteString.wrap(qual));
+            permissionBuilder.setQualifier(ByteStringer.wrap(qual));
           }
           ret.setType(AccessControlProtos.Permission.Type.Table).setTablePermission(
               permissionBuilder);
@@ -157,10 +157,10 @@ public class AccessControlClient {
             permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
           }
           if (family != null) {
-            permissionBuilder.setFamily(HBaseZeroCopyByteString.wrap(family));
+            permissionBuilder.setFamily(ByteStringer.wrap(family));
           }
           if (qualifier != null) {
-            permissionBuilder.setQualifier(HBaseZeroCopyByteString.wrap(qualifier));
+            permissionBuilder.setQualifier(ByteStringer.wrap(qualifier));
           }
           ret.setType(AccessControlProtos.Permission.Type.Table).setTablePermission(
               permissionBuilder);

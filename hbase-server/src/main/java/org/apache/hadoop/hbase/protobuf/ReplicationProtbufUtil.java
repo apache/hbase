@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -91,8 +91,8 @@ public class ReplicationProtbufUtil {
       WALProtos.WALKey.Builder keyBuilder = entryBuilder.getKeyBuilder();
       HLogKey key = entry.getKey();
       keyBuilder.setEncodedRegionName(
-        HBaseZeroCopyByteString.wrap(key.getEncodedRegionName()));
-      keyBuilder.setTableName(HBaseZeroCopyByteString.wrap(key.getTablename().getName()));
+        ByteStringer.wrap(key.getEncodedRegionName()));
+      keyBuilder.setTableName(ByteStringer.wrap(key.getTablename().getName()));
       keyBuilder.setLogSequenceNumber(key.getLogSeqNum());
       keyBuilder.setWriteTime(key.getWriteTime());
       if (key.getNonce() != HConstants.NO_NONCE) {
@@ -110,7 +110,7 @@ public class ReplicationProtbufUtil {
       NavigableMap<byte[], Integer> scopes = key.getScopes();
       if (scopes != null && !scopes.isEmpty()) {
         for (Map.Entry<byte[], Integer> scope: scopes.entrySet()) {
-          scopeBuilder.setFamily(HBaseZeroCopyByteString.wrap(scope.getKey()));
+          scopeBuilder.setFamily(ByteStringer.wrap(scope.getKey()));
           WALProtos.ScopeType scopeType =
               WALProtos.ScopeType.valueOf(scope.getValue().intValue());
           scopeBuilder.setScopeType(scopeType);

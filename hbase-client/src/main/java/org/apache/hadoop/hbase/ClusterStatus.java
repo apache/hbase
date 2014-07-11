@@ -26,7 +26,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -334,7 +334,7 @@ public class ClusterStatus extends VersionedWritable {
         ClusterStatusProtos.RegionState rs = rit.getValue().convert();
         RegionSpecifier.Builder spec =
             RegionSpecifier.newBuilder().setType(RegionSpecifierType.REGION_NAME);
-        spec.setValue(HBaseZeroCopyByteString.wrap(Bytes.toBytes(rit.getKey())));
+        spec.setValue(ByteStringer.wrap(Bytes.toBytes(rit.getKey())));
 
         RegionInTransition pbRIT =
             RegionInTransition.newBuilder().setSpec(spec.build()).setRegionState(rs).build();

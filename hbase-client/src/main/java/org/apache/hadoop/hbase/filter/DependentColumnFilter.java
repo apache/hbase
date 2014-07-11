@@ -25,7 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
@@ -225,10 +225,10 @@ public class DependentColumnFilter extends CompareFilter {
       FilterProtos.DependentColumnFilter.newBuilder();
     builder.setCompareFilter(super.convert());
     if (this.columnFamily != null) {
-      builder.setColumnFamily(HBaseZeroCopyByteString.wrap(this.columnFamily));
+      builder.setColumnFamily(ByteStringer.wrap(this.columnFamily));
     }
     if (this.columnQualifier != null) {
-      builder.setColumnQualifier(HBaseZeroCopyByteString.wrap(this.columnQualifier));
+      builder.setColumnQualifier(ByteStringer.wrap(this.columnQualifier));
     }
     builder.setDropDependentColumn(this.dropDependentColumn);
     return builder.build().toByteArray();

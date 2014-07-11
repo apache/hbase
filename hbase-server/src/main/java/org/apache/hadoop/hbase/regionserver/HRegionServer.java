@@ -53,7 +53,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.management.ObjectName;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -200,7 +200,6 @@ import org.apache.hadoop.hbase.regionserver.handler.CloseMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.CloseRegionHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
-import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -1361,7 +1360,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       regionSpecifier = RegionSpecifier.newBuilder();
     }
     regionSpecifier.setType(RegionSpecifierType.REGION_NAME);
-    regionSpecifier.setValue(HBaseZeroCopyByteString.wrap(name));
+    regionSpecifier.setValue(ByteStringer.wrap(name));
     regionLoadBldr.setRegionSpecifier(regionSpecifier.build())
       .setStores(stores)
       .setStorefiles(storefiles)
@@ -4079,7 +4078,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       RollWALWriterResponse.Builder builder = RollWALWriterResponse.newBuilder();
       if (regionsToFlush != null) {
         for (byte[] region: regionsToFlush) {
-          builder.addRegionToFlush(HBaseZeroCopyByteString.wrap(region));
+          builder.addRegionToFlush(ByteStringer.wrap(region));
         }
       }
       return builder.build();

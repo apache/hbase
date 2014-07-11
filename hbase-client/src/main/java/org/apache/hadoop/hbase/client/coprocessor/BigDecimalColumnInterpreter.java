@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -121,7 +121,7 @@ public class BigDecimalColumnInterpreter extends ColumnInterpreter<BigDecimal, B
 
   private BigDecimalMsg getProtoForType(BigDecimal t) {
     BigDecimalMsg.Builder builder = BigDecimalMsg.newBuilder();
-    return builder.setBigdecimalMsg(HBaseZeroCopyByteString.wrap(Bytes.toBytes(t))).build();
+    return builder.setBigdecimalMsg(ByteStringer.wrap(Bytes.toBytes(t))).build();
   }
   
   @Override

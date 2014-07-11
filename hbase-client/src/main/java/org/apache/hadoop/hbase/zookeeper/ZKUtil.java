@@ -35,7 +35,7 @@ import java.util.Properties;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.AppConfigurationEntry.LoginModuleControlFlag;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -1949,7 +1949,7 @@ public class ZKUtil {
       for (Map.Entry<byte[], Long> e : storeSequenceIds.entrySet()){
         byte[] columnFamilyName = e.getKey();
         Long curSeqId = e.getValue();
-        storeSequenceIdBuilder.setFamilyName(HBaseZeroCopyByteString.wrap(columnFamilyName));
+        storeSequenceIdBuilder.setFamilyName(ByteStringer.wrap(columnFamilyName));
         storeSequenceIdBuilder.setSequenceId(curSeqId);
         regionSequenceIdsBuilder.addStoreSequenceId(storeSequenceIdBuilder.build());
         storeSequenceIdBuilder.clear();

@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.filter;
 
 import java.util.ArrayList;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
@@ -175,7 +175,7 @@ public class ColumnPaginationFilter extends FilterBase
       builder.setOffset(this.offset);
     }
     if (this.columnOffset != null) {
-      builder.setColumnOffset(HBaseZeroCopyByteString.wrap(this.columnOffset));
+      builder.setColumnOffset(ByteStringer.wrap(this.columnOffset));
     }
     return builder.build().toByteArray();
   }

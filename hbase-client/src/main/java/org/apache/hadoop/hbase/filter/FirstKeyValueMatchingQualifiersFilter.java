@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -89,7 +89,7 @@ public class FirstKeyValueMatchingQualifiersFilter extends FirstKeyOnlyFilter {
     FilterProtos.FirstKeyValueMatchingQualifiersFilter.Builder builder =
       FilterProtos.FirstKeyValueMatchingQualifiersFilter.newBuilder();
     for (byte[] qualifier : qualifiers) {
-      if (qualifier != null) builder.addQualifiers(HBaseZeroCopyByteString.wrap(qualifier));
+      if (qualifier != null) builder.addQualifiers(ByteStringer.wrap(qualifier));
     }
     return builder.build().toByteArray();
   }

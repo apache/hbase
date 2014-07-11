@@ -24,7 +24,7 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -193,7 +193,7 @@ public class Reference {
     FSProtos.Reference.Builder builder = FSProtos.Reference.newBuilder();
     builder.setRange(isTopFileRegion(getFileRegion())?
       FSProtos.Reference.Range.TOP: FSProtos.Reference.Range.BOTTOM);
-    builder.setSplitkey(HBaseZeroCopyByteString.wrap(getSplitKey()));
+    builder.setSplitkey(ByteStringer.wrap(getSplitKey()));
     return builder.build();
   }
 
