@@ -282,11 +282,8 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
       }
 
       // evict remaining tasks and futures from taskPool.
-      while (!futures.isEmpty()) {
-        // block to remove cancelled futures;
-        LOG.warn("Removing cancelled elements from taskPool");
-        futures.remove(taskPool.take());
-      }
+      futures.clear();
+      while (taskPool.poll() != null) {}
       stop();
     }
 
