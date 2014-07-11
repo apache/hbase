@@ -188,13 +188,6 @@ if [ "$HBASE_LOGFILE" = "" ]; then
   HBASE_LOGFILE='hbase.log'
 fi
 
-# cygwin path translation
-if $cygwin; then
-  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
-  HBASE_HOME=`cygpath -d "$HBASE_HOME"`
-  HBASE_LOG_DIR=`cygpath -d "$HBASE_LOG_DIR"`
-fi
-
 function append_path() {
   if [ -z "$1" ]; then
     echo $2
@@ -216,6 +209,23 @@ if [ -f ${HADOOP_IN_PATH} ]; then
   CLASSPATH=$(append_path "${CLASSPATH}" `${HADOOP_IN_PATH} classpath 2>/dev/null`)
 fi
 
+# Add user-specified CLASSPATH last
+if [ "$HBASE_CLASSPATH" != "" ]; then
+  CLASSPATH=${CLASSPATH}:${HBASE_CLASSPATH}
+fi
+
+# Add user-specified CLASSPATH prefix first
+if [ "$HBASE_CLASSPATH_PREFIX" != "" ]; then
+  CLASSPATH=${HBASE_CLASSPATH_PREFIX}:${CLASSPATH}
+fi
+
+# cygwin path translation
+if $cygwin; then
+  CLASSPATH=`cygpath -p -w "$CLASSPATH"`
+  HBASE_HOME=`cygpath -d "$HBASE_HOME"`
+  HBASE_LOG_DIR=`cygpath -d "$HBASE_LOG_DIR"`
+fi
+
 if [ -d "${HBASE_HOME}/build/native" -o -d "${HBASE_HOME}/lib/native" ]; then
   if [ -z $JAVA_PLATFORM ]; then
     JAVA_PLATFORM=`CLASSPATH=${CLASSPATH} ${JAVA} org.apache.hadoop.util.PlatformName | sed -e "s/ /_/g"`
@@ -227,16 +237,6 @@ if [ -d "${HBASE_HOME}/build/native" -o -d "${HBASE_HOME}/lib/native" ]; then
   if [ -d "${HBASE_HOME}/lib/native" ]; then
     JAVA_LIBRARY_PATH=$(append_path "$JAVA_LIBRARY_PATH" ${HBASE_HOME}/lib/native/${JAVA_PLATFORM})
   fi
-fi
-
-# Add user-specified CLASSPATH last
-if [ "$HBASE_CLASSPATH" != "" ]; then
-  CLASSPATH=${CLASSPATH}:${HBASE_CLASSPATH}
-fi
-
-# Add user-specified CLASSPATH prefix first
-if [ "$HBASE_CLASSPATH_PREFIX" != "" ]; then
-  CLASSPATH=${HBASE_CLASSPATH_PREFIX}:${CLASSPATH}
 fi
 
 # cygwin path translation
