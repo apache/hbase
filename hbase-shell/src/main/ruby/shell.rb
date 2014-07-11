@@ -330,7 +330,7 @@ Shell.load_command_group(
 )
 
 Shell.load_command_group(
-  'snapshot',
+  'snapshots',
   :full_name => 'CLUSTER SNAPSHOT TOOLS',
   :commands => %w[
     snapshot
