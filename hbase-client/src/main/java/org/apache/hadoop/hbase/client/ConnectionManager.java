@@ -1594,7 +1594,7 @@ class ConnectionManager {
     }
 
     private ZooKeeperKeepAliveConnection keepAliveZookeeper;
-    private int keepAliveZookeeperUserCount;
+    private AtomicInteger keepAliveZookeeperUserCount = new AtomicInteger(0);
     private boolean canCloseZKW = true;
 
     // keepAlive time, in ms. No reason to make it configurable.
@@ -1615,7 +1615,7 @@ class ConnectionManager {
           // But there is a retry mechanism in the ZooKeeperWatcher itself
           keepAliveZookeeper = new ZooKeeperKeepAliveConnection(conf, this.toString(), this);
         }
-        keepAliveZookeeperUserCount++;
+        keepAliveZookeeperUserCount.addAndGet(1);
         keepZooKeeperWatcherAliveUntil = Long.MAX_VALUE;
         return keepAliveZookeeper;
       }
@@ -1625,11 +1625,8 @@ class ConnectionManager {
       if (zkw == null){
         return;
       }
-      synchronized (masterAndZKLock) {
-        --keepAliveZookeeperUserCount;
-        if (keepAliveZookeeperUserCount <= 0 ){
-          keepZooKeeperWatcherAliveUntil = System.currentTimeMillis() + keepAlive;
-        }
+      if (keepAliveZookeeperUserCount.addAndGet(-1) <= 0 ){
+        keepZooKeeperWatcherAliveUntil = System.currentTimeMillis() + keepAlive;
       }
     }
 
@@ -1707,7 +1704,7 @@ class ConnectionManager {
           keepAliveZookeeper.internalClose();
           keepAliveZookeeper = null;
         }
-        keepAliveZookeeperUserCount = 0;
+        keepAliveZookeeperUserCount.set(0);
       }
     }
 
