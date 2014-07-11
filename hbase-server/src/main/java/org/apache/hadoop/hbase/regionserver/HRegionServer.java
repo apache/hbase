@@ -3054,7 +3054,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       if (request.hasCloseScanner()) {
         closeScanner = request.getCloseScanner();
       }
-      int rows = 1;
+      int rows = closeScanner ? 0 : 1;
       if (request.hasNumberOfRows()) {
         rows = request.getNumberOfRows();
       }
