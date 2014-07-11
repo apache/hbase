@@ -73,6 +73,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -4902,7 +4903,7 @@ public class HRegion implements HeapSize { // , Writable{
         long now = EnvironmentEdgeManager.currentTimeMillis();
         doProcessRowWithTimeout(
             processor, now, this, null, null, timeout);
-        processor.postProcess(this, walEdit);
+        processor.postProcess(this, walEdit, true);
       } catch (IOException e) {
         throw e;
       } finally {
@@ -4916,7 +4917,7 @@ public class HRegion implements HeapSize { // , Writable{
     boolean walSyncSuccessful = false;
     List<RowLock> acquiredRowLocks;
     long addedSize = 0;
-    List<KeyValue> mutations = new ArrayList<KeyValue>();
+    List<Mutation> mutations = new ArrayList<Mutation>();
     List<KeyValue> memstoreCells = new ArrayList<KeyValue>();
     Collection<byte[]> rowsToLock = processor.getRowsToLock();
     long mvccNum = 0;
@@ -4931,6 +4932,7 @@ public class HRegion implements HeapSize { // , Writable{
       // 3. Region lock
       lock(this.updatesLock.readLock(), acquiredRowLocks.size());
       locked = true;
+      // Get a mvcc write number
       mvccNum = MultiVersionConsistencyControl.getPreAssignedWriteNumber(this.sequenceId);
 
       long now = EnvironmentEdgeManager.currentTimeMillis();
@@ -4941,23 +4943,28 @@ public class HRegion implements HeapSize { // , Writable{
             processor, now, this, mutations, walEdit, timeout);
 
         if (!mutations.isEmpty()) {
-          // 5. Get a mvcc write number
+          // 5. Start mvcc transaction
           writeEntry = mvcc.beginMemstoreInsertWithSeqNum(mvccNum);
-          // 6. Apply to memstore
-          for (KeyValue kv : mutations) {
-            kv.setSequenceId(mvccNum);
-            Store store = getStore(kv);
-            if (store == null) {
-              checkFamily(CellUtil.cloneFamily(kv));
-              // unreachable
+          // 6. Call the preBatchMutate hook
+          processor.preBatchMutate(this, walEdit);
+          // 7. Apply to memstore
+          for (Mutation m : mutations) {
+            for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
+              KeyValue kv = KeyValueUtil.ensureKeyValue(cellScanner.current());
+              kv.setSequenceId(mvccNum);
+              Store store = getStore(kv);
+              if (store == null) {
+                checkFamily(CellUtil.cloneFamily(kv));
+                // unreachable
+              }
+              Pair<Long, Cell> ret = store.add(kv);
+              addedSize += ret.getFirst();
+              memstoreCells.add(KeyValueUtil.ensureKeyValue(ret.getSecond()));
             }
-            Pair<Long, Cell> ret = store.add(kv);
-            addedSize += ret.getFirst();
-            memstoreCells.add(KeyValueUtil.ensureKeyValue(ret.getSecond()));
           }
 
           long txid = 0;
-          // 7. Append no sync
+          // 8. Append no sync
           if (!walEdit.isEmpty()) {
             walKey = new HLogKey(this.getRegionInfo().getEncodedNameAsBytes(),
               this.htableDescriptor.getTableName(), HLog.NO_SEQUENCE_ID, now,
@@ -4971,31 +4978,36 @@ public class HRegion implements HeapSize { // , Writable{
             walKey = this.appendNoSyncNoAppend(this.log, memstoreCells);
           }
 
-          // 8. Release region lock
+          // 9. Release region lock
           if (locked) {
             this.updatesLock.readLock().unlock();
             locked = false;
           }
 
-          // 9. Release row lock(s)
+          // 10. Release row lock(s)
           releaseRowLocks(acquiredRowLocks);
 
-          // 10. Sync edit log
+          // 11. Sync edit log
           if (txid != 0) {
             syncOrDefer(txid, getEffectiveDurability(processor.useDurability()));
           }
           walSyncSuccessful = true;
+          // 12. call postBatchMutate hook
+          processor.postBatchMutate(this);
         }
       } finally {
         if (!mutations.isEmpty() && !walSyncSuccessful) {
           LOG.warn("Wal sync failed. Roll back " + mutations.size() +
               " memstore keyvalues for row(s):" + StringUtils.byteToHexString(
               processor.getRowsToLock().iterator().next()) + "...");
-          for (KeyValue kv : mutations) {
-            getStore(kv).rollback(kv);
+          for (Mutation m : mutations) {
+            for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
+              KeyValue kv = KeyValueUtil.ensureKeyValue(cellScanner.current());
+              getStore(kv).rollback(kv);
+            }
           }
         }
-        // 11. Roll mvcc forward
+        // 13. Roll mvcc forward
         if (writeEntry != null) {
           mvcc.completeMemstoreInsertWithSeqNum(writeEntry, walKey);
         }
@@ -5006,8 +5018,8 @@ public class HRegion implements HeapSize { // , Writable{
         releaseRowLocks(acquiredRowLocks);
       }
 
-      // 12. Run post-process hook
-      processor.postProcess(this, walEdit);
+      // 14. Run post-process hook
+      processor.postProcess(this, walEdit, walSyncSuccessful);
 
     } catch (IOException e) {
       throw e;
@@ -5023,7 +5035,7 @@ public class HRegion implements HeapSize { // , Writable{
   private void doProcessRowWithTimeout(final RowProcessor<?,?> processor,
                                        final long now,
                                        final HRegion region,
-                                       final List<KeyValue> mutations,
+                                       final List<Mutation> mutations,
                                        final WALEdit walEdit,
                                        final long timeout) throws IOException {
     // Short circuit the no time bound case.

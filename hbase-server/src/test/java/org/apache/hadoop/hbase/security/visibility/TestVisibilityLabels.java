@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LA
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABEL_QUALIFIER;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
@@ -859,6 +861,45 @@ public class TestVisibilityLabels {
       if (table != null) {
         table.close();
       }
+    }
+  }
+
+  @Test
+  public void testMutateRow() throws Exception {
+    final byte[] qual2 = Bytes.toBytes("qual2");
+    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HColumnDescriptor col = new HColumnDescriptor(fam);
+    desc.addFamily(col);
+    TEST_UTIL.getHBaseAdmin().createTable(desc);
+    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    try {
+      Put p1 = new Put(row1);
+      p1.add(fam, qual, value);
+      p1.setCellVisibility(new CellVisibility(CONFIDENTIAL));
+
+      Put p2 = new Put(row1);
+      p2.add(fam, qual2, value);
+      p2.setCellVisibility(new CellVisibility(SECRET));
+
+      RowMutations rm = new RowMutations(row1);
+      rm.add(p1);
+      rm.add(p2);
+
+      table.mutateRow(rm);
+
+      Get get = new Get(row1);
+      get.setAuthorizations(new Authorizations(CONFIDENTIAL));
+      Result result = table.get(get);
+      assertTrue(result.containsColumn(fam, qual));
+      assertFalse(result.containsColumn(fam, qual2));
+
+      get.setAuthorizations(new Authorizations(SECRET));
+      result = table.get(get);
+      assertFalse(result.containsColumn(fam, qual));
+      assertTrue(result.containsColumn(fam, qual2));
+    } finally {
+      table.close();
     }
   }
 

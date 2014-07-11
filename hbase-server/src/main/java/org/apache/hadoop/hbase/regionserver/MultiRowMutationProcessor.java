@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +43,7 @@ class MultiRowMutationProcessor extends BaseRowProcessor<MultiRowMutationProcess
 MultiRowMutationProcessorResponse> {
   Collection<byte[]> rowsToLock;
   Collection<Mutation> mutations;
+  MiniBatchOperationInProgress<Mutation> miniBatch;
 
   MultiRowMutationProcessor(Collection<Mutation> mutations,
                             Collection<byte[]> rowsToLock) {
@@ -67,11 +69,11 @@ MultiRowMutationProcessorResponse> {
   @Override
   public void process(long now,
                       HRegion region,
-                      List<KeyValue> mutationKvs,
+                      List<Mutation> mutationsToApply,
                       WALEdit walEdit) throws IOException {
     byte[] byteNow = Bytes.toBytes(now);
-    // Check mutations and apply edits to a single WALEdit
-    for (Mutation m : mutations) {
+    // Check mutations
+    for (Mutation m : this.mutations) {
       if (m instanceof Put) {
         Map<byte[], List<Cell>> familyMap = m.getFamilyCellMap();
         region.checkFamilies(familyMap.keySet());
@@ -82,18 +84,18 @@ MultiRowMutationProcessorResponse> {
         region.prepareDelete(d);
         region.prepareDeleteTimestamps(d, d.getFamilyCellMap(), byteNow);
       } else {
-        throw new DoNotRetryIOException(
-            "Action must be Put or Delete. But was: "
+        throw new DoNotRetryIOException("Action must be Put or Delete. But was: "
             + m.getClass().getName());
       }
-      for (List<Cell> cells: m.getFamilyCellMap().values()) {
+      mutationsToApply.add(m);
+    }
+    // Apply edits to a single WALEdit
+    for (Mutation m : mutations) {
+      for (List<Cell> cells : m.getFamilyCellMap().values()) {
         boolean writeToWAL = m.getDurability() != Durability.SKIP_WAL;
         for (Cell cell : cells) {
           KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-          mutationKvs.add(kv);
-          if (writeToWAL) {
-            walEdit.add(kv);
-          }
+          if (writeToWAL) walEdit.add(kv);
         }
       }
     }
@@ -122,7 +124,46 @@ MultiRowMutationProcessorResponse> {
   }
 
   @Override
-  public void postProcess(HRegion region, WALEdit walEdit) throws IOException {
+  public void preBatchMutate(HRegion region, WALEdit walEdit) throws IOException {
+    // TODO we should return back the status of this hook run to HRegion so that those Mutations
+    // with OperationStatus as SUCCESS or FAILURE should not get applied to memstore.
+    RegionCoprocessorHost coprocessorHost = region.getCoprocessorHost();
+    OperationStatus[] opStatus = new OperationStatus[mutations.size()];
+    Arrays.fill(opStatus, OperationStatus.NOT_RUN);
+    WALEdit[] walEditsFromCP = new WALEdit[mutations.size()];
+    if (coprocessorHost != null) {
+      miniBatch = new MiniBatchOperationInProgress<Mutation>(
+          mutations.toArray(new Mutation[mutations.size()]), opStatus, walEditsFromCP, 0,
+          mutations.size());
+      coprocessorHost.preBatchMutate(miniBatch);
+    }
+    // Apply edits to a single WALEdit
+    for (int i = 0; i < mutations.size(); i++) {
+      if (opStatus[i] == OperationStatus.NOT_RUN) {
+        // Other OperationStatusCode means that Mutation is already succeeded or failed in CP hook
+        // itself. No need to apply again to region
+        if (walEditsFromCP[i] != null) {
+          // Add the WALEdit created by CP hook
+          for (KeyValue walKv : walEditsFromCP[i].getKeyValues()) {
+            walEdit.add(walKv);
+          }
+        }
+      }
+    }
+  }
+
+  @Override
+  public void postBatchMutate(HRegion region) throws IOException {
+    RegionCoprocessorHost coprocessorHost = region.getCoprocessorHost();
+    if (coprocessorHost != null) {
+      assert miniBatch != null;
+      // Use the same miniBatch state used to call the preBatchMutate()
+      coprocessorHost.postBatchMutate(miniBatch);
+    }
+  }
+
+  @Override
+  public void postProcess(HRegion region, WALEdit walEdit, boolean success) throws IOException {
     RegionCoprocessorHost coprocessorHost = region.getCoprocessorHost();
     if (coprocessorHost != null) {
       for (Mutation m : mutations) {
@@ -131,6 +172,12 @@ MultiRowMutationProcessorResponse> {
         } else if (m instanceof Delete) {
           coprocessorHost.postDelete((Delete) m, walEdit, m.getDurability());
         }
+      }
+      // At the end call the CP hook postBatchMutateIndispensably
+      if (miniBatch != null) {
+        // Directly calling this hook, with out calling pre/postBatchMutate() when Processor do a
+        // read only process. Then no need to call this batch based CP hook also.
+        coprocessorHost.postBatchMutateIndispensably(miniBatch, success);
       }
     }
   }
