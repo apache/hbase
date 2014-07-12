@@ -137,7 +137,6 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.HBaseZeroCopyByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.Parser;
@@ -2496,7 +2495,7 @@ public final class ProtobufUtil {
     for (Path outputPath : outputPaths) {
       builder.addCompactionOutput(outputPath.getName());
     }
-    builder.setRegionName(HBaseZeroCopyByteString.wrap(info.getRegionName()));
+    builder.setRegionName(ByteStringer.wrap(info.getRegionName()));
     return builder.build();
   }
 
