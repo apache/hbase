@@ -56,6 +56,10 @@ module Hbase
       @shell.hbase_admin
     end
 
+    def security_admin
+      @shell.hbase_security_admin
+    end
+
     def create_test_table(name)
       # Create the table if needed
       unless admin.exists?(name)
