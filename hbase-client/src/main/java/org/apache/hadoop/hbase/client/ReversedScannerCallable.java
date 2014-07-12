@@ -167,7 +167,7 @@ public class ReversedScannerCallable extends ScannerCallable {
       } else {
         throw new DoNotRetryIOException("Does hbase:meta exist hole? Locating row "
             + Bytes.toStringBinary(currentKey) + " returns incorrect region "
-            + regionLocation.getRegionInfo());
+            + (regionLocation == null ? null : regionLocation.getRegionInfo()));
       }
       currentKey = regionLocation.getRegionInfo().getEndKey();
     } while (!Bytes.equals(currentKey, HConstants.EMPTY_END_ROW)
