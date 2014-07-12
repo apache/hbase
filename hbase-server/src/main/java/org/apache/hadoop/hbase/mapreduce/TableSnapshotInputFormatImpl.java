@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -41,6 +40,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -109,7 +109,7 @@ public class TableSnapshotInputFormatImpl {
         MapReduceProtos.TableSnapshotRegionSplit.newBuilder()
           .setRegion(HBaseProtos.RegionSpecifier.newBuilder()
             .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.ENCODED_REGION_NAME)
-            .setValue(HBaseZeroCopyByteString.wrap(Bytes.toBytes(regionName))).build());
+            .setValue(ByteStringer.wrap(Bytes.toBytes(regionName))).build());
 
       for (String location : locations) {
         builder.addLocations(location);

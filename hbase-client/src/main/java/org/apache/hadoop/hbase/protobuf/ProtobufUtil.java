@@ -36,7 +36,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -2510,7 +2509,7 @@ public final class ProtobufUtil {
     for (Path outputPath : outputPaths) {
       builder.addCompactionOutput(outputPath.getName());
     }
-    builder.setRegionName(HBaseZeroCopyByteString.wrap(info.getRegionName()));
+    builder.setRegionName(ByteStringer.wrap(info.getRegionName()));
     return builder.build();
   }
 
