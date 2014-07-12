@@ -40,10 +40,9 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-
-import com.google.protobuf.HBaseZeroCopyByteString;
 
 /**
  * DO NOT USE DIRECTLY. USE {@link SnapshotManifest}.
@@ -185,7 +184,7 @@ public class SnapshotManifestV1 {
         // 2.1. build the snapshot reference for the store
         SnapshotRegionManifest.FamilyFiles.Builder family =
               SnapshotRegionManifest.FamilyFiles.newBuilder();
-        family.setFamilyName(HBaseZeroCopyByteString.wrap(Bytes.toBytes(familyName)));
+        family.setFamilyName(ByteStringer.wrap(Bytes.toBytes(familyName)));
 
         if (LOG.isDebugEnabled()) {
           LOG.debug("Adding snapshot references for " + storeFiles  + " hfiles");

@@ -152,6 +152,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -161,7 +162,6 @@ import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.HBaseZeroCopyByteString;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -1443,7 +1443,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       RollWALWriterResponse.Builder builder = RollWALWriterResponse.newBuilder();
       if (regionsToFlush != null) {
         for (byte[] region: regionsToFlush) {
-          builder.addRegionToFlush(HBaseZeroCopyByteString.wrap(region));
+          builder.addRegionToFlush(ByteStringer.wrap(region));
         }
       }
       return builder.build();

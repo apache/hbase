@@ -41,9 +41,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.FSUtils;
-
-import com.google.protobuf.HBaseZeroCopyByteString;
 
 /**
  * DO NOT USE DIRECTLY. USE {@link SnapshotManifest}.
@@ -93,7 +92,7 @@ public class SnapshotManifestV2 {
         final SnapshotRegionManifest.Builder region, final byte[] familyName) {
       SnapshotRegionManifest.FamilyFiles.Builder family =
           SnapshotRegionManifest.FamilyFiles.newBuilder();
-      family.setFamilyName(HBaseZeroCopyByteString.wrap(familyName));
+      family.setFamilyName(ByteStringer.wrap(familyName));
       return family;
     }
 
