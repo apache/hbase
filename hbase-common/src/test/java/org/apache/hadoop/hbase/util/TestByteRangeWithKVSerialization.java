@@ -35,8 +35,10 @@ public class TestByteRangeWithKVSerialization {
     pbr.putInt(kv.getValueLength());
     pbr.put(kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength());
     pbr.put(kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
-    pbr.putShort(kv.getTagsLength());
-    pbr.put(kv.getTagsArray(), kv.getTagsOffset(), kv.getTagsLength());
+    int tagsLen = kv.getTagsLength();
+    pbr.put((byte) (tagsLen >> 8 & 0xff));
+    pbr.put((byte) (tagsLen & 0xff));
+    pbr.put(kv.getTagsArray(), kv.getTagsOffset(), tagsLen);
     pbr.putVLong(kv.getMvccVersion());
   }
 
@@ -45,7 +47,7 @@ public class TestByteRangeWithKVSerialization {
     int keyLen = pbr.getInt();
     int valLen = pbr.getInt();
     pbr.setPosition(pbr.getPosition() + keyLen + valLen); // Skip the key and value section
-    short tagsLen = pbr.getShort();
+    int tagsLen = ((pbr.get() & 0xff) << 8) ^ (pbr.get() & 0xff);
     pbr.setPosition(pbr.getPosition() + tagsLen); // Skip the tags section
     long mvcc = pbr.getVLong();
     KeyValue kv = new KeyValue(pbr.getBytes(), kvStartPos,
@@ -82,8 +84,9 @@ public class TestByteRangeWithKVSerialization {
       Assert.assertTrue(kv.equals(kv1));
       Assert.assertTrue(Bytes.equals(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(),
           kv1.getValueArray(), kv1.getValueOffset(), kv1.getValueLength()));
-      Assert.assertTrue(Bytes.equals(kv.getTagsArray(), kv.getTagsOffset(), kv.getTagsLength(),
-          kv1.getTagsArray(), kv1.getTagsOffset(), kv1.getTagsLength()));
+      Assert.assertTrue(Bytes.equals(kv.getTagsArray(), kv.getTagsOffset(),
+          kv.getTagsLength(), kv1.getTagsArray(), kv1.getTagsOffset(),
+          kv1.getTagsLength()));
       Assert.assertEquals(kv1.getMvccVersion(), kv.getMvccVersion());
     }
   }

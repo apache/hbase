@@ -190,11 +190,11 @@ public interface Cell {
    * @return the first offset where the tags start in the Cell
    */
   int getTagsOffset();
-  
+
   /**
    * @return the total length of the tags in the Cell.
    */
-  short getTagsLength();
+  int getTagsLength();
   
   /**
    * WARNING do not use, expensive.  This gets an arraycopy of the cell's value.

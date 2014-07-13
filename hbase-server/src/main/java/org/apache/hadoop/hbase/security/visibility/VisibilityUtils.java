@@ -180,8 +180,8 @@ public class VisibilityUtils {
         cell.getTagsLength());
     while (tagsIterator.hasNext()) {
       Tag tag = tagsIterator.next();
-      if(tag.getType() == VisibilityUtils.VISIBILITY_EXP_SERIALIZATION_TAG_TYPE) {
-        int serializationVersion = Bytes.toShort(tag.getValue());
+      if (tag.getType() == VisibilityUtils.VISIBILITY_EXP_SERIALIZATION_TAG_TYPE) {
+        int serializationVersion = Bytes.toShort(tag.getBuffer());
         if (serializationVersion == VisibilityConstants.VISIBILITY_SERIALIZATION_VERSION) {
           sortedOrder = true;
           continue;

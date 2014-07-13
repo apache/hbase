@@ -489,8 +489,8 @@ public final class CellUtil {
       @Override
       public Tag next() {
         if (hasNext()) {
-          short curTagLen = Bytes.toShort(tags, this.pos);
-          Tag tag = new Tag(tags, pos, (short) (curTagLen + Bytes.SIZEOF_SHORT));
+          int curTagLen = Bytes.readAsInt(tags, this.pos, Tag.TAG_LENGTH_SIZE);
+          Tag tag = new Tag(tags, pos, curTagLen + Tag.TAG_LENGTH_SIZE);
           this.pos += Bytes.SIZEOF_SHORT + curTagLen;
           return tag;
         }

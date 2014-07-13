@@ -54,7 +54,7 @@ public class NoOpDataBlockEncoder implements HFileDataBlockEncoder {
     int encodedKvSize = klength + vlength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
     // Write the additional tag into the stream
     if (encodingCtx.getHFileContext().isIncludesTags()) {
-      short tagsLength = kv.getTagsLength();
+      int tagsLength = kv.getTagsLength();
       out.writeShort(tagsLength);
       if (tagsLength > 0) {
         out.write(kv.getTagsArray(), kv.getTagsOffset(), tagsLength);

@@ -35,11 +35,12 @@ public class Tag {
   public final static int TYPE_LENGTH_SIZE = Bytes.SIZEOF_BYTE;
   public final static int TAG_LENGTH_SIZE = Bytes.SIZEOF_SHORT;
   public final static int INFRASTRUCTURE_SIZE = TYPE_LENGTH_SIZE + TAG_LENGTH_SIZE;
+  private static final int MAX_TAG_LENGTH = (2 * Short.MAX_VALUE) + 1 - TAG_LENGTH_SIZE;
 
   private final byte type;
   private final byte[] bytes;
   private int offset = 0;
-  private short length = 0;
+  private int length = 0;
 
   // The special tag will write the length of each tag and that will be
   // followed by the type and then the actual tag.
@@ -54,13 +55,19 @@ public class Tag {
    * @param tag
    */
   public Tag(byte tagType, byte[] tag) {
-    /** <length of tag - 2 bytes><type code - 1 byte><tag>
-     * taglength maximum is Short.MAX_SIZE.  It includes 1 byte type length and actual tag bytes length.
+    /**
+     * Format for a tag : <length of tag - 2 bytes><type code - 1 byte><tag> taglength is serialized
+     * using 2 bytes only but as this will be unsigned, we can have max taglength of
+     * (Short.MAX_SIZE * 2) +1. It includes 1 byte type length and actual tag bytes length.
      */
-    short tagLength = (short) ((tag.length & 0x0000ffff) + TYPE_LENGTH_SIZE);
-    length = (short) (TAG_LENGTH_SIZE + tagLength);
+    int tagLength = tag.length + TYPE_LENGTH_SIZE;
+    if (tagLength > MAX_TAG_LENGTH) {
+      throw new IllegalArgumentException(
+          "Invalid tag data being passed. Its length can not exceed " + MAX_TAG_LENGTH);
+    }
+    length = TAG_LENGTH_SIZE + tagLength;
     bytes = new byte[length];
-    int pos = Bytes.putShort(bytes, 0, tagLength);
+    int pos = Bytes.putAsShort(bytes, 0, tagLength);
     pos = Bytes.putByte(bytes, pos, tagType);
     Bytes.putBytes(bytes, pos, tag, 0, tag.length);
     this.type = tagType;
@@ -80,14 +87,14 @@ public class Tag {
     this(bytes, offset, getLength(bytes, offset));
   }
 
-  private static short getLength(byte[] bytes, int offset) {
-    return (short) (TAG_LENGTH_SIZE + Bytes.toShort(bytes, offset));
+  private static int getLength(byte[] bytes, int offset) {
+    return TAG_LENGTH_SIZE + Bytes.readAsInt(bytes, offset, TAG_LENGTH_SIZE);
   }
 
   /**
-   * Creates a Tag from the specified byte array, starting at offset, and for
-   * length <code>length</code>. Presumes <code>bytes</code> content starting at
-   * <code>offset</code> is formatted as a Tag blob.
+   * Creates a Tag from the specified byte array, starting at offset, and for length
+   * <code>length</code>. Presumes <code>bytes</code> content starting at <code>offset</code> is
+   * formatted as a Tag blob.
    * @param bytes
    *          byte array
    * @param offset
@@ -95,7 +102,11 @@ public class Tag {
    * @param length
    *          length of the Tag
    */
-  public Tag(byte[] bytes, int offset, short length) {
+  public Tag(byte[] bytes, int offset, int length) {
+    if (length > MAX_TAG_LENGTH) {
+      throw new IllegalArgumentException(
+          "Invalid tag data being passed. Its length can not exceed " + MAX_TAG_LENGTH);
+    }
     this.bytes = bytes;
     this.offset = offset;
     this.length = length;
@@ -156,8 +167,8 @@ public class Tag {
     List<Tag> tags = new ArrayList<Tag>();
     int pos = offset;
     while (pos < offset + length) {
-      short tagLen = Bytes.toShort(b, pos);
-      tags.add(new Tag(b, pos, (short) (tagLen + TAG_LENGTH_SIZE)));
+      int tagLen = Bytes.readAsInt(b, pos, TAG_LENGTH_SIZE);
+      tags.add(new Tag(b, pos, tagLen + TAG_LENGTH_SIZE));
       pos += TAG_LENGTH_SIZE + tagLen;
     }
     return tags;
@@ -174,9 +185,9 @@ public class Tag {
   public static Tag getTag(byte[] b, int offset, int length, byte type) {
     int pos = offset;
     while (pos < offset + length) {
-      short tagLen = Bytes.toShort(b, pos);
+      int tagLen = Bytes.readAsInt(b, pos, TAG_LENGTH_SIZE);
       if(b[pos + TAG_LENGTH_SIZE] == type) {
-        return new Tag(b, pos, (short) (tagLen + TAG_LENGTH_SIZE));
+        return new Tag(b, pos, tagLen + TAG_LENGTH_SIZE);
       }
       pos += TAG_LENGTH_SIZE + tagLen;
     }
@@ -186,7 +197,7 @@ public class Tag {
   /**
    * Returns the total length of the entire tag entity
    */
-  short getLength() {
+  int getLength() {
     return this.length;
   }
 

@@ -170,7 +170,7 @@ public class WALCellCodec implements Codec {
       StreamUtils.writeRawVInt32(out, kv.getKeyLength());
       StreamUtils.writeRawVInt32(out, kv.getValueLength());
       // To support tags
-      short tagsLength = kv.getTagsLength();
+      int tagsLength = kv.getTagsLength();
       StreamUtils.writeRawVInt32(out, tagsLength);
 
       // Write row, qualifier, and family; use dictionary
@@ -227,7 +227,7 @@ public class WALCellCodec implements Codec {
       int keylength = StreamUtils.readRawVarint32(in);
       int vlength = StreamUtils.readRawVarint32(in);
       
-      short tagsLength = (short) StreamUtils.readRawVarint32(in);
+      int tagsLength = StreamUtils.readRawVarint32(in);
       int length = 0;
       if(tagsLength == 0) {
         length = KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE + keylength + vlength;
@@ -266,7 +266,7 @@ public class WALCellCodec implements Codec {
 
       // tags
       if (tagsLength > 0) {
-        pos = Bytes.putShort(backingArray, pos, tagsLength);
+        pos = Bytes.putAsShort(backingArray, pos, tagsLength);
         if (compression.tagCompressionContext != null) {
           compression.tagCompressionContext.uncompressTags(in, backingArray, pos, tagsLength);
         } else {
