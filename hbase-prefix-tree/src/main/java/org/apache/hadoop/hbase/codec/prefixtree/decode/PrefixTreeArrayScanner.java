@@ -464,7 +464,7 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
   protected void populateTag() {
     int tagTreeIndex = currentRowNode.getTagOffset(currentCellIndex, blockMeta);
     tagsOffset = tagsReader.populateBuffer(tagTreeIndex).getColumnOffset();
-    tagsLength = (short)tagsReader.getColumnLength();
+    tagsLength = tagsReader.getColumnLength();
   }
 
   protected void populateTimestamp() {

@@ -43,7 +43,7 @@ public class KeyValueUtil {
   public static int length(final Cell cell) {
     return (int) (KeyValue.getKeyValueDataStructureSize(cell.getRowLength(),
         cell.getFamilyLength(), cell.getQualifierLength(), cell.getValueLength(),
-        cell.getTagsLength()));
+        cell.getTagsLengthUnsigned()));
   }
 
   protected static int keyLength(final Cell cell) {
@@ -115,8 +115,8 @@ public class KeyValueUtil {
     pos = Bytes.putInt(output, pos, cell.getValueLength());
     pos = appendKeyToByteArrayWithoutValue(cell, output, pos);
     pos = CellUtil.copyValueTo(cell, output, pos);
-    if ((cell.getTagsLength() > 0)) {
-      pos = Bytes.putShort(output, pos, cell.getTagsLength());
+    if ((cell.getTagsLengthUnsigned() > 0)) {
+      pos = Bytes.putAsShort(output, pos, cell.getTagsLengthUnsigned());
       pos = CellUtil.copyTagTo(cell, output, pos);
     }
     return pos;
@@ -165,9 +165,10 @@ public class KeyValueUtil {
     int keyLength = bb.getInt();
     int valueLength = bb.getInt();
     ByteBufferUtils.skip(bb, keyLength + valueLength);
-    short tagsLength = 0;
+    int tagsLength = 0;
     if (includesTags) {
-      tagsLength = bb.getShort();
+      // Read short as unsigned, high byte first
+      tagsLength = ((bb.get() & 0xff) << 8) ^ (bb.get() & 0xff);
       ByteBufferUtils.skip(bb, tagsLength);
     }
     int kvLength = (int) KeyValue.getKeyValueDataStructureSize(keyLength, valueLength, tagsLength);

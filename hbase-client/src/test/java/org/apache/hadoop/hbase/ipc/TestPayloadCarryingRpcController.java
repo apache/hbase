@@ -165,6 +165,12 @@ public class TestPayloadCarryingRpcController {
               }
 
               @Override
+              public int getTagsLengthUnsigned() {
+                // unused
+                return 0;
+              }
+
+              @Override
               public short getTagsLength() {
                 // unused
                 return 0;

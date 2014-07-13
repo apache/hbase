@@ -143,6 +143,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
 
   public static final int KEYVALUE_WITH_TAGS_INFRASTRUCTURE_SIZE = ROW_OFFSET + TAGS_LENGTH_SIZE;
 
+  private static final int MAX_TAGS_LENGTH = (2 * Short.MAX_VALUE) + 1;
 
   /**
    * Computes the number of bytes that a <code>KeyValue</code> instance with the provided
@@ -735,7 +736,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
         c.getFamilyArray(), c.getFamilyOffset(), (int)c.getFamilyLength(), 
         c.getQualifierArray(), c.getQualifierOffset(), (int) c.getQualifierLength(), 
         c.getTimestamp(), Type.codeToType(c.getTypeByte()), c.getValueArray(), c.getValueOffset(), 
-        c.getValueLength(), c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
+        c.getValueLength(), c.getTagsArray(), c.getTagsOffset(), c.getTagsLengthUnsigned());
   }
 
   /**
@@ -790,7 +791,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     pos = Bytes.putByte(bytes, pos, type.getCode());
     pos += vlength;
     if (tagsLength > 0) {
-      pos = Bytes.putShort(bytes, pos, (short)(tagsLength & 0x0000ffff));
+      pos = Bytes.putAsShort(bytes, pos, tagsLength);
     }
     return bytes;
   }
@@ -908,7 +909,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     }
     // Write the number of tags. If it is 0 then it means there are no tags.
     if (tagsLength > 0) {
-      pos = Bytes.putShort(buffer, pos, (short) tagsLength);
+      pos = Bytes.putAsShort(buffer, pos, tagsLength);
       for (Tag t : tags) {
         pos = Bytes.putBytes(buffer, pos, t.getBuffer(), t.getOffset(), t.getLength());
       }
@@ -917,8 +918,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   }
 
   private static void checkForTagsLength(int tagsLength) {
-    if (tagsLength > Short.MAX_VALUE) {
-      throw new IllegalArgumentException("tagslength "+ tagsLength + " > " + Short.MAX_VALUE);
+    if (tagsLength > MAX_TAGS_LENGTH) {
+      throw new IllegalArgumentException("tagslength "+ tagsLength + " > " + MAX_TAGS_LENGTH);
     }
   }
 
@@ -973,7 +974,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     }
     // Add the tags after the value part
     if (tagsLength > 0) {
-      pos = Bytes.putShort(bytes, pos, (short) (tagsLength));
+      pos = Bytes.putAsShort(bytes, pos, tagsLength);
       pos = Bytes.putBytes(bytes, pos, tags, tagsOffset, tagsLength);
     }
     return bytes;
@@ -1033,7 +1034,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     }
     // Add the tags after the value part
     if (tagsLength > 0) {
-      pos = Bytes.putShort(bytes, pos, (short) (tagsLength));
+      pos = Bytes.putAsShort(bytes, pos, tagsLength);
       for (Tag t : tags) {
         pos = Bytes.putBytes(bytes, pos, t.getBuffer(), t.getOffset(), t.getLength());
       }
@@ -1577,7 +1578,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    */
   @Override
   public int getTagsOffset() {
-    short tagsLen = getTagsLength();
+    int tagsLen = getTagsLengthUnsigned();
     if (tagsLen == 0) {
       return this.offset + this.length;
     }
@@ -1588,14 +1589,21 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * This returns the total length of the tag bytes
    */
   @Override
-  public short getTagsLength() {
+  @Deprecated
+  public int getTagsLengthUnsigned() {
     int tagsLen = this.length - (getKeyLength() + getValueLength() + KEYVALUE_INFRASTRUCTURE_SIZE);
     if (tagsLen > 0) {
       // There are some Tag bytes in the byte[]. So reduce 2 bytes which is added to denote the tags
       // length
       tagsLen -= TAGS_LENGTH_SIZE;
     }
-    return (short) tagsLen;
+    return tagsLen;
+  }
+
+  @Override
+  @Deprecated
+  public short getTagsLength() {
+    return (short) getTagsLengthUnsigned();
   }
 
   /**
@@ -1603,7 +1611,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    * @return The tags
    */
   public List<Tag> getTags() {
-    short tagsLength = getTagsLength();
+    int tagsLength = getTagsLengthUnsigned();
     if (tagsLength == 0) {
       return EMPTY_ARRAY_LIST;
     }
@@ -2079,8 +2087,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
      * @return Long.MAX_VALUE if there is no LOG_REPLAY_TAG
      */
     private long getReplaySeqNum(final Cell c) {
-      Tag tag = Tag.getTag(c.getTagsArray(), c.getTagsOffset(), c.getTagsLength(), 
-        TagType.LOG_REPLAY_TAG_TYPE);
+      Tag tag = Tag.getTag(c.getTagsArray(), c.getTagsOffset(), c.getTagsLengthUnsigned(),
+          TagType.LOG_REPLAY_TAG_TYPE);
 
       if(tag != null) {
         return Bytes.toLong(tag.getBuffer(), tag.getTagOffset(), tag.getTagLength());
@@ -2779,8 +2787,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    */
   public static KeyValue cloneAndAddTags(Cell c, List<Tag> newTags) {
     List<Tag> existingTags = null;
-    if(c.getTagsLength() > 0) {
-      existingTags = Tag.asList(c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
+    if(c.getTagsLengthUnsigned() > 0) {
+      existingTags = Tag.asList(c.getTagsArray(), c.getTagsOffset(), c.getTagsLengthUnsigned());
       existingTags.addAll(newTags);
     } else {
       existingTags = newTags;

@@ -67,7 +67,8 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
         current.valueOffset = currentBuffer.position();
         ByteBufferUtils.skip(currentBuffer, current.valueLength);
         if (includesTags()) {
-          current.tagsLength = currentBuffer.getShort();
+          // Read short as unsigned, high byte first
+          current.tagsLength = ((currentBuffer.get() & 0xff) << 8) ^ (currentBuffer.get() & 0xff);
           ByteBufferUtils.skip(currentBuffer, current.tagsLength);
         }
         if (includesMvcc()) {

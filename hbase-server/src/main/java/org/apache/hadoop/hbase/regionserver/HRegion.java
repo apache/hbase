@@ -5180,7 +5180,7 @@ public class HRegion implements HeapSize { // , Writable{
                 newKV = new KeyValue(row.length, kv.getFamilyLength(),
                     kv.getQualifierLength(), now, KeyValue.Type.Put,
                     oldKv.getValueLength() + kv.getValueLength(),
-                    oldKv.getTagsLength() + kv.getTagsLength());
+                    oldKv.getTagsLengthUnsigned() + kv.getTagsLengthUnsigned());
                 // copy in the value
                 System.arraycopy(oldKv.getBuffer(), oldKv.getValueOffset(),
                     newKV.getBuffer(), newKV.getValueOffset(),
@@ -5191,9 +5191,10 @@ public class HRegion implements HeapSize { // , Writable{
                     kv.getValueLength());
                 // copy in the tags
                 System.arraycopy(oldKv.getBuffer(), oldKv.getTagsOffset(), newKV.getBuffer(),
-                    newKV.getTagsOffset(), oldKv.getTagsLength());
+                    newKV.getTagsOffset(), oldKv.getTagsLengthUnsigned());
                 System.arraycopy(kv.getBuffer(), kv.getTagsOffset(), newKV.getBuffer(),
-                    newKV.getTagsOffset() + oldKv.getTagsLength(), kv.getTagsLength());
+                    newKV.getTagsOffset() + oldKv.getTagsLengthUnsigned(),
+                    kv.getTagsLengthUnsigned());
                 // copy in row, family, and qualifier
                 System.arraycopy(kv.getBuffer(), kv.getRowOffset(),
                     newKV.getBuffer(), newKV.getRowOffset(), kv.getRowLength());
@@ -5383,8 +5384,8 @@ public class HRegion implements HeapSize { // , Writable{
               // Append new incremented KeyValue to list
               byte[] q = CellUtil.cloneQualifier(kv);
               byte[] val = Bytes.toBytes(amount);
-              int oldCellTagsLen = (c == null) ? 0 : c.getTagsLength();
-              int incCellTagsLen = kv.getTagsLength();
+              int oldCellTagsLen = (c == null) ? 0 : c.getTagsLengthUnsigned();
+              int incCellTagsLen = kv.getTagsLengthUnsigned();
               KeyValue newKV = new KeyValue(row.length, family.getKey().length, q.length, now,
                   KeyValue.Type.Put, val.length, oldCellTagsLen + incCellTagsLen);
               System.arraycopy(row, 0, newKV.getBuffer(), newKV.getRowOffset(), row.length);

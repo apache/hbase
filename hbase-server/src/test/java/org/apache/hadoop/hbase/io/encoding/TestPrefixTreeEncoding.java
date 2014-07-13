@@ -162,9 +162,9 @@ public class TestPrefixTreeEncoding {
         fail("Current kv " + currentKV + " is smaller than previous keyvalue " + previousKV);
       }
       if (!includesTag) {
-        assertFalse(currentKV.getTagsLength() > 0);
+        assertFalse(currentKV.getTagsLengthUnsigned() > 0);
       } else {
-        Assert.assertTrue(currentKV.getTagsLength() > 0);
+        Assert.assertTrue(currentKV.getTagsLengthUnsigned() > 0);
       }
       previousKV = currentKV;
     } while (seeker.next());
@@ -279,9 +279,9 @@ public class TestPrefixTreeEncoding {
       userDataStream.write(kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength());
       userDataStream.write(kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
       if (useTags) {
-        userDataStream.writeShort(kv.getTagsLength());
+        userDataStream.writeShort(kv.getTagsLengthUnsigned());
         userDataStream.write(kv.getBuffer(), kv.getValueOffset() + kv.getValueLength()
-            + Bytes.SIZEOF_SHORT, kv.getTagsLength());
+            + Bytes.SIZEOF_SHORT, kv.getTagsLengthUnsigned());
       }
     }
     return ByteBuffer.wrap(baosInMemory.toByteArray());
@@ -316,9 +316,9 @@ public class TestPrefixTreeEncoding {
       userDataStream.write(kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength());
       userDataStream.write(kv.getBuffer(), kv.getValueOffset(), kv.getValueLength());
       if (useTags) {
-        userDataStream.writeShort(kv.getTagsLength());
+        userDataStream.writeShort(kv.getTagsLengthUnsigned());
         userDataStream.write(kv.getBuffer(), kv.getValueOffset() + kv.getValueLength()
-            + Bytes.SIZEOF_SHORT, kv.getTagsLength());
+            + Bytes.SIZEOF_SHORT, kv.getTagsLengthUnsigned());
       }
     }
     return ByteBuffer.wrap(baosInMemory.toByteArray());

@@ -1045,9 +1045,9 @@ public final class ProtobufUtil {
               kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
           valueBuilder.setValue(ByteStringer.wrap(
               kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
-          if (kv.getTagsLength() > 0) {
+          if (kv.getTagsLengthUnsigned() > 0) {
             valueBuilder.setTags(ByteStringer.wrap(kv.getTagsArray(),
-                kv.getTagsOffset(), kv.getTagsLength()));
+                kv.getTagsOffset(), kv.getTagsLengthUnsigned()));
           }
           columnBuilder.addQualifierValue(valueBuilder.build());
         }
@@ -1108,9 +1108,9 @@ public final class ProtobufUtil {
         valueBuilder.setValue(ByteStringer.wrap(
             kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
         valueBuilder.setTimestamp(kv.getTimestamp());
-        if(cell.getTagsLength() > 0) {
+        if(cell.getTagsLengthUnsigned() > 0) {
           valueBuilder.setTags(ByteStringer.wrap(kv.getTagsArray(), kv.getTagsOffset(),
-              kv.getTagsLength()));
+              kv.getTagsLengthUnsigned()));
         }
         if (type == MutationType.DELETE) {
           KeyValue.Type keyValueType = KeyValue.Type.codeToType(kv.getType());

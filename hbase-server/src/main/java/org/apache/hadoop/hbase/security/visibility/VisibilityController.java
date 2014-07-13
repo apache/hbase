@@ -700,7 +700,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
               for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
                 Cell cell = cellScanner.current();
                 List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
-                    cell.getTagsLength());
+                    cell.getTagsLengthUnsigned());
                 tags.addAll(visibilityTags);
                 Cell updatedCell = new KeyValue(cell.getRowArray(), cell.getRowOffset(),
                     cell.getRowLength(), cell.getFamilyArray(), cell.getFamilyOffset(),
@@ -867,9 +867,9 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     if (isSystemOrSuperUser()) {
       return true;
     }
-    if (cell.getTagsLength() > 0) {
+    if (cell.getTagsLengthUnsigned() > 0) {
       Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-          cell.getTagsLength());
+          cell.getTagsLengthUnsigned());
       while (tagsItr.hasNext()) {
         if (reservedVisTagTypes.contains(tagsItr.next().getType())) {
           return false;
@@ -1201,7 +1201,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     }
     // Adding all other tags
     Iterator<Tag> tagsItr = CellUtil.tagsIterator(newCell.getTagsArray(), newCell.getTagsOffset(),
-        newCell.getTagsLength());
+        newCell.getTagsLengthUnsigned());
     while (tagsItr.hasNext()) {
       Tag tag = tagsItr.next();
       if (tag.getType() != VisibilityUtils.VISIBILITY_TAG_TYPE) {

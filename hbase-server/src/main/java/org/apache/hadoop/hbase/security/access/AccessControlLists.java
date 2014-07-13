@@ -683,7 +683,7 @@ public class AccessControlLists {
        throws IOException {
      List<Permission> results = Lists.newArrayList();
      Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-        cell.getTagsLength());
+        cell.getTagsLengthUnsigned());
      while (tagsIterator.hasNext()) {
        Tag tag = tagsIterator.next();
        if (tag.getType() == ACL_TAG_TYPE) {

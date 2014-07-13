@@ -240,7 +240,8 @@ public class TestReplicationWithTags {
         // Check tag presence in the 1st cell in 1st Result
         if (!results.isEmpty()) {
           Cell cell = results.get(0);
-          tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
+          tags = Tag
+              .asList(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLengthUnsigned());
         }
       }
     }

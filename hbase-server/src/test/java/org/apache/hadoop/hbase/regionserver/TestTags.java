@@ -27,6 +27,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -63,7 +64,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- *  Class that test tags
+ * Class that test tags
  */
 @Category(MediumTests.class)
 public class TestTags {
@@ -123,9 +124,9 @@ public class TestTags {
       table.put(put);
       admin.flush(tableName.getName());
       List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
-      for(HRegion region : regions) {
+      for (HRegion region : regions) {
         Store store = region.getStore(fam);
-        while(!(store.getStorefilesCount() > 0)) {
+        while (!(store.getStorefilesCount() > 0)) {
           Thread.sleep(10);
         }
       }
@@ -137,9 +138,9 @@ public class TestTags {
       table.put(put1);
       admin.flush(tableName.getName());
       regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
-      for(HRegion region : regions) {
+      for (HRegion region : regions) {
         Store store = region.getStore(fam);
-        while(!(store.getStorefilesCount() > 1)) {
+        while (!(store.getStorefilesCount() > 1)) {
           Thread.sleep(10);
         }
       }
@@ -152,15 +153,15 @@ public class TestTags {
 
       admin.flush(tableName.getName());
       regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
-      for(HRegion region : regions) {
+      for (HRegion region : regions) {
         Store store = region.getStore(fam);
-        while(!(store.getStorefilesCount() > 2)) {
+        while (!(store.getStorefilesCount() > 2)) {
           Thread.sleep(10);
         }
       }
       result(fam, row, qual, row2, table, value, value2, row1, value1);
       admin.compact(tableName.getName());
-      while(admin.getCompactionState(tableName.getName()) != CompactionState.NONE) {
+      while (admin.getCompactionState(tableName.getName()) != CompactionState.NONE) {
         Thread.sleep(10);
       }
       result(fam, row, qual, row2, table, value, value2, row1, value1);
@@ -201,9 +202,9 @@ public class TestTags {
       table.put(put);
       admin.flush(tableName.getName());
       List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
-      for(HRegion region : regions) {
+      for (HRegion region : regions) {
         Store store = region.getStore(fam);
-        while(!(store.getStorefilesCount() > 0)) {
+        while (!(store.getStorefilesCount() > 0)) {
           Thread.sleep(10);
         }
       }
@@ -214,9 +215,9 @@ public class TestTags {
       table.put(put1);
       admin.flush(tableName.getName());
       regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
-      for(HRegion region : regions) {
+      for (HRegion region : regions) {
         Store store = region.getStore(fam);
-        while(!(store.getStorefilesCount() > 1)) {
+        while (!(store.getStorefilesCount() > 1)) {
           Thread.sleep(10);
         }
       }
@@ -228,9 +229,9 @@ public class TestTags {
 
       admin.flush(tableName.getName());
       regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
-      for(HRegion region : regions) {
+      for (HRegion region : regions) {
         Store store = region.getStore(fam);
-        while(!(store.getStorefilesCount() > 2)) {
+        while (!(store.getStorefilesCount() > 2)) {
           Thread.sleep(10);
         }
       }
@@ -240,7 +241,7 @@ public class TestTags {
         Result[] next = scanner.next(3);
         for (Result result : next) {
           CellScanner cellScanner = result.cellScanner();
-          boolean advance = cellScanner.advance();
+          cellScanner.advance();
           KeyValue current = (KeyValue) cellScanner.current();
           assertTrue(current.getValueOffset() + current.getValueLength() == current.getLength());
         }
@@ -249,7 +250,7 @@ public class TestTags {
           scanner.close();
       }
       admin.compact(tableName.getName());
-      while(admin.getCompactionState(tableName.getName()) != CompactionState.NONE) {
+      while (admin.getCompactionState(tableName.getName()) != CompactionState.NONE) {
         Thread.sleep(10);
       }
       s = new Scan(row);
@@ -258,7 +259,7 @@ public class TestTags {
         Result[] next = scanner.next(3);
         for (Result result : next) {
           CellScanner cellScanner = result.cellScanner();
-          boolean advance = cellScanner.advance();
+          cellScanner.advance();
           KeyValue current = (KeyValue) cellScanner.current();
           assertTrue(current.getValueOffset() + current.getValueLength() == current.getLength());
         }
@@ -273,6 +274,7 @@ public class TestTags {
       }
     }
   }
+
   @Test
   public void testFlushAndCompactionwithCombinations() throws Exception {
     HTable table = null;
@@ -302,7 +304,8 @@ public class TestTags {
       Put put = new Put(row);
       byte[] value = Bytes.toBytes("value");
       put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
-      put.setAttribute("visibility", Bytes.toBytes("ram"));
+      int bigTagLen = Short.MAX_VALUE + 5;
+      put.setAttribute("visibility", new byte[bigTagLen]);
       table.put(put);
       Put put1 = new Put(row1);
       byte[] value1 = Bytes.toBytes("1000dfsdf");
@@ -310,9 +313,9 @@ public class TestTags {
       table.put(put1);
       admin.flush(tableName.getName());
       List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
-      for(HRegion region : regions) {
+      for (HRegion region : regions) {
         Store store = region.getStore(fam);
-        while(!(store.getStorefilesCount() > 0)) {
+        while (!(store.getStorefilesCount() > 0)) {
           Thread.sleep(10);
         }
       }
@@ -323,9 +326,9 @@ public class TestTags {
       table.put(put1);
       admin.flush(tableName.getName());
       regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
-      for(HRegion region : regions) {
+      for (HRegion region : regions) {
         Store store = region.getStore(fam);
-        while(!(store.getStorefilesCount() > 1)) {
+        while (!(store.getStorefilesCount() > 1)) {
           Thread.sleep(10);
         }
       }
@@ -340,57 +343,60 @@ public class TestTags {
       table.put(put2);
       admin.flush(tableName.getName());
       regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
-      for(HRegion region : regions) {
+      for (HRegion region : regions) {
         Store store = region.getStore(fam);
-        while(!(store.getStorefilesCount() > 2)) {
+        while (!(store.getStorefilesCount() > 2)) {
           Thread.sleep(10);
         }
       }
+      TestCoprocessorForTags.checkTagPresence = true;
       Scan s = new Scan(row);
+      s.setCaching(1);
       ResultScanner scanner = table.getScanner(s);
       try {
-        Result[] next = scanner.next(5);
-        for (Result result : next) {
-          CellScanner cellScanner = result.cellScanner();
-          boolean advance = cellScanner.advance();
+        Result next = null;
+        while ((next = scanner.next()) != null) {
+          CellScanner cellScanner = next.cellScanner();
+          cellScanner.advance();
           KeyValue current = (KeyValue) cellScanner.current();
-          // System.out.println(current);
-          int tagsLength = current.getTagsLength();
-          if (tagsLength == 0) {
-            assertTrue(current.getValueOffset() + current.getValueLength() == current.getLength());
+          if (CellUtil.matchingRow(current, row)) {
+            assertEquals(1, TestCoprocessorForTags.tags.size());
+            Tag tag = TestCoprocessorForTags.tags.get(0);
+            assertEquals(bigTagLen, tag.getTagLength());
           } else {
-            // even if taglength is going to be > 0 the byte array would be same
-            assertTrue(current.getValueOffset() + current.getValueLength() != current.getLength());
+            assertEquals(0, TestCoprocessorForTags.tags.size());
           }
         }
       } finally {
         if (scanner != null) {
           scanner.close();
         }
+        TestCoprocessorForTags.checkTagPresence = false;
       }
-      while(admin.getCompactionState(tableName.getName()) != CompactionState.NONE) {
+      while (admin.getCompactionState(tableName.getName()) != CompactionState.NONE) {
         Thread.sleep(10);
       }
-      s = new Scan(row);
+      TestCoprocessorForTags.checkTagPresence = true;
       scanner = table.getScanner(s);
       try {
-        Result[] next = scanner.next(5);
-        for (Result result : next) {
-          CellScanner cellScanner = result.cellScanner();
-          boolean advance = cellScanner.advance();
+        Result next = null;
+        while ((next = scanner.next()) != null) {
+          CellScanner cellScanner = next.cellScanner();
+          cellScanner.advance();
           KeyValue current = (KeyValue) cellScanner.current();
-          // System.out.println(current);
-          if (current.getTagsLength() == 0) {
-            assertTrue(current.getValueOffset() + current.getValueLength() == current.getLength());
+          if (CellUtil.matchingRow(current, row)) {
+            assertEquals(1, TestCoprocessorForTags.tags.size());
+            Tag tag = TestCoprocessorForTags.tags.get(0);
+            assertEquals(bigTagLen, tag.getTagLength());
           } else {
-            // even if taglength is going to be > 0 the byte array would be same
-            assertTrue(current.getValueOffset() + current.getValueLength() != current.getLength());
+            assertEquals(0, TestCoprocessorForTags.tags.size());
           }
         }
       } finally {
         if (scanner != null) {
           scanner.close();
         }
+        TestCoprocessorForTags.checkTagPresence = false;
       }
     } finally {
       if (table != null) {
@@ -544,9 +550,6 @@ public class TestTags {
     try {
       scanner = table.getScanner(s);
       Result next = scanner.next();
-      CellScanner cellScanner = next.cellScanner();
-      boolean advance = cellScanner.advance();
-      KeyValue current = (KeyValue) cellScanner.current();
 
       assertTrue(Bytes.equals(next.getRow(), row));
       assertTrue(Bytes.equals(next.getValue(fam, qual), value));
@@ -630,7 +633,8 @@ public class TestTags {
           CellScanner cellScanner = result.cellScanner();
           if (cellScanner.advance()) {
             Cell cell = cellScanner.current();
-            tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
+            tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
+                cell.getTagsLengthUnsigned());
           }
         }
       }

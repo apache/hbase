@@ -88,7 +88,7 @@ public class HFileWriterV3 extends HFileWriterV2 {
     // Currently get the complete arrays
     append(kv.getMvccVersion(), kv.getBuffer(), kv.getKeyOffset(), kv.getKeyLength(),
         kv.getBuffer(), kv.getValueOffset(), kv.getValueLength(), kv.getBuffer(),
-        kv.getTagsOffset(), kv.getTagsLength());
+        kv.getTagsOffset(), kv.getTagsLengthUnsigned());
     this.maxMemstoreTS = Math.max(this.maxMemstoreTS, kv.getMvccVersion());
   }
   
@@ -160,7 +160,7 @@ public class HFileWriterV3 extends HFileWriterV2 {
       out.write(value, voffset, vlength);
       // Write the additional tag into the stream
       if (hFileContext.isIncludesTags()) {
-        out.writeShort((short) tagsLength);
+        out.writeShort(tagsLength);
         if (tagsLength > 0) {
           out.write(tag, tagsOffset, tagsLength);
           if (tagsLength > maxTagsLength) {

@@ -759,7 +759,7 @@ public class AccessController extends BaseRegionObserver
       for (Cell cell: e.getValue()) {
         List<Tag> tags = Lists.newArrayList(new Tag(AccessControlLists.ACL_TAG_TYPE, perms));
         Iterator<Tag> tagIterator = CellUtil.tagsIterator(cell.getTagsArray(),
-            cell.getTagsOffset(), cell.getTagsLength());
+            cell.getTagsOffset(), cell.getTagsLengthUnsigned());
         while (tagIterator.hasNext()) {
           tags.add(tagIterator.next());
         }
@@ -793,9 +793,9 @@ public class AccessController extends BaseRegionObserver
     }
     for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
       Cell cell = cellScanner.current();
-      if (cell.getTagsLength() > 0) {
+      if (cell.getTagsLengthUnsigned() > 0) {
         Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-          cell.getTagsLength());
+          cell.getTagsLengthUnsigned());
         while (tagsItr.hasNext()) {
           if (tagsItr.next().getType() == AccessControlLists.ACL_TAG_TYPE) {
             throw new AccessDeniedException("Mutation contains cell with reserved type tag");
@@ -1828,7 +1828,7 @@ public class AccessController extends BaseRegionObserver
     ListMultimap<String,Permission> perms = ArrayListMultimap.create();
     if (oldCell != null) {
       Iterator<Tag> tagIterator = CellUtil.tagsIterator(oldCell.getTagsArray(),
-          oldCell.getTagsOffset(), oldCell.getTagsLength());
+          oldCell.getTagsOffset(), oldCell.getTagsLengthUnsigned());
       while (tagIterator.hasNext()) {
         Tag tag = tagIterator.next();
         if (tag.getType() != AccessControlLists.ACL_TAG_TYPE) {

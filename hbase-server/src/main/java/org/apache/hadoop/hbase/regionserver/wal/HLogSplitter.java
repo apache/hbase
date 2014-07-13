@@ -1897,9 +1897,9 @@ public class HLogSplitter {
   private static Cell tagReplayLogSequenceNumber(WALEntry entry, Cell cell) {
     // Tag puts with original sequence number if there is no LOG_REPLAY_TAG yet
     boolean needAddRecoveryTag = true;
-    if (cell.getTagsLength() > 0) {
-      Tag tmpTag = Tag.getTag(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength(),
-        TagType.LOG_REPLAY_TAG_TYPE);
+    if (cell.getTagsLengthUnsigned() > 0) {
+      Tag tmpTag = Tag.getTag(cell.getTagsArray(), cell.getTagsOffset(),
+          cell.getTagsLengthUnsigned(), TagType.LOG_REPLAY_TAG_TYPE);
       if (tmpTag != null) {
         // found an existing log replay tag so reuse it
         needAddRecoveryTag = false;

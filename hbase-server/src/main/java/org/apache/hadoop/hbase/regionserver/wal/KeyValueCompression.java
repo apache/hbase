@@ -106,7 +106,7 @@ class KeyValueCompression {
     // we first write the KeyValue infrastructure as VInts.
     WritableUtils.writeVInt(out, keyVal.getKeyLength());
     WritableUtils.writeVInt(out, keyVal.getValueLength());
-    WritableUtils.writeVInt(out, keyVal.getTagsLength());
+    WritableUtils.writeVInt(out, keyVal.getTagsLengthUnsigned());
 
     // now we write the row key, as the row key is likely to be repeated
     // We save space only if we attempt to compress elements with duplicates

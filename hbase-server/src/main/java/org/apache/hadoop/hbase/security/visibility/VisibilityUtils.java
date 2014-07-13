@@ -177,11 +177,11 @@ public class VisibilityUtils {
   public static boolean getVisibilityTags(Cell cell, List<Tag> tags) {
     boolean sortedOrder = false;
     Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-        cell.getTagsLength());
+        cell.getTagsLengthUnsigned());
     while (tagsIterator.hasNext()) {
       Tag tag = tagsIterator.next();
-      if(tag.getType() == VisibilityUtils.VISIBILITY_EXP_SERIALIZATION_TAG_TYPE) {
-        int serializationVersion = Bytes.toShort(tag.getValue());
+      if (tag.getType() == VisibilityUtils.VISIBILITY_EXP_SERIALIZATION_TAG_TYPE) {
+        int serializationVersion = Bytes.toShort(tag.getBuffer());
         if (serializationVersion == VisibilityConstants.VISIBILITY_SERIALIZATION_VERSION) {
           sortedOrder = true;
           continue;
@@ -201,7 +201,7 @@ public class VisibilityUtils {
    */
   public static boolean isVisibilityTagsPresent(Cell cell) {
     Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-        cell.getTagsLength());
+        cell.getTagsLengthUnsigned());
     while (tagsIterator.hasNext()) {
       Tag tag = tagsIterator.next();
       if (tag.getType() == VisibilityUtils.VISIBILITY_TAG_TYPE) {
@@ -271,7 +271,7 @@ public class VisibilityUtils {
 
   private static List<List<Integer>> sortTagsBasedOnOrdinal(Cell cell) throws IOException {
     Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-        cell.getTagsLength());
+        cell.getTagsLengthUnsigned());
     List<List<Integer>> fullTagsList = new ArrayList<List<Integer>>();
     while (tagsItr.hasNext()) {
       Tag tag = tagsItr.next();

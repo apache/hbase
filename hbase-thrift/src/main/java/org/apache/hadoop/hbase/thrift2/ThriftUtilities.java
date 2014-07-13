@@ -161,7 +161,7 @@ public class ThriftUtilities {
       col.setQualifier(CellUtil.cloneQualifier(kv));
       col.setTimestamp(kv.getTimestamp());
       col.setValue(CellUtil.cloneValue(kv));
-      if (kv.getTagsLength() > 0) {
+      if (kv.getTagsLengthUnsigned() > 0) {
         col.setTags(CellUtil.getTagArray(kv));
       }
       columnValues.add(col);

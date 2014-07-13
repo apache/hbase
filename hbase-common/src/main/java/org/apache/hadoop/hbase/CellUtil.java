@@ -54,7 +54,7 @@ public final class CellUtil {
   }
 
   public static ByteRange fillTagRange(Cell cell, ByteRange range) {
-    return range.set(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
+    return range.set(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLengthUnsigned());
   }
 
   /***************** get individual arrays for tests ************/
@@ -91,7 +91,7 @@ public final class CellUtil {
    * @return tag value in a new byte array.
    */
   public static byte[] getTagArray(Cell cell){
-    byte[] output = new byte[cell.getTagsLength()];
+    byte[] output = new byte[cell.getTagsLengthUnsigned()];
     copyTagTo(cell, output, 0);
     return output;
   }
@@ -132,8 +132,8 @@ public final class CellUtil {
    */
   public static int copyTagTo(Cell cell, byte[] destination, int destinationOffset) {
     System.arraycopy(cell.getTagsArray(), cell.getTagsOffset(), destination, destinationOffset,
-        cell.getTagsLength());
-    return destinationOffset + cell.getTagsLength();
+        cell.getTagsLengthUnsigned());
+    return destinationOffset + cell.getTagsLengthUnsigned();
   }
 
   /********************* misc *************************************/
@@ -418,8 +418,8 @@ public final class CellUtil {
       @Override
       public Tag next() {
         if (hasNext()) {
-          short curTagLen = Bytes.toShort(tags, this.pos);
-          Tag tag = new Tag(tags, pos, (short) (curTagLen + Bytes.SIZEOF_SHORT));
+          int curTagLen = Bytes.readAsInt(tags, this.pos, Tag.TAG_LENGTH_SIZE);
+          Tag tag = new Tag(tags, pos, curTagLen + Tag.TAG_LENGTH_SIZE);
           this.pos += Bytes.SIZEOF_SHORT + curTagLen;
           return tag;
         }

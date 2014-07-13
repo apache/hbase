@@ -757,6 +757,28 @@ public class Bytes {
   }
 
   /**
+   * Converts a byte array to an int value
+   * @param bytes byte array
+   * @param offset offset into array
+   * @param length how many bytes should be considered for creating int
+   * @return the int value
+   * @throws IllegalArgumentException if there's not enough room in the array at the offset
+   * indicated.
+   */
+  public static int readAsInt(byte[] bytes, int offset, final int length) {
+    if (offset + length > bytes.length) {
+      throw new IllegalArgumentException("offset (" + offset + ") + length (" + length
+          + ") exceed the" + " capacity of the array: " + bytes.length);
+    }
+    int n = 0;
+    for(int i = offset; i < (offset + length); i++) {
+      n <<= 8;
+      n ^= bytes[i] & 0xFF;
+    }
+    return n;
+  }
+
+  /**
    * Put an int value out to the specified byte array position.
    * @param bytes the byte array
    * @param offset position in the array
@@ -853,6 +875,29 @@ public class Bytes {
    * enough room at the offset specified.
    */
   public static int putShort(byte[] bytes, int offset, short val) {
+    if (bytes.length - offset < SIZEOF_SHORT) {
+      throw new IllegalArgumentException("Not enough room to put a short at"
+          + " offset " + offset + " in a " + bytes.length + " byte array");
+    }
+    bytes[offset+1] = (byte) val;
+    val >>= 8;
+    bytes[offset] = (byte) val;
+    return offset + SIZEOF_SHORT;
+  }
+
+  /**
+   * Put an int value as short out to the specified byte array position. Only the lower 2 bytes of
+   * the short will be put into the array. The caller of the API need to make sure they will not
+   * loose the value by doing so. This is useful to store an unsigned short which is represented as
+   * int in other parts.
+   * @param bytes the byte array
+   * @param offset position in the array
+   * @param val value to write out
+   * @return incremented offset
+   * @throws IllegalArgumentException if the byte array given doesn't have
+   * enough room at the offset specified.
+   */
+  public static int putAsShort(byte[] bytes, int offset, int val) {
     if (bytes.length - offset < SIZEOF_SHORT) {
       throw new IllegalArgumentException("Not enough room to put a short at"
           + " offset " + offset + " in a " + bytes.length + " byte array");

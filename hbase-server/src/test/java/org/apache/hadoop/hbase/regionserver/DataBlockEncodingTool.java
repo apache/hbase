@@ -208,7 +208,7 @@ public class DataBlockEncodingTool {
     }
 
     rawKVs = uncompressedOutputStream.toByteArray();
-    boolean useTag = (currentKV.getTagsLength() > 0);
+    boolean useTag = (currentKV.getTagsLengthUnsigned() > 0);
     for (DataBlockEncoding encoding : encodings) {
       if (encoding == DataBlockEncoding.NONE) {
         continue;

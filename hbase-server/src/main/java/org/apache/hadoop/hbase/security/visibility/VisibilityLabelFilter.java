@@ -81,7 +81,7 @@ class VisibilityLabelFilter extends FilterBase {
     }
 
     Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-        cell.getTagsLength());
+        cell.getTagsLengthUnsigned());
     boolean visibilityTagPresent = false;
     while (tagsItr.hasNext()) {
       boolean includeKV = true;

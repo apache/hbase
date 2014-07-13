@@ -237,7 +237,7 @@ public class TestHFileWriterV3 {
         buf.get(value);
         byte[] tagValue = null;
         if (useTags) {
-          int tagLen = buf.getShort();
+          int tagLen = ((buf.get() & 0xff) << 8) ^ (buf.get() & 0xff);
           tagValue = new byte[tagLen];
           buf.get(tagValue);
         }
@@ -257,9 +257,9 @@ public class TestHFileWriterV3 {
         if (useTags) {
           assertNotNull(tagValue);
           KeyValue tkv =  keyValues.get(entriesRead);
-          assertEquals(tagValue.length, tkv.getTagsLength());
-          assertTrue(Bytes.compareTo(tagValue, 0, tagValue.length, tkv.getBuffer(),
-              tkv.getTagsOffset(), tkv.getTagsLength()) == 0);
+          assertEquals(tagValue.length, tkv.getTagsLengthUnsigned());
+          assertTrue(Bytes.compareTo(tagValue, 0, tagValue.length, tkv.getTagsArray(),
+              tkv.getTagsOffset(), tkv.getTagsLengthUnsigned()) == 0);
         }
         ++entriesRead;
       }

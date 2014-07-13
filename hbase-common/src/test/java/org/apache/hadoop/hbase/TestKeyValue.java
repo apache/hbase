@@ -538,7 +538,7 @@ public class TestKeyValue extends TestCase {
     byte[] metaValue2 = Bytes.toBytes("metaValue2");
     KeyValue kv = new KeyValue(row, cf, q, HConstants.LATEST_TIMESTAMP, value, new Tag[] {
         new Tag((byte) 1, metaValue1), new Tag((byte) 2, metaValue2) });
-    assertTrue(kv.getTagsLength() > 0);
+    assertTrue(kv.getTagsLengthUnsigned() > 0);
     assertTrue(Bytes.equals(kv.getRow(), row));
     assertTrue(Bytes.equals(kv.getFamily(), cf));
     assertTrue(Bytes.equals(kv.getQualifier(), q));
@@ -561,7 +561,7 @@ public class TestKeyValue extends TestCase {
     assertTrue(meta1Ok);
     assertTrue(meta2Ok);
     Iterator<Tag> tagItr = CellUtil.tagsIterator(kv.getTagsArray(), kv.getTagsOffset(),
-        kv.getTagsLength());
+        kv.getTagsLengthUnsigned());
     //Iterator<Tag> tagItr = kv.tagsIterator();
     assertTrue(tagItr.hasNext());
     Tag next = tagItr.next();
@@ -575,7 +575,8 @@ public class TestKeyValue extends TestCase {
     Bytes.equals(next.getValue(), metaValue2);
     assertFalse(tagItr.hasNext());
 
-    tagItr = CellUtil.tagsIterator(kv.getTagsArray(), kv.getTagsOffset(), kv.getTagsLength());
+    tagItr = CellUtil.tagsIterator(kv.getTagsArray(), kv.getTagsOffset(),
+        kv.getTagsLengthUnsigned());
     assertTrue(tagItr.hasNext());
     next = tagItr.next();
     assertEquals(10, next.getTagLength());

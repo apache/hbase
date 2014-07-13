@@ -108,7 +108,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
 
   private void extractDeleteTags(Cell delCell, Type type) {
     // If tag is present in the delete
-    if (delCell.getTagsLength() > 0) {
+    if (delCell.getTagsLengthUnsigned() > 0) {
       switch (type) {
         case DeleteFamily:
           List<Tag> delTags = new ArrayList<Tag>();

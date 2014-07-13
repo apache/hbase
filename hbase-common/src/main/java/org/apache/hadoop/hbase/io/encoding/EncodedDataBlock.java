@@ -110,11 +110,11 @@ public class EncodedDataBlock {
         int offset = decompressedData.position();
         int klen = decompressedData.getInt();
         int vlen = decompressedData.getInt();
-        short tagsLen = 0;
+        int tagsLen = 0;
         ByteBufferUtils.skip(decompressedData, klen + vlen);
         // Read the tag length in case when steam contain tags
         if (meta.isIncludesTags()) {
-          tagsLen = decompressedData.getShort();
+          tagsLen = ((decompressedData.get() & 0xff) << 8) ^ (decompressedData.get() & 0xff);
           ByteBufferUtils.skip(decompressedData, tagsLen);
         }
         KeyValue kv = new KeyValue(decompressedData.array(), offset,

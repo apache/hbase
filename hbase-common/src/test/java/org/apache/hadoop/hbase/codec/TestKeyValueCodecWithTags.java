@@ -76,7 +76,7 @@ public class TestKeyValueCodecWithTags {
     assertTrue(decoder.advance());
     Cell c = decoder.current();
     assertTrue(CellComparator.equals(c, kv1));
-    List<Tag> tags = Tag.asList(c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
+    List<Tag> tags = Tag.asList(c.getTagsArray(), c.getTagsOffset(), c.getTagsLengthUnsigned());
     assertEquals(2, tags.size());
     Tag tag = tags.get(0);
     assertEquals(1, tag.getType());
@@ -87,7 +87,7 @@ public class TestKeyValueCodecWithTags {
     assertTrue(decoder.advance());
     c = decoder.current();
     assertTrue(CellComparator.equals(c, kv2));
-    tags = Tag.asList(c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
+    tags = Tag.asList(c.getTagsArray(), c.getTagsOffset(), c.getTagsLengthUnsigned());
     assertEquals(1, tags.size());
     tag = tags.get(0);
     assertEquals(1, tag.getType());
@@ -95,7 +95,7 @@ public class TestKeyValueCodecWithTags {
     assertTrue(decoder.advance());
     c = decoder.current();
     assertTrue(CellComparator.equals(c, kv3));
-    tags = Tag.asList(c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
+    tags = Tag.asList(c.getTagsArray(), c.getTagsOffset(), c.getTagsLengthUnsigned());
     assertEquals(3, tags.size());
     tag = tags.get(0);
     assertEquals(2, tag.getType());

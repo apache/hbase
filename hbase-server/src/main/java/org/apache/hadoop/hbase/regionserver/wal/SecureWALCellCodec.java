@@ -194,7 +194,7 @@ public class SecureWALCellCodec extends WALCellCodec {
       StreamUtils.writeRawVInt32(cout, kv.getKeyLength());
       StreamUtils.writeRawVInt32(cout, kv.getValueLength());
       // To support tags
-      StreamUtils.writeRawVInt32(cout, kv.getTagsLength());
+      StreamUtils.writeRawVInt32(cout, kv.getTagsLengthUnsigned());
 
       // Write row, qualifier, and family
       StreamUtils.writeRawVInt32(cout, kv.getRowLength());

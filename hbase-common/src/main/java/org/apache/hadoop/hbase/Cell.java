@@ -179,11 +179,20 @@ public interface Cell {
    * @return the first offset where the tags start in the Cell
    */
   int getTagsOffset();
-  
+
   /**
    * @return the total length of the tags in the Cell.
+   * @deprecated use {@link #getTagsLengthUnsigned()} which can handle tags length upto 65535.
    */
+  @Deprecated
   short getTagsLength();
+
+  /**
+   * @return the total length of the tags in the Cell.
+   * @deprecated From next major version this will be renamed to getTagsLength() which returns int.
+   */
+  @Deprecated
+  int getTagsLengthUnsigned();
   
   /**
    * WARNING do not use, expensive.  This gets an arraycopy of the cell's value.

@@ -189,8 +189,8 @@ public class TestHFileBlock {
       // always write the taglength
       totalSize += kv.getLength();
       if (useTag) {
-        dataOutputStream.writeShort(kv.getTagsLength());
-        dataOutputStream.write(kv.getBuffer(), kv.getTagsOffset(), kv.getTagsLength());
+        dataOutputStream.writeShort(kv.getTagsLengthUnsigned());
+        dataOutputStream.write(kv.getBuffer(), kv.getTagsOffset(), kv.getTagsLengthUnsigned());
       }
       if (includesMemstoreTS) {
         long memstoreTS = randomizer.nextLong();
