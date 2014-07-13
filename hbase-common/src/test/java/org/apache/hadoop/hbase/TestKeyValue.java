@@ -575,7 +575,8 @@ public class TestKeyValue extends TestCase {
     Bytes.equals(next.getValue(), metaValue2);
     assertFalse(tagItr.hasNext());
 
-    tagItr = CellUtil.tagsIterator(kv.getTagsArray(), kv.getTagsOffset(), kv.getTagsLength());
+    tagItr = CellUtil.tagsIterator(kv.getTagsArray(), kv.getTagsOffset(),
+        kv.getTagsLength());
     assertTrue(tagItr.hasNext());
     next = tagItr.next();
     assertEquals(10, next.getTagLength());

@@ -48,7 +48,7 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
     int size = klength + vlength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
     // Write the additional tag into the stream
     if (encodingContext.getHFileContext().isIncludesTags()) {
-      short tagsLength = kv.getTagsLength();
+      int tagsLength = kv.getTagsLength();
       out.writeShort(tagsLength);
       if (tagsLength > 0) {
         out.write(kv.getTagsArray(), kv.getTagsOffset(), tagsLength);
@@ -88,7 +88,8 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
         current.valueOffset = currentBuffer.position();
         ByteBufferUtils.skip(currentBuffer, current.valueLength);
         if (includesTags()) {
-          current.tagsLength = currentBuffer.getShort();
+          // Read short as unsigned, high byte first
+          current.tagsLength = ((currentBuffer.get() & 0xff) << 8) ^ (currentBuffer.get() & 0xff);
           ByteBufferUtils.skip(currentBuffer, current.tagsLength);
         }
         if (includesMvcc()) {

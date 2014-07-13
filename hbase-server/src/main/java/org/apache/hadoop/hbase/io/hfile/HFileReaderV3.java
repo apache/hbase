@@ -216,7 +216,8 @@ public class HFileReaderV3 extends HFileReaderV2 {
       }
       ByteBufferUtils.skip(blockBuffer, currKeyLen + currValueLen);
       if (reader.hfileContext.isIncludesTags()) {
-        currTagsLen = blockBuffer.getShort();
+        // Read short as unsigned, high byte first
+        currTagsLen = ((blockBuffer.get() & 0xff) << 8) ^ (blockBuffer.get() & 0xff);
         if (currTagsLen < 0 || currTagsLen > blockBuffer.limit()) {
           throw new IllegalStateException("Invalid currTagsLen " + currTagsLen + ". Block offset: "
               + block.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
@@ -263,7 +264,8 @@ public class HFileReaderV3 extends HFileReaderV2 {
         }
         ByteBufferUtils.skip(blockBuffer, klen + vlen);
         if (reader.hfileContext.isIncludesTags()) {
-          tlen = blockBuffer.getShort();
+          // Read short as unsigned, high byte first
+          tlen = ((blockBuffer.get() & 0xff) << 8) ^ (blockBuffer.get() & 0xff);
           if (tlen < 0 || tlen > blockBuffer.limit()) {
             throw new IllegalStateException("Invalid tlen " + tlen + ". Block offset: "
                 + block.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "

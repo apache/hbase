@@ -61,13 +61,13 @@ public class TagCompressionContext {
    * @param length Length of all tag bytes
    * @throws IOException
    */
-  public void compressTags(OutputStream out, byte[] in, int offset, short length)
+  public void compressTags(OutputStream out, byte[] in, int offset, int length)
       throws IOException {
     int pos = offset;
     int endOffset = pos + length;
     assert pos < endOffset;
     while (pos < endOffset) {
-      short tagLen = Bytes.toShort(in, pos);
+      int tagLen = Bytes.readAsInt(in, pos, Tag.TAG_LENGTH_SIZE);
       pos += Tag.TAG_LENGTH_SIZE;
       write(in, pos, tagLen, out);
       pos += tagLen;
@@ -81,7 +81,7 @@ public class TagCompressionContext {
    * @param length Length of all tag bytes
    * @throws IOException
    */
-  public void compressTags(OutputStream out, ByteBuffer in, short length) throws IOException {
+  public void compressTags(OutputStream out, ByteBuffer in, int length) throws IOException {
     if (in.hasArray()) {
       compressTags(out, in.array(), in.arrayOffset() + in.position(), length);
       ByteBufferUtils.skip(in, length);
@@ -100,15 +100,14 @@ public class TagCompressionContext {
    * @param length Length of all tag bytes
    * @throws IOException
    */
-  public void uncompressTags(InputStream src, byte[] dest, int offset, short length)
+  public void uncompressTags(InputStream src, byte[] dest, int offset, int length)
       throws IOException {
     int endOffset = offset + length;
     while (offset < endOffset) {
       byte status = (byte) src.read();
       if (status == Dictionary.NOT_IN_DICTIONARY) {
-        // We are writing short as tagLen. So can downcast this without any risk.
-        short tagLen = (short) StreamUtils.readRawVarint32(src);
-        offset = Bytes.putShort(dest, offset, tagLen);
+        int tagLen = StreamUtils.readRawVarint32(src);
+        offset = Bytes.putAsShort(dest, offset, tagLen);
         IOUtils.readFully(src, dest, offset, tagLen);
         tagDict.addEntry(dest, offset, tagLen);
         offset += tagLen;
@@ -118,7 +117,7 @@ public class TagCompressionContext {
         if (entry == null) {
           throw new IOException("Missing dictionary entry for index " + dictIdx);
         }
-        offset = Bytes.putShort(dest, offset, (short) entry.length);
+        offset = Bytes.putAsShort(dest, offset, entry.length);
         System.arraycopy(entry, 0, dest, offset, entry.length);
         offset += entry.length;
       }
@@ -140,11 +139,10 @@ public class TagCompressionContext {
     int endOffset = offset + length;
     while (offset < endOffset) {
       byte status = src.get();
-      short tagLen;
+      int tagLen;
       if (status == Dictionary.NOT_IN_DICTIONARY) {
-        // We are writing short as tagLen. So can downcast this without any risk.
-        tagLen = (short) StreamUtils.readRawVarint32(src);
-        offset = Bytes.putShort(dest, offset, tagLen);
+        tagLen = StreamUtils.readRawVarint32(src);
+        offset = Bytes.putAsShort(dest, offset, tagLen);
         src.get(dest, offset, tagLen);
         tagDict.addEntry(dest, offset, tagLen);
         offset += tagLen;
@@ -154,8 +152,8 @@ public class TagCompressionContext {
         if (entry == null) {
           throw new IOException("Missing dictionary entry for index " + dictIdx);
         }
-        tagLen = (short) entry.length;
-        offset = Bytes.putShort(dest, offset, tagLen);
+        tagLen = entry.length;
+        offset = Bytes.putAsShort(dest, offset, tagLen);
         System.arraycopy(entry, 0, dest, offset, tagLen);
         offset += tagLen;
       }
@@ -170,7 +168,7 @@ public class TagCompressionContext {
    * @param length Length of all tag bytes
    * @throws IOException
    */
-  public void uncompressTags(InputStream src, ByteBuffer dest, short length) throws IOException {
+  public void uncompressTags(InputStream src, ByteBuffer dest, int length) throws IOException {
     if (dest.hasArray()) {
       uncompressTags(src, dest.array(), dest.arrayOffset() + dest.position(), length);
     } else {
@@ -180,7 +178,7 @@ public class TagCompressionContext {
     }
   }
 
-  private void write(byte[] data, int offset, short length, OutputStream out) throws IOException {
+  private void write(byte[] data, int offset, int length, OutputStream out) throws IOException {
     short dictIdx = Dictionary.NOT_IN_DICTIONARY;
     if (tagDict != null) {
       dictIdx = tagDict.findEntry(data, offset, length);

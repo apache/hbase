@@ -47,11 +47,11 @@ public class TestTagCompressionContext {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     TagCompressionContext context = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
     KeyValue kv1 = createKVWithTags(2);
-    short tagsLength1 = kv1.getTagsLength();
+    int tagsLength1 = kv1.getTagsLength();
     ByteBuffer ib = ByteBuffer.wrap(kv1.getTagsArray(), kv1.getTagsOffset(), tagsLength1);
     context.compressTags(baos, ib, tagsLength1);
     KeyValue kv2 = createKVWithTags(3);
-    short tagsLength2 = kv2.getTagsLength();
+    int tagsLength2 = kv2.getTagsLength();
     ib = ByteBuffer.wrap(kv2.getTagsArray(), kv2.getTagsOffset(), tagsLength2);
     context.compressTags(baos, ib, tagsLength2);
 
@@ -73,10 +73,10 @@ public class TestTagCompressionContext {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     TagCompressionContext context = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
     KeyValue kv1 = createKVWithTags(1);
-    short tagsLength1 = kv1.getTagsLength();
+    int tagsLength1 = kv1.getTagsLength();
     context.compressTags(baos, kv1.getTagsArray(), kv1.getTagsOffset(), tagsLength1);
     KeyValue kv2 = createKVWithTags(3);
-    short tagsLength2 = kv2.getTagsLength();
+    int tagsLength2 = kv2.getTagsLength();
     context.compressTags(baos, kv2.getTagsArray(), kv2.getTagsOffset(), tagsLength2);
 
     context.clear();

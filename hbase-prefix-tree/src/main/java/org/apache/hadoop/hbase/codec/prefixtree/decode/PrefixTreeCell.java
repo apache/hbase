@@ -72,7 +72,7 @@ public class PrefixTreeCell implements Cell, Comparable<Cell> {
 
   protected byte[] tagsBuffer;
   protected int tagsOffset;
-  protected short tagsLength;
+  protected int tagsLength;
 
   /********************** Cell methods ******************/
 
@@ -229,7 +229,7 @@ public class PrefixTreeCell implements Cell, Comparable<Cell> {
   }
 
   @Override
-  public short getTagsLength() {
+  public int getTagsLength() {
     return tagsLength;
   }
 
@@ -237,5 +237,4 @@ public class PrefixTreeCell implements Cell, Comparable<Cell> {
   public byte[] getTagsArray() {
     return this.tagsBuffer;
   }
-
 }

@@ -85,7 +85,7 @@ public class HFileWriterV3 extends HFileWriterV2 {
   public void append(final KeyValue kv) throws IOException {
     // Currently get the complete arrays
     super.append(kv);
-    short tagsLength = kv.getTagsLength();
+    int tagsLength = kv.getTagsLength();
     if (tagsLength > this.maxTagsLength) {
       this.maxTagsLength = tagsLength;
     }
@@ -126,7 +126,7 @@ public class HFileWriterV3 extends HFileWriterV2 {
     pos = Bytes.putBytes(b, pos, key, 0, key.length);
     pos = Bytes.putBytes(b, pos, value, 0, value.length);
     if (tag.length > 0) {
-      pos = Bytes.putShort(b, pos, (short) tag.length);
+      pos = Bytes.putAsShort(b, pos, tag.length);
       Bytes.putBytes(b, pos, tag, 0, tag.length);
     }
     append(new KeyValue(b, 0, kvlen));

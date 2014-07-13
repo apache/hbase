@@ -237,7 +237,7 @@ public class TestHFileWriterV3 {
         buf.get(value);
         byte[] tagValue = null;
         if (useTags) {
-          int tagLen = buf.getShort();
+          int tagLen = ((buf.get() & 0xff) << 8) ^ (buf.get() & 0xff);
           tagValue = new byte[tagLen];
           buf.get(tagValue);
         }

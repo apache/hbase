@@ -268,8 +268,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
-    public short getTagsLength() {
-      return (short) tagsLength;
+    public int getTagsLength() {
+      return tagsLength;
     }
 
     @Override
@@ -312,7 +312,6 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
           currentKey.getTimestamp(), currentKey.getTypeByte(), valueLength, valueOffset,
           memstoreTS, tagsOffset, tagsLength, tagCompressionContext, tagsBuffer);
     }
-          
   }
 
   /**
@@ -463,8 +462,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
-    public short getTagsLength() {
-      return (short) tagsLength;
+    public int getTagsLength() {
+      return tagsLength;
     }
 
     @Override
@@ -585,7 +584,9 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
           currentBuffer.arrayOffset() + current.valueOffset,
           current.valueLength);
       if (current.tagsLength > 0) {
-        kvBuffer.putShort((short) current.tagsLength);
+        // Put short as unsigned
+        kvBuffer.put((byte) (current.tagsLength >> 8 & 0xff));
+        kvBuffer.put((byte) (current.tagsLength & 0xff));
         if (current.tagsOffset != -1) {
           // the offset of the tags bytes in the underlying buffer is marked. So the temp
           // buffer,tagsBuffer was not been used.
@@ -833,7 +834,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
     int size = 0;
     if (encodingCtx.getHFileContext().isIncludesTags()) {
-      short tagsLength = kv.getTagsLength();
+      int tagsLength = kv.getTagsLength();
       ByteBufferUtils.putCompressedInt(out, tagsLength);
       // There are some tags to be written
       if (tagsLength > 0) {
@@ -863,8 +864,10 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   protected final void afterDecodingKeyValue(DataInputStream source,
       ByteBuffer dest, HFileBlockDefaultDecodingContext decodingCtx) throws IOException {
     if (decodingCtx.getHFileContext().isIncludesTags()) {
-      short tagsLength = (short) ByteBufferUtils.readCompressedInt(source);
-      dest.putShort(tagsLength);
+      int tagsLength = ByteBufferUtils.readCompressedInt(source);
+      // Put as unsigned short
+      dest.put((byte) ((tagsLength >> 8) & 0xff));
+      dest.put((byte) (tagsLength & 0xff));
       if (tagsLength > 0) {
         TagCompressionContext tagCompressionContext = decodingCtx.getTagCompressionContext();
         // When tag compression is been used in this file, tagCompressionContext will have a not
