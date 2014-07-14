@@ -1204,7 +1204,8 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
         newCell.getTagsLengthUnsigned());
     while (tagsItr.hasNext()) {
       Tag tag = tagsItr.next();
-      if (tag.getType() != VisibilityUtils.VISIBILITY_TAG_TYPE) {
+      if (tag.getType() != VisibilityUtils.VISIBILITY_TAG_TYPE
+          && tag.getType() != VisibilityUtils.VISIBILITY_EXP_SERIALIZATION_TAG_TYPE) {
         tags.add(tag);
       }
     }
