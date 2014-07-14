@@ -27,4 +27,5 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceStability.Evolving
 public class HBaseInterfaceAudience {
   public static final String COPROC = "Coprocesssor";
+  public static final String PHOENIX = "Phoenix";
 }

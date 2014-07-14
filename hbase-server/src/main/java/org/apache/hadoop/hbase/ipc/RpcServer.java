@@ -64,13 +64,16 @@ import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
 import io.netty.util.internal.ConcurrentSet;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
@@ -148,7 +151,8 @@ import com.google.protobuf.TextFormat;
  *
  * @see RpcClient
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceStability.Evolving
 public class RpcServer implements RpcServerInterface {
   public static final Log LOG = LogFactory.getLog(RpcServer.class);
 
