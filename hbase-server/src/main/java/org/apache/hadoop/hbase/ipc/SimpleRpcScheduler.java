@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.HConstants;
  */
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
-public class SimpleRpcScheduler implements RpcScheduler {
+public class SimpleRpcScheduler extends RpcScheduler {
   public static final Log LOG = LogFactory.getLog(SimpleRpcScheduler.class);
 
   public static final String CALL_QUEUE_READ_SHARE_CONF_KEY =

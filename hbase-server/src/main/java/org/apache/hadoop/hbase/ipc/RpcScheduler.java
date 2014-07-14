@@ -29,11 +29,11 @@ import java.net.InetSocketAddress;
  */
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
-public interface RpcScheduler {
+public abstract class RpcScheduler {
 
   /** Exposes runtime information of a {@code RpcServer} that a {@code RpcScheduler} may need. */
-  interface Context {
-    InetSocketAddress getListenerAddress();
+  static abstract class Context {
+    public abstract InetSocketAddress getListenerAddress();
   }
 
   /**
@@ -42,15 +42,15 @@ public interface RpcScheduler {
    *
    * @param context provides methods to retrieve runtime information from
    */
-  void init(Context context);
+  public abstract void init(Context context);
 
   /**
    * Prepares for request serving. An implementation may start some handler threads here.
    */
-  void start();
+  public abstract void start();
 
   /** Stops serving new requests. */
-  void stop();
+  public abstract void stop();
 
   /**
    * Dispatches an RPC request asynchronously. An implementation is free to choose to process the
@@ -58,17 +58,17 @@ public interface RpcScheduler {
    *
    * @param task the request to be dispatched
    */
-  void dispatch(CallRunner task) throws IOException, InterruptedException;
+  public abstract void dispatch(CallRunner task) throws IOException, InterruptedException;
 
   /** Retrieves length of the general queue for metrics. */
-  int getGeneralQueueLength();
+  public abstract int getGeneralQueueLength();
 
   /** Retrieves length of the priority queue for metrics. */
-  int getPriorityQueueLength();
+  public abstract int getPriorityQueueLength();
 
   /** Retrieves length of the replication queue for metrics. */
-  int getReplicationQueueLength();
+  public abstract int getReplicationQueueLength();
 
   /** Retrieves the number of active handler. */
-  int getActiveRpcHandlerCount();
+  public abstract int getActiveRpcHandlerCount();
 }

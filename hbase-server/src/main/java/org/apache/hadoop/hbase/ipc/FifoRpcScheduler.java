@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.ipc.CallRunner;
  *
  * This can be used for HMaster, where no prioritization is needed.
  */
-public class FifoRpcScheduler implements RpcScheduler {
+public class FifoRpcScheduler extends RpcScheduler {
 
   private final int handlerCount;
   private final int maxQueueLength;
