@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.client.replication;
 
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -24,6 +28,8 @@ import org.apache.hadoop.hbase.*;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.common.collect.Lists;
 
 import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
@@ -115,6 +121,37 @@ public class TestReplicationAdmin {
       // OK!
     }
     admin.removePeer(ID_ONE);
+  }
+
+  @Test
+  public void testGetTableCfsStr() {
+    // opposite of TestPerTableCFReplication#testParseTableCFsFromConfig()
+
+    Map<TableName, List<String>> tabCFsMap = null;
+
+    // 1. null or empty string, result should be null
+    assertEquals(null, ReplicationAdmin.getTableCfsStr(tabCFsMap));
+
+
+    // 2. single table: "tab1" / "tab2:cf1" / "tab3:cf1,cf3"
+    tabCFsMap = new TreeMap<TableName, List<String>>();
+    tabCFsMap.put(TableName.valueOf("tab1"), null);   // its table name is "tab1"
+    assertEquals("tab1", ReplicationAdmin.getTableCfsStr(tabCFsMap));
+
+    tabCFsMap = new TreeMap<TableName, List<String>>();
+    tabCFsMap.put(TableName.valueOf("tab1"), Lists.newArrayList("cf1"));
+    assertEquals("tab1:cf1", ReplicationAdmin.getTableCfsStr(tabCFsMap));
+
+    tabCFsMap = new TreeMap<TableName, List<String>>();
+    tabCFsMap.put(TableName.valueOf("tab1"), Lists.newArrayList("cf1", "cf3"));
+    assertEquals("tab1:cf1,cf3", ReplicationAdmin.getTableCfsStr(tabCFsMap));
+
+    // 3. multiple tables: "tab1 ; tab2:cf1 ; tab3:cf1,cf3"
+    tabCFsMap = new TreeMap<TableName, List<String>>();
+    tabCFsMap.put(TableName.valueOf("tab1"), null);
+    tabCFsMap.put(TableName.valueOf("tab2"), Lists.newArrayList("cf1"));
+    tabCFsMap.put(TableName.valueOf("tab3"), Lists.newArrayList("cf1", "cf3"));
+    assertEquals("tab1;tab2:cf1;tab3:cf1,cf3", ReplicationAdmin.getTableCfsStr(tabCFsMap));
   }
 
 }

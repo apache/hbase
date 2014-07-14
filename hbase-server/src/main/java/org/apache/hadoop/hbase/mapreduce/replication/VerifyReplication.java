@@ -39,9 +39,11 @@ import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
-import org.apache.hadoop.hbase.replication.ReplicationPeer;
+import org.apache.hadoop.hbase.replication.ReplicationPeerZKImpl;
+import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.mapreduce.Job;
@@ -131,6 +133,7 @@ public class VerifyReplication extends Configured implements Tool {
       }
     }
 
+    @Override
     protected void cleanup(Context context) {
       if (replicatedScanner != null) {
         replicatedScanner.close();
@@ -141,7 +144,7 @@ public class VerifyReplication extends Configured implements Tool {
 
   private static String getPeerQuorumAddress(final Configuration conf) throws IOException {
     ZooKeeperWatcher localZKW = null;
-    ReplicationPeer peer = null;
+    ReplicationPeerZKImpl peer = null;
     try {
       localZKW = new ZooKeeperWatcher(conf, "VerifyReplication",
           new Abortable() {
@@ -152,11 +155,11 @@ public class VerifyReplication extends Configured implements Tool {
       ReplicationPeers rp = ReplicationFactory.getReplicationPeers(localZKW, conf, localZKW);
       rp.init();
 
-      Configuration peerConf = rp.getPeerConf(peerId);
-      if (peerConf == null) {
+      Pair<ReplicationPeerConfig, Configuration> pair = rp.getPeerConf(peerId);
+      if (pair == null) {
         throw new IOException("Couldn't get peer conf!");
       }
-
+      Configuration peerConf = rp.getPeerConf(peerId).getSecond();
       return ZKUtil.getZooKeeperClusterKey(peerConf);
     } catch (ReplicationException e) {
       throw new IOException(

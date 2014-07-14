@@ -175,30 +175,30 @@ public class TestPerTableCFReplication {
     Map<String, List<String>> tabCFsMap = null;
 
     // 1. null or empty string, result should be null
-    tabCFsMap = ReplicationPeer.parseTableCFsFromConfig(null);
+    tabCFsMap = ReplicationPeerZKImpl.parseTableCFsFromConfig(null);
     assertEquals(null, tabCFsMap);
 
-    tabCFsMap = ReplicationPeer.parseTableCFsFromConfig("");
+    tabCFsMap = ReplicationPeerZKImpl.parseTableCFsFromConfig("");
     assertEquals(null, tabCFsMap);
 
-    tabCFsMap = ReplicationPeer.parseTableCFsFromConfig("   ");
+    tabCFsMap = ReplicationPeerZKImpl.parseTableCFsFromConfig("   ");
     assertEquals(null, tabCFsMap);
 
     // 2. single table: "tab1" / "tab2:cf1" / "tab3:cf1,cf3"
-    tabCFsMap = ReplicationPeer.parseTableCFsFromConfig("tab1");
+    tabCFsMap = ReplicationPeerZKImpl.parseTableCFsFromConfig("tab1");
     assertEquals(1, tabCFsMap.size()); // only one table
     assertTrue(tabCFsMap.containsKey("tab1"));   // its table name is "tab1"
     assertFalse(tabCFsMap.containsKey("tab2"));  // not other table
     assertEquals(null, tabCFsMap.get("tab1"));   // null cf-list,
 
-    tabCFsMap = ReplicationPeer.parseTableCFsFromConfig("tab2:cf1");
+    tabCFsMap = ReplicationPeerZKImpl.parseTableCFsFromConfig("tab2:cf1");
     assertEquals(1, tabCFsMap.size()); // only one table
     assertTrue(tabCFsMap.containsKey("tab2"));   // its table name is "tab2"
     assertFalse(tabCFsMap.containsKey("tab1"));  // not other table
     assertEquals(1, tabCFsMap.get("tab2").size());   // cf-list contains only 1 cf
     assertEquals("cf1", tabCFsMap.get("tab2").get(0));// the only cf is "cf1"
 
-    tabCFsMap = ReplicationPeer.parseTableCFsFromConfig("tab3 : cf1 , cf3");
+    tabCFsMap = ReplicationPeerZKImpl.parseTableCFsFromConfig("tab3 : cf1 , cf3");
     assertEquals(1, tabCFsMap.size()); // only one table
     assertTrue(tabCFsMap.containsKey("tab3"));   // its table name is "tab2"
     assertFalse(tabCFsMap.containsKey("tab1"));  // not other table
@@ -207,7 +207,7 @@ public class TestPerTableCFReplication {
     assertTrue(tabCFsMap.get("tab3").contains("cf3"));// contains "cf3"
 
     // 3. multiple tables: "tab1 ; tab2:cf1 ; tab3:cf1,cf3"
-    tabCFsMap = ReplicationPeer.parseTableCFsFromConfig("tab1 ; tab2:cf1 ; tab3:cf1,cf3");
+    tabCFsMap = ReplicationPeerZKImpl.parseTableCFsFromConfig("tab1 ; tab2:cf1 ; tab3:cf1,cf3");
     // 3.1 contains 3 tables : "tab1", "tab2" and "tab3"
     assertEquals(3, tabCFsMap.size());
     assertTrue(tabCFsMap.containsKey("tab1"));
@@ -225,7 +225,8 @@ public class TestPerTableCFReplication {
 
     // 4. contiguous or additional ";"(table delimiter) or ","(cf delimiter) can be tolerated
     // still use the example of multiple tables: "tab1 ; tab2:cf1 ; tab3:cf1,cf3"
-    tabCFsMap = ReplicationPeer.parseTableCFsFromConfig("tab1 ; ; tab2:cf1 ; tab3:cf1,,cf3 ;");
+    tabCFsMap = ReplicationPeerZKImpl.parseTableCFsFromConfig(
+      "tab1 ; ; tab2:cf1 ; tab3:cf1,,cf3 ;");
     // 4.1 contains 3 tables : "tab1", "tab2" and "tab3"
     assertEquals(3, tabCFsMap.size());
     assertTrue(tabCFsMap.containsKey("tab1"));
@@ -243,7 +244,8 @@ public class TestPerTableCFReplication {
 
     // 5. invalid format "tab1:tt:cf1 ; tab2::cf1 ; tab3:cf1,cf3"
     //    "tab1:tt:cf1" and "tab2::cf1" are invalid and will be ignored totally
-    tabCFsMap = ReplicationPeer.parseTableCFsFromConfig("tab1:tt:cf1 ; tab2::cf1 ; tab3:cf1,cf3");
+    tabCFsMap = ReplicationPeerZKImpl.parseTableCFsFromConfig(
+      "tab1:tt:cf1 ; tab2::cf1 ; tab3:cf1,cf3");
     // 5.1 no "tab1" and "tab2", only "tab3"
     assertEquals(1, tabCFsMap.size()); // only one table
     assertFalse(tabCFsMap.containsKey("tab1"));

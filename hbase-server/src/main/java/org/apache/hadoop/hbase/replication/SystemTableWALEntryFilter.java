@@ -15,18 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+
+package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
 
 /**
- * This class defines constants for different classes of hbase limited private apis
+ * Skips WAL edits for all System tables including META
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public class HBaseInterfaceAudience {
-  public static final String COPROC = "Coprocesssor";
-  public static final String REPLICATION = "Replication";
-  public static final String PHOENIX = "Phoenix";
+@InterfaceAudience.Private
+public class SystemTableWALEntryFilter implements WALEntryFilter {
+  @Override
+  public Entry filter(Entry entry) {
+    if (entry.getKey().getTablename().isSystemTable()) {
+      return null;
+    }
+    return entry;
+  }
 }

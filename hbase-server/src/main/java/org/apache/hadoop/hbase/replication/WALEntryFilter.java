@@ -15,18 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+
+package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 
 /**
- * This class defines constants for different classes of hbase limited private apis
+ * A Filter for WAL entries before being sent over to replication. Multiple
+ * filters might be chained together using {@link ChainWALEntryFilter}.
  */
-@InterfaceAudience.Public
-@InterfaceStability.Evolving
-public class HBaseInterfaceAudience {
-  public static final String COPROC = "Coprocesssor";
-  public static final String REPLICATION = "Replication";
-  public static final String PHOENIX = "Phoenix";
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
+public interface WALEntryFilter {
+
+  /**
+   * Applies the filter, possibly returning a different HLog.Entry instance.
+   * If null is returned, the entry will be skipped.
+   * @param entry WAL Entry to filter
+   * @return a (possibly modified) HLog.Entry to use. Returning null or an entry with
+   * no cells will cause the entry to be skipped for replication.
+   */
+  public HLog.Entry filter(HLog.Entry entry);
+
 }

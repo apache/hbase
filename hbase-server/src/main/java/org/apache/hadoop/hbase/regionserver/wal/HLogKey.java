@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
@@ -67,7 +68,7 @@ import com.google.protobuf.ByteString;
  */
 // TODO: Key and WALEdit are never used separately, or in one-to-many relation, for practical
 //       purposes. They need to be merged into HLogEntry.
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public class HLogKey implements WritableComparable<HLogKey>, SequenceNumber {
   public static final Log LOG = LogFactory.getLog(HLogKey.class);
 
@@ -190,7 +191,7 @@ public class HLogKey implements WritableComparable<HLogKey>, SequenceNumber {
    */
   public HLogKey(final byte [] encodedRegionName, final TableName tablename,
       final long now, List<UUID> clusterIds, long nonceGroup, long nonce) {
-    init(encodedRegionName, tablename, HLog.NO_SEQUENCE_ID, now, clusterIds, 
+    init(encodedRegionName, tablename, HLog.NO_SEQUENCE_ID, now, clusterIds,
       nonceGroup, nonce);
   }
 
@@ -208,7 +209,7 @@ public class HLogKey implements WritableComparable<HLogKey>, SequenceNumber {
    */
   public HLogKey(final byte [] encodedRegionName, final TableName tablename, long logSeqNum,
       long nonceGroup, long nonce) {
-    init(encodedRegionName, tablename, logSeqNum, EnvironmentEdgeManager.currentTimeMillis(), 
+    init(encodedRegionName, tablename, logSeqNum, EnvironmentEdgeManager.currentTimeMillis(),
       EMPTY_UUIDS, nonceGroup, nonce);
   }
 
@@ -254,7 +255,7 @@ public class HLogKey implements WritableComparable<HLogKey>, SequenceNumber {
     this.logSeqNum = sequence;
     this.seqNumAssignedLatch.countDown();
   }
-  
+
   /**
    * Used to set original seq Id for HLogKey during wal replay
    * @param seqId
@@ -276,6 +277,7 @@ public class HLogKey implements WritableComparable<HLogKey>, SequenceNumber {
    * @return long the new assigned sequence number
    * @throws InterruptedException
    */
+  @Override
   public long getSequenceNumber() throws IOException {
     try {
       this.seqNumAssignedLatch.await();
@@ -396,6 +398,7 @@ public class HLogKey implements WritableComparable<HLogKey>, SequenceNumber {
     return result;
   }
 
+  @Override
   public int compareTo(HLogKey o) {
     int result = Bytes.compareTo(this.encodedRegionName, o.encodedRegionName);
     if (result == 0) {
