@@ -84,21 +84,18 @@ public class SimpleRpcScheduler extends RpcScheduler {
       // multiple read/write queues
       callExecutor = new RWQueueRpcExecutor("default", handlerCount, numCallQueues,
           callqReadShare, maxQueueLength);
-    } else if (numCallQueues > 1) {
-      // multiple queues
-      callExecutor = new MultipleQueueRpcExecutor("default", handlerCount,
-          numCallQueues, maxQueueLength);
     } else {
-      // Single queue
-      callExecutor = new SingleQueueRpcExecutor("default", handlerCount, maxQueueLength);
+      // multiple queues
+      callExecutor = new BalancedQueueRpcExecutor("default", handlerCount,
+          numCallQueues, maxQueueLength);
     }
 
-    this.priorityExecutor = priorityHandlerCount > 0
-        ? new SingleQueueRpcExecutor("Priority", priorityHandlerCount, maxQueueLength)
-        : null;
-    this.replicationExecutor = replicationHandlerCount > 0
-        ? new SingleQueueRpcExecutor("Replication", replicationHandlerCount, maxQueueLength)
-        : null;
+   this.priorityExecutor =
+     priorityHandlerCount > 0 ? new BalancedQueueRpcExecutor("Priority", priorityHandlerCount,
+       1, maxQueueLength) : null;
+   this.replicationExecutor =
+     replicationHandlerCount > 0 ? new BalancedQueueRpcExecutor("Replication",
+       replicationHandlerCount, 1, maxQueueLength) : null;
   }
 
   @Override
