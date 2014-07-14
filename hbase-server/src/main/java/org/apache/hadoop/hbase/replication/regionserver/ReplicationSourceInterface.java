@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 
@@ -50,7 +51,8 @@ public interface ReplicationSourceInterface {
   public void init(final Configuration conf, final FileSystem fs,
       final ReplicationSourceManager manager, final ReplicationQueues replicationQueues,
       final ReplicationPeers replicationPeers, final Stoppable stopper,
-      final String peerClusterZnode, final UUID clusterId) throws IOException;
+      final String peerClusterZnode, final UUID clusterId, ReplicationEndpoint replicationEndpoint,
+      final MetricsSource metrics) throws IOException;
 
   /**
    * Add a log to the list of logs to replicate

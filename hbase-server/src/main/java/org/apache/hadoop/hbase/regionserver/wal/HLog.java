@@ -34,7 +34,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
@@ -133,6 +133,7 @@ public interface HLog {
    */
   // TODO: Remove this Writable.
   // TODO: Why is this in here?  Implementation detail?
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
   class Entry implements Writable {
     private WALEdit edit;
     private HLogKey key;
@@ -224,7 +225,7 @@ public interface HLog {
    * @return the number of HLog files
    */
   int getNumLogFiles();
-  
+
   /**
    * @return the size of HLog files
    */
@@ -292,9 +293,10 @@ public interface HLog {
    * @param sequenceId
    * @throws IOException
    * @deprecated For tests only and even then, should use
-   * {@link #appendNoSync(HTableDescriptor, HRegionInfo, HLogKey, WALEdit, AtomicLong, boolean, 
+   * {@link #appendNoSync(HTableDescriptor, HRegionInfo, HLogKey, WALEdit, AtomicLong, boolean,
    * List)} and {@link #sync()} instead.
    */
+  @Deprecated
   @VisibleForTesting
   public void append(HRegionInfo info, TableName tableName, WALEdit edits,
       final long now, HTableDescriptor htd, AtomicLong sequenceId) throws IOException;
@@ -343,6 +345,7 @@ public interface HLog {
    * instead because you can get back the region edit/sequenceid; it is set into the passed in
    * <code>key</code>.
    */
+  @Deprecated
   long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
       List<UUID> clusterIds, final long now, HTableDescriptor htd, AtomicLong sequenceId,
       boolean isInMemstore, long nonceGroup, long nonce) throws IOException;

@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSinkManager.SinkPeer;
 import org.junit.Before;
@@ -42,13 +43,15 @@ public class TestReplicationSinkManager {
   private static final String PEER_CLUSTER_ID = "PEER_CLUSTER_ID";
 
   private ReplicationPeers replicationPeers;
+  private HBaseReplicationEndpoint replicationEndpoint;
   private ReplicationSinkManager sinkManager;
 
   @Before
   public void setUp() {
     replicationPeers = mock(ReplicationPeers.class);
+    replicationEndpoint = mock(HBaseReplicationEndpoint.class);
     sinkManager = new ReplicationSinkManager(mock(HConnection.class),
-                      PEER_CLUSTER_ID, replicationPeers, new Configuration());
+                      PEER_CLUSTER_ID, replicationEndpoint, new Configuration());
   }
 
   @Test
@@ -58,7 +61,7 @@ public class TestReplicationSinkManager {
       serverNames.add(mock(ServerName.class));
     }
 
-    when(replicationPeers.getRegionServersOfConnectedPeer(PEER_CLUSTER_ID))
+    when(replicationEndpoint.getRegionServers())
           .thenReturn(serverNames);
 
     sinkManager.chooseSinks();
@@ -72,7 +75,7 @@ public class TestReplicationSinkManager {
     List<ServerName> serverNames = Lists.newArrayList(mock(ServerName.class),
       mock(ServerName.class));
 
-    when(replicationPeers.getRegionServersOfConnectedPeer(PEER_CLUSTER_ID))
+    when(replicationEndpoint.getRegionServers())
           .thenReturn(serverNames);
 
     sinkManager.chooseSinks();
@@ -84,8 +87,8 @@ public class TestReplicationSinkManager {
   public void testReportBadSink() {
     ServerName serverNameA = mock(ServerName.class);
     ServerName serverNameB = mock(ServerName.class);
-    when(replicationPeers.getRegionServersOfConnectedPeer(PEER_CLUSTER_ID)).thenReturn(
-      Lists.newArrayList(serverNameA, serverNameB));
+    when(replicationEndpoint.getRegionServers())
+      .thenReturn(Lists.newArrayList(serverNameA, serverNameB));
 
     sinkManager.chooseSinks();
     // Sanity check
@@ -110,7 +113,7 @@ public class TestReplicationSinkManager {
     for (int i = 0; i < 20; i++) {
       serverNames.add(mock(ServerName.class));
     }
-    when(replicationPeers.getRegionServersOfConnectedPeer(PEER_CLUSTER_ID))
+    when(replicationEndpoint.getRegionServers())
           .thenReturn(serverNames);
 
 
@@ -137,7 +140,7 @@ public class TestReplicationSinkManager {
     for (int i = 0; i < 20; i++) {
       serverNames.add(mock(ServerName.class));
     }
-    when(replicationPeers.getRegionServersOfConnectedPeer(PEER_CLUSTER_ID))
+    when(replicationEndpoint.getRegionServers())
           .thenReturn(serverNames);
 
 
