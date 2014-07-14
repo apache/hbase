@@ -154,40 +154,49 @@ public class Import {
             + Bytes.toString(key.get(), key.getOffset(), key.getLength()));
       }
       if (filter == null || !filter.filterRowKey(key.get(), key.getOffset(), key.getLength())) {
-        for (Cell kv : result.rawCells()) {
-          kv = filterKv(filter, kv);
-          // skip if we filter it out
-          if (kv == null) continue;
+        processKV(key, result, context, put, delete);
+      }
+    }
 
-          kv = convertKv(kv, cfRenameMap);
-          // Deletes and Puts are gathered and written when finished
-          if (CellUtil.isDelete(kv)) {
-            if (delete == null) {
-              delete = new Delete(key.get());
-            }
-            delete.addDeleteMarker(kv);
-          } else {
-            if (put == null) {
-              put = new Put(key.get());
-            }
-            put.add(kv);
+    protected void processKV(ImmutableBytesWritable key, Result result, Context context, Put put,
+        Delete delete) throws IOException, InterruptedException {
+      for (Cell kv : result.rawCells()) {
+        kv = filterKv(filter, kv);
+        // skip if we filter it out
+        if (kv == null) continue;
+
+        kv = convertKv(kv, cfRenameMap);
+        // Deletes and Puts are gathered and written when finished
+        if (CellUtil.isDelete(kv)) {
+          if (delete == null) {
+            delete = new Delete(key.get());
           }
-        }
-        if (put != null) {
-          if (durability != null) {
-            put.setDurability(durability);
+          delete.addDeleteMarker(kv);
+        } else {
+          if (put == null) {
+            put = new Put(key.get());
           }
-          put.setClusterIds(clusterIds);
-          context.write(key, put);
-        }
-        if (delete != null) {
-          if (durability != null) {
-            delete.setDurability(durability);
-          }
-          delete.setClusterIds(clusterIds);
-          context.write(key, delete);
+          addPutToKv(put, kv);
         }
       }
+      if (put != null) {
+        if (durability != null) {
+          put.setDurability(durability);
+        }
+        put.setClusterIds(clusterIds);
+        context.write(key, put);
+      }
+      if (delete != null) {
+        if (durability != null) {
+          delete.setDurability(durability);
+        }
+        delete.setClusterIds(clusterIds);
+        context.write(key, delete);
+      }
+    }
+
+    protected void addPutToKv(Put put, Cell kv) throws IOException {
+      put.add(kv);
     }
 
     @Override
