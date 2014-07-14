@@ -39,8 +39,9 @@ public class FifoRpcScheduler implements RpcScheduler {
 
   public FifoRpcScheduler(Configuration conf, int handlerCount) {
     this.handlerCount = handlerCount;
-    this.maxQueueLength = conf.getInt("ipc.server.max.callqueue.length",
-        handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
+    this.maxQueueLength = conf.getInt("hbase.ipc.server.max.callqueue.length",
+      conf.getInt("ipc.server.max.callqueue.length",
+        handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER));
   }
 
   @Override

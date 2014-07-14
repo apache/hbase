@@ -517,7 +517,8 @@ public class RpcServer implements RpcServerInterface {
                                          //-tion (for idle connections) ran
     private long cleanupInterval = 10000; //the minimum interval between
                                           //two cleanup runs
-    private int backlogLength = conf.getInt("ipc.server.listen.queue.size", 128);
+    private int backlogLength = conf.getInt("hbase.ipc.server.listen.queue.size",
+      conf.getInt("ipc.server.listen.queue.size", 128));
 
     private ExecutorService readPool;
 
@@ -1854,14 +1855,19 @@ public class RpcServer implements RpcServerInterface {
     this.isa = isa;
     this.conf = conf;
     this.socketSendBufferSize = 0;
-    this.maxQueueSize =
-      this.conf.getInt("ipc.server.max.callqueue.size", DEFAULT_MAX_CALLQUEUE_SIZE);
-    this.readThreads = conf.getInt("ipc.server.read.threadpool.size", 10);
-    this.maxIdleTime = 2*conf.getInt("ipc.client.connection.maxidletime", 1000);
-    this.maxConnectionsToNuke = conf.getInt("ipc.client.kill.max", 10);
-    this.thresholdIdleConnections = conf.getInt("ipc.client.idlethreshold", 4000);
-    this.purgeTimeout = conf.getLong("ipc.client.call.purge.timeout",
-      2 * HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+    this.maxQueueSize = conf.getInt("hbase.ipc.server.max.callqueue.size",
+      conf.getInt("ipc.server.max.callqueue.size", DEFAULT_MAX_CALLQUEUE_SIZE));
+    this.readThreads = conf.getInt("hbase.ipc.server.read.threadpool.size",
+      conf.getInt("ipc.server.read.threadpool.size", 10));
+    this.maxIdleTime = 2 * conf.getInt("hbase.ipc.client.connection.maxidletime",
+      conf.getInt("ipc.client.connection.maxidletime", 1000));
+    this.maxConnectionsToNuke = conf.getInt("hbase.ipc.client.kill.max",
+      conf.getInt("ipc.client.kill.max", 10));
+    this.thresholdIdleConnections = conf.getInt("hbase.ipc.client.idlethreshold",
+      conf.getInt("ipc.client.idlethreshold", 4000));
+    this.purgeTimeout = conf.getLong("hbase.ipc.client.call.purge.timeout",
+      conf.getLong("ipc.client.call.purge.timeout",
+        2 * HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
     this.warnResponseTime = conf.getInt(WARN_RESPONSE_TIME, DEFAULT_WARN_RESPONSE_TIME);
     this.warnResponseSize = conf.getInt(WARN_RESPONSE_SIZE, DEFAULT_WARN_RESPONSE_SIZE);
 
@@ -1870,8 +1876,10 @@ public class RpcServer implements RpcServerInterface {
     this.port = listener.getAddress().getPort();
 
     this.metrics = new MetricsHBaseServer(name, new MetricsHBaseServerWrapperImpl(this));
-    this.tcpNoDelay = conf.getBoolean("ipc.server.tcpnodelay", true);
-    this.tcpKeepAlive = conf.getBoolean("ipc.server.tcpkeepalive", true);
+    this.tcpNoDelay = conf.getBoolean("hbase.ipc.server.tcpnodelay",
+      conf.getBoolean("ipc.server.tcpnodelay", true));
+    this.tcpKeepAlive = conf.getBoolean("hbase.ipc.server.tcpkeepalive",
+      conf.getBoolean("ipc.server.tcpkeepalive", true));
 
     this.warnDelayedCalls = conf.getInt(WARN_DELAYED_CALLS, DEFAULT_WARN_DELAYED_CALLS);
     this.delayedCalls = new AtomicInteger(0);

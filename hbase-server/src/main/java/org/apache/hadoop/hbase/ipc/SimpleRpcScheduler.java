@@ -34,9 +34,12 @@ import org.apache.hadoop.hbase.HConstants;
 public class SimpleRpcScheduler implements RpcScheduler {
   public static final Log LOG = LogFactory.getLog(SimpleRpcScheduler.class);
 
-  public static final String CALL_QUEUE_READ_SHARE_CONF_KEY = "ipc.server.callqueue.read.share";
+  public static final String CALL_QUEUE_READ_SHARE_CONF_KEY =
+    "hbase.ipc.server.callqueue.read.share";
   public static final String CALL_QUEUE_HANDLER_FACTOR_CONF_KEY =
-      "ipc.server.callqueue.handler.factor";
+    "hbase.ipc.server.callqueue.handler.factor";
+  public static final String CALL_QUEUE_MAX_LENGTH_CONF_KEY =
+    "hbase.ipc.server.max.callqueue.length";
 
   private int port;
   private final PriorityFunction priority;
@@ -62,14 +65,17 @@ public class SimpleRpcScheduler implements RpcScheduler {
       int replicationHandlerCount,
       PriorityFunction priority,
       int highPriorityLevel) {
-    int maxQueueLength = conf.getInt("ipc.server.max.callqueue.length",
-        handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
+    int maxQueueLength = conf.getInt(CALL_QUEUE_MAX_LENGTH_CONF_KEY,
+      conf.getInt("ipc.server.max.callqueue.length",
+        handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER));
     this.priority = priority;
     this.highPriorityLevel = highPriorityLevel;
 
-    float callqReadShare = conf.getFloat(CALL_QUEUE_READ_SHARE_CONF_KEY, 0);
+    float callqReadShare = conf.getFloat(CALL_QUEUE_READ_SHARE_CONF_KEY,
+      conf.getFloat("ipc.server.callqueue.read.share", 0));
 
-    float callQueuesHandlersFactor = conf.getFloat(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 0);
+    float callQueuesHandlersFactor = conf.getFloat(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY,
+      conf.getFloat("ipc.server.callqueue.handler.factor", 0));
     int numCallQueues = Math.max(1, (int)Math.round(handlerCount * callQueuesHandlersFactor));
 
     LOG.info("Using default user call queue, count=" + numCallQueues);
