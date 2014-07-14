@@ -101,8 +101,7 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
     MonkeyFactory fact = MonkeyFactory.getFactory(monkeyToUse);
     if (fact == null) {
       // Run with no monkey in distributed context, with real monkey in local test context.
-      fact = MonkeyFactory.getFactory(
-          util.isDistributedCluster() ? MonkeyFactory.CALM : MonkeyFactory.SLOW_DETERMINISTIC);
+      fact = getDefaultMonkeyFactory();
     }
     monkey = fact.setUtil(util)
                  .setTableName(getTablename())
@@ -130,6 +129,11 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
       }
     }
     return util;
+  }
+  
+  protected MonkeyFactory getDefaultMonkeyFactory() {
+    return MonkeyFactory.getFactory(
+        util.isDistributedCluster() ? MonkeyFactory.CALM : MonkeyFactory.SLOW_DETERMINISTIC);
   }
 
   public abstract void setUpCluster() throws Exception;

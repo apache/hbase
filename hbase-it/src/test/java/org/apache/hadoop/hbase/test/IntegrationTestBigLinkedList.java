@@ -160,22 +160,22 @@ import com.google.common.collect.Sets;
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestBigLinkedList extends IntegrationTestBase {
-  private static final byte[] NO_KEY = new byte[1];
+  protected static final byte[] NO_KEY = new byte[1];
 
   protected static String TABLE_NAME_KEY = "IntegrationTestBigLinkedList.table";
 
   protected static String DEFAULT_TABLE_NAME = "IntegrationTestBigLinkedList";
 
-  private static byte[] FAMILY_NAME = Bytes.toBytes("meta");
+  protected static byte[] FAMILY_NAME = Bytes.toBytes("meta");
 
   //link to the id of the prev node in the linked list
-  private static final byte[] COLUMN_PREV = Bytes.toBytes("prev");
+  protected static final byte[] COLUMN_PREV = Bytes.toBytes("prev");
 
   //identifier of the mapred task that generated this row
-  private static final byte[] COLUMN_CLIENT = Bytes.toBytes("client");
+  protected static final byte[] COLUMN_CLIENT = Bytes.toBytes("client");
 
   //the id of the row within the same client.
-  private static final byte[] COLUMN_COUNT = Bytes.toBytes("count");
+  protected static final byte[] COLUMN_COUNT = Bytes.toBytes("count");
 
   /** How many rows to write per map task. This has to be a multiple of 25M */
   private static final String GENERATOR_NUM_ROWS_PER_MAP_KEY
@@ -198,8 +198,8 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
   private static final int WRAP_DEFAULT = 25;
   private static final int ROWKEY_LENGTH = 16;
 
-  private String toRun;
-  private String[] otherArgs;
+  protected String toRun;
+  protected String[] otherArgs;
 
   static class CINode {
     byte[] key;
@@ -345,9 +345,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       protected void setup(Context context) throws IOException, InterruptedException {
         id = Bytes.toBytes("Job: "+context.getJobID() + " Task: " + context.getTaskAttemptID());
         Configuration conf = context.getConfiguration();
-        table = new HTable(conf, getTableName(conf));
-        table.setAutoFlush(false, true);
-        table.setWriteBufferSize(4 * 1024 * 1024);
+        instantiateHTable(conf);
         this.width = context.getConfiguration().getInt(GENERATOR_WIDTH_KEY, WIDTH_DEFAULT);
         current = new byte[this.width][];
         int wrapMultiplier = context.getConfiguration().getInt(GENERATOR_WRAP_KEY, WRAP_DEFAULT);
@@ -357,6 +355,12 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         if (this.numNodes < this.wrap) {
           this.wrap = this.numNodes;
         }
+      }
+
+      protected void instantiateHTable(Configuration conf) throws IOException {
+        table = new HTable(conf, getTableName(conf));
+        table.setAutoFlush(false, true);
+        table.setWriteBufferSize(4 * 1024 * 1024);
       }
 
       @Override
@@ -400,7 +404,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         first[first.length - 1] = ez;
       }
 
-      private void persist(Context output, long count, byte[][] prev, byte[][] current, byte[] id)
+      protected void persist(Context output, long count, byte[][] prev, byte[][] current, byte[] id)
           throws IOException {
         for (int i = 0; i < current.length; i++) {
           Put put = new Put(current[i]);
@@ -495,7 +499,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       FileOutputFormat.setOutputPath(job, tmpOutput);
       job.setOutputFormatClass(SequenceFileOutputFormat.class);
 
-      boolean success = job.waitForCompletion(true);
+      boolean success = jobCompletion(job);
 
       return success ? 0 : 1;
     }
@@ -517,7 +521,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
       setJobConf(job, numMappers, numNodes, width, wrapMuplitplier);
 
-      job.setMapperClass(GeneratorMapper.class);
+      setMapperForGenerator(job);
 
       job.setOutputFormatClass(NullOutputFormat.class);
 
@@ -526,9 +530,19 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       TableMapReduceUtil.addDependencyJars(job.getConfiguration(), AbstractHBaseTool.class);
       TableMapReduceUtil.initCredentials(job);
 
-      boolean success = job.waitForCompletion(true);
+      boolean success = jobCompletion(job);
 
       return success ? 0 : 1;
+    }
+
+    protected boolean jobCompletion(Job job) throws IOException, InterruptedException,
+        ClassNotFoundException {
+      boolean success = job.waitForCompletion(true);
+      return success;
+    }
+
+    protected void setMapperForGenerator(Job job) {
+      job.setMapperClass(GeneratorMapper.class);
     }
 
     public int run(int numMappers, long numNodes, Path tmpOutput,
@@ -548,9 +562,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
   static class Verify extends Configured implements Tool {
 
     private static final Log LOG = LogFactory.getLog(Verify.class);
-    private static final BytesWritable DEF = new BytesWritable(NO_KEY);
+    protected static final BytesWritable DEF = new BytesWritable(NO_KEY);
 
-    private Job job;
+    protected Job job;
 
     public static class VerifyMapper extends TableMapper<BytesWritable, BytesWritable> {
       private BytesWritable row = new BytesWritable();
@@ -727,27 +741,31 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       }
 
       if (!success) {
-        Configuration conf = job.getConfiguration();
-        HConnection conn = HConnectionManager.getConnection(conf);
-        TableName tableName = getTableName(conf);
-        CounterGroup g = counters.getGroup("undef");
-        Iterator<Counter> it = g.iterator();
-        while (it.hasNext()) {
-          String keyString = it.next().getName();
-          byte[] key = Bytes.toBytes(keyString);
-          HRegionLocation loc = conn.relocateRegion(tableName, key);
-          LOG.error("undefined row " + keyString + ", " + loc);
-        }
-        g = counters.getGroup("unref");
-        it = g.iterator();
-        while (it.hasNext()) {
-          String keyString = it.next().getName();
-          byte[] key = Bytes.toBytes(keyString);
-          HRegionLocation loc = conn.relocateRegion(tableName, key);
-          LOG.error("unreferred row " + keyString + ", " + loc);
-        }
+        handleFailure(counters);
       }
       return success;
+    }
+
+    protected void handleFailure(Counters counters) throws IOException {
+      Configuration conf = job.getConfiguration();
+      HConnection conn = HConnectionManager.getConnection(conf);
+      TableName tableName = getTableName(conf);
+      CounterGroup g = counters.getGroup("undef");
+      Iterator<Counter> it = g.iterator();
+      while (it.hasNext()) {
+        String keyString = it.next().getName();
+        byte[] key = Bytes.toBytes(keyString);
+        HRegionLocation loc = conn.relocateRegion(tableName, key);
+        LOG.error("undefined row " + keyString + ", " + loc);
+      }
+      g = counters.getGroup("unref");
+      it = g.iterator();
+      while (it.hasNext()) {
+        String keyString = it.next().getName();
+        byte[] key = Bytes.toBytes(keyString);
+        HRegionLocation loc = conn.relocateRegion(tableName, key);
+        LOG.error("unreferred row " + keyString + ", " + loc);
+      }
     }
   }
 
@@ -1157,7 +1175,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     }
   }
 
-  private static void setJobScannerConf(Job job) {
+  public static void setJobScannerConf(Job job) {
     // Make sure scanners log something useful to make debugging possible.
     job.getConfiguration().setBoolean(ScannerCallable.LOG_SCANNER_ACTIVITY, true);
     job.getConfiguration().setInt(TableRecordReaderImpl.LOG_PER_ROW_COUNT, 100000);
