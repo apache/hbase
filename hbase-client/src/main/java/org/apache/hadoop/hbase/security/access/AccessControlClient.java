@@ -23,14 +23,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
@@ -40,11 +41,12 @@ import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
+import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService.BlockingInterface;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeResponse;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService.BlockingInterface;
+import org.apache.hadoop.hbase.util.ByteStringer;
 
 import com.google.protobuf.ByteString;
 
@@ -115,6 +117,21 @@ public class AccessControlClient {
     } finally {
       if (ht != null) {
         ht.close();
+      }
+    }
+  }
+
+  public static boolean isAccessControllerRunning(Configuration conf)
+      throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
+    TableName aclTableName = TableName
+        .valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "acl");
+    HBaseAdmin ha = null;
+    try {
+      ha = new HBaseAdmin(conf);
+      return ha.isTableAvailable(aclTableName.getNameAsString());
+    } finally {
+      if (ha != null) {
+        ha.close();
       }
     }
   }
