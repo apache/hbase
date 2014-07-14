@@ -181,7 +181,7 @@ public class VisibilityUtils {
     while (tagsIterator.hasNext()) {
       Tag tag = tagsIterator.next();
       if (tag.getType() == VisibilityUtils.VISIBILITY_EXP_SERIALIZATION_TAG_TYPE) {
-        int serializationVersion = Bytes.toShort(tag.getBuffer());
+        int serializationVersion = tag.getBuffer()[tag.getTagOffset()];
         if (serializationVersion == VisibilityConstants.VISIBILITY_SERIALIZATION_VERSION) {
           sortedOrder = true;
           continue;

@@ -46,7 +46,7 @@ public final class VisibilityConstants {
    **/
   public static final byte VISIBILITY_SERIALIZATION_VERSION = 1;
   /** Byte representation of the visibility_serialization_version **/
-  public static final byte[] SORTED_ORDINAL_SERIALIZATION_FORMAT = Bytes
-      .toBytes(VISIBILITY_SERIALIZATION_VERSION);
+  public static final byte[] SORTED_ORDINAL_SERIALIZATION_FORMAT =
+      new byte[] { VISIBILITY_SERIALIZATION_VERSION };
 
 }
