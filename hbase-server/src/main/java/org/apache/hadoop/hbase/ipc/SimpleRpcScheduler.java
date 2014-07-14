@@ -127,33 +127,24 @@ public class SimpleRpcScheduler extends RpcScheduler {
         callExecutor = new RWQueueRpcExecutor("default", handlerCount, numCallQueues,
             callqReadShare, maxQueueLength);
       }
-    } else if (numCallQueues > 1) {
+    } else {
       // multiple queues
       if (callQueueType.equals(CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE)) {
         CallPriorityComparator callPriority = new CallPriorityComparator(conf, this.priority);
-        callExecutor = new MultipleQueueRpcExecutor("default", handlerCount, numCallQueues,
+        callExecutor = new BalancedQueueRpcExecutor("default", handlerCount, numCallQueues,
             BoundedPriorityBlockingQueue.class, maxQueueLength, callPriority);
       } else {
-        callExecutor = new MultipleQueueRpcExecutor("default", handlerCount,
+        callExecutor = new BalancedQueueRpcExecutor("default", handlerCount,
             numCallQueues, maxQueueLength);
-      }
-    } else {
-      // Single queue
-      if (callQueueType.equals(CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE)) {
-        CallPriorityComparator callPriority = new CallPriorityComparator(conf, this.priority);
-        callExecutor = new SingleQueueRpcExecutor("default", handlerCount,
-            BoundedPriorityBlockingQueue.class, maxQueueLength, callPriority);
-      } else {
-        callExecutor = new SingleQueueRpcExecutor("default", handlerCount, maxQueueLength);
       }
     }
 
-    this.priorityExecutor = priorityHandlerCount > 0
-        ? new SingleQueueRpcExecutor("Priority", priorityHandlerCount, maxQueueLength)
-        : null;
-    this.replicationExecutor = replicationHandlerCount > 0
-        ? new SingleQueueRpcExecutor("Replication", replicationHandlerCount, maxQueueLength)
-        : null;
+   this.priorityExecutor =
+     priorityHandlerCount > 0 ? new BalancedQueueRpcExecutor("Priority", priorityHandlerCount,
+       1, maxQueueLength) : null;
+   this.replicationExecutor =
+     replicationHandlerCount > 0 ? new BalancedQueueRpcExecutor("Replication",
+       replicationHandlerCount, 1, maxQueueLength) : null;
   }
 
   @Override
