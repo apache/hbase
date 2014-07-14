@@ -72,9 +72,13 @@ import org.junit.experimental.categories.Category;
  * This class can be run as a unit test, as an integration test, or from the command line.
  * 
  * Originally taken from Apache Bigtop.
+ * Issue user names as comma seperated list.
+ *./hbase IntegrationTestWithCellVisibilityLoadAndVerify -u usera,userb
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationTestLoadAndVerify {
+  private static final String ERROR_STR = 
+      "Two user names are to be specified seperated by a ',' like 'usera,userb'";
   private static final char NOT = '!';
   private static final char OR = '|';
   private static final char AND = '&';
@@ -94,6 +98,8 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
   private static final String NUM_TO_WRITE_KEY = "loadmapper.num_to_write";
   private static final long NUM_TO_WRITE_DEFAULT = 100 * 1000;
   private static final int SCANNER_CACHING = 500;
+  private static String USER_OPT = "users";
+  private static String userNames = "user1,user2";
 
   private long numRowsLoadedWithExp1, numRowsLoadedWithExp2, numRowsLoadWithExp3,
       numRowsLoadWithExp4;
@@ -113,10 +119,23 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     conf.set("hbase.coprocessor.master.classes", VisibilityController.class.getName());
     conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());
     conf.set("hbase.superuser", User.getCurrent().getName());
+    conf.setBoolean("dfs.permissions", false);
     super.setUpCluster();
-    USER1 = User.createUserForTesting(conf, "user1", new String[] {});
-    USER2 = User.createUserForTesting(conf, "user2", new String[] {});
+    String[] users = userNames.split(",");
+    if (users.length != 2) {
+      System.err.println(ERROR_STR);
+      throw new IOException(ERROR_STR);
+    }
+    System.out.println(userNames + " "+users[0]+ " "+users[1]);
+    USER1 = User.createUserForTesting(conf, users[0], new String[] {});
+    USER2 = User.createUserForTesting(conf, users[1], new String[] {});
     addLabelsAndAuths();
+  }
+
+  @Override
+  protected void addOptions() {
+    super.addOptions();
+    addOptWithArg("u", USER_OPT, "User names to be passed");
   }
 
   private void addLabelsAndAuths() throws Exception {
@@ -325,7 +344,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
   }
 
   public void usage() {
-    System.err.println(this.getClass().getSimpleName() + " [-Doptions]");
+    System.err.println(this.getClass().getSimpleName() + " -u usera,userb [-Doptions]");
     System.err.println("  Loads a table with cell visibilities and verifies with Authorizations");
     System.err.println("Options");
     System.err
@@ -369,6 +388,9 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     }
     // We always want loadAndVerify action
     args.add("loadAndVerify");
+    if (cmd.hasOption(USER_OPT)) {
+      userNames = cmd.getOptionValue(USER_OPT);
+    }
     super.processOptions(cmd);
   }
 
