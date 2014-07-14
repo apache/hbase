@@ -17,14 +17,18 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.ipc.SimpleRpcScheduler;
 
 /** Constructs a {@link SimpleRpcScheduler}. for the region server. */
-class SimpleRpcSchedulerFactory implements RpcSchedulerFactory {
-
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceStability.Evolving
+public class SimpleRpcSchedulerFactory implements RpcSchedulerFactory {
   @Override
   public RpcScheduler create(Configuration conf, RegionServerServices server) {
     int handlerCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,

@@ -17,26 +17,19 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
-
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
 
 /**
  * A scheduler that maintains isolated handler pools for general, high-priority and replication
  * requests.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
 public class SimpleRpcScheduler implements RpcScheduler {
   public static final Log LOG = LogFactory.getLog(SimpleRpcScheduler.class);

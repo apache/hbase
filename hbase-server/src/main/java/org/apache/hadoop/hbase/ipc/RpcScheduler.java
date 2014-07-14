@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -26,7 +27,7 @@ import java.net.InetSocketAddress;
 /**
  * An interface for RPC request scheduling algorithm.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
 public interface RpcScheduler {
 

@@ -18,25 +18,20 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-
-import com.google.common.collect.Lists;
 
 /**
  * RPC Executor that uses a single queue for all the requests.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
 public class SingleQueueRpcExecutor extends RpcExecutor {
   private final BlockingQueue<CallRunner> queue;

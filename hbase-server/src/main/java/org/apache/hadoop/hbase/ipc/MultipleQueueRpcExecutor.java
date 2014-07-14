@@ -18,27 +18,22 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
-
-import com.google.common.collect.Lists;
 
 /**
  * RPC Executor that dispatch the requests on multiple queues.
  * Each handler has its own queue and there is no stealing.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
 public class MultipleQueueRpcExecutor extends RpcExecutor {
   protected final List<BlockingQueue<CallRunner>> queues;
