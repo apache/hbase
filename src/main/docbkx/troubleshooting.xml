@@ -1111,6 +1111,23 @@ ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expi
         </section>
 
       </section>
+    <section>
+      <title>Snapshot Errors Due to Reverse DNS</title>
+      <para>Several operations within HBase, including snapshots, rely on properly configured
+        reverse DNS. Some environments, such as Amazon EC2, have trouble with reverse DNS. If you
+        see errors like the following on your RegionServers, check your reverse DNS configuration:</para>
+      <screen>
+2013-05-01 00:04:56,356 DEBUG org.apache.hadoop.hbase.procedure.Subprocedure: Subprocedure 'backup1' 
+coordinator notified of 'acquire', waiting on 'reached' or 'abort' from coordinator.        
+      </screen>
+      <para>In general, the hostname reported by the RegionServer needs to be the same as the
+        hostname the Master is trying to reach. You can see a hostname mismatch by looking for the
+        following type of message in the RegionServer's logs at start-up.</para>
+      <screen>
+2013-05-01 00:03:00,614 INFO org.apache.hadoop.hbase.regionserver.HRegionServer: Master passed us hostname 
+to use. Was=myhost-1234, Now=ip-10-55-88-99.ec2.internal        
+      </screen>
+    </section>
       <section xml:id="trouble.rs.shutdown">
         <title>Shutdown Errors</title>
   <para />
