@@ -27,6 +27,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.SortedMap;
 import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -55,10 +57,12 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
+import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
 import org.apache.hadoop.hbase.replication.ReplicationStateZKBase;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager.NodeFailoverWorker;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
@@ -70,6 +74,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.common.collect.Sets;
 
 @Category(MediumTests.class)
 public class TestReplicationSourceManager {
@@ -138,14 +144,14 @@ public class TestReplicationSourceManager {
     ZKUtil.setData(zkw, "/hbase/replication/state", ReplicationStateZKBase.ENABLED_ZNODE_BYTES);
 
     ZKClusterId.setClusterId(zkw, new ClusterId());
-
-    replication = new Replication(new DummyServer(), fs, logDir, oldLogDir);
-    manager = replication.getReplicationManager();
     fs = FileSystem.get(conf);
     oldLogDir = new Path(utility.getDataTestDir(),
         HConstants.HREGION_OLDLOGDIR_NAME);
     logDir = new Path(utility.getDataTestDir(),
         HConstants.HREGION_LOGDIR_NAME);
+    replication = new Replication(new DummyServer(), fs, logDir, oldLogDir);
+    manager = replication.getReplicationManager();
+    
     logName = HConstants.HREGION_LOGDIR_NAME;
 
     manager.addSource(slaveId);
@@ -273,6 +279,40 @@ public class TestReplicationSourceManager {
         + w3.isLogZnodesMapPopulated();
     assertEquals(1, populatedMap);
     server.abort("", null);
+  }
+  
+  @Test
+  public void testCleanupFailoverQueues() throws Exception {
+    final Server server = new DummyServer("hostname1.example.org");
+    ReplicationQueues rq =
+        ReplicationFactory.getReplicationQueues(server.getZooKeeper(), server.getConfiguration(),
+          server);
+    rq.init(server.getServerName().toString());
+    // populate some znodes in the peer znode
+    SortedSet<String> files = new TreeSet<String>();
+    files.add("log1");
+    files.add("log2");
+    for (String file : files) {
+      rq.addLog("1", file);
+    }
+    Server s1 = new DummyServer("dummyserver1.example.org");
+    ReplicationQueues rq1 =
+        ReplicationFactory.getReplicationQueues(s1.getZooKeeper(), s1.getConfiguration(), s1);
+    rq1.init(s1.getServerName().toString());
+    ReplicationPeers rp1 =
+        ReplicationFactory.getReplicationPeers(s1.getZooKeeper(), s1.getConfiguration(), s1);
+    rp1.init();
+    NodeFailoverWorker w1 =
+        manager.new NodeFailoverWorker(server.getServerName().getServerName(), rq1, rp1, new UUID(
+            new Long(1), new Long(2)));
+    w1.start();
+    w1.join(5000);
+    assertEquals(1, manager.getHlogsByIdRecoveredQueues().size());
+    String id = "1-" + server.getServerName().getServerName();
+    assertEquals(files, manager.getHlogsByIdRecoveredQueues().get(id));
+    manager.cleanOldLogs("log2", id, true);
+    // log1 should be deleted
+    assertEquals(Sets.newHashSet("log2"), manager.getHlogsByIdRecoveredQueues().get(id));
   }
 
   @Test
