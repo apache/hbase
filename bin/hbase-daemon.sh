@@ -214,17 +214,17 @@ case $startStop in
         #if the cluster is being stopped then do not restart it again.
         zparent=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.parent`
         if [ "$zparent" == "null" ]; then zparent="/hbase"; fi
-        zshutdown=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.state`
-        if [ "$zshutdown" == "null" ]; then zshutdown="shutdown"; fi
-        zFullShutdown=$zparent/$zshutdown
-        $bin/hbase zkcli stat $zFullShutdown 2>&1 | grep "Node does not exist"  1>/dev/null 2>&1
+        zkrunning=`$bin/hbase org.apache.hadoop.hbase.util.HBaseConfTool zookeeper.znode.state`
+        if [ "$zkrunning" == "null" ]; then zkrunning="running"; fi
+        zkFullRunning=$zparent/$zkrunning
+        $bin/hbase zkcli stat $zkFullRunning 2>&1 | grep "Node does not exist"  1>/dev/null 2>&1
         #grep returns 0 if it found something, 1 otherwise
         if [ $? -eq 0 ]; then
           exit 1
         fi
 
         #If ZooKeeper cannot be found, then do not restart
-        $bin/hbase zkcli stat $zFullShutdown 2>&1 | grep Exception | grep ConnectionLoss  1>/dev/null 2>&1
+        $bin/hbase zkcli stat $zkFullRunning 2>&1 | grep Exception | grep ConnectionLoss  1>/dev/null 2>&1
         if [ $? -eq 0 ]; then
           exit 1
         fi
