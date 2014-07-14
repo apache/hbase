@@ -22,7 +22,7 @@ import java.net.InetSocketAddress;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
-class RpcSchedulerContext implements RpcScheduler.Context {
+class RpcSchedulerContext extends RpcScheduler.Context {
   private final RpcServer rpcServer;
 
   /**
