@@ -2035,6 +2035,7 @@ public class HStore implements Store {
     private long cacheFlushSeqNum;
     private MemStoreSnapshot snapshot;
     private List<Path> tempFiles;
+    private List<Path> committedFiles;
 
     private StoreFlusherImpl(long cacheFlushSeqNum) {
       this.cacheFlushSeqNum = cacheFlushSeqNum;
@@ -2047,6 +2048,7 @@ public class HStore implements Store {
     @Override
     public void prepare() {
       this.snapshot = memstore.snapshot();
+      committedFiles = new ArrayList<Path>(1);
     }
 
     @Override
@@ -2079,13 +2081,19 @@ public class HStore implements Store {
         }
       }
 
-      if (HStore.this.getCoprocessorHost() != null) {
-        for (StoreFile sf : storeFiles) {
+      for (StoreFile sf : storeFiles) {
+        if (HStore.this.getCoprocessorHost() != null) {
           HStore.this.getCoprocessorHost().postFlush(HStore.this, sf);
         }
+        committedFiles.add(sf.getPath());
       }
       // Add new file to store files.  Clear snapshot too while we have the Store write lock.
       return HStore.this.updateStorefiles(storeFiles, snapshot.getId());
+    }
+
+    @Override
+    public List<Path> getCommittedFiles() {
+      return committedFiles;
     }
   }
 
