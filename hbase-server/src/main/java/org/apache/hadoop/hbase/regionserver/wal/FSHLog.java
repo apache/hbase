@@ -472,7 +472,7 @@ class FSHLog implements HLog, Syncable {
     rollWriter();
 
     this.slowSyncNs =
-        1000 * conf.getInt("hbase.regionserver.hlog.slowsync.ms",
+        1000000 * conf.getInt("hbase.regionserver.hlog.slowsync.ms",
           DEFAULT_SLOW_SYNC_TIME_MS);
     // handle the reflection necessary to call getNumCurrentReplicas(). TODO: Replace with
     // HdfsDataOutputStream#getCurrentBlockReplication() and go without reflection.
@@ -1443,7 +1443,7 @@ class FSHLog implements HLog, Syncable {
     if (timeInNanos > this.slowSyncNs) {
       String msg =
           new StringBuilder().append("Slow sync cost: ")
-              .append(timeInNanos / 1000).append(" ms, current pipeline: ")
+              .append(timeInNanos / 1000000).append(" ms, current pipeline: ")
               .append(Arrays.toString(getPipeLine())).toString();
       Trace.addTimelineAnnotation(msg);
       LOG.info(msg);
