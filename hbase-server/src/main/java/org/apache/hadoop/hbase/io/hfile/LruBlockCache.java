@@ -698,7 +698,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    */
   static class EvictionThread extends HasThread {
     private WeakReference<LruBlockCache> cache;
-    private boolean go = true;
+    private volatile boolean go = true;
     // flag set after enter the run method, used for test
     private boolean enteringRun = false;
 
@@ -861,7 +861,25 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
           @Override
           public int compareTo(CachedBlock other) {
-            return (int)(other.getOffset() - this.getOffset());
+            int diff = this.getFilename().compareTo(other.getFilename());
+            if (diff != 0) return diff;
+            diff = (int)(this.getOffset() - other.getOffset());
+            if (diff != 0) return diff;
+            if (other.getCachedTime() < 0 || this.getCachedTime() < 0) {
+              throw new IllegalStateException("" + this.getCachedTime() + ", " +
+                other.getCachedTime());
+            }
+            return (int)(other.getCachedTime() - this.getCachedTime());
+          }
+
+          @Override
+          public boolean equals(Object obj) {
+            if (obj instanceof CachedBlock) {
+              CachedBlock cb = (CachedBlock)obj;
+              return compareTo(cb) == 0;
+            } else {
+              return false;
+            }
           }
         };
       }

@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -200,12 +201,27 @@ public class TestCacheConfig {
   @Test
   public void testBucketCacheConfig() {
     this.conf.set(CacheConfig.BUCKET_CACHE_IOENGINE_KEY, "offheap");
-    this.conf.setInt(CacheConfig.BUCKET_CACHE_SIZE_KEY, 100);
-    this.conf.setFloat(CacheConfig.BUCKET_CACHE_COMBINED_PERCENTAGE_KEY, 0.8f);
+    final float percent = 0.8f;
+    this.conf.setFloat(CacheConfig.BUCKET_CACHE_COMBINED_PERCENTAGE_KEY, percent);
+    final int bcSize = 100;
+    this.conf.setInt(CacheConfig.BUCKET_CACHE_SIZE_KEY, bcSize);
     CacheConfig cc = new CacheConfig(this.conf);
     basicBlockCacheOps(cc, false, false);
     assertTrue(cc.getBlockCache() instanceof CombinedBlockCache);
     // TODO: Assert sizes allocated are right and proportions.
+    CombinedBlockCache cbc = (CombinedBlockCache)cc.getBlockCache();
+    BlockCache [] bcs = cbc.getBlockCaches();
+    assertTrue(bcs[0] instanceof LruBlockCache);
+    LruBlockCache lbc = (LruBlockCache)bcs[0];
+    long expectedBCSize = (long)(bcSize * (1.0f - percent));
+    long actualBCSize = lbc.getMaxSize() / (1024 * 1024);
+    assertTrue(expectedBCSize == actualBCSize);
+    assertTrue(bcs[1] instanceof BucketCache);
+    BucketCache bc = (BucketCache)bcs[1];
+    // getMaxSize comes back in bytes but we specified size in MB
+    expectedBCSize = (long)(bcSize * percent);
+    actualBCSize = (long)(bc.getMaxSize() / (1024 * 1024));
+    assertTrue(expectedBCSize == actualBCSize);
   }
 
   /**
@@ -216,7 +232,6 @@ public class TestCacheConfig {
   public void testCacheDataInL1() {
     this.conf.set(CacheConfig.BUCKET_CACHE_IOENGINE_KEY, "offheap");
     this.conf.setInt(CacheConfig.BUCKET_CACHE_SIZE_KEY, 100);
-    this.conf.setFloat(CacheConfig.BUCKET_CACHE_COMBINED_PERCENTAGE_KEY, 0.8f);
     CacheConfig cc = new CacheConfig(this.conf);
     assertTrue(cc.getBlockCache() instanceof CombinedBlockCache);
     CombinedBlockCache cbc = (CombinedBlockCache)cc.getBlockCache();

@@ -117,7 +117,7 @@ public class CacheConfig {
    * A float which designates how much of the overall cache to give to bucket cache
    * and how much to on-heap lru cache when {@link #BUCKET_CACHE_COMBINED_KEY} is set.
    */
-  public static final String BUCKET_CACHE_COMBINED_PERCENTAGE_KEY = 
+  public static final String BUCKET_CACHE_COMBINED_PERCENTAGE_KEY =
       "hbase.bucketcache.percentage.in.combinedcache";
 
   public static final String BUCKET_CACHE_WRITER_THREADS_KEY = "hbase.bucketcache.writer.threads";
@@ -451,6 +451,22 @@ public class CacheConfig {
   @VisibleForTesting
   static boolean blockCacheDisabled = false;
 
+  private static long getLruCacheSize(final Configuration conf, final MemoryUsage mu) {
+    float cachePercentage = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
+      HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
+    if (cachePercentage <= 0.0001f) {
+      blockCacheDisabled = true;
+      return -1;
+    }
+    if (cachePercentage > 1.0) {
+      throw new IllegalArgumentException(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY +
+        " must be between 0.0 and 1.0, and not > 1.0");
+    }
+
+    // Calculate the amount of heap to give the heap.
+    return (long) (mu.getMax() * cachePercentage);
+  }
+
   /**
    * Returns the block cache or <code>null</code> in case none should be used.
    *
@@ -460,21 +476,8 @@ public class CacheConfig {
   public static synchronized BlockCache instantiateBlockCache(Configuration conf) {
     if (GLOBAL_BLOCK_CACHE_INSTANCE != null) return GLOBAL_BLOCK_CACHE_INSTANCE;
     if (blockCacheDisabled) return null;
-
-    float cachePercentage = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
-      HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
-    if (cachePercentage <= 0.0001f) {
-      blockCacheDisabled = true;
-      return null;
-    }
-    if (cachePercentage > 1.0) {
-      throw new IllegalArgumentException(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY +
-        " must be between 0.0 and 1.0, and not > 1.0");
-    }
-
-    // Calculate the amount of heap to give the heap.
     MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-    long lruCacheSize = (long) (mu.getMax() * cachePercentage);
+    long lruCacheSize = getLruCacheSize(conf, mu);
     int blockSize = conf.getInt("hbase.offheapcache.minblocksize", HConstants.DEFAULT_BLOCKSIZE);
 
     String bucketCacheIOEngineName = conf.get(BUCKET_CACHE_IOENGINE_KEY, null);
@@ -492,26 +495,23 @@ public class CacheConfig {
       int writerQueueLen = conf.getInt(BUCKET_CACHE_WRITER_QUEUE_KEY,
         DEFAULT_BUCKET_CACHE_WRITER_QUEUE);
       String persistentPath = conf.get(BUCKET_CACHE_PERSISTENT_PATH_KEY);
-      float combinedPercentage = conf.getFloat(
-        BUCKET_CACHE_COMBINED_PERCENTAGE_KEY,
+      float combinedPercentage = conf.getFloat(BUCKET_CACHE_COMBINED_PERCENTAGE_KEY,
         DEFAULT_BUCKET_CACHE_COMBINED_PERCENTAGE);
       String[] configuredBucketSizes = conf.getStrings(BUCKET_CACHE_BUCKETS_KEY);
-      int[] bucketSizes = null;
+      int [] bucketSizes = null;
       if (configuredBucketSizes != null) {
         bucketSizes = new int[configuredBucketSizes.length];
         for (int i = 0; i < configuredBucketSizes.length; i++) {
           bucketSizes[i] = Integer.parseInt(configuredBucketSizes[i]);
         }
       }
+      if (combinedWithLru) {
+        lruCacheSize = (long) ((1 - combinedPercentage) * bucketCacheSize);
+        bucketCacheSize = (long) (combinedPercentage * bucketCacheSize);
+      }
       LOG.info("Allocating LruBlockCache size=" +
         StringUtils.byteDesc(lruCacheSize) + ", blockSize=" + StringUtils.byteDesc(blockSize));
       LruBlockCache lruCache = new LruBlockCache(lruCacheSize, blockSize, true, conf);
-      lruCache.setVictimCache(bucketCache);
-      if (bucketCache != null && combinedWithLru) {
-        GLOBAL_BLOCK_CACHE_INSTANCE = new CombinedBlockCache(lruCache, bucketCache);
-      } else {
-        GLOBAL_BLOCK_CACHE_INSTANCE = lruCache;
-      }
       try {
         int ioErrorsTolerationDuration = conf.getInt(
           "hbase.bucketcache.ioengine.errors.tolerated.duration",
@@ -523,6 +523,12 @@ public class CacheConfig {
         LOG.error("Can't instantiate bucket cache", ioex);
         throw new RuntimeException(ioex);
       }
+      if (combinedWithLru) {
+        GLOBAL_BLOCK_CACHE_INSTANCE = new CombinedBlockCache(lruCache, bucketCache);
+      } else {
+        GLOBAL_BLOCK_CACHE_INSTANCE = lruCache;
+      }
+      lruCache.setVictimCache(bucketCache);
     }
     LOG.info("Allocating LruBlockCache size=" +
       StringUtils.byteDesc(lruCacheSize) + ", blockSize=" + StringUtils.byteDesc(blockSize));
