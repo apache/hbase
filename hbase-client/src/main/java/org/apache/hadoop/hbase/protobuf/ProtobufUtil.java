@@ -87,6 +87,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
@@ -117,6 +118,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -2497,6 +2500,29 @@ public final class ProtobufUtil {
     }
     builder.setRegionName(ByteStringer.wrap(info.getRegionName()));
     return builder.build();
+  }
+
+  public static FlushDescriptor toFlushDescriptor(FlushAction action, HRegionInfo hri,
+      long flushSeqId, Map<byte[], List<Path>> committedFiles) {
+    FlushDescriptor.Builder desc = FlushDescriptor.newBuilder()
+        .setAction(action)
+        .setEncodedRegionName(ByteStringer.wrap(hri.getEncodedNameAsBytes()))
+        .setFlushSequenceNumber(flushSeqId)
+        .setTableName(ByteStringer.wrap(hri.getTable().getName()));
+
+    for (Map.Entry<byte[], List<Path>> entry : committedFiles.entrySet()) {
+      WALProtos.FlushDescriptor.StoreFlushDescriptor.Builder builder =
+          WALProtos.FlushDescriptor.StoreFlushDescriptor.newBuilder()
+          .setFamilyName(ByteStringer.wrap(entry.getKey()))
+          .setStoreHomeDir(Bytes.toString(entry.getKey())); //relative to region
+      if (entry.getValue() != null) {
+        for (Path path : entry.getValue()) {
+          builder.addFlushOutput(path.getName());
+        }
+      }
+      desc.addStoreFlushes(builder);
+    }
+    return desc.build();
   }
 
   /**

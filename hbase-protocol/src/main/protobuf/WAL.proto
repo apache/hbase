@@ -89,10 +89,33 @@ message CompactionDescriptor {
   required bytes table_name = 1; // TODO: WALKey already stores these, might remove
   required bytes encoded_region_name = 2;
   required bytes family_name = 3;
-  repeated string compaction_input = 4;
+  repeated string compaction_input = 4; // relative to store dir
   repeated string compaction_output = 5;
-  required string store_home_dir = 6;
+  required string store_home_dir = 6; // relative to region dir
   optional bytes  region_name = 7; // full region name
+}
+
+/**
+ * Special WAL entry to hold all related to a flush.
+ */
+message FlushDescriptor {
+  enum FlushAction {
+    START_FLUSH = 0;
+    COMMIT_FLUSH = 1;
+    ABORT_FLUSH = 2;
+  }
+
+  message StoreFlushDescriptor {
+    required bytes family_name = 1;
+    required string store_home_dir = 2; //relative to region dir
+    repeated string flush_output = 3; // relative to store dir (if this is a COMMIT_FLUSH)
+  }
+
+  required FlushAction action = 1;
+  required bytes table_name = 2;
+  required bytes encoded_region_name = 3;
+  optional uint64 flush_sequence_number = 4;
+  repeated StoreFlushDescriptor store_flushes = 5;
 }
 
 /**
