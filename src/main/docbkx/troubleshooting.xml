@@ -799,6 +799,12 @@ at org.apache.hadoop.mapred.LocalJobRunner$Job.run(LocalJobRunner.java:210)
           http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#classpath</link>
         for more information on HBase MapReduce jobs and classpaths. </para>
     </section>
+    <section xml:id="trouble.hbasezerocopybytestring">
+      <title>Launching a job, you get java.lang.IllegalAccessError: com/google/protobuf/HBaseZeroCopyByteString or class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString</title>
+      <para>See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-10304">HBASE-10304 Running an hbase job jar: IllegalAccessError: class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString</link> and <link xlink:href="https://issues.apache.org/jira/browse/HBASE-11118">HBASE-11118 non environment variable solution for "IllegalAccessError: class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString"</link>.  The issue can also show up
+          when trying to run spark jobs.  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-10877">HBASE-10877 HBase non-retriable exception list should be expanded</link>.
+      </para>
+    </section>
   </section>
 
   <section
