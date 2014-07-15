@@ -1,5 +1,103 @@
 HBase Change Log
 
+Release 0.98.4 - 7/21/2014
+
+** Sub-task
+    * [HBASE-11088] - Support Visibility Expression Deletes in Shell
+    * [HBASE-11094] - Distributed log replay is incompatible for rolling restarts
+    * [HBASE-11307] - Deprecate SlabCache
+    * [HBASE-11395] - Add logging for HBase table operations
+
+** Bug
+    * [HBASE-10330] - TableInputFormat/TableRecordReaderImpl leaks HTable
+    * [HBASE-10922] - Log splitting status should always be closed
+    * [HBASE-11052] - Sending random data crashes thrift service
+    * [HBASE-11118] - non environment variable solution for "IllegalAccessError: class com.google.protobuf.ZeroCopyLiteralByteString cannot access its superclass com.google.protobuf.LiteralByteString"
+    * [HBASE-11162] - RegionServer webui uses the default master info port irrespective of the user configuration.
+    * [HBASE-11194] - [AccessController] issue with covering permission check in case of concurrent op on same row
+    * [HBASE-11294] - IntegrationTestIngestWithACL should automatically set the superuser when running on local minicluster
+    * [HBASE-11302] - ReplicationSourceManager#sources is not thread safe
+    * [HBASE-11310] - Delete's copy constructor should copy the attributes also
+    * [HBASE-11311] - Secure Bulk Load does not execute chmod 777 on the files
+    * [HBASE-11312] - Minor refactoring of TestVisibilityLabels class
+    * [HBASE-11327] - ExportSnapshot hit stackoverflow error when target snapshotDir doesn't contain uri
+    * [HBASE-11335] - Fix the TABLE_DIR param in TableSnapshotInputFormat
+    * [HBASE-11341] - ZKProcedureCoordinatorRpcs should respond only to members
+    * [HBASE-11342] - The method isChildReadLock in class ZKInterProcessLockBase is wrong
+    * [HBASE-11347] - For some errors, the client can retry infinitely
+    * [HBASE-11353] - Wrong Write Request Count
+    * [HBASE-11363] - Access checks in preCompact and preCompactSelection are out of sync
+    * [HBASE-11371] - Typo in Thrift2 docs
+    * [HBASE-11374] - RpcRetryingCaller#callWithoutRetries has a timeout of zero
+    * [HBASE-11378] - TableMapReduceUtil overwrites user supplied options for multiple tables/scaners job
+    * [HBASE-11380] - HRegion lock object is not being released properly, leading to snapshot failure
+    * [HBASE-11387] - metrics: wrong totalRequestCount
+    * [HBASE-11391] - Thrift table creation will fail with default TTL with sanity checks
+    * [HBASE-11396] - Invalid meta entries can lead to unstartable master
+    * [HBASE-11397] - When merging expired stripes, we need to create an empty file to preserve metadata.
+    * [HBASE-11403] - Fix race conditions around Object#notify
+    * [HBASE-11413] - [findbugs] RV: Negating the result of compareTo()/compare()
+    * [HBASE-11418] - build target "site" doesn't respect hadoop-two.version property
+    * [HBASE-11422] - Specification of scope is missing for certain Hadoop dependencies
+    * [HBASE-11423] - Visibility label and per cell ACL feature not working with HTable#mutateRow() and MultiRowMutationEndpoint
+    * [HBASE-11424] - Avoid usage of CellUtil#getTagArray(Cell cell) within server
+    * [HBASE-11430] - lastFlushSeqId has been updated wrongly during region open
+    * [HBASE-11432] - [AccessController] Remove cell first strategy
+    * [HBASE-11433] - LruBlockCache does not respect its configurable parameters
+    * [HBASE-11435] - Visibility labelled cells fail to getting replicated
+    * [HBASE-11439] - StripeCompaction may not obey the OffPeak rule to compaction
+    * [HBASE-11442] - ReplicationSourceManager doesn't cleanup the queues for recovered sources
+    * [HBASE-11457] - Increment HFile block encoding IVs accounting for ciper's internal use
+    * [HBASE-11458] - NPEs if RegionServer cannot initialize
+    * [HBASE-11460] - Deadlock in HMaster on masterAndZKLock in HConnectionManager
+    * [HBASE-11465] - [VisibilityController] Reserved tags check not happening for Append/Increment
+    * [HBASE-11475] - Distributed log replay should also replay compaction events
+    * [HBASE-11481] - TableSnapshotInputFormat javadoc wrongly claims HBase "enforces security"
+    * [HBASE-11487] - ScanResponse carries non-zero cellblock for CloseScanRequest (ScanRequest with close_scanner = true)
+    * [HBASE-11488] - cancelTasks in SubprocedurePool can hang during task error
+    * [HBASE-11492] - Hadoop configuration overrides some ipc parameters including tcpNoDelay
+    * [HBASE-11493] - Autorestart option is not working because of stale znode  "shutdown"
+    * [HBASE-11496] - HBASE-9745 broke cygwin CLASSPATH translation
+    * [HBASE-11505] - 'snapshot' shell command shadows 'snapshot' shell when 'help' is invoked
+    * [HBASE-11506] - IntegrationTestWithCellVisibilityLoadAndVerify allow User to be passed as arg
+    * [HBASE-11510] - Visibility serialization format tag gets duplicated in Append/Increment'ed cells
+
+** Improvement
+    * [HBASE-8495] - Change ownership of the directory to bulk load
+    * [HBASE-10289] - Avoid random port usage by default JMX Server. Create Custome JMX server
+    * [HBASE-10641] - Configurable Bucket Sizes in bucketCache
+    * [HBASE-10871] - Indefinite OPEN/CLOSE wait on busy RegionServers
+    * [HBASE-10885] - Support visibility expressions on Deletes
+    * [HBASE-11126] - Add RegionObserver pre hooks that operate under row lock
+    * [HBASE-11349] - [Thrift] support authentication/impersonation
+    * [HBASE-11355] - a couple of callQueue related improvements
+    * [HBASE-11362] - Minor improvements to LoadTestTool and PerformanceEvaluation
+    * [HBASE-11376] - Presplit table in IntegrationTestBigLinkedList's Generator tool
+    * [HBASE-11398] - Print the stripes' state with file size info
+    * [HBASE-11407] - hbase-client should not require Jackson for pure HBase queries be executed 
+    * [HBASE-11434] - [AccessController] Disallow inbound cells with reserved tags
+    * [HBASE-11436] - Support start Row and stop Row in HBase Export
+    * [HBASE-11437] - Modify cell tag handling code to treat the length as unsigned
+    * [HBASE-11444] - Remove use of reflection for User#getShortName
+    * [HBASE-11446] - Reduce the frequency of RNG calls in SecureWALCellCodec#EncryptedKvEncoder
+    * [HBASE-11450] - Improve file size info in SnapshotInfo tool
+    * [HBASE-11452] - add getUserPermission feature in AccessControlClient as client API 
+    * [HBASE-11473] - Add BaseWALObserver class
+    * [HBASE-11474] - [Thrift2] support authentication/impersonation
+    * [HBASE-11497] - Expose RpcScheduling implementations as LimitedPrivate interfaces
+    * [HBASE-11513] - Combine SingleMultiple Queue RpcExecutor into a single class
+
+** New Feature
+    * [HBASE-10935] - support snapshot policy where flush memstore can be skipped to prevent production cluster freeze
+
+** Task
+    * [HBASE-11366] - Backport HBASE-4089 (block cache contents report UI) to 0.98
+
+** Test
+    * [HBASE-11039] - [VisibilityController] Integration test for labeled data set mixing and filtered excise
+    * [HBASE-11057] - Improve TestShell coverage of grant and revoke comamnds
+
+
 Release 0.98.3 - 6/1/2014
 
 ** Sub-task
