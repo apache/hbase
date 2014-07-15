@@ -20,11 +20,9 @@
 package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -112,10 +110,10 @@ final public class FilterWrapper extends Filter {
    * Old filter wrapper descendants will implement KV getNextKeyHint(KV) so we should call it.
    */
   @Override
-  public Cell getNextCellHint(Cell currentKV) throws IOException {
+  public Cell getNextCellHint(Cell currentCell) throws IOException {
     // Old filters based off of this class will override KeyValue getNextKeyHint(KeyValue).
     // Thus to maintain compatibility we need to call the old version.
-    return this.getNextKeyHint(KeyValueUtil.ensureKeyValue(currentKV));
+    return this.getNextKeyHint(KeyValueUtil.ensureKeyValue(currentCell));
   }
 
   @Override

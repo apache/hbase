@@ -29,8 +29,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -172,9 +170,6 @@ public class SingleColumnValueFilter extends FilterBase {
 
   @Override
   public ReturnCode filterKeyValue(Cell c) {
-    // TODO get rid of this.
-    KeyValue keyValue = KeyValueUtil.ensureKeyValue(c);
-    
     // System.out.println("REMOVE KEY=" + keyValue.toString() + ", value=" + Bytes.toString(keyValue.getValue()));
     if (this.matchedColumn) {
       // We already found and matched the single column, all keys now pass
@@ -183,12 +178,12 @@ public class SingleColumnValueFilter extends FilterBase {
       // We found but did not match the single column, skip to next row
       return ReturnCode.NEXT_ROW;
     }
-    if (!CellUtil.matchingColumn(keyValue, this.columnFamily, this.columnQualifier)) {
+    if (!CellUtil.matchingColumn(c, this.columnFamily, this.columnQualifier)) {
       return ReturnCode.INCLUDE;
     }
     foundColumn = true;
-    if (filterColumnValue(keyValue.getValueArray(),
-        keyValue.getValueOffset(), keyValue.getValueLength())) {
+    if (filterColumnValue(c.getValueArray(),
+        c.getValueOffset(), c.getValueLength())) {
       return this.latestVersionOnly? ReturnCode.NEXT_ROW: ReturnCode.INCLUDE;
     }
     this.matchedColumn = true;

@@ -21,13 +21,13 @@ package org.apache.hadoop.hbase.filter;
 
 import java.util.ArrayList;
 
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.base.Preconditions;
@@ -130,10 +130,10 @@ public class ColumnPrefixFilter extends FilterBase {
   }
 
   @Override
-  public Cell getNextCellHint(Cell kv) {
+  public Cell getNextCellHint(Cell cell) {
     return KeyValueUtil.createFirstOnRow(
-        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), kv.getFamilyArray(),
-        kv.getFamilyOffset(), kv.getFamilyLength(), prefix, 0, prefix.length);
+        cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), cell.getFamilyArray(),
+        cell.getFamilyOffset(), cell.getFamilyLength(), prefix, 0, prefix.length);
   }
 
   @Override

@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -143,10 +142,8 @@ public abstract class FilterBase extends Filter {
    *
    * @inheritDoc
    */
-  public Cell getNextCellHint(Cell currentKV) throws IOException {
-    // Old filters based off of this class will override KeyValue getNextKeyHint(KeyValue).
-    // Thus to maintain compatibility we need to call the old version.
-    return getNextKeyHint(KeyValueUtil.ensureKeyValue(currentKV));
+  public Cell getNextCellHint(Cell currentCell) throws IOException {
+    return null;
   }
 
   /**

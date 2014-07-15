@@ -3899,7 +3899,7 @@ public class HRegion implements HeapSize { // , Writable{
       if (region != null && region.metricsRegion != null) {
         long totalSize = 0;
         for(Cell c:outResults) {
-          // TODO clean up
+          // TODO clean up.  Find way to remove this ensureKeyValue
           KeyValue kv = KeyValueUtil.ensureKeyValue(c);
           totalSize += kv.getLength();
         }

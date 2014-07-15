@@ -353,4 +353,14 @@ public class CellComparator implements Comparator<Cell>, Serializable{
     return 0;
   }
 
+  /**
+   * Counter part for the KeyValue.RowOnlyComparator
+   */
+  public static class RowComparator extends CellComparator {
+    @Override
+    public int compare(Cell a, Cell b) {
+      return compareRows(a, b);
+    }
+  }
+
 }

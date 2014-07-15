@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 
 import com.google.common.base.Preconditions;
@@ -54,6 +53,8 @@ public class KeyOnlyFilter extends FilterBase {
     // TODO Move to KeyValueUtil
 
     // TODO make matching Column a cell method or CellUtil method.
+    // Even if we want to make use of KeyValue.KeyOnlyKeyValue we need to convert
+    // the cell to KV so that we can make use of kv.getKey() to form the key part
     KeyValue v = KeyValueUtil.ensureKeyValue(kv);
 
     return v.createKeyOnly(this.lenAsVal);

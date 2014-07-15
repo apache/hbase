@@ -223,7 +223,7 @@ public abstract class Filter {
    *         seek to next.
    * @throws IOException in case an I/O or an filter specific failure needs to be signaled.
    */
-  abstract public Cell getNextCellHint(final Cell currentKV) throws IOException;
+  abstract public Cell getNextCellHint(final Cell currentCell) throws IOException;
 
   /**
    * Check that given column family is essential for filter to check row. Most filters always return

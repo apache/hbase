@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.TreeSet;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
@@ -27,10 +31,7 @@ import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.TreeSet;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * This filter is used for selecting only those keys with columns that matches
@@ -154,10 +155,10 @@ public class MultipleColumnPrefixFilter extends FilterBase {
   }
 
   @Override
-  public Cell getNextCellHint(Cell kv) {
+  public Cell getNextCellHint(Cell cell) {
     return KeyValueUtil.createFirstOnRow(
-      kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), kv.getFamilyArray(),
-      kv.getFamilyOffset(), kv.getFamilyLength(), hint, 0, hint.length);
+      cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), cell.getFamilyArray(),
+      cell.getFamilyOffset(), cell.getFamilyLength(), hint, 0, hint.length);
   }
 
   public TreeSet<byte []> createTreeSet() {

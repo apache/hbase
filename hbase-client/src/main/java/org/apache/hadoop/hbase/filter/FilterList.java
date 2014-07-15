@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -70,7 +71,7 @@ final public class FilterList extends Filter {
   private Filter seekHintFilter = null;
 
   /** Reference Cell used by {@link #transformCell(Cell)} for validation purpose. */
-  private Cell referenceKV = null;
+  private Cell referenceCell = null;
 
   /**
    * When filtering a given Cell in {@link #filterKeyValue(Cell)},
@@ -79,7 +80,7 @@ final public class FilterList extends Filter {
    * Individual filters transformation are applied only when the filter includes the Cell.
    * Transformations are composed in the order specified by {@link #filters}.
    */
-  private Cell transformedKV = null;
+  private Cell transformedCell = null;
 
   /**
    * Constructor that takes a set of {@link Filter}s. The default operator
@@ -211,8 +212,12 @@ final public class FilterList extends Filter {
   }
 
   @Override
-  public Cell transformCell(Cell v) throws IOException {
-    return transform(KeyValueUtil.ensureKeyValue(v));
+  public Cell transformCell(Cell c) throws IOException {
+    if (!CellComparator.equals(c, referenceCell)) {
+      throw new IllegalStateException("Reference Cell: " + this.referenceCell + " does not match: "
+          + c);
+    }
+    return this.transformedCell;
   }
 
   /**
@@ -226,22 +231,22 @@ final public class FilterList extends Filter {
   @Override
   public KeyValue transform(KeyValue v) throws IOException {
     // transform() is expected to follow an inclusive filterKeyValue() immediately:
-    if (!v.equals(this.referenceKV)) {
+    if (!v.equals(this.referenceCell)) {
       throw new IllegalStateException(
-          "Reference Cell: " + this.referenceKV + " does not match: " + v);
+          "Reference Cell: " + this.referenceCell + " does not match: " + v);
      }
-    return KeyValueUtil.ensureKeyValue(this.transformedKV);
+    return KeyValueUtil.ensureKeyValue(this.transformedCell);
   }
 
   
   @Override
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="SF_SWITCH_FALLTHROUGH",
     justification="Intentional")
-  public ReturnCode filterKeyValue(Cell v) throws IOException {
-    this.referenceKV = v;
+  public ReturnCode filterKeyValue(Cell c) throws IOException {
+    this.referenceCell = c;
 
     // Accumulates successive transformation of every filter that includes the Cell:
-    Cell transformed = v;
+    Cell transformed = c;
 
     ReturnCode rc = operator == Operator.MUST_PASS_ONE?
         ReturnCode.SKIP: ReturnCode.INCLUDE;
@@ -250,7 +255,7 @@ final public class FilterList extends Filter {
         if (filter.filterAllRemaining()) {
           return ReturnCode.NEXT_ROW;
         }
-        ReturnCode code = filter.filterKeyValue(v);
+        ReturnCode code = filter.filterKeyValue(c);
         switch (code) {
         // Override INCLUDE and continue to evaluate.
         case INCLUDE_AND_NEXT_COL:
@@ -269,7 +274,7 @@ final public class FilterList extends Filter {
           continue;
         }
 
-        switch (filter.filterKeyValue(v)) {
+        switch (filter.filterKeyValue(c)) {
         case INCLUDE:
           if (rc != ReturnCode.INCLUDE_AND_NEXT_COL) {
             rc = ReturnCode.INCLUDE;
@@ -296,7 +301,7 @@ final public class FilterList extends Filter {
     }
 
     // Save the transformed Cell for transform():
-    this.transformedKV = transformed;
+    this.transformedCell = transformed;
 
     return rc;
   }
@@ -401,16 +406,16 @@ final public class FilterList extends Filter {
   }
 
   @Override
-  public Cell getNextCellHint(Cell currentKV) throws IOException {
+  public Cell getNextCellHint(Cell currentCell) throws IOException {
     Cell keyHint = null;
     if (operator == Operator.MUST_PASS_ALL) {
-      keyHint = seekHintFilter.getNextCellHint(currentKV);
+      keyHint = seekHintFilter.getNextCellHint(currentCell);
       return keyHint;
     }
 
     // If any condition can pass, we need to keep the min hint
     for (Filter filter : filters) {
-      Cell curKeyHint = filter.getNextCellHint(currentKV);
+      Cell curKeyHint = filter.getNextCellHint(currentCell);
       if (curKeyHint == null) {
         // If we ever don't have a hint and this is must-pass-one, then no hint
         return null;

@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import com.google.protobuf.InvalidProtocolBufferException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
@@ -30,9 +32,7 @@ import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Filters data based on fuzzy row key. Performs fast-forwards during scanning.
@@ -74,16 +74,12 @@ public class FuzzyRowFilter extends FilterBase {
 
   // TODO: possible improvement: save which fuzzy row key to use when providing a hint
   @Override
-  public ReturnCode filterKeyValue(Cell kv) {
-    // TODO add getRow() equivalent to Cell or change satisfies to take b[],o,l style args.
-    KeyValue v = KeyValueUtil.ensureKeyValue(kv);
-
-    byte[] rowKey = v.getRow();
+  public ReturnCode filterKeyValue(Cell c) {
     // assigning "worst" result first and looking for better options
     SatisfiesCode bestOption = SatisfiesCode.NO_NEXT;
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
-      SatisfiesCode satisfiesCode =
-              satisfies(rowKey, fuzzyData.getFirst(), fuzzyData.getSecond());
+      SatisfiesCode satisfiesCode = satisfies(c.getRowArray(), c.getRowOffset(),
+          c.getRowLength(), fuzzyData.getFirst(), fuzzyData.getSecond());
       if (satisfiesCode == SatisfiesCode.YES) {
         return ReturnCode.INCLUDE;
       }
@@ -103,16 +99,13 @@ public class FuzzyRowFilter extends FilterBase {
   }
 
   @Override
-  public Cell getNextCellHint(Cell currentKV) {
-    // TODO make matching Column a cell method or CellUtil method.
-    KeyValue v = KeyValueUtil.ensureKeyValue(currentKV);
-
-    byte[] rowKey = v.getRow();
+  public Cell getNextCellHint(Cell currentCell) {
     byte[] nextRowKey = null;
     // Searching for the "smallest" row key that satisfies at least one fuzzy row key
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
-      byte[] nextRowKeyCandidate = getNextForFuzzyRule(rowKey,
-              fuzzyData.getFirst(), fuzzyData.getSecond());
+      byte[] nextRowKeyCandidate = getNextForFuzzyRule(currentCell.getRowArray(),
+          currentCell.getRowOffset(), currentCell.getRowLength(), fuzzyData.getFirst(),
+          fuzzyData.getSecond());
       if (nextRowKeyCandidate == null) {
         continue;
       }
@@ -124,10 +117,9 @@ public class FuzzyRowFilter extends FilterBase {
     if (nextRowKey == null) {
       // SHOULD NEVER happen
       // TODO: is there a better way than throw exception? (stop the scanner?)
-      throw new IllegalStateException("No next row key that satisfies fuzzy exists when" +
-                                         " getNextKeyHint() is invoked." +
-                                         " Filter: " + this.toString() +
-                                         " currentKV: " + currentKV.toString());
+      throw new IllegalStateException("No next row key that satisfies fuzzy exists when"
+          + " getNextKeyHint() is invoked." + " Filter: " + this.toString() + " currentKV: "
+          + KeyValueUtil.ensureKeyValue(currentCell).toString());
     }
 
     return KeyValueUtil.createFirstOnRow(nextRowKey);
