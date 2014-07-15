@@ -79,6 +79,7 @@ public class ClientScanner extends AbstractClientScanner {
      * @param tableName The table that we wish to scan
      * @throws IOException
      */
+    @Deprecated
     public ClientScanner(final Configuration conf, final Scan scan,
         final TableName tableName) throws IOException {
       this(conf, scan, tableName, HConnectionManager.getConnection(conf));
