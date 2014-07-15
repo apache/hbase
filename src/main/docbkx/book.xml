@@ -1945,7 +1945,7 @@ rs.close();
         <title>Block Cache</title>
 
         <para>HBase provides three different BlockCache implementations: the default onheap
-          LruBlockCache, and BucketCache, and SlabCache, which are both (usually) offheap. This section
+          LruBlockCache, BucketCache, and SlabCache, which are both (usually) offheap. This section
           discusses benefits and drawbacks of each implementation, how to choose the appropriate
           option, and configuration options for each.</para>
         <section>
@@ -1980,10 +1980,7 @@ rs.close();
               works so differently, it is difficult to do a fair comparison between BucketCache and SlabCache.
             See Nick Dimiduk's <link
               xlink:href="http://www.n10k.com/blog/blockcache-101/">BlockCache 101</link> for some
-            numbers. See also the description of <link
-              xlink:href="https://issues.apache.org/jira/browse/HBASE-7404">HBASE-7404</link> where
-            Chunhui Shen lists issues he found with BlockCache, such as inefficient use of memory
-            and garbage-collection overhead.</para>
+          numbers.</para>
           <para>For more information about the off heap cache options, see <xref
               linkend="offheap.blockcache" />.</para>
         </section>
@@ -2164,16 +2161,11 @@ rs.close();
           </section>
           <section>
             <title>Enable BucketCache</title>
-            <para> To enable BucketCache, set the value of
-                <varname>hbase.offheapcache.percentage</varname> to 0 in the RegionServer's
-                <filename>hbase-site.xml</filename> file. This disables SlabCache.</para>
-
-                <para>Just as for SlabCache, the usual deploy of BucketCache is via a
+                <para>The usual deploy of BucketCache is via a
                     managing class that sets up two caching tiers: an L1 onheap cache
                     implemented by LruBlockCache and a second L2 cache implemented
                     with BucketCache. The managing class is <link
-                xlink:href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CombinedBlockCache.html">CombinedBlockCache</link>
-            by default. The just-previous link describes the mechanism of CombinedBlockCache. In short, it works
+                xlink:href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CombinedBlockCache.html">CombinedBlockCache</link> by default. The just-previous link describes the mechanism of CombinedBlockCache. In short, it works
             by keeping meta blocks -- INDEX and BLOOM in the L1, onheap LruBlockCache tier -- and DATA
             blocks are kept in the L2, BucketCache tier. It is possible to amend this behavior in
             HBase since version 1.0 and ask that a column family have both its meta and DATA blocks hosted onheap in the L1 tier by
@@ -2189,32 +2181,29 @@ rs.close();
             (Useful in particular if you have some fast i/o attached to the box such
             as SSDs).
         </para>
-        <para>To disable
-              CombinedBlockCache, and use the BucketCache as a strict L2 cache to the L1
+        <para>To disable CombinedBlockCache, and use the BucketCache as a strict L2 cache to the L1
               LruBlockCache, set <varname>CacheConfig.BUCKET_CACHE_COMBINED_KEY</varname> to
                 <literal>false</literal>. In this mode, on eviction from L1, blocks go to L2.</para>
 
-            <para> By default, <varname>CacheConfig.BUCKET_CACHE_COMBINED_PERCENTAGE_KEY</varname>
-              defaults to <literal>0.9</literal>. This means that whatever size you set for the
-              bucket cache with <varname>CacheConfig.BUCKET_CACHE_SIZE_KEY</varname>, 90% will be
-              used for offheap and 10% will be used by the onheap LruBlockCache. </para>
-          <para>
-          </para>
             <procedure>
               <title>BucketCache Example Configuration</title>
-              <para> This sample provides a configuration for a 4 GB offheap BucketCache with a 1 GB
-                onheap cache. Configuration is performed on the RegionServer.</para>
+              <para>This sample provides a configuration for a 4 GB offheap BucketCache with a 1 GB
+                  onheap cache. Configuration is performed on the RegionServer.  Setting
+                  <varname>hbase.bucketcache.ioengine</varname> and 
+                  <varname>hbase.bucketcache.size</varname> &gt; 0 enables CombinedBlockCache.
+              </para>
               <step>
                 <para>First, edit the RegionServer's <filename>hbase-env.sh</filename> and set
-                  -XX:MaxDirectMemorySize to the total size of the desired onheap plus offheap, in
-                  this case, 5 GB (but expressed as 5G).</para>
+                  -XX:MaxDirectMemorySize to a value greater than the offheap size wanted, in
+                  this case, 4 GB (expressed as 4G).  Lets set it to 5G.  That'll be 4G
+                  for our offheap cache and 1G for any other uses of offheap memory (there are
+                  other users of offheap memory other than BlockCache; e.g. DFSClient 
+                  in RegionServer can make use of offheap memory).</para>
                 <programlisting>-XX:MaxDirectMemorySize=5G</programlisting>
               </step>
               <step>
                 <para>Next, add the following configuration to the RegionServer's
-                    <filename>hbase-site.xml</filename>. This configuration uses 80% of the
-                  -XX:MaxDirectMemorySize (4 GB) for offheap, and the remainder (1 GB) for
-                  onheap.</para>
+                    <filename>hbase-site.xml</filename>.</para>
                 <programlisting>
 <![CDATA[<property>
   <name>hbase.bucketcache.ioengine</name>

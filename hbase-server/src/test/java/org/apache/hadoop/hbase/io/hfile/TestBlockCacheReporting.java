@@ -73,7 +73,6 @@ public class TestBlockCacheReporting {
   public void testBucketCache() throws JsonGenerationException, JsonMappingException, IOException {
     this.conf.set(CacheConfig.BUCKET_CACHE_IOENGINE_KEY, "offheap");
     this.conf.setInt(CacheConfig.BUCKET_CACHE_SIZE_KEY, 100);
-    this.conf.setFloat(CacheConfig.BUCKET_CACHE_COMBINED_PERCENTAGE_KEY, 0.8f);
     CacheConfig cc = new CacheConfig(this.conf);
     assertTrue(cc.getBlockCache() instanceof CombinedBlockCache);
     logPerBlock(cc.getBlockCache());
