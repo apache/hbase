@@ -326,7 +326,7 @@ public class TestMetaTableLocator {
 
     void doWaiting() throws InterruptedException {
       try {
-        while (new MetaTableLocator().waitMetaRegionLocation(watcher, 100) == null);
+        while (new MetaTableLocator().waitMetaRegionLocation(watcher, 10000) == null);
       } catch (NotAllMetaRegionsOnlineException e) {
         //Ignore
       }
