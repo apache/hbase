@@ -329,7 +329,7 @@ public class RegionStates {
         regionsInTransition.put(encodedName, regionState);
       }
       if (lastHost != null && newState != State.SPLIT) {
-        addToServerHoldings(serverName, hri);
+        addToServerHoldings(lastHost, hri);
       }
     }
     return regionState;
