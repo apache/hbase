@@ -43,6 +43,7 @@ import java.util.concurrent.Future;
 
 import com.google.common.base.Objects;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -71,6 +72,7 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.RandomDistribution;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
@@ -541,6 +543,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
   /**
    * Wraps up options passed to {@link org.apache.hadoop.hbase.PerformanceEvaluation}.
    * This makes tracking all these arguments a little easier.
+   * NOTE: ADDING AN OPTION, you need to add a data member, a getter/setter (to make JSON
+   * serialization of this TestOptions class behave), and you need to add to the clone constructor
+   * below copying your new option from the 'that' to the 'this'.  Look for 'clone' below.
    */
   static class TestOptions {
     String cmdName = null;
@@ -571,11 +576,16 @@ public class PerformanceEvaluation extends Configured implements Tool {
     BloomType bloomType = BloomType.ROW;
     DataBlockEncoding blockEncoding = DataBlockEncoding.NONE;
     boolean valueRandom = false;
+    boolean valueZipf = false;
     int valueSize = DEFAULT_VALUE_LENGTH;
     int period = (this.perClientRunRows / 10) == 0? perClientRunRows: perClientRunRows / 10;
 
     public TestOptions() {}
 
+    /**
+     * Clone constructor.
+     * @param that Object to copy from.
+     */
     public TestOptions(TestOptions that) {
       this.cmdName = that.cmdName;
       this.nomapred = that.nomapred;
@@ -604,9 +614,18 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.filterAll = that.filterAll;
       this.bloomType = that.bloomType;
       this.valueRandom = that.valueRandom;
+      this.valueZipf = that.valueZipf;
       this.valueSize = that.valueSize;
       this.period = that.period;
       this.randomSleep = that.randomSleep;
+    }
+
+    public boolean isValueZipf() {
+      return valueZipf;
+    }
+
+    public void setValueZipf(boolean valueZipf) {
+      this.valueZipf = valueZipf;
     }
 
     public String getCmdName() {
@@ -877,6 +896,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private String testName;
     private Histogram latency;
     private Histogram valueSize;
+    private RandomDistribution.Zipf zipf;
 
     /**
      * Note that all subclasses of this class must provide a public constructor
@@ -897,11 +917,16 @@ public class PerformanceEvaluation extends Configured implements Tool {
         this.traceSampler = Sampler.NEVER;
       }
       everyN = (int) (opts.totalRows / (opts.totalRows * opts.sampleRate));
+      if (options.isValueZipf()) {
+        this.zipf = new RandomDistribution.Zipf(this.rand, 1, options.getValueSize(), 1.1);
+      }
       LOG.info("Sampling 1 every " + everyN + " out of " + opts.perClientRunRows + " total rows.");
     }
 
     int getValueLength(final Random r) {
-      return opts.valueRandom? Math.abs(r.nextInt() % opts.valueSize): opts.valueSize;
+      if (this.opts.isValueRandom()) return Math.abs(r.nextInt() % opts.valueSize);
+      else if (this.opts.isValueZipf()) return Math.abs(this.zipf.nextInt());
+      else return opts.valueSize;
     }
 
     void updateValueSize(final Result [] rs) throws IOException {
@@ -1072,8 +1097,6 @@ public class PerformanceEvaluation extends Configured implements Tool {
     abstract void testRow(final int i) throws IOException, InterruptedException;
   }
 
-
-  @SuppressWarnings("unused")
   static class RandomSeekScanTest extends Test {
     RandomSeekScanTest(HConnection con, TestOptions options, Status status) {
       super(con, options, status);
@@ -1568,6 +1591,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" valueSize       Pass value size to use: Default: 1024");
     System.err.println(" valueRandom     Set if we should vary value size between 0 and " +
         "'valueSize'; set on read for stats on size: Default: Not set.");
+    System.err.println(" valueZipf       Set if we should vary value size between 0 and " +
+        "'valueSize' in zipf form: Default: Not set.");
     System.err.println(" period          Report every 'period' rows: " +
       "Default: opts.perClientRunRows / 10");
     System.err.println(" multiGet        Batch gets together into groups of N. Only supported " +
@@ -1766,6 +1791,18 @@ public class PerformanceEvaluation extends Configured implements Tool {
       final String valueRandom = "--valueRandom";
       if (cmd.startsWith(valueRandom)) {
         opts.valueRandom = true;
+        if (opts.valueZipf) {
+          throw new IllegalStateException("Either valueZipf or valueRandom but not both");
+        }
+        continue;
+      }
+
+      final String valueZipf = "--valueZipf";
+      if (cmd.startsWith(valueZipf)) {
+        opts.valueZipf = true;
+        if (opts.valueRandom) {
+          throw new IllegalStateException("Either valueZipf or valueRandom but not both");
+        }
         continue;
       }
 
