@@ -87,6 +87,36 @@
                 binary with a 0.94.6 binary. </para>
         </section>
     </section>
+    <section
+        xml:id="upgrade1.0">
+        <title>Upgrading from 0.98.x to 1.0.x</title>
+        <para>A rolling upgrade from 0.98.x to 1.0.x works (TODO: Verify!!!!). The two versions are not binary
+            compatible.</para>
+        <section xml:id="upgrade1.0.changes">
+            <title>Changes of Note!</title>
+            <para>In here we list important changes that are in 1.0.0 since 0.98.x., changes you should
+            be aware that will go into effect once you upgrade.</para>
+            <section xml:id="upgrade1.0.hbase.bucketcache.percentage.in.combinedcache">
+                <title>hbase.bucketcache.percentage.in.combinedcache configuration has been REMOVED</title>
+                <para>You may have made use of this configuration if you are using BucketCache.
+                    If NOT using BucketCache, this change does not effect you.
+                    Its removal means that your L1 LruBlockCache is now sized
+                    using <varname>hfile.block.cache.size</varname> -- i.e. the way you
+                    would size the onheap L1 LruBlockCache if you were NOT doing
+                    BucketCache -- and the BucketCache size is not whatever the
+                    setting for hbase.bucketcache.size is.  You may need to adjust
+                    configs to get the LruBlockCache and BucketCache sizes set to
+                    what they were in 0.98.x and previous.  If you did not set this
+                    config., its default value was 0.9.  If you do nothing, your
+                    BucketCache will increase in size by 10%.  Your L1 LruBlockCache will
+                    become <varname>hfile.block.cache.size</varname> times your java
+                    heap size (hfile.block.cache.size is a float between 0.0 and 1.0).
+                    To read more, see
+                    <link xlink:href="https://issues.apache.org/jira/browse/HBASE-11520">HBASE-11520 Simplify offheap cache config by removing the confusing "hbase.bucketcache.percentage.in.combinedcache"</link>.
+                </para>
+          </section>
+        </section>
+    </section>
 
     <section
         xml:id="upgrade0.98">
