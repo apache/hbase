@@ -326,7 +326,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable buf, boolean inMemory,
       final boolean cacheDataInL1) {
     LruCachedBlock cb = map.get(cacheKey);
-    if(cb != null) {
+    if (cb != null) {
       // compare the contents, if they are not equal, we are in big trouble
       if (compare(buf, cb.getBuffer()) != 0) {
         throw new RuntimeException("Cached block contents differ, which should not have happened."
@@ -341,7 +341,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     long newSize = updateSizeMetrics(cb, false);
     map.put(cacheKey, cb);
     elements.incrementAndGet();
-    if(newSize > acceptableSize() && !evictionInProgress) {
+    if (newSize > acceptableSize() && !evictionInProgress) {
       runEviction();
     }
   }
@@ -893,7 +893,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
   // Simple calculators of sizes given factors and maxSize
 
-  private long acceptableSize() {
+  long acceptableSize() {
     return (long)Math.floor(this.maxSize * this.acceptableFactor);
   }
   private long minSize() {
@@ -934,7 +934,8 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
   /** Clears the cache. Used in tests. */
   public void clearCache() {
-    map.clear();
+    this.map.clear();
+    this.elements.set(0);
   }
 
   /**
@@ -976,6 +977,10 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   public void setVictimCache(BucketCache handler) {
     assert victimHandler == null;
     victimHandler = handler;
+  }
+
+  BucketCache getVictimHandler() {
+    return this.victimHandler;
   }
 
   @Override

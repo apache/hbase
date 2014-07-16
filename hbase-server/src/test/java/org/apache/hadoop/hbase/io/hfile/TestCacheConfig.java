@@ -22,15 +22,22 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -198,11 +205,36 @@ public class TestCacheConfig {
     assertTrue(cc.getBlockCache() instanceof LruBlockCache);
   }
 
+  /**
+   * Assert that the caches are deployed with CombinedBlockCache and of the appropriate sizes.
+   */
   @Test
-  public void testBucketCacheConfig() {
+  public void testOffHeapBucketCacheConfig() {
     this.conf.set(CacheConfig.BUCKET_CACHE_IOENGINE_KEY, "offheap");
-    final float percent = 0.8f;
-    this.conf.setFloat(CacheConfig.BUCKET_CACHE_COMBINED_PERCENTAGE_KEY, percent);
+    doBucketCacheConfigTest();
+  }
+
+  @Test
+  public void testOnHeapBucketCacheConfig() {
+    this.conf.set(CacheConfig.BUCKET_CACHE_IOENGINE_KEY, "heap");
+    doBucketCacheConfigTest();
+  }
+
+  @Test
+  public void testFileBucketCacheConfig() throws IOException {
+    HBaseTestingUtility htu = new HBaseTestingUtility(this.conf);
+    try {
+      Path p = new Path(htu.getDataTestDir(), "bc.txt");
+      FileSystem fs = FileSystem.get(this.conf);
+      fs.create(p).close();
+      this.conf.set(CacheConfig.BUCKET_CACHE_IOENGINE_KEY, "file:" + p);
+      doBucketCacheConfigTest();
+    } finally {
+      htu.cleanupTestDir();
+    }
+  }
+
+  private void doBucketCacheConfigTest() {
     final int bcSize = 100;
     this.conf.setInt(CacheConfig.BUCKET_CACHE_SIZE_KEY, bcSize);
     CacheConfig cc = new CacheConfig(this.conf);
@@ -213,15 +245,66 @@ public class TestCacheConfig {
     BlockCache [] bcs = cbc.getBlockCaches();
     assertTrue(bcs[0] instanceof LruBlockCache);
     LruBlockCache lbc = (LruBlockCache)bcs[0];
-    long expectedBCSize = (long)(bcSize * (1.0f - percent));
-    long actualBCSize = lbc.getMaxSize() / (1024 * 1024);
-    assertTrue(expectedBCSize == actualBCSize);
+    assertEquals(CacheConfig.getLruCacheSize(this.conf,
+        ManagementFactory.getMemoryMXBean().getHeapMemoryUsage()), lbc.getMaxSize());
     assertTrue(bcs[1] instanceof BucketCache);
     BucketCache bc = (BucketCache)bcs[1];
     // getMaxSize comes back in bytes but we specified size in MB
-    expectedBCSize = (long)(bcSize * percent);
-    actualBCSize = (long)(bc.getMaxSize() / (1024 * 1024));
-    assertTrue(expectedBCSize == actualBCSize);
+    assertEquals(bcSize, bc.getMaxSize() / (1024 * 1024));
+  }
+
+  /**
+   * Assert that when BUCKET_CACHE_COMBINED_KEY is false, the non-default, that we deploy
+   * LruBlockCache as L1 with a BucketCache for L2.
+   */
+  @Test (timeout=10000)
+  public void testBucketCacheConfigL1L2Setup() {
+    this.conf.set(CacheConfig.BUCKET_CACHE_IOENGINE_KEY, "offheap");
+    // Make lru size is smaller than bcSize for sure.  Need this to be true so when eviction
+    // from L1 happens, it does not fail because L2 can't take the eviction because block too big.
+    this.conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.001f);
+    MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+    long lruExpectedSize = CacheConfig.getLruCacheSize(this.conf, mu);
+    final int bcSize = 100;
+    long bcExpectedSize = 100 * 1024 * 1024; // MB.
+    assertTrue(lruExpectedSize < bcExpectedSize);
+    this.conf.setInt(CacheConfig.BUCKET_CACHE_SIZE_KEY, bcSize);
+    this.conf.setBoolean(CacheConfig.BUCKET_CACHE_COMBINED_KEY, false);
+    CacheConfig cc = new CacheConfig(this.conf);
+    basicBlockCacheOps(cc, false, false);
+    assertTrue(cc.getBlockCache() instanceof LruBlockCache);
+    // TODO: Assert sizes allocated are right and proportions.
+    LruBlockCache lbc = (LruBlockCache)cc.getBlockCache();
+    assertEquals(lruExpectedSize, lbc.getMaxSize());
+    BucketCache bc = lbc.getVictimHandler();
+    // getMaxSize comes back in bytes but we specified size in MB
+    assertEquals(bcExpectedSize, bc.getMaxSize());
+    // Test the L1+L2 deploy works as we'd expect with blocks evicted from L1 going to L2.
+    long initialL1BlockCount = lbc.getBlockCount();
+    long initialL2BlockCount = bc.getBlockCount();
+    Cacheable c = new DataCacheEntry();
+    BlockCacheKey bck = new BlockCacheKey("bck", 0);
+    lbc.cacheBlock(bck, c, false, false);
+    assertEquals(initialL1BlockCount + 1, lbc.getBlockCount());
+    assertEquals(initialL2BlockCount, bc.getBlockCount());
+    // Force evictions by putting in a block too big.
+    final long justTooBigSize = lbc.acceptableSize() + 1;
+    lbc.cacheBlock(new BlockCacheKey("bck2", 0), new DataCacheEntry() {
+      @Override
+      public long heapSize() {
+        return justTooBigSize;
+      }
+
+      @Override
+      public int getSerializedLength() {
+        return (int)heapSize();
+      }
+    });
+    // The eviction thread in lrublockcache needs to run.
+    while (initialL1BlockCount != lbc.getBlockCount()) Threads.sleep(10);
+    assertEquals(initialL1BlockCount, lbc.getBlockCount());
+    long count = bc.getBlockCount();
+    assertTrue(initialL2BlockCount + 1 <= count);
   }
 
   /**

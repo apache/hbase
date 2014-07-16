@@ -2159,7 +2159,7 @@ rs.close();
             <para>Restart (or rolling restart) your cluster for the configurations to take effect.
               Check logs for errors or unexpected behavior.</para>
           </section>
-          <section>
+          <section xml:id="enable.bucketcache">
             <title>Enable BucketCache</title>
                 <para>The usual deploy of BucketCache is via a
                     managing class that sets up two caching tiers: an L1 onheap cache
@@ -2172,8 +2172,7 @@ rs.close();
             setting <varname>cacheDataInL1</varname> via <programlisting>(HColumnDescriptor.setCacheDataInL1(true)</programlisting>
             or in the shell, creating or amending column families setting <varname>CACHE_DATA_IN_L1</varname>
             to true: e.g. <programlisting>hbase(main):003:0> create 't', {NAME => 't', CONFIGURATION => {CACHE_DATA_IN_L1 => 'true'}}</programlisting></para>
-        <para>The BucketCache deploy can be
-            onheap, offheap, or file based. You set which via the
+        <para>The BucketCache deploy can be onheap, offheap, or file based. You set which via the
             <varname>hbase.bucketcache.ioengine</varname> setting it to
             <varname>heap</varname> for BucketCache running as part of the java heap,
             <varname>offheap</varname> for BucketCache to make allocations offheap,
@@ -2191,6 +2190,8 @@ rs.close();
                   onheap cache. Configuration is performed on the RegionServer.  Setting
                   <varname>hbase.bucketcache.ioengine</varname> and 
                   <varname>hbase.bucketcache.size</varname> &gt; 0 enables CombinedBlockCache.
+                  Let us presume that the RegionServer has been set to run with a 5G heap:
+                  i.e. HBASE_HEAPSIZE=5g.
               </para>
               <step>
                 <para>First, edit the RegionServer's <filename>hbase-env.sh</filename> and set
@@ -2210,12 +2211,12 @@ rs.close();
   <value>offheap</value>
 </property>
 <property>
-  <name>hbase.bucketcache.percentage.in.combinedcache</name>
-  <value>0.8</value>
+  <name>hfile.block.cache.size</name>
+  <value>0.2</value>
 </property>
 <property>
   <name>hbase.bucketcache.size</name>
-  <value>5120</value>
+  <value>4196</value>
 </property>]]>
           </programlisting>
               </step>
@@ -2224,6 +2225,11 @@ rs.close();
                   issues.</para>
               </step>
             </procedure>
+            <para>In the above, we set bucketcache to be 4G.  The onheap lrublockcache we
+                configured to have 0.2 of the RegionServer's heap size (0.2 * 5G = 1G).
+                In other words, you configure the L1 LruBlockCache as you would normally,
+                as you would when there is no L2 BucketCache present.
+            </para>
           </section>
         </section>
       </section>
