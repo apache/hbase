@@ -4390,6 +4390,11 @@ This option should not normally be used, and it is not in <code>-fixAll</code>.
   <appendix xml:id="compression">
 
     <title >Compression In HBase<indexterm><primary>Compression</primary></indexterm></title>
+    <note>
+      <para>Codecs mentioned in this section are for encoding and decoding data blocks. For
+        information about replication codecs, see <xref
+          linkend="cluster.replication.preserving.tags" />.</para>
+    </note>
     <para>There are a bunch of compression options in HBase.  Some codecs come with java --
         e.g. gzip -- and so require no additional installations. Others require native
         libraries.  The native libraries may be available in your hadoop as is the case

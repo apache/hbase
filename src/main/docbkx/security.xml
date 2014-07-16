@@ -1582,6 +1582,11 @@ user_permission <table>
           <code>org.apache.hadoop.hbase.security.visibility.DefaultScanLabelGenerator</code>. One
         can configure a set of ScanLabelGenerators to be used by the system. For this, a comma
         separated set of implementation class names to be configured. </para>
+      <note>
+        <title>Visibility Labels and Replication</title>
+        <para>By default, visibility labels are lost on replication. To change this behavior, see
+          <xref linkend="cluster.replication.preserving.tags" />.</para>
+      </note>
     </section>
   </section>
 
