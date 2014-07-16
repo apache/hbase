@@ -808,8 +808,10 @@
               <htmlStylesheet>../css/freebsd_docbook.css</htmlStylesheet>
               <targetDirectory>${basedir}/target/docbkx/book</targetDirectory>
               <preProcess>
-                <copy todir="target/docbkx/book">
+                <copy todir="target/docbkx/book/images">
                     <fileset dir="src/main/site/resources/images/" />
+                </copy>
+                <copy todir="target/docbkx/book/css">
                     <fileset dir="src/main/site/resources/css/" />
                 </copy>
               </preProcess>
@@ -826,8 +828,10 @@
               <htmlStylesheet>css/freebsd_docbook.css</htmlStylesheet>
               <targetDirectory>${basedir}/target/docbkx/</targetDirectory>
               <preProcess>
-                <copy todir="target/docbkx/book">
+                <copy todir="target/docbkx/images">
                     <fileset dir="src/main/site/resources/images/" />
+                </copy>
+                <copy todir="target/docbkx/css">
                     <fileset dir="src/main/site/resources/css/" />
                 </copy>
               </preProcess>
