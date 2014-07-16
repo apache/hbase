@@ -39,9 +39,11 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -118,6 +120,7 @@ public class RegionStates {
   private final HashMap<ServerName, Long> processedServers;
   private long lastProcessedServerCleanTime;
 
+  private final TableStateManager tableStateManager;
   private final RegionStateStore regionStateStore;
   private final ServerManager serverManager;
   private final Server server;
@@ -126,7 +129,7 @@ public class RegionStates {
   static final String LOG_SPLIT_TIME = "hbase.master.maximum.logsplit.keeptime";
   static final long DEFAULT_LOG_SPLIT_TIME = 7200000L; // 2 hours
 
-  RegionStates(final Server master,
+  RegionStates(final Server master, final TableStateManager tableStateManager,
       final ServerManager serverManager, final RegionStateStore regionStateStore) {
     regionStates = new HashMap<String, RegionState>();
     regionsInTransition = new HashMap<String, RegionState>();
@@ -136,6 +139,7 @@ public class RegionStates {
     lastAssignments = new HashMap<String, ServerName>();
     processedServers = new HashMap<ServerName, Long>();
     deadServers = new HashMap<String, Long>();
+    this.tableStateManager = tableStateManager;
     this.regionStateStore = regionStateStore;
     this.serverManager = serverManager;
     this.server = master;
@@ -405,7 +409,7 @@ public class RegionStates {
         LOG.info("Onlined " + hri.getShortNameToLog() + " on " + serverName);
         addToServerHoldings(serverName, hri);
         addToReplicaMapping(hri);
-        if (oldServerName != null) {
+        if (oldServerName != null && serverHoldings.containsKey(oldServerName)) {
           LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
           removeFromServerHoldings(oldServerName, hri);
         }
@@ -528,7 +532,12 @@ public class RegionStates {
     synchronized (this) {
       regionsInTransition.remove(hri.getEncodedName());
       ServerName oldServerName = regionAssignments.remove(hri);
-      if (oldServerName != null && serverHoldings.containsKey(oldServerName)) {
+      if (oldServerName != null && serverHoldings.containsKey(oldServerName)
+          && (newState == State.MERGED || newState == State.SPLIT
+            || tableStateManager.isTableState(hri.getTable(),
+              ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING))) {
+        // Offline the region only if it's merged/split, or the table is disabled/disabling.
+        // Otherwise, offline it from this server only when it is online on a different server.
         LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
         removeFromServerHoldings(oldServerName, hri);
         removeFromReplicaMapping(hri);
@@ -554,16 +563,14 @@ public class RegionStates {
       // Offline open regions, no need to offline if SPLIT/MERGED/OFFLINE
       if (isRegionOnline(region)) {
         regionsToOffline.add(region);
-      } else {
-        if (isRegionInState(region, State.SPLITTING, State.MERGING)) {
-          LOG.debug("Offline splitting/merging region " + getRegionState(region));
-          try {
-            // Delete the ZNode if exists
-            ZKAssign.deleteNodeFailSilent(watcher, region);
-            regionsToOffline.add(region);
-          } catch (KeeperException ke) {
-            server.abort("Unexpected ZK exception deleting node " + region, ke);
-          }
+      } else if (isRegionInState(region, State.SPLITTING, State.MERGING)) {
+        LOG.debug("Offline splitting/merging region " + getRegionState(region));
+        try {
+          // Delete the ZNode if exists
+          ZKAssign.deleteNodeFailSilent(watcher, region);
+          regionsToOffline.add(region);
+        } catch (KeeperException ke) {
+          server.abort("Unexpected ZK exception deleting node " + region, ke);
         }
       }
     }
@@ -921,6 +928,7 @@ public class RegionStates {
    * @param  regionName
    * @return HRegionInfo for the region
    */
+  @SuppressWarnings("deprecation")
   protected HRegionInfo getRegionInfo(final byte [] regionName) {
     String encodedName = HRegionInfo.encodeRegionName(regionName);
     RegionState regionState = getRegionState(encodedName);

@@ -295,7 +295,8 @@ public class AssignmentManager extends ZooKeeperListener {
     int maxThreads = conf.getInt("hbase.assignment.threads.max", 30);
     this.threadPoolExecutorService = Threads.getBoundedCachedThreadPool(
       maxThreads, 60L, TimeUnit.SECONDS, Threads.newDaemonThreadFactory("AM."));
-    this.regionStates = new RegionStates(server, serverManager, regionStateStore);
+    this.regionStates = new RegionStates(
+      server, tableStateManager, serverManager, regionStateStore);
 
     this.bulkAssignWaitTillAllAssigned =
       conf.getBoolean("hbase.bulk.assignment.waittillallassigned", false);
@@ -1138,6 +1139,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * This is handled in a separate code path because it breaks the normal rules.
    * @param rt
    */
+  @SuppressWarnings("deprecation")
   private void handleHBCK(RegionTransition rt) {
     String encodedName = HRegionInfo.encodeRegionName(rt.getRegionName());
     LOG.info("Handling HBCK triggered transition=" + rt.getEventType() +
@@ -1932,6 +1934,7 @@ public class AssignmentManager extends ZooKeeperListener {
     return state;
   }
 
+  @SuppressWarnings("deprecation")
   private boolean wasRegionOnDeadServerByMeta(
       final HRegionInfo region, final ServerName sn) {
     try {

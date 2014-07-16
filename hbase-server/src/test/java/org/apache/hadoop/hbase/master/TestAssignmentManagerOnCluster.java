@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -92,7 +93,7 @@ public class TestAssignmentManagerOnCluster {
     // Reduce the maximum attempts to speed up the test
     conf.setInt("hbase.assignment.maximum.attempts", 3);
 
-    TEST_UTIL.startMiniCluster(1, 4, null, MyMaster.class, null);
+    TEST_UTIL.startMiniCluster(1, 4, null, MyMaster.class, MyRegionServer.class);
     admin = TEST_UTIL.getHBaseAdmin();
   }
 
@@ -795,6 +796,7 @@ public class TestAssignmentManagerOnCluster {
         master.enableSSH(true);
       }
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
+      cluster.startRegionServer();
     }
   }
 
@@ -839,6 +841,162 @@ public class TestAssignmentManagerOnCluster {
     }
   }
 
+  /**
+   * Test offlined region is assigned by SSH
+   */
+  @Test (timeout=60000)
+  public void testAssignOfflinedRegionBySSH() throws Exception {
+    String table = "testAssignOfflinedRegionBySSH";
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    MyMaster master = null;
+    try {
+      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
+      desc.addFamily(new HColumnDescriptor(FAMILY));
+      admin.createTable(desc);
+
+      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      HRegionInfo hri = new HRegionInfo(
+        desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+      MetaTableAccessor.addRegionToMeta(meta, hri);
+
+      // Assign the region
+      master = (MyMaster)cluster.getMaster();
+      master.assignRegion(hri);
+
+      AssignmentManager am = master.getAssignmentManager();
+      RegionStates regionStates = am.getRegionStates();
+      ServerName metaServer = regionStates.getRegionServerOfRegion(
+        HRegionInfo.FIRST_META_REGIONINFO);
+      ServerName oldServerName = null;
+      while (true) {
+        assertTrue(am.waitForAssignment(hri));
+        RegionState state = regionStates.getRegionState(hri);
+        oldServerName = state.getServerName();
+        if (!ServerName.isSameHostnameAndPort(oldServerName, metaServer)) {
+          // Mark the hosting server aborted, but don't actually kill it.
+          // It doesn't have meta on it.
+          MyRegionServer.abortedServer = oldServerName;
+          break;
+        }
+        int i = cluster.getServerWithMeta();
+        HRegionServer rs = cluster.getRegionServer(i == 0 ? 1 : 0);
+        oldServerName = rs.getServerName();
+        master.move(hri.getEncodedNameAsBytes(),
+          Bytes.toBytes(oldServerName.getServerName()));
+      }
+
+      // Make sure the region is assigned on the dead server
+      assertTrue(regionStates.isRegionOnline(hri));
+      assertEquals(oldServerName, regionStates.getRegionServerOfRegion(hri));
+
+      // Try to unassign the dead region before SSH
+      am.unassign(hri, false);
+      // The region should be moved to offline since the server is dead
+      RegionState state = regionStates.getRegionState(hri);
+      assertTrue(state.isOffline());
+
+      // Kill the hosting server, which doesn't have meta on it.
+      cluster.killRegionServer(oldServerName);
+      cluster.waitForRegionServerToStop(oldServerName, -1);
+
+      ServerManager serverManager = master.getServerManager();
+      while (!serverManager.isServerDead(oldServerName)
+          || serverManager.getDeadServers().areDeadServersInProgress()) {
+        Thread.sleep(100);
+      }
+
+      // Let's check if it's assigned after it's out of transition.
+      // no need to assign it manually, SSH should do it
+      am.waitOnRegionToClearRegionsInTransition(hri);
+      assertTrue(am.waitForAssignment(hri));
+
+      ServerName serverName = master.getAssignmentManager().
+        getRegionStates().getRegionServerOfRegion(hri);
+      TEST_UTIL.assertRegionOnlyOnServer(hri, serverName, 200);
+    } finally {
+      MyRegionServer.abortedServer = null;
+      TEST_UTIL.deleteTable(Bytes.toBytes(table));
+      cluster.startRegionServer();
+    }
+  }
+
+  /**
+   * Test disabled region is ignored by SSH
+   */
+  @Test (timeout=60000)
+  public void testAssignDisabledRegionBySSH() throws Exception {
+    String table = "testAssignDisabledRegionBySSH";
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    MyMaster master = null;
+    try {
+      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
+      desc.addFamily(new HColumnDescriptor(FAMILY));
+      admin.createTable(desc);
+
+      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      HRegionInfo hri = new HRegionInfo(
+        desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+      MetaTableAccessor.addRegionToMeta(meta, hri);
+
+      // Assign the region
+      master = (MyMaster)cluster.getMaster();
+      master.assignRegion(hri);
+
+      AssignmentManager am = master.getAssignmentManager();
+      RegionStates regionStates = am.getRegionStates();
+      ServerName metaServer = regionStates.getRegionServerOfRegion(
+        HRegionInfo.FIRST_META_REGIONINFO);
+      ServerName oldServerName = null;
+      while (true) {
+        assertTrue(am.waitForAssignment(hri));
+        RegionState state = regionStates.getRegionState(hri);
+        oldServerName = state.getServerName();
+        if (!ServerName.isSameHostnameAndPort(oldServerName, metaServer)) {
+          // Mark the hosting server aborted, but don't actually kill it.
+          // It doesn't have meta on it.
+          MyRegionServer.abortedServer = oldServerName;
+          break;
+        }
+        int i = cluster.getServerWithMeta();
+        HRegionServer rs = cluster.getRegionServer(i == 0 ? 1 : 0);
+        oldServerName = rs.getServerName();
+        master.move(hri.getEncodedNameAsBytes(),
+          Bytes.toBytes(oldServerName.getServerName()));
+      }
+
+      // Make sure the region is assigned on the dead server
+      assertTrue(regionStates.isRegionOnline(hri));
+      assertEquals(oldServerName, regionStates.getRegionServerOfRegion(hri));
+
+      // Try to unassign the dead region before SSH
+      am.unassign(hri, false);
+      // The region should be moved to offline since the server is dead
+      RegionState state = regionStates.getRegionState(hri);
+      assertTrue(state.isOffline());
+
+      // Disable the table now.
+      master.disableTable(hri.getTable());
+
+      // Kill the hosting server, which doesn't have meta on it.
+      cluster.killRegionServer(oldServerName);
+      cluster.waitForRegionServerToStop(oldServerName, -1);
+
+      ServerManager serverManager = master.getServerManager();
+      while (!serverManager.isServerDead(oldServerName)
+          || serverManager.getDeadServers().areDeadServersInProgress()) {
+        Thread.sleep(100);
+      }
+
+      // Wait till no more RIT, the region should be offline.
+      am.waitUntilNoRegionsInTransition(60000);
+      assertTrue(regionStates.isRegionOffline(hri));
+    } finally {
+      MyRegionServer.abortedServer = null;
+      TEST_UTIL.deleteTable(Bytes.toBytes(table));
+      cluster.startRegionServer();
+    }
+  }
+
   static class MyLoadBalancer extends StochasticLoadBalancer {
     // For this region, if specified, always assign to nowhere
     static volatile String controledRegion = null;
@@ -872,6 +1030,21 @@ public class TestAssignmentManagerOnCluster {
       if (enabled) {
         serverManager.processQueuedDeadServers();
       }
+    }
+  }
+
+  public static class MyRegionServer extends MiniHBaseClusterRegionServer {
+    static volatile ServerName abortedServer = null;
+
+    public MyRegionServer(Configuration conf, CoordinatedStateManager cp)
+      throws IOException, KeeperException,
+        InterruptedException {
+      super(conf, cp);
+    }
+
+    @Override
+    public boolean isAborted() {
+      return getServerName().equals(abortedServer) || super.isAborted();
     }
   }
 
