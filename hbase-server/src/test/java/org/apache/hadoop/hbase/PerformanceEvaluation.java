@@ -609,6 +609,142 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.randomSleep = that.randomSleep;
     }
 
+    public String getCmdName() {
+      return cmdName;
+    }
+
+    public void setCmdName(String cmdName) {
+      this.cmdName = cmdName;
+    }
+
+    public int getRandomSleep() {
+      return randomSleep;
+    }
+
+    public void setRandomSleep(int randomSleep) {
+      this.randomSleep = randomSleep;
+    }
+
+    public int getReplicas() {
+      return replicas;
+    }
+
+    public void setReplicas(int replicas) {
+      this.replicas = replicas;
+    }
+
+    public String getSplitPolicy() {
+      return splitPolicy;
+    }
+
+    public void setSplitPolicy(String splitPolicy) {
+      this.splitPolicy = splitPolicy;
+    }
+
+    public void setNomapred(boolean nomapred) {
+      this.nomapred = nomapred;
+    }
+
+    public void setFilterAll(boolean filterAll) {
+      this.filterAll = filterAll;
+    }
+
+    public void setStartRow(int startRow) {
+      this.startRow = startRow;
+    }
+
+    public void setSize(float size) {
+      this.size = size;
+    }
+
+    public void setPerClientRunRows(int perClientRunRows) {
+      this.perClientRunRows = perClientRunRows;
+    }
+
+    public void setNumClientThreads(int numClientThreads) {
+      this.numClientThreads = numClientThreads;
+    }
+
+    public void setTotalRows(int totalRows) {
+      this.totalRows = totalRows;
+    }
+
+    public void setSampleRate(float sampleRate) {
+      this.sampleRate = sampleRate;
+    }
+
+    public void setTraceRate(double traceRate) {
+      this.traceRate = traceRate;
+    }
+
+    public void setTableName(String tableName) {
+      this.tableName = tableName;
+    }
+
+    public void setFlushCommits(boolean flushCommits) {
+      this.flushCommits = flushCommits;
+    }
+
+    public void setWriteToWAL(boolean writeToWAL) {
+      this.writeToWAL = writeToWAL;
+    }
+
+    public void setAutoFlush(boolean autoFlush) {
+      this.autoFlush = autoFlush;
+    }
+
+    public void setOneCon(boolean oneCon) {
+      this.oneCon = oneCon;
+    }
+
+    public void setUseTags(boolean useTags) {
+      this.useTags = useTags;
+    }
+
+    public void setNoOfTags(int noOfTags) {
+      this.noOfTags = noOfTags;
+    }
+
+    public void setReportLatency(boolean reportLatency) {
+      this.reportLatency = reportLatency;
+    }
+
+    public void setMultiGet(int multiGet) {
+      this.multiGet = multiGet;
+    }
+
+    public void setInMemoryCF(boolean inMemoryCF) {
+      this.inMemoryCF = inMemoryCF;
+    }
+
+    public void setPresplitRegions(int presplitRegions) {
+      this.presplitRegions = presplitRegions;
+    }
+
+    public void setCompression(Compression.Algorithm compression) {
+      this.compression = compression;
+    }
+
+    public void setBloomType(BloomType bloomType) {
+      this.bloomType = bloomType;
+    }
+
+    public void setBlockEncoding(DataBlockEncoding blockEncoding) {
+      this.blockEncoding = blockEncoding;
+    }
+
+    public void setValueRandom(boolean valueRandom) {
+      this.valueRandom = valueRandom;
+    }
+
+    public void setValueSize(int valueSize) {
+      this.valueSize = valueSize;
+    }
+
+    public void setPeriod(int period) {
+      this.period = period;
+    }
+
     public boolean isNomapred() {
       return nomapred;
     }
@@ -1615,7 +1751,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
         continue;
       }
 
-      final String bloomFilter = "--bloomFilter";
+      final String bloomFilter = "--bloomFilter=";
       if (cmd.startsWith(bloomFilter)) {
         opts.bloomType = BloomType.valueOf(cmd.substring(bloomFilter.length()));
         continue;
