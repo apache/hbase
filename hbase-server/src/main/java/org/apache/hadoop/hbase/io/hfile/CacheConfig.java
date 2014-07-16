@@ -113,13 +113,6 @@ public class CacheConfig {
   public static final String BUCKET_CACHE_COMBINED_KEY = 
       "hbase.bucketcache.combinedcache.enabled";
 
-  /**
-   * A float which designates how much of the overall cache to give to bucket cache
-   * and how much to on-heap lru cache when {@link #BUCKET_CACHE_COMBINED_KEY} is set.
-   */
-  public static final String BUCKET_CACHE_COMBINED_PERCENTAGE_KEY =
-      "hbase.bucketcache.percentage.in.combinedcache";
-
   public static final String BUCKET_CACHE_WRITER_THREADS_KEY = "hbase.bucketcache.writer.threads";
   public static final String BUCKET_CACHE_WRITER_QUEUE_KEY = 
       "hbase.bucketcache.writer.queuelength";
@@ -451,7 +444,7 @@ public class CacheConfig {
   @VisibleForTesting
   static boolean blockCacheDisabled = false;
 
-  private static long getLruCacheSize(final Configuration conf, final MemoryUsage mu) {
+  static long getLruCacheSize(final Configuration conf, final MemoryUsage mu) {
     float cachePercentage = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
       HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
     if (cachePercentage <= 0.0001f) {
@@ -468,7 +461,68 @@ public class CacheConfig {
   }
 
   /**
+   * @param c Configuration to use.
+   * @param mu JMX Memory Bean
+   * @return An L1 instance.  Currently an instance of LruBlockCache.
+   */
+  private static LruBlockCache getL1(final Configuration c, final MemoryUsage mu) {
+    long lruCacheSize = getLruCacheSize(c, mu);
+    int blockSize = c.getInt("hbase.offheapcache.minblocksize", HConstants.DEFAULT_BLOCKSIZE);
+    LOG.info("Allocating LruBlockCache size=" +
+      StringUtils.byteDesc(lruCacheSize) + ", blockSize=" + StringUtils.byteDesc(blockSize));
+    return new LruBlockCache(lruCacheSize, blockSize, true, c);
+  }
+
+  /**
+   * @param c Configuration to use.
+   * @param mu JMX Memory Bean
+   * @return Returns L2 block cache instance (for now it is BucketCache BlockCache all the time)
+   * or null if not supposed to be a L2.
+   */
+  private static BucketCache getL2(final Configuration c, final MemoryUsage mu) {
+    // Check for L2.  ioengine name must be non-null.
+    String bucketCacheIOEngineName = c.get(BUCKET_CACHE_IOENGINE_KEY, null);
+    if (bucketCacheIOEngineName == null || bucketCacheIOEngineName.length() <= 0) return null;
+
+    int blockSize = c.getInt("hbase.offheapcache.minblocksize", HConstants.DEFAULT_BLOCKSIZE);
+    float bucketCachePercentage = c.getFloat(BUCKET_CACHE_SIZE_KEY, 0F);
+    long bucketCacheSize = (long) (bucketCachePercentage < 1? mu.getMax() * bucketCachePercentage:
+      bucketCachePercentage * 1024 * 1024);
+    if (bucketCacheSize <= 0) {
+      throw new IllegalStateException("bucketCacheSize <= 0; Check " +
+        BUCKET_CACHE_SIZE_KEY + " setting and/or server java heap size");
+    }
+    int writerThreads = c.getInt(BUCKET_CACHE_WRITER_THREADS_KEY,
+      DEFAULT_BUCKET_CACHE_WRITER_THREADS);
+    int writerQueueLen = c.getInt(BUCKET_CACHE_WRITER_QUEUE_KEY,
+      DEFAULT_BUCKET_CACHE_WRITER_QUEUE);
+    String persistentPath = c.get(BUCKET_CACHE_PERSISTENT_PATH_KEY);
+    String[] configuredBucketSizes = c.getStrings(BUCKET_CACHE_BUCKETS_KEY);
+    int [] bucketSizes = null;
+    if (configuredBucketSizes != null) {
+      bucketSizes = new int[configuredBucketSizes.length];
+      for (int i = 0; i < configuredBucketSizes.length; i++) {
+        bucketSizes[i] = Integer.parseInt(configuredBucketSizes[i]);
+      }
+    }
+    BucketCache bucketCache = null;
+    try {
+      int ioErrorsTolerationDuration = c.getInt(
+        "hbase.bucketcache.ioengine.errors.tolerated.duration",
+        BucketCache.DEFAULT_ERROR_TOLERATION_DURATION);
+      // Bucket cache logs its stats on creation internal to the constructor.
+      bucketCache = new BucketCache(bucketCacheIOEngineName,
+        bucketCacheSize, blockSize, bucketSizes, writerThreads, writerQueueLen, persistentPath,
+        ioErrorsTolerationDuration);
+    } catch (IOException ioex) {
+      LOG.error("Can't instantiate bucket cache", ioex); throw new RuntimeException(ioex);
+    }
+    return bucketCache;
+  }
+
+  /**
    * Returns the block cache or <code>null</code> in case none should be used.
+   * Sets GLOBAL_BLOCK_CACHE_INSTANCE
    *
    * @param conf  The current configuration.
    * @return The block cache or <code>null</code>.
@@ -477,67 +531,23 @@ public class CacheConfig {
     if (GLOBAL_BLOCK_CACHE_INSTANCE != null) return GLOBAL_BLOCK_CACHE_INSTANCE;
     if (blockCacheDisabled) return null;
     MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
-    long lruCacheSize = getLruCacheSize(conf, mu);
-    int blockSize = conf.getInt("hbase.offheapcache.minblocksize", HConstants.DEFAULT_BLOCKSIZE);
-
-    String bucketCacheIOEngineName = conf.get(BUCKET_CACHE_IOENGINE_KEY, null);
-    float bucketCachePercentage = conf.getFloat(BUCKET_CACHE_SIZE_KEY, 0F);
-    // A percentage of max heap size or a absolute value with unit megabytes
-    long bucketCacheSize = (long) (bucketCachePercentage < 1 ? mu.getMax()
-      * bucketCachePercentage : bucketCachePercentage * 1024 * 1024);
-
-    boolean combinedWithLru = conf.getBoolean(BUCKET_CACHE_COMBINED_KEY,
-      DEFAULT_BUCKET_CACHE_COMBINED);
-    BucketCache bucketCache = null;
-    if (bucketCacheIOEngineName != null && bucketCacheSize > 0) {
-      int writerThreads = conf.getInt(BUCKET_CACHE_WRITER_THREADS_KEY,
-        DEFAULT_BUCKET_CACHE_WRITER_THREADS);
-      int writerQueueLen = conf.getInt(BUCKET_CACHE_WRITER_QUEUE_KEY,
-        DEFAULT_BUCKET_CACHE_WRITER_QUEUE);
-      String persistentPath = conf.get(BUCKET_CACHE_PERSISTENT_PATH_KEY);
-      float combinedPercentage = conf.getFloat(BUCKET_CACHE_COMBINED_PERCENTAGE_KEY,
-        DEFAULT_BUCKET_CACHE_COMBINED_PERCENTAGE);
-      String[] configuredBucketSizes = conf.getStrings(BUCKET_CACHE_BUCKETS_KEY);
-      int [] bucketSizes = null;
-      if (configuredBucketSizes != null) {
-        bucketSizes = new int[configuredBucketSizes.length];
-        for (int i = 0; i < configuredBucketSizes.length; i++) {
-          bucketSizes[i] = Integer.parseInt(configuredBucketSizes[i]);
-        }
-      }
-      if (combinedWithLru) {
-        lruCacheSize = (long) ((1 - combinedPercentage) * bucketCacheSize);
-        bucketCacheSize = (long) (combinedPercentage * bucketCacheSize);
-      }
-      LOG.info("Allocating LruBlockCache size=" +
-        StringUtils.byteDesc(lruCacheSize) + ", blockSize=" + StringUtils.byteDesc(blockSize));
-      LruBlockCache lruCache = new LruBlockCache(lruCacheSize, blockSize, true, conf);
-      try {
-        int ioErrorsTolerationDuration = conf.getInt(
-          "hbase.bucketcache.ioengine.errors.tolerated.duration",
-          BucketCache.DEFAULT_ERROR_TOLERATION_DURATION);
-        bucketCache = new BucketCache(bucketCacheIOEngineName,
-          bucketCacheSize, blockSize, bucketSizes, writerThreads, writerQueueLen, persistentPath,
-          ioErrorsTolerationDuration);
-      } catch (IOException ioex) {
-        LOG.error("Can't instantiate bucket cache", ioex);
-        throw new RuntimeException(ioex);
-      }
-      if (combinedWithLru) {
-        GLOBAL_BLOCK_CACHE_INSTANCE = new CombinedBlockCache(lruCache, bucketCache);
-      } else {
-        GLOBAL_BLOCK_CACHE_INSTANCE = lruCache;
-      }
-      lruCache.setVictimCache(bucketCache);
-    }
-    LOG.info("Allocating LruBlockCache size=" +
-      StringUtils.byteDesc(lruCacheSize) + ", blockSize=" + StringUtils.byteDesc(blockSize));
-    LruBlockCache lruCache = new LruBlockCache(lruCacheSize, blockSize);
-    lruCache.setVictimCache(bucketCache);
-    if (bucketCache != null && combinedWithLru) {
-      GLOBAL_BLOCK_CACHE_INSTANCE = new CombinedBlockCache(lruCache, bucketCache);
+    LruBlockCache l1 = getL1(conf, mu);
+    BucketCache l2 = getL2(conf, mu);
+    if (l2 == null) {
+      GLOBAL_BLOCK_CACHE_INSTANCE = l1;
     } else {
-      GLOBAL_BLOCK_CACHE_INSTANCE = lruCache;
+      boolean combinedWithLru = conf.getBoolean(BUCKET_CACHE_COMBINED_KEY,
+        DEFAULT_BUCKET_CACHE_COMBINED);
+      if (combinedWithLru) {
+        GLOBAL_BLOCK_CACHE_INSTANCE = new CombinedBlockCache(l1, l2);
+      } else {
+        // L1 and L2 are not 'combined'.  They are connected via the LruBlockCache victimhandler
+        // mechanism.  It is a little ugly but works according to the following: when the
+        // background eviction thread runs, blocks evicted from L1 will go to L2 AND when we get
+        // a block from the L1 cache, if not in L1, we will search L2.
+        l1.setVictimCache(l2);
+        GLOBAL_BLOCK_CACHE_INSTANCE = l1;
+      }
     }
     return GLOBAL_BLOCK_CACHE_INSTANCE;
   }
