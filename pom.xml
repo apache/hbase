@@ -804,13 +804,13 @@
             <configuration>
               <navigShowtitles>true</navigShowtitles>
               <chunkedOutput>true</chunkedOutput>
-              <imgSrcPath>${basedir}/src/main/docbkx/images/</imgSrcPath>
+              <imgSrcPath>${basedir}/src/main/site/resources/images/</imgSrcPath>
               <htmlStylesheet>../css/freebsd_docbook.css</htmlStylesheet>
               <targetDirectory>${basedir}/target/docbkx/book</targetDirectory>
               <preProcess>
                 <copy todir="target/docbkx/book">
-                  <fileset dir="src/main/docbkx/images/" />
-                  <fileset dir="src/main/docbkx/css/" />
+                    <fileset dir="src/main/site/resources/images/" />
+                    <fileset dir="src/main/site/resources/css/" />
                 </copy>
               </preProcess>
             </configuration>
@@ -822,13 +822,13 @@
             </goals>
             <phase>pre-site</phase>
             <configuration>
-              <imgSrcPath>${basedir}/src/main/docbkx/images/</imgSrcPath>
+                <imgSrcPath>${basedir}/src/main/site/resources/images/</imgSrcPath>
               <htmlStylesheet>css/freebsd_docbook.css</htmlStylesheet>
               <targetDirectory>${basedir}/target/docbkx/</targetDirectory>
               <preProcess>
                 <copy todir="target/docbkx/book">
-                  <fileset dir="src/main/docbkx/images/" />
-                  <fileset dir="src/main/docbkx/css/" />
+                    <fileset dir="src/main/site/resources/images/" />
+                    <fileset dir="src/main/site/resources/css/" />
                 </copy>
               </preProcess>
             </configuration>
