@@ -65,9 +65,6 @@ public class TestReplicaWithCluster {
   private static final int NB_SERVERS = 2;
   private static final byte[] row = TestReplicaWithCluster.class.getName().getBytes();
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
-
-  // second minicluster used in testing of replication
-  private static HBaseTestingUtility HTU2;
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
   private final static int REFRESH_PERIOD = 1000;
@@ -129,7 +126,6 @@ public class TestReplicaWithCluster {
 
   @AfterClass
   public static void afterClass() throws Exception {
-    HTU2.shutdownMiniCluster();
     HTU.shutdownMiniCluster();
   }
 
@@ -214,13 +210,17 @@ public class TestReplicaWithCluster {
 
     HTU.getHBaseCluster().stopMaster(0);
     HBaseAdmin admin = new HBaseAdmin(HTU.getConfiguration());
-    nHdt =admin.getTableDescriptor(hdt.getTableName());
-    Assert.assertEquals("fams=" + Arrays.toString(nHdt.getColumnFamilies()),
+    try {
+      nHdt = admin.getTableDescriptor(hdt.getTableName());
+      Assert.assertEquals("fams=" + Arrays.toString(nHdt.getColumnFamilies()),
         bHdt.getColumnFamilies().length + 1, nHdt.getColumnFamilies().length);
 
-    admin.disableTable(hdt.getTableName());
-    admin.deleteTable(hdt.getTableName());
-    HTU.getHBaseCluster().startMaster();
+      admin.disableTable(hdt.getTableName());
+      admin.deleteTable(hdt.getTableName());
+      HTU.getHBaseCluster().startMaster();
+    } finally {
+      if (admin != null) admin.close();
+    }
   }
 
   @Test (timeout=30000)
@@ -239,27 +239,30 @@ public class TestReplicaWithCluster {
     conf2.set(HConstants.HBASE_CLIENT_INSTANCE_ID, String.valueOf(-1));
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
     MiniZooKeeperCluster miniZK = HTU.getZkCluster();
-
-    HTU2 = new HBaseTestingUtility(conf2);
+    HBaseTestingUtility HTU2 = new HBaseTestingUtility(conf2);
     HTU2.setZkCluster(miniZK);
     HTU2.startMiniCluster(NB_SERVERS);
     LOG.info("Setup second Zk");
     HTU2.getHBaseAdmin().createTable(hdt, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
 
     ReplicationAdmin admin = new ReplicationAdmin(HTU.getConfiguration());
-    admin.addPeer("2", HTU2.getClusterKey());
+    try {
+      admin.addPeer("2", HTU2.getClusterKey());
+    } finally {
+      if (admin != null) admin.close();
+    }
 
     Put p = new Put(row);
     p.add(row, row, row);
     final HTable table = new HTable(HTU.getConfiguration(), hdt.getTableName());
-    table.put(p);
+    try {
+      table.put(p);
+      HTU.getHBaseAdmin().flush(table.getTableName());
+      LOG.info("Put & flush done on the first cluster. Now doing a get on the same cluster.");
 
-    HTU.getHBaseAdmin().flush(table.getTableName());
-    LOG.info("Put & flush done on the first cluster. Now doing a get on the same cluster.");
-
-    Waiter.waitFor(HTU.getConfiguration(), 1000, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
+      Waiter.waitFor(HTU.getConfiguration(), 1000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
         try {
           SlowMeCopro.cdl.set(new CountDownLatch(1));
           Get g = new Get(row);
@@ -270,15 +273,18 @@ public class TestReplicaWithCluster {
         } finally {
           SlowMeCopro.cdl.get().countDown();
           SlowMeCopro.sleepTime.set(0);
-        }      }
-    });
-
+        }
+      }});
+    } finally {
+      if (table != null) table.close();
+    }
     LOG.info("stale get on the first cluster done. Now for the second.");
 
     final HTable table2 = new HTable(HTU.getConfiguration(), hdt.getTableName());
-    Waiter.waitFor(HTU.getConfiguration(), 1000, new Waiter.Predicate<Exception>() {
-      @Override
-      public boolean evaluate() throws Exception {
+    try {
+      Waiter.waitFor(HTU.getConfiguration(), 1000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
         try {
           SlowMeCopro.cdl.set(new CountDownLatch(1));
           Get g = new Get(row);
@@ -289,8 +295,11 @@ public class TestReplicaWithCluster {
         } finally {
           SlowMeCopro.cdl.get().countDown();
           SlowMeCopro.sleepTime.set(0);
-        }      }
-    });
+        }
+      }});
+    } finally {
+      if (table2 != null) table2.close();
+    }
 
     HTU.getHBaseAdmin().disableTable(hdt.getTableName());
     HTU.deleteTable(hdt.getTableName());
@@ -298,11 +307,10 @@ public class TestReplicaWithCluster {
     HTU2.getHBaseAdmin().disableTable(hdt.getTableName());
     HTU2.deleteTable(hdt.getTableName());
 
-    // We shutdown HTU2 minicluster later, in afterClass(), as shutting down
-    // the minicluster has negative impact of deleting all HConnections in JVM.
+    HTU2.shutdownMiniCluster();
   }
 
-  @Test (timeout=30000)
+  @Test
   public void testBulkLoad() throws IOException {
     // Create table then get the single region for our new table.
     LOG.debug("Creating test table");
