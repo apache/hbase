@@ -279,6 +279,7 @@ if [ "$COMMAND" = "shell" ] ; then
     CLASSPATH="$JRUBY_HOME/lib/jruby.jar:$CLASSPATH"
     HBASE_OPTS="$HBASE_OPTS -Djruby.home=$JRUBY_HOME -Djruby.lib=$JRUBY_HOME/lib"
   fi
+  HBASE_OPTS="$HBASE_OPTS $HBASE_SHELL_OPTS"
   CLASS="org.jruby.Main -X+O ${JRUBY_OPTS} ${HBASE_HOME}/bin/hirb.rb"
 elif [ "$COMMAND" = "hbck" ] ; then
   CLASS='org.apache.hadoop.hbase.util.HBaseFsck'
