@@ -275,6 +275,7 @@ if [ "$COMMAND" = "shell" ] ; then
   else
     HBASE_OPTS="$HBASE_OPTS -Dhbase.ruby.sources=$HBASE_HOME/hbase-shell/src/main/ruby"
   fi
+  HBASE_OPTS="$HBASE_OPTS $HBASE_SHELL_OPTS"
   CLASS="org.jruby.Main -X+O ${JRUBY_OPTS} ${HBASE_HOME}/bin/hirb.rb"
 elif [ "$COMMAND" = "hbck" ] ; then
   CLASS='org.apache.hadoop.hbase.util.HBaseFsck'
