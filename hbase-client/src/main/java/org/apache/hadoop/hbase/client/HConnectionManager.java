@@ -44,24 +44,18 @@ import org.apache.hadoop.hbase.security.User;
  *   connection.close();
  * }
  * }</pre>
- * <p>The following logic and API will be removed in the future:
  * <p>This class has a static Map of {@link HConnection} instances keyed by
- * {@link Configuration}; all invocations of {@link #getConnection(Configuration)}
- * that pass the same {@link Configuration} instance will be returned the same
- * {@link  HConnection} instance (Adding properties to a Configuration
- * instance does not change its object identity; for more on how this is done see
- * {@link HConnectionKey}).  Sharing {@link HConnection}
- * instances is usually what you want; all clients of the {@link HConnection}
- * instances share the HConnections' cache of Region locations rather than each
- * having to discover for itself the location of meta, etc.  It makes
- * sense for the likes of the pool of HTables class {@link HTablePool}, for
- * instance (If concerned that a single {@link HConnection} is insufficient
- * for sharing amongst clients in say an heavily-multithreaded environment,
- * in practise its not proven to be an issue.  Besides, {@link HConnection} is
- * implemented atop Hadoop RPC and as of this writing, Hadoop RPC does a
- * connection per cluster-member, exclusively).
- *
- * <p>But sharing connections makes clean up of {@link HConnection} instances a little awkward.
+ * {@link HConnectionKey}; A {@link HConnectionKey} is identified by a set of
+ * {@link Configuration} properties. Invocations of {@link #getConnection(Configuration)}
+ * that pass the same {@link Configuration} instance will return the same
+ * {@link  HConnection} instance ONLY WHEN the set of properties are the same
+ * (i.e. if you change properties in your {@link Configuration} instance, such as RPC timeout,
+ * the codec used, HBase will create a new {@link HConnection} instance. For more details on
+ * how this is done see {@link HConnectionKey}).
+ * <p>Sharing {@link HConnection} instances is usually what you want; all clients
+ * of the {@link HConnection} instances share the HConnections' cache of Region
+ * locations rather than each having to discover for itself the location of meta, etc.
+ * But sharing connections makes clean up of {@link HConnection} instances a little awkward.
  * Currently, clients cleanup by calling {@link #deleteConnection(Configuration)}. This will
  * shutdown the zookeeper connection the HConnection was using and clean up all
  * HConnection resources as well as stopping proxies to servers out on the
@@ -71,15 +65,15 @@ import org.apache.hadoop.hbase.security.User;
  * subsequently used by another will cause breakage so be careful running
  * cleanup.
  * <p>To create a {@link HConnection} that is not shared by others, you can
- * create a new {@link Configuration} instance, pass this new instance to
- * {@link #getConnection(Configuration)}, and then when done, close it up by
- * doing something like the following:
+ * set property "hbase.client.instance.id" to a unique value for your {@link Configuration}
+ * instance, like the following:
  * <pre>
  * {@code
- * Configuration newConfig = new Configuration(originalConf);
- * HConnection connection = HConnectionManager.getConnection(newConfig);
+ * conf.set("hbase.client.instance.id", "12345");
+ * HConnection connection = HConnectionManager.getConnection(conf);
  * // Use the connection to your hearts' delight and then when done...
- * HConnectionManager.deleteConnection(newConfig, true);
+ * conf.set("hbase.client.instance.id", "12345");
+ * HConnectionManager.deleteConnection(conf, true);
  * }
  * </pre>
  * <p>Cleanup used to be done inside in a shutdown hook.  On startup we'd
