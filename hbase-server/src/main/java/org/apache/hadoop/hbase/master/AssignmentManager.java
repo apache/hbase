@@ -1499,7 +1499,6 @@ public class AssignmentManager extends ZooKeeperListener {
       deleteNodeInStates(encodedName, "closed", null,
         EventType.RS_ZK_REGION_CLOSED, EventType.M_ZK_REGION_OFFLINE);
     }
-    LOG.debug("Removing region from replicasToClose " + regionInfo);
     replicasToClose.remove(regionInfo);
     regionOffline(regionInfo);
   }
