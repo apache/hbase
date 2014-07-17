@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 
@@ -81,6 +82,11 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
     // if this is a primary region, just return the StoreFileInfo constructed from path
     if (regionInfo.equals(regionInfoForFs)) {
       return new StoreFileInfo(conf, fs, status);
+    }
+
+    if (StoreFileInfo.isReference(status.getPath())) {
+      Reference reference = Reference.read(fs, status.getPath());
+      return new StoreFileInfo(conf, fs, status, reference);
     }
 
     // else create a store file link. The link file does not exists on filesystem though.

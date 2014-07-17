@@ -149,6 +149,23 @@ public class StoreFileInfo implements Comparable<StoreFileInfo> {
   }
 
   /**
+   * Create a Store File Info from an HFileLink
+   * @param conf
+   * @param fs
+   * @param fileStatus
+   * @param reference
+   * @throws IOException
+   */
+  public StoreFileInfo(final Configuration conf, final FileSystem fs, final FileStatus fileStatus,
+      final Reference reference)
+      throws IOException {
+    this.conf = conf;
+    this.fileStatus = fileStatus;
+    this.reference = reference;
+    this.link = null;
+  }
+
+  /**
    * Sets the region coprocessor env.
    * @param coprocessorHost
    */
