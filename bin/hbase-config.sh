@@ -122,22 +122,8 @@ fi
 # memory usage to explode. Tune the variable down to prevent vmem explosion.
 export MALLOC_ARENA_MAX=${MALLOC_ARENA_MAX:-4}
 
+# Now having JAVA_HOME defined is required 
 if [ -z "$JAVA_HOME" ]; then
-  for candidate in \
-    /usr/lib/jvm/java-6-sun \
-    /usr/lib/jvm/java-1.6.0-sun-1.6.0.*/jre \
-    /usr/lib/jvm/java-1.6.0-sun-1.6.0.* \
-    /usr/lib/j2sdk1.6-sun \
-    /usr/java/jdk1.6* \
-    /usr/java/jre1.6* \
-    /Library/Java/Home ; do
-    if [ -e $candidate/bin/java ]; then
-      export JAVA_HOME=$candidate
-      break
-    fi
-  done
-  # if we didn't set it
-  if [ -z "$JAVA_HOME" ]; then
     cat 1>&2 <<EOF
 +======================================================================+
 |      Error: JAVA_HOME is not set and Java could not be found         |
@@ -151,5 +137,4 @@ if [ -z "$JAVA_HOME" ]; then
 +======================================================================+
 EOF
     exit 1
-  fi
 fi
