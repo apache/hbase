@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -145,48 +144,48 @@ public class ProcedureCoordinator {
     String procName = proc.getName();
 
     // make sure we aren't already running a procedure of that name
-    synchronized (procedures) {
-      Procedure oldProc = procedures.get(procName);
-      if (oldProc != null) {
-        // procedures are always eventually completed on both successful and failed execution
-        try {
-          if (!oldProc.isCompleted()) {
-            LOG.warn("Procedure " + procName + " currently running.  Rejecting new request");
+    Procedure oldProc = procedures.get(procName);
+    if (oldProc != null) {
+      // procedures are always eventually completed on both successful and failed execution
+      try {
+        if (!oldProc.isCompleted()) {
+          LOG.warn("Procedure " + procName + " currently running.  Rejecting new request");
+          return false;
+        } else {
+          LOG.debug("Procedure " + procName
+              + " was in running list but was completed.  Accepting new attempt.");
+          if (!procedures.remove(procName, oldProc)) {
+            LOG.warn("Procedure " + procName
+                + " has been resubmitted by another thread. Rejecting this request.");
             return false;
           }
-          else {
-            LOG.debug("Procedure " + procName
-              + " was in running list but was completed.  Accepting new attempt.");
-            procedures.remove(procName);
-          }
-        } catch (ForeignException e) {
-          LOG.debug("Procedure " + procName
+        }
+      } catch (ForeignException e) {
+        LOG.debug("Procedure " + procName
             + " was in running list but has exception.  Accepting new attempt.");
-          procedures.remove(procName);
+        if (!procedures.remove(procName, oldProc)) {
+          LOG.warn("Procedure " + procName
+              + " has been resubmitted by another thread. Rejecting this request.");
+          return false;
         }
       }
     }
 
     // kick off the procedure's execution in a separate thread
-    Future<Void> f = null;
     try {
-      synchronized (procedures) {
-        this.procedures.put(procName, proc);
-        f = this.pool.submit(proc);
+      if (this.procedures.putIfAbsent(procName, proc) == null) {
+        this.pool.submit(proc);
+        return true;
+      } else {
+        LOG.error("Another thread has submitted procedure '" + procName + "'. Ignoring this attempt.");
+        return false;
       }
-      return true;
     } catch (RejectedExecutionException e) {
-      LOG.warn("Procedure " + procName + " rejected by execution pool.  Propagating error and " +
-          "cancelling operation.", e);
+      LOG.warn("Procedure " + procName + " rejected by execution pool.  Propagating error.", e);
       // Remove the procedure from the list since is not started
-      this.procedures.remove(procName);
+      this.procedures.remove(procName, proc);
       // the thread pool is full and we can't run the procedure
       proc.receive(new ForeignException(procName, e));
-
-      // cancel procedure proactively
-      if (f != null) {
-        f.cancel(true);
-      }
     }
     return false;
   }
@@ -217,13 +216,11 @@ public class ProcedureCoordinator {
    */
   public void abortProcedure(String procName, ForeignException reason) {
     // if we know about the Procedure, notify it
-    synchronized(procedures) {
-      Procedure proc = procedures.get(procName);
-      if (proc == null) {
-        return;
-      }
-      proc.receive(reason);
+    Procedure proc = procedures.get(procName);
+    if (proc == null) {
+      return;
     }
+    proc.receive(reason);
   }
 
   /**

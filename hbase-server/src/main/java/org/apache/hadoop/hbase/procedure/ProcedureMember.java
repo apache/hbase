@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -139,41 +138,36 @@ public class ProcedureMember implements Closeable {
     }
 
     // make sure we aren't already running an subprocedure of that name
-    Subprocedure rsub;
-    synchronized (subprocs) {
-      rsub = subprocs.get(procName);
-    }
+    Subprocedure rsub = subprocs.get(procName);
     if (rsub != null) {
       if (!rsub.isComplete()) {
         LOG.error("Subproc '" + procName + "' is already running. Bailing out");
         return false;
       }
       LOG.warn("A completed old subproc "  +  procName + " is still present, removing");
-      subprocs.remove(procName);
+      if (!subprocs.remove(procName, rsub)) {
+        LOG.error("Another thread has replaced existing subproc '" + procName + "'. Bailing out");
+        return false;
+      }
     }
 
     LOG.debug("Submitting new Subprocedure:" + procName);
 
     // kick off the subprocedure
-    Future<Void> future = null;
     try {
-      synchronized (subprocs) {
-        subprocs.put(procName, subproc);
+      if (subprocs.putIfAbsent(procName, subproc) == null) {
+        this.pool.submit(subproc);
+        return true;
+      } else {
+        LOG.error("Another thread has submitted subproc '" + procName + "'. Bailing out");
+        return false;
       }
-      future = this.pool.submit(subproc);
-      return true;
     } catch (RejectedExecutionException e) {
-      synchronized (subprocs) {
-        subprocs.remove(procName);
-      }
+      subprocs.remove(procName, subproc);
+
       // the thread pool is full and we can't run the subprocedure
       String msg = "Subprocedure pool is full!";
       subproc.cancel(msg, e.getCause());
-
-      // cancel all subprocedures proactively
-      if (future != null) {
-        future.cancel(true);
-      }
     }
 
     LOG.error("Failed to start subprocedure '" + procName + "'");
@@ -182,7 +176,7 @@ public class ProcedureMember implements Closeable {
 
    /**
     * Notification that procedure coordinator has reached the global barrier
-    * @param procName name of the subprocedure that should start running the the in-barrier phase
+    * @param procName name of the subprocedure that should start running the in-barrier phase
     */
    public void receivedReachedGlobalBarrier(String procName) {
      Subprocedure subproc = subprocs.get(procName);
