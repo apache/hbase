@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -32,6 +34,14 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * TableSnapshotInputFormat allows a MapReduce job to run over a table snapshot. Further
+ * documentation available on {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat}.
+ *
+ * @see org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat
+ */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class TableSnapshotInputFormat implements InputFormat<ImmutableBytesWritable, Result> {
 
   static class TableSnapshotRegionSplit implements InputSplit {
