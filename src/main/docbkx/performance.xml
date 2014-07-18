@@ -183,6 +183,8 @@
           save a bit of YGC churn and allocate in the old gen directly. </para>
         <para>For more information about GC logs, see <xref
             linkend="trouble.log.gc" />. </para>
+    <para>Consider also enabling the offheap Block Cache.  This has been shown to mitigate
+        GC pause times.  See <xref linkend="block.cache" /></para>
       </section>
     </section>
   </section>
@@ -723,6 +725,8 @@ htable.close();
           <methodname>setCacheBlocks</methodname> method. For input Scans to MapReduce jobs, this
         should be <varname>false</varname>. For frequently accessed rows, it is advisable to use the
         block cache.</para>
+
+    <para>Cache more data by moving your Block Cache offheap.  See <xref linkend="offheap.blockcache" /></para>
     </section>
     <section
       xml:id="perf.hbase.client.rowkeyonly">
