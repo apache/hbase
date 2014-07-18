@@ -46,32 +46,36 @@ if $PATCH -p0 -E --dry-run < $PATCH_FILE 2>&1 > $TMP; then
   # is adding new files and they would apply anywhere. So try to guess the
   # correct place to put those files.
 
-  TMP2=/tmp/tmp.paths.2.$$
-  TOCLEAN="$TOCLEAN $TMP2"
+#  NOTE 2014/07/17:
+#  Temporarily disabling below check since our jenkins boxes seems to be not defaulting to bash 
+#  causing below checks to fail. Once it is fixed, we can revert the commit and enable this again.
 
-  grep '^patching file ' $TMP | awk '{print $3}' | grep -v /dev/null | sort | uniq > $TMP2
-
-  #first off check that all of the files do not exist
-  FOUND_ANY=0
-  for CHECK_FILE in $(cat $TMP2)
-  do
-    if [[ -f $CHECK_FILE ]]; then
-      FOUND_ANY=1
-    fi
-  done
-
-  if [[ "$FOUND_ANY" = "0" ]]; then
-    #all of the files are new files so we have to guess where the correct place to put it is.
-
-    # if all of the lines start with a/ or b/, then this is a git patch that
-    # was generated without --no-prefix
-    if ! grep -qv '^a/\|^b/' $TMP2 ; then
-      echo Looks like this is a git patch. Stripping a/ and b/ prefixes
-      echo and incrementing PLEVEL
-      PLEVEL=$[$PLEVEL + 1]
-      sed -i -e 's,^[ab]/,,' $TMP2
-    fi
-  fi
+#  TMP2=/tmp/tmp.paths.2.$$
+#  TOCLEAN="$TOCLEAN $TMP2"
+#
+#  grep '^patching file ' $TMP | awk '{print $3}' | grep -v /dev/null | sort | uniq > $TMP2
+#
+#  #first off check that all of the files do not exist
+#  FOUND_ANY=0
+#  for CHECK_FILE in $(cat $TMP2)
+#  do
+#    if [[ -f $CHECK_FILE ]]; then
+#      FOUND_ANY=1
+#    fi
+#  done
+#
+#  if [[ "$FOUND_ANY" = "0" ]]; then
+#    #all of the files are new files so we have to guess where the correct place to put it is.
+#
+#    # if all of the lines start with a/ or b/, then this is a git patch that
+#    # was generated without --no-prefix
+#    if ! grep -qv '^a/\|^b/' $TMP2 ; then
+#      echo Looks like this is a git patch. Stripping a/ and b/ prefixes
+#      echo and incrementing PLEVEL
+#      PLEVEL=$[$PLEVEL + 1]
+#      sed -i -e 's,^[ab]/,,' $TMP2
+#    fi
+#  fi
 elif $PATCH -p1 -E --dry-run < $PATCH_FILE 2>&1 > /dev/null; then
   PLEVEL=1
 elif $PATCH -p2 -E --dry-run < $PATCH_FILE 2>&1 > /dev/null; then
