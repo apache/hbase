@@ -924,6 +924,25 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
+    <name>hbase.regionserver.thrift.framed</name>
+    <value>false</value>
+    <description>Use Thrift TFramedTransport on the server side.
+      This is the recommended transport for thrift servers and requires a similar setting
+      on the client side. Changing this to false will select the default transport,
+      vulnerable to DoS when malformed requests are issued due to THRIFT-601.
+    </description>
+  </property>
+  <property>
+   <name>hbase.regionserver.thrift.framed.max_frame_size_in_mb</name>
+    <value>2</value>
+    <description>Default frame size when using framed transport</description>
+  </property>
+  <property>
+    <name>hbase.regionserver.thrift.compact</name>
+    <value>false</value>
+    <description>Use Thrift TCompactProtocol binary serialization protocol.</description>
+  </property>
+  <property>
     <name>hbase.offheapcache.percentage</name>
     <value>0</value>
     <description>The amount of off heap space to be allocated towards the experimental
