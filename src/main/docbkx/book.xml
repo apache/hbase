@@ -2263,6 +2263,23 @@ rs.close();
                     <emphasis>Server Metrics: Memory</emphasis> tab in the UI.
                 </para>
             </note>
+              <note xml:id="hbase.bucketcache.percentage.in.combinedcache"><title>hbase.bucketcache.percentage.in.combinedcache</title>
+                  <para>This is a pre-HBase 1.0 configuration removed because it
+                      was confusing. It was a float that you would set to some value
+                      between 0.0 and 1.0.  Its default was 0.9. If the deploy was using
+                      CombinedBlockCache, then the LruBlockCache L1 size was calculated to
+                      be (1 - <varname>hbase.bucketcache.percentage.in.combinedcache</varname>) * <varname>size-of-bucketcache</varname> 
+                      and the BucketCache size was <varname>hbase.bucketcache.percentage.in.combinedcache</varname> * size-of-bucket-cache.
+                      where size-of-bucket-cache itself is EITHER the value of the configuration hbase.bucketcache.size
+                      IF it was specified as megabytes OR <varname>hbase.bucketcache.size</varname> * <varname>-XX:MaxDirectMemorySize</varname> if
+                      <varname>hbase.bucketcache.size</varname> between 0 and 1.0.
+                  </para>
+                  <para>In 1.0, it should be more straight-forward. L1 LruBlockCache size
+                      is set as a fraction of java heap using hfile.block.cache.size setting
+                      (not the best name) and L2 is set as above either in absolute
+                      megabytes or as a fraction of allocated maximum direct memory.
+                  </para>
+              </note>
           </section>
         </section>
       </section>
