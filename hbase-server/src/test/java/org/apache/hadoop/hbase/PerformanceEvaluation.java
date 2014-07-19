@@ -41,9 +41,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import com.google.common.base.Objects;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -90,15 +87,16 @@ import org.apache.hadoop.mapreduce.lib.reduce.LongSumReducer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.codehaus.jackson.map.ObjectMapper;
-
-import com.yammer.metrics.core.Histogram;
-import com.yammer.metrics.stats.UniformSample;
-import com.yammer.metrics.stats.Snapshot;
-
 import org.htrace.Sampler;
 import org.htrace.Trace;
 import org.htrace.TraceScope;
 import org.htrace.impl.ProbabilitySampler;
+
+import com.google.common.base.Objects;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.yammer.metrics.core.Histogram;
+import com.yammer.metrics.stats.Snapshot;
+import com.yammer.metrics.stats.UniformSample;
 
 /**
  * Script used evaluating HBase performance and scalability.  Runs a HBase
@@ -472,34 +470,47 @@ public class PerformanceEvaluation extends Configured implements Tool {
     return job;
   }
 
+  /**
+   * Per client, how many tasks will we run?  We divide number of rows by this number and have the
+   * client do the resulting count in a map task.
+   */
+  static int TASKS_PER_CLIENT = 10;
+
+  static String JOB_INPUT_FILENAME = "input.txt";
+
   /*
    * Write input file of offsets-per-client for the mapreduce job.
    * @param c Configuration
-   * @return Directory that contains file written.
+   * @return Directory that contains file written whose name is JOB_INPUT_FILENAME
    * @throws IOException
    */
-  private static Path writeInputFile(final Configuration c, final TestOptions opts) throws IOException {
+  static Path writeInputFile(final Configuration c, final TestOptions opts) throws IOException {
+    return writeInputFile(c, opts, new Path("."));
+  }
+
+  static Path writeInputFile(final Configuration c, final TestOptions opts, final Path basedir)
+  throws IOException {
     SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddHHmmss");
-    Path jobdir = new Path(PERF_EVAL_DIR, formatter.format(new Date()));
+    Path jobdir = new Path(new Path(basedir, PERF_EVAL_DIR), formatter.format(new Date()));
     Path inputDir = new Path(jobdir, "inputs");
 
     FileSystem fs = FileSystem.get(c);
     fs.mkdirs(inputDir);
 
-    Path inputFile = new Path(inputDir, "input.txt");
+    Path inputFile = new Path(inputDir, JOB_INPUT_FILENAME);
     PrintStream out = new PrintStream(fs.create(inputFile));
     // Make input random.
     Map<Integer, String> m = new TreeMap<Integer, String>();
     Hash h = MurmurHash.getInstance();
     int perClientRows = (opts.totalRows / opts.numClientThreads);
     try {
-      for (int i = 0; i < 10; i++) {
+      for (int i = 0; i < TASKS_PER_CLIENT; i++) {
         for (int j = 0; j < opts.numClientThreads; j++) {
           TestOptions next = new TestOptions(opts);
           next.startRow = (j * perClientRows) + (i * (perClientRows/10));
           next.perClientRunRows = perClientRows / 10;
           String s = MAPPER.writeValueAsString(next);
-          LOG.info("maptask input=" + s);
+          LOG.info("Client=" + j + ", maptask=" + i + ", input=" + s);
           int hash = h.hash(Bytes.toBytes(s));
           m.put(hash, s);
         }
@@ -579,6 +590,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     boolean valueZipf = false;
     int valueSize = DEFAULT_VALUE_LENGTH;
     int period = (this.perClientRunRows / 10) == 0? perClientRunRows: perClientRunRows / 10;
+    int cycles = 1;
 
     public TestOptions() {}
 
@@ -588,6 +600,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
      */
     public TestOptions(TestOptions that) {
       this.cmdName = that.cmdName;
+      this.cycles = that.cycles;
       this.nomapred = that.nomapred;
       this.startRow = that.startRow;
       this.size = that.size;
@@ -620,6 +633,14 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.randomSleep = that.randomSleep;
     }
 
+    public int getCycles() {
+      return this.cycles;
+    }
+
+    public void setCycles(final int cycles) {
+      this.cycles = cycles;
+    }
+ 
     public boolean isValueZipf() {
       return valueZipf;
     }
@@ -904,11 +925,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
      */
     Test(final HConnection con, final TestOptions options, final Status status) {
       this.connection = con;
-      this.conf = con.getConfiguration();
+      this.conf = con ==  null? null: this.connection.getConfiguration();
+      this.receiverHost = this.conf == null? null: SpanReceiverHost.getInstance(conf);
       this.opts = options;
       this.status = status;
       this.testName = this.getClass().getSimpleName();
-      receiverHost = SpanReceiverHost.getInstance(conf);
       if (options.traceRate >= 1.0) {
         this.traceSampler = Sampler.ALWAYS;
       } else if (options.traceRate > 0.0) {
@@ -918,7 +939,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       }
       everyN = (int) (opts.totalRows / (opts.totalRows * opts.sampleRate));
       if (options.isValueZipf()) {
-        this.zipf = new RandomDistribution.Zipf(this.rand, 1, options.getValueSize(), 1.1);
+        this.zipf = new RandomDistribution.Zipf(this.rand, 1, options.getValueSize(), 1.2);
       }
       LOG.info("Sampling 1 every " + everyN + " out of " + opts.perClientRunRows + " total rows.");
     }
@@ -1016,18 +1037,21 @@ public class PerformanceEvaluation extends Configured implements Tool {
     void testTimed() throws IOException, InterruptedException {
       int lastRow = opts.startRow + opts.perClientRunRows;
       // Report on completion of 1/10th of total.
-      for (int i = opts.startRow; i < lastRow; i++) {
-        if (i % everyN != 0) continue;
-        long startTime = System.nanoTime();
-        TraceScope scope = Trace.startSpan("test row", traceSampler);
-        try {
-          testRow(i);
-        } finally {
-          scope.close();
-        }
-        latency.update((System.nanoTime() - startTime) / 1000);
-        if (status != null && i > 0 && (i % getReportingPeriod()) == 0) {
-          status.setStatus(generateStatus(opts.startRow, i, lastRow));
+      for (int ii = 0; ii < opts.cycles; ii++) {
+        if (opts.cycles > 1) LOG.info("Cycle=" + ii + " of " + opts.cycles);
+        for (int i = opts.startRow; i < lastRow; i++) {
+          if (i % everyN != 0) continue;
+          long startTime = System.nanoTime();
+          TraceScope scope = Trace.startSpan("test row", traceSampler);
+          try {
+            testRow(i);
+          } finally {
+            scope.close();
+          }
+          latency.update((System.nanoTime() - startTime) / 1000);
+          if (status != null && i > 0 && (i % getReportingPeriod()) == 0) {
+            status.setStatus(generateStatus(opts.startRow, i, lastRow));
+          }
         }
       }
     }
@@ -1598,6 +1622,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" multiGet        Batch gets together into groups of N. Only supported " +
       "by randomRead. Default: disabled");
     System.err.println(" replicas        Enable region replica testing. Defaults: 1.");
+    System.err.println(" cycles          How many times to cycle the test. Defaults: 1.");
     System.err.println(" splitPolicy     Specify a custom RegionSplitPolicy for the table.");
     System.err.println(" randomSleep     Do a random sleep before each get between 0 and entered value. Defaults: 0");
     System.err.println();
@@ -1647,6 +1672,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
       final String rows = "--rows=";
       if (cmd.startsWith(rows)) {
         opts.perClientRunRows = Integer.parseInt(cmd.substring(rows.length()));
+        continue;
+      }
+
+      final String cycles = "--cycles=";
+      if (cmd.startsWith(cycles)) {
+        opts.cycles = Integer.parseInt(cmd.substring(cycles.length()));
         continue;
       }
 
@@ -1761,6 +1792,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       final String size = "--size=";
       if (cmd.startsWith(size)) {
         opts.size = Float.parseFloat(cmd.substring(size.length()));
+        if (opts.size <= 1.0f) throw new IllegalStateException("Size must be > 1; i.e. 1GB");
         continue;
       }
 
@@ -1815,24 +1847,34 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (isCommandClass(cmd)) {
         opts.cmdName = cmd;
         opts.numClientThreads = Integer.parseInt(args.remove());
-        int rowsPerGB = ONE_GB / (opts.valueRandom? opts.valueSize/2: opts.valueSize);
         if (opts.size != DEFAULT_OPTS.size &&
             opts.perClientRunRows != DEFAULT_OPTS.perClientRunRows) {
-          throw new IllegalArgumentException(rows + " and " + size + " are mutually exclusive arguments.");
+          throw new IllegalArgumentException(rows + " and " + size +
+            " are mutually exclusive options");
         }
-        if (opts.size != DEFAULT_OPTS.size) {
-          // total size in GB specified
-          opts.totalRows = (int) opts.size * rowsPerGB;
-          opts.perClientRunRows = opts.totalRows / opts.numClientThreads;
-        } else if (opts.perClientRunRows != DEFAULT_OPTS.perClientRunRows) {
-          // number of rows specified
-          opts.totalRows = opts.perClientRunRows * opts.numClientThreads;
-          opts.size = opts.totalRows / rowsPerGB;
-        }
+        opts = calculateRowsAndSize(opts);
         break;
       }
     }
     return opts;
+  }
+
+  static TestOptions calculateRowsAndSize(final TestOptions opts) {
+    int rowsPerGB = getRowsPerGB(opts);
+    if (opts.size != DEFAULT_OPTS.size) {
+      // total size in GB specified
+      opts.totalRows = (int) opts.size * rowsPerGB;
+      opts.perClientRunRows = opts.totalRows / opts.numClientThreads;
+    } else if (opts.perClientRunRows != DEFAULT_OPTS.perClientRunRows) {
+      // number of rows specified
+      opts.totalRows = opts.perClientRunRows * opts.numClientThreads;
+      opts.size = opts.totalRows / rowsPerGB;
+    }
+    return opts;
+  }
+
+  static int getRowsPerGB(final TestOptions opts) {
+    return ONE_GB / (opts.valueRandom? opts.valueSize/2: opts.valueSize);
   }
 
   @Override

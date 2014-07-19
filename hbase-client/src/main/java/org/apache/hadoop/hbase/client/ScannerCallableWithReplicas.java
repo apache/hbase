@@ -210,8 +210,8 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
       currentScannerCallable = scanner;
       // store where to start the replica scanner from if we need to.
       if (result != null && result.length != 0) this.lastResult = result[result.length - 1];
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Setting current scanner as " + currentScannerCallable.scannerId +
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Setting current scanner as " + currentScannerCallable.scannerId +
             " associated with " + currentScannerCallable.getHRegionInfo().getReplicaId());
       }
       // close all outstanding replica scanners but the one we heard back from
