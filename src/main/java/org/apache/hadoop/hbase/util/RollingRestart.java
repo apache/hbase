@@ -456,8 +456,7 @@ public class RollingRestart {
 
   private void removeFromBlackList() {
     try {
-      admin.getMaster().clearBlacklistedServer(
-          getHRegionConnection(serverAddr).getHServerInfo().getHostnamePort());
+      admin.getMaster().clearBlacklistedServer(serverAddr.getHostNameWithPort());
     } catch (IOException e) {
       LOG.error("Failed to remove the server from black list. Please remove it");
     }
