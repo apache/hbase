@@ -154,8 +154,6 @@ public class TableMapReduceUtil {
     initTableMapJob(snapshotName, columns, mapper, outputKeyClass, outputValueClass, job,
       addDependencyJars, TableSnapshotInputFormat.class);
     org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.resetCacheConfig(job);
-    // We would need even more libraries that hbase-server depends on
-    org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil.addDependencyJars(job, Counter.class);
   }
 
   /**

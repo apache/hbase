@@ -314,10 +314,7 @@ public class TableMapReduceUtil {
     TableSnapshotInputFormat.setInput(job, snapshotName, tmpRestoreDir);
     initTableMapperJob(snapshotName, scan, mapper, outputKeyClass,
         outputValueClass, job, addDependencyJars, false, TableSnapshotInputFormat.class);
-
     resetCacheConfig(job.getConfiguration());
-    // We would need even more libraries that hbase-server depends on
-    TableMapReduceUtil.addDependencyJars(job.getConfiguration(), Counter.class);
   }
 
   /**
@@ -719,7 +716,8 @@ public class TableMapReduceUtil {
       org.jboss.netty.channel.ChannelFactory.class,
       com.google.protobuf.Message.class,
       com.google.common.collect.Lists.class,
-      org.cloudera.htrace.Trace.class);
+      org.cloudera.htrace.Trace.class,
+      org.cliffc.high_scale_lib.Counter.class); // needed for mapred over snapshots
   }
 
   /**
