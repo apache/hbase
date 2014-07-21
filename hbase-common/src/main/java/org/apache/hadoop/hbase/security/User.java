@@ -248,15 +248,12 @@ public abstract class User {
     @Override
     public String getShortName() {
       if (shortName != null) return shortName;
-
       try {
-        shortName = (String)call(ugi, "getShortUserName", null, null);
+        shortName = ugi.getShortUserName();
         return shortName;
-      } catch (RuntimeException re) {
-        throw re;
       } catch (Exception e) {
-        throw new UndeclaredThrowableException(e,
-            "Unexpected error getting user short name");
+        throw new RuntimeException("Unexpected error getting user short name",
+          e);
       }
     }
 
