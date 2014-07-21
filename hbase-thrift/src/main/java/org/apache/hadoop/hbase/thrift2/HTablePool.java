@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.client;
+package org.apache.hadoop.hbase.thrift2;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
@@ -49,12 +50,14 @@ import com.google.protobuf.ServiceException;
  * Each HTablePool acts as a pool for all tables. To use, instantiate an
  * HTablePool and use {@link #getTable(String)} to get an HTable from the pool.
  *
-   * This method is not needed anymore, clients should call
-   * HTableInterface.close() rather than returning the tables to the pool
-   *
- * Once you are done with it, close your instance of {@link HTableInterface}
- * by calling {@link HTableInterface#close()} rather than returning the tables
- * to the pool with (deprecated) {@link #putTable(HTableInterface)}.
+ * This method is not needed anymore, clients should call
+ * HTableInterface.close() rather than returning the tables to the pool
+ *
+ * Once you are done with it, close your instance of
+ * {@link org.apache.hadoop.hbase.client.HTableInterface}
+ * by calling {@link org.apache.hadoop.hbase.client.HTableInterface#close()} rather than returning
+ * the tablesto the pool with (deprecated)
+ * {@link #putTable(org.apache.hadoop.hbase.client.HTableInterface)}.
  *
  * <p>
  * A pool can be created with a <i>maxSize</i> which defines the most HTable
@@ -63,11 +66,12 @@ import com.google.protobuf.ServiceException;
  *
  * <p>
  * Pool will manage its own connections to the cluster. See
- * {@link HConnectionManager}.
- * @deprecated as of 0.98.1. See {@link HConnection#getTable(String)}.
+ * {@link org.apache.hadoop.hbase.client.HConnectionManager}.
+ * Was @deprecated made @InterfaceAudience.private as of 0.98.1.
+ * See {@link org.apache.hadoop.hbase.client.HConnection#getTable(String)},
+ * Moved to thrift2 module for 2.0
  */
 @InterfaceAudience.Private
-@Deprecated
 public class HTablePool implements Closeable {
   private final PoolMap<String, HTableInterface> tables;
   private final int maxSize;
@@ -633,7 +637,8 @@ public class HTablePool implements Closeable {
 
     private void checkState() {
       if (!isOpen()) {
-        throw new IllegalStateException("Table=" + new String(table.getTableName()) + " already closed");
+        throw new IllegalStateException("Table=" + new String(table.getTableName())
+                + " already closed");
       }
     }
 

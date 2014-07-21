@@ -34,7 +34,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
-@Suite.SuiteClasses({TestPoolMap.TestRoundRobinPoolType.class, TestPoolMap.TestThreadLocalPoolType.class, TestPoolMap.TestReusablePoolType.class})
+@Suite.SuiteClasses({TestPoolMap.TestRoundRobinPoolType.class, TestPoolMap.TestThreadLocalPoolType.class,
+        TestPoolMap.TestReusablePoolType.class})
 @Category(SmallTests.class)
 public class TestPoolMap {
   public abstract static class TestPoolType extends TestCase {
