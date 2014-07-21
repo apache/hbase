@@ -150,23 +150,6 @@ public class TestKeyValue extends TestCase {
     metacomparisons(new KeyValue.MetaComparator());
   }
 
-  public void testBadMetaCompareSingleDelim() {
-    MetaComparator c = new KeyValue.MetaComparator();
-    long now = System.currentTimeMillis();
-    // meta keys values are not quite right.  A users can enter illegal values
-    // from shell when scanning meta.
-    KeyValue a = new KeyValue(Bytes.toBytes("table,a1"), now);
-    KeyValue b = new KeyValue(Bytes.toBytes("table,a2"), now);
-    try {
-      c.compare(a, b);
-    } catch (IllegalArgumentException iae) {
-      assertEquals("hbase:meta key must have two ',' delimiters and have the following" +
-      		" format: '<table>,<key>,<etc>'", iae.getMessage());
-      return;
-    }
-    fail("Expected IllegalArgumentException");
-  }
-
   public void testMetaComparatorTableKeysWithCommaOk() {
     MetaComparator c = new KeyValue.MetaComparator();
     long now = System.currentTimeMillis();
@@ -588,5 +571,50 @@ public class TestKeyValue extends TestCase {
     assertEquals((byte) 2, next.getType());
     Bytes.equals(next.getValue(), metaValue2);
     assertFalse(tagItr.hasNext());
+  }
+  
+  public void testMetaKeyComparator() {
+    MetaComparator c = new KeyValue.MetaComparator();
+    long now = System.currentTimeMillis();
+
+    KeyValue a = new KeyValue(Bytes.toBytes("table1"), now);
+    KeyValue b = new KeyValue(Bytes.toBytes("table2"), now);
+    assertTrue(c.compare(a, b) < 0);
+    
+    a = new KeyValue(Bytes.toBytes("table1,111"), now);
+    b = new KeyValue(Bytes.toBytes("table2"), now);
+    assertTrue(c.compare(a, b) < 0);
+    
+    a = new KeyValue(Bytes.toBytes("table1"), now);
+    b = new KeyValue(Bytes.toBytes("table2,111"), now);
+    assertTrue(c.compare(a, b) < 0);
+    
+    a = new KeyValue(Bytes.toBytes("table,111"), now);
+    b = new KeyValue(Bytes.toBytes("table,2222"), now);
+    assertTrue(c.compare(a, b) < 0);
+    
+    a = new KeyValue(Bytes.toBytes("table,111,aaaa"), now);
+    b = new KeyValue(Bytes.toBytes("table,2222"), now);
+    assertTrue(c.compare(a, b) < 0);
+    
+    a = new KeyValue(Bytes.toBytes("table,111"), now);
+    b = new KeyValue(Bytes.toBytes("table,2222.bbb"), now);
+    assertTrue(c.compare(a, b) < 0);
+
+    a = new KeyValue(Bytes.toBytes("table,,aaaa"), now);
+    b = new KeyValue(Bytes.toBytes("table,111,bbb"), now);
+    assertTrue(c.compare(a, b) < 0);
+    
+    a = new KeyValue(Bytes.toBytes("table,111,aaaa"), now);
+    b = new KeyValue(Bytes.toBytes("table,111,bbb"), now);
+    assertTrue(c.compare(a, b) < 0);
+
+    a = new KeyValue(Bytes.toBytes("table,111,xxxx"), now);
+    b = new KeyValue(Bytes.toBytes("table,111,222,bbb"), now);
+    assertTrue(c.compare(a, b) < 0);
+    
+    a = new KeyValue(Bytes.toBytes("table,111,11,xxx"), now);
+    b = new KeyValue(Bytes.toBytes("table,111,222,bbb"), now);
+    assertTrue(c.compare(a, b) < 0);
   }
 }
