@@ -44,7 +44,7 @@ import java.util.List;
 @InterfaceStability.Evolving
 public class TableSnapshotInputFormat implements InputFormat<ImmutableBytesWritable, Result> {
 
-  static class TableSnapshotRegionSplit implements InputSplit {
+  public static class TableSnapshotRegionSplit implements InputSplit {
     private TableSnapshotInputFormatImpl.InputSplit delegate;
 
     // constructor for mapreduce framework / Writable

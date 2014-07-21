@@ -89,8 +89,7 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
 
   private static final Log LOG = LogFactory.getLog(TableSnapshotInputFormat.class);
 
-  @VisibleForTesting
-  static class TableSnapshotRegionSplit extends InputSplit implements Writable {
+  public static class TableSnapshotRegionSplit extends InputSplit implements Writable {
     private TableSnapshotInputFormatImpl.InputSplit delegate;
 
     public TableSnapshotRegionSplit() {
