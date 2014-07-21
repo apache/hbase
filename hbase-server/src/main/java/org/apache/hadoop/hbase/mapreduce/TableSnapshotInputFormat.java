@@ -88,8 +88,7 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceStability.Evolving
 public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable, Result> {
 
-  @VisibleForTesting
-  static class TableSnapshotRegionSplit extends InputSplit implements Writable {
+  public static class TableSnapshotRegionSplit extends InputSplit implements Writable {
     private TableSnapshotInputFormatImpl.InputSplit delegate;
 
     // constructor for mapreduce framework / Writable
