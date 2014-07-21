@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 
@@ -237,16 +238,7 @@ public abstract class User {
     private String shortName;
 
     private SecureHadoopUser() throws IOException {
-      try {
-        ugi = (UserGroupInformation) callStatic("getCurrentUser");
-      } catch (IOException ioe) {
-        throw ioe;
-      } catch (RuntimeException re) {
-        throw re;
-      } catch (Exception e) {
-        throw new UndeclaredThrowableException(e,
-            "Unexpected exception getting current secure user");
-      }
+      ugi = UserGroupInformation.getCurrentUser();
     }
 
     private SecureHadoopUser(UserGroupInformation ugi) {
@@ -267,41 +259,20 @@ public abstract class User {
 
     @Override
     public <T> T runAs(PrivilegedAction<T> action) {
-      try {
-        return (T) call(ugi, "doAs", new Class[]{PrivilegedAction.class},
-            new Object[]{action});
-      } catch (RuntimeException re) {
-        throw re;
-      } catch (Exception e) {
-        throw new UndeclaredThrowableException(e,
-            "Unexpected exception in runAs()");
-      }
+      return ugi.doAs(action);
     }
 
     @Override
     public <T> T runAs(PrivilegedExceptionAction<T> action)
         throws IOException, InterruptedException {
-      try {
-        return (T) call(ugi, "doAs",
-            new Class[]{PrivilegedExceptionAction.class},
-            new Object[]{action});
-      } catch (IOException ioe) {
-        throw ioe;
-      } catch (InterruptedException ie) {
-        throw ie;
-      } catch (RuntimeException re) {
-        throw re;
-      } catch (Exception e) {
-        throw new UndeclaredThrowableException(e,
-            "Unexpected exception in runAs(PrivilegedExceptionAction)");
-      }
+      return ugi.doAs(action);
     }
 
     @Override
     public void obtainAuthTokenForJob(Configuration conf, Job job)
         throws IOException, InterruptedException {
       try {
-        Class c = Class.forName(
+        Class<?> c = Class.forName(
             "org.apache.hadoop.hbase.security.token.TokenUtil");
         Methods.call(c, null, "obtainTokenForJob",
             new Class[]{Configuration.class, UserGroupInformation.class,
@@ -326,7 +297,7 @@ public abstract class User {
     public void obtainAuthTokenForJob(JobConf job)
         throws IOException, InterruptedException {
       try {
-        Class c = Class.forName(
+        Class<?> c = Class.forName(
             "org.apache.hadoop.hbase.security.token.TokenUtil");
         Methods.call(c, null, "obtainTokenForJob",
             new Class[]{JobConf.class, UserGroupInformation.class},
@@ -349,18 +320,7 @@ public abstract class User {
     /** @see User#createUserForTesting(org.apache.hadoop.conf.Configuration, String, String[]) */
     public static User createUserForTesting(Configuration conf,
         String name, String[] groups) {
-      try {
-        return new SecureHadoopUser(
-            (UserGroupInformation)callStatic("createUserForTesting",
-                new Class[]{String.class, String[].class},
-                new Object[]{name, groups})
-        );
-      } catch (RuntimeException re) {
-        throw re;
-      } catch (Exception e) {
-        throw new UndeclaredThrowableException(e,
-            "Error creating secure test user");
-      }
+      return new SecureHadoopUser(UserGroupInformation.createUserForTesting(name, groups));
     }
 
     /**
@@ -378,26 +338,7 @@ public abstract class User {
     public static void login(Configuration conf, String fileConfKey,
         String principalConfKey, String localhost) throws IOException {
       if (isSecurityEnabled()) {
-        // check for SecurityUtil class
-        try {
-          Class c = Class.forName("org.apache.hadoop.security.SecurityUtil");
-          Class[] types = new Class[]{
-              Configuration.class, String.class, String.class, String.class };
-          Object[] args = new Object[]{
-              conf, fileConfKey, principalConfKey, localhost };
-          Methods.call(c, null, "login", types, args);
-        } catch (ClassNotFoundException cnfe) {
-          throw new RuntimeException("Unable to login using " +
-              "org.apache.hadoop.security.SecurityUtil.login(). SecurityUtil class " +
-              "was not found!  Is this a version of secure Hadoop?", cnfe);
-        } catch (IOException ioe) {
-          throw ioe;
-        } catch (RuntimeException re) {
-          throw re;
-        } catch (Exception e) {
-          throw new UndeclaredThrowableException(e,
-              "Unhandled exception in User.login()");
-        }
+        SecurityUtil.login(conf, fileConfKey, principalConfKey, localhost);
       }
     }
 
@@ -405,30 +346,7 @@ public abstract class User {
      * Returns the result of {@code UserGroupInformation.isSecurityEnabled()}.
      */
     public static boolean isSecurityEnabled() {
-      try {
-        return (Boolean)callStatic("isSecurityEnabled");
-      } catch (RuntimeException re) {
-        throw re;
-      } catch (Exception e) {
-        throw new UndeclaredThrowableException(e,
-            "Unexpected exception calling UserGroupInformation.isSecurityEnabled()");
-      }
+      return UserGroupInformation.isSecurityEnabled();
     }
-  }
-
-  /* Reflection helper methods */
-  private static Object callStatic(String methodName) throws Exception {
-    return call(null, methodName, null, null);
-  }
-
-  private static Object callStatic(String methodName, Class[] types,
-      Object[] args) throws Exception {
-    return call(null, methodName, types, args);
-  }
-
-  private static Object call(UserGroupInformation instance, String methodName,
-      Class[] types, Object[] args) throws Exception {
-    return Methods.call(UserGroupInformation.class, instance, methodName, types,
-        args);
   }
 }
