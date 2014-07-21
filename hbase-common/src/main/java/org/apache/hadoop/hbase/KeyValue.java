@@ -1664,20 +1664,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
   }
 
   /**
-   * This function is only used in Meta key comparisons so its error message
-   * is specific for meta key errors.
-   */
-  static int getRequiredDelimiterInReverse(final byte [] b,
-      final int offset, final int length, final int delimiter) {
-    int index = getDelimiterInReverse(b, offset, length, delimiter);
-    if (index < 0) {
-      throw new IllegalArgumentException("hbase:meta key must have two '" + (char)delimiter + "' "
-        + "delimiters and have the following format: '<table>,<key>,<etc>'");
-    }
-    return index;
-  }
-
-  /**
    * @param b
    * @param delimiter
    * @return Index of delimiter having started from start of <code>b</code>
@@ -1749,35 +1735,44 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
           HConstants.DELIMITER);
       int rightDelimiter = getDelimiter(right, roffset, rlength,
           HConstants.DELIMITER);
-      if (leftDelimiter < 0 && rightDelimiter >= 0) {
-        // Nothing between hbase:meta and regionid.  Its first key.
-        return -1;
-      } else if (rightDelimiter < 0 && leftDelimiter >= 0) {
-        return 1;
-      } else if (leftDelimiter < 0 && rightDelimiter < 0) {
-        return 0;
-      }
       // Compare up to the delimiter
-      int result = Bytes.compareTo(left, loffset, leftDelimiter - loffset,
-          right, roffset, rightDelimiter - roffset);
+      int lpart = (leftDelimiter < 0 ? llength :leftDelimiter - loffset);
+      int rpart = (rightDelimiter < 0 ? rlength :rightDelimiter - roffset);
+      int result = Bytes.compareTo(left, loffset, lpart, right, roffset, rpart);
       if (result != 0) {
         return result;
+      } else {
+        if (leftDelimiter < 0 && rightDelimiter >= 0) {
+          return -1;
+        } else if (rightDelimiter < 0 && leftDelimiter >= 0) {
+          return 1;
+        } else if (leftDelimiter < 0 && rightDelimiter < 0) {
+          return 0;
+        }
       }
       // Compare middle bit of the row.
       // Move past delimiter
       leftDelimiter++;
       rightDelimiter++;
-      int leftFarDelimiter = getRequiredDelimiterInReverse(left, leftDelimiter,
+      int leftFarDelimiter = getDelimiterInReverse(left, leftDelimiter,
           llength - (leftDelimiter - loffset), HConstants.DELIMITER);
-      int rightFarDelimiter = getRequiredDelimiterInReverse(right,
+      int rightFarDelimiter = getDelimiterInReverse(right,
           rightDelimiter, rlength - (rightDelimiter - roffset),
           HConstants.DELIMITER);
       // Now compare middlesection of row.
-      result = super.compareRows(left, leftDelimiter,
-          leftFarDelimiter - leftDelimiter, right, rightDelimiter,
-          rightFarDelimiter - rightDelimiter);
+      lpart = (leftFarDelimiter < 0 ? llength + loffset: leftFarDelimiter) - leftDelimiter;
+      rpart = (rightFarDelimiter < 0 ? rlength + roffset: rightFarDelimiter)- rightDelimiter;
+      result = super.compareRows(left, leftDelimiter, lpart, right, rightDelimiter, rpart);
       if (result != 0) {
         return result;
+      }  else {
+        if (leftDelimiter < 0 && rightDelimiter >= 0) {
+          return -1;
+        } else if (rightDelimiter < 0 && leftDelimiter >= 0) {
+          return 1;
+        } else if (leftDelimiter < 0 && rightDelimiter < 0) {
+          return 0;
+        }
       }
       // Compare last part of row, the rowid.
       leftFarDelimiter++;
