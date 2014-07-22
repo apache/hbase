@@ -53,7 +53,7 @@ com.yammer.metrics.stats.Snapshot;
   }
   CachedBlocksByFile cbsbf = BlockCacheUtil.getLoadedCachedBlocksByFile(conf, bc);
 </%java>
-<%if bcv.equals("file") %><& bc_by_file; cbsbf = cbsbf; &><%else><% BlockCacheUtil.toJSON(bc) %></%if>
+<%if bcv.equals("file") %><& bc_by_file; cbsbf = cbsbf; &><%else>{<% BlockCacheUtil.toJSON(bc) %>, <% cbsbf %> }</%if>
 <%java>
 cbsbf = null;
 </%java>
