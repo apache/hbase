@@ -1054,7 +1054,12 @@ public class RpcClient {
           LOG.debug(getName() + ": wrote request header " + TextFormat.shortDebugString(header));
         }
       } catch(IOException e) {
-        markClosed(e);
+        synchronized (this) {
+          if (!shouldCloseConnection.get()) {
+            markClosed(e);
+            interrupt();
+          }
+        }
       }
     }
 
