@@ -136,7 +136,7 @@ public final class TableName implements Comparable<TableName> {
 
     int namespaceDelimIndex = com.google.common.primitives.Bytes.lastIndexOf(tableName,
         (byte) NAMESPACE_DELIM);
-    if (namespaceDelimIndex == 0 || namespaceDelimIndex == -1){
+    if (namespaceDelimIndex < 0){
       isLegalTableQualifierName(tableName);
     } else {
       isLegalNamespaceName(tableName, 0, namespaceDelimIndex);
@@ -217,6 +217,11 @@ public final class TableName implements Comparable<TableName> {
         "'alphanumeric characters': i.e. [a-zA-Z_0-9]: " + Bytes.toString(namespaceName,
           offset, length));
     }
+    if(offset == length)
+      throw new IllegalArgumentException("Illegal character <" + namespaceName[offset] +
+          "> at " + offset + ". Namespaces can only contain " +
+          "'alphanumeric characters': i.e. [a-zA-Z_0-9]: " + Bytes.toString(namespaceName,
+            offset, length));
   }
 
   public byte[] getName() {
