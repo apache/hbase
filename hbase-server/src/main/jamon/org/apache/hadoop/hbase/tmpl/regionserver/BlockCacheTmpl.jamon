@@ -325,6 +325,16 @@ are combined counts. Request count is sum of hits and misses.</p>
         <td>Size of DATA Blocks</td>
     </tr>
 </%if>
+    <tr>
+        <td>Evicted</td>
+        <td><% String.format("%,d", bc.getStats().getEvictedCount()) %></td>
+        <td>The total number of blocks evicted</td>
+    </tr>
+    <tr>
+        <td>Evictions</td>
+        <td><% String.format("%,d", bc.getStats().getEvictionCount()) %></td>
+        <td>The total number of times an eviction has occurred</td>
+    </tr>
 <%doc>Can't do age of block in cache when slab cache</%doc>
 <%if !slabCache %>
     <tr>
