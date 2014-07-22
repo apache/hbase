@@ -78,7 +78,7 @@ import org.apache.hadoop.util.ToolRunner;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public final class ExportSnapshot extends Configured implements Tool {
+public class ExportSnapshot extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(ExportSnapshot.class);
 
   private static final String CONF_FILES_USER = "snapshot.export.files.attributes.user";
