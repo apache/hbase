@@ -252,7 +252,7 @@ public class MapFilePerformanceEvaluation {
       this.reader.next(key, value);
       PerformanceEvaluationCommons.assertKey(this.key.get(),
         format(i, this.verify).get());
-      PerformanceEvaluationCommons.assertValueSize(ROW_LENGTH, value.getSize());
+      PerformanceEvaluationCommons.assertValueSize(ROW_LENGTH, value.getLength());
     }
 
     @Override
@@ -275,7 +275,7 @@ public class MapFilePerformanceEvaluation {
     void doRow(int i) throws Exception {
       ImmutableBytesWritable k = getRandomRow();
       ImmutableBytesWritable r = (ImmutableBytesWritable)reader.get(k, value);
-      PerformanceEvaluationCommons.assertValueSize(r.getSize(), ROW_LENGTH);
+      PerformanceEvaluationCommons.assertValueSize(r.getLength(), ROW_LENGTH);
     }
 
     private ImmutableBytesWritable getRandomRow() {
@@ -304,7 +304,7 @@ public class MapFilePerformanceEvaluation {
       // TODO: Verify we're getting right values.
       for (int ii = 0; ii < 29; ii++) {
         this.reader.next(this.key, this.value);
-        PerformanceEvaluationCommons.assertValueSize(this.value.getSize(), ROW_LENGTH);
+        PerformanceEvaluationCommons.assertValueSize(this.value.getLength(), ROW_LENGTH);
       }
     }
 
@@ -325,7 +325,7 @@ public class MapFilePerformanceEvaluation {
     void doRow(int i) throws Exception {
       ImmutableBytesWritable k = getGaussianRandomRow();
       ImmutableBytesWritable r = (ImmutableBytesWritable)reader.get(k, value);
-      PerformanceEvaluationCommons.assertValueSize(r.getSize(), ROW_LENGTH);
+      PerformanceEvaluationCommons.assertValueSize(r.getLength(), ROW_LENGTH);
     }
 
     private ImmutableBytesWritable getGaussianRandomRow() {
