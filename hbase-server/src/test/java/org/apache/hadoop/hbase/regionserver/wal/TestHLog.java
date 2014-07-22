@@ -135,11 +135,11 @@ public class TestHLog  {
 
     // faster failover with cluster.shutdown();fs.close() idiom
     TEST_UTIL.getConfiguration()
-        .setInt("ipc.client.connect.max.retries", 1);
+        .setInt("hbase.ipc.client.connect.max.retries", 1);
     TEST_UTIL.getConfiguration().setInt(
         "dfs.client.block.recovery.retries", 1);
     TEST_UTIL.getConfiguration().setInt(
-      "ipc.client.connection.maxidletime", 500);
+      "hbase.ipc.client.connection.maxidletime", 500);
     TEST_UTIL.getConfiguration().set(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY,
         SampleRegionWALObserver.class.getName());
     TEST_UTIL.startMiniDFSCluster(3);

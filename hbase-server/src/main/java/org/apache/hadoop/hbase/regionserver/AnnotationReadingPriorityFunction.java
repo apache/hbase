@@ -71,7 +71,7 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
     LogFactory.getLog(AnnotationReadingPriorityFunction.class.getName());
 
   /** Used to control the scan delay, currently sqrt(numNextCall * weight) */
-  public static final String SCAN_VTIME_WEIGHT_CONF_KEY = "ipc.server.scan.vtime.weight";
+  public static final String SCAN_VTIME_WEIGHT_CONF_KEY = "hbase.ipc.server.scan.vtime.weight";
 
   private final Map<String, Integer> annotatedQos;
   //We need to mock the regionserver instance for some unit tests (set via
