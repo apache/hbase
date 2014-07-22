@@ -1309,7 +1309,7 @@ index e70ebc6..96f8c27 100644
           requests to user tables. The rule of thumb is to keep this number low when the payload per
           request approaches the MB (big puts, scans using a large cache) and high when the payload
           is small (gets, small puts, ICVs, deletes). The total size of the queries in progress is
-          limited by the setting "ipc.server.max.callqueue.size". </para>
+          limited by the setting "hbase.ipc.server.max.callqueue.size". </para>
         <para> It is safe to set that number to the maximum number of incoming clients if their
           payload is small, the typical example being a cluster that serves a website since puts
           aren't typically buffered and most of the operations are gets. </para>

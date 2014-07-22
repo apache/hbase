@@ -38,17 +38,18 @@ import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
 public class SimpleRpcScheduler extends RpcScheduler {
   public static final Log LOG = LogFactory.getLog(SimpleRpcScheduler.class);
 
-  public static final String CALL_QUEUE_READ_SHARE_CONF_KEY = "ipc.server.callqueue.read.share";
+  public static final String CALL_QUEUE_READ_SHARE_CONF_KEY = "hbase.ipc.server.callqueue.read.share";
   public static final String CALL_QUEUE_HANDLER_FACTOR_CONF_KEY =
-      "ipc.server.callqueue.handler.factor";
+      "hbase.ipc.server.callqueue.handler.factor";
 
   /** If set to 'deadline', uses a priority queue and deprioritize long-running scans */
-  public static final String CALL_QUEUE_TYPE_CONF_KEY = "ipc.server.callqueue.type";
+  public static final String CALL_QUEUE_TYPE_CONF_KEY = "hbase.ipc.server.callqueue.type";
   public static final String CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE = "deadline";
   public static final String CALL_QUEUE_TYPE_FIFO_CONF_VALUE = "fifo";
 
   /** max delay in msec used to bound the deprioritized requests */
-  public static final String QUEUE_MAX_CALL_DELAY_CONF_KEY = "ipc.server.queue.max.call.delay";
+  public static final String QUEUE_MAX_CALL_DELAY_CONF_KEY
+      = "hbase.ipc.server.queue.max.call.delay";
 
   /**
    * Comparator used by the "normal callQueue" if DEADLINE_CALL_QUEUE_CONF_KEY is set to true.
@@ -104,7 +105,7 @@ public class SimpleRpcScheduler extends RpcScheduler {
       int replicationHandlerCount,
       PriorityFunction priority,
       int highPriorityLevel) {
-    int maxQueueLength = conf.getInt("ipc.server.max.callqueue.length",
+    int maxQueueLength = conf.getInt("hbase.ipc.server.max.callqueue.length",
         handlerCount * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER);
     this.priority = priority;
     this.highPriorityLevel = highPriorityLevel;

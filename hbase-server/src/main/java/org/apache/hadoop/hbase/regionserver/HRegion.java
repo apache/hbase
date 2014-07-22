@@ -614,7 +614,7 @@ public class HRegion implements HeapSize { // , Writable{
         + busyWaitDuration + ") or hbase.busy.wait.multiplier.max ("
         + maxBusyWaitMultiplier + "). Their product should be positive");
     }
-    this.maxBusyWaitDuration = conf.getLong("ipc.client.call.purge.timeout",
+    this.maxBusyWaitDuration = conf.getLong("hbase.ipc.client.call.purge.timeout",
       2 * HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
 
     /*

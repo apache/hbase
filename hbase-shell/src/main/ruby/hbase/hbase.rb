@@ -36,7 +36,7 @@ module Hbase
         self.configuration = org.apache.hadoop.hbase.HBaseConfiguration.create
         # Turn off retries in hbase and ipc.  Human doesn't want to wait on N retries.
         configuration.setInt("hbase.client.retries.number", 7)
-        configuration.setInt("ipc.client.connect.max.retries", 3)
+        configuration.setInt("hbase.ipc.client.connect.max.retries", 3)
       end
     end
 
