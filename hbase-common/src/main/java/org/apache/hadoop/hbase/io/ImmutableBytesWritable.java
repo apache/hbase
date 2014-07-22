@@ -33,7 +33,7 @@ import org.apache.hadoop.io.WritableComparator;
 /**
  * A byte sequence that is usable as a key or value.  Based on
  * {@link org.apache.hadoop.io.BytesWritable} only this class is NOT resizable
- * and DOES NOT distinguish between the size of the seqeunce and the current
+ * and DOES NOT distinguish between the size of the sequence and the current
  * capacity as {@link org.apache.hadoop.io.BytesWritable} does. Hence its
  * comparatively 'immutable'. When creating a new instance of this class,
  * the underlying byte [] is not copied, just referenced.  The backing
@@ -71,7 +71,7 @@ implements WritableComparable<ImmutableBytesWritable> {
    * @param ibw the value to set this ImmutableBytesWritable to.
    */
   public ImmutableBytesWritable(final ImmutableBytesWritable ibw) {
-    this(ibw.get(), ibw.getOffset(), ibw.getSize());
+    this(ibw.get(), ibw.getOffset(), ibw.getLength());
   }
 
   /**
@@ -119,7 +119,9 @@ implements WritableComparable<ImmutableBytesWritable> {
 
   /**
    * @return the number of valid bytes in the buffer
+   * @deprecated use {@link #getLength()} instead
    */
+  @Deprecated
   public int getSize() {
     if (this.bytes == null) {
       throw new IllegalStateException("Uninitialiized. Null constructor " +
@@ -131,8 +133,6 @@ implements WritableComparable<ImmutableBytesWritable> {
   /**
    * @return the number of valid bytes in the buffer
    */
-  //Should probably deprecate getSize() so that we keep the same calls for all
-  //byte []
   public int getLength() {
     if (this.bytes == null) {
       throw new IllegalStateException("Uninitialiized. Null constructor " +
