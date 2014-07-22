@@ -1099,6 +1099,7 @@ public class RpcClient {
           //  won't even try to write
           shouldCloseConnection.set(true);
           writeException = e;
+          interrupt();
         }
       }
 
