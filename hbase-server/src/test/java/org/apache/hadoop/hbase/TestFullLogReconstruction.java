@@ -52,7 +52,7 @@ public class TestFullLogReconstruction {
     c.setInt("dfs.heartbeat.interval", 1);
     c.setInt("dfs.socket.timeout", 5000);
     // faster failover with cluster.shutdown();fs.close() idiom
-    c.setInt("ipc.client.connect.max.retries", 1);
+    c.setInt("hbase.ipc.client.connect.max.retries", 1);
     c.setInt("hbase.ipc.client.connect.max.retries", 1);
     c.setInt("dfs.client.block.recovery.retries", 1);
     c.setInt(HConstants.ZK_SESSION_TIMEOUT, 1000);

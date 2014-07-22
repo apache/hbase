@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -137,8 +138,8 @@ public class TestLogRolling  {
 
     TEST_UTIL.getConfiguration().setInt(
         "hbase.regionserver.logroll.errors.tolerated", 2);
-    TEST_UTIL.getConfiguration().setInt("ipc.ping.interval", 10 * 1000);
-    TEST_UTIL.getConfiguration().setInt("ipc.socket.timeout", 10 * 1000);
+    TEST_UTIL.getConfiguration().setInt(RpcClient.PING_INTERVAL_NAME, 10 * 1000);
+    TEST_UTIL.getConfiguration().setInt(RpcClient.SOCKET_TIMEOUT, 10 * 1000);
     TEST_UTIL.getConfiguration().setInt("hbase.rpc.timeout", 10 * 1000);
 
     // For less frequently updated regions flush after every 2 flushes

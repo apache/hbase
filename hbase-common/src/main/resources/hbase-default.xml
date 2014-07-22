@@ -198,14 +198,14 @@ possible configurations would overwhelm and obscure the important.
     Same property is used by the Master for count of master handlers.</description>
   </property>
   <property>
-    <name>ipc.server.callqueue.handler.factor</name>
+    <name>hbase.ipc.server.callqueue.handler.factor</name>
     <value>0.1</value>
     <description>Factor to determine the number of call queues.
       A value of 0 means a single queue shared between all the handlers.
       A value of 1 means that each handler has its own queue.</description>
   </property>
   <property>
-    <name>ipc.server.callqueue.read.share</name>
+    <name>hbase.ipc.server.callqueue.read.share</name>
     <value>0</value>
     <description>Split the call queues into read and write queues.
       A value of 0 indicate to not split the call queues.

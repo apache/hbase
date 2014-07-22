@@ -1876,8 +1876,7 @@ public class RpcServer implements RpcServerInterface {
     this.port = listener.getAddress().getPort();
 
     this.metrics = new MetricsHBaseServer(name, new MetricsHBaseServerWrapperImpl(this));
-    this.tcpNoDelay = conf.getBoolean("hbase.ipc.server.tcpnodelay",
-      conf.getBoolean("ipc.server.tcpnodelay", true));
+    this.tcpNoDelay = conf.getBoolean("hbase.ipc.server.tcpnodelay", true);
     this.tcpKeepAlive = conf.getBoolean("hbase.ipc.server.tcpkeepalive",
       conf.getBoolean("ipc.server.tcpkeepalive", true));
 

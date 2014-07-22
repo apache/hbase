@@ -138,8 +138,8 @@ public class RpcClient {
   private final boolean fallbackAllowed;
   private UserProvider userProvider;
 
-  final private static String PING_INTERVAL_NAME = "ipc.ping.interval";
-  final private static String SOCKET_TIMEOUT = "ipc.socket.timeout";
+  final public static String PING_INTERVAL_NAME = "hbase.ipc.ping.interval";
+  final public static String SOCKET_TIMEOUT = "hbase.ipc.socket.timeout";
   final static int DEFAULT_PING_INTERVAL = 60000;  // 1 min
   final static int DEFAULT_SOCKET_TIMEOUT = 20000; // 20 seconds
   final static int PING_CALL_ID = -1;
@@ -244,7 +244,7 @@ public class RpcClient {
    * @return the ping interval
    */
   static int getPingInterval(Configuration conf) {
-    return conf.getInt(PING_INTERVAL_NAME, DEFAULT_PING_INTERVAL);
+    return conf.getInt(PING_INTERVAL_NAME, conf.getInt("ipc.ping.interval", DEFAULT_PING_INTERVAL));
   }
 
   /**
@@ -260,7 +260,7 @@ public class RpcClient {
    * @return the socket timeout
    */
   static int getSocketTimeout(Configuration conf) {
-    return conf.getInt(SOCKET_TIMEOUT, DEFAULT_SOCKET_TIMEOUT);
+    return conf.getInt(SOCKET_TIMEOUT, conf.getInt("ipc.socket.timeout", DEFAULT_SOCKET_TIMEOUT));
   }
 
   /** A call waiting for a value. */

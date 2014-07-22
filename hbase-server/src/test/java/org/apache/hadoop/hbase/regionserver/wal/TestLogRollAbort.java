@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -71,8 +72,8 @@ public class TestLogRollAbort {
     // Tweak default timeout values down for faster recovery
     TEST_UTIL.getConfiguration().setInt(
         "hbase.regionserver.logroll.errors.tolerated", 2);
-    TEST_UTIL.getConfiguration().setInt("ipc.ping.interval", 10 * 1000);
-    TEST_UTIL.getConfiguration().setInt("ipc.socket.timeout", 10 * 1000);
+    TEST_UTIL.getConfiguration().setInt(RpcClient.PING_INTERVAL_NAME, 10 * 1000);
+    TEST_UTIL.getConfiguration().setInt(RpcClient.SOCKET_TIMEOUT, 10 * 1000);
     TEST_UTIL.getConfiguration().setInt("hbase.rpc.timeout", 10 * 1000);
 
     // Increase the amount of time between client retries

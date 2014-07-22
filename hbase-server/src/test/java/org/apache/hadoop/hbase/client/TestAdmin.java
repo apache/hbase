@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.executor.EventHandler;
+import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -1551,8 +1552,8 @@ public class TestAdmin {
 
     TEST_UTIL.getConfiguration().setInt(
         "hbase.regionserver.logroll.errors.tolerated", 2);
-    TEST_UTIL.getConfiguration().setInt("ipc.ping.interval", 10 * 1000);
-    TEST_UTIL.getConfiguration().setInt("ipc.socket.timeout", 10 * 1000);
+    TEST_UTIL.getConfiguration().setInt(RpcClient.PING_INTERVAL_NAME, 10 * 1000);
+    TEST_UTIL.getConfiguration().setInt(RpcClient.SOCKET_TIMEOUT, 10 * 1000);
     TEST_UTIL.getConfiguration().setInt("hbase.rpc.timeout", 10 * 1000);
 
     // For less frequently updated regions flush after every 2 flushes
