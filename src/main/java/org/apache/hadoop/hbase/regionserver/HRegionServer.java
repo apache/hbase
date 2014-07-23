@@ -1527,8 +1527,8 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     int stores = 0;
     int storefiles = 0;
     long memstoreSize = 0;
-    int readRequestsCount = 0;
-    int writeRequestsCount = 0;
+    long readRequestsCount = 0;
+    long writeRequestsCount = 0;
     long storefileIndexSize = 0;
     HDFSBlocksDistribution hdfsBlocksDistribution =
       new HDFSBlocksDistribution();
