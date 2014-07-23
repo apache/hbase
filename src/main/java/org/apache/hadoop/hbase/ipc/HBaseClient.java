@@ -628,7 +628,12 @@ public class HBaseClient {
           out.flush();
         }
       } catch(IOException e) {
-        markClosed(e);
+        synchronized (this) {
+          if (!shouldCloseConnection.get()) {
+            markClosed(e);
+            interrupt();
+          }
+        }
       } finally {
         //the buffer is just an in-memory buffer, but it is still polite to
         // close early
