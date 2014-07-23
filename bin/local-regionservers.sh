@@ -42,8 +42,8 @@ run_regionserver () {
   DN=$2
   export HBASE_IDENT_STRING="$USER-$DN"
   HBASE_REGIONSERVER_ARGS="\
-    -D hbase.regionserver.port=`expr 60200 + $DN` \
-    -D hbase.regionserver.info.port=`expr 60300 + $DN`"
+    -D hbase.regionserver.port=`expr 16200 + $DN` \
+    -D hbase.regionserver.info.port=`expr 16300 + $DN`"
   "$bin"/hbase-daemon.sh  --config "${HBASE_CONF_DIR}" $1 regionserver $HBASE_REGIONSERVER_ARGS
 }
 

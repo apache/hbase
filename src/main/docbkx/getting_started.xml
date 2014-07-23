@@ -327,14 +327,23 @@ $
           <title>Configure HBase.</title>
           <para>
             Edit the <filename>hbase-site.xml</filename> configuration. First, add the following
-            property, which directs HBase to run in distributed mode, with one JVM instance per
-            daemon.
+            properties. Property <code>hbase.cluster.distributed</code> is set to <code>true</code>
+            (Its default is <code>false</code>), which directs HBase to run in distributed mode,
+            with one JVM instance per daemon. Since HBase version 1.0.0, a HMaster is also a
+            RegionServer. So in pseudo-distributed mode, just one HMaster (also a RegionServer)
+            instance is started by default. Because there is just one RegionServer (the HMaster),
+            property <code>hbase.master.wait.on.regionservers.mintostart</code> should be set to
+            <code>1</code> (Its default is changed to <code>2</code> since version 1.0.0).
           </para>
           <programlisting><![CDATA[
 <property>
   <name>hbase.cluster.distributed</name>
   <value>true</value>
-</property>            
+</property>
+<property>
+  <name>hbase.master.wait.on.regionservers.mintostart</name>
+  <value>1</value>
+</property>
             ]]></programlisting>
           <para>Next, change the <code>hbase.rootdir</code> from the local filesystem to the address
             of your HDFS instance, using the <code>hdfs:////</code> URI syntax. In this example,
@@ -391,10 +400,10 @@ drwxr-xr-x   - hbase users          0 2014-06-25 21:49 /hbase/oldWALs
             servers, which makes 10 total HMasters, counting the primary. To start a backup HMaster,
             use the <command>local-master-backup.sh</command>. For each backup master you want to
             start, add a parameter representing the port offset for that master. Each HMaster uses
-            two ports (16000 and 16010 by default). The port offset is added to these ports, so
-            using an offset of 2, the first backup HMaster would use ports 16002 and 16012. The
-            following command starts 3 backup servers using ports 16002/16012, 16003/16013, and
-            16005/16015.</para>
+            three ports (16010, 16020, and 16030 by default). The port offset is added to these ports, so
+            using an offset of 2, the backup HMaster would use ports 16012, 16022, and 16032. The
+            following command starts 3 backup servers using ports 16012/16022/16032, 16013/16023/16033,
+            and 16015/16025/16035.</para>
             <screen>
 $ ./bin/local-master-backup.sh 2 3 5             
             </screen>
@@ -417,9 +426,12 @@ $ cat /tmp/hbase-testuser-1-master.pid |xargs kill -9
             RegionServers. It works in a similar way to the
             <command>local-master-backup.sh</command> command, in that each parameter you provide
             represents the port offset for an instance. Each RegionServer requires two ports, and
-            the default ports are 16200 and 16300. You can run 99 additional RegionServers, or 100
-            total, on a server. The following command starts four additional
-          RegionServers, running on sequential ports starting at 16202/16302.</para>
+            the default ports are 16020 and 16030. However, the base ports for additional RegionServers
+            are not the default ports since the default ports are used by the HMaster, which is also
+            a RegionServer since HBase version 1.0.0. The base ports are 16200 and 16300 instead.
+            You can run 99 additional RegionServers that are not a HMaster or backup HMaster,
+            on a server. The following command starts four additional RegionServers, running on
+            sequential ports starting at 16202/16302 (base ports 16200/16300 plus 2).</para>
           <screen>
 $ .bin/local-regionservers.sh start 2 3 4 5            
           </screen>
