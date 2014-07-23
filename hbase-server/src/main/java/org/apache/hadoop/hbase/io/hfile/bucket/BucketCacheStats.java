@@ -34,6 +34,10 @@ public class BucketCacheStats extends CacheStats {
   private final static int nanoTime = 1000000;
   private long lastLogTime = EnvironmentEdgeManager.currentTimeMillis();
 
+  BucketCacheStats() {
+    super("BucketCache");
+  }
+
   @Override
   public String toString() {
     return super.toString() + ", ioHitsPerSecond=" + getIOHitsPerSecond() +

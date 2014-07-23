@@ -607,7 +607,7 @@ public class TestLruBlockCache {
    double delta = 0.01;
 
     // 3 total periods
-    CacheStats stats = new CacheStats(3);
+    CacheStats stats = new CacheStats("test", 3);
 
     // No accesses, should be 0
     stats.rollMetricsPeriod();

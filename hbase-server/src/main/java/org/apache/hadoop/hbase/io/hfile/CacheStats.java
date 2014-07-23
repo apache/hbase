@@ -22,11 +22,19 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
+import com.yammer.metrics.core.Histogram;
+import com.yammer.metrics.core.MetricsRegistry;
+
 /**
  * Class that implements cache metrics.
  */
 @InterfaceAudience.Private
 public class CacheStats {
+  /**
+   * Needed making histograms.
+   */
+  private static final MetricsRegistry METRICS = new MetricsRegistry();
+
   /** Sliding window statistics. The number of metric periods to include in
    * sliding window hit ratio calculations.
    */
@@ -78,25 +86,34 @@ public class CacheStats {
   private long lastRequestCachingCount = 0;
   /** Current window index (next to be updated) */
   private int windowIndex = 0;
+  /**
+   * Keep running age at eviction time
+   */
+  private Histogram ageAtEviction;
+  private long startTime = System.nanoTime();
 
-  public CacheStats() {
-    this(DEFAULT_WINDOW_PERIODS);
+  public CacheStats(final String name) {
+    this(name, DEFAULT_WINDOW_PERIODS);
   }
 
-  public CacheStats(int numPeriodsInWindow) {
+  public CacheStats(final String name, int numPeriodsInWindow) {
     this.numPeriodsInWindow = numPeriodsInWindow;
     this.hitCounts = initializeZeros(numPeriodsInWindow);
     this.hitCachingCounts = initializeZeros(numPeriodsInWindow);
     this.requestCounts = initializeZeros(numPeriodsInWindow);
     this.requestCachingCounts = initializeZeros(numPeriodsInWindow);
+    this.ageAtEviction = METRICS.newHistogram(CacheStats.class, name + ".ageAtEviction");
   }
 
   @Override
   public String toString() {
+    AgeSnapshot snapshot = getAgeAtEvictionSnapshot();
     return "hitCount=" + getHitCount() + ", hitCachingCount=" + getHitCachingCount() +
       ", missCount=" + getMissCount() + ", missCachingCount=" + getMissCachingCount() +
       ", evictionCount=" + getEvictionCount() +
-      ", evictedBlockCount=" + getEvictedCount();
+      ", evictedBlockCount=" + getEvictedCount() +
+      ", evictedAgeMean=" + snapshot.getMean() +
+      ", evictedAgeStdDev=" + snapshot.getStdDev();
   }
 
   public void miss(boolean caching) {
@@ -113,8 +130,9 @@ public class CacheStats {
     evictionCount.incrementAndGet();
   }
 
-  public void evicted() {
-    evictedBlockCount.incrementAndGet();
+  public void evicted(final long t) {
+    if (t > this.startTime) this.ageAtEviction.update(t - this.startTime);
+    this.evictedBlockCount.incrementAndGet();
   }
 
   public long getRequestCount() {
@@ -146,7 +164,7 @@ public class CacheStats {
   }
 
   public long getEvictedCount() {
-    return evictedBlockCount.get();
+    return this.evictedBlockCount.get();
   }
 
   public double getHitRatio() {
@@ -208,6 +226,10 @@ public class CacheStats {
     double ratio =
       ((double)sum(hitCachingCounts)/(double)sum(requestCachingCounts));
     return Double.isNaN(ratio) ? 0 : ratio;
+  }
+
+  public AgeSnapshot getAgeAtEvictionSnapshot() {
+    return new AgeSnapshot(this.ageAtEviction);
   }
 
   private static long sum(long [] counts) {

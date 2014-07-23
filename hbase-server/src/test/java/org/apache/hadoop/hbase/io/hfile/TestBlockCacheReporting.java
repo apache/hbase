@@ -67,6 +67,11 @@ public class TestBlockCacheReporting {
       bc.getBlock(bcki, true, false, true);
     }
     assertEquals(2 * count /*Data and Index blocks*/, bc.getStats().getHitCount());
+    BlockCacheKey bckd = new BlockCacheKey("f", 0);
+    BlockCacheKey bcki = new BlockCacheKey("f", 0 + count);
+    bc.evictBlock(bckd);
+    bc.evictBlock(bcki);
+    bc.getStats().getEvictedCount();
   }
 
   @Test

@@ -160,57 +160,6 @@ public class BlockCacheUtil {
   }
 
   /**
-   * Snapshot of block cache age in cache.
-   * This object is preferred because we can control how it is serialized out when JSON'ing.
-   */
-  @JsonIgnoreProperties({"ageHistogram", "snapshot"})
-  public static class AgeSnapshot {
-    private final Histogram ageHistogram;
-    private final Snapshot snapshot;
-
-    AgeSnapshot(final Histogram ageHistogram) {
-      this.ageHistogram = ageHistogram;
-      this.snapshot = ageHistogram.getSnapshot();
-    }
-
-    public double get75thPercentile() {
-      return snapshot.get75thPercentile();
-    }
-
-    public double get95thPercentile() {
-      return snapshot.get95thPercentile();
-    }
-
-    public double get98thPercentile() {
-      return snapshot.get98thPercentile();
-    }
-
-    public double get999thPercentile() {
-      return snapshot.get999thPercentile();
-    }
-
-    public double get99thPercentile() {
-      return snapshot.get99thPercentile();
-    }
-
-    public double getMean() {
-      return this.ageHistogram.mean();
-    }
-
-    public double getMax() {
-      return ageHistogram.max();
-    }
-
-    public double getMin() {
-      return ageHistogram.min();
-    }
-
-    public double getStdDev() {
-      return ageHistogram.stdDev();
-    }
-  }
-
-  /**
    * Get a {@link CachedBlocksByFile} instance and load it up by iterating content in
    * {@link BlockCache}.
    * @param conf Used to read configurations
@@ -319,7 +268,7 @@ public class BlockCacheUtil {
       return dataSize;
     }
 
-    public AgeSnapshot getAgeSnapshot() {
+    public AgeSnapshot getAgeInCacheSnapshot() {
       return new AgeSnapshot(this.age);
     }
 

@@ -285,7 +285,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     this.singleFactor = singleFactor;
     this.multiFactor = multiFactor;
     this.memoryFactor = memoryFactor;
-    this.stats = new CacheStats();
+    this.stats = new CacheStats(this.getClass().getSimpleName());
     this.count = new AtomicLong(0);
     this.elements = new AtomicLong(0);
     this.overhead = calculateOverhead(maxSize, blockSize, mapConcurrencyLevel);
@@ -460,7 +460,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
     map.remove(block.getCacheKey());
     updateSizeMetrics(block, true);
     elements.decrementAndGet();
-    stats.evicted();
+    stats.evicted(block.getCachedTime());
     if (evictedByEvictionProcess && victimHandler != null) {
       boolean wait = getCurrentSize() < acceptableSize();
       boolean inMemory = block.getPriority() == BlockPriority.MEMORY;

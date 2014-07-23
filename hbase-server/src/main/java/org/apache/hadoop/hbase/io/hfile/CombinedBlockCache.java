@@ -127,6 +127,7 @@ public class CombinedBlockCache implements BlockCache, HeapSize {
     private final CacheStats bucketCacheStats;
 
     CombinedCacheStats(CacheStats lbcStats, CacheStats fcStats) {
+      super("CombinedBlockCache");
       this.lruCacheStats = lbcStats;
       this.bucketCacheStats = fcStats;
     }

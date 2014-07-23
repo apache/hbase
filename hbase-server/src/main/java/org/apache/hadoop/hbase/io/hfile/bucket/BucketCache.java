@@ -447,7 +447,7 @@ public class BucketCache implements BlockCache, HeapSize {
         }
       }
     }
-    cacheStats.evicted();
+    cacheStats.evicted(bucketEntry == null? 0: bucketEntry.getCachedTime());
     return true;
   }
 
