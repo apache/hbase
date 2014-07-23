@@ -474,7 +474,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
     if (!useZKForAssignment) {
       // Not use ZK for assignment any more, remove the ZNode
-      ZKUtil.deleteNodeFailSilent(watcher, watcher.assignmentZNode);
+      ZKUtil.deleteNodeRecursively(watcher, watcher.assignmentZNode);
     }
     recoverTableInDisablingState();
     recoverTableInEnablingState();
@@ -733,7 +733,8 @@ public class AssignmentManager extends ZooKeeperListener {
     final String prettyPrintedRegionName = HRegionInfo.prettyPrint(encodedName);
     LOG.info("Processing " + prettyPrintedRegionName + " in state: " + et);
 
-    if (regionStates.isRegionInTransition(encodedName)) {
+    if (regionStates.isRegionInTransition(encodedName)
+        && (regionInfo.isMetaRegion() || !useZKForAssignment)) {
       LOG.info("Processed region " + prettyPrintedRegionName + " in state: "
         + et + ", does nothing since the region is already in transition "
         + regionStates.getRegionTransitionState(encodedName));
