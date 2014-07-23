@@ -26,7 +26,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
  * An InputStream that wraps a DataInput.
- * @see DataOutputOutputStream
  */
 @InterfaceAudience.Private
 public class DataInputInputStream extends InputStream {

@@ -261,8 +261,7 @@ public class TestHeapMemoryManager {
   }
 
   private static class BlockCacheStub implements ResizableBlockCache {
-
-    CacheStats stats = new CacheStats();
+    CacheStats stats = new CacheStats("test");
     long maxSize = 0;
     
     public BlockCacheStub(long size){
@@ -288,13 +287,13 @@ public class TestHeapMemoryManager {
 
     @Override
     public boolean evictBlock(BlockCacheKey cacheKey) {
-      stats.evicted();
+      stats.evicted(0);
       return false;
     }
 
     @Override
     public int evictBlocksByHfileName(String hfileName) {
-      stats.evicted(); // Just assuming only one block for file here.
+      stats.evicted(0); // Just assuming only one block for file here.
       return 0;
     }
 
