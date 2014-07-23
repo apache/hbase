@@ -42,8 +42,9 @@ run_master () {
   DN=$2
   export HBASE_IDENT_STRING="$USER-$DN"
   HBASE_MASTER_ARGS="\
-    -D hbase.master.port=`expr 16000 + $DN` \
     -D hbase.master.info.port=`expr 16010 + $DN` \
+    -D hbase.regionserver.port=`expr 16020 + $DN` \
+    -D hbase.regionserver.info.port=`expr 16030 + $DN` \
     --backup"
   "$bin"/hbase-daemon.sh --config "${HBASE_CONF_DIR}" $1 master $HBASE_MASTER_ARGS
 }
