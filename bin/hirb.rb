@@ -54,9 +54,11 @@ cmdline_help = <<HERE # HERE document output as shell usage
 HBase Shell command-line options:
  format        Formatter for outputting results: console | html. Default: console
  -d | --debug  Set DEBUG log levels.
+ --exec='cmd'  Run the command and exit immediately.
 HERE
 found = []
 format = 'console'
+cmdline = nil
 script2run = nil
 log_level = org.apache.log4j.Level::ERROR
 for arg in ARGV
@@ -77,6 +79,11 @@ for arg in ARGV
     log_level = org.apache.log4j.Level::DEBUG
     $fullBackTrace = true
     puts "Setting DEBUG log level..."
+  elsif arg =~ /^--exec=(.+)/i
+    cmdline = $1
+    puts "exec " + cmdline
+    found.push(arg)
+    break
   else
     # Presume it a script. Save it off for running later below
     # after we've set up some environment.
@@ -145,6 +152,9 @@ end
 
 # Include hbase constants
 include HBaseConstants
+
+eval(cmdline) if cmdline
+exit if cmdline
 
 # If script2run, try running it.  Will go on to run the shell unless
 # script calls 'exit' or 'exit 0' or 'exit errcode'.
