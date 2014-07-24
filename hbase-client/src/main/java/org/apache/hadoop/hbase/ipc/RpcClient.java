@@ -24,6 +24,7 @@ import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
 import com.google.protobuf.Message.Builder;
+import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import com.google.protobuf.TextFormat;
@@ -115,13 +116,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RpcClient {
   // The LOG key is intentionally not from this package to avoid ipc logging at DEBUG (all under
   // o.a.h.hbase is set to DEBUG as default).
-  public static final Log LOG = LogFactory.getLog("org.apache.hadoop.ipc.RpcClient");
+  public static final Log LOG = LogFactory.getLog(RpcClient.class);
   protected final PoolMap<ConnectionId, Connection> connections;
 
   protected final AtomicInteger callIdCnt = new AtomicInteger();
   protected final AtomicBoolean running = new AtomicBoolean(true); // if client runs
   final protected Configuration conf;
-  protected final int minIdleTimeBeforeClose; // if the connection is iddle for more than this
+  protected final int minIdleTimeBeforeClose; // if the connection is idle for more than this
                                                // time (in ms), it will be closed at any moment.
   final protected int maxRetries; //the max. no. of retries for socket connections
   final protected long failureSleep; // Time to sleep before retry on failure.
@@ -168,7 +169,7 @@ public class RpcClient {
       "hbase.ipc.client.fallback-to-simple-auth-allowed";
   public static final boolean IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT = false;
 
-  public static final String ALLOWS_INTERRUPTS = "hbase.ipc.client.allowsInterrupt";
+  public static final String SPECIFIC_WRITE_THREAD = "hbase.ipc.client.specificThreadForWriting";
 
   /**
    * A class to manage a list of servers that failed recently.
@@ -426,7 +427,10 @@ public class RpcClient {
       public CallFuture sendCall(Call call, int priority, Span span)
           throws InterruptedException, IOException {
         CallFuture cts = new CallFuture(call, priority, span);
-        callsToWrite.add(cts);
+        if (!callsToWrite.offer(cts)) {
+          throw new IOException("Can't add the call " + call.id +
+              " to the write queue. callsToWrite.size()=" + callsToWrite.size());
+        }
         checkIsOpen(); // We check after the put, to be sure that the call we added won't stay
                        //  in the list while the cleanup was already done.
         return cts;
@@ -448,7 +452,11 @@ public class RpcClient {
 
       public void remove(CallFuture cts){
         callsToWrite.remove(cts);
+
+        // By removing the call from the expected call list, we make the list smaller, but
+        //  it means as well that we don't know how many calls we cancelled.
         calls.remove(cts.call.id);
+        cts.call.callComplete();
       }
 
       /**
@@ -464,7 +472,7 @@ public class RpcClient {
             markClosed(new InterruptedIOException());
           }
 
-          if (cts == null || cts == CallFuture.DEATH_PILL){
+          if (cts == null || cts == CallFuture.DEATH_PILL) {
             assert shouldCloseConnection.get();
             break;
           }
@@ -580,7 +588,7 @@ public class RpcClient {
         + ticket.getUserName())));
       this.setDaemon(true);
 
-      if (conf.getBoolean(ALLOWS_INTERRUPTS, false)) {
+      if (conf.getBoolean(SPECIFIC_WRITE_THREAD, false)) {
         callSender = new CallSender(getName(), conf);
         callSender.start();
       } else {
@@ -606,6 +614,7 @@ public class RpcClient {
       }
       return userInfoPB.build();
     }
+
 
 
     protected synchronized void setupConnection() throws IOException {
@@ -717,7 +726,7 @@ public class RpcClient {
      * it is idle too long, it is marked as to be closed,
      * or the client is marked as not running.
      *
-     * Return true if it is time to read a response; false otherwise.
+     * @return true if it is time to read a response; false otherwise.
      */
     protected synchronized boolean waitForWork() throws InterruptedException {
       // beware of the concurrent access to the calls list: we can add calls, but as well
@@ -743,13 +752,18 @@ public class RpcClient {
         return true;
       }
 
-      // Connection is idle.
-      // We expect the number of calls to be zero here, but actually someone can
-      //  adds a call at the any moment, as there is no synchronization between this task
-      //  and adding new calls. It's not a big issue, but it will get an exception.
-      markClosed(new IOException(
-          "idle connection closed with " + calls.size() + " pending request(s)"));
+      if (EnvironmentEdgeManager.currentTimeMillis() >= waitUntil) {
+        // Connection is idle.
+        // We expect the number of calls to be zero here, but actually someone can
+        //  adds a call at the any moment, as there is no synchronization between this task
+        //  and adding new calls. It's not a big issue, but it will get an exception.
+        markClosed(new IOException(
+            "idle connection closed with " + calls.size() + " pending request(s)"));
+        return false;
+      }
 
+      // We can get here if we received a notification that there is some work to do but
+      //  the work was cancelled. As we're not idle we continue to wait.
       return false;
     }
 
@@ -767,15 +781,19 @@ public class RpcClient {
         while (waitForWork()) { // Wait here for work - read or close connection
           readResponse();
         }
+      } catch (InterruptedException t) {
+        LOG.debug(getName() + ": interrupted while waiting for call responses");
+        markClosed(ExceptionUtil.asInterrupt(t));
       } catch (Throwable t) {
-        LOG.debug(getName() + ": unexpected exception receiving call responses", t);
-        markClosed(new IOException("Unexpected exception receiving call responses", t));
+        LOG.debug(getName() + ": unexpected throwable while waiting for call responses", t);
+        markClosed(new IOException("Unexpected throwable while waiting call responses", t));
       }
 
       close();
 
-      if (LOG.isDebugEnabled())
+      if (LOG.isDebugEnabled()) {
         LOG.debug(getName() + ": stopped, connections " + connections.size());
+      }
     }
 
     private synchronized void disposeSasl() {
@@ -1146,8 +1164,10 @@ public class RpcClient {
           // this connection.
           int readSoFar = IPCUtil.getTotalSizeWhenWrittenDelimited(responseHeader);
           int whatIsLeftToRead = totalSize - readSoFar;
-          LOG.debug("Unknown callId: " + id + ", skipping over this response of " +
-              whatIsLeftToRead + " bytes");
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Unknown callId: " + id + ", skipping over this response of " +
+                whatIsLeftToRead + " bytes");
+          }
           IOUtils.skipFully(in, whatIsLeftToRead);
         }
         if (responseHeader.hasException()) {
@@ -1188,16 +1208,10 @@ public class RpcClient {
         }
       } finally {
         cleanupCalls(false);
-        if (expectedCall && !call.done) {
-          LOG.warn("Coding error: code should be true for callId=" + call.id +
-              ", server=" + getRemoteAddress() +
-              ", shouldCloseConnection=" + shouldCloseConnection.get());
-        }
       }
     }
 
     /**
-     * @param e
      * @return True if the exception is a fatal connection exception.
      */
     private boolean isFatalConnectionException(final ExceptionResponse e) {
@@ -1225,7 +1239,7 @@ public class RpcClient {
 
       if (shouldCloseConnection.compareAndSet(false, true)) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug(getName() + ": marking at should close, reason =" + e.getMessage());
+          LOG.debug(getName() + ": marking at should close, reason: " + e.getMessage());
         }
         if (callSender != null) {
           callSender.close();
@@ -1447,10 +1461,12 @@ public class RpcClient {
     }
   }
 
-  Pair<Message, CellScanner> call(MethodDescriptor md, Message param, CellScanner cells,
+  Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc,
+                                  MethodDescriptor md, Message param, CellScanner cells,
       Message returnType, User ticket, InetSocketAddress addr, int rpcTimeout)
   throws InterruptedException, IOException {
-    return call(md, param, cells, returnType, ticket, addr, rpcTimeout, HConstants.NORMAL_QOS);
+    return
+        call(pcrc, md, param, cells, returnType, ticket, addr, rpcTimeout, HConstants.NORMAL_QOS);
   }
 
   /** Make a call, passing <code>param</code>, to the IPC server running at
@@ -1465,16 +1481,34 @@ public class RpcClient {
    * @throws InterruptedException
    * @throws IOException
    */
-  Pair<Message, CellScanner> call(MethodDescriptor md, Message param, CellScanner cells,
+  Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc, MethodDescriptor md,
+                                  Message param, CellScanner cells,
       Message returnType, User ticket, InetSocketAddress addr, int callTimeout, int priority)
       throws IOException, InterruptedException {
-    Call call = new Call(md, param, cells, returnType, callTimeout);
-    Connection connection = getConnection(ticket, call, addr, this.codec, this.compressor);
+    final Call call = new Call(md, param, cells, returnType, callTimeout);
 
-    CallFuture cts = null;
-    if (connection.callSender != null){
+    final Connection connection = getConnection(ticket, call, addr, this.codec, this.compressor);
+
+    final CallFuture cts;
+    if (connection.callSender != null) {
       cts = connection.callSender.sendCall(call, priority, Trace.currentSpan());
+      if (pcrc != null) {
+        pcrc.notifyOnCancel(new RpcCallback<Object>() {
+          @Override
+          public void run(Object parameter) {
+            connection.callSender.remove(cts);
+            call.callComplete();
+          }
+        });
+        if (pcrc.isCanceled()) {
+          // To finish if the call was cancelled before we set the notification (race condition)
+          call.callComplete();
+          return new Pair<Message, CellScanner>(call.response, call.cells);
+        }
+      }
+
     } else {
+      cts = null;
       connection.tracedWriteRequest(call, priority, Trace.currentSpan());
     }
 
@@ -1663,7 +1697,7 @@ public class RpcClient {
     }
     Pair<Message, CellScanner> val;
     try {
-      val = call(md, param, cells, returnType, ticket, isa, callTimeout,
+      val = call(pcrc, md, param, cells, returnType, ticket, isa, callTimeout,
         pcrc != null? pcrc.getPriority(): HConstants.NORMAL_QOS);
       if (pcrc != null) {
         // Shove the results into controller so can be carried across the proxy/pb service void.

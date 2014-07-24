@@ -343,7 +343,7 @@ public class TestHCM {
     c2.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 100); // retry a lot
     c2.setInt(HConstants.HBASE_CLIENT_PAUSE, 0); // don't wait between retries.
     c2.setInt(RpcClient.FAILED_SERVER_EXPIRY_KEY, 0); // Server do not really expire
-    c2.setBoolean(RpcClient.ALLOWS_INTERRUPTS, allowsInterrupt);
+    c2.setBoolean(RpcClient.SPECIFIC_WRITE_THREAD, allowsInterrupt);
 
     final HTable table = new HTable(c2, tableName.getBytes());
 

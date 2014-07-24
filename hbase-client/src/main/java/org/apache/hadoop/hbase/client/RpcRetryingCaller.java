@@ -25,12 +25,12 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.ipc.RemoteException;
@@ -60,6 +60,7 @@ public class RpcRetryingCaller<T> {
 
   private final long pause;
   private final int retries;
+  private final AtomicBoolean cancelled = new AtomicBoolean(false);
 
   public RpcRetryingCaller(long pause, int retries) {
     this.pause = pause;
@@ -70,6 +71,7 @@ public class RpcRetryingCaller<T> {
     if (callTimeout <= 0) {
       return 0;
     } else {
+      if (callTimeout == Integer.MAX_VALUE) return Integer.MAX_VALUE;
       int remainingTime = (int) (callTimeout -
           (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime));
       if (remainingTime < MIN_RPC_TIMEOUT) {
@@ -79,6 +81,13 @@ public class RpcRetryingCaller<T> {
         remainingTime = MIN_RPC_TIMEOUT;
       }
       return remainingTime;
+    }
+  }
+
+  public void cancel(){
+    cancelled.set(true);
+    synchronized (cancelled){
+      cancelled.notifyAll();
     }
   }
 
@@ -103,9 +112,11 @@ public class RpcRetryingCaller<T> {
       } catch (Throwable t) {
         ExceptionUtil.rethrowIfInterrupt(t);
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Call exception, tries=" + tries + ", retries=" + retries + ", retryTime=" +
-              (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime) + "ms", t);
+          LOG.trace("Call exception, tries=" + tries + ", retries=" + retries + ", started=" +
+              (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime) + " ms ago, "
+              + "cancelled=" + cancelled.get(), t);
         }
+
         // translateException throws exception when should not retry: i.e. when request is bad.
         t = translateException(t);
         callable.throwable(t, retries != 1);
@@ -130,7 +141,13 @@ public class RpcRetryingCaller<T> {
         }
       }
       try {
-        Thread.sleep(expectedSleep);
+        if (expectedSleep > 0) {
+          synchronized (cancelled) {
+            if (cancelled.get()) return null;
+            cancelled.wait(expectedSleep);
+          }
+        }
+        if (cancelled.get()) return null;
       } catch (InterruptedException e) {
         throw new InterruptedIOException("Interrupted after " + tries + " tries  on " + retries);
       }

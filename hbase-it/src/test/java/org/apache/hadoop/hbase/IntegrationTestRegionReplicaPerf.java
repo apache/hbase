@@ -149,7 +149,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
       conf.getLong("hbase.regionserver.storefile.refresh.period", 0) > 0);
 
     // enable client-side settings
-    conf.setBoolean(RpcClient.ALLOWS_INTERRUPTS, true);
+    conf.setBoolean(RpcClient.SPECIFIC_WRITE_THREAD, true);
     // TODO: expose these settings to CLI override
     conf.setLong("hbase.client.primaryCallTimeout.get", primaryTimeout);
     conf.setLong("hbase.client.primaryCallTimeout.multiget", primaryTimeout);

@@ -198,7 +198,7 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
 
     if (exceptions != null && !exceptions.isEmpty()) {
       RpcRetryingCallerWithReadReplicas.throwEnrichedException(exceptions.get(0),
-          retries, toString()); // just rethrow the first exception for now.
+          retries); // just rethrow the first exception for now.
     }
     return null; // unreachable
   }
