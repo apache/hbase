@@ -244,7 +244,7 @@ public class CopyTable extends Configured implements Tool {
             "peer address must be specified");
         return false;
       }
-      if (startTime > endTime) {
+      if ((endTime != 0) && (startTime > endTime)) {
         printUsage("Invalid time range filter: starttime=" + startTime + " >  endtime=" + endTime);
         return false;
       }
