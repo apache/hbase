@@ -143,7 +143,7 @@ abstract public class Subprocedure implements Callable<Void> {
    *
    * This would normally be executed by the ProcedureMemeber when a acquire message comes from the
    * coordinator.  Rpcs are used to spend message back to the coordinator after different phases
-   * are executed.  Any exceptions caught during the execution (except for InterrupedException) get
+   * are executed.  Any exceptions caught during the execution (except for InterruptedException) get
    * converted and propagated to coordinator via {@link ProcedureMemberRpcs#sendMemberAborted(
    * Subprocedure, ForeignException)}.
    */

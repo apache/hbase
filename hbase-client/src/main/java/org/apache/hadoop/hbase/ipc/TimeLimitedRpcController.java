@@ -22,12 +22,18 @@ package org.apache.hadoop.hbase.ipc;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
 public class TimeLimitedRpcController implements RpcController {
 
   /**
    * The time, in ms before the call should expire.
    */
-  protected Integer callTimeout;
+  protected volatile Integer callTimeout;
+  protected volatile boolean cancelled = false;
+  protected final AtomicReference<RpcCallback<Object>> cancellationCb =
+      new AtomicReference<RpcCallback<Object>>(null);
 
   public Integer getCallTimeout() {
     return callTimeout;
@@ -53,12 +59,12 @@ public class TimeLimitedRpcController implements RpcController {
 
   @Override
   public boolean isCanceled() {
-    throw new UnsupportedOperationException();
+    return cancelled;
   }
 
   @Override
-  public void notifyOnCancel(RpcCallback<Object> arg0) {
-    throw new UnsupportedOperationException();
+  public void notifyOnCancel(RpcCallback<Object> cancellationCb) {
+    this.cancellationCb.set(cancellationCb);
   }
 
   @Override
@@ -73,6 +79,9 @@ public class TimeLimitedRpcController implements RpcController {
 
   @Override
   public void startCancel() {
-    throw new UnsupportedOperationException();
+    cancelled = true;
+    if (cancellationCb.get() != null) {
+      cancellationCb.get().run(null);
+    }
   }
 }

@@ -31,7 +31,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 class BufferChain {
-  private static final ByteBuffer [] FOR_TOARRAY_TYPE = new ByteBuffer[0];
   private final ByteBuffer[] buffers;
   private int remaining = 0;
   private int bufferOffset = 0;
@@ -44,7 +43,7 @@ class BufferChain {
       bbs.add(b);
       this.remaining += b.remaining();
     }
-    this.buffers = bbs.toArray(FOR_TOARRAY_TYPE);
+    this.buffers = bbs.toArray(new ByteBuffer[bbs.size()]);
   }
 
   /**

@@ -21,18 +21,7 @@
 package org.apache.hadoop.hbase.client;
 
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-
+import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -47,10 +36,20 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
-import org.apache.hadoop.hbase.util.BoundedCompletionService;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
-import com.google.protobuf.ServiceException;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.RunnableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Caller that goes to replica if the primary region does no answer within a configurable
@@ -60,6 +59,7 @@ import com.google.protobuf.ServiceException;
  */
 public class RpcRetryingCallerWithReadReplicas {
   static final Log LOG = LogFactory.getLog(RpcRetryingCallerWithReadReplicas.class);
+
   protected final ExecutorService pool;
   protected final ClusterConnection cConnection;
   protected final Configuration conf;
@@ -69,12 +69,13 @@ public class RpcRetryingCallerWithReadReplicas {
   private final int callTimeout;
   private final int retries;
   private final RpcControllerFactory rpcControllerFactory;
+  private final RpcRetryingCallerFactory rpcRetryingCallerFactory;
 
   public RpcRetryingCallerWithReadReplicas(
       RpcControllerFactory rpcControllerFactory, TableName tableName,
-                                           ClusterConnection cConnection, final Get get,
-                                           ExecutorService pool, int retries, int callTimeout,
-                                           int timeBeforeReplicas) {
+      ClusterConnection cConnection, final Get get,
+      ExecutorService pool, int retries, int callTimeout,
+      int timeBeforeReplicas) {
     this.rpcControllerFactory = rpcControllerFactory;
     this.tableName = tableName;
     this.cConnection = cConnection;
@@ -84,6 +85,7 @@ public class RpcRetryingCallerWithReadReplicas {
     this.retries = retries;
     this.callTimeout = callTimeout;
     this.timeBeforeReplicas = timeBeforeReplicas;
+    this.rpcRetryingCallerFactory = new RpcRetryingCallerFactory(conf);
   }
 
   /**
@@ -94,12 +96,19 @@ public class RpcRetryingCallerWithReadReplicas {
    */
   class ReplicaRegionServerCallable extends RegionServerCallable<Result> {
     final int id;
+    private final PayloadCarryingRpcController controller;
 
     public ReplicaRegionServerCallable(int id, HRegionLocation location) {
       super(RpcRetryingCallerWithReadReplicas.this.cConnection,
           RpcRetryingCallerWithReadReplicas.this.tableName, get.getRow());
       this.id = id;
       this.location = location;
+      this.controller = rpcControllerFactory.newController();
+      controller.setPriority(tableName);
+    }
+
+    public void startCancel() {
+      controller.startCancel();
     }
 
     /**
@@ -109,6 +118,8 @@ public class RpcRetryingCallerWithReadReplicas {
      */
     @Override
     public void prepare(final boolean reload) throws IOException {
+      if (controller.isCanceled()) return;
+
       if (Thread.interrupted()) {
         throw new InterruptedIOException();
       }
@@ -125,13 +136,14 @@ public class RpcRetryingCallerWithReadReplicas {
       }
 
       ServerName dest = location.getServerName();
-      assert dest != null;
 
       setStub(cConnection.getClient(dest));
     }
 
     @Override
     public Result call(int callTimeout) throws Exception {
+      if (controller.isCanceled()) return null;
+
       if (Thread.interrupted()) {
         throw new InterruptedIOException();
       }
@@ -140,33 +152,17 @@ public class RpcRetryingCallerWithReadReplicas {
 
       ClientProtos.GetRequest request =
           RequestConverter.buildGetRequest(reg, get);
-      PayloadCarryingRpcController controller = rpcControllerFactory.newController();
-      controller.setPriority(tableName);
       controller.setCallTimeout(callTimeout);
+
       try {
         ClientProtos.GetResponse response = getStub().get(controller, request);
-        if (response == null) return null;
+        if (response == null) {
+          return null;
+        }
         return ProtobufUtil.toResult(response.getResult());
       } catch (ServiceException se) {
         throw ProtobufUtil.getRemoteException(se);
       }
-    }
-  }
-
-  /**
-   * Adapter to put the HBase retrying caller into a Java callable.
-   */
-  class RetryingRPC implements Callable<Result> {
-    final RetryingCallable<Result> callable;
-
-    RetryingRPC(RetryingCallable<Result> callable) {
-      this.callable = callable;
-    }
-
-    @Override
-    public Result call() throws IOException {
-      return new RpcRetryingCallerFactory(conf).<Result>newCaller().
-          callWithRetries(callable, callTimeout);
     }
   }
 
@@ -191,12 +187,9 @@ public class RpcRetryingCallerWithReadReplicas {
       throws DoNotRetryIOException, InterruptedIOException, RetriesExhaustedException {
     RegionLocations rl = getRegionLocations(true, RegionReplicaUtil.DEFAULT_REPLICA_ID,
         cConnection, tableName, get.getRow());
-    BoundedCompletionService<Result> cs = new BoundedCompletionService<Result>(pool, rl.size());
+    ResultBoundedCompletionService cs = new ResultBoundedCompletionService(pool, rl.size());
 
-    List<ExecutionException> exceptions = null;
-    int submitted = 0, completed = 0;
-    // submit call for the primary replica.
-    submitted += addCallsForReplica(cs, rl, 0, 0);
+    addCallsForReplica(cs, rl, 0, 0);
     try {
       // wait for the timeout to see whether the primary responds back
       Future<Result> f = cs.poll(timeBeforeReplicas, TimeUnit.MICROSECONDS); // Yes, microseconds
@@ -204,11 +197,7 @@ public class RpcRetryingCallerWithReadReplicas {
         return f.get(); //great we got a response
       }
     } catch (ExecutionException e) {
-      // the primary call failed with RetriesExhaustedException or DoNotRetryIOException
-      // but the secondaries might still succeed. Continue on the replica RPCs.
-      exceptions = new ArrayList<ExecutionException>(rl.size());
-      exceptions.add(e);
-      completed++;
+      throwEnrichedException(e, retries);
     } catch (CancellationException e) {
       throw new InterruptedIOException();
     } catch (InterruptedException e) {
@@ -216,20 +205,13 @@ public class RpcRetryingCallerWithReadReplicas {
     }
 
     // submit call for the all of the secondaries at once
-    // TODO: this may be an overkill for large region replication
-    submitted += addCallsForReplica(cs, rl, 1, rl.size() - 1);
+    addCallsForReplica(cs, rl, 1, rl.size() - 1);
     try {
-      while (completed < submitted) {
-        try {
-          Future<Result> f = cs.take();
-          return f.get(); // great we got an answer
-        } catch (ExecutionException e) {
-          // if not cancel or interrupt, wait until all RPC's are done
-          // one of the tasks failed. Save the exception for later.
-          if (exceptions == null) exceptions = new ArrayList<ExecutionException>(rl.size());
-          exceptions.add(e);
-          completed++;
-        }
+      try {
+        Future<Result> f = cs.take();
+        return f.get();
+      } catch (ExecutionException e) {
+        throwEnrichedException(e, retries);
       }
     } catch (CancellationException e) {
       throw new InterruptedIOException();
@@ -238,12 +220,9 @@ public class RpcRetryingCallerWithReadReplicas {
     } finally {
       // We get there because we were interrupted or because one or more of the
       // calls succeeded or failed. In all case, we stop all our tasks.
-      cs.cancelAll(true);
+      cs.cancelAll();
     }
 
-    if (exceptions != null && !exceptions.isEmpty()) {
-      throwEnrichedException(exceptions.get(0), retries, toString()); // just rethrow the first exception for now.
-    }
     return null; // unreachable
   }
 
@@ -251,7 +230,7 @@ public class RpcRetryingCallerWithReadReplicas {
    * Extract the real exception from the ExecutionException, and throws what makes more
    * sense.
    */
-  static void throwEnrichedException(ExecutionException e, int retries, String str)
+  static void throwEnrichedException(ExecutionException e, int retries)
       throws RetriesExhaustedException, DoNotRetryIOException {
     Throwable t = e.getCause();
     assert t != null; // That's what ExecutionException is about: holding an exception
@@ -266,7 +245,7 @@ public class RpcRetryingCallerWithReadReplicas {
 
     RetriesExhaustedException.ThrowableWithExtraContext qt =
         new RetriesExhaustedException.ThrowableWithExtraContext(t,
-            EnvironmentEdgeManager.currentTimeMillis(), str);
+            EnvironmentEdgeManager.currentTimeMillis(), null);
 
     List<RetriesExhaustedException.ThrowableWithExtraContext> exceptions =
         Collections.singletonList(qt);
@@ -277,26 +256,24 @@ public class RpcRetryingCallerWithReadReplicas {
   /**
    * Creates the calls and submit them
    *
-   * @param cs         - the completion service to use for submitting
-   * @param rl         - the region locations
-   * @param min        - the id of the first replica, inclusive
-   * @param max        - the id of the last replica, inclusive.
-   * @return the number of submitted calls
+   * @param cs  - the completion service to use for submitting
+   * @param rl  - the region locations
+   * @param min - the id of the first replica, inclusive
+   * @param max - the id of the last replica, inclusive.
    */
-  private int addCallsForReplica(BoundedCompletionService<Result> cs,
-                                  RegionLocations rl, int min, int max) {
+  private void addCallsForReplica(ResultBoundedCompletionService cs,
+                                 RegionLocations rl, int min, int max) {
     for (int id = min; id <= max; id++) {
       HRegionLocation hrl = rl.getRegionLocation(id);
       ReplicaRegionServerCallable callOnReplica = new ReplicaRegionServerCallable(id, hrl);
-      RetryingRPC retryingOnReplica = new RetryingRPC(callOnReplica);
-      cs.submit(retryingOnReplica);
+      cs.submit(callOnReplica, callTimeout);
     }
-    return max - min + 1;
   }
 
   static RegionLocations getRegionLocations(boolean useCache, int replicaId,
-      ClusterConnection cConnection, TableName tableName, byte[] row)
+                 ClusterConnection cConnection, TableName tableName, byte[] row)
       throws RetriesExhaustedException, DoNotRetryIOException, InterruptedIOException {
+
     RegionLocations rl;
     try {
       rl = cConnection.locateRegion(tableName, row, useCache, true, replicaId);
@@ -314,5 +291,136 @@ public class RpcRetryingCallerWithReadReplicas {
     }
 
     return rl;
+  }
+
+
+  /**
+   * A completion service for the RpcRetryingCallerFactory.
+   * Keeps the list of the futures, and allows to cancel them all.
+   * This means as well that it can be used for a small set of tasks only.
+   * <br>Implementation is not Thread safe.
+   */
+  public class ResultBoundedCompletionService {
+    private final Executor executor;
+    private final QueueingFuture[] tasks; // all the tasks
+    private volatile QueueingFuture completed = null;
+
+    class QueueingFuture implements RunnableFuture<Result> {
+      private final ReplicaRegionServerCallable future;
+      private Result result = null;
+      private ExecutionException exeEx = null;
+      private volatile boolean canceled;
+      private final int callTimeout;
+      private final RpcRetryingCaller<Result> retryingCaller;
+
+
+      public QueueingFuture(ReplicaRegionServerCallable future, int callTimeout) {
+        this.future = future;
+        this.callTimeout = callTimeout;
+        this.retryingCaller = rpcRetryingCallerFactory.<Result>newCaller();
+      }
+
+      @Override
+      public void run() {
+        try {
+          if (!canceled) {
+            result =
+                rpcRetryingCallerFactory.<Result>newCaller().callWithRetries(future, callTimeout);
+          }
+        } catch (Throwable t) {
+          exeEx = new ExecutionException(t);
+        } finally {
+          if (!canceled && completed == null) {
+            completed = QueueingFuture.this;
+            synchronized (tasks) {
+              tasks.notify();
+            }
+          }
+        }
+      }
+
+      @Override
+      public boolean cancel(boolean mayInterruptIfRunning) {
+        if (result != null || exeEx != null) return false;
+        retryingCaller.cancel();
+        future.startCancel();
+        canceled = true;
+        return true;
+      }
+
+      @Override
+      public boolean isCancelled() {
+        return canceled;
+      }
+
+      @Override
+      public boolean isDone() {
+        return result != null || exeEx != null;
+      }
+
+      @Override
+      public Result get() throws InterruptedException, ExecutionException {
+        try {
+          return get(1000, TimeUnit.DAYS);
+        } catch (TimeoutException e) {
+          throw new RuntimeException("You did wait for 1000 days here?", e);
+        }
+      }
+
+      @Override
+      public Result get(long timeout, TimeUnit unit)
+          throws InterruptedException, ExecutionException, TimeoutException {
+        synchronized (tasks) {
+          if (result != null) {
+            return result;
+          }
+          if (exeEx != null) {
+            throw exeEx;
+          }
+          unit.timedWait(tasks, timeout);
+        }
+
+        if (result != null) {
+          return result;
+        }
+        if (exeEx != null) {
+          throw exeEx;
+        }
+
+        throw new TimeoutException();
+      }
+    }
+
+    public ResultBoundedCompletionService(Executor executor, int maxTasks) {
+      this.executor = executor;
+      this.tasks = new QueueingFuture[maxTasks];
+    }
+
+
+    public void submit(ReplicaRegionServerCallable task, int callTimeout) {
+      QueueingFuture newFuture = new QueueingFuture(task, callTimeout);
+      executor.execute(newFuture);
+      tasks[task.id] = newFuture;
+    }
+
+    public QueueingFuture take() throws InterruptedException {
+      synchronized (tasks) {
+        if (completed == null) tasks.wait();
+      }
+      return completed;
+    }
+
+    public QueueingFuture poll(long timeout, TimeUnit unit) throws InterruptedException {
+      synchronized (tasks) {
+        if (completed == null) unit.timedWait(tasks, timeout);
+      }
+      return completed;
+    }
+
+    public void cancelAll() {
+      for (QueueingFuture future : tasks) {
+        if (future != null) future.cancel(true);
+      }
+    }
   }
 }

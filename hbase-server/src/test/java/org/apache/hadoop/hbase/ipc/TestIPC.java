@@ -190,7 +190,7 @@ public class TestIPC {
       MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
       final String message = "hello";
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage(message).build();
-      Pair<Message, CellScanner> r = client.call(md, param, null,
+      Pair<Message, CellScanner> r = client.call(null, md, param, null,
         md.getOutputType().toProto(), User.getCurrent(), address, 0);
       assertTrue(r.getSecond() == null);
       // Silly assertion that the message is in the returned pb.
@@ -229,7 +229,7 @@ public class TestIPC {
       InetSocketAddress address = rpcServer.getListenerAddress();
       MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
-      Pair<Message, CellScanner> r = client.call(md, param, CellUtil.createCellScanner(cells),
+      Pair<Message, CellScanner> r = client.call(null, md, param, CellUtil.createCellScanner(cells),
         md.getOutputType().toProto(), User.getCurrent(), address, 0);
       int index = 0;
       while (r.getSecond().advance()) {
@@ -263,7 +263,7 @@ public class TestIPC {
       InetSocketAddress address = rpcServer.getListenerAddress();
       MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
-      client.call(md, param, null, null, User.getCurrent(), address, 0);
+      client.call(null, md, param, null, null, User.getCurrent(), address, 0);
       fail("Expected an exception to have been thrown!");
     } catch (Exception e) {
       LOG.info("Caught expected exception: " + e.toString());
@@ -287,7 +287,7 @@ public class TestIPC {
       MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
       for (int i = 0; i < 10; i++) {
-        client.call(md, param, CellUtil.createCellScanner(ImmutableList.of(CELL)),
+        client.call(null, md, param, CellUtil.createCellScanner(ImmutableList.of(CELL)),
             md.getOutputType().toProto(), User.getCurrent(), rpcServer.getListenerAddress(), 0);
       }
       verify(scheduler, times(10)).dispatch((CallRunner) anyObject());
@@ -342,7 +342,7 @@ public class TestIPC {
         }
         CellScanner cellScanner = CellUtil.createCellScanner(cells);
         Pair<Message, CellScanner> response =
-          client.call(md, builder.build(), cellScanner, param, user, address, 0);
+            client.call(null, md, builder.build(), cellScanner, param, user, address, 0);
         /*
         int count = 0;
         while (p.getSecond().advance()) {

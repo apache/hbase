@@ -59,7 +59,8 @@ public class ExceptionUtil {
     if (t instanceof InterruptedIOException) return (InterruptedIOException) t;
 
     if (t instanceof InterruptedException || t instanceof ClosedByInterruptException) {
-      InterruptedIOException iie = new InterruptedIOException();
+      InterruptedIOException iie =
+          new InterruptedIOException("Origin: " + t.getClass().getSimpleName());
       iie.initCause(t);
       return iie;
     }
