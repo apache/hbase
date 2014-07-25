@@ -487,7 +487,7 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     }
 
     ReplicationPeer peer =
-        new ReplicationPeer(peerConf, peerId, ZKUtil.getZooKeeperClusterKey(peerConf));
+        new ReplicationPeer(peerConf, peerId);
     try {
       peer.startStateTracker(this.zookeeper, this.getPeerStateNode(peerId));
     } catch (KeeperException e) {

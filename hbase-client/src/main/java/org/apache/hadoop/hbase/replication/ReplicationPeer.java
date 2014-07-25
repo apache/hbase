@@ -73,9 +73,9 @@ public class ReplicationPeer implements Abortable, Closeable {
    * @param key cluster key used to locate the peer
    * @param id string representation of this peer's identifier
    */
-  public ReplicationPeer(Configuration conf, String key, String id) throws ReplicationException {
+  public ReplicationPeer(Configuration conf, String id) throws ReplicationException {
     this.conf = conf;
-    this.clusterKey = key;
+    this.clusterKey = ZKUtil.getZooKeeperClusterKey(conf);
     this.id = id;
     try {
       this.reloadZkWatcher();
