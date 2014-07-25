@@ -182,100 +182,11 @@ public class HFile {
   public static final int DEFAULT_BYTES_PER_CHECKSUM = 16 * 1024;
   public static final ChecksumType DEFAULT_CHECKSUM_TYPE = ChecksumType.CRC32;
 
-  // For measuring latency of "sequential" reads and writes
-  private static final AtomicInteger readOps = new AtomicInteger();
-  private static final AtomicLong readTimeNano = new AtomicLong();
-  private static final AtomicInteger writeOps = new AtomicInteger();
-  private static final AtomicLong writeTimeNano = new AtomicLong();
-
-  // For measuring latency of pread
-  private static final AtomicInteger preadOps = new AtomicInteger();
-  private static final AtomicLong preadTimeNano = new AtomicLong();
-
   // For measuring number of checksum failures
   static final AtomicLong checksumFailures = new AtomicLong();
 
-  // For getting more detailed stats on FS latencies
-  // If, for some reason, the metrics subsystem stops polling for latencies,
-  // I don't want data to pile up in a memory leak
-  // so, after LATENCY_BUFFER_SIZE items have been enqueued for processing,
-  // fs latency stats will be dropped (and this behavior will be logged)
-  private static final int LATENCY_BUFFER_SIZE = 5000;
-  private static final BlockingQueue<Long> fsReadLatenciesNanos =
-      new ArrayBlockingQueue<Long>(LATENCY_BUFFER_SIZE);
-  private static final BlockingQueue<Long> fsWriteLatenciesNanos =
-      new ArrayBlockingQueue<Long>(LATENCY_BUFFER_SIZE);
-  private static final BlockingQueue<Long> fsPreadLatenciesNanos =
-      new ArrayBlockingQueue<Long>(LATENCY_BUFFER_SIZE);
-
-  public static final void offerReadLatency(long latencyNanos, boolean pread) {
-    if (pread) {
-      fsPreadLatenciesNanos.offer(latencyNanos); // might be silently dropped, if the queue is full
-      preadOps.incrementAndGet();
-      preadTimeNano.addAndGet(latencyNanos);
-    } else {
-      fsReadLatenciesNanos.offer(latencyNanos); // might be silently dropped, if the queue is full
-      readTimeNano.addAndGet(latencyNanos);
-      readOps.incrementAndGet();
-    }
-  }
-
-  public static final void offerWriteLatency(long latencyNanos) {
-    fsWriteLatenciesNanos.offer(latencyNanos); // might be silently dropped, if the queue is full
-
-    writeTimeNano.addAndGet(latencyNanos);
-    writeOps.incrementAndGet();
-  }
-
-  public static final Collection<Long> getReadLatenciesNanos() {
-    final List<Long> latencies =
-        Lists.newArrayListWithCapacity(fsReadLatenciesNanos.size());
-    fsReadLatenciesNanos.drainTo(latencies);
-    return latencies;
-  }
-
-  public static final Collection<Long> getPreadLatenciesNanos() {
-    final List<Long> latencies =
-        Lists.newArrayListWithCapacity(fsPreadLatenciesNanos.size());
-    fsPreadLatenciesNanos.drainTo(latencies);
-    return latencies;
-  }
-
-  public static final Collection<Long> getWriteLatenciesNanos() {
-    final List<Long> latencies =
-        Lists.newArrayListWithCapacity(fsWriteLatenciesNanos.size());
-    fsWriteLatenciesNanos.drainTo(latencies);
-    return latencies;
-  }
-
   // for test purpose
   public static final AtomicLong dataBlockReadCnt = new AtomicLong(0);
-
-  // number of sequential reads
-  public static final int getReadOps() {
-    return readOps.getAndSet(0);
-  }
-
-  public static final long getReadTimeMs() {
-    return readTimeNano.getAndSet(0) / 1000000;
-  }
-
-  // number of positional reads
-  public static final int getPreadOps() {
-    return preadOps.getAndSet(0);
-  }
-
-  public static final long getPreadTimeMs() {
-    return preadTimeNano.getAndSet(0) / 1000000;
-  }
-
-  public static final int getWriteOps() {
-    return writeOps.getAndSet(0);
-  }
-
-  public static final long getWriteTimeMs() {
-    return writeTimeNano.getAndSet(0) / 1000000;
-  }
 
   /**
    * Number of checksum verification failures. It also
