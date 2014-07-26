@@ -419,7 +419,7 @@ class MetricsRegionServerWrapperImpl
       // assume that it took PERIOD seconds to start the executor.
       // this is a guess but it's a pretty good one.
       if (lastRan == 0) {
-        lastRan = currentTime - (period * 1000);
+        lastRan = currentTime - period;
       }
 
 
