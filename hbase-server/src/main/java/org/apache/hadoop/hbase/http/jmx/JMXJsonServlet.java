@@ -34,6 +34,7 @@ import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.management.ReflectionException;
+import javax.management.RuntimeMBeanException;
 import javax.management.RuntimeErrorException;
 import javax.management.RuntimeMBeanException;
 import javax.management.openmbean.CompositeData;
@@ -248,6 +249,15 @@ public class JMXJsonServlet extends HttpServlet {
             prs = attribute;
             attributeinfo = mBeanServer.getAttribute(oname, prs);
           }
+        } catch (RuntimeMBeanException e) {
+         // UnsupportedOperationExceptions happen in the normal course of business,
+         // so no need to log them as errors all the time.
+         if (e.getCause() instanceof UnsupportedOperationException) {
+           LOG.debug("getting attribute " + oname + " of "+oname+" threw an exception", e);
+         } else {
+           LOG.error("getting attribute " + oname + " of "+oname+" threw an exception", e);
+         }
+         return;
         } catch (AttributeNotFoundException e) {
           // If the modelerType attribute was not found, the class name is used
           // instead.
