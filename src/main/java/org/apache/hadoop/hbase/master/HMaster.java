@@ -884,7 +884,8 @@ HMasterRegionInterface, Watcher, StoppableMaster {
       /* Main processing loop */
       FINISHED: while (!this.closed.get()) {
         // check if we should be shutting down
-        if (clusterShutdownRequested.get()) {
+        if (zkMasterAddressWatcher.isElectionZNodeDeleted()
+            || clusterShutdownRequested.get()) {
           // The region servers won't all exit until we stop scanning the
           // meta regions
           this.regionManager.stopScanners();
@@ -1682,7 +1683,8 @@ HMasterRegionInterface, Watcher, StoppableMaster {
     List<Future<Void>> futures = new ArrayList<>();
     for (final Pair<HRegionInfo, HServerAddress> entry : tableRegions) {
       Callable<Void> writer = new Callable<Void>() {
-        
+
+        @Override
         public Void call() throws IOException {
           HRegionInfo hri = entry.getFirst();
             hri.writeToDisk(conf);

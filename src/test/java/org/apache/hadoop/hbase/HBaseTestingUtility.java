@@ -2056,6 +2056,13 @@ public class HBaseTestingUtility {
   }
 
   /**
+   * Sets the configuration to use local-file-system.
+   */
+  public void useLFS() {
+    this.conf.set(FS_TYPE_KEY, FS_TYPE_LFS);
+  }
+
+  /**
    * Moves the region to a new server and change the assignment accordingly.
    *
    * @throws IOException

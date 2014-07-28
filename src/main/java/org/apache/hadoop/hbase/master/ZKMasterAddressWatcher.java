@@ -19,16 +19,15 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HServerAddress;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWrapper;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
-
-import java.util.concurrent.atomic.AtomicBoolean;
 
 
 /**
@@ -45,6 +44,7 @@ class ZKMasterAddressWatcher implements Watcher {
 
   private ZooKeeperWrapper zookeeper;
   private final StoppableMaster stoppable;
+  private final AtomicBoolean electionZNodeDeleted = new AtomicBoolean(false);
 
   /**
    * Create this watcher using passed ZooKeeperWrapper instance.
@@ -70,6 +70,7 @@ class ZKMasterAddressWatcher implements Watcher {
         this.stoppable.requestClusterShutdown();
       } else if (event.getPath().equals(this.zookeeper.masterElectionZNode)){
         LOG.info("Master address ZNode deleted, notifying waiting masters");
+        electionZNodeDeleted.set(true);
         notifyAll();
       }
     } else if(type.equals(EventType.NodeCreated)) {
@@ -119,7 +120,8 @@ class ZKMasterAddressWatcher implements Watcher {
         LOG.debug("Won't start Master because of requested shutdown");
         return false;
       }
-      if(this.zookeeper.writeMasterAddress(address)) {
+      if (this.zookeeper.writeMasterAddress(address)) {
+        electionZNodeDeleted.set(false);
         this.zookeeper.setClusterState(true);
         this.zookeeper.setClusterStateWatch();
         // Watch our own node
@@ -142,4 +144,10 @@ class ZKMasterAddressWatcher implements Watcher {
     notifyAll();
   }
 
+  /**
+   * Returns whether the election znode was deleted.
+   */
+  public boolean isElectionZNodeDeleted() {
+    return electionZNodeDeleted.get();
+  }
 }
