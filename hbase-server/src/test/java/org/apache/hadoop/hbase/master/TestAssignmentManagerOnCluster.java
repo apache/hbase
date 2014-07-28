@@ -70,7 +70,6 @@ import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -126,7 +125,8 @@ public class TestAssignmentManagerOnCluster {
       RegionStates regionStates = master.getAssignmentManager().getRegionStates();
       ServerName metaServerName = regionStates.getRegionServerOfRegion(
         HRegionInfo.FIRST_META_REGIONINFO);
-      if (master.getServerName().equals(metaServerName)) {
+      if (master.getServerName().equals(metaServerName) || metaServerName == null
+          || !metaServerName.equals(cluster.getServerHoldingMeta())) {
         // Move meta off master
         metaServerName = cluster.getLiveRegionServerThreads()
           .get(0).getRegionServer().getServerName();

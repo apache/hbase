@@ -885,6 +885,7 @@ public class TestDistributedLogSplitting {
       List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
       if (regions.isEmpty()) continue;
       region = regions.get(0);
+      if (region.isMetaRegion()) continue;
       regionSet.add(region);
       dstRS = rsts.get((i+1) % NUM_RS).getRegionServer();
       break;

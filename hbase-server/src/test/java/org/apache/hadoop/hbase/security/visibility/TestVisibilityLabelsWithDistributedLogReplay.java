@@ -42,6 +42,8 @@ public class TestVisibilityLabelsWithDistributedLogReplay extends
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
         ScanLabelGenerator.class);
     conf.set("hbase.superuser", "admin");
+    // Put meta on master to avoid meta server shutdown handling
+    conf.set("hbase.balancer.tablesOnMaster", "hbase:meta");
     TEST_UTIL.startMiniCluster(2);
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
     USER1 = User.createUserForTesting(conf, "user1", new String[] {});

@@ -76,7 +76,7 @@ public class TestRSKilledWhenInitializing {
     master.start();
     try {
       long startTime = System.currentTimeMillis();
-      while (!master.getMaster().isInitialized()) {
+      while (!master.getMaster().isActiveMaster()) {
         try {
           Thread.sleep(100);
         } catch (InterruptedException ignored) {

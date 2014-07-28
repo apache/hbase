@@ -898,8 +898,18 @@ public class ServerManager {
       getLong(WAIT_ON_REGIONSERVERS_INTERVAL, 1500);
     final long timeout = this.master.getConfiguration().
       getLong(WAIT_ON_REGIONSERVERS_TIMEOUT, 4500);
+    String[] tablesOnMaster = this.master.getConfiguration().
+      getStrings("hbase.balancer.tablesOnMaster");
+    int defaultMinToStart = 1;
+    if (tablesOnMaster != null && tablesOnMaster.length > 0) {
+      // If we assign regions to master, we'd like to start
+      // at least another region server so that we don't
+      // assign all regions to master if that region server
+      // doesn't come up in time.
+      defaultMinToStart = 2;
+    }
     int minToStart = this.master.getConfiguration().
-      getInt(WAIT_ON_REGIONSERVERS_MINTOSTART, 2);
+      getInt(WAIT_ON_REGIONSERVERS_MINTOSTART, defaultMinToStart);
     if (minToStart < 1) {
       LOG.warn(String.format(
         "The value of '%s' (%d) can not be less than 1, ignoring.",

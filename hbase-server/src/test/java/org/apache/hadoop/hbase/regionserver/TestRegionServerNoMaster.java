@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.ZkOpenRegionCoordination;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
@@ -43,9 +42,7 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.junit.After;
@@ -102,22 +99,6 @@ public class TestRegionServerNoMaster {
     while (HTU.getHBaseCluster().getMasterThread() != null
         && HTU.getHBaseCluster().getMasterThread().isAlive()) {
       Threads.sleep(100);
-    }
-    // Master is down, so is the meta. We need to assign it somewhere
-    // so that regions can be assigned during the mocking phase.
-    HRegionServer hrs = HTU.getHBaseCluster().getRegionServer(0);
-    ZooKeeperWatcher zkw = hrs.getZooKeeper();
-    ZKAssign.createNodeOffline(
-      zkw, HRegionInfo.FIRST_META_REGIONINFO, hrs.getServerName());
-    ProtobufUtil.openRegion(hrs.getRSRpcServices(),
-      hrs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
-    MetaTableLocator mtl = new MetaTableLocator();
-    while (true) {
-      ServerName sn = mtl.getMetaRegionLocation(zkw);
-      if (sn != null && sn.equals(hrs.getServerName())) {
-        break;
-      }
-      Thread.sleep(100);
     }
   }
 

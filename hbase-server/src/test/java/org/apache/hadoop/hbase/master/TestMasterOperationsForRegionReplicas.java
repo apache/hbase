@@ -337,12 +337,12 @@ public class TestMasterOperationsForRegionReplicas {
     Map<HRegionInfo, ServerName>  regionToServerMap = snapshot.getRegionToRegionServerMap();
     assertEquals(regionToServerMap.size(), numRegions * numReplica + 1); //'1' for the namespace
     Map<ServerName, List<HRegionInfo>> serverToRegionMap = snapshot.getRegionServerToRegionMap();
-    assertEquals(serverToRegionMap.keySet().size(), 2); // 1 rs + 1 master
+    assertEquals(serverToRegionMap.keySet().size(), 1); // master by default not used
     for (Map.Entry<ServerName, List<HRegionInfo>> entry : serverToRegionMap.entrySet()) {
       if (entry.getKey().equals(TEST_UTIL.getHBaseCluster().getMaster().getServerName())) {
         continue;
       }
-      assertEquals(entry.getValue().size(), numRegions * numReplica);
+      assertEquals(entry.getValue().size(), numRegions * numReplica + 1); //'1' for the namespace
     }
   }
 }

@@ -158,6 +158,11 @@ public class TestRegionServerMetrics {
     }
     table.get(gets);
 
+    // By default, master doesn't host meta now.
+    // Adding some meta related requests
+    requests += 3;
+    readRequests ++;
+
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     metricsHelper.assertCounter("totalRequestCount", requests + 50, serverSource);
     metricsHelper.assertCounter("readRequestCount", readRequests + 20, serverSource);

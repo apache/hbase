@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -118,17 +117,6 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
    */
   @Test
   public void testImmediateAssignment() throws Exception {
-    List<ServerName> tmp = getListOfServerNames(randomServers(1, 0));
-    tmp.add(master);
-    ServerName sn = loadBalancer.randomAssignment(HRegionInfo.FIRST_META_REGIONINFO, tmp);
-    assertEquals(master, sn);
-    HRegionInfo hri = randomRegions(1, -1).get(0);
-    sn = loadBalancer.randomAssignment(hri, tmp);
-    assertNotEquals(master, sn);
-    tmp = new ArrayList<ServerName>();
-    tmp.add(master);
-    sn = loadBalancer.randomAssignment(hri, tmp);
-    assertEquals(master, sn);
     for (int[] mock : regionsAndServersMocks) {
       LOG.debug("testImmediateAssignment with " + mock[0] + " regions and " + mock[1] + " servers");
       List<HRegionInfo> regions = randomRegions(mock[0]);
@@ -164,18 +152,6 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
    */
   @Test
   public void testBulkAssignment() throws Exception {
-    List<ServerName> tmp = getListOfServerNames(randomServers(5, 0));
-    List<HRegionInfo> hris = randomRegions(20);
-    hris.add(HRegionInfo.FIRST_META_REGIONINFO);
-    tmp.add(master);
-    Map<ServerName, List<HRegionInfo>> plans = loadBalancer.roundRobinAssignment(hris, tmp);
-    assertTrue(plans.get(master).contains(HRegionInfo.FIRST_META_REGIONINFO));
-    assertEquals(1, plans.get(master).size());
-    int totalRegion = 0;
-    for (List<HRegionInfo> regions: plans.values()) {
-      totalRegion += regions.size();
-    }
-    assertEquals(hris.size(), totalRegion);
     for (int[] mock : regionsAndServersMocks) {
       LOG.debug("testBulkAssignment with " + mock[0] + " regions and " + mock[1] + " servers");
       List<HRegionInfo> regions = randomRegions(mock[0]);
@@ -533,7 +509,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     balancer.usingBackupMasters = false;
     Mockito.when(st.getBackupMasters()).thenReturn(backupMasters);
     loadBalancer.setClusterStatus(st);
-    assertEquals(1, balancer.excludedServers.size());
+    assertEquals(backupMasters.size(), balancer.excludedServers.size());
     assertTrue(balancer.excludedServers.contains(backupMaster));
 
     // Round robin assignment

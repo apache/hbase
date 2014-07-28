@@ -63,6 +63,8 @@ public class TestScannerTimeout {
     Configuration c = TEST_UTIL.getConfiguration();
     c.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, SCANNER_TIMEOUT);
     c.setInt(HConstants.THREAD_WAKE_FREQUENCY, THREAD_WAKE_FREQUENCY);
+    // Put meta on master to avoid meta server shutdown handling
+    c.set("hbase.balancer.tablesOnMaster", "hbase:meta");
     // We need more than one region server for this test
     TEST_UTIL.startMiniCluster(2);
     Table table = TEST_UTIL.createTable(TABLE_NAME, SOME_BYTES);

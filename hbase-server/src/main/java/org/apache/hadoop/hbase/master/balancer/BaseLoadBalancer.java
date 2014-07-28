@@ -43,12 +43,10 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
-import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer.Cluster.Action.Type;
@@ -863,17 +861,11 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   // That's why the default activeMasterWeight is high.
   public static final String BACKUP_MASTER_WEIGHT_KEY =
     "hbase.balancer.backupMasterWeight";
-  public static final int DEFAULT_BACKUP_MASTER_WEIGHT = 1;
+  public static final int DEFAULT_BACKUP_MASTER_WEIGHT = 0;
 
   private static final String ACTIVE_MASTER_WEIGHT_KEY =
     "hbase.balancer.activeMasterWeight";
   private static final int DEFAULT_ACTIVE_MASTER_WEIGHT = 200;
-
-  // Regions of these tables are put on the master by default.
-  private static final String[] DEFAULT_TABLES_ON_MASTER =
-    new String[] {AccessControlLists.ACL_TABLE_NAME.getNameAsString(),
-      TableName.NAMESPACE_TABLE_NAME.getNameAsString(),
-      TableName.META_TABLE_NAME.getNameAsString()};
 
   protected int activeMasterWeight;
   protected int backupMasterWeight;
@@ -906,8 +898,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         + BACKUP_MASTER_WEIGHT_KEY + " is " + backupMasterWeight
         + "(<1)");
     }
-    String[] tables = conf.getStrings(
-      "hbase.balancer.tablesOnMaster", DEFAULT_TABLES_ON_MASTER);
+    String[] tables = conf.getStrings("hbase.balancer.tablesOnMaster");
     if (tables != null) {
       for (String table: tables) {
         tablesOnMaster.add(table);
@@ -1139,8 +1130,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     int total = regions.size();
     // Get the number of regions to be assigned
     // to backup masters based on the weight
-    int numRegions = total * numBackupMasters
-      / (numServers * backupMasterWeight + numBackupMasters);
+    int numRegions = usingBackupMasters ? total * numBackupMasters
+      / (numServers * backupMasterWeight + numBackupMasters) : 0;
     if (numRegions > 0) {
       // backupMasters can't be null, according to the formula, numBackupMasters != 0
       roundRobinAssignment(cluster, regions, unassignedRegions, 0,

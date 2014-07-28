@@ -68,7 +68,6 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKTableStateManager;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -292,22 +291,6 @@ public class TestMasterFailover {
      * Now, let's start mocking up some weird states as described in the method
      * javadoc.
      */
-
-    // Master is down, so is the meta. We need to assign it somewhere
-    // so that regions can be assigned during the mocking phase.
-    ZKAssign.createNodeOffline(
-      zkw, HRegionInfo.FIRST_META_REGIONINFO, hrs.getServerName());
-    ProtobufUtil.openRegion(hrs.getRSRpcServices(),
-      hrs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
-
-    MetaTableLocator mtl = new MetaTableLocator();
-    while (true) {
-      ServerName sn = mtl.getMetaRegionLocation(zkw);
-      if (sn != null && sn.equals(hrs.getServerName())) {
-        break;
-      }
-      Thread.sleep(100);
-    }
 
     List<HRegionInfo> regionsThatShouldBeOnline = new ArrayList<HRegionInfo>();
     List<HRegionInfo> regionsThatShouldBeOffline = new ArrayList<HRegionInfo>();
@@ -686,22 +669,6 @@ public class TestMasterFailover {
      * javadoc.
      */
 
-    // Master is down, so is the meta. We need to assign it somewhere
-    // so that regions can be assigned during the mocking phase.
-    ZKAssign.createNodeOffline(
-      zkw, HRegionInfo.FIRST_META_REGIONINFO, hrs.getServerName());
-    ProtobufUtil.openRegion(hrs.getRSRpcServices(),
-      hrs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO);
-
-    MetaTableLocator mtl = new MetaTableLocator();
-    while (true) {
-      ServerName sn = mtl.getMetaRegionLocation(zkw);
-      if (sn != null && sn.equals(hrs.getServerName())) {
-        break;
-      }
-      Thread.sleep(100);
-    }
-
     List<HRegionInfo> regionsThatShouldBeOnline = new ArrayList<HRegionInfo>();
     List<HRegionInfo> regionsThatShouldBeOffline = new ArrayList<HRegionInfo>();
 
@@ -988,16 +955,26 @@ public class TestMasterFailover {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
 
     // Find regionserver carrying meta.
-    HRegionServer regionServer = cluster.getMaster();
-    HRegion metaRegion = regionServer.getOnlineRegion(
-      HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+    List<RegionServerThread> regionServerThreads =
+      cluster.getRegionServerThreads();
+    HRegion metaRegion = null;
+    HRegionServer metaRegionServer = null;
+    for (RegionServerThread regionServerThread : regionServerThreads) {
+      HRegionServer regionServer = regionServerThread.getRegionServer();
+      metaRegion = regionServer.getOnlineRegion(HRegionInfo.FIRST_META_REGIONINFO.getRegionName());
+      regionServer.abort("");
+      if (null != metaRegion) {
+        metaRegionServer = regionServer;
+        break;
+      }
+    }
 
     TEST_UTIL.shutdownMiniHBaseCluster();
 
     // Create a ZKW to use in the test
     ZooKeeperWatcher zkw =
       HBaseTestingUtility.createAndForceNodeToOpenedState(TEST_UTIL,
-          metaRegion, regionServer.getServerName());
+          metaRegion, metaRegionServer.getServerName());
 
     LOG.info("Staring cluster for second time");
     TEST_UTIL.startMiniHBaseCluster(NUM_MASTERS, NUM_RS);

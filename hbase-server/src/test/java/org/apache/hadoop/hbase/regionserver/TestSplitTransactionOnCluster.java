@@ -131,7 +131,7 @@ public class TestSplitTransactionOnCluster {
   static void setupOnce() throws Exception {
     TESTING_UTIL.getConfiguration().setInt("hbase.balancer.period", 60000);
     useZKForAssignment = TESTING_UTIL.getConfiguration().getBoolean(
-      "hbase.assignment.usezk", false);
+      "hbase.assignment.usezk", true);
     TESTING_UTIL.startMiniCluster(NB_SERVERS);
   }
 
@@ -1270,8 +1270,8 @@ public class TestSplitTransactionOnCluster {
     // hbase:meta  We don't want hbase:meta replay polluting our test when we later crash
     // the table region serving server.
     int metaServerIndex = cluster.getServerWithMeta();
-    assertTrue(metaServerIndex == -1); // meta is on master now
-    HRegionServer metaRegionServer = cluster.getMaster();
+    assertTrue(metaServerIndex != -1);
+    HRegionServer metaRegionServer = cluster.getRegionServer(metaServerIndex);
     int tableRegionIndex = cluster.getServerWith(hri.getRegionName());
     assertTrue(tableRegionIndex != -1);
     HRegionServer tableRegionServer = cluster.getRegionServer(tableRegionIndex);

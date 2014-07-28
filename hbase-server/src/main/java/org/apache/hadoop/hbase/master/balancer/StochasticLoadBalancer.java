@@ -329,6 +329,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     loads = new HashMap<String, Deque<RegionLoad>>();
 
     for (ServerName sn : clusterStatus.getServers()) {
+      if (excludedServers.contains(sn)) continue;
       ServerLoad sl = clusterStatus.getLoad(sn);
       if (sl == null) {
         continue;
