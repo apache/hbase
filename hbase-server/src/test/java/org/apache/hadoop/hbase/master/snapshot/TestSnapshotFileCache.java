@@ -17,15 +17,19 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.HashSet;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.collect.Iterables;
+import com.google.common.collect.ObjectArrays;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -92,10 +96,13 @@ public class TestSnapshotFileCache {
     FSUtils.logFileSystemState(fs, rootDir, LOG);
 
     // then make sure the cache finds them
-    assertTrue("Cache didn't find:" + file1, cache.contains(file1.getName()));
-    assertTrue("Cache didn't find:" + file2, cache.contains(file2.getName()));
+    Iterable<FileStatus> nonSnapshotFiles = cache.getUnreferencedFiles(
+            Arrays.asList(FSUtils.listStatus(fs, family))
+    );
+    assertFalse("Cache didn't find:" + file1, Iterables.contains(nonSnapshotFiles, file1));
+    assertFalse("Cache didn't find:" + file2, Iterables.contains(nonSnapshotFiles, file2));
     String not = "file-shouldn't-be-found";
-    assertFalse("Cache found '" + not + "', but it shouldn't have.", cache.contains(not));
+    assertFalse("Cache found '" + not + "', but it shouldn't have.", Iterables.contains(nonSnapshotFiles, not));
 
     // make sure we get a little bit of separation in the modification times
     // its okay if we sleep a little longer (b/c of GC pause), as long as we sleep a little
@@ -110,18 +117,77 @@ public class TestSnapshotFileCache {
 
 
     LOG.debug("Checking to see if file is deleted.");
-    assertTrue("Cache didn't find:" + file1, cache.contains(file1.getName()));
-    assertTrue("Cache didn't find:" + file2, cache.contains(file2.getName()));
+    nonSnapshotFiles = cache.getUnreferencedFiles(
+            nonSnapshotFiles
+    );
+    
+    assertFalse("Cache didn't find:" + file1, Iterables.contains(nonSnapshotFiles, file1));
+    assertFalse("Cache didn't find:" + file2, Iterables.contains(nonSnapshotFiles, file2));
 
     // then trigger a refresh
     cache.triggerCacheRefreshForTesting();
+
+    nonSnapshotFiles = cache.getUnreferencedFiles(
+            nonSnapshotFiles
+    );
     // and not it shouldn't find those files
     assertFalse("Cache found '" + file1 + "', but it shouldn't have.",
-      cache.contains(file1.getName()));
+            Iterables.contains(nonSnapshotFiles, file1));
     assertFalse("Cache found '" + file2 + "', but it shouldn't have.",
-      cache.contains(file2.getName()));
+            Iterables.contains(nonSnapshotFiles, file2));
 
     fs.delete(snapshotDir, true);
+  }
+
+  @Test
+  public void testWeNeverCacheTmpDirAndLoadIt() throws Exception {
+
+    final AtomicInteger count = new AtomicInteger(0);
+    // don't refresh the cache unless we tell it to
+    long period = Long.MAX_VALUE;
+    Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
+    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
+            "test-snapshot-file-cache-refresh", new SnapshotFiles()) {
+      @Override
+      List<String> getSnapshotsInProgress() throws IOException {
+        List<String> result = super.getSnapshotsInProgress();
+        count.incrementAndGet();
+        return result;
+      }
+    };
+
+    // create a file in a 'completed' snapshot
+    Path snapshot = new Path(snapshotDir, "snapshot");
+    Path region = new Path(snapshot, "7e91021");
+    Path family = new Path(region, "fam");
+    Path file1 = new Path(family, "file1");
+    fs.createNewFile(file1);
+
+    FileStatus[] completedFiles = FSUtils.listStatus(fs, family);
+
+    // create an 'in progress' snapshot
+    SnapshotDescription desc = SnapshotDescription.newBuilder().setName("working").build();
+    snapshot = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
+    region = new Path(snapshot, "7e91021");
+    family = new Path(region, "fam");
+    Path file2 = new Path(family, "file2");
+    fs.createNewFile(file2);
+    cache.triggerCacheRefreshForTesting();
+
+    Iterable<FileStatus> deletableFiles = cache.getUnreferencedFiles(Arrays.asList(
+            ObjectArrays.concat(completedFiles, FSUtils.listStatus(fs, family), FileStatus.class))
+    );
+    assertTrue(Iterables.isEmpty(deletableFiles));
+    assertEquals(1, count.get()); // we check the tmp directory
+
+    Path file3 = new Path(family, "file3");
+    fs.create(file3);
+    deletableFiles = cache.getUnreferencedFiles(Arrays.asList(
+            ObjectArrays.concat(completedFiles, FSUtils.listStatus(fs, family), FileStatus.class))
+    );
+    assertTrue(Iterables.isEmpty(deletableFiles));
+    assertEquals(2, count.get()); // we check the tmp directory
+
   }
 
   @Test
@@ -150,8 +216,11 @@ public class TestSnapshotFileCache {
     FSUtils.logFileSystemState(fs, rootDir, LOG);
 
     // then make sure the cache finds both files
-    assertTrue("Cache didn't find:" + file1, cache.contains(file1.getName()));
-    assertTrue("Cache didn't find:" + file2, cache.contains(file2.getName()));
+    Iterable<FileStatus> nonSnapshotFiles = cache.getUnreferencedFiles(
+            Arrays.asList(FSUtils.listStatus(fs, family))
+    );
+    assertFalse("Cache didn't find:" + file1, Iterables.contains(nonSnapshotFiles, file1));
+    assertFalse("Cache didn't find:" + file2, Iterables.contains(nonSnapshotFiles, file2));
   }
 
   @Test
@@ -181,10 +250,13 @@ public class TestSnapshotFileCache {
 
     FSUtils.logFileSystemState(fs, rootDir, LOG);
 
+    Iterable<FileStatus> nonSnapshotFiles = cache.getUnreferencedFiles(
+            Arrays.asList(FSUtils.listStatus(fs, family))
+    );    
     // then make sure the cache only finds the log files
     assertFalse("Cache found '" + file1 + "', but it shouldn't have.",
-      cache.contains(file1.getName()));
-    assertTrue("Cache didn't find:" + log, cache.contains(log.getName()));
+            Iterables.contains(nonSnapshotFiles, file1));
+    assertFalse("Cache didn't find:" + log, Iterables.contains(nonSnapshotFiles, log));
   }
 
   @Test
@@ -207,7 +279,10 @@ public class TestSnapshotFileCache {
 
     FSUtils.logFileSystemState(fs, rootDir, LOG);
 
-    assertTrue("Cache didn't find " + file1, cache.contains(file1.getName()));
+    Iterable<FileStatus> nonSnapshotFiles = cache.getUnreferencedFiles(
+            Arrays.asList(FSUtils.listStatus(fs, family))
+    );  
+    assertFalse("Cache didn't find " + file1, Iterables.contains(nonSnapshotFiles, file1));
 
     // now delete the snapshot and add a file with a different name
     fs.delete(snapshot, true);
@@ -215,13 +290,15 @@ public class TestSnapshotFileCache {
     fs.createNewFile(file3);
 
     FSUtils.logFileSystemState(fs, rootDir, LOG);
-    assertTrue("Cache didn't find new file:" + file3, cache.contains(file3.getName()));
+    nonSnapshotFiles = cache.getUnreferencedFiles(
+            Arrays.asList(FSUtils.listStatus(fs, family))
+    );
+    assertFalse("Cache didn't find new file:" + file3, Iterables.contains(nonSnapshotFiles, file3));
   }
 
   @Test
   public void testSnapshotTempDirReload() throws IOException {
     long period = Long.MAX_VALUE;
-    // This doesn't refresh cache until we invoke it explicitly
     Path snapshotDir = new Path(SnapshotDescriptionUtils.getSnapshotsDir(rootDir),
         SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME);
     SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
@@ -231,13 +308,13 @@ public class TestSnapshotFileCache {
     Path snapshot1 = new Path(snapshotDir, "snapshot1");
     Path file1 = new Path(new Path(new Path(snapshot1, "7e91021"), "fam"), "file1");
     fs.createNewFile(file1);
-    assertTrue(cache.contains(file1.getName()));
+    assertTrue(cache.getSnapshotsInProgress().contains(file1.getName()));
 
     // Add another snapshot
     Path snapshot2 = new Path(snapshotDir, "snapshot2");
     Path file2 = new Path(new Path(new Path(snapshot2, "7e91021"), "fam2"), "file2");
     fs.createNewFile(file2);
-    assertTrue(cache.contains(file2.getName()));
+    assertTrue(cache.getSnapshotsInProgress().contains((file2.getName())));
   }
 
   class SnapshotFiles implements SnapshotFileCache.SnapshotFileInspector {
