@@ -18,22 +18,22 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Tool used to copy a table to another one which can be on a different setup.
@@ -72,7 +72,7 @@ public class CopyTable extends Configured implements Tool {
     if (!doCommandLine(args)) {
       return null;
     }
-    Job job = new Job(conf, NAME + "_" + tableName);
+    Job job = Job.getInstance(conf, NAME + "_" + tableName);
     job.setJarByClass(CopyTable.class);
     Scan scan = new Scan();
     scan.setCacheBlocks(false);

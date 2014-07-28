@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -57,6 +58,8 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
 
 
@@ -65,7 +68,7 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Import {
+public class Import extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(Import.class);
   final static String NAME = "import";
   public final static String CF_RENAME_PROP = "HBASE_IMPORTER_RENAME_CFS";
@@ -399,7 +402,7 @@ public class Import {
     String tableName = args[0];
     conf.set(TABLE_NAME, tableName);
     Path inputDir = new Path(args[1]);
-    Job job = new Job(conf, NAME + "_" + tableName);
+    Job job = Job.getInstance(conf, NAME + "_" + tableName);
     job.setJarByClass(Importer.class);
     FileInputFormat.setInputPaths(job, inputDir);
     job.setInputFormatClass(SequenceFileInputFormat.class);
@@ -491,29 +494,34 @@ public class Import {
     }
   }
 
-  /**
-   * Main entry point.
-   *
-   * @param args  The command line parameters.
-   * @throws Exception When running the job fails.
-   */
-  public static void main(String[] args) throws Exception {
-    Configuration conf = HBaseConfiguration.create();
-    String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+  @Override
+  public int run(String[] args) throws Exception {
+    String[] otherArgs = new GenericOptionsParser(getConf(), args).getRemainingArgs();
     if (otherArgs.length < 2) {
       usage("Wrong number of arguments: " + otherArgs.length);
-      System.exit(-1);
+      return -1;
     }
     String inputVersionString = System.getProperty(ResultSerialization.IMPORT_FORMAT_VER);
     if (inputVersionString != null) {
-      conf.set(ResultSerialization.IMPORT_FORMAT_VER, inputVersionString);
+      getConf().set(ResultSerialization.IMPORT_FORMAT_VER, inputVersionString);
     }
-    Job job = createSubmittableJob(conf, otherArgs);
+    Job job = createSubmittableJob(getConf(), otherArgs);
     boolean isJobSuccessful = job.waitForCompletion(true);
     if(isJobSuccessful){
       // Flush all the regions of the table
-      flushRegionsIfNecessary(conf);
+      flushRegionsIfNecessary(getConf());
     }
-    System.exit(job.waitForCompletion(true) ? 0 : 1);
+    return (isJobSuccessful ? 0 : 1);
   }
+
+  /**
+   * Main entry point.
+   * @param args The command line parameters.
+   * @throws Exception When running the job fails.
+   */
+  public static void main(String[] args) throws Exception {
+    int errCode = ToolRunner.run(HBaseConfiguration.create(), new Import(), args);
+    System.exit(errCode);
+  }
+
 }

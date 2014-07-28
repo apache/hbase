@@ -231,7 +231,7 @@ public class WALPlayer extends Configured implements Tool {
     }
     conf.setStrings(TABLES_KEY, tables);
     conf.setStrings(TABLE_MAP_KEY, tableMap);
-    Job job = new Job(conf, NAME + "_" + inputDir);
+    Job job = Job.getInstance(conf, NAME + "_" + inputDir);
     job.setJarByClass(WALPlayer.class);
     FileInputFormat.setInputPaths(job, inputDir);
     job.setInputFormatClass(HLogInputFormat.class);

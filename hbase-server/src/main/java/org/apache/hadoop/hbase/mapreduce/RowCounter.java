@@ -26,6 +26,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -36,6 +37,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * A job with a just a map phase to count rows. Map outputs table rows IF the
@@ -43,7 +46,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class RowCounter {
+public class RowCounter extends Configured implements Tool {
 
   /** Name of this 'program'. */
   static final String NAME = "rowcounter";
@@ -112,7 +115,7 @@ public class RowCounter {
       }
     }
 
-    Job job = new Job(conf, NAME + "_" + tableName);
+    Job job = Job.getInstance(conf, NAME + "_" + tableName);
     job.setJarByClass(RowCounter.class);
     Scan scan = new Scan();
     scan.setCacheBlocks(false);
@@ -170,23 +173,28 @@ public class RowCounter {
         + "-Dmapreduce.map.speculative=false");
   }
 
+  @Override
+  public int run(String[] args) throws Exception {
+    String[] otherArgs = new GenericOptionsParser(getConf(), args).getRemainingArgs();
+    if (otherArgs.length < 1) {
+      printUsage("Wrong number of parameters: " + args.length);
+      return -1;
+    }
+    Job job = createSubmittableJob(getConf(), otherArgs);
+    if (job == null) {
+      return -1;
+    }
+    return (job.waitForCompletion(true) ? 0 : 1);
+  }
+
   /**
    * Main entry point.
-   *
-   * @param args  The command line parameters.
+   * @param args The command line parameters.
    * @throws Exception When running the job fails.
    */
   public static void main(String[] args) throws Exception {
-    Configuration conf = HBaseConfiguration.create();
-    String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
-    if (otherArgs.length < 1) {
-      printUsage("Wrong number of parameters: " + args.length);
-      System.exit(-1);
-    }
-    Job job = createSubmittableJob(conf, otherArgs);
-    if (job == null) {
-      System.exit(-1);
-    }
-    System.exit(job.waitForCompletion(true) ? 0 : 1);
+    int errCode = ToolRunner.run(HBaseConfiguration.create(), new RowCounter(), args);
+    System.exit(errCode);
   }
+
 }

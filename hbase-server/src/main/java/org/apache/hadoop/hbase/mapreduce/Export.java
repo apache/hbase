@@ -25,7 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Result;
@@ -42,6 +42,8 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
 * Export an HBase table.
@@ -50,7 +52,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
 */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Export {
+public class Export extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(Export.class);
   final static String NAME = "export";
   final static String RAW_SCAN = "hbase.mapreduce.include.deleted.rows";
@@ -68,7 +70,7 @@ public class Export {
   throws IOException {
     String tableName = args[0];
     Path outputDir = new Path(args[1]);
-    Job job = new Job(conf, NAME + "_" + tableName);
+    Job job = Job.getInstance(conf, NAME + "_" + tableName);
     job.setJobName(NAME + "_" + tableName);
     job.setJarByClass(Export.class);
     // Set optional scan parameters
@@ -172,20 +174,25 @@ public class Export {
         + "   -D" + EXPORT_BATCHING + "=10");
   }
 
+
+  @Override
+  public int run(String[] args) throws Exception {
+    String[] otherArgs = new GenericOptionsParser(getConf(), args).getRemainingArgs();
+    if (otherArgs.length < 2) {
+      usage("Wrong number of arguments: " + otherArgs.length);
+      return -1;
+    }
+    Job job = createSubmittableJob(getConf(), otherArgs);
+    return (job.waitForCompletion(true) ? 0 : 1);
+  }
+
   /**
    * Main entry point.
-   *
-   * @param args  The command line parameters.
+   * @param args The command line parameters.
    * @throws Exception When running the job fails.
    */
   public static void main(String[] args) throws Exception {
-    Configuration conf = HBaseConfiguration.create();
-    String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
-    if (otherArgs.length < 2) {
-      usage("Wrong number of arguments: " + otherArgs.length);
-      System.exit(-1);
-    }
-    Job job = createSubmittableJob(conf, otherArgs);
-    System.exit(job.waitForCompletion(true)? 0 : 1);
+    int errCode = ToolRunner.run(HBaseConfiguration.create(), new Export(), args);
+    System.exit(errCode);
   }
 }

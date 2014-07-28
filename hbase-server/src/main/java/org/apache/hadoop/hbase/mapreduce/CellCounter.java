@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -45,6 +46,8 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.base.Preconditions;
 
@@ -68,7 +71,7 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class CellCounter {
+public class CellCounter extends Configured implements Tool {
   private static final Log LOG =
     LogFactory.getLog(CellCounter.class.getName());
 
@@ -185,7 +188,7 @@ public class CellCounter {
     Path outputDir = new Path(args[1]);
     String reportSeparatorString = (args.length > 2) ? args[2]: ":";
     conf.set("ReportSeparator", reportSeparatorString);
-    Job job = new Job(conf, NAME + "_" + tableName);
+    Job job = Job.getInstance(conf, NAME + "_" + tableName);
     job.setJarByClass(CellCounter.class);
     Scan scan = getConfiguredScanForJob(conf, args);
     TableMapReduceUtil.initTableMapperJob(tableName, scan,
@@ -233,15 +236,9 @@ public class CellCounter {
     return rowFilter;
   }
 
-  /**
-   * Main entry point.
-   *
-   * @param args The command line parameters.
-   * @throws Exception When running the job fails.
-   */
-  public static void main(String[] args) throws Exception {
-    Configuration conf = HBaseConfiguration.create();
-    String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+  @Override
+  public int run(String[] args) throws Exception {
+    String[] otherArgs = new GenericOptionsParser(getConf(), args).getRemainingArgs();
     if (otherArgs.length < 1) {
       System.err.println("ERROR: Wrong number of parameters: " + args.length);
       System.err.println("Usage: CellCounter <tablename> <outputDir> <reportSeparator> " +
@@ -254,9 +251,20 @@ public class CellCounter {
           "string : used to separate the rowId/column family name and qualifier name.");
       System.err.println(" [^[regex pattern] or [Prefix] parameter can be used to limit the cell counter count " +
           "operation to a limited subset of rows from the table based on regex or prefix pattern.");
-      System.exit(-1);
+      return -1;
     }
-    Job job = createSubmittableJob(conf, otherArgs);
-    System.exit(job.waitForCompletion(true) ? 0 : 1);
+    Job job = createSubmittableJob(getConf(), otherArgs);
+    return (job.waitForCompletion(true) ? 0 : 1);
   }
+
+  /**
+   * Main entry point.
+   * @param args The command line parameters.
+   * @throws Exception When running the job fails.
+   */
+  public static void main(String[] args) throws Exception {
+    int errCode = ToolRunner.run(HBaseConfiguration.create(), new CellCounter(), args);
+    System.exit(errCode);
+  }
+
 }

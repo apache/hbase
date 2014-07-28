@@ -416,7 +416,7 @@ public class ImportTsv extends Configured implements Tool {
     String tableName = args[0];
     Path inputDir = new Path(args[1]);
     String jobName = conf.get(JOB_NAME_CONF_KEY,NAME + "_" + tableName);
-    Job job = new Job(conf, jobName);
+    Job job = Job.getInstance(conf, NAME + "_" + tableName);
     job.setJarByClass(mapperClass);
     FileInputFormat.setInputPaths(job, inputDir);
     job.setInputFormatClass(TextInputFormat.class);
