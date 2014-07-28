@@ -171,7 +171,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     try {
       // Create all the necessary "directories" of znodes
       ZKUtil.createWithParents(this, baseZNode);
-      if (conf.getBoolean("hbase.assignment.usezk", true)) {
+      if (conf.getBoolean("hbase.assignment.usezk", false)) {
         ZKUtil.createAndFailSilent(this, assignmentZNode);
       }
       ZKUtil.createAndFailSilent(this, rsZNode);

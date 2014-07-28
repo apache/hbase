@@ -28,6 +28,6 @@ public class ConfigUtil {
 
   public static boolean useZKForAssignment(Configuration conf) {
     // To change the default, please also update ZooKeeperWatcher.java
-    return conf.getBoolean("hbase.assignment.usezk", true);
+    return conf.getBoolean("hbase.assignment.usezk", false);
   }
 }
