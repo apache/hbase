@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
@@ -46,7 +46,11 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests that {@link CacheConfig} does as expected.
  */
-@Category(SmallTests.class)
+// This test is marked as a large test though it runs in a short amount of time
+// (seconds).  It is large because it depends on being able to reset the global
+// blockcache instance which is in a global variable.  Experience has it that
+// tests clash on the global variable if this test is run as small sized test.
+@Category(LargeTests.class)
 public class TestCacheConfig {
   private static final Log LOG = LogFactory.getLog(TestCacheConfig.class);
   private Configuration conf;
