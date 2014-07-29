@@ -1673,7 +1673,7 @@ public class ZKUtil {
       if (data != null && data.length > 0) { // log position
         long position = 0;
         try {
-          position = ZKUtil.parseHLogPositionFrom(ZKUtil.getData(zkw, znodeToProcess));
+          position = ZKUtil.parseWALPositionFrom(ZKUtil.getData(zkw, znodeToProcess));
           sb.append(position);
         } catch (DeserializationException ignored) {
         } catch (InterruptedException e) {
@@ -1924,7 +1924,7 @@ public class ZKUtil {
   /**
    * @param position
    * @return Serialized protobuf of <code>position</code> with pb magic prefix prepended suitable
-   *         for use as content of an hlog position in a replication queue.
+   *         for use as content of an wal position in a replication queue.
    */
   public static byte[] positionToByteArray(final long position) {
     byte[] bytes = ZooKeeperProtos.ReplicationHLogPosition.newBuilder().setPosition(position)
@@ -1933,13 +1933,13 @@ public class ZKUtil {
   }
 
   /**
-   * @param bytes - Content of a HLog position znode.
-   * @return long - The current HLog position.
+   * @param bytes - Content of a WAL position znode.
+   * @return long - The current WAL position.
    * @throws DeserializationException
    */
-  public static long parseHLogPositionFrom(final byte[] bytes) throws DeserializationException {
+  public static long parseWALPositionFrom(final byte[] bytes) throws DeserializationException {
     if (bytes == null) {
-      throw new DeserializationException("Unable to parse null HLog position.");
+      throw new DeserializationException("Unable to parse null WAL position.");
     }
     if (ProtobufUtil.isPBMagicPrefix(bytes)) {
       int pblen = ProtobufUtil.lengthOfPBMagic();

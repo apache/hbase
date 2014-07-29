@@ -61,19 +61,19 @@ public class ServerShutdownHandler extends EventHandler {
   protected final ServerName serverName;
   protected final MasterServices services;
   protected final DeadServer deadServers;
-  protected final boolean shouldSplitHlog; // whether to split HLog or not
+  protected final boolean shouldSplitWal; // whether to split WAL or not
   protected final int regionAssignmentWaitTimeout;
 
   public ServerShutdownHandler(final Server server, final MasterServices services,
       final DeadServer deadServers, final ServerName serverName,
-      final boolean shouldSplitHlog) {
+      final boolean shouldSplitWal) {
     this(server, services, deadServers, serverName, EventType.M_SERVER_SHUTDOWN,
-        shouldSplitHlog);
+        shouldSplitWal);
   }
 
   ServerShutdownHandler(final Server server, final MasterServices services,
       final DeadServer deadServers, final ServerName serverName, EventType type,
-      final boolean shouldSplitHlog) {
+      final boolean shouldSplitWal) {
     super(server, type);
     this.serverName = serverName;
     this.server = server;
@@ -82,7 +82,7 @@ public class ServerShutdownHandler extends EventHandler {
     if (!this.deadServers.isDeadServer(this.serverName)) {
       LOG.warn(this.serverName + " is NOT in deadservers; it should be!");
     }
-    this.shouldSplitHlog = shouldSplitHlog;
+    this.shouldSplitWal = shouldSplitWal;
     this.regionAssignmentWaitTimeout = server.getConfiguration().getInt(
       HConstants.LOG_REPLAY_WAIT_REGION_TIMEOUT, 15000);
   }
@@ -138,7 +138,7 @@ public class ServerShutdownHandler extends EventHandler {
       AssignmentManager am = services.getAssignmentManager();
       ServerManager serverManager = services.getServerManager();
       if (isCarryingMeta() /* hbase:meta */ || !am.isFailoverCleanupDone()) {
-        serverManager.processDeadServer(serverName, this.shouldSplitHlog);
+        serverManager.processDeadServer(serverName, this.shouldSplitWal);
         return;
       }
 
@@ -200,7 +200,7 @@ public class ServerShutdownHandler extends EventHandler {
         (this.services.getMasterFileSystem().getLogRecoveryMode() == RecoveryMode.LOG_REPLAY);
 
       try {
-        if (this.shouldSplitHlog) {
+        if (this.shouldSplitWal) {
           if (distributedLogReplay) {
             LOG.info("Mark regions in recovery for crashed server " + serverName +
               " before assignment; regions=" + hris);
@@ -302,13 +302,13 @@ public class ServerShutdownHandler extends EventHandler {
         throw (InterruptedIOException)new InterruptedIOException().initCause(ie);
       } catch (IOException ioe) {
         LOG.info("Caught " + ioe + " during region assignment, will retry");
-        // Only do HLog splitting if shouldSplitHlog and in DLR mode
+        // Only do wal splitting if shouldSplitWal and in DLR mode
         serverManager.processDeadServer(serverName,
-          this.shouldSplitHlog && distributedLogReplay);
+          this.shouldSplitWal && distributedLogReplay);
         return;
       }
 
-      if (this.shouldSplitHlog && distributedLogReplay) {
+      if (this.shouldSplitWal && distributedLogReplay) {
         // wait for region assignment completes
         for (HRegionInfo hri : toAssignRegions) {
           try {

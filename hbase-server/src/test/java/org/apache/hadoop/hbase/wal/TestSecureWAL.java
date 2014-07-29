@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver.wal;
+package org.apache.hadoop.hbase.wal;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -43,15 +43,21 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.log4j.Level;
+
+// imports for things that haven't moved from regionserver.wal yet.
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
+import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
-public class TestSecureHLog {
-  static final Log LOG = LogFactory.getLog(TestSecureHLog.class);
+public class TestSecureWAL {
+  static final Log LOG = LogFactory.getLog(TestSecureWAL.class);
   static {
     ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hbase.regionserver.wal"))
       .getLogger().setLevel(Level.ALL);
@@ -64,15 +70,16 @@ public class TestSecureHLog {
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
     conf.setClass("hbase.regionserver.hlog.reader.impl", SecureProtobufLogReader.class,
-      HLog.Reader.class);
+      WAL.Reader.class);
     conf.setClass("hbase.regionserver.hlog.writer.impl", SecureProtobufLogWriter.class,
-      HLog.Writer.class);
+      WALProvider.Writer.class);
     conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
+    FSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
   }
 
   @Test
-  public void testSecureHLog() throws Exception {
-    TableName tableName = TableName.valueOf("TestSecureHLog");
+  public void testSecureWAL() throws Exception {
+    TableName tableName = TableName.valueOf("TestSecureWAL");
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(tableName.getName()));
     HRegionInfo regioninfo = new HRegionInfo(tableName,
@@ -82,19 +89,21 @@ public class TestSecureHLog {
     final byte[] family = Bytes.toBytes("family");
     final byte[] value = Bytes.toBytes("Test value");
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    Path logDir = TEST_UTIL.getDataTestDir("log");
+    final WALFactory wals = new WALFactory(TEST_UTIL.getConfiguration(), null, "TestSecureWAL");
     final AtomicLong sequenceId = new AtomicLong(1);
 
     // Write the WAL
-    HLog wal = new FSHLog(fs, TEST_UTIL.getDataTestDir(), logDir.toString(),
-      TEST_UTIL.getConfiguration());
+    final WAL wal = wals.getWAL(regioninfo.getEncodedNameAsBytes());
+
     for (int i = 0; i < total; i++) {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(row, family, Bytes.toBytes(i), value));
-      wal.append(regioninfo, tableName, kvs, System.currentTimeMillis(), htd, sequenceId);
+      wal.append(htd, regioninfo, new WALKey(regioninfo.getEncodedNameAsBytes(), tableName,
+          System.currentTimeMillis()), kvs, sequenceId, true, null);
     }
-    final Path walPath = ((FSHLog) wal).computeFilename();
-    wal.close();
+    wal.sync();
+    final Path walPath = DefaultWALProvider.getCurrentFileName(wal);
+    wals.shutdown();
 
     // Insure edits are not plaintext
     long length = fs.getFileStatus(walPath).getLen();
@@ -105,10 +114,9 @@ public class TestSecureHLog {
     assertFalse("Cells appear to be plaintext", Bytes.contains(fileData, value));
 
     // Confirm the WAL can be read back
-    HLog.Reader reader = HLogFactory.createReader(TEST_UTIL.getTestFileSystem(), walPath,
-      TEST_UTIL.getConfiguration());
+    WAL.Reader reader = wals.createReader(TEST_UTIL.getTestFileSystem(), walPath);
     int count = 0;
-    HLog.Entry entry = new HLog.Entry();
+    WAL.Entry entry = new WAL.Entry();
     while (reader.next(entry) != null) {
       count++;
       List<Cell> cells = entry.getEdit().getCells();

@@ -589,7 +589,7 @@ public class ServerManager {
     this.processDeadServer(serverName, false);
   }
 
-  public synchronized void processDeadServer(final ServerName serverName, boolean shouldSplitHlog) {
+  public synchronized void processDeadServer(final ServerName serverName, boolean shouldSplitWal) {
     // When assignment manager is cleaning up the zookeeper nodes and rebuilding the
     // in-memory region states, region servers could be down. Meta table can and
     // should be re-assigned, log splitting can be done too. However, it is better to
@@ -599,14 +599,14 @@ public class ServerManager {
     // the handler threads and meta table could not be re-assigned in case
     // the corresponding server is down. So we queue them up here instead.
     if (!services.getAssignmentManager().isFailoverCleanupDone()) {
-      requeuedDeadServers.put(serverName, shouldSplitHlog);
+      requeuedDeadServers.put(serverName, shouldSplitWal);
       return;
     }
 
     this.deadservers.add(serverName);
     this.services.getExecutorService().submit(
       new ServerShutdownHandler(this.master, this.services, this.deadservers, serverName,
-          shouldSplitHlog));
+          shouldSplitWal));
   }
 
   /**
@@ -953,7 +953,7 @@ public class ServerManager {
 
   /**
    * During startup, if we figure it is not a failover, i.e. there is
-   * no more HLog files to split, we won't try to recover these dead servers.
+   * no more WAL files to split, we won't try to recover these dead servers.
    * So we just remove them from the queue. Use caution in calling this.
    */
   void removeRequeuedDeadServers() {

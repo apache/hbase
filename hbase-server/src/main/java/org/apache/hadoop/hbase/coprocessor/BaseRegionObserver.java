@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -444,14 +445,32 @@ public abstract class BaseRegionObserver implements RegionObserver {
       final InternalScanner s) throws IOException {
   }
 
+  /**
+   * Implementers should override this version of the method and leave the deprecated one as-is.
+   */
+  @Override
+  public void preWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
+      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+  }
+
   @Override
   public void preWALRestore(ObserverContext<RegionCoprocessorEnvironment> env, HRegionInfo info,
       HLogKey logKey, WALEdit logEdit) throws IOException {
+    preWALRestore(env, info, (WALKey)logKey, logEdit);
+  }
+
+  /**
+   * Implementers should override this version of the method and leave the deprecated one as-is.
+   */
+  @Override
+  public void postWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
+      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
   }
 
   @Override
   public void postWALRestore(ObserverContext<RegionCoprocessorEnvironment> env,
       HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
+    postWALRestore(env, info, (WALKey)logKey, logEdit);
   }
 
   @Override

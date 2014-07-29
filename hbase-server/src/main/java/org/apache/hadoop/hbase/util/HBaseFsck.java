@@ -102,7 +102,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.Block
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes.ByteArrayComparator;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
@@ -707,7 +707,7 @@ public class HBaseFsck extends Configured {
   /**
    * Orphaned regions are regions without a .regioninfo file in them.  We "adopt"
    * these orphans by creating a new region, and moving the column families,
-   * recovered edits, HLogs, into the new region dir.  We determine the region
+   * recovered edits, WALs, into the new region dir.  We determine the region
    * startkey and endkeys by looking at all of the hfiles inside the column
    * families to identify the min and max keys. The resulting region will
    * likely violate table integrity but will be dealt with by merging
@@ -3556,7 +3556,7 @@ public class HBaseFsck extends Configured {
             // This is special case if a region is left after split
             he.hdfsOnlyEdits = true;
             FileStatus[] subDirs = fs.listStatus(regionDir.getPath());
-            Path ePath = HLogUtil.getRegionDirRecoveredEditsDir(regionDir.getPath());
+            Path ePath = WALSplitter.getRegionDirRecoveredEditsDir(regionDir.getPath());
             for (FileStatus subDir : subDirs) {
               String sdName = subDir.getPath().getName();
               if (!sdName.startsWith(".") && !sdName.equals(ePath.getName())) {

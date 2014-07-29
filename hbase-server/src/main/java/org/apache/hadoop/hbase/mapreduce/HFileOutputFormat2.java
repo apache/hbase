@@ -189,12 +189,12 @@ public class HFileOutputFormat2
           rollWriters();
         }
 
-        // create a new HLog writer, if necessary
+        // create a new WAL writer, if necessary
         if (wl == null || wl.writer == null) {
           wl = getNewWriter(family, conf);
         }
 
-        // we now have the proper HLog writer. full steam ahead
+        // we now have the proper WAL writer. full steam ahead
         kv.updateLatestStamp(this.now);
         wl.writer.append(kv);
         wl.written += length;

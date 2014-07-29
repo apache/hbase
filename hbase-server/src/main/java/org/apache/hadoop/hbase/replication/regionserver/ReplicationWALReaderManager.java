@@ -24,23 +24,24 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.wal.WAL.Reader;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALFactory;
 
 import java.io.IOException;
 
 /**
- * Wrapper class around HLog to help manage the implementation details
+ * Wrapper class around WAL to help manage the implementation details
  * such as compression.
  */
 @InterfaceAudience.Private
-public class ReplicationHLogReaderManager {
+public class ReplicationWALReaderManager {
 
-  private static final Log LOG = LogFactory.getLog(ReplicationHLogReaderManager.class);
+  private static final Log LOG = LogFactory.getLog(ReplicationWALReaderManager.class);
   private final FileSystem fs;
   private final Configuration conf;
   private long position = 0;
-  private HLog.Reader reader;
+  private Reader reader;
   private Path lastPath;
 
   /**
@@ -49,7 +50,7 @@ public class ReplicationHLogReaderManager {
    * @param fs
    * @param conf
    */
-  public ReplicationHLogReaderManager(FileSystem fs, Configuration conf) {
+  public ReplicationWALReaderManager(FileSystem fs, Configuration conf) {
     this.fs = fs;
     this.conf = conf;
   }
@@ -57,15 +58,15 @@ public class ReplicationHLogReaderManager {
   /**
    * Opens the file at the current position
    * @param path
-   * @return an HLog reader.
+   * @return an WAL reader.
    * @throws IOException
    */
-  public HLog.Reader openReader(Path path) throws IOException {
+  public Reader openReader(Path path) throws IOException {
     // Detect if this is a new file, if so get a new reader else
     // reset the current reader so that we see the new data
     if (this.reader == null || !this.lastPath.equals(path)) {
       this.closeReader();
-      this.reader = HLogFactory.createReader(this.fs, path, this.conf);
+      this.reader = WALFactory.createReader(this.fs, path, this.conf);
       this.lastPath = path;
     } else {
       try {
@@ -82,8 +83,8 @@ public class ReplicationHLogReaderManager {
    * @return a new entry or null
    * @throws IOException
    */
-  public HLog.Entry readNextAndSetPosition() throws IOException {
-    HLog.Entry entry = this.reader.next();
+  public Entry readNextAndSetPosition() throws IOException {
+    Entry entry = this.reader.next();
     // Store the position so that in the future the reader can start
     // reading from here. If the above call to next() throws an
     // exception, the position won't be changed and retry will happen

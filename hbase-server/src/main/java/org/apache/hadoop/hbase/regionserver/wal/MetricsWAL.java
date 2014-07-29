@@ -31,7 +31,7 @@ import org.apache.hadoop.util.StringUtils;
  * single function call and turn it into multiple manipulations of the hadoop metrics system.
  */
 @InterfaceAudience.Private
-public class MetricsWAL {
+public class MetricsWAL extends WALActionsListener.Base {
   static final Log LOG = LogFactory.getLog(MetricsWAL.class);
 
   private final MetricsWALSource source;
@@ -40,19 +40,20 @@ public class MetricsWAL {
     source = CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
   }
 
-  public void finishSync(long time) {
-    source.incrementSyncTime(time);
+  @Override
+  public void postSync(final long timeInNanos, final int handlerSyncs) {
+    source.incrementSyncTime(timeInNanos/1000000l);
   }
 
-  public void finishAppend(long time, long size) {
-
+  @Override
+  public void postAppend(final long size, final long time) {
     source.incrementAppendCount();
     source.incrementAppendTime(time);
     source.incrementAppendSize(size);
 
     if (time > 1000) {
       source.incrementSlowAppendCount();
-      LOG.warn(String.format("%s took %d ms appending an edit to hlog; len~=%s",
+      LOG.warn(String.format("%s took %d ms appending an edit to wal; len~=%s",
           Thread.currentThread().getName(),
           time,
           StringUtils.humanReadableInt(size)));

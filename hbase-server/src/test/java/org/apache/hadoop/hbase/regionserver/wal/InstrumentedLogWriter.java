@@ -1,4 +1,5 @@
 /**
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,18 +16,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.junit.Test;
+import java.io.IOException;
 
-public class TestMetricsHLogSource {
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 
-  @Test(expected=RuntimeException.class)
-  public void testGetInstanceNoHadoopCompat() throws Exception {
-    //This should throw an exception because there is no compat lib on the class path.
-    CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
+public class InstrumentedLogWriter extends ProtobufLogWriter {
 
+  public InstrumentedLogWriter() {
+    super();
   }
+
+  public static boolean activateFailure = false;
+  @Override
+    public void append(Entry entry) throws IOException {
+      super.append(entry);
+      if (activateFailure &&
+          Bytes.equals(entry.getKey().getEncodedRegionName(), "break".getBytes())) {
+        System.out.println(getClass().getName() + ": I will throw an exception now...");
+        throw(new IOException("This exception is instrumented and should only be thrown for testing"
+            ));
+      }
+    }
 }

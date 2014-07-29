@@ -688,9 +688,9 @@ admin.createTable(table, splits);
       xml:id="def.log.flush">
       <title> Table Creation: Deferred Log Flush </title>
       <para> The default behavior for Puts using the Write Ahead Log (WAL) is that
-          <classname>HLog</classname> edits will be written immediately. If deferred log flush is
+          <classname>WAL</classname> edits will be written immediately. If deferred log flush is
         used, WAL edits are kept in memory until the flush period. The benefit is aggregated and
-        asynchronous <classname>HLog</classname>- writes, but the potential downside is that if the
+        asynchronous <classname>WAL</classname>- writes, but the potential downside is that if the
         RegionServer goes down the yet-to-be-flushed edits are lost. This is safer, however, than
         not using WAL at all with Puts. </para>
       <para> Deferred log flush can be configured on tables via <link

@@ -63,7 +63,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * sources. There are two classes of sources:
  * <li> Normal sources are persistent and one per peer cluster</li>
  * <li> Old sources are recovered from a failed region server and our
- * only goal is to finish replicating the HLog queue it had up in ZK</li>
+ * only goal is to finish replicating the WAL queue it had up in ZK</li>
  *
  * When a region server dies, this class uses a watcher to get notified and it
  * tries to grab a lock in order to transfer all the queues in a local
@@ -88,16 +88,16 @@ public class ReplicationSourceManager implements ReplicationListener {
   // All about stopping
   private final Server server;
   // All logs we are currently tracking
-  private final Map<String, SortedSet<String>> hlogsById;
+  private final Map<String, SortedSet<String>> walsById;
   // Logs for recovered sources we are currently tracking
-  private final Map<String, SortedSet<String>> hlogsByIdRecoveredQueues;
+  private final Map<String, SortedSet<String>> walsByIdRecoveredQueues;
   private final Configuration conf;
   private final FileSystem fs;
   // The path to the latest log we saw, for new coming sources
   private Path latestPath;
-  // Path to the hlogs directories
+  // Path to the wals directories
   private final Path logDir;
-  // Path to the hlog archive
+  // Path to the wal archive
   private final Path oldLogDir;
   // The number of ms that we wait before moving znodes, HBASE-3596
   private final long sleepBeforeFailover;
@@ -115,7 +115,7 @@ public class ReplicationSourceManager implements ReplicationListener {
    * @param conf the configuration to use
    * @param server the server for this region server
    * @param fs the file system to use
-   * @param logDir the directory that contains all hlog directories of live RSs
+   * @param logDir the directory that contains all wal directories of live RSs
    * @param oldLogDir the directory where old logs are archived
    * @param clusterId
    */
@@ -130,8 +130,8 @@ public class ReplicationSourceManager implements ReplicationListener {
     this.replicationPeers = replicationPeers;
     this.replicationTracker = replicationTracker;
     this.server = server;
-    this.hlogsById = new HashMap<String, SortedSet<String>>();
-    this.hlogsByIdRecoveredQueues = new ConcurrentHashMap<String, SortedSet<String>>();
+    this.walsById = new HashMap<String, SortedSet<String>>();
+    this.walsByIdRecoveredQueues = new ConcurrentHashMap<String, SortedSet<String>>();
     this.oldsources = new CopyOnWriteArrayList<ReplicationSourceInterface>();
     this.conf = conf;
     this.fs = fs;
@@ -159,7 +159,7 @@ public class ReplicationSourceManager implements ReplicationListener {
 
   /**
    * Provide the id of the peer and a log key and this method will figure which
-   * hlog it belongs to and will log, for this region server, the current
+   * wal it belongs to and will log, for this region server, the current
    * position. It will also clean old logs from the queue.
    * @param log Path to the log currently being replicated from
    * replication status in zookeeper. It will also delete older entries.
@@ -187,32 +187,32 @@ public class ReplicationSourceManager implements ReplicationListener {
    */
   public void cleanOldLogs(String key, String id, boolean queueRecovered) {
     if (queueRecovered) {
-      SortedSet<String> hlogs = hlogsByIdRecoveredQueues.get(id);
-      if (hlogs != null && !hlogs.first().equals(key)) {
-        cleanOldLogs(hlogs, key, id);
+      SortedSet<String> wals = walsByIdRecoveredQueues.get(id);
+      if (wals != null && !wals.first().equals(key)) {
+        cleanOldLogs(wals, key, id);
       }
     } else {
-      synchronized (this.hlogsById) {
-        SortedSet<String> hlogs = hlogsById.get(id);
-        if (!hlogs.first().equals(key)) {
-          cleanOldLogs(hlogs, key, id);
+      synchronized (this.walsById) {
+        SortedSet<String> wals = walsById.get(id);
+        if (!wals.first().equals(key)) {
+          cleanOldLogs(wals, key, id);
         }
       }
     }
  }
   
-  private void cleanOldLogs(SortedSet<String> hlogs, String key, String id) {
-    SortedSet<String> hlogSet = hlogs.headSet(key);
-    LOG.debug("Removing " + hlogSet.size() + " logs in the list: " + hlogSet);
-    for (String hlog : hlogSet) {
-      this.replicationQueues.removeLog(id, hlog);
+  private void cleanOldLogs(SortedSet<String> wals, String key, String id) {
+    SortedSet<String> walSet = wals.headSet(key);
+    LOG.debug("Removing " + walSet.size() + " logs in the list: " + walSet);
+    for (String wal : walSet) {
+      this.replicationQueues.removeLog(id, wal);
     }
-    hlogSet.clear();
+    walSet.clear();
   }
 
   /**
    * Adds a normal source per registered peer cluster and tries to process all
-   * old region server hlog queues
+   * old region server wal queues
    */
   protected void init() throws IOException, ReplicationException {
     for (String id : this.replicationPeers.getPeerIds()) {
@@ -248,13 +248,13 @@ public class ReplicationSourceManager implements ReplicationListener {
     ReplicationSourceInterface src =
         getReplicationSource(this.conf, this.fs, this, this.replicationQueues,
           this.replicationPeers, server, id, this.clusterId, peerConfig, peer);
-    synchronized (this.hlogsById) {
+    synchronized (this.walsById) {
       this.sources.add(src);
-      this.hlogsById.put(id, new TreeSet<String>());
-      // Add the latest hlog to that source's queue
+      this.walsById.put(id, new TreeSet<String>());
+      // Add the latest wal to that source's queue
       if (this.latestPath != null) {
         String name = this.latestPath.getName();
-        this.hlogsById.get(id).add(name);
+        this.walsById.get(id).add(name);
         try {
           this.replicationQueues.addLog(src.getPeerClusterZnode(), name);
         } catch (ReplicationException e) {
@@ -272,8 +272,8 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   /**
-   * Delete a complete queue of hlogs associated with a peer cluster
-   * @param peerId Id of the peer cluster queue of hlogs to delete
+   * Delete a complete queue of wals associated with a peer cluster
+   * @param peerId Id of the peer cluster queue of wals to delete
    */
   public void deleteSource(String peerId, boolean closeConnection) {
     this.replicationQueues.removeQueue(peerId);
@@ -296,19 +296,19 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   /**
-   * Get a copy of the hlogs of the first source on this rs
-   * @return a sorted set of hlog names
+   * Get a copy of the wals of the first source on this rs
+   * @return a sorted set of wal names
    */
-  protected Map<String, SortedSet<String>> getHLogs() {
-    return Collections.unmodifiableMap(hlogsById);
+  protected Map<String, SortedSet<String>> getWALs() {
+    return Collections.unmodifiableMap(walsById);
   }
   
   /**
-   * Get a copy of the hlogs of the recovered sources on this rs
-   * @return a sorted set of hlog names
+   * Get a copy of the wals of the recovered sources on this rs
+   * @return a sorted set of wal names
    */
-  protected Map<String, SortedSet<String>> getHlogsByIdRecoveredQueues() {
-    return Collections.unmodifiableMap(hlogsByIdRecoveredQueues);
+  protected Map<String, SortedSet<String>> getWalsByIdRecoveredQueues() {
+    return Collections.unmodifiableMap(walsByIdRecoveredQueues);
   }
 
   /**
@@ -328,7 +328,7 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   void preLogRoll(Path newLog) throws IOException {
-    synchronized (this.hlogsById) {
+    synchronized (this.walsById) {
       String name = newLog.getName();
       for (ReplicationSourceInterface source : this.sources) {
         try {
@@ -338,13 +338,13 @@ public class ReplicationSourceManager implements ReplicationListener {
               + source.getPeerClusterZnode() + ", filename=" + name, e);
         }
       }
-      for (SortedSet<String> hlogs : this.hlogsById.values()) {
+      for (SortedSet<String> wals : this.walsById.values()) {
         if (this.sources.isEmpty()) {
-          // If there's no slaves, don't need to keep the old hlogs since
+          // If there's no slaves, don't need to keep the old wals since
           // we only consider the last one when a new slave comes in
-          hlogs.clear();
+          wals.clear();
         }
-        hlogs.add(name);
+        wals.add(name);
       }
     }
 
@@ -452,7 +452,7 @@ public class ReplicationSourceManager implements ReplicationListener {
     LOG.info("Done with the recovered queue " + src.getPeerClusterZnode());
     this.oldsources.remove(src);
     deleteSource(src.getPeerClusterZnode(), false);
-    this.hlogsByIdRecoveredQueues.remove(src.getPeerClusterZnode());
+    this.walsByIdRecoveredQueues.remove(src.getPeerClusterZnode());
   }
 
   /**
@@ -569,7 +569,7 @@ public class ReplicationSourceManager implements ReplicationListener {
       // Copying over the failed queue is completed.
       if (newQueues.isEmpty()) {
         // We either didn't get the lock or the failed region server didn't have any outstanding
-        // HLogs to replicate, so we are done.
+        // WALs to replicate, so we are done.
         return;
       }
 
@@ -600,12 +600,12 @@ public class ReplicationSourceManager implements ReplicationListener {
             break;
           }
           oldsources.add(src);
-          SortedSet<String> hlogsSet = entry.getValue();
-          for (String hlog : hlogsSet) {
-            src.enqueueLog(new Path(oldLogDir, hlog));
+          SortedSet<String> walsSet = entry.getValue();
+          for (String wal : walsSet) {
+            src.enqueueLog(new Path(oldLogDir, wal));
           }
           src.startup();
-          hlogsByIdRecoveredQueues.put(peerId, hlogsSet);
+          walsByIdRecoveredQueues.put(peerId, walsSet);
         } catch (IOException e) {
           // TODO manage it
           LOG.error("Failed creating a source", e);
@@ -615,16 +615,16 @@ public class ReplicationSourceManager implements ReplicationListener {
   }
 
   /**
-   * Get the directory where hlogs are archived
-   * @return the directory where hlogs are archived
+   * Get the directory where wals are archived
+   * @return the directory where wals are archived
    */
   public Path getOldLogDir() {
     return this.oldLogDir;
   }
 
   /**
-   * Get the directory where hlogs are stored by their RSs
-   * @return the directory where hlogs are stored by their RSs
+   * Get the directory where wals are stored by their RSs
+   * @return the directory where wals are stored by their RSs
    */
   public Path getLogDir() {
     return this.logDir;

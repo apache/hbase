@@ -51,7 +51,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.io.FileLink;
 import org.apache.hadoop.hbase.io.HFileLink;
-import org.apache.hadoop.hbase.io.HLogLink;
+import org.apache.hadoop.hbase.io.WALLink;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
@@ -79,7 +79,7 @@ import org.apache.hadoop.util.ToolRunner;
  * Export the specified snapshot to a given FileSystem.
  *
  * The .snapshot/name folder is copied to the destination cluster
- * and then all the hfiles/hlogs are copied using a Map-Reduce Job in the .archive/ location.
+ * and then all the hfiles/wals are copied using a Map-Reduce Job in the .archive/ location.
  * When everything is done, the second cluster can restore the snapshot.
  */
 @InterfaceAudience.Public
@@ -402,7 +402,7 @@ public class ExportSnapshot extends Configured implements Tool {
           case WAL:
             String serverName = fileInfo.getWalServer();
             String logName = fileInfo.getWalName();
-            link = new HLogLink(inputRoot, serverName, logName);
+            link = new WALLink(inputRoot, serverName, logName);
             break;
           default:
             throw new IOException("Invalid File Type: " + fileInfo.getType().toString());
@@ -425,7 +425,7 @@ public class ExportSnapshot extends Configured implements Tool {
             link = new HFileLink(inputRoot, inputArchive, inputPath);
             break;
           case WAL:
-            link = new HLogLink(inputRoot, fileInfo.getWalServer(), fileInfo.getWalName());
+            link = new WALLink(inputRoot, fileInfo.getWalServer(), fileInfo.getWalName());
             break;
           default:
             throw new IOException("Invalid File Type: " + fileInfo.getType().toString());
@@ -477,7 +477,7 @@ public class ExportSnapshot extends Configured implements Tool {
   // ==========================================================================
 
   /**
-   * Extract the list of files (HFiles/HLogs) to copy using Map-Reduce.
+   * Extract the list of files (HFiles/WALs) to copy using Map-Reduce.
    * @return list of files referenced by the snapshot (pair of path and size)
    */
   private static List<Pair<SnapshotFileInfo, Long>> getSnapshotFiles(final Configuration conf,
@@ -525,7 +525,7 @@ public class ExportSnapshot extends Configured implements Tool {
             .setWalName(logfile)
             .build();
 
-          long size = new HLogLink(conf, server, logfile).getFileStatus(fs).getLen();
+          long size = new WALLink(conf, server, logfile).getFileStatus(fs).getLen();
           files.add(new Pair<SnapshotFileInfo, Long>(fileInfo, size));
         }
     });
@@ -781,7 +781,7 @@ public class ExportSnapshot extends Configured implements Tool {
   }
 
   /**
-   * Execute the export snapshot by copying the snapshot metadata, hfiles and hlogs.
+   * Execute the export snapshot by copying the snapshot metadata, hfiles and wals.
    * @return 0 on success, and != 0 upon failure.
    */
   @Override

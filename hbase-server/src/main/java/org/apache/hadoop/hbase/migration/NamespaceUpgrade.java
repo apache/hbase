@@ -48,9 +48,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -380,12 +379,11 @@ public class NamespaceUpgrade implements Tool {
 
 
     ServerName fakeServer = ServerName.valueOf("nsupgrade", 96, 123);
-    String metaLogName = HLogUtil.getHLogDirectoryName(fakeServer.toString());
-    HLog metaHLog = HLogFactory.createMetaHLog(fs, rootDir,
-        metaLogName, conf, null,
-        fakeServer.toString());
+    final WALFactory walFactory = new WALFactory(conf, null, fakeServer.toString());
+    WAL metawal = walFactory.getMetaWAL(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes());
+    FSTableDescriptors fst = new FSTableDescriptors(conf);
     HRegion meta = HRegion.openHRegion(rootDir, HRegionInfo.FIRST_META_REGIONINFO,
-        HTableDescriptor.META_TABLEDESC, metaHLog, conf);
+        fst.get(TableName.META_TABLE_NAME), metawal, conf);
     HRegion region = null;
     try {
       for(Path regionDir : FSUtils.getRegionDirs(fs, oldTablePath)) {
@@ -402,7 +400,7 @@ public class NamespaceUpgrade implements Tool {
             new HRegion(
                 HRegionFileSystem.openRegionFromFileSystem(conf, fs, oldTablePath,
                     oldRegionInfo, false),
-                metaHLog,
+                metawal,
                 conf,
                 oldDesc,
                 null);
@@ -439,7 +437,7 @@ public class NamespaceUpgrade implements Tool {
       meta.flushcache();
       meta.waitForFlushesAndCompactions();
       meta.close();
-      metaHLog.closeAndDelete();
+      walFactory.close();
       if(region != null) {
         region.close();
       }

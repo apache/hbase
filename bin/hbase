@@ -83,7 +83,7 @@ if [ $# = 0 ]; then
   echo "Some commands take arguments. Pass no args or -h for usage."
   echo "  shell           Run the HBase shell"
   echo "  hbck            Run the hbase 'fsck' tool"
-  echo "  hlog            Write-ahead-log analyzer"
+  echo "  wal             Write-ahead-log analyzer"
   echo "  hfile           Store file analyzer"
   echo "  zkcli           Run the ZooKeeper shell"
   echo "  upgrade         Upgrade hbase"
@@ -293,8 +293,9 @@ if [ "$COMMAND" = "shell" ] ; then
   CLASS="org.jruby.Main -X+O ${JRUBY_OPTS} ${HBASE_HOME}/bin/hirb.rb"
 elif [ "$COMMAND" = "hbck" ] ; then
   CLASS='org.apache.hadoop.hbase.util.HBaseFsck'
-elif [ "$COMMAND" = "hlog" ] ; then
-  CLASS='org.apache.hadoop.hbase.regionserver.wal.HLogPrettyPrinter'
+# TODO remove old 'hlog' version
+elif [ "$COMMAND" = "hlog" -o "$COMMAND" = "wal" ] ; then
+  CLASS='org.apache.hadoop.hbase.wal.WALPrettyPrinter'
 elif [ "$COMMAND" = "hfile" ] ; then
   CLASS='org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter'
 elif [ "$COMMAND" = "zkcli" ] ; then

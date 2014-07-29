@@ -79,7 +79,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1216,7 +1216,7 @@ public class HStore implements Store {
    */
   private void writeCompactionWalRecord(Collection<StoreFile> filesCompacted,
       Collection<StoreFile> newFiles) throws IOException {
-    if (region.getLog() == null) return;
+    if (region.getWAL() == null) return;
     List<Path> inputPaths = new ArrayList<Path>(filesCompacted.size());
     for (StoreFile f : filesCompacted) {
       inputPaths.add(f.getPath());
@@ -1228,7 +1228,7 @@ public class HStore implements Store {
     HRegionInfo info = this.region.getRegionInfo();
     CompactionDescriptor compactionDescriptor = ProtobufUtil.toCompactionDescriptor(info,
         family.getName(), inputPaths, outputPaths, fs.getStoreDir(getFamily().getNameAsString()));
-    HLogUtil.writeCompactionMarker(region.getLog(), this.region.getTableDesc(),
+    WALUtil.writeCompactionMarker(region.getWAL(), this.region.getTableDesc(),
         this.region.getRegionInfo(), compactionDescriptor, this.region.getSequenceId());
   }
 

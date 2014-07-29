@@ -27,23 +27,23 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
- * HLogLink describes a link to a WAL.
+ * WALLink describes a link to a WAL.
  *
- * An hlog can be in /hbase/.logs/<server>/<hlog>
- * or it can be in /hbase/.oldlogs/<hlog>
+ * An wal can be in /hbase/.logs/<server>/<wal>
+ * or it can be in /hbase/.oldlogs/<wal>
  *
  * The link checks first in the original path,
  * if it is not present it fallbacks to the archived path.
  */
 @InterfaceAudience.Private
-public class HLogLink extends FileLink {
+public class WALLink extends FileLink {
   /**
    * @param conf {@link Configuration} from which to extract specific archive locations
    * @param serverName Region Server owner of the log
    * @param logName WAL file name
    * @throws IOException on unexpected error.
    */
-  public HLogLink(final Configuration conf,
+  public WALLink(final Configuration conf,
       final String serverName, final String logName) throws IOException {
     this(FSUtils.getRootDir(conf), serverName, logName);
   }
@@ -53,7 +53,7 @@ public class HLogLink extends FileLink {
    * @param serverName Region Server owner of the log
    * @param logName WAL file name
    */
-  public HLogLink(final Path rootDir, final String serverName, final String logName) {
+  public WALLink(final Path rootDir, final String serverName, final String logName) {
     final Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     final Path logDir = new Path(new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), serverName);
     setLocations(new Path(logDir, logName), new Path(oldLogDir, logName));
@@ -63,7 +63,7 @@ public class HLogLink extends FileLink {
    * @param originPath Path to the wal in the log directory
    * @param archivePath Path to the wal in the archived log directory
    */
-  public HLogLink(final Path originPath, final Path archivePath) {
+  public WALLink(final Path originPath, final Path archivePath) {
     setLocations(originPath, archivePath);
   }
 }

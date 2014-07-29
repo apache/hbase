@@ -34,7 +34,7 @@ public class RegionServerAccounting {
 
   private final AtomicLong atomicGlobalMemstoreSize = new AtomicLong(0);
   
-  // Store the edits size during replaying HLog. Use this to roll back the  
+  // Store the edits size during replaying WAL. Use this to roll back the  
   // global memstore size once a region opening failed.
   private final ConcurrentMap<byte[], AtomicLong> replayEditsPerRegion = 
     new ConcurrentSkipListMap<byte[], AtomicLong>(Bytes.BYTES_COMPARATOR);

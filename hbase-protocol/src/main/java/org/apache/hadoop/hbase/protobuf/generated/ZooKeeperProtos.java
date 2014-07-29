@@ -7105,7 +7105,7 @@ public final class ZooKeeperProtos {
    *
    * <pre>
    **
-   * Used by replication. Holds the current position in an HLog file.
+   * Used by replication. Holds the current position in an WAL file.
    * </pre>
    */
   public static final class ReplicationHLogPosition extends
@@ -7373,7 +7373,7 @@ public final class ZooKeeperProtos {
      *
      * <pre>
      **
-     * Used by replication. Holds the current position in an HLog file.
+     * Used by replication. Holds the current position in an WAL file.
      * </pre>
      */
     public static final class Builder extends

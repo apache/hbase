@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.regionserver.Leases;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ServerNonceManager;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -204,7 +204,7 @@ class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public HLog getWAL(HRegionInfo regionInfo) throws IOException {
+  public WAL getWAL(HRegionInfo regionInfo) throws IOException {
     return null;
   }
 

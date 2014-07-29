@@ -142,7 +142,7 @@ message ReplicationState {
 }
 
 /**
- * Used by replication. Holds the current position in an HLog file.
+ * Used by replication. Holds the current position in an WAL file.
  */
 message ReplicationHLogPosition {
   required int64 position = 1;

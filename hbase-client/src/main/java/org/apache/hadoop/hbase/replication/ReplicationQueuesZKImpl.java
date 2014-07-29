@@ -43,21 +43,21 @@ import org.apache.zookeeper.KeeperException;
 /**
  * This class provides an implementation of the ReplicationQueues interface using Zookeeper. The
  * base znode that this class works at is the myQueuesZnode. The myQueuesZnode contains a list of
- * all outstanding HLog files on this region server that need to be replicated. The myQueuesZnode is
+ * all outstanding WAL files on this region server that need to be replicated. The myQueuesZnode is
  * the regionserver name (a concatenation of the region server’s hostname, client port and start
  * code). For example:
  *
  * /hbase/replication/rs/hostname.example.org,6020,1234
  *
- * Within this znode, the region server maintains a set of HLog replication queues. These queues are
+ * Within this znode, the region server maintains a set of WAL replication queues. These queues are
  * represented by child znodes named using there give queue id. For example:
  *
  * /hbase/replication/rs/hostname.example.org,6020,1234/1
  * /hbase/replication/rs/hostname.example.org,6020,1234/2
  *
- * Each queue has one child znode for every HLog that still needs to be replicated. The value of
- * these HLog child znodes is the latest position that has been replicated. This position is updated
- * every time a HLog entry is replicated. For example:
+ * Each queue has one child znode for every WAL that still needs to be replicated. The value of
+ * these WAL child znodes is the latest position that has been replicated. This position is updated
+ * every time a WAL entry is replicated. For example:
  *
  * /hbase/replication/rs/hostname.example.org,6020,1234/1/23522342.23422 [VALUE: 254]
  */
@@ -115,7 +115,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       znode = ZKUtil.joinZNode(znode, filename);
       ZKUtil.deleteNode(this.zookeeper, znode);
     } catch (KeeperException e) {
-      this.abortable.abort("Failed to remove hlog from queue (queueId=" + queueId + ", filename="
+      this.abortable.abort("Failed to remove wal from queue (queueId=" + queueId + ", filename="
           + filename + ")", e);
     }
   }
@@ -128,7 +128,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       // Why serialize String of Long and not Long as bytes?
       ZKUtil.setData(this.zookeeper, znode, ZKUtil.positionToByteArray(position));
     } catch (KeeperException e) {
-      this.abortable.abort("Failed to write replication hlog position (filename=" + filename
+      this.abortable.abort("Failed to write replication wal position (filename=" + filename
           + ", position=" + position + ")", e);
     }
   }
@@ -148,12 +148,12 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       return 0;
     }
     try {
-      return ZKUtil.parseHLogPositionFrom(bytes);
+      return ZKUtil.parseWALPositionFrom(bytes);
     } catch (DeserializationException de) {
-      LOG.warn("Failed to parse HLogPosition for queueId=" + queueId + " and hlog=" + filename
+      LOG.warn("Failed to parse WALPosition for queueId=" + queueId + " and wal=" + filename
           + "znode content, continuing.");
     }
-    // if we can not parse the position, start at the beginning of the hlog file
+    // if we can not parse the position, start at the beginning of the wal file
     // again
     return 0;
   }
@@ -168,10 +168,10 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     SortedMap<String, SortedSet<String>> newQueues = new TreeMap<String, SortedSet<String>>();
     // check whether there is multi support. If yes, use it.
     if (conf.getBoolean(HConstants.ZOOKEEPER_USEMULTI, true)) {
-      LOG.info("Atomically moving " + regionserverZnode + "'s hlogs to my queue");
+      LOG.info("Atomically moving " + regionserverZnode + "'s wals to my queue");
       newQueues = copyQueuesFromRSUsingMulti(regionserverZnode);
     } else {
-      LOG.info("Moving " + regionserverZnode + "'s hlogs to my queue");
+      LOG.info("Moving " + regionserverZnode + "'s wals to my queue");
       if (!lockOtherRS(regionserverZnode)) {
         return newQueues;
       }
@@ -202,7 +202,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     try {
       result = ZKUtil.listChildrenNoWatch(this.zookeeper, znode);
     } catch (KeeperException e) {
-      this.abortable.abort("Failed to get list of hlogs for queueId=" + queueId, e);
+      this.abortable.abort("Failed to get list of wals for queueId=" + queueId, e);
     }
     return result;
   }
@@ -285,10 +285,10 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   }
 
   /**
-   * It "atomically" copies all the hlogs queues from another region server and returns them all
+   * It "atomically" copies all the wals queues from another region server and returns them all
    * sorted per peer cluster (appended with the dead server's znode).
    * @param znode pertaining to the region server to copy the queues from
-   * @return HLog queues sorted per peer cluster
+   * @return WAL queues sorted per peer cluster
    */
   private SortedMap<String, SortedSet<String>> copyQueuesFromRSUsingMulti(String znode) {
     SortedMap<String, SortedSet<String>> queues = new TreeMap<String, SortedSet<String>>();
@@ -310,8 +310,8 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
         String newPeerZnode = ZKUtil.joinZNode(this.myQueuesZnode, newPeerId);
         // check the logs queue for the old peer cluster
         String oldClusterZnode = ZKUtil.joinZNode(deadRSZnodePath, peerId);
-        List<String> hlogs = ZKUtil.listChildrenNoWatch(this.zookeeper, oldClusterZnode);
-        if (hlogs == null || hlogs.size() == 0) {
+        List<String> wals = ZKUtil.listChildrenNoWatch(this.zookeeper, oldClusterZnode);
+        if (wals == null || wals.size() == 0) {
           listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldClusterZnode));
           continue; // empty log queue.
         }
@@ -321,15 +321,15 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
         ZKUtilOp op = ZKUtilOp.createAndFailSilent(newPeerZnode, HConstants.EMPTY_BYTE_ARRAY);
         listOfOps.add(op);
         // get the offset of the logs and set it to new znodes
-        for (String hlog : hlogs) {
-          String oldHlogZnode = ZKUtil.joinZNode(oldClusterZnode, hlog);
-          byte[] logOffset = ZKUtil.getData(this.zookeeper, oldHlogZnode);
-          LOG.debug("Creating " + hlog + " with data " + Bytes.toString(logOffset));
-          String newLogZnode = ZKUtil.joinZNode(newPeerZnode, hlog);
+        for (String wal : wals) {
+          String oldWalZnode = ZKUtil.joinZNode(oldClusterZnode, wal);
+          byte[] logOffset = ZKUtil.getData(this.zookeeper, oldWalZnode);
+          LOG.debug("Creating " + wal + " with data " + Bytes.toString(logOffset));
+          String newLogZnode = ZKUtil.joinZNode(newPeerZnode, wal);
           listOfOps.add(ZKUtilOp.createAndFailSilent(newLogZnode, logOffset));
           // add ops for deleting
-          listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldHlogZnode));
-          logQueue.add(hlog);
+          listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldWalZnode));
+          logQueue.add(wal);
         }
         // add delete op for peer
         listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldClusterZnode));
@@ -352,10 +352,10 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
   }
 
   /**
-   * This methods copies all the hlogs queues from another region server and returns them all sorted
+   * This methods copies all the wals queues from another region server and returns them all sorted
    * per peer cluster (appended with the dead server's znode)
    * @param znode server names to copy
-   * @return all hlogs for all peers of that cluster, null if an error occurred
+   * @return all wals for all peers of that cluster, null if an error occurred
    */
   private SortedMap<String, SortedSet<String>> copyQueuesFromRS(String znode) {
     // TODO this method isn't atomic enough, we could start copying and then
@@ -383,31 +383,31 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
         String newCluster = cluster + "-" + znode;
         String newClusterZnode = ZKUtil.joinZNode(this.myQueuesZnode, newCluster);
         String clusterPath = ZKUtil.joinZNode(nodePath, cluster);
-        List<String> hlogs = ZKUtil.listChildrenNoWatch(this.zookeeper, clusterPath);
+        List<String> wals = ZKUtil.listChildrenNoWatch(this.zookeeper, clusterPath);
         // That region server didn't have anything to replicate for this cluster
-        if (hlogs == null || hlogs.size() == 0) {
+        if (wals == null || wals.size() == 0) {
           continue;
         }
         ZKUtil.createNodeIfNotExistsAndWatch(this.zookeeper, newClusterZnode,
           HConstants.EMPTY_BYTE_ARRAY);
         SortedSet<String> logQueue = new TreeSet<String>();
         queues.put(newCluster, logQueue);
-        for (String hlog : hlogs) {
-          String z = ZKUtil.joinZNode(clusterPath, hlog);
+        for (String wal : wals) {
+          String z = ZKUtil.joinZNode(clusterPath, wal);
           byte[] positionBytes = ZKUtil.getData(this.zookeeper, z);
           long position = 0;
           try {
-            position = ZKUtil.parseHLogPositionFrom(positionBytes);
+            position = ZKUtil.parseWALPositionFrom(positionBytes);
           } catch (DeserializationException e) {
-            LOG.warn("Failed parse of hlog position from the following znode: " + z
+            LOG.warn("Failed parse of wal position from the following znode: " + z
                 + ", Exception: " + e);
           }
-          LOG.debug("Creating " + hlog + " with data " + position);
-          String child = ZKUtil.joinZNode(newClusterZnode, hlog);
+          LOG.debug("Creating " + wal + " with data " + position);
+          String child = ZKUtil.joinZNode(newClusterZnode, wal);
           // Position doesn't actually change, we are just deserializing it for
           // logging, so just use the already serialized version
           ZKUtil.createAndWatch(this.zookeeper, child, positionBytes);
-          logQueue.add(hlog);
+          logQueue.add(wal);
         }
       }
     } catch (KeeperException e) {

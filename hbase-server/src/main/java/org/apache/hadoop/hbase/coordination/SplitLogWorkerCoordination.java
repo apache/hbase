@@ -44,7 +44,7 @@ import com.google.common.annotations.VisibleForTesting;
  * for external changes in coordination (if required) <BR>
  * {@link #endTask(SplitLogTask, AtomicLong, SplitTaskDetails)} notify coordination engine that
  * <p>
- * Important methods for HLogSplitterHandler: <BR>
+ * Important methods for WALSplitterHandler: <BR>
  * splitting task has completed.
  */
 @InterfaceAudience.Private
@@ -112,7 +112,7 @@ public interface SplitLogWorkerCoordination {
    */
   void removeListener();
 
-  /* HLogSplitterHandler part */
+  /* WALSplitterHandler part */
 
   /**
    * Notify coordination engine that splitting task has completed.

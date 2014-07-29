@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver.wal;
+package org.apache.hadoop.hbase.wal;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -38,17 +38,21 @@ import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.EntryBuffers;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.RegionEntryBuffer;
+import org.apache.hadoop.hbase.wal.WALSplitter.EntryBuffers;
+import org.apache.hadoop.hbase.wal.WALSplitter.RegionEntryBuffer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+// imports for things that haven't moved from regionserver.wal yet.
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+
 /**
- * Simple testing of a few HLog methods.
+ * Simple testing of a few WAL methods.
  */
 @Category(SmallTests.class)
-public class TestHLogMethods {
+public class TestWALMethods {
   private static final byte[] TEST_REGION = Bytes.toBytes("test_region");;
   private static final TableName TEST_TABLE =
       TableName.valueOf("test_table");
@@ -65,37 +69,40 @@ public class TestHLogMethods {
     Path regiondir = util.getDataTestDir("regiondir");
     fs.delete(regiondir, true);
     fs.mkdirs(regiondir);
-    Path recoverededits = HLogUtil.getRegionDirRecoveredEditsDir(regiondir);
-    String first = HLogSplitter.formatRecoveredEditsFileName(-1);
+    Path recoverededits = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
+    String first = WALSplitter.formatRecoveredEditsFileName(-1);
     createFile(fs, recoverededits, first);
-    createFile(fs, recoverededits, HLogSplitter.formatRecoveredEditsFileName(0));
-    createFile(fs, recoverededits, HLogSplitter.formatRecoveredEditsFileName(1));
-    createFile(fs, recoverededits, HLogSplitter
+    createFile(fs, recoverededits, WALSplitter.formatRecoveredEditsFileName(0));
+    createFile(fs, recoverededits, WALSplitter.formatRecoveredEditsFileName(1));
+    createFile(fs, recoverededits, WALSplitter
         .formatRecoveredEditsFileName(11));
-    createFile(fs, recoverededits, HLogSplitter.formatRecoveredEditsFileName(2));
-    createFile(fs, recoverededits, HLogSplitter
+    createFile(fs, recoverededits, WALSplitter.formatRecoveredEditsFileName(2));
+    createFile(fs, recoverededits, WALSplitter
         .formatRecoveredEditsFileName(50));
-    String last = HLogSplitter.formatRecoveredEditsFileName(Long.MAX_VALUE);
+    String last = WALSplitter.formatRecoveredEditsFileName(Long.MAX_VALUE);
     createFile(fs, recoverededits, last);
     createFile(fs, recoverededits,
       Long.toString(Long.MAX_VALUE) + "." + System.currentTimeMillis());
 
-    HLogFactory.createHLog(fs, regiondir, "dummyLogName", util.getConfiguration());
-    NavigableSet<Path> files = HLogUtil.getSplitEditFilesSorted(fs, regiondir);
+    final Configuration walConf = new Configuration(util.getConfiguration());
+    FSUtils.setRootDir(walConf, regiondir);
+    (new WALFactory(walConf, null, "dummyLogName")).getWAL(new byte[]{});
+
+    NavigableSet<Path> files = WALSplitter.getSplitEditFilesSorted(fs, regiondir);
     assertEquals(7, files.size());
     assertEquals(files.pollFirst().getName(), first);
     assertEquals(files.pollLast().getName(), last);
     assertEquals(files.pollFirst().getName(),
-      HLogSplitter
+      WALSplitter
         .formatRecoveredEditsFileName(0));
     assertEquals(files.pollFirst().getName(),
-      HLogSplitter
+      WALSplitter
         .formatRecoveredEditsFileName(1));
     assertEquals(files.pollFirst().getName(),
-      HLogSplitter
+      WALSplitter
         .formatRecoveredEditsFileName(2));
     assertEquals(files.pollFirst().getName(),
-      HLogSplitter
+      WALSplitter
         .formatRecoveredEditsFileName(11));
   }
 
@@ -108,7 +115,7 @@ public class TestHLogMethods {
 
   @Test
   public void testRegionEntryBuffer() throws Exception {
-    HLogSplitter.RegionEntryBuffer reb = new HLogSplitter.RegionEntryBuffer(
+    WALSplitter.RegionEntryBuffer reb = new WALSplitter.RegionEntryBuffer(
         TEST_TABLE, TEST_REGION);
     assertEquals(0, reb.heapSize());
 
@@ -121,12 +128,12 @@ public class TestHLogMethods {
     Configuration conf = new Configuration();
     RecoveryMode mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false) ?
       RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING);
-    HLogSplitter splitter = new HLogSplitter(
+    WALSplitter splitter = new WALSplitter(WALFactory.getInstance(conf),
       conf, mock(Path.class), mock(FileSystem.class), null, null, mode);
 
     EntryBuffers sink = splitter.new EntryBuffers(1*1024*1024);
     for (int i = 0; i < 1000; i++) {
-      HLog.Entry entry = createTestLogEntry(i);
+      WAL.Entry entry = createTestLogEntry(i);
       sink.appendEntry(entry);
     }
 
@@ -141,7 +148,7 @@ public class TestHLogMethods {
 
     // Insert some more entries
     for (int i = 0; i < 500; i++) {
-      HLog.Entry entry = createTestLogEntry(i);
+      WAL.Entry entry = createTestLogEntry(i);
       sink.appendEntry(entry);
     }
     // Asking for another chunk shouldn't work since the first one
@@ -163,15 +170,15 @@ public class TestHLogMethods {
     assertEquals(0, sink.totalBuffered);
   }
 
-  private HLog.Entry createTestLogEntry(int i) {
+  private WAL.Entry createTestLogEntry(int i) {
     long seq = i;
     long now = i * 1000;
 
     WALEdit edit = new WALEdit();
     edit.add(KeyValueTestUtil.create("row", "fam", "qual", 1234, "val"));
-    HLogKey key = new HLogKey(TEST_REGION, TEST_TABLE, seq, now,
+    WALKey key = new WALKey(TEST_REGION, TEST_TABLE, seq, now,
         HConstants.DEFAULT_CLUSTER_ID);
-    HLog.Entry entry = new HLog.Entry(key, edit);
+    WAL.Entry entry = new WAL.Entry(key, edit);
     return entry;
   }
 

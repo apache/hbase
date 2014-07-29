@@ -204,6 +204,10 @@ message ReplicateWALEntryResponse {
 message RollWALWriterRequest {
 }
 
+/*
+ * Roll request responses no longer include regions to flush
+ * this list will always be empty when talking to a 1.0 server
+ */
 message RollWALWriterResponse {
   // A list of encoded name of regions to flush
   repeated bytes region_to_flush = 1;

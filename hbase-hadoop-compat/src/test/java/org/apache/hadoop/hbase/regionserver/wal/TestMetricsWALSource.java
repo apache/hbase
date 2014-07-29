@@ -15,24 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
+package org.apache.hadoop.hbase.regionserver.wal;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.junit.Test;
 
-@InterfaceAudience.Private
-class MetaLogRoller extends LogRoller {
-  public MetaLogRoller(Server server, RegionServerServices services) {
-    super(server, services);
-  }
-  @Override
-  protected HLog getWAL() throws IOException {
-    //The argument to getWAL below could either be HRegionInfo.FIRST_META_REGIONINFO or
-    //HRegionInfo.ROOT_REGIONINFO. Both these share the same WAL.
-    return services.getWAL(HRegionInfo.FIRST_META_REGIONINFO);
+public class TestMetricsWALSource {
+
+  @Test(expected=RuntimeException.class)
+  public void testGetInstanceNoHadoopCompat() throws Exception {
+    //This should throw an exception because there is no compat lib on the class path.
+    CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
+
   }
 }

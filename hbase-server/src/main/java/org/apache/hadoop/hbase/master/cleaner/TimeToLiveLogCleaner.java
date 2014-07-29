@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
- * Log cleaner that uses the timestamp of the hlog to determine if it should
+ * Log cleaner that uses the timestamp of the wal to determine if it should
  * be deleted. By default they are allowed to live for 10 minutes.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)

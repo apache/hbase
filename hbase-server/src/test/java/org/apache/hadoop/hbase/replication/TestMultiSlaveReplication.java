@@ -21,16 +21,21 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -38,6 +43,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -100,7 +107,7 @@ public class TestMultiSlaveReplication {
 
     utility2 = new HBaseTestingUtility(conf2);
     utility2.setZkCluster(miniZK);
-    new ZooKeeperWatcher(conf2, "cluster3", null, true);
+    new ZooKeeperWatcher(conf2, "cluster2", null, true);
 
     utility3 = new HBaseTestingUtility(conf3);
     utility3.setZkCluster(miniZK);
@@ -143,7 +150,8 @@ public class TestMultiSlaveReplication {
     putAndWait(row2, famName, htable1, htable2);
 
     // now roll the region server's logs
-    new HBaseAdmin(conf1).rollHLogWriter(master.getRegionServer(0).getServerName().toString());
+    rollWALAndWait(utility1, htable1.getName(), row2);
+
     // after the log was rolled put a new row
     putAndWait(row3, famName, htable1, htable2);
 
@@ -166,8 +174,7 @@ public class TestMultiSlaveReplication {
     p.add(famName, row, row);
     htable1.put(p);
     // now roll the logs again
-    new HBaseAdmin(conf1).rollHLogWriter(master.getRegionServer(0)
-        .getServerName().toString());
+    rollWALAndWait(utility1, htable1.getName(), row);
 
     // cleanup "row2", also conveniently use this to wait replication
     // to finish
@@ -188,6 +195,48 @@ public class TestMultiSlaveReplication {
     utility1.shutdownMiniCluster();
   }
 
+  private void rollWALAndWait(final HBaseTestingUtility utility, final TableName table,
+      final byte[] row) throws IOException {
+    final Admin admin = utility.getHBaseAdmin();
+    final MiniHBaseCluster cluster = utility.getMiniHBaseCluster();
+
+    // find the region that corresponds to the given row.
+    HRegion region = null;
+    for (HRegion candidate : cluster.getRegions(table)) {
+      if (HRegion.rowIsInRange(candidate.getRegionInfo(), row)) {
+        region = candidate;
+        break;
+      }
+    }
+    assertNotNull("Couldn't find the region for row '" + Arrays.toString(row) + "'", region);
+
+    final CountDownLatch latch = new CountDownLatch(1);
+
+    // listen for successful log rolls
+    final WALActionsListener listener = new WALActionsListener.Base() {
+          @Override
+          public void postLogRoll(final Path oldPath, final Path newPath) throws IOException {
+            latch.countDown();
+          }
+        };
+    region.getWAL().registerWALActionsListener(listener);
+
+    // request a roll
+    admin.rollWALWriter(cluster.getServerHoldingRegion(region.getTableDesc().getTableName(),
+      region.getRegionName()));
+
+    // wait
+    try {
+      latch.await();
+    } catch (InterruptedException exception) {
+      LOG.warn("Interrupted while waiting for the wal of '" + region + "' to roll. If later " +
+          "replication tests fail, it's probably because we should still be waiting.");
+      Thread.currentThread().interrupt();
+    }
+    region.getWAL().unregisterWALActionsListener(listener);
+  }
+
+ 
   private void checkWithWait(byte[] row, int count, Table table) throws Exception {
     Get get = new Get(row);
     for (int i = 0; i < NB_RETRIES; i++) {
@@ -199,7 +248,8 @@ public class TestMultiSlaveReplication {
       if (res.size() >= 1) {
         LOG.info("Row is replicated");
         rowReplicated = true;
-        assertEquals(count, res.size());
+        assertEquals("Table '" + table + "' did not have the expected number of  results.",
+            count, res.size());
         break;
       }
       if (rowReplicated) {
@@ -214,7 +264,8 @@ public class TestMultiSlaveReplication {
     Get get = new Get(row);
     for (Table table : tables) {
       Result res = table.get(get);
-      assertEquals(count, res.size());
+      assertEquals("Table '" + table + "' did not have the expected number of results.",
+          count, res.size());
     }
   }
 

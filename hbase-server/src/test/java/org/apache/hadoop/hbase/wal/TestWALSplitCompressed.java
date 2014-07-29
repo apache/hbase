@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,30 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver.wal;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+package org.apache.hadoop.hbase.wal;
 
-/**
- * An Utility testcase that returns the number of log files that
- * were rolled to be accessed from outside packages.
- * 
- * This class makes available methods that are package protected.
- *  This is interesting for test only.
- */
-public class HLogUtilsForTests {
-  
-  /**
-   * 
-   * @param log
-   * @return
-   */
-  public static int getNumRolledLogFiles(HLog log) {
-    return ((FSHLog) log).getNumRolledLogFiles();
-  }
 
-  public static int getNumEntries(HLog log) {
-    return ((FSHLog) log).getNumEntries();
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.LargeTests;
+import org.junit.BeforeClass;
+import org.junit.experimental.categories.Category;
+
+@Category(LargeTests.class)
+public class TestWALSplitCompressed extends TestWALSplit {
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    TestWALSplit.setUpBeforeClass();
+    TEST_UTIL.getConfiguration().setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
   }
 }

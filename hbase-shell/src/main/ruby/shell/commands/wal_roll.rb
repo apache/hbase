@@ -18,7 +18,7 @@
 #
 module Shell
   module Commands
-    class HlogRoll < Command
+    class WalRoll < Command
       def help
         return <<-EOF
 Roll the log writer. That is, start writing log messages to a new file.
@@ -31,9 +31,12 @@ EOF
 
       def command(server_name)
         format_simple_command do
-          admin.hlog_roll(server_name)
+          admin.wal_roll(server_name)
         end
       end
+    end
+    #TODO remove old HLog version
+    class HlogRoll < WalRoll
     end
   end
 end

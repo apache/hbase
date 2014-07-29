@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -115,8 +116,6 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   final AtomicInteger ctPreCheckAndDelete = new AtomicInteger(0);
   final AtomicInteger ctPreCheckAndDeleteAfterRowLock = new AtomicInteger(0);
   final AtomicInteger ctPostCheckAndDelete = new AtomicInteger(0);
-  final AtomicInteger ctPreWALRestored = new AtomicInteger(0);
-  final AtomicInteger ctPostWALRestored = new AtomicInteger(0);
   final AtomicInteger ctPreScannerNext = new AtomicInteger(0);
   final AtomicInteger ctPostScannerNext = new AtomicInteger(0);
   final AtomicInteger ctPreScannerClose = new AtomicInteger(0);
@@ -130,6 +129,8 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   final AtomicInteger ctPostBatchMutate = new AtomicInteger(0);
   final AtomicInteger ctPreWALRestore = new AtomicInteger(0);
   final AtomicInteger ctPostWALRestore = new AtomicInteger(0);
+  final AtomicInteger ctPreWALRestoreDeprecated = new AtomicInteger(0);
+  final AtomicInteger ctPostWALRestoreDeprecated = new AtomicInteger(0);
   final AtomicInteger ctPreSplitBeforePONR = new AtomicInteger(0);
   final AtomicInteger ctPreSplitAfterPONR = new AtomicInteger(0);
   final AtomicInteger ctPreStoreFileReaderOpen = new AtomicInteger(0);
@@ -661,8 +662,8 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
-  public void preWALRestore(ObserverContext<RegionCoprocessorEnvironment> env, HRegionInfo info,
-                            HLogKey logKey, WALEdit logEdit) throws IOException {
+  public void preWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
+      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
     String tableName = logKey.getTablename().getNameAsString();
     if (tableName.equals(TABLE_SKIPPED)) {
       // skip recovery of TABLE_SKIPPED for testing purpose
@@ -673,9 +674,23 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
+  public void preWALRestore(ObserverContext<RegionCoprocessorEnvironment> env, HRegionInfo info,
+                            HLogKey logKey, WALEdit logEdit) throws IOException {
+    preWALRestore(env, info, (WALKey)logKey, logEdit);
+    ctPreWALRestoreDeprecated.incrementAndGet();
+  }
+
+  @Override
+  public void postWALRestore(ObserverContext<? extends RegionCoprocessorEnvironment> env,
+                             HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
+    ctPostWALRestore.incrementAndGet();
+  }
+
+  @Override
   public void postWALRestore(ObserverContext<RegionCoprocessorEnvironment> env,
                              HRegionInfo info, HLogKey logKey, WALEdit logEdit) throws IOException {
-    ctPostWALRestore.incrementAndGet();
+    postWALRestore(env, info, (WALKey)logKey, logEdit);
+    ctPostWALRestoreDeprecated.incrementAndGet();
   }
 
   @Override
@@ -794,13 +809,14 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     return ctPrePrepareDeleteTS.get() > 0;
   }
   
-  public boolean hadPreWALRestored() {
-    return ctPreWALRestored.get() > 0;
+  public boolean hadPreWALRestore() {
+    return ctPreWALRestore.get() > 0;
   }
 
-  public boolean hadPostWALRestored() {
-    return ctPostWALRestored.get() > 0;
+  public boolean hadPostWALRestore() {
+    return ctPostWALRestore.get() > 0;
   }
+
   public boolean wasScannerNextCalled() {
     return ctPreScannerNext.get() > 0 && ctPostScannerNext.get() > 0;
   }
@@ -939,7 +955,22 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     return ctPostWALRestore.get();
   }
 
+  public int getCtPreWALRestoreDeprecated() {
+    return ctPreWALRestoreDeprecated.get();
+  }
+
+  public int getCtPostWALRestoreDeprecated() {
+    return ctPostWALRestoreDeprecated.get();
+  }
+
   public boolean wasStoreFileReaderOpenCalled() {
     return ctPreStoreFileReaderOpen.get() > 0 && ctPostStoreFileReaderOpen.get() > 0;
+  }
+
+  /**
+   * This implementation should trigger our legacy support because it does not directly
+   * implement the newer API calls.
+   */
+  public static class Legacy extends SimpleRegionObserver {
   }
 }

@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -53,9 +54,9 @@ import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
@@ -76,7 +77,7 @@ public class TestSplitTransaction {
   private final Path testdir =
     TEST_UTIL.getDataTestDir(this.getClass().getName());
   private HRegion parent;
-  private HLog wal;
+  private WALFactory wals;
   private FileSystem fs;
   private static final byte [] STARTROW = new byte [] {'a', 'a', 'a'};
   // '{' is next ascii after 'z'.
@@ -91,10 +92,11 @@ public class TestSplitTransaction {
     this.fs = FileSystem.get(TEST_UTIL.getConfiguration());
     TEST_UTIL.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, CustomObserver.class.getName());
     this.fs.delete(this.testdir, true);
-    this.wal = HLogFactory.createHLog(fs, this.testdir, "logs",
-      TEST_UTIL.getConfiguration());
+    final Configuration walConf = new Configuration(TEST_UTIL.getConfiguration());
+    FSUtils.setRootDir(walConf, this.testdir);
+    this.wals = new WALFactory(walConf, null, this.getClass().getName());
     
-    this.parent = createRegion(this.testdir, this.wal);
+    this.parent = createRegion(this.testdir, this.wals);
     RegionCoprocessorHost host = new RegionCoprocessorHost(this.parent, null, TEST_UTIL.getConfiguration());
     this.parent.setCoprocessorHost(host);
     TEST_UTIL.getConfiguration().setBoolean("hbase.testing.nocluster", true);
@@ -106,7 +108,9 @@ public class TestSplitTransaction {
     if (this.fs.exists(regionDir) && !this.fs.delete(regionDir, true)) {
       throw new IOException("Failed delete of " + regionDir);
     }
-    if (this.wal != null) this.wal.closeAndDelete();
+    if (this.wals != null) {
+      this.wals.close();
+    }
     this.fs.delete(this.testdir, true);
   }
 
@@ -364,7 +368,7 @@ public class TestSplitTransaction {
     return rowcount;
   }
 
-  HRegion createRegion(final Path testdir, final HLog wal)
+  HRegion createRegion(final Path testdir, final WALFactory wals)
   throws IOException {
     // Make a region with start and end keys. Use 'aaa', to 'AAA'.  The load
     // region utility will add rows between 'aaa' and 'zzz'.
@@ -374,7 +378,7 @@ public class TestSplitTransaction {
     HRegionInfo hri = new HRegionInfo(htd.getTableName(), STARTROW, ENDROW);
     HRegion r = HRegion.createHRegion(hri, testdir, TEST_UTIL.getConfiguration(), htd);
     HRegion.closeHRegion(r);
-    return HRegion.openHRegion(testdir, hri, htd, wal,
+    return HRegion.openHRegion(testdir, hri, htd, wals.getWAL(hri.getEncodedNameAsBytes()),
       TEST_UTIL.getConfiguration());
   }
   

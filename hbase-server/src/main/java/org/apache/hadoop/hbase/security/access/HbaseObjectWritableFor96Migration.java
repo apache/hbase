@@ -87,8 +87,10 @@ import org.apache.hadoop.hbase.io.WritableWithSize;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ProtoUtil;
 import org.apache.hadoop.io.MapWritable;
@@ -228,8 +230,8 @@ class HbaseObjectWritableFor96Migration implements Writable, WritableWithSize, C
 
     addToMap(Delete [].class, code++);
 
-    addToMap(HLog.Entry.class, code++);
-    addToMap(HLog.Entry[].class, code++);
+    addToMap(Entry.class, code++);
+    addToMap(Entry[].class, code++);
     addToMap(HLogKey.class, code++);
 
     addToMap(List.class, code++);
@@ -539,6 +541,26 @@ class HbaseObjectWritableFor96Migration implements Writable, WritableWithSize, C
       byte [] scanBytes = ProtobufUtil.toScan(scan).toByteArray();
       out.writeInt(scanBytes.length);
       out.write(scanBytes);
+    } else if (Entry.class.isAssignableFrom(declClass)) {
+      // Entry is no longer Writable, maintain compatible serialization.
+      // Writables write their exact runtime class
+      Class <?> c = instanceObj.getClass();
+      Integer code = CLASS_TO_CODE.get(c);
+      if (code == null) {
+        out.writeByte(NOT_ENCODED);
+        Text.writeString(out, c.getName());
+      } else {
+        writeClassCode(out, c);
+      }
+      final Entry entry = (Entry)instanceObj;
+      // We only support legacy HLogKey
+      WALKey key = entry.getKey();
+      if (!(key instanceof HLogKey)) {
+        throw new IOException("Can't write Entry '" + instanceObj + "' due to key class '" +
+            key.getClass() + "'");
+      }
+      ((HLogKey)key).write(out);
+      entry.getEdit().write(out);
     } else {
       throw new IOException("Can't write: "+instanceObj+" as "+declClass);
     }
@@ -673,6 +695,9 @@ class HbaseObjectWritableFor96Migration implements Writable, WritableWithSize, C
       int b = (byte)WritableUtils.readVInt(in);
       if (b == NOT_ENCODED) {
         String className = Text.readString(in);
+        if ("org.apache.hadoop.hbase.regionserver.wal.HLog$Entry".equals(className)) {
+          className = Entry.class.getName();
+        }
         try {
           instanceClass = getClassByName(conf, className);
         } catch (ClassNotFoundException e) {
@@ -695,6 +720,13 @@ class HbaseObjectWritableFor96Migration implements Writable, WritableWithSize, C
           declaredClass = ((NullInstance)instance).declaredClass;
           instance = null;
         }
+      } else if (Entry.class.isAssignableFrom(instanceClass)) {
+        // Entry stopped being Writable; maintain serialization support.
+        final HLogKey key = new HLogKey();
+        final WALEdit edit = new WALEdit();
+        key.readFields(in);
+        edit.readFields(in);
+        instance = new Entry(key, edit);
       } else {
         int length = in.readInt();
         byte[] objectBytes = new byte[length];

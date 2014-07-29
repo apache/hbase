@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.replication;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 /**
  * A Filter for WAL entries before being sent over to replication. Multiple
@@ -30,12 +30,12 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 public interface WALEntryFilter {
 
   /**
-   * Applies the filter, possibly returning a different HLog.Entry instance.
+   * Applies the filter, possibly returning a different Entry instance.
    * If null is returned, the entry will be skipped.
-   * @param entry WAL Entry to filter
-   * @return a (possibly modified) HLog.Entry to use. Returning null or an entry with
+   * @param entry Entry to filter
+   * @return a (possibly modified) Entry to use. Returning null or an entry with
    * no cells will cause the entry to be skipped for replication.
    */
-  public HLog.Entry filter(HLog.Entry entry);
+  public Entry filter(Entry entry);
 
 }

@@ -28,11 +28,11 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
@@ -56,7 +56,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 @Category(LargeTests.class)
 @RunWith(Parameterized.class)
-public class TestReplicationHLogReaderManager {
+public class TestReplicationWALReaderManager {
 
   private static HBaseTestingUtility TEST_UTIL;
   private static Configuration conf;
@@ -70,8 +70,8 @@ public class TestReplicationHLogReaderManager {
       HConstants.EMPTY_START_ROW, HConstants.LAST_ROW, false);
   private static final HTableDescriptor htd = new HTableDescriptor(tableName);
 
-  private HLog log;
-  private ReplicationHLogReaderManager logManager;
+  private WAL log;
+  private ReplicationWALReaderManager logManager;
   private PathWatcher pathWatcher;
   private int nbRows;
   private int walEditKVs;
@@ -99,7 +99,7 @@ public class TestReplicationHLogReaderManager {
     return parameters;
   }
 
-  public TestReplicationHLogReaderManager(int nbRows, int walEditKVs, boolean enableCompression) {
+  public TestReplicationWALReaderManager(int nbRows, int walEditKVs, boolean enableCompression) {
     this.nbRows = nbRows;
     this.walEditKVs = walEditKVs;
     TEST_UTIL.getConfiguration().setBoolean(HConstants.ENABLE_WAL_COMPRESSION,
@@ -124,16 +124,17 @@ public class TestReplicationHLogReaderManager {
 
   @Before
   public void setUp() throws Exception {
-    logManager = new ReplicationHLogReaderManager(fs, conf);
+    logManager = new ReplicationWALReaderManager(fs, conf);
     List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
     pathWatcher = new PathWatcher();
     listeners.add(pathWatcher);
-    log = HLogFactory.createHLog(fs, hbaseDir, "test", conf, listeners, "some server");
+    final WALFactory wals = new WALFactory(conf, listeners, "some server");
+    log = wals.getWAL(info.getEncodedNameAsBytes());
   }
 
   @After
   public void tearDown() throws Exception {
-    log.closeAndDelete();
+    log.close();
   }
 
   @Test
@@ -148,7 +149,7 @@ public class TestReplicationHLogReaderManager {
     // There's one edit in the log, read it. Reading past it needs to return nulls
     assertNotNull(logManager.openReader(path));
     logManager.seek();
-    HLog.Entry entry = logManager.readNextAndSetPosition();
+    WAL.Entry entry = logManager.readNextAndSetPosition();
     assertNotNull(entry);
     entry = logManager.readNextAndSetPosition();
     assertNull(entry);
@@ -183,7 +184,7 @@ public class TestReplicationHLogReaderManager {
     logManager.openReader(path);
     logManager.seek();
     for (int i = 0; i < nbRows; i++) {
-      HLog.Entry e = logManager.readNextAndSetPosition();
+      WAL.Entry e = logManager.readNextAndSetPosition();
       if (e == null) {
         fail("Should have enough entries");
       }
@@ -195,7 +196,9 @@ public class TestReplicationHLogReaderManager {
   }
 
   private void appendToLogPlus(int count) throws IOException {
-    log.append(info, tableName, getWALEdits(count), System.currentTimeMillis(), htd, sequenceId);
+    final long txid = log.append(htd, info, new WALKey(info.getEncodedNameAsBytes(), tableName,
+        System.currentTimeMillis()), getWALEdits(count), sequenceId, true, null);
+    log.sync(txid);
   }
 
   private WALEdit getWALEdits(int count) {
@@ -207,7 +210,7 @@ public class TestReplicationHLogReaderManager {
     return edit;
   }
 
-  class PathWatcher implements WALActionsListener {
+  class PathWatcher extends WALActionsListener.Base {
 
     Path currentPath;
 
@@ -215,26 +218,5 @@ public class TestReplicationHLogReaderManager {
     public void preLogRoll(Path oldPath, Path newPath) throws IOException {
       currentPath = newPath;
     }
-
-    @Override
-    public void postLogRoll(Path oldPath, Path newPath) throws IOException {}
-
-    @Override
-    public void preLogArchive(Path oldPath, Path newPath) throws IOException {}
-
-    @Override
-    public void postLogArchive(Path oldPath, Path newPath) throws IOException {}
-
-    @Override
-    public void logRollRequested() {}
-
-    @Override
-    public void logCloseRequested() {}
-
-    @Override
-    public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit) {}
-
-    @Override
-    public void visitLogEntryBeforeWrite(HTableDescriptor htd, HLogKey logKey, WALEdit logEdit) {}
   }
 }

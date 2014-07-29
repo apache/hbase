@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
@@ -61,10 +61,10 @@ public class TestStoreFileRefresherChore {
   private Path testDir;
 
   @Before
-  public void setUp() {
+  public void setUp() throws IOException {
     TEST_UTIL = new HBaseTestingUtility();
     testDir = TEST_UTIL.getDataTestDir("TestStoreFileRefresherChore");
-    TEST_UTIL.getConfiguration().set(HConstants.HBASE_DIR, testDir.toString());
+    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), testDir);
   }
 
   private HTableDescriptor getTableDesc(TableName tableName, byte[]... families) {
@@ -100,8 +100,10 @@ public class TestStoreFileRefresherChore {
     HRegionInfo info = new HRegionInfo(htd.getTableName(), startKey, stopKey, false, 0, replicaId);
 
     HRegionFileSystem fs = new FailingHRegionFileSystem(conf, tableDir.getFileSystem(conf), tableDir, info);
-    HRegion region = new HRegion(fs, HLogFactory.createHLog(fs.getFileSystem(),
-      tableDir, "log_" + replicaId, conf), conf, htd, null);
+    final Configuration walConf = new Configuration(conf);
+    FSUtils.setRootDir(walConf, tableDir);
+    final WALFactory wals = new WALFactory(walConf, null, "log_" + replicaId);
+    HRegion region = new HRegion(fs, wals.getWAL(info.getEncodedNameAsBytes()), conf, htd, null);
 
     region.initialize();
 

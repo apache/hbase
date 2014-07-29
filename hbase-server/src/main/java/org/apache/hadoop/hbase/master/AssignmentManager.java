@@ -90,9 +90,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.RegionAlreadyInTransitionException;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.ConfigUtil;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.KeyLocker;
@@ -558,17 +557,20 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     if (!failover) {
       // If we get here, we have a full cluster restart. It is a failover only
-      // if there are some HLogs are not split yet. For meta HLogs, they should have
+      // if there are some WALs are not split yet. For meta WALs, they should have
       // been split already, if any. We can walk through those queued dead servers,
-      // if they don't have any HLogs, this restart should be considered as a clean one
+      // if they don't have any WALs, this restart should be considered as a clean one
       Set<ServerName> queuedDeadServers = serverManager.getRequeuedDeadServers().keySet();
       if (!queuedDeadServers.isEmpty()) {
         Configuration conf = server.getConfiguration();
         Path rootdir = FSUtils.getRootDir(conf);
         FileSystem fs = rootdir.getFileSystem(conf);
         for (ServerName serverName: queuedDeadServers) {
-          Path logDir = new Path(rootdir, HLogUtil.getHLogDirectoryName(serverName.toString()));
-          Path splitDir = logDir.suffix(HLog.SPLITTING_EXT);
+          // In the case of a clean exit, the shutdown handler would have presplit any WALs and
+          // removed empty directories.
+          Path logDir = new Path(rootdir,
+              DefaultWALProvider.getWALDirectoryName(serverName.toString()));
+          Path splitDir = logDir.suffix(DefaultWALProvider.SPLITTING_EXT);
           if (fs.exists(logDir) || fs.exists(splitDir)) {
             LOG.debug("Found queued dead server " + serverName);
             failover = true;

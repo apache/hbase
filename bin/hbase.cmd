@@ -210,7 +210,7 @@ goto :MakeCmdArgsLoop
 set hbase-command-arguments=%_hbasearguments%
 
 @rem figure out which class to run
-set corecommands=shell master regionserver thrift thrift2 rest avro hlog hbck hfile zookeeper zkcli upgrade mapredcp
+set corecommands=shell master regionserver thrift thrift2 rest avro hlog wal hbck hfile zookeeper zkcli upgrade mapredcp
 for %%i in ( %corecommands% ) do (
   if "%hbase-command%"=="%%i" set corecommand=true
 )
@@ -375,8 +375,13 @@ goto :eof
   set CLASS=org.apache.hadoop.hbase.util.HBaseFsck
   goto :eof
 
+@rem TODO remove older 'hlog' command
 :hlog
-  set CLASS=org.apache.hadoop.hbase.regionserver.wal.HLogPrettyPrinter
+  set CLASS=org.apache.hadoop.hbase.wal.WALPrettyPrinter
+  goto :eof
+
+:wal
+  set CLASS=org.apache.hadoop.hbase.wal.WALPrettyPrinter
   goto :eof
 
 :hfile
@@ -416,7 +421,7 @@ goto :eof
   echo Some commands take arguments. Pass no args or -h for usage."
   echo   shell           Run the HBase shell
   echo   hbck            Run the hbase 'fsck' tool
-  echo   hlog            Write-ahead-log analyzer
+  echo   wal             Write-ahead-log analyzer
   echo   hfile           Store file analyzer
   echo   zkcli           Run the ZooKeeper shell
   echo   upgrade         Upgrade hbase

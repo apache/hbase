@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 
 /**
  * Utility methods for interacting with the hbase.root file system.
@@ -179,7 +179,7 @@ public final class FSVisitor {
    */
   public static void visitRegionRecoveredEdits(final FileSystem fs, final Path regionDir,
       final FSVisitor.RecoveredEditsVisitor visitor) throws IOException {
-    NavigableSet<Path> files = HLogUtil.getSplitEditFilesSorted(fs, regionDir);
+    NavigableSet<Path> files = WALSplitter.getSplitEditFilesSorted(fs, regionDir);
     if (files == null || files.size() == 0) return;
 
     for (Path source: files) {
@@ -213,16 +213,16 @@ public final class FSVisitor {
     for (FileStatus serverLogs: logServerDirs) {
       String serverName = serverLogs.getPath().getName();
 
-      FileStatus[] hlogs = FSUtils.listStatus(fs, serverLogs.getPath());
-      if (hlogs == null) {
+      FileStatus[] wals = FSUtils.listStatus(fs, serverLogs.getPath());
+      if (wals == null) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace("No hfiles found for server: " + serverName + ", skipping.");
+          LOG.trace("No wals found for server: " + serverName + ", skipping.");
         }
         continue;
       }
 
-      for (FileStatus hlogRef: hlogs) {
-        visitor.logFile(serverName, hlogRef.getPath().getName());
+      for (FileStatus walRef: wals) {
+        visitor.logFile(serverName, walRef.getPath().getName());
       }
     }
   }

@@ -16956,6 +16956,12 @@ public final class AdminProtos {
   }
   /**
    * Protobuf type {@code RollWALWriterResponse}
+   *
+   * <pre>
+   *
+   * Roll request responses no longer include regions to flush
+   * this list will always be empty when talking to a 1.0 server
+   * </pre>
    */
   public static final class RollWALWriterResponse extends
       com.google.protobuf.GeneratedMessage
@@ -17241,6 +17247,12 @@ public final class AdminProtos {
     }
     /**
      * Protobuf type {@code RollWALWriterResponse}
+     *
+     * <pre>
+     *
+     * Roll request responses no longer include regions to flush
+     * this list will always be empty when talking to a 1.0 server
+     * </pre>
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>

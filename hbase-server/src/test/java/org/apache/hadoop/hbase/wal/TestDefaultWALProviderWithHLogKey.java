@@ -15,21 +15,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hbase.wal;
 
-package org.apache.hadoop.hbase.regionserver.wal;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
-
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LargeTests;
-import org.junit.BeforeClass;
+import org.apache.hadoop.hbase.TableName;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
-public class TestHLogSplitCompressed extends TestHLogSplit {
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    TestHLogSplit.setUpBeforeClass();
-    TEST_UTIL.getConfiguration().setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
+@Category(LargeTests.class)
+public class TestDefaultWALProviderWithHLogKey extends TestDefaultWALProvider {
+  @Override
+  WALKey getWalKey(final byte[] info, final TableName tableName, final long timestamp) {
+    return new HLogKey(info, tableName, timestamp);
   }
 }

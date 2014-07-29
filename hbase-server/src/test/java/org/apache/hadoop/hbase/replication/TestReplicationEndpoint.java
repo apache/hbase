@@ -36,8 +36,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
@@ -81,7 +80,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     ReplicationEndpointReturningFalse.replicated.set(false);
     ReplicationEndpointForTest.lastEntries = null;
     for (RegionServerThread rs : utility1.getMiniHBaseCluster().getRegionServerThreads()) {
-      utility1.getHBaseAdmin().rollHLogWriter(rs.getRegionServer().getServerName().toString());
+      utility1.getHBaseAdmin().rollWALWriter(rs.getRegionServer().getServerName());
     }
   }
 
@@ -215,7 +214,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     static AtomicInteger startedCount = new AtomicInteger();
     static AtomicInteger stoppedCount = new AtomicInteger();
     static AtomicInteger replicateCount = new AtomicInteger();
-    static volatile List<HLog.Entry> lastEntries = null;
+    static volatile List<Entry> lastEntries = null;
 
     public ReplicationEndpointForTest() {
       contructedCount.incrementAndGet();

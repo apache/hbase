@@ -98,8 +98,9 @@ public class TestRegionObserverInterface {
     // set configure to indicate which cp should be loaded
     Configuration conf = util.getConfiguration();
     conf.setBoolean("hbase.master.distributed.log.replay", true);
-    conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
-        "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver");
+    conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+        "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver",
+        "org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver$Legacy");
 
     util.startMiniCluster();
     cluster = util.getMiniHBaseCluster();
@@ -618,9 +619,10 @@ public class TestRegionObserverInterface {
           );
 
       verifyMethodResult(SimpleRegionObserver.class,
-          new String[] {"getCtPreWALRestore", "getCtPostWALRestore", "getCtPrePut", "getCtPostPut"},
+          new String[] {"getCtPreWALRestore", "getCtPostWALRestore", "getCtPrePut", "getCtPostPut",
+              "getCtPreWALRestoreDeprecated", "getCtPostWALRestoreDeprecated"},
           tableName,
-          new Integer[] {0, 0, 1, 1});
+          new Integer[] {0, 0, 1, 1, 0, 0});
 
       cluster.killRegionServer(rs1.getRegionServer().getServerName());
       Threads.sleep(1000); // Let the kill soak in.
@@ -628,9 +630,60 @@ public class TestRegionObserverInterface {
       LOG.info("All regions assigned");
 
       verifyMethodResult(SimpleRegionObserver.class,
-          new String[]{"getCtPrePut", "getCtPostPut"},
+          new String[] {"getCtPreWALRestore", "getCtPostWALRestore", "getCtPrePut", "getCtPostPut",
+              "getCtPreWALRestoreDeprecated", "getCtPostWALRestoreDeprecated"},
           tableName,
-          new Integer[]{0, 0});
+          new Integer[]{1, 1, 0, 0, 0, 0});
+    } finally {
+      util.deleteTable(tableName);
+      table.close();
+    }
+  }
+
+  @Test
+  public void testLegacyRecovery() throws Exception {
+    LOG.info(TestRegionObserverInterface.class.getName() +".testLegacyRecovery");
+    TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".testLegacyRecovery");
+    HTable table = util.createTable(tableName, new byte[][] {A, B, C});
+    try {
+      JVMClusterUtil.RegionServerThread rs1 = cluster.startRegionServer();
+      ServerName sn2 = rs1.getRegionServer().getServerName();
+      String regEN = table.getRegionLocations().firstEntry().getKey().getEncodedName();
+
+      util.getHBaseAdmin().move(regEN.getBytes(), sn2.getServerName().getBytes());
+      while (!sn2.equals(table.getRegionLocations().firstEntry().getValue() )){
+        Thread.sleep(100);
+      }
+
+      Put put = new Put(ROW);
+      put.add(A, A, A);
+      put.add(B, B, B);
+      put.add(C, C, C);
+      table.put(put);
+
+      verifyMethodResult(SimpleRegionObserver.Legacy.class,
+          new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
+        "hadPreBatchMutate", "hadPostBatchMutate", "hadDelete"},
+        tableName,
+        new Boolean[] {false, false, true, true, true, true, false}
+          );
+
+      verifyMethodResult(SimpleRegionObserver.Legacy.class,
+          new String[] {"getCtPreWALRestore", "getCtPostWALRestore", "getCtPrePut", "getCtPostPut",
+              "getCtPreWALRestoreDeprecated", "getCtPostWALRestoreDeprecated"},
+          tableName,
+          new Integer[] {0, 0, 1, 1, 0, 0});
+
+      cluster.killRegionServer(rs1.getRegionServer().getServerName());
+      Threads.sleep(1000); // Let the kill soak in.
+      util.waitUntilAllRegionsAssigned(tableName);
+      LOG.info("All regions assigned");
+
+      verifyMethodResult(SimpleRegionObserver.Legacy.class,
+          new String[] {"getCtPreWALRestore", "getCtPostWALRestore", "getCtPrePut", "getCtPostPut",
+              "getCtPreWALRestoreDeprecated", "getCtPostWALRestoreDeprecated"},
+          tableName,
+          new Integer[]{1, 1, 0, 0, 1, 1});
     } finally {
       util.deleteTable(tableName);
       table.close();
@@ -664,7 +717,9 @@ public class TestRegionObserverInterface {
     util.waitUntilAllRegionsAssigned(tableName);
 
     verifyMethodResult(SimpleRegionObserver.class, new String[] { "getCtPreWALRestore",
-        "getCtPostWALRestore" }, tableName, new Integer[] { 0, 0 });
+        "getCtPostWALRestore", "getCtPreWALRestoreDeprecated", "getCtPostWALRestoreDeprecated"},
+        tableName,
+        new Integer[] {0, 0, 0, 0});
 
     util.deleteTable(tableName);
     table.close();

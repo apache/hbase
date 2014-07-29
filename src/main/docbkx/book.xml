@@ -2128,7 +2128,7 @@ rs.close();
         <section
           xml:id="regionserver.arch.processes.log">
           <title>LogRoller</title>
-          <para>Periodically checks the RegionServer's HLog.</para>
+          <para>Periodically checks the RegionServer's WAL.</para>
         </section>
       </section>
 
@@ -2450,13 +2450,22 @@ rs.close();
           becomes unavailable before the MemStore is flushed, the WAL ensures that the changes to
           the data can be replayed. If writing to the WAL fails, the entire operation to modify the
           data fails.</para>
-          <para>HBase uses an implementation of the <link
-              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/wal/HLog.html">HLog</link>
-            interface for the WAL.
-            Usually, there is only one instance of a WAL per RegionServer. The RegionServer records Puts and Deletes to
-            it, before recording them to the <xref
+          <para>
+            HBase uses an implementation of the <link xlink:href=
+            "http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/wal/WAL.html"
+            >WAL</link> interface. Usually, there is only one instance of a WAL per RegionServer.
+            The RegionServer records Puts and Deletes to it, before recording them to the <xref
               linkend="store.memstore" /> for the affected <xref
-              linkend="store" />.</para>
+              linkend="store" />.
+          </para>
+          <note>
+            <title>The HLog</title>
+            <para>
+              Prior to 2.0, the interface for WALs in HBase was named <classname>HLog</classname>.
+              In 0.94, HLog was the name of the implementation of the WAL. You will likely find
+              references to the HLog in documentation tailored to these older versions.
+            </para>
+          </note>
           <para>The WAL resides in HDFS in the <filename>/hbase/WALs/</filename> directory (prior to
             HBase 0.94, they were stored in <filename>/hbase/.logs/</filename>), with subdirectories per
             region.</para>
@@ -3159,10 +3168,10 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
                   <varname>hbase.regionserver.global.memstore.lowerLimit</varname>. </para>
             </listitem>
             <listitem>
-              <para>When the number of HLog per region server reaches the value specified in
+              <para>When the number of WAL per region server reaches the value specified in
                   <varname>hbase.regionserver.max.logs</varname>, MemStores from various regions
-                will be flushed out to disk to reduce HLog count. The flush order is based on time.
-                Regions with the oldest MemStores are flushed first until HLog count drops below
+                will be flushed out to disk to reduce WAL count. The flush order is based on time.
+                Regions with the oldest MemStores are flushed first until WAL count drops below
                   <varname>hbase.regionserver.max.logs</varname>. </para>
             </listitem>
           </orderedlist>

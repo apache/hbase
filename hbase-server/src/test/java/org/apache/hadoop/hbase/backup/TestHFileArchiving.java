@@ -437,7 +437,7 @@ public class TestHFileArchiving {
     // remove all the non-storefile named files for the region
     for (int i = 0; i < storeFiles.size(); i++) {
       String file = storeFiles.get(i);
-      if (file.contains(HRegionFileSystem.REGION_INFO_FILE) || file.contains("hlog")) {
+      if (file.contains(HRegionFileSystem.REGION_INFO_FILE) || file.contains("wal")) {
         storeFiles.remove(i--);
       }
     }

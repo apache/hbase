@@ -67,7 +67,7 @@ import com.google.common.collect.Lists;
  * Adding a new peer results in creating new outbound connections from every
  * region server to a subset of region servers on the slave cluster. Each
  * new stream of replication will start replicating from the beginning of the
- * current HLog, meaning that edits from that past will be replicated.
+ * current WAL, meaning that edits from that past will be replicated.
  * </p>
  * <p>
  * Removing a peer is a destructive and irreversible operation that stops

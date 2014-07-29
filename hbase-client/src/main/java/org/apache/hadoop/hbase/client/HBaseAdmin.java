@@ -2626,37 +2626,60 @@ public class HBaseAdmin implements Admin {
     return getTableDescriptorsByTableName(tableNames);
   }
 
+  private RollWALWriterResponse rollWALWriterImpl(final ServerName sn) throws IOException,
+      FailedLogCloseException {
+    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
+    RollWALWriterRequest request = RequestConverter.buildRollWALWriterRequest();
+    try {
+      return admin.rollWALWriter(null, request);
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
+  }
+
   /**
-   * Roll the log writer. That is, start writing log messages to a new file.
+   * Roll the log writer. I.e. when using a file system based write ahead log, 
+   * start writing log messages to a new file.
+   *
+   * Note that when talking to a version 1.0+ HBase deployment, the rolling is asynchronous.
+   * This method will return as soon as the roll is requested and the return value will
+   * always be null. Additionally, the named region server may schedule store flushes at the
+   * request of the wal handling the roll request.
+   *
+   * When talking to a 0.98 or older HBase deployment, the rolling is synchronous and the
+   * return value may be either null or a list of encoded region names.
    *
    * @param serverName
    *          The servername of the regionserver. A server name is made of host,
    *          port and startcode. This is mandatory. Here is an example:
    *          <code> host187.example.com,60020,1289493121758</code>
-   * @return If lots of logs, flush the returned regions so next time through
-   * we can clean logs. Returns null if nothing to flush.  Names are actual
-   * region names as returned by {@link HRegionInfo#getEncodedName()}
+   * @return a set of {@link HRegionInfo#getEncodedName()} that would allow the wal to
+   *         clean up some underlying files. null if there's nothing to flush.
    * @throws IOException if a remote or network exception occurs
    * @throws FailedLogCloseException
+   * @deprecated use {@link #rollWALWriter(ServerName)}
    */
-  @Override
-  public synchronized  byte[][] rollHLogWriter(String serverName)
+  @Deprecated
+  public synchronized byte[][] rollHLogWriter(String serverName)
       throws IOException, FailedLogCloseException {
     ServerName sn = ServerName.valueOf(serverName);
-    AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
-    RollWALWriterRequest request = RequestConverter.buildRollWALWriterRequest();
-    try {
-      RollWALWriterResponse response = admin.rollWALWriter(null, request);
-      int regionCount = response.getRegionToFlushCount();
-      byte[][] regionsToFlush = new byte[regionCount][];
-      for (int i = 0; i < regionCount; i++) {
-        ByteString region = response.getRegionToFlush(i);
-        regionsToFlush[i] = region.toByteArray();
-      }
-      return regionsToFlush;
-    } catch (ServiceException se) {
-      throw ProtobufUtil.getRemoteException(se);
+    final RollWALWriterResponse response = rollWALWriterImpl(sn);
+    int regionCount = response.getRegionToFlushCount();
+    if (0 == regionCount) {
+      return null;
     }
+    byte[][] regionsToFlush = new byte[regionCount][];
+    for (int i = 0; i < regionCount; i++) {
+      ByteString region = response.getRegionToFlush(i);
+      regionsToFlush[i] = region.toByteArray();
+    }
+    return regionsToFlush;
+  }
+
+  @Override
+  public synchronized void rollWALWriter(ServerName serverName)
+      throws IOException, FailedLogCloseException {
+    rollWALWriterImpl(serverName);
   }
 
   @Override

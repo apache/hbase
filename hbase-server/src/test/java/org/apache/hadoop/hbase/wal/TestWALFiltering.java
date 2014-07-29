@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver.wal;
+package org.apache.hadoop.hbase.wal;
 
 import static org.junit.Assert.assertEquals;
 
@@ -48,12 +48,12 @@ import com.google.common.collect.Lists;
 import com.google.protobuf.ServiceException;
 
 @Category(MediumTests.class)
-public class TestHLogFiltering {
+public class TestWALFiltering {
   private static final int NUM_MASTERS = 1;
   private static final int NUM_RS = 4;
 
   private static final TableName TABLE_NAME =
-      TableName.valueOf("TestHLogFiltering");
+      TableName.valueOf("TestWALFiltering");
   private static final byte[] CF1 = Bytes.toBytes("MyCF1");
   private static final byte[] CF2 = Bytes.toBytes("MyCF2");
   private static final byte[][] FAMILIES = { CF1, CF2 };

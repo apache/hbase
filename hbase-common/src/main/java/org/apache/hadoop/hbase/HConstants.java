@@ -874,7 +874,7 @@ public final class HConstants {
   /** File permission umask to use when creating hbase data files */
   public static final String DATA_FILE_UMASK_KEY = "hbase.data.umask";
 
-  /** Configuration name of HLog Compression */
+  /** Configuration name of WAL Compression */
   public static final String ENABLE_WAL_COMPRESSION =
     "hbase.regionserver.wal.enablecompression";
 
@@ -1006,7 +1006,7 @@ public final class HConstants {
   /** Configuration key for the name of the master WAL encryption key for the cluster, a string */
   public static final String CRYPTO_WAL_KEY_NAME_CONF_KEY = "hbase.crypto.wal.key.name";
 
-  /** Configuration key for enabling HLog encryption, a boolean */
+  /** Configuration key for enabling WAL encryption, a boolean */
   public static final String ENABLE_WAL_ENCRYPTION = "hbase.regionserver.wal.encryption";
 
   /** Configuration key for setting RPC codec class name */

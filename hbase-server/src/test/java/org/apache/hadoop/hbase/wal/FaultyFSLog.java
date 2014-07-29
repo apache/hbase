@@ -17,30 +17,37 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.regionserver.wal;
+package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 
-/*
+// imports for things that haven't moved yet
+import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+
+/**
  * This is a utility class, used by tests, which fails operation specified by FailureType enum
  */
-public class FaultyHLog extends FSHLog {
+@InterfaceAudience.Private
+public class FaultyFSLog extends FSHLog {
   public enum FailureType {
-    NONE, APPENDNOSYNC, SYNC
+    NONE, APPEND, SYNC
   }
   FailureType ft = FailureType.NONE;
 
-  public FaultyHLog(FileSystem fs, Path rootDir, String logName, Configuration conf)
+  public FaultyFSLog(FileSystem fs, Path rootDir, String logName, Configuration conf)
       throws IOException {
     super(fs, rootDir, logName, conf);
   }
@@ -56,15 +63,14 @@ public class FaultyHLog extends FSHLog {
     }
     super.sync(txid);
   }
+
   @Override
-  public long appendNoSync(HRegionInfo info, TableName tableName, WALEdit edits,
-      List<UUID> clusterIds, final long now, HTableDescriptor htd, AtomicLong sequenceId,
-      boolean isInMemstore, long nonceGroup, long nonce) throws IOException {
-    if (this.ft == FailureType.APPENDNOSYNC) {
-      throw new IOException("appendNoSync");
+  public long append(HTableDescriptor htd, HRegionInfo info, WALKey key, WALEdit edits,
+      AtomicLong sequenceId, boolean isInMemstore, List<Cell> cells) throws IOException {
+    if (this.ft == FailureType.APPEND) {
+      throw new IOException("append");
     }
-    return super.appendNoSync(info, tableName, edits, clusterIds, now, htd, sequenceId,
-      isInMemstore, nonceGroup, nonce);
+    return super.append(htd, info, key, edits, sequenceId, isInMemstore, cells);
   }
 }
 

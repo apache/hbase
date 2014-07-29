@@ -82,7 +82,7 @@ import com.google.common.base.Objects;
  * <ol>
  * <li>
  * Load Test Tool.<br/>
- * This runs so that all RegionServers will have some load and HLogs will be full.
+ * This runs so that all RegionServers will have some load and WALs will be full.
  * </li>
  * <li>
  * Scan thread.<br/>
@@ -151,7 +151,7 @@ public class IntegrationTestMTTR {
   private static Action restartMasterAction;
 
   /**
-   * The load test tool used to create load and make sure that HLogs aren't empty.
+   * The load test tool used to create load and make sure that WALs aren't empty.
    */
   private static LoadTestTool loadTool;
 

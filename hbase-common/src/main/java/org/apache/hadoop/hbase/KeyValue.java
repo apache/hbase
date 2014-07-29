@@ -1195,7 +1195,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
 
   /**
    * Produces a string map for this key/value pair. Useful for programmatic use
-   * and manipulation of the data stored in an HLogKey, for example, printing
+   * and manipulation of the data stored in an WALKey, for example, printing
    * as JSON. Values are left out due to their tendency to be large. If needed,
    * they can be added manually.
    *

@@ -314,13 +314,17 @@ Shell.load_command_group(
     merge_region
     unassign
     zk_dump
-    hlog_roll
+    wal_roll
     catalogjanitor_run
     catalogjanitor_switch
     catalogjanitor_enabled
     compact_rs
     trace
-  ]
+  ],
+  # TODO remove older hlog_roll command
+  :aliases => {
+    'wal_roll' => ['hlog_roll']
+  }
 )
 
 Shell.load_command_group(

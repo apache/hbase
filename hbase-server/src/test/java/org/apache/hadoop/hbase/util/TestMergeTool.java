@@ -41,8 +41,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.experimental.categories.Category;
@@ -61,6 +61,7 @@ public class TestMergeTool extends HBaseTestCase {
   private HTableDescriptor desc;
   private byte [][][] rows;
   private MiniDFSCluster dfsCluster = null;
+  private WALFactory wals;
 
   @Override
   public void setUp() throws Exception {
@@ -143,6 +144,7 @@ public class TestMergeTool extends HBaseTestCase {
     // we will end up with a local file system
 
     super.setUp();
+    wals = new WALFactory(conf, null, "TestMergeTool");
     try {
       // Create meta region
       createMetaRegion();
@@ -183,6 +185,7 @@ public class TestMergeTool extends HBaseTestCase {
         HRegion.closeHRegion(r);
       }
     }
+    wals.close();
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -196,7 +199,7 @@ public class TestMergeTool extends HBaseTestCase {
    * @throws Exception
    */
   private HRegion mergeAndVerify(final String msg, final String regionName1,
-    final String regionName2, final HLog log, final int upperbound)
+    final String regionName2, final WAL log, final int upperbound)
   throws Exception {
     Merge merger = new Merge(this.conf);
     LOG.info(msg);
@@ -269,39 +272,26 @@ public class TestMergeTool extends HBaseTestCase {
       // Close the region and delete the log
       HRegion.closeHRegion(regions[i]);
     }
+    WAL log = wals.getWAL(new byte[]{});
+     // Merge Region 0 and Region 1
+    HRegion merged = mergeAndVerify("merging regions 0 and 1 ",
+      this.sourceRegions[0].getRegionNameAsString(),
+      this.sourceRegions[1].getRegionNameAsString(), log, 2);
 
-    // Create a log that we can reuse when we need to open regions
-    Path logPath = new Path("/tmp");
-    String logName = HConstants.HREGION_LOGDIR_NAME + "_"
-      + System.currentTimeMillis();
-    LOG.info("Creating log " + logPath.toString() + "/" + logName);
+    // Merge the result of merging regions 0 and 1 with region 2
+    merged = mergeAndVerify("merging regions 0+1 and 2",
+      merged.getRegionInfo().getRegionNameAsString(),
+      this.sourceRegions[2].getRegionNameAsString(), log, 3);
 
-    HLog log = HLogFactory.createHLog(this.fs, logPath,
-        logName, this.conf);
+    // Merge the result of merging regions 0, 1 and 2 with region 3
+    merged = mergeAndVerify("merging regions 0+1+2 and 3",
+      merged.getRegionInfo().getRegionNameAsString(),
+      this.sourceRegions[3].getRegionNameAsString(), log, 4);
 
-    try {
-       // Merge Region 0 and Region 1
-      HRegion merged = mergeAndVerify("merging regions 0 and 1 ",
-        this.sourceRegions[0].getRegionNameAsString(),
-        this.sourceRegions[1].getRegionNameAsString(), log, 2);
-
-      // Merge the result of merging regions 0 and 1 with region 2
-      merged = mergeAndVerify("merging regions 0+1 and 2",
-        merged.getRegionInfo().getRegionNameAsString(),
-        this.sourceRegions[2].getRegionNameAsString(), log, 3);
-
-      // Merge the result of merging regions 0, 1 and 2 with region 3
-      merged = mergeAndVerify("merging regions 0+1+2 and 3",
-        merged.getRegionInfo().getRegionNameAsString(),
-        this.sourceRegions[3].getRegionNameAsString(), log, 4);
-
-      // Merge the result of merging regions 0, 1, 2 and 3 with region 4
-      merged = mergeAndVerify("merging regions 0+1+2+3 and 4",
-        merged.getRegionInfo().getRegionNameAsString(),
-        this.sourceRegions[4].getRegionNameAsString(), log, rows.length);
-    } finally {
-      log.closeAndDelete();
-    }
+    // Merge the result of merging regions 0, 1, 2 and 3 with region 4
+    merged = mergeAndVerify("merging regions 0+1+2+3 and 4",
+      merged.getRegionInfo().getRegionNameAsString(),
+      this.sourceRegions[4].getRegionNameAsString(), log, rows.length);
   }
 
 }

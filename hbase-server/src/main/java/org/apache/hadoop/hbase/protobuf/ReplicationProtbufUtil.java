@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Pair;
@@ -50,14 +50,14 @@ import com.google.protobuf.ServiceException;
 @InterfaceAudience.Private
 public class ReplicationProtbufUtil {
   /**
-   * A helper to replicate a list of HLog entries using admin protocol.
+   * A helper to replicate a list of WAL entries using admin protocol.
    *
    * @param admin
    * @param entries
    * @throws java.io.IOException
    */
   public static void replicateWALEntry(final AdminService.BlockingInterface admin,
-      final HLog.Entry[] entries) throws IOException {
+      final Entry[] entries) throws IOException {
     Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner> p =
       buildReplicateWALEntryRequest(entries);
     PayloadCarryingRpcController controller = new PayloadCarryingRpcController(p.getSecond());
@@ -69,14 +69,14 @@ public class ReplicationProtbufUtil {
   }
 
   /**
-   * Create a new ReplicateWALEntryRequest from a list of HLog entries
+   * Create a new ReplicateWALEntryRequest from a list of WAL entries
    *
-   * @param entries the HLog entries to be replicated
+   * @param entries the WAL entries to be replicated
    * @return a pair of ReplicateWALEntryRequest and a CellScanner over all the WALEdit values
    * found.
    */
   public static Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner>
-      buildReplicateWALEntryRequest(final HLog.Entry[] entries) {
+      buildReplicateWALEntryRequest(final Entry[] entries) {
     // Accumulate all the Cells seen in here.
     List<List<? extends Cell>> allCells = new ArrayList<List<? extends Cell>>(entries.length);
     int size = 0;
@@ -85,11 +85,11 @@ public class ReplicationProtbufUtil {
     AdminProtos.ReplicateWALEntryRequest.Builder builder =
       AdminProtos.ReplicateWALEntryRequest.newBuilder();
     HBaseProtos.UUID.Builder uuidBuilder = HBaseProtos.UUID.newBuilder();
-    for (HLog.Entry entry: entries) {
+    for (Entry entry: entries) {
       entryBuilder.clear();
-      // TODO: this duplicates a lot in HLogKey#getBuilder
+      // TODO: this duplicates a lot in WALKey#getBuilder
       WALProtos.WALKey.Builder keyBuilder = entryBuilder.getKeyBuilder();
-      HLogKey key = entry.getKey();
+      WALKey key = entry.getKey();
       keyBuilder.setEncodedRegionName(
         ByteStringer.wrap(key.getEncodedRegionName()));
       keyBuilder.setTableName(ByteStringer.wrap(key.getTablename().getName()));

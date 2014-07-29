@@ -36,7 +36,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileV1Detector;
@@ -234,6 +235,8 @@ public class UpgradeTo96 extends Configured implements Tool {
     LOG.info("Starting Log splitting");
     final Path rootDir = FSUtils.getRootDir(getConf());
     final Path oldLogDir = new Path(rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    // since this is the singleton, we needn't close it.
+    final WALFactory factory = WALFactory.getInstance(getConf());
     FileSystem fs = FSUtils.getCurrentFileSystem(getConf());
     Path logDir = new Path(rootDir, HConstants.HREGION_LOGDIR_NAME);
     FileStatus[] regionServerLogDirs = FSUtils.listStatus(fs, logDir);
@@ -244,7 +247,7 @@ public class UpgradeTo96 extends Configured implements Tool {
     try {
       for (FileStatus regionServerLogDir : regionServerLogDirs) {
         // split its log dir, if exists
-        HLogSplitter.split(rootDir, regionServerLogDir.getPath(), oldLogDir, fs, getConf());
+        WALSplitter.split(rootDir, regionServerLogDir.getPath(), oldLogDir, fs, getConf(), factory);
       }
       LOG.info("Successfully completed Log splitting");
     } catch (Exception e) {

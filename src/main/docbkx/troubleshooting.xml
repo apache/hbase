@@ -859,7 +859,7 @@ at org.apache.hadoop.mapred.LocalJobRunner$Job.run(LocalJobRunner.java:210)
 <filename>/hbase</filename>
      <filename>/.logs</filename>
           <filename>/&lt;RegionServer&gt;</filename>    (RegionServers)
-               <filename>/&lt;HLog&gt;</filename>           (WAL HLog files for the RegionServer)
+               <filename>/&lt;WAL&gt;</filename>           (WAL files for the RegionServer)
             </programlisting>
       </para>
       <para>See the <link
@@ -867,11 +867,11 @@ at org.apache.hadoop.mapred.LocalJobRunner$Job.run(LocalJobRunner.java:210)
           Guide</link> for other non-shell diagnostic utilities like <code>fsck</code>. </para>
       <section
         xml:id="trouble.namenode.0size.hlogs">
-        <title>Zero size HLogs with data in them</title>
+        <title>Zero size WALs with data in them</title>
         <para>Problem: when getting a listing of all the files in a region server's .logs directory,
           one file has a size of 0 but it contains data.</para>
-        <para>Answer: It's an HDFS quirk. A file that's currently being to will appear to have a
-          size of 0 but once it's closed it will show its true size</para>
+        <para>Answer: It's an HDFS quirk. A file that's currently being written to will appear to
+          have a size of 0 but once it's closed it will show its true size</para>
       </section>
       <section
         xml:id="trouble.namenode.uncompaction">
@@ -1546,7 +1546,7 @@ WARN HDFS.DFSClient: DataStreamer Exception: java.io.IOException: Unable to crea
           <para>If the operation was an attempt to split the log, the following type of message may
             also appear:</para>
           <screen>
-FATAL wal.HLogSplitter: WriterThread-xxx Got while writing log entry to log            
+FATAL wal.WALSplitter: WriterThread-xxx Got while writing log entry to log            
           </screen>
         </listitem>
       </varlistentry>

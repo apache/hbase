@@ -67,7 +67,7 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
       boolean distributedLogReplay = 
         (this.services.getMasterFileSystem().getLogRecoveryMode() == RecoveryMode.LOG_REPLAY);
       try {
-        if (this.shouldSplitHlog) {
+        if (this.shouldSplitWal) {
           LOG.info("Splitting hbase:meta logs for " + serverName);
           if (distributedLogReplay) {
             Set<HRegionInfo> regions = new HashSet<HRegionInfo>();
@@ -101,7 +101,7 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
       }
 
       try {
-        if (this.shouldSplitHlog && distributedLogReplay) {
+        if (this.shouldSplitWal && distributedLogReplay) {
           if (!am.waitOnRegionToClearRegionsInTransition(HRegionInfo.FIRST_META_REGIONINFO,
             regionAssignmentWaitTimeout)) {
             // Wait here is to avoid log replay hits current dead server and incur a RPC timeout

@@ -129,10 +129,10 @@ public interface MetricsRegionServerSource extends BaseSource {
   String REGION_COUNT_DESC = "Number of regions";
   String STORE_COUNT = "storeCount";
   String STORE_COUNT_DESC = "Number of Stores";
-  String HLOGFILE_COUNT = "hlogFileCount";
-  String HLOGFILE_COUNT_DESC = "Number of HLog Files";
-  String HLOGFILE_SIZE = "hlogFileSize";
-  String HLOGFILE_SIZE_DESC = "Size of all HLog Files";
+  String WALFILE_COUNT = "hlogFileCount";
+  String WALFILE_COUNT_DESC = "Number of WAL Files";
+  String WALFILE_SIZE = "hlogFileSize";
+  String WALFILE_SIZE_DESC = "Size of all WAL Files";
   String STOREFILE_COUNT = "storeFileCount";
   String STOREFILE_COUNT_DESC = "Number of Store Files";
   String MEMSTORE_SIZE = "memStoreSize";

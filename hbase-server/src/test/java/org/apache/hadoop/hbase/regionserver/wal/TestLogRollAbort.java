@@ -27,10 +27,15 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -40,6 +45,11 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.Before;
@@ -49,7 +59,7 @@ import org.junit.experimental.categories.Category;
 
 /**
  * Tests for conditions that should trigger RegionServer aborts when
- * rolling the current HLog fails.
+ * rolling the current WAL fails.
  */
 @Category(MediumTests.class)
 public class TestLogRollAbort {
@@ -58,6 +68,10 @@ public class TestLogRollAbort {
   private static Admin admin;
   private static MiniHBaseCluster cluster;
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+  /* For the split-then-roll test */
+  private static final Path HBASEDIR = new Path("/hbase");
+  private static final Path OLDLOGDIR = new Path(HBASEDIR, HConstants.HREGION_OLDLOGDIR_NAME);
 
   // Need to override this setup so we can edit the config before it gets sent
   // to the HDFS & HBase cluster startup.
@@ -82,6 +96,9 @@ public class TestLogRollAbort {
     TEST_UTIL.getConfiguration().setInt("dfs.client.block.write.retries", 10);
   }
 
+  private Configuration conf;
+  private FileSystem fs;
+
   @Before
   public void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(2);
@@ -89,9 +106,12 @@ public class TestLogRollAbort {
     cluster = TEST_UTIL.getHBaseCluster();
     dfsCluster = TEST_UTIL.getDFSCluster();
     admin = TEST_UTIL.getHBaseAdmin();
+    conf = TEST_UTIL.getConfiguration();
+    fs = TEST_UTIL.getDFSCluster().getFileSystem();
 
     // disable region rebalancing (interferes with log watching)
     cluster.getMaster().balanceSwitch(false);
+    FSUtils.setRootDir(conf, HBASEDIR);
   }
 
   @After
@@ -121,9 +141,8 @@ public class TestLogRollAbort {
     try {
 
       HRegionServer server = TEST_UTIL.getRSForFirstRegionInTable(tableName);
-      HLog log = server.getWAL();
+      WAL log = server.getWAL(null);
 
-      assertTrue("Need HDFS-826 for this test", ((FSHLog) log).canGetCurReplicas());
       // don't run this test without append support (HDFS-200 & HDFS-142)
       assertTrue("Need append support for this test",
         FSUtils.isAppendSupported(TEST_UTIL.getConfiguration()));
@@ -152,6 +171,73 @@ public class TestLogRollAbort {
       }
     } finally {
       table.close();
+    }
+  }
+
+  /**
+   * Tests the case where a RegionServer enters a GC pause,
+   * comes back online after the master declared it dead and started to split.
+   * Want log rolling after a master split to fail. See HBASE-2312.
+   */
+  @Test (timeout=300000)
+  public void testLogRollAfterSplitStart() throws IOException {
+    LOG.info("Verify wal roll after split starts will fail.");
+    String logName = "testLogRollAfterSplitStart";
+    Path thisTestsDir = new Path(HBASEDIR, DefaultWALProvider.getWALDirectoryName(logName));
+    final WALFactory wals = new WALFactory(conf, null, logName);
+
+    try {
+      // put some entries in an WAL
+      TableName tableName =
+          TableName.valueOf(this.getClass().getName());
+      HRegionInfo regioninfo = new HRegionInfo(tableName,
+          HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
+      final WAL log = wals.getWAL(regioninfo.getEncodedNameAsBytes());
+    
+      final AtomicLong sequenceId = new AtomicLong(1);
+
+      final int total = 20;
+      for (int i = 0; i < total; i++) {
+        WALEdit kvs = new WALEdit();
+        kvs.add(new KeyValue(Bytes.toBytes(i), tableName.getName(), tableName.getName()));
+        HTableDescriptor htd = new HTableDescriptor(tableName);
+        htd.addFamily(new HColumnDescriptor("column"));
+        log.append(htd, regioninfo, new WALKey(regioninfo.getEncodedNameAsBytes(), tableName,
+            System.currentTimeMillis()), kvs, sequenceId, true, null);
+      }
+      // Send the data to HDFS datanodes and close the HDFS writer
+      log.sync();
+      ((FSHLog) log).replaceWriter(((FSHLog)log).getOldPath(), null, null, null);
+
+      /* code taken from MasterFileSystem.getLogDirs(), which is called from MasterFileSystem.splitLog()
+       * handles RS shutdowns (as observed by the splitting process)
+       */
+      // rename the directory so a rogue RS doesn't create more WALs
+      Path rsSplitDir = thisTestsDir.suffix(DefaultWALProvider.SPLITTING_EXT);
+      if (!fs.rename(thisTestsDir, rsSplitDir)) {
+        throw new IOException("Failed fs.rename for log split: " + thisTestsDir);
+      }
+      LOG.debug("Renamed region directory: " + rsSplitDir);
+
+      LOG.debug("Processing the old log files.");
+      WALSplitter.split(HBASEDIR, rsSplitDir, OLDLOGDIR, fs, conf, wals);
+
+      LOG.debug("Trying to roll the WAL.");
+      try {
+        log.rollWriter();
+        Assert.fail("rollWriter() did not throw any exception.");
+      } catch (IOException ioe) {
+        if (ioe.getCause() instanceof FileNotFoundException) {
+          LOG.info("Got the expected exception: ", ioe.getCause());
+        } else {
+          Assert.fail("Unexpected exception: " + ioe);
+        }
+      }
+    } finally {
+      wals.close();
+      if (fs.exists(thisTestsDir)) {
+        fs.delete(thisTestsDir, true);
+      }
     }
   }
 }

@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.FSVisitor;
 
@@ -73,7 +73,7 @@ public final class SnapshotReferenceUtil {
    * @return path to the log home directory for the archive files.
    */
   public static Path getLogsDir(Path snapshotDir, String serverName) {
-    return new Path(snapshotDir, HLogUtil.getHLogDirectoryName(serverName));
+    return new Path(snapshotDir, DefaultWALProvider.getWALDirectoryName(serverName));
   }
 
   /**
@@ -364,9 +364,9 @@ public final class SnapshotReferenceUtil {
    * @param fs {@link FileSystem}
    * @param snapshotDir {@link Path} to the Snapshot directory
    * @throws IOException if an error occurred while scanning the directory
-   * @return the names of hlogs in the specified snaphot
+   * @return the names of wals in the specified snaphot
    */
-  public static Set<String> getHLogNames(final FileSystem fs, final Path snapshotDir)
+  public static Set<String> getWALNames(final FileSystem fs, final Path snapshotDir)
       throws IOException {
     final Set<String> names = new HashSet<String>();
     visitLogFiles(fs, snapshotDir, new FSVisitor.LogFileVisitor() {

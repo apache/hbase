@@ -40,8 +40,8 @@ import org.apache.hadoop.hbase.util.CancelableProgressable;
  * Handles log splitting a wal
  */
 @InterfaceAudience.Private
-public class HLogSplitterHandler extends EventHandler {
-  private static final Log LOG = LogFactory.getLog(HLogSplitterHandler.class);
+public class WALSplitterHandler extends EventHandler {
+  private static final Log LOG = LogFactory.getLog(WALSplitterHandler.class);
   private final ServerName serverName;
   private final CancelableProgressable reporter;
   private final AtomicInteger inProgressTasks;
@@ -51,7 +51,7 @@ public class HLogSplitterHandler extends EventHandler {
   private final SplitLogWorkerCoordination coordination;
 
 
-  public HLogSplitterHandler(final Server server, SplitLogWorkerCoordination coordination,
+  public WALSplitterHandler(final Server server, SplitLogWorkerCoordination coordination,
       SplitLogWorkerCoordination.SplitTaskDetails splitDetails, CancelableProgressable reporter,
       AtomicInteger inProgressTasks, TaskExecutor splitTaskExecutor, RecoveryMode mode) {
     super(server, EventType.RS_LOG_REPLAY);

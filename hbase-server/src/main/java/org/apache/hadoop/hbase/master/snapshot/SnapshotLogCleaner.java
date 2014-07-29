@@ -46,11 +46,11 @@ public class SnapshotLogCleaner extends BaseLogCleanerDelegate {
    * Conf key for the frequency to attempt to refresh the cache of hfiles currently used in
    * snapshots (ms)
    */
-  static final String HLOG_CACHE_REFRESH_PERIOD_CONF_KEY =
+  static final String WAL_CACHE_REFRESH_PERIOD_CONF_KEY =
       "hbase.master.hlogcleaner.plugins.snapshot.period";
 
   /** Refresh cache, by default, every 5 minutes */
-  private static final long DEFAULT_HLOG_CACHE_REFRESH_PERIOD = 300000;
+  private static final long DEFAULT_WAL_CACHE_REFRESH_PERIOD = 300000;
 
   private SnapshotFileCache cache;
 
@@ -77,14 +77,14 @@ public class SnapshotLogCleaner extends BaseLogCleanerDelegate {
     super.setConf(conf);
     try {
       long cacheRefreshPeriod = conf.getLong(
-        HLOG_CACHE_REFRESH_PERIOD_CONF_KEY, DEFAULT_HLOG_CACHE_REFRESH_PERIOD);
+        WAL_CACHE_REFRESH_PERIOD_CONF_KEY, DEFAULT_WAL_CACHE_REFRESH_PERIOD);
       final FileSystem fs = FSUtils.getCurrentFileSystem(conf);
       Path rootDir = FSUtils.getRootDir(conf);
       cache = new SnapshotFileCache(fs, rootDir, cacheRefreshPeriod, cacheRefreshPeriod,
           "snapshot-log-cleaner-cache-refresher", new SnapshotFileCache.SnapshotFileInspector() {
             public Collection<String> filesUnderSnapshot(final Path snapshotDir)
                 throws IOException {
-              return SnapshotReferenceUtil.getHLogNames(fs, snapshotDir);
+              return SnapshotReferenceUtil.getWALNames(fs, snapshotDir);
             }
           });
     } catch (IOException e) {

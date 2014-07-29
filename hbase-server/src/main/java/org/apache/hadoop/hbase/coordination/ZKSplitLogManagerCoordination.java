@@ -51,8 +51,8 @@ import org.apache.hadoop.hbase.master.SplitLogManager.ResubmitDirective;
 import org.apache.hadoop.hbase.master.SplitLogManager.Task;
 import org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -113,7 +113,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
       @Override
       public Status finish(ServerName workerName, String logfile) {
         try {
-          HLogSplitter.finishSplitLogFile(logfile, manager.getServer().getConfiguration());
+          WALSplitter.finishSplitLogFile(logfile, manager.getServer().getConfiguration());
         } catch (IOException e) {
           LOG.warn("Could not finish splitting of log file " + logfile, e);
           return Status.ERR;
@@ -715,7 +715,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
           }
           // decode the file name
           t = ZKSplitLog.getFileName(t);
-          ServerName serverName = HLogUtil.getServerNameFromHLogDirectoryName(new Path(t));
+          ServerName serverName = DefaultWALProvider.getServerNameFromWALDirectoryName(new Path(t));
           if (serverName != null) {
             knownFailedServers.add(serverName.getServerName());
           } else {

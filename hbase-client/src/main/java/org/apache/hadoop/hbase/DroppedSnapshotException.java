@@ -22,7 +22,7 @@ import java.io.IOException;
 
 /**
  * Thrown during flush if the possibility snapshot content was not properly
- * persisted into store files.  Response should include replay of hlog content.
+ * persisted into store files.  Response should include replay of wal content.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 
 /**
- * Interface of the source that will export metrics about the region server's HLog.
+ * Interface of the source that will export metrics about the region server's WAL.
  */
 public interface MetricsWALSource extends BaseSource {
 
@@ -39,7 +39,7 @@ public interface MetricsWALSource extends BaseSource {
   /**
    * Description
    */
-  String METRICS_DESCRIPTION = "Metrics about HBase RegionServer HLog";
+  String METRICS_DESCRIPTION = "Metrics about HBase RegionServer WAL";
 
   /**
    * The name of the metrics context that metrics will be under in jmx
@@ -52,11 +52,11 @@ public interface MetricsWALSource extends BaseSource {
   String APPEND_COUNT = "appendCount";
   String APPEND_COUNT_DESC = "Number of appends to the write ahead log.";
   String APPEND_SIZE = "appendSize";
-  String APPEND_SIZE_DESC = "Size (in bytes) of the data appended to the HLog.";
+  String APPEND_SIZE_DESC = "Size (in bytes) of the data appended to the WAL.";
   String SLOW_APPEND_COUNT = "slowAppendCount";
   String SLOW_APPEND_COUNT_DESC = "Number of appends that were slow.";
   String SYNC_TIME = "syncTime";
-  String SYNC_TIME_DESC = "The time it took to sync the HLog to HDFS.";
+  String SYNC_TIME_DESC = "The time it took to sync the WAL to HDFS.";
 
   /**
    * Add the append size.
@@ -69,7 +69,7 @@ public interface MetricsWALSource extends BaseSource {
   void incrementAppendTime(long time);
 
   /**
-   * Increment the count of hlog appends
+   * Increment the count of wal appends
    */
   void incrementAppendCount();
 
@@ -79,7 +79,7 @@ public interface MetricsWALSource extends BaseSource {
   void incrementSlowAppendCount();
 
   /**
-   * Add the time it took to sync the hlog.
+   * Add the time it took to sync the wal.
    */
   void incrementSyncTime(long time);
 

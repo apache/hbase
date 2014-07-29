@@ -46,7 +46,7 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.HFileLink;
-import org.apache.hadoop.hbase.io.HLogLink;
+import org.apache.hadoop.hbase.io.WALLink;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * <ol>
  * <li> Table Descriptor
  * <li> Snapshot creation time, type, format version, ...
- * <li> List of hfiles and hlogs
+ * <li> List of hfiles and wals
  * <li> Stats about hfiles and logs sizes, percentage of shared with the source table, ...
  * </ol>
  */
@@ -243,7 +243,7 @@ public final class SnapshotInfo extends Configured implements Tool {
      * @return the log information
      */
     FileInfo addLogFile(final String server, final String logfile) throws IOException {
-      HLogLink logLink = new HLogLink(conf, server, logfile);
+      WALLink logLink = new WALLink(conf, server, logfile);
       long size = -1;
       try {
         size = logLink.getFileStatus(fs).getLen();

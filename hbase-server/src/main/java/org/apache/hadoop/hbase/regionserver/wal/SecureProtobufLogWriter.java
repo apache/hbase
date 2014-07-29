@@ -52,10 +52,10 @@ public class SecureProtobufLogWriter extends ProtobufLogWriter {
     builder.setWriterClsName(SecureProtobufLogWriter.class.getSimpleName());
     if (conf.getBoolean(HConstants.ENABLE_WAL_ENCRYPTION, false)) {
       // Get an instance of our cipher
-      Cipher cipher = Encryption.getCipher(conf,
-        conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, DEFAULT_CIPHER));
+      final String cipherName = conf.get(HConstants.CRYPTO_WAL_ALGORITHM_CONF_KEY, DEFAULT_CIPHER);
+      Cipher cipher = Encryption.getCipher(conf, cipherName);
       if (cipher == null) {
-        throw new RuntimeException("Cipher '" + cipher + "' is not available");
+        throw new RuntimeException("Cipher '" + cipherName + "' is not available");
       }
 
       // Generate an encryption key for this WAL

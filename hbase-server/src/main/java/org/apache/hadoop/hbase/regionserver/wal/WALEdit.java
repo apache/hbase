@@ -52,7 +52,7 @@ import org.apache.hadoop.io.Writable;
  * for serializing/deserializing a set of KeyValue items.
  *
  * Previously, if a transaction contains 3 edits to c1, c2, c3 for a row R,
- * the HLog would have three log entries as follows:
+ * the WAL would have three log entries as follows:
  *
  *    <logseq1-for-edit1>:<KeyValue-for-edit-c1>
  *    <logseq2-for-edit2>:<KeyValue-for-edit-c2>
@@ -73,7 +73,7 @@ import org.apache.hadoop.io.Writable;
  *   <-1, 3, <Keyvalue-for-edit-c1>, <KeyValue-for-edit-c2>, <KeyValue-for-edit-c3>>
  *
  * The -1 marker is just a special way of being backward compatible with
- * an old HLog which would have contained a single <KeyValue>.
+ * an old WAL which would have contained a single <KeyValue>.
  *
  * The deserializer for WALEdit backward compatibly detects if the record
  * is an old style KeyValue or the new style WALEdit.
@@ -168,7 +168,7 @@ public class WALEdit implements Writable, HeapSize {
     int versionOrLength = in.readInt();
     // TODO: Change version when we protobuf.  Also, change way we serialize KV!  Pb it too.
     if (versionOrLength == VERSION_2) {
-      // this is new style HLog entry containing multiple KeyValues.
+      // this is new style WAL entry containing multiple KeyValues.
       int numEdits = in.readInt();
       for (int idx = 0; idx < numEdits; idx++) {
         if (compressionContext != null) {
@@ -189,7 +189,7 @@ public class WALEdit implements Writable, HeapSize {
         }
       }
     } else {
-      // this is an old style HLog entry. The int that we just
+      // this is an old style WAL entry. The int that we just
       // read is actually the length of a single KeyValue
       this.add(KeyValue.create(versionOrLength, in));
     }

@@ -139,7 +139,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
         } catch (Exception e) {
           e.printStackTrace();
         }
-        mr.getLog().closeAndDelete();
+        mr.getWAL().close();
       }
     }
   }
@@ -289,7 +289,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
         } catch (Exception e) {
           e.printStackTrace();
         }
-        region.getLog().closeAndDelete();
+        region.getWAL().close();
       }
     }
   }
@@ -344,7 +344,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
         } catch (Exception e) {
           e.printStackTrace();
         }
-        region.getLog().closeAndDelete();
+        region.getWAL().close();
       }
     }
   }

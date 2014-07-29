@@ -262,7 +262,7 @@ public class FSHDFSUtils extends FSUtils {
     } catch (IOException e) {
       if (e instanceof LeaseExpiredException && e.getMessage().contains("File does not exist")) {
         // This exception comes out instead of FNFE, fix it
-        throw new FileNotFoundException("The given HLog wasn't found at " + p);
+        throw new FileNotFoundException("The given WAL wasn't found at " + p);
       } else if (e instanceof FileNotFoundException) {
         throw (FileNotFoundException)e;
       }
