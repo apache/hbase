@@ -2169,8 +2169,9 @@ rs.close();
             The just-previous link describes the caching 'policy' implemented by CombinedBlockCache. In short, it works
             by keeping meta blocks -- INDEX and BLOOM in the L1, onheap LruBlockCache tier -- and DATA
             blocks are kept in the L2, BucketCache tier. It is possible to amend this behavior in
-            HBase since version 1.0 and ask that a column family has both its meta and DATA blocks hosted onheap in the L1 tier by
-            setting <varname>cacheDataInL1</varname> via <programlisting>(HColumnDescriptor.setCacheDataInL1(true)</programlisting>
+            HBase since version 1.0 and ask that a column family have both its meta and DATA blocks hosted onheap in the L1 tier by
+            setting <varname>cacheDataInL1</varname> via
+                  <code>(HColumnDescriptor.setCacheDataInL1(true)</code>
             or in the shell, creating or amending column families setting <varname>CACHE_DATA_IN_L1</varname>
             to true: e.g. <programlisting>hbase(main):003:0> create 't', {NAME => 't', CONFIGURATION => {CACHE_DATA_IN_L1 => 'true'}}</programlisting></para>
 
@@ -3056,307 +3057,514 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
         </section>
 
       </section>
-               <section
+        <section
           xml:id="compaction">
           <title>Compaction</title>
-          <para><firstterm>Compaction</firstterm> is an operation which reduces the number of
-            StoreFiles, by merging them together, in order to increase performance on read
-            operations. Compactions can be resource-intensive to perform, and can either help or
-            hinder performance depending on many factors. </para>
-          <para>Compactions fall into two categories: minor and major.</para>
-          <para><firstterm>Minor compactions</firstterm> usually pick up a small number of small,
-            adjacent <systemitem>StoreFiles</systemitem> and rewrite them as a single
-            <systemitem>StoreFile</systemitem>. Minor compactions do not drop deletes or expired
-            cells. If a minor compaction picks up all the <systemitem>StoreFiles</systemitem> in a
-            <systemitem>Store</systemitem>, it promotes itself from a minor to a major compaction.
-            If there are a lot of small files to be compacted, the algorithm tends to favor minor
-            compactions to "clean up" those small files.</para>
-          <para>The goal of a <firstterm>major compaction</firstterm> is to end up with a single
-            StoreFile per store. Major compactions also process delete markers and max versions.
-            Attempting to process these during a minor compaction could cause side effects. </para>
-          
-          <formalpara>
+          <itemizedlist>
+            <title>Ambiguous Terminology</title>
+            <listitem><para>A <firstterm>StoreFile</firstterm> is a facade of HFile. In terms of compaction, use of
+              StoreFile seems to have prevailed in the past.</para></listitem>
+            <listitem><para>A <firstterm>Store</firstterm> is the same thing as a ColumnFamily.
+              StoreFiles are related to a Store, or ColumnFamily.</para></listitem>
+            <listitem>
+              <para>If you want to read more about StoreFiles versus HFiles and Stores versus
+                ColumnFamilies, see <link
+                  xlink:href="https://issues.apache.org/jira/browse/HBASE-11316">HBASE-11316</link>.</para>
+            </listitem>
+          </itemizedlist>
+          <para>When the MemStore reaches a given size
+              (<code>hbase.hregion.memstore.flush.size)</code>, it flushes its contents to a
+            StoreFile. The number of StoreFiles in a Store increases over time.
+              <firstterm>Compaction</firstterm> is an operation which reduces the number of
+            StoreFiles in a Store, by merging them together, in order to increase performance on
+            read operations. Compactions can be resource-intensive to perform, and can either help
+            or hinder performance depending on many factors. </para>
+          <para>Compactions fall into two categories: minor and major. Minor and major compactions
+            differ in the following ways.</para>
+          <para><firstterm>Minor compactions</firstterm> usually select a small number of small,
+            adjacent StoreFiles and rewrite them as a single StoreFile. Minor compactions do not
+            drop (filter out) deletes or expired versions, because of potential side effects. See <xref
+              linkend="compaction.and.deletes" /> and <xref
+              linkend="compaction.and.versions" /> for information on how deletes and versions are
+            handled in relation to compactions. The end result of a minor compaction is fewer,
+            larger StoreFiles for a given Store.</para>
+          <para>The end result of a <firstterm>major compaction</firstterm> is a single StoreFile
+            per Store. Major compactions also process delete markers and max versions. See <xref
+              linkend="compaction.and.deletes" /> and <xref
+              linkend="compaction.and.versions" /> for information on how deletes and versions are
+            handled in relation to compactions.</para>
+
+          <formalpara
+            xml:id="compaction.and.deletes">
             <title>Compaction and Deletions</title>
             <para> When an explicit deletion occurs in HBase, the data is not actually deleted.
               Instead, a <firstterm>tombstone</firstterm> marker is written. The tombstone marker
               prevents the data from being returned with queries. During a major compaction, the
               data is actually deleted, and the tombstone marker is removed from the StoreFile. If
-              the deletion happens because of an expired TTL, no tombstone is created. Instead, the 
-            expired data is filtered out and is not written back to the compacted StoreFile.</para>
+              the deletion happens because of an expired TTL, no tombstone is created. Instead, the
+              expired data is filtered out and is not written back to the compacted
+              StoreFile.</para>
           </formalpara>
-          
-          <formalpara>
+
+          <formalpara
+            xml:id="compaction.and.versions">
             <title>Compaction and Versions</title>
-            <para> When you create a column family, you can specify the maximum number of versions
+            <para> When you create a Column Family, you can specify the maximum number of versions
               to keep, by specifying <varname>HColumnDescriptor.setMaxVersions(int
                 versions)</varname>. The default value is <literal>3</literal>. If more versions
               than the specified maximum exist, the excess versions are filtered out and not written
-            back to the compacted StoreFile.</para>
+              back to the compacted StoreFile.</para>
           </formalpara>
-          
+
           <note>
             <title>Major Compactions Can Impact Query Results</title>
-            <para> In some situations, older versions can be inadvertently 
-              resurrected if a newer version is explicitly deleted. See <xref
-                linkend="major.compactions.change.query.results" /> for a more in-depth explanation. This
-              situation is only possible before the compaction finishes.
-            </para>
+            <para> In some situations, older versions can be inadvertently resurrected if a newer
+              version is explicitly deleted. See <xref
+                linkend="major.compactions.change.query.results" /> for a more in-depth explanation.
+              This situation is only possible before the compaction finishes. </para>
           </note>
-          
+
           <para>In theory, major compactions improve performance. However, on a highly loaded
             system, major compactions can require an inappropriate number of resources and adversely
             affect performance. In a default configuration, major compactions are scheduled
-            automatically to run once in a 7-day period. This is usually inappropriate for systems
+            automatically to run once in a 7-day period. This is sometimes inappropriate for systems
             in production. You can manage major compactions manually. See <xref
               linkend="managed.compactions" />. </para>
           <para>Compactions do not perform region merges. See <xref
-            linkend="ops.regionmgt.merge" /> for more information on region merging. </para>
+              linkend="ops.regionmgt.merge" /> for more information on region merging. </para>
           <section
             xml:id="compaction.file.selection">
-            <title>Algorithm for Compaction File Selection - HBase 0.96.x and newer</title>
-            <para>The compaction algorithms used by HBase have evolved over time. HBase 0.96
-              introduced new algorithms for compaction file selection. To find out about the old
-              algorithms, see <xref
-                linkend="compaction" />. The rest of this section describes the new algorithm. File
-              selection happens in several phases and is controlled by several configurable
-              parameters. These parameters will be explained in context, and then will be given in a
-              table which shows their descriptions, defaults, and implications of changing
-              them.</para>
-            
-            <formalpara xml:id="exploringcompaction.policy">
-              <title>The<link
-                xlink:href="https://issues.apache.org/jira/browse/HBASE-7842">ExploringCompaction Policy</link></title>
-              <para><link
-                xlink:href="https://issues.apache.org/jira/browse/HBASE-7842">HBASE-7842</link>
-                was introduced in HBase 0.96 and represents a major change in the algorithms for
-                file selection for compactions. Its goal is to do the most impactful compaction with
-                the lowest cost, in situations where a lot of files need compaction. In such a
-                situation, the list of all eligible files is "explored", and files are grouped by
-                size before any ratio-based algorithms are run. This favors clean-up of large
-                numbers of small files before larger files are considered. For more details, refer
-                to the link to the JIRA. Most of the code for this change can be reviewed in
-                <filename>hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/compactions/ExploringCompactionPolicy.java</filename>.</para>
-            </formalpara>
-            
-            <variablelist>
-              <title>Algorithms for Determining File List and Compaction Type</title>
-              <varlistentry>
-                <term>Create a list of all files which can possibly be compacted, ordered by
-                  sequence ID.</term>
-                <listitem>
+            <title>Compaction Policy - HBase 0.96.x and newer</title>
+            <para>Compacting large StoreFiles, or too many StoreFiles at once, can cause more IO
+              load than your cluster is able to handle without causing performance problems. The
+              method by which HBase selects which StoreFiles to include in a compaction (and whether
+              the compaction is a minor or major compaction) is called the <firstterm>compaction
+                policy</firstterm>.</para>
+            <para>Prior to HBase 0.96.x, there was only one compaction policy. That original
+              compaction policy is still available as
+                <systemitem>RatioBasedCompactionPolicy</systemitem> The new compaction default
+              policy, called <systemitem>ExploringCompactionPolicy</systemitem>, was subsequently
+              backported to HBase 0.94 and HBase 0.95, and is the default in HBase 0.96 and newer.
+              It was implemented in <link
+                xlink:href="https://issues.apache.org/jira/browse/HBASE-7842">HBASE-7842</link>. In
+              short, <systemitem>ExploringCompactionPolicy</systemitem> attempts to select the best
+              possible set of StoreFiles to compact with the least amount of work, while the
+                <systemitem>RatioBasedCompactionPolicy</systemitem> selects the first set that meets
+              the criteria.</para>
+            <para>Regardless of the compaction policy used, file selection is controlled by several
+              configurable parameters and happens in a multi-step approach. These parameters will be
+              explained in context, and then will be given in a table which shows their
+              descriptions, defaults, and implications of changing them.</para>
+
+            <section
+              xml:id="compaction.being.stuck">
+              <title>Being Stuck</title>
+              <para>When the MemStore gets too large, it needs to flush its contents to a StoreFile.
+                However, a Store can only have <varname>hbase.hstore.blockingStoreFiles</varname>
+                files, so the MemStore needs to wait for the number of StoreFiles to be reduced by
+                one or more compactions. However, if the MemStore grows larger than
+                  <varname>hbase.hregion.memstore.flush.size</varname>, it is not able to flush its
+                contents to a StoreFile. If the MemStore is too large and the number of StpreFo;es
+                is also too high, the algorithm is said to be "stuck". The compaction algorithm
+                checks for this "stuck" situation and provides mechanisms to alleviate it.</para>
+            </section>
+
+            <section
+              xml:id="exploringcompaction.policy">
+              <title>The ExploringCompactionPolicy Algorithm</title>
+              <para>The ExploringCompactionPolicy algorithm considers each possible set of
+                adjacent StoreFiles before choosing the set where compaction will have the most
+                benefit. </para>
+              <para>One situation where the ExploringCompactionPolicy works especially well is when
+                you are bulk-loading data and the bulk loads create larger StoreFiles than the
+                StoreFiles which are holding data older than the bulk-loaded data. This can "trick"
+                HBase into choosing to perform a major compaction each time a compaction is needed,
+                and cause a lot of extra overhead. With the ExploringCompactionPolicy, major
+                compactions happen much less frequently because minor compactions are more
+                efficient.</para>
+              <para>In general, ExploringCompactionPolicy is the right choice for most situations,
+                and thus is the default compaction policy. You can also use
+                ExploringCompactionPolicy along with <xref
+                  linkend="ops.stripe" />.</para>
+              <para>The logic of this policy can be examined in
+                  <filename>hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/compactions/ExploringCompactionPolicy.java</filename>.
+                The following is a walk-through of the logic of the
+                ExploringCompactionPolicy.</para>
+              <procedure>
+                <step>
+                  <para>Make a list of all existing StoreFiles in the Store. The rest of the
+                    algorithm filters this list to come up with the subset of HFiles which will be
+                    chosen for compaction.</para>
+                </step>
+                <step>
+                  <para>If this was a user-requested compaction, attempt to perform the requested
+                    compaction type, regardless of what would normally be chosen. Note that even if
+                    the user requests a major compaction, it may not be possible to perform a major
+                    compaction. This may be because not all StoreFiles in the Column Family are
+                    available to compact or because there are too many Stores in the Column
+                    Family.</para>
+                </step>
+                <step>
+                  <para>Some StoreFiles are automatically excluded from consideration. These
+                    include:</para>
+                  <itemizedlist>
+                    <listitem>
+                      <para>StoreFiles that are larger than
+                          <varname>hbase.hstore.compaction.max.size</varname></para>
+                    </listitem>
+                    <listitem>
+                      <para>StoreFiles that were created by a bulk-load operation which explicitly
+                        excluded compaction. You may decide to exclude StoreFiles resulting from
+                        bulk loads, from compaction. To do this, specify the
+                          <varname>hbase.mapreduce.hfileoutputformat.compaction.exclude</varname>
+                        parameter during the bulk load operation.</para>
+                    </listitem>
+                  </itemizedlist>
+                </step>
+                <step>
+                  <para>Iterate through the list from step 1, and make a list of all potential sets
+                    of StoreFiles to compact together. A potential set is a grouping of
+                      <varname>hbase.hstore.compaction.min</varname> contiguous StoreFiles in the
+                    list. For each set, perform some sanity-checking and figure out whether this is
+                    the best compaction that could be done:</para>
+                  <itemizedlist>
+                    <listitem>
+                      <para>If the number of StoreFiles in this set (not the size of the StoreFiles)
+                        is fewer than <varname>hbase.hstore.compaction.min</varname> or more than
+                          <varname>hbase.hstore.compaction.max</varname>, take it out of
+                        consideration.</para>
+                    </listitem>
+                    <listitem>
+                      <para>Compare the size of this set of StoreFiles with the size of the smallest
+                        possible compaction that has been found in the list so far. If the size of
+                        this set of StoreFiles represents the smallest compaction that could be
+                        done, store it to be used as a fall-back if the algorithm is "stuck" and no
+                        StoreFiles would otherwise be chosen. See <xref
+                          linkend="compaction.being.stuck" />.</para>
+                    </listitem>
+                    <listitem>
+                      <para>Do size-based sanity checks against each StoreFile in this set of
+                        StoreFiles.</para>
+                      <itemizedlist>
+                        <listitem>
+                          <para>If the size of this StoreFile is larger than
+                              <varname>hbase.hstore.compaction.max.size</varname>, take it out of
+                            consideration.</para>
+                        </listitem>
+                        <listitem>
+                          <para>If the size is greater than or equal to
+                              <varname>hbase.hstore.compaction.min.size</varname>, sanity-check it
+                            against the file-based ratio to see whether it is too large to be
+                            considered. The sanity-checking is successful if:</para>
+                          <itemizedlist>
+                            <listitem>
+                              <para>There is only one StoreFile in this set, or</para>
+                            </listitem>
+                            <listitem>
+                              <para>For each StoreFile, its size multiplied by
+                                  <varname>hbase.store.compaction.ratio</varname> (or
+                                  <varname>hbase.hstore.compaction.ratio.offpeak</varname> if
+                                off-peak hours are configured and it is during off-peak hours) is
+                                less than the sum of the sizes of the other HFiles in the
+                                set.</para>
+                            </listitem>
+                          </itemizedlist>
+                        </listitem>
+                      </itemizedlist>
+                    </listitem>
+                  </itemizedlist>
+                </step>
+                <step>
+                  <para>If this set of StoreFiles is still in consideration, compare it to the
+                    previously-selected best compaction. If it is better, replace the
+                    previously-selected best compaction with this one.</para>
+                </step>
+                <step>
+                  <para>When the entire list of potential compactions has been processed, perform
+                    the best compaction that was found. If no StoreFiles were selected for
+                    compaction, but there are multiple StoreFiles, assume the algorithm is stuck
+                    (see <xref
+                      linkend="compaction.being.stuck" />) and if so, perform the smallest
+                    compaction that was found in step 3.</para>
+                </step>
+              </procedure>
+            </section>
+
+            <section
+              xml:id="compaction.ratiobasedcompactionpolicy.algorithm">
+              <title>RatioBasedCompactionPolicy Algorithm</title>
+              <para>The RatioBasedCompactionPolicy was the only compaction policy prior to HBase
+                0.96, though ExploringCompactionPolicy has now been backported to HBase 0.94 and
+                0.95. To use the RatioBasedCompactionPolicy rather than the
+                ExploringCompactionPolicy, set
+                  <varname>hbase.hstore.defaultengine.compactionpolicy.class</varname> to
+                  <literal>RatioBasedCompactionPolicy</literal> in the
+                  <filename>hbase-site.xml</filename> file. To switch back to the
+                ExploringCompactionPolicy, remove the setting from the
+                  <filename>hbase-site.xml</filename>.</para>
+              <para>The following section walks you through the algorithm used to select StoreFiles
+                for compaction in the RatioBasedCompactionPolicy.</para>
+              <procedure>
+                <step>
                   <para>The first phase is to create a list of all candidates for compaction. A list
-                    is created of all StoreFiles not already in the compaction queue, and all files
-                    newer than the newest file that is currently being compacted. This list of files
-                    is ordered by the sequence ID. The sequence ID is generated when a Put is
-                    appended to the write-ahead log (WAL), and is stored in the metadata of the
-                    StoreFile.</para>
-                </listitem>
-              </varlistentry>
-              <varlistentry>
-                <term>Check to see if major compaction is required because there are too many
-                  StoreFiles and the memstore is too large.</term>
-                <listitem>
-                  <para>A store can only <varname>have hbase.hstore.blockingStoreFiles</varname>. If
-                    the store has too many files, you cannot flush data. In addition, you cannot
-                    perform an insert if the memstore is over
-                    <varname>hbase.hregion.memstore.flush.size</varname>. Normally, minor
-                    compactions will alleviate this situation. However, if the normal compaction
-                    algorithm do not find any normally-eligible StoreFiles, a major compaction is
-                    the only way to get out of this situation, and is forced.</para>
-                  <para>If you are using the ExploringCompaction policy, the set of files to
-                    compact is always selected, and will not trigger a major compaction. See <xref
-                      linkend="exploringcompaction.policy" />.</para>
-                </listitem>
-              </varlistentry>
-              <varlistentry>
-                <term>If this compaction was user-requested, perform the requested type of compaction.</term>
-                <listitem>
-                  <para>Compactions can run on a schedule or can be initiated manually. If a
-                    compaction is requested manually, HBase always runs that type of compaction. If the
-                    user requests a major compaction, the major compaction still runs even if the are
-                    more than <varname>hbase.hstore.compaction.max</varname> files that need
-                    compaction.</para>
-                </listitem>
-              </varlistentry>
-              <varlistentry>
-                <term>Exclude files which are too large.</term>
-                <listitem>
-                  <para>The purpose of compaction is to merge small files together, and it is
-                    counterproductive to compact files which are too large. Files larger than
-                    <varname>hbase.hstore.compaction.max.size</varname> are excluded from
-                    consideration.</para>
-                </listitem>
-              </varlistentry>
-              <varlistentry>
-                <term>If configured, exclude bulk-loaded files.</term>
-                <listitem>
-                  <para>You may decide to exclude bulk-loaded files from compaction, in the bulk
-                    load operation, by specifying the
-                    <varname>hbase.mapreduce.hfileoutputformat.compaction.exclude
-                      parameter.</varname> If a bulk-loaded file was excluded, it is removed from
-                    consideration at this point.</para>
-                </listitem>
-              </varlistentry>
-              <varlistentry>
-                <term>If there are too many files to compact, do a minor compaction.</term>
-                <listitem>
-                  <para>The maximum number of files allowed in a major compaction is controlled by
-                    the <varname>hbase.hstore.compaction.max</varname> parameter. If the list
-                    contains more than this number of files, a compaction that would otherwise be a
-                    major compaction is downgraded to a minor compaction. However, a user-requested
-                    major compaction still occurs even if there are more than
-                    <varname>hbase.hstore.compaction.max</varname> files to compact.</para>
-                </listitem>
-              </varlistentry>
-              <varlistentry>
-                <term>Only run the compaction if enough files need to be compacted.</term>
-                <listitem>
+                    is created of all StoreFiles not already in the compaction queue, and all
+                    StoreFiles newer than the newest file that is currently being compacted. This
+                    list of StoreFiles is ordered by the sequence ID. The sequence ID is generated
+                    when a Put is appended to the write-ahead log (WAL), and is stored in the
+                    metadata of the HFile.</para>
+                </step>
+                <step>
+                  <para>Check to see if the algorithm is stuck (see <xref
+                      linkend="compaction.being.stuck" />, and if so, a major compaction is forced.
+                    This is a key area where <xref
+                      linkend="exploringcompaction.policy" /> is often a better choice than the
+                    RatioBasedCompactionPolicy.</para>
+                </step>
+                <step>
+                  <para>If the compaction was user-requested, try to perform the type of compaction
+                    that was requested. Note that a major compaction may not be possible if all
+                    HFiles are not available for compaction or if too may StoreFiles exist (more
+                    than <varname>hbase.hstore.compaction.max</varname>).</para>
+                </step>
+                <step>
+                  <para>Some StoreFiles are automatically excluded from consideration. These
+                    include:</para>
+                  <itemizedlist>
+                    <listitem>
+                      <para>StoreFiles that are larger than
+                          <varname>hbase.hstore.compaction.max.size</varname></para>
+                    </listitem>
+                    <listitem>
+                      <para>StoreFiles that were created by a bulk-load operation which explicitly
+                        excluded compaction. You may decide to exclude StoreFiles resulting from
+                        bulk loads, from compaction. To do this, specify the
+                          <varname>hbase.mapreduce.hfileoutputformat.compaction.exclude</varname>
+                        parameter during the bulk load operation.</para>
+                    </listitem>
+                  </itemizedlist>
+                </step>
+                <step>
+                  <para>The maximum number of StoreFiles allowed in a major compaction is controlled
+                    by the <varname>hbase.hstore.compaction.max</varname> parameter. If the list
+                    contains more than this number of StoreFiles, a minor compaction is performed
+                    even if a major compaction would otherwise have been done. However, a
+                    user-requested major compaction still occurs even if there are more than
+                      <varname>hbase.hstore.compaction.max</varname> StoreFiles to compact.</para>
+                </step>
+                <step>
                   <para>If the list contains fewer than
-                    <varname>hbase.hstore.compaction.min</varname> files to compact, compaction is
-                    aborted.</para>
-                </listitem>
-              </varlistentry>
-              <varlistentry>
-                <term>If this is a minor compaction, determine which files are eligible, based upon
-                  the <varname>hbase.store.compaction.ratio</varname>.</term>
-                <listitem>
+                      <varname>hbase.hstore.compaction.min</varname> StoreFiles to compact, a minor
+                    compaction is aborted. Note that a major compaction can be performed on a single
+                    HFile. Its function is to remove deletes and expired versions, and reset
+                    locality on the StoreFile.</para>
+                </step>
+                <step>
                   <para>The value of the <varname>hbase.store.compaction.ratio</varname> parameter
-                    is multiplied by the sum of files smaller than a given file, to determine
-                    whether that file is selected for compaction during a minor compaction. For
+                    is multiplied by the sum of StoreFiles smaller than a given file, to determine
+                    whether that StoreFile is selected for compaction during a minor compaction. For
                     instance, if hbase.store.compaction.ratio is 1.2, FileX is 5 mb, FileY is 2 mb,
                     and FileZ is 3 mb:</para>
-                  <screen>5 &lt;= 1.2 x (2 + 3)            or          5 &lt;= 6</screen>
+                  <screen>5 &lt;= 1.2 x (2 + 3)            or           5 &lt;= 6</screen>
                   <para>In this scenario, FileX is eligible for minor compaction. If FileX were 7
                     mb, it would not be eligible for minor compaction. This ratio favors smaller
-                    files. You can configure a different ratio for use in off-peak hours, using the
-                    parameter <varname>hbase.hstore.compaction.ratio.offpeak</varname>, if you also
-                    configure <varname>hbase.offpeak.start.hour</varname> and
-                    <varname>hbase.offpeak.end.hour</varname>.</para>
-                </listitem>
-              </varlistentry>
-              <varlistentry>
-                <term>If major compactions are not managed manually, and it has been too long since
-                  the last major compaction, run a major compaction anyway.</term>
-                <listitem>
+                    StoreFile. You can configure a different ratio for use in off-peak hours, using
+                    the parameter <varname>hbase.hstore.compaction.ratio.offpeak</varname>, if you
+                    also configure <varname>hbase.offpeak.start.hour</varname> and
+                      <varname>hbase.offpeak.end.hour</varname>.</para>
+                </step>
+
+                <step>
                   <para>If the last major compaction was too long ago and there is more than one
-                    file to be compacted, a major compaction is run, even if it would otherwise have
-                    been minor. By default, the maximum time between major compactions is 7 days,
-                    plus or minus a 4.8 hour period, and determined randomly within those
-                    parameters. Prior to HBase 0.96, the major compaction period was 24 hours. This
-                    is also referred to as a time-based or time-triggered major compaction. See
-                    <varname>hbase.hregion.majorcompaction</varname> in the table below to tune or
+                    StoreFile to be compacted, a major compaction is run, even if it would otherwise
+                    have been minor. By default, the maximum time between major compactions is 7
+                    days, plus or minus a 4.8 hour period, and determined randomly within those
+                    parameters. Prior to HBase 0.96, the major compaction period was 24 hours. See
+                      <varname>hbase.hregion.majorcompaction</varname> in the table below to tune or
                     disable time-based major compactions.</para>
-                </listitem>
-              </varlistentry>
-            </variablelist>
-            <table xml:id="compaction.parameters">
+                </step>
+              </procedure>
+            </section>
+
+            <section xml:id="compaction.parameters">
+
               <title>Parameters Used by Compaction Algorithm</title>
-              <textobject>
-                <para>This table contains the main configuration parameters for compaction. This
-                  list is not exhaustive. To tune these parameters from the defaults, edit the
-                    <filename>hbase-default.xml</filename> file. For a full list of all
-                  configuration parameters available, see <xref
-                    linkend="config.files" /></para>
-              </textobject>
-              <tgroup
-                cols="3">
-                <thead>
-                  <row>
-                    <entry>Parameter</entry>
-                    <entry>Description</entry>
-                    <entry>Default</entry>
-                  </row>
-                </thead>
-                <tbody>
-                  <row>
-                    <entry>hbase.hstore.compaction.min</entry>
-                    <entry><para>The minimum number of files which must be eligible for compaction
-                        before compaction can run.</para>
-                      <para>In previous versions, the parameter
-                          <code>hbase.hstore.compaction.min</code> was called
-                          <code>hbase.hstore.compactionThreshold</code>.</para>
-                    </entry>
-                    <entry>3</entry>
-                  </row>
-                  <row>
-                    <entry>hbase.hstore.compaction.max</entry>
-                    <entry>The maximum number of files which will be selected for a single minor
-                      compaction, regardless of the number of eligible files.</entry>
-                    <entry>10</entry>
-                  </row>
-                  <row>
-                    <entry>hbase.hstore.compaction.min.size</entry>
-                    <entry>A StoreFile smaller than this size (in bytes) will always be eligible for
-                      minor compaction.</entry>
-                    <entry>128 MB</entry>
-                  </row>
-                  <row>
-                    <entry>hbase.hstore.compaction.max.size</entry>
-                    <entry>A StoreFile larger than this size (in bytes) will be excluded from minor
-                      compaction.</entry>
-                    <entry>Long.MAX_VALUE</entry>
-                  </row>
-                  <row>
-                    <entry>hbase.store.compaction.ratio</entry>
-                    <entry>For minor compaction, this ratio is used to determine whether a given
-                      file is eligible for compaction. Its effect is to limit compaction of large
-                      files. Expressed as a floating-point decimal.</entry>
-                    <entry>1.2F</entry>
-                  </row>
-                  <row>
-                    <entry>hbase.hstore.compaction.ratio.offpeak</entry>
-                    <entry>The compaction ratio used during off-peak compactions, if off-peak is
-                      enabled. Expressed as a floating-point decimal. This allows for more
-                      aggressive compaction, because in theory, the cluster is under less load.
-                      Ignored if off-peak is disabled (default).</entry>
-                    <entry>5.0F</entry>
-                  </row>
-                  <row>
-                    <entry>hbase.offpeak.start.hour</entry>
-                    <entry>The start of off-peak hours, expressed as an integer between 0 and 23,
-                      inclusive. Set to <literal>-1</literal> to disable off-peak.</entry>
-                    <entry>-1 (disabled)</entry>
-                  </row>
-                  <row>
-                    <entry>hbase.offpeak.end.hour</entry>
-                    <entry>The end of off-peak hours, expressed as an integer between 0 and 23,
-                      inclusive. Set to <literal>-1</literal> to disable off-peak.</entry>
-                    <entry>-1 (disabled)</entry>
-                  </row>
-                  <row>
-                    <entry>hbase.regionserver.thread.compaction.throttle</entry>
-                    <entry>Throttles compaction if too much of a backlog of compaction work
-                      exists.</entry>
-                    <entry>2 x hbase.hstore.compaction.max x hbase.hregion.memstore.flush.size
-                      (which defaults to 128)</entry>
-                  </row>
-                  <row>
-                    <entry>hbase.hregion.majorcompaction</entry>
-                    <entry>Time between major compactions, expressed in milliseconds. Set to 0 to
-                      disable time-based automatic major compactions. User-requested and size-based
-                      major compactions will still run.</entry>
-                    <entry>7 days (604800000 milliseconds)</entry>
-                  </row>
-                  <row>
-                    <entry>hbase.hregion.majorcompaction.jitter</entry>
-                    <entry>A multiplier applied to majorCompactionPeriod to cause compaction to
-                      occur a given amount of time either side of majorCompactionPeriod. The smaller
-                      the number, the closer the compactions will happen to the
-                      <varname>hbase.hregion.majorcompaction</varname> interval. Expressed as a
-                      floating-point decimal.</entry>
-                    <entry>.50F</entry>
-                  </row>
-                </tbody>
-              </tgroup>
-            </table>
+              <para>This table contains the main configuration parameters for compaction. This list
+                is not exhaustive. To tune these parameters from the defaults, edit the
+                  <filename>hbase-default.xml</filename> file. For a full list of all configuration
+                parameters available, see <xref
+                  linkend="config.files" /></para>
+              <informaltable>
+                <tgroup
+                  cols="3">
+                  <thead>
+                    <row>
+                      <entry>Parameter</entry>
+                      <entry>Description</entry>
+                      <entry>Default</entry>
+                    </row>
+                  </thead>
+                  <tbody>
+                    <row>
+                      <entry>hbase.hstore.compaction.min</entry>
+                      <entry><para>The minimum number of StoreFiles which must be eligible for
+                          compaction before compaction can run.</para>
+                        <para>The goal of tuning <varname>hbase.hstore.compaction.min</varname>
+                          is to avoid ending up with too many tiny StoreFiles to compact. Setting
+                          this value to <literal>2</literal> would cause a minor compaction each
+                          time you have two StoreFiles in a Store, and this is probably not
+                          appropriate. If you set this value too high, all the other values will
+                          need to be adjusted accordingly. For most cases, the default value is
+                          appropriate.</para>
+                        <para>In previous versions of HBase, the parameter
+                            <code>hbase.hstore.compaction.min</code> was called
+                            <code>hbase.hstore.compactionThreshold</code>.</para>
+                      </entry>
+                      <entry>3</entry>
+                    </row>
+                    <row>
+                      <entry>hbase.hstore.compaction.max</entry>
+                      <entry><para>The maximum number of StoreFiles which will be selected for a
+                          single minor compaction, regardless of the number of eligible
+                          StoreFiles.</para>
+                        <para>Effectively, the value of
+                            <varname>hbase.hstore.compaction.max</varname> controls the length of
+                          time it takes a single compaction to complete. Setting it larger means
+                          that more StoreFiles are included in a compaction. For most cases, the
+                          default value is appropriate.</para>
+                      </entry>
+                      <entry>10</entry>
+                    </row>
+                    <row>
+                      <entry>hbase.hstore.compaction.min.size</entry>
+                      <entry><para>A StoreFile smaller than this size will always be eligible for
+                          minor compaction. StoreFiles this size or larger are evaluated by
+                            <varname>hbase.store.compaction.ratio</varname> to determine if they are
+                          eligible.</para>
+                        <para>Because this limit represents the "automatic include" limit for
+                          all StoreFiles smaller than this value, this value may need to be reduced
+                          in write-heavy environments where many files in the 1-2 MB range are being
+                          flushed, because every StoreFile will be targeted for compaction and the
+                          resulting StoreFiles may still be under the minimum size and require
+                          further compaction.</para>
+                        <para>If this parameter is lowered, the ratio check is triggered more
+                          quickly. This addressed some issues seen in earlier versions of HBase but
+                          changing this parameter is no longer necessary in most situations.</para>
+                      </entry>
+                      <entry>128 MB</entry>
+                    </row>
+                    <row>
+                      <entry>hbase.hstore.compaction.max.size</entry>
+                      <entry><para>An StoreFile larger than this size will be excluded from
+                          compaction. The effect of raising
+                            <varname>hbase.hstore.compaction.max.size</varname> is fewer, larger
+                          StoreFiles that do not get compacted often. If you feel that compaction is
+                          happening too often without much benefit, you can try raising this
+                          value.</para></entry>
+                      <entry>Long.MAX_VALUE</entry>
+                    </row>
+                    <row>
+                      <entry>hbase.hstore.compaction.ratio</entry>
+                      <entry><para>For minor compaction, this ratio is used to determine whether a
+                          given StoreFile which is larger than
+                            <varname>hbase.hstore.compaction.min.size</varname> is eligible for
+                          compaction. Its effect is to limit compaction of large StoreFile. The
+                          value of <varname>hbase.hstore.compaction.ratio</varname> is expressed as
+                          a floating-point decimal.</para>
+                        <para>A large ratio, such as <literal>10</literal>, will produce a
+                          single giant StoreFile. Conversely, a value of <literal>.25</literal>,
+                          will produce behavior similar to the BigTable compaction algorithm,
+                          producing four StoreFiles.</para>
+                        <para>A moderate value of between 1.0 and 1.4 is recommended. When
+                          tuning this value, you are balancing write costs with read costs. Raising
+                          the value (to something like 1.4) will have more write costs, because you
+                          will compact larger StoreFiles. However, during reads, HBase will need to seek
+                          through fewer StpreFo;es to accomplish the read. Consider this approach if you
+                          cannot take advantage of <xref
+                            linkend="schema.bloom" />.</para>
+                        <para>Alternatively, you can lower this value to something like 1.0 to
+                          reduce the background cost of writes, and use <xref
+                            linkend="schema.bloom" /> to limit the number of StoreFiles touched
+                          during reads.</para>
+                        <para>For most cases, the default value is appropriate.</para>
+                      </entry>
+                      <entry>1.2F</entry>
+                    </row>
+                    <row>
+                      <entry>hbase.hstore.compaction.ratio.offpeak</entry>
+                      <entry>The compaction ratio used during off-peak compactions, if off-peak
+                        hours are also configured (see below). Expressed as a floating-point
+                        decimal. This allows for more aggressive (or less aggressive, if you set it
+                        lower than <varname>hbase.hstore.compaction.ratio</varname>) compaction
+                        during a set time period. Ignored if off-peak is disabled (default). This
+                        works the same as <varname>hbase.hstore.compaction.ratio</varname>.</entry>
+                      <entry>5.0F</entry>
+                    </row>
+                    <row>
+                      <entry>hbase.offpeak.start.hour</entry>
+                      <entry>The start of off-peak hours, expressed as an integer between 0 and 23,
+                        inclusive. Set to <literal>-1</literal> to disable off-peak.</entry>
+                      <entry>-1 (disabled)</entry>
+                    </row>
+                    <row>
+                      <entry>hbase.offpeak.end.hour</entry>
+                      <entry>The end of off-peak hours, expressed as an integer between 0 and 23,
+                        inclusive. Set to <literal>-1</literal> to disable off-peak.</entry>
+                      <entry>-1 (disabled)</entry>
+                    </row>
+                    <row>
+                      <entry>hbase.regionserver.thread.compaction.throttle</entry>
+                      <entry><para>There are two different thread pools for compactions, one for
+                          large compactions and the other for small compactions. This helps to keep
+                          compaction of lean tables (such as <systemitem>hbase:meta</systemitem>)
+                          fast. If a compaction is larger than this threshold, it goes into the
+                          large compaction pool. In most cases, the default value is
+                          appropriate.</para></entry>
+                      <entry>2 x hbase.hstore.compaction.max x hbase.hregion.memstore.flush.size
+                        (which defaults to 128)</entry>
+                    </row>
+                    <row>
+                      <entry>hbase.hregion.majorcompaction</entry>
+                      <entry><para>Time between major compactions, expressed in milliseconds. Set to
+                          0 to disable time-based automatic major compactions. User-requested and
+                          size-based major compactions will still run. This value is multiplied by
+                            <varname>hbase.hregion.majorcompaction.jitter</varname> to cause
+                          compaction to start at a somewhat-random time during a given window of
+                          time.</para></entry>
+                      <entry>7 days (604800000 milliseconds)</entry>
+                    </row>
+                    <row>
+                      <entry>hbase.hregion.majorcompaction.jitter</entry>
+                      <entry><para>A multiplier applied to
+                            <varname>hbase.hregion.majorcompaction</varname> to cause compaction to
+                          occur a given amount of time either side of
+                            <varname>hbase.hregion.majorcompaction</varname>. The smaller the
+                          number, the closer the compactions will happen to the
+                            <varname>hbase.hregion.majorcompaction</varname> interval. Expressed as
+                          a floating-point decimal.</para></entry>
+                      <entry>.50F</entry>
+                    </row>
+                  </tbody>
+                </tgroup>
+              </informaltable>
+            </section>
           </section>
-          
           <section
             xml:id="compaction.file.selection.old">
-          <title>Compaction File Selection</title>
-          <para>To understand the core algorithm for StoreFile selection, there is some ASCII-art in the <link xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/regionserver/Store.html#836">Store source code</link> that
-          will serve as useful reference.  It has been copied below:
-<programlisting>
+            <title>Compaction File Selection</title>
+            <note>
+              <title>Legacy Information</title>
+              <para>This section has been preserved for historical reasons and refers to the way
+                compaction worked prior to HBase 0.96.x. You can still use this behavior if you
+                enable <xref
+                  linkend="compaction.ratiobasedcompactionpolicy.algorithm" /> For information on
+                the way that compactions work in HBase 0.96.x and later, see <xref
+                  linkend="compaction" />.</para>
+            </note>
+            <para>To understand the core algorithm for StoreFile selection, there is some ASCII-art
+              in the <link
+                xlink:href="http://hbase.apache.org/xref/org/apache/hadoop/hbase/regionserver/Store.html#836">Store
+                source code</link> that will serve as useful reference. It has been copied below:
+              <programlisting>
 /* normal skew:
  *
  *         older ----> newer
@@ -3369,200 +3577,403 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
  *    | |  | |  | |  | | | | | |
  */
 </programlisting>
-          Important knobs:
-          <itemizedlist>
-            <listitem><para><code>hbase.store.compaction.ratio</code> Ratio used in compaction
-            file selection algorithm (default 1.2f).</para> </listitem>
-            <listitem><para><code>hbase.hstore.compaction.min</code> (.90 hbase.hstore.compactionThreshold) (files) Minimum number
-            of StoreFiles per Store to be selected for a compaction to occur (default 2).</para></listitem>
-            <listitem><para><code>hbase.hstore.compaction.max</code> (files) Maximum number of StoreFiles to compact per minor compaction (default 10).</para></listitem>
-            <listitem><para><code>hbase.hstore.compaction.min.size</code> (bytes)
-            Any StoreFile smaller than this setting with automatically be a candidate for compaction.  Defaults to
-            <code>hbase.hregion.memstore.flush.size</code> (128 mb). </para></listitem>
-            <listitem><para><code>hbase.hstore.compaction.max.size</code> (.92) (bytes)
-            Any StoreFile larger than this setting with automatically be excluded from compaction (default Long.MAX_VALUE). </para></listitem>
+              Important knobs: <itemizedlist>
+                <listitem>
+                  <para><code>hbase.store.compaction.ratio</code> Ratio used in compaction file
+                    selection algorithm (default 1.2f).</para>
+                </listitem>
+                <listitem>
+                  <para><code>hbase.hstore.compaction.min</code> (.90
+                    hbase.hstore.compactionThreshold) (files) Minimum number of StoreFiles per Store
+                    to be selected for a compaction to occur (default 2).</para>
+                </listitem>
+                <listitem>
+                  <para><code>hbase.hstore.compaction.max</code> (files) Maximum number of
+                    StoreFiles to compact per minor compaction (default 10).</para>
+                </listitem>
+                <listitem>
+                  <para><code>hbase.hstore.compaction.min.size</code> (bytes) Any StoreFile smaller
+                    than this setting with automatically be a candidate for compaction. Defaults to
+                      <code>hbase.hregion.memstore.flush.size</code> (128 mb). </para>
+                </listitem>
+                <listitem>
+                  <para><code>hbase.hstore.compaction.max.size</code> (.92) (bytes) Any StoreFile
+                    larger than this setting with automatically be excluded from compaction (default
+                    Long.MAX_VALUE). </para>
+                </listitem>
+              </itemizedlist>
+            </para>
+            <para>The minor compaction StoreFile selection logic is size based, and selects a file
+              for compaction when the file &lt;= sum(smaller_files) *
+                <code>hbase.hstore.compaction.ratio</code>. </para>
+
+          <section
+            xml:id="compaction.file.selection.example1">
+            <title>Minor Compaction File Selection - Example #1 (Basic Example)</title>
+            <para>This example mirrors an example from the unit test
+                <code>TestCompactSelection</code>.</para>
+            <itemizedlist>
+              <listitem>
+                <para><code>hbase.store.compaction.ratio</code> = 1.0f </para>
+              </listitem>
+              <listitem>
+                <para><code>hbase.hstore.compaction.min</code> = 3 (files) </para>
+              </listitem>
+              <listitem>
+                <para><code>hbase.hstore.compaction.max</code> = 5 (files) </para>
+              </listitem>
+              <listitem>
+                <para><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </para>
+              </listitem>
+              <listitem>
+                <para><code>hbase.hstore.compaction.max.size</code> = 1000 (bytes) </para>
+              </listitem>
             </itemizedlist>
-          </para>
-          <para>The minor compaction StoreFile selection logic is size based, and selects a file for compaction when the file
-           &lt;= sum(smaller_files) * <code>hbase.hstore.compaction.ratio</code>.
-          </para>
-        </section>
-        <section xml:id="compaction.file.selection.example1">
-          <title>Minor Compaction File Selection - Example #1 (Basic Example)</title>
-          <para>This example mirrors an example from the unit test <code>TestCompactSelection</code>.</para>
-          <itemizedlist>
-            <listitem><para><code>hbase.store.compaction.ratio</code> = 1.0f </para></listitem>
-            <listitem><para><code>hbase.hstore.compaction.min</code> = 3 (files) </para></listitem>
-            <listitem><para><code>hbase.hstore.compaction.max</code> = 5 (files) </para></listitem>
-            <listitem><para><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </para></listitem>
-            <listitem><para><code>hbase.hstore.compaction.max.size</code> = 1000 (bytes) </para></listitem>
-          </itemizedlist>
-          <para>
-          The following StoreFiles exist: 100, 50, 23, 12, and 12 bytes apiece (oldest to newest).
-          With the above parameters, the files that would be selected for minor compaction are 23, 12, and 12.
-          </para>
-          <para>Why?
-          <itemizedlist>
-            <listitem><para>100 --&gt;  No, because sum(50, 23, 12, 12) * 1.0 = 97. </para></listitem>
-            <listitem><para>50 --&gt;  No, because sum(23, 12, 12) * 1.0 = 47. </para></listitem>
-            <listitem><para>23 --&gt;  Yes, because sum(12, 12) * 1.0 = 24. </para></listitem>
-            <listitem><para>12 --&gt;  Yes, because the previous file has been included, and because this
-          does not exceed the the max-file limit of 5  </para></listitem>
-            <listitem><para>12 --&gt;  Yes, because the previous file had been included, and because this
-          does not exceed the the max-file limit of 5.</para></listitem>
-          </itemizedlist>
-          </para>
-        </section>
-        <section xml:id="compaction.file.selection.example2">
-          <title>Minor Compaction File Selection - Example #2 (Not Enough Files To Compact)</title>
-          <para>This example mirrors an example from the unit test <code>TestCompactSelection</code>.
-          <itemizedlist>
-            <listitem><para><code>hbase.store.compaction.ratio</code> = 1.0f </para></listitem>
-            <listitem><para><code>hbase.hstore.compaction.min</code> = 3 (files) </para></listitem>
-            <listitem><para><code>hbase.hstore.compaction.max</code> = 5 (files)</para> </listitem>
-            <listitem><para><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </para></listitem>
-            <listitem><para><code>hbase.hstore.compaction.max.size</code> = 1000 (bytes) </para></listitem>
-          </itemizedlist>
-          </para>
-          <para>The following StoreFiles exist: 100, 25, 12, and 12 bytes apiece (oldest to newest).
-          With the above parameters, no compaction will be started.
-          </para>
-          <para>Why?
-          <itemizedlist>
-            <listitem><para>100 --&gt; No, because sum(25, 12, 12) * 1.0 = 47</para></listitem>
-            <listitem><para>25 --&gt;  No, because sum(12, 12) * 1.0 = 24</para></listitem>
-            <listitem><para>12 --&gt;  No. Candidate because sum(12) * 1.0 = 12, there are only 2 files to compact and that is less than the threshold of 3</para></listitem>
-            <listitem><para>12 --&gt;  No. Candidate because the previous StoreFile was, but there are not enough files to compact</para></listitem>
-          </itemizedlist>
-          </para>
-        </section>
-        <section xml:id="compaction.file.selection.example3">
-          <title>Minor Compaction File Selection - Example #3 (Limiting Files To Compact)</title>
-          <para>This example mirrors an example from the unit test <code>TestCompactSelection</code>.
-          <itemizedlist>
-            <listitem><para><code>hbase.store.compaction.ratio</code> = 1.0f </para></listitem>
-            <listitem><para><code>hbase.hstore.compaction.min</code> = 3 (files) </para></listitem>
-            <listitem><para><code>hbase.hstore.compaction.max</code> = 5 (files)</para> </listitem>
-            <listitem><para><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </para></listitem>
-            <listitem><para><code>hbase.hstore.compaction.max.size</code> = 1000 (bytes) </para></listitem>
-          </itemizedlist>
-          The following StoreFiles exist: 7, 6, 5, 4, 3, 2, and 1 bytes apiece (oldest to newest).
-          With the above parameters, the files that would be selected for minor compaction are 7, 6, 5, 4, 3.
-          </para>
-          <para>Why?
-          <itemizedlist>
-            <listitem><para>7 --&gt;  Yes, because sum(6, 5, 4, 3, 2, 1) * 1.0 = 21.  Also, 7 is less than the min-size</para></listitem>
-            <listitem><para>6 --&gt;  Yes, because sum(5, 4, 3, 2, 1) * 1.0 = 15.  Also, 6 is less than the min-size. </para></listitem>
-            <listitem><para>5 --&gt;  Yes, because sum(4, 3, 2, 1) * 1.0 = 10.  Also, 5 is less than the min-size. </para></listitem>
-            <listitem><para>4 --&gt;  Yes, because sum(3, 2, 1) * 1.0 = 6.  Also, 4 is less than the min-size. </para></listitem>
-            <listitem><para>3 --&gt;  Yes, because sum(2, 1) * 1.0 = 3.  Also, 3 is less than the min-size. </para></listitem>
-            <listitem><para>2 --&gt;  No.  Candidate because previous file was selected and 2 is less than the min-size, but the max-number of files to compact has been reached. </para></listitem>
-            <listitem><para>1 --&gt;  No.  Candidate because previous file was selected and 1 is less than the min-size, but max-number of files to compact has been reached. </para></listitem>
-          </itemizedlist>
-          </para>
-        </section>
-        <section xml:id="compaction.config.impact">
-          <title>Impact of Key Configuration Options</title>
-          <para><code>hbase.store.compaction.ratio</code>.  A large ratio (e.g., 10) will produce a single giant file.  Conversely, a value of .25 will
-          produce behavior similar to the BigTable compaction algorithm - resulting in 4 StoreFiles.
-          </para>
-          <para><code>hbase.hstore.compaction.min.size</code>.  Because
-          this limit represents the "automatic include" limit for all StoreFiles smaller than this value, this value may need to
-          be adjusted downwards in write-heavy environments where many 1 or 2 mb StoreFiles are being flushed, because every file
-          will be targeted for compaction and the resulting files may still be under the min-size and require further compaction, etc.
-          </para>
-        </section>
-<section xml:id="ops.stripe"><title>Experimental: stripe compactions</title>
-<para>
-Stripe compactions is an experimental feature added in HBase 0.98 which aims to improve compactions for large regions or non-uniformly distributed row keys. In order to achieve smaller and/or more granular compactions, the store files within a region are maintained separately for several row-key sub-ranges, or "stripes", of the region. The division is not visible to the higher levels of the system, so externally each region functions as before.
-</para><para>
-This feature is fully compatible with default compactions - it can be enabled for existing tables, and the table will continue to operate normally if it's disabled later.
-</para>
-</section><section xml:id="ops.stripe.when"><title>When to use</title>
-<para>You might want to consider using this feature if you have:
-<itemizedlist>
-<listitem><para>large regions (in that case, you can get the positive effect of much smaller regions without additional memstore and region management overhead); or
-</para></listitem>
-  <listitem><para>
-non-uniform row keys, e.g. time dimension in a key (in that case, only the stripes receiving the new keys will keep compacting - old data will not compact as much, or at all).
-</para></listitem>
-</itemizedlist>
-</para><para>
-According to perf testing performed, in these case the read performance can improve somewhat, and the read and write performance variability due to compactions is greatly reduced. There's overall perf improvement on large, non-uniform row key regions (hash-prefixed timestamp key) over long term. All of these performance gains are best realized when table is already large. In future, the perf improvement might also extend to region splits.
-</para>
-<section xml:id="ops.stripe.enable"><title>How to enable</title>
-<para>
-To use stripe compactions for a table or a column family, you should set its  <varname>hbase.hstore.engine.class</varname> to <varname>org.apache.hadoop.hbase.regionserver.StripeStoreEngine</varname>. Due to the nature of compactions, you also need to set the blocking file count to a high number (100 is a good default, which is 10 times the normal default of 10). If changing the existing table, you should do it when it is disabled. Examples:
-<programlisting>
-alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}
+            <para> The following StoreFiles exist: 100, 50, 23, 12, and 12 bytes apiece (oldest to
+              newest). With the above parameters, the files that would be selected for minor
+              compaction are 23, 12, and 12. </para>
+            <para>Why? <itemizedlist>
+                <listitem>
+                  <para>100 --&gt; No, because sum(50, 23, 12, 12) * 1.0 = 97. </para>
+                </listitem>
+                <listitem>
+                  <para>50 --&gt; No, because sum(23, 12, 12) * 1.0 = 47. </para>
+                </listitem>
+                <listitem>
+                  <para>23 --&gt; Yes, because sum(12, 12) * 1.0 = 24. </para>
+                </listitem>
+                <listitem>
+                  <para>12 --&gt; Yes, because the previous file has been included, and because this
+                    does not exceed the the max-file limit of 5 </para>
+                </listitem>
+                <listitem>
+                  <para>12 --&gt; Yes, because the previous file had been included, and because this
+                    does not exceed the the max-file limit of 5.</para>
+                </listitem>
+              </itemizedlist>
+            </para>
+          </section>
+          <section
+            xml:id="compaction.file.selection.example2">
+            <title>Minor Compaction File Selection - Example #2 (Not Enough Files To
+              Compact)</title>
+            <para>This example mirrors an example from the unit test
+                <code>TestCompactSelection</code>. <itemizedlist>
+                <listitem>
+                  <para><code>hbase.store.compaction.ratio</code> = 1.0f </para>
+                </listitem>
+                <listitem>
+                  <para><code>hbase.hstore.compaction.min</code> = 3 (files) </para>
+                </listitem>
+                <listitem>
+                  <para><code>hbase.hstore.compaction.max</code> = 5 (files)</para>
+                </listitem>
+                <listitem>
+                  <para><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </para>
+                </listitem>
+                <listitem>
+                  <para><code>hbase.hstore.compaction.max.size</code> = 1000 (bytes) </para>
+                </listitem>
+              </itemizedlist>
+            </para>
+            <para>The following StoreFiles exist: 100, 25, 12, and 12 bytes apiece (oldest to
+              newest). With the above parameters, no compaction will be started. </para>
+            <para>Why? <itemizedlist>
+                <listitem>
+                  <para>100 --&gt; No, because sum(25, 12, 12) * 1.0 = 47</para>
+                </listitem>
+                <listitem>
+                  <para>25 --&gt; No, because sum(12, 12) * 1.0 = 24</para>
+                </listitem>
+                <listitem>
+                  <para>12 --&gt; No. Candidate because sum(12) * 1.0 = 12, there are only 2 files
+                    to compact and that is less than the threshold of 3</para>
+                </listitem>
+                <listitem>
+                  <para>12 --&gt; No. Candidate because the previous StoreFile was, but there are
+                    not enough files to compact</para>
+                </listitem>
+              </itemizedlist>
+            </para>
+          </section>
+          <section
+            xml:id="compaction.file.selection.example3">
+            <title>Minor Compaction File Selection - Example #3 (Limiting Files To Compact)</title>
+            <para>This example mirrors an example from the unit test
+                <code>TestCompactSelection</code>. <itemizedlist>
+                <listitem>
+                  <para><code>hbase.store.compaction.ratio</code> = 1.0f </para>
+                </listitem>
+                <listitem>
+                  <para><code>hbase.hstore.compaction.min</code> = 3 (files) </para>
+                </listitem>
+                <listitem>
+                  <para><code>hbase.hstore.compaction.max</code> = 5 (files)</para>
+                </listitem>
+                <listitem>
+                  <para><code>hbase.hstore.compaction.min.size</code> = 10 (bytes) </para>
+                </listitem>
+                <listitem>
+                  <para><code>hbase.hstore.compaction.max.size</code> = 1000 (bytes) </para>
+                </listitem>
+              </itemizedlist> The following StoreFiles exist: 7, 6, 5, 4, 3, 2, and 1 bytes apiece
+              (oldest to newest). With the above parameters, the files that would be selected for
+              minor compaction are 7, 6, 5, 4, 3. </para>
+            <para>Why? <itemizedlist>
+                <listitem>
+                  <para>7 --&gt; Yes, because sum(6, 5, 4, 3, 2, 1) * 1.0 = 21. Also, 7 is less than
+                    the min-size</para>
+                </listitem>
+                <listitem>
+                  <para>6 --&gt; Yes, because sum(5, 4, 3, 2, 1) * 1.0 = 15. Also, 6 is less than
+                    the min-size. </para>
+                </listitem>
+                <listitem>
+                  <para>5 --&gt; Yes, because sum(4, 3, 2, 1) * 1.0 = 10. Also, 5 is less than the
+                    min-size. </para>
+                </listitem>
+                <listitem>
+                  <para>4 --&gt; Yes, because sum(3, 2, 1) * 1.0 = 6. Also, 4 is less than the
+                    min-size. </para>
+                </listitem>
+                <listitem>
+                  <para>3 --&gt; Yes, because sum(2, 1) * 1.0 = 3. Also, 3 is less than the
+                    min-size. </para>
+                </listitem>
+                <listitem>
+                  <para>2 --&gt; No. Candidate because previous file was selected and 2 is less than
+                    the min-size, but the max-number of files to compact has been reached. </para>
+                </listitem>
+                <listitem>
+                  <para>1 --&gt; No. Candidate because previous file was selected and 1 is less than
+                    the min-size, but max-number of files to compact has been reached. </para>
+                </listitem>
+              </itemizedlist>
+            </para>
+            <section
+              xml:id="compaction.config.impact">
+              <title>Impact of Key Configuration Options</title>
+              <note>
+                <para>This information is now included in the configuration parameter table in <xref
+                    linkend="compaction.configuration.parameters" />.</para>
+              </note>
+            </section>
+          </section>
+          </section>
+          <section
+            xml:id="ops.stripe">
+            <title>Experimental: Stripe Compactions</title>
+            <para> Stripe compactions is an experimental feature added in HBase 0.98 which aims to
+              improve compactions for large regions or non-uniformly distributed row keys. In order
+              to achieve smaller and/or more granular compactions, the StoreFiles within a region
+              are maintained separately for several row-key sub-ranges, or "stripes", of the region.
+              The stripes are transparent to the rest of HBase, so other operations on the HFiles or
+              data work without modification.</para>
+            <para>Stripe compactions change the HFile layout, creating sub-regions within regions.
+              These sub-regions are easier to compact, and should result in fewer major compactions.
+              This approach alleviates some of the challenges of larger regions.</para>
+            <para>Stripe compaction is fully compatible with <xref
+                linkend="compaction" /> and works in conjunction with either the
+              ExploringCompactionPolicy or RatioBasedCompactionPolicy. It can be enabled for
+              existing tables, and the table will continue to operate normally if it is disabled
+              later. </para>
+          </section>
+          <section
+            xml:id="ops.stripe.when">
+            <title>When To Use Stripe Compactions</title>
+            <para>Consider using stripe compaction if you have either of the following:</para>
+            <itemizedlist>
+              <listitem>
+                <para>Large regions. You can get the positive effects of smaller regions without
+                  additional overhead for MemStore and region management overhead.</para>
+              </listitem>
+              <listitem>
+                <para>Non-uniform keys, such as time dimension in a key. Only the stripes receiving
+                  the new keys will need to compact. Old data will not compact as often, if at
+                  all</para>
+              </listitem>
+            </itemizedlist>
+            <formalpara>
+              <title>Performance Improvements</title>
+              <para>Performance testing has shown that the performance of reads improves somewhat,
+                and variability of performance of reads and writes is greatly reduced. An overall
+                long-term performance improvement is seen on large non-uniform-row key regions, such
+                as a hash-prefixed timestamp key. These performance gains are the most dramatic on a
+                table which is already large. It is possible that the performance improvement might
+                extend to region splits.</para>
+            </formalpara>
+            <section
+              xml:id="ops.stripe.enable">
+              <title>Enabling Stripe Compaction</title>
+              <para>You can enable stripe compaction for a table or a column family, by setting its
+                  <varname>hbase.hstore.engine.class</varname> to
+                  <varname>org.apache.hadoop.hbase.regionserver.StripeStoreEngine</varname>. You
+                also need to set the <varname>hbase.hstore.blockingStoreFiles</varname> to a high
+                number, such as 100 (rather than the default value of 10).</para>
+              <procedure>
+                <title>Enable Stripe Compaction</title>
+                <step>
+                  <para>If the table already exists, disable the table.</para>
+                </step>
+                <step>
+                  <para>Run one of following commands in the HBase shell. Replace the table name
+                      <literal>orders_table</literal> with the name of your table.</para>
+                  <screen>
+<userinput>alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}</userinput>
+<userinput>alter 'orders_table', {NAME => 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}}</userinput>
+<userinput>create 'orders_table', 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}</userinput>                  
+                </screen>
+                </step>
+                <step>
+                  <para>Configure other options if needed. See <xref
+                      linkend="ops.stripe.config" /> for more information.</para>
+                </step>
+                <step>
+                  <para>Enable the table.</para>
+                </step>
+              </procedure>
 
-alter 'orders_table', {NAME => 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}}
+              <procedure>
+                <title>Disable Stripe Compaction</title>
+                <step>
+                  <para>Disable the table.</para>
+                </step>
+                <step>
+                  <para>Set the <varname>hbase.hstore.engine.class</varname> option to either nil or
+                      <literal>org.apache.hadoop.hbase.regionserver.DefaultStoreEngine</literal>.
+                    Either option has the same effect.</para>
+                  <screen>
+<userinput>alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => ''}</userinput>
+                </screen>
+                </step>
+                <step>
+                  <para>Enable the table.</para>
+                </step>
+              </procedure>
+              <para> When you enable a large table after changing the store engine either way, a
+                major compaction will likely be performed on most regions. This is not necessary on
+                new tables.</para>
+            </section>
+            <section
+              xml:id="ops.stripe.config">
+              <title>Configuring Stripe Compaction</title>
+              <para>Each of the settings for stripe compaction should be configured at the table or
+                column family, after disabling the table. If you use HBase shell, the general
+                command pattern is as follows:</para>
 
-create 'orders_table', 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}
-</programlisting>
-</para><para>
-Then, you can configure the other options if needed (see below) and enable the table.
-To switch back to default compactions, set <varname>hbase.hstore.engine.class</varname> to nil to unset it; or set it explicitly to "<varname>org.apache.hadoop.hbase.regionserver.DefaultStoreEngine</varname>" (this also needs to be done on a disabled table).
-</para><para>
-When you enable a large table after changing the store engine either way, a major compaction will likely be performed on most regions. This is not a problem with new tables.
-</para>
-</section><section xml:id="ops.stripe.config"><title>How to configure</title>
-<para>
-All of the settings described below are best set on table/cf level (with the table disabled first, for the settings to apply), similar to the above, e.g.
-<programlisting>
+              <programlisting>
 alter 'orders_table', CONFIGURATION => {'key' => 'value', ..., 'key' => 'value'}}
-</programlisting>
-</para>
-<section xml:id="ops.stripe.config.sizing"><title>Region and stripe sizing</title>
-<para>
-Based on your region sizing, you might want to also change your stripe sizing. By default, your new regions will start with one stripe. When the stripe is too big (16 memstore flushes size), on next compaction it will be split into two stripes. Stripe splitting will continue in a similar manner as the region grows, until the region itself is big enough to split (region split will work the same as with default compactions).
-</para><para>
-You can improve this pattern for your data. You should generally aim at stripe size of at least 1Gb, and about 8-12 stripes for uniform row keys - so, for example if your regions are 30 Gb, 12x2.5Gb stripes might be a good idea.
-</para><para>
-The settings are as follows:
-<informaltable frame='all'><tgroup cols='2' align='left' colsep='1' rowsep='1'><colspec colname='c1'/><colspec colname='c2'/>
-<thead><row><entry>Setting</entry><entry>Notes</entry></row></thead>
-<tbody>
-<row><entry>
-<varname>hbase.store.stripe.initialStripeCount</varname>
-</entry><entry>
-<para>Initial stripe count to create. You can use it as follows:
-</para><itemizedlist>
-<listitem><para>
-for relatively uniform row keys, if you know the approximate target number of stripes from the above, you can avoid some splitting overhead by starting w/several stripes (2, 5, 10...). Note that if the early data is not representative of overall row key distribution, this will not be as efficient.
-</para></listitem>
-  <listitem><para>
-for existing tables with lots of data, you can use this to pre-split stripes.
-</para></listitem>
-  <listitem>
-<para>for e.g. hash-prefixed sequential keys, with more than one hash prefix per region, you know that some pre-splitting makes sense.
-</para></listitem>
-</itemizedlist>
-</entry></row><row><entry>
-<varname>hbase.store.stripe.sizeToSplit</varname>
-</entry><entry>
-Maximum stripe size before it's split. You can use this in conjunction with the next setting to control target stripe size (sizeToSplit = splitPartsCount * target stripe size), according to the above sizing considerations.
-</entry></row><row><entry>
-<varname>hbase.store.stripe.splitPartCount</varname>
-</entry><entry>
-The number of new stripes to create when splitting one. The default is 2, and is good for most cases. For non-uniform row keys, you might experiment with increasing the number somewhat (3-4), to isolate the arriving updates into narrower slice of the region with just one split instead of several.
-</entry></row>
-</tbody>
-</tgroup></informaltable>
-</para>
-</section><section xml:id="ops.stripe.config.memstore"><title>Memstore sizing</title>
-<para>
-By default, the flush creates several files from one memstore, according to existing stripe boundaries and row keys to flush. This approach minimizes write amplification, but can be undesirable if memstore is small and there are many stripes (the files will be too small).
-</para><para>
-In such cases, you can set <varname>hbase.store.stripe.compaction.flushToL0</varname> to true. This will cause  flush to create a single file instead; when at least <varname>hbase.store.stripe.compaction.minFilesL0</varname> such files (by default, 4) accumulate, they will be compacted into striped files.</para>
-</section><section xml:id="ops.stripe.config.compact"><title>Normal compaction configuration</title>
-<para>
-All the settings that apply to normal compactions (file size limits, etc.) apply to stripe compactions. The exception are min and max number of files, which are set to higher values by default because the files in stripes are smaller. To control these for stripe compactions, use <varname>hbase.store.stripe.compaction.minFiles</varname> and <varname>.maxFiles</varname>.
-</para>
-</section>
-</section>
-</section>
-      </section>  <!--  compaction -->
+              </programlisting>
+              <section
+                xml:id="ops.stripe.config.sizing">
+                <title>Region and stripe sizing</title>
+                <para>You can configure your stripe sizing bsaed upon your region sizing. By
+                  default, your new regions will start with one stripe. On the next compaction after
+                  the stripe has grown too large (16 x MemStore flushes size), it is split into two
+                  stripes. Stripe splitting continues as the region grows, until the region is large
+                  enough to split.</para>
+                <para>You can improve this pattern for your own data. A good rule is to aim for a
+                  stripe size of at least 1 GB, and about 8-12 stripes for uniform row keys. For
+                  example, if your regions are 30 GB, 12 x 2.5 GB stripes might be a good starting
+                  point.</para>
+
+                <table
+                  frame="all">
+                  <title>Stripe Sizing Settings</title>
+                  <tgroup
+                    cols="2"
+                    align="left"
+                    colsep="1"
+                    rowsep="1">
+                    <colspec
+                      colname="c1" />
+                    <colspec
+                      colname="c2" />
+                    <thead>
+                      <row>
+                        <entry>Setting</entry>
+                        <entry>Notes</entry>
+                      </row>
+                    </thead>
+                    <tbody>
+                      <row>
+                        <entry>
+                          <varname>hbase.store.stripe.initialStripeCount</varname>
+                        </entry>
+                        <entry>
+                          <para>The number of stripes to create when stripe compaction is enabled.
+                            You can use it as follows: </para><itemizedlist>
+                            <listitem>
+                              <para>For relatively uniform row keys, if you know the approximate
+                                target number of stripes from the above, you can avoid some
+                                splitting overhead by starting with several stripes (2, 5, 10...).
+                                If the early data is not representative of overall row key
+                                distribution, this will not be as efficient.</para>
+                            </listitem>
+                            <listitem>
+                              <para>For existing tables with a large amount of data, this setting
+                                will effectively pre-split your stripes.</para>
+                            </listitem>
+                            <listitem>
+                              <para>For keys such as hash-prefixed sequential keys, with more than
+                                one hash prefix per region, pre-splitting may make sense. </para>
+                            </listitem>
+                          </itemizedlist>
+                        </entry>
+                      </row>
+                      <row>
+                        <entry>
+                          <varname>hbase.store.stripe.sizeToSplit</varname>
+                        </entry>
+                        <entry>The maximum size a stripe grows before splitting. Use this in
+                          conjunction with <varname>hbase.store.stripe.splitPartCount</varname> to
+                          control the target stripe size (sizeToSplit = splitPartsCount * target
+                          stripe size), according to the above sizing considerations. </entry>
+                      </row>
+                      <row>
+                        <entry>
+                          <varname>hbase.store.stripe.splitPartCount</varname>
+                        </entry>
+                        <entry>The number of new stripes to create when splitting a stripe. The
+                          default is 2, which is appropriate for most cases. For non-uniform row
+                          keys, you can experiment with increasing the number to 3 or 4, to isolate
+                          the arriving updates into narrower slice of the region without additional
+                          splits being required.</entry>
+                      </row>
+                    </tbody>
+                  </tgroup>
+                </table>
+              </section>
+              <section
+                xml:id="ops.stripe.config.memstore">
+                <title>MemStore Size Settings</title>
+                <para> By default, the flush creates several files from one MemStore, according to
+                  existing stripe boundaries and row keys to flush. This approach minimizes write
+                  amplification, but can be undesirable if the MemStore is small and there are many
+                  stripes, because the files will be too small. </para>
+                <para>In this type of situation, you can set
+                    <varname>hbase.store.stripe.compaction.flushToL0</varname> to
+                    <literal>true</literal>. This will cause a MemStore flush to create a single
+                  file instead. When at least
+                    <varname>hbase.store.stripe.compaction.minFilesL0</varname> such files (by
+                  default, 4) accumulate, they will be compacted into striped files.</para>
+              </section>
+              <section
+                xml:id="ops.stripe.config.compact">
+                <title>Normal Compaction Configuration and Stripe Compaction</title>
+                <para> All the settings that apply to normal compactions (see <xref
+                    linkend="compaction.configuration.parameters" />) apply to stripe compactions.
+                  The exceptions are the minimum and maximum number of files, which are set to
+                  higher values by default because the files in stripes are smaller. To control
+                  these for stripe compactions, use
+                    <varname>hbase.store.stripe.compaction.minFiles</varname> and
+                    <varname>hbase.store.stripe.compaction.maxFiles</varname>, rather than
+                    <varname>hbase.hstore.compaction.min</varname> and
+                    <varname>hbase.hstore.compaction.max</varname>. </para>
+              </section>
+            </section>
+          </section>
+        </section>  <!--  compaction -->
 
      </section>  <!--  store -->
 
@@ -3772,7 +4183,7 @@ public enum Consistency {
                 required, this can be implemented later though. </para>
             </listitem>
           </itemizedlist>
-			
+
         <figure>
           <title>HFile Version 1</title>
           <mediaobject>
@@ -3788,7 +4199,6 @@ public enum Consistency {
           </mediaobject>
         </figure>
 		<para>
-
 			To better understand the TIMELINE semantics, lets look at the above diagram. Lets say that there are two clients, and the first one writes x=1 at first, then x=2 and x=3 later. As above, all writes are handled by the primary region replica. The writes are saved in the write ahead log (WAL), and replicated to the other replicas asynchronously. In the above diagram, notice that replica_id=1 received 2 updates, and it’s data shows that x=2, while the replica_id=2 only received a single update, and its data shows that x=1. 
 		</para><para>
 			If client1 reads with STRONG consistency, it will only talk with the replica_id=0, and thus is guaranteed to observe the latest value of x=3. In case of a client issuing TIMELINE consistency reads, the RPC will go to all replicas (after primary timeout) and the result from the first response will be returned back. Thus the client can see either 1, 2 or 3 as the value of x. Let’s say that the primary region has failed and log replication cannot continue for some time. If the client does multiple reads with TIMELINE consistency, she can observe x=2 first, then x=1, and so on. 

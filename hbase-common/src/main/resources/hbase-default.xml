@@ -597,77 +597,154 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.hregion.max.filesize</name>
     <value>10737418240</value>
     <description>
-    Maximum HStoreFile size. If any one of a column families' HStoreFiles has
-    grown to exceed this value, the hosting HRegion is split in two.</description>
+    Maximum HFile size. If the sum of the sizes of a region's HFiles has grown to exceed this 
+    value, the region is split in two.</description>
   </property>
   <property>
     <name>hbase.hregion.majorcompaction</name>
     <value>604800000</value>
-    <description>The time (in miliseconds) between 'major' compactions of all
-    HStoreFiles in a region.  Default: Set to 7 days.  Major compactions tend to
-    happen exactly when you need them least so enable them such that they run at
-    off-peak for your deploy; or, since this setting is on a periodicity that is
-    unlikely to match your loading, run the compactions via an external
-    invocation out of a cron job or some such.</description>
+    <description>Time between major compactions, expressed in milliseconds. Set to 0 to disable
+      time-based automatic major compactions. User-requested and size-based major compactions will
+      still run. This value is multiplied by hbase.hregion.majorcompaction.jitter to cause
+      compaction to start at a somewhat-random time during a given window of time. The default value
+      is 7 days, expressed in milliseconds. If major compactions are causing disruption in your
+      environment, you can configure them to run at off-peak times for your deployment, or disable
+      time-based major compactions by setting this parameter to 0, and run major compactions in a
+      cron job or by another external mechanism.</description>
   </property>
   <property>
     <name>hbase.hregion.majorcompaction.jitter</name>
     <value>0.50</value>
-    <description>Jitter outer bound for major compactions.
-    On each regionserver, we multiply the hbase.region.majorcompaction
-    interval by some random fraction that is inside the bounds of this
-    maximum.  We then add this + or - product to when the next
-    major compaction is to run.  The idea is that major compaction
-    does happen on every regionserver at exactly the same time.  The
-    smaller this number, the closer the compactions come together.</description>
+    <description>A multiplier applied to hbase.hregion.majorcompaction to cause compaction to occur
+      a given amount of time either side of hbase.hregion.majorcompaction. The smaller the number,
+      the closer the compactions will happen to the hbase.hregion.majorcompaction
+      interval.</description>
   </property>
   <property>
     <name>hbase.hstore.compactionThreshold</name>
     <value>3</value>
-    <description>
-    If more than this number of HStoreFiles in any one HStore
-    (one HStoreFile is written per flush of memstore) then a compaction
-    is run to rewrite all HStoreFiles files as one.  Larger numbers
-    put off compaction but when it runs, it takes longer to complete.</description>
+    <description> If more than this number of StoreFiles exist in any one Store 
+      (one StoreFile is written per flush of MemStore), a compaction is run to rewrite all 
+      StoreFiles into a single StoreFile. Larger values delay compaction, but when compaction does
+      occur, it takes longer to complete.</description>
   </property>
   <property>
     <name>hbase.hstore.flusher.count</name>
     <value>2</value>
-    <description>
-    The number of flush threads. With less threads, the memstore flushes will be queued. With
-    more threads, the flush will be executed in parallel, increasing the hdfs load. This can
-    lead as well to more compactions.
-    </description>
+    <description> The number of flush threads. With fewer threads, the MemStore flushes will be
+      queued. With more threads, the flushes will be executed in parallel, increasing the load on
+      HDFS, and potentially causing more compactions. </description>
   </property>
   <property>
     <name>hbase.hstore.blockingStoreFiles</name>
     <value>10</value>
-    <description>
-    If more than this number of StoreFiles in any one Store
-    (one StoreFile is written per flush of MemStore) then updates are
-    blocked for this HRegion until a compaction is completed, or
-    until hbase.hstore.blockingWaitTime has been exceeded.</description>
+    <description> If more than this number of StoreFiles exist in any one Store (one StoreFile
+     is written per flush of MemStore), updates are blocked for this region until a compaction is
+      completed, or until hbase.hstore.blockingWaitTime has been exceeded.</description>
   </property>
   <property>
     <name>hbase.hstore.blockingWaitTime</name>
     <value>90000</value>
-    <description>
-    The time an HRegion will block updates for after hitting the StoreFile
-    limit defined by hbase.hstore.blockingStoreFiles.
-    After this time has elapsed, the HRegion will stop blocking updates even
-    if a compaction has not been completed.</description>
+    <description> The time for which a region will block updates after reaching the StoreFile limit
+    defined by hbase.hstore.blockingStoreFiles. After this time has elapsed, the region will stop 
+    blocking updates even if a compaction has not been completed.</description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.min</name>
+    <value>3</value>
+    <description>The minimum number of StoreFiles which must be eligible for compaction before 
+      compaction can run. The goal of tuning hbase.hstore.compaction.min is to avoid ending up with 
+      too many tiny StoreFiles to compact. Setting this value to 2 would cause a minor compaction 
+      each time you have two StoreFiles in a Store, and this is probably not appropriate. If you
+      set this value too high, all the other values will need to be adjusted accordingly. For most 
+      cases, the default value is appropriate. In previous versions of HBase, the parameter
+      hbase.hstore.compaction.min was named hbase.hstore.compactionThreshold.</description>
   </property>
   <property>
     <name>hbase.hstore.compaction.max</name>
     <value>10</value>
-    <description>Max number of HStoreFiles to compact per 'minor' compaction.</description>
+    <description>The maximum number of StoreFiles which will be selected for a single minor 
+      compaction, regardless of the number of eligible StoreFiles. Effectively, the value of
+      hbase.hstore.compaction.max controls the length of time it takes a single compaction to
+      complete. Setting it larger means that more StoreFiles are included in a compaction. For most
+      cases, the default value is appropriate.</description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.min.size</name>
+    <value>134217728</value>
+    <description>A StoreFile smaller than this size will always be eligible for minor compaction. 
+      HFiles this size or larger are evaluated by hbase.store.compaction.ratio to determine if 
+      they are eligible. Because this limit represents the "automatic include"limit for all 
+      StoreFiles smaller than this value, this value may need to be reduced in write-heavy 
+      environments where many StoreFiles in the 1-2 MB range are being flushed, because every 
+      StoreFile will be targeted for compaction and the resulting StoreFiles may still be under the
+      minimum size and require further compaction. If this parameter is lowered, the ratio check is
+      triggered more quickly. This addressed some issues seen in earlier versions of HBase but 
+      changing this parameter is no longer necessary in most situations. Default: 128 MB expressed 
+      in bytes.</description>
+  </property>
+    <property>
+    <name>hbase.hstore.compaction.max.size</name>
+    <value>9223372036854775807</value>
+    <description>A StoreFile larger than this size will be excluded from compaction. The effect of 
+      raising hbase.hstore.compaction.max.size is fewer, larger StoreFiles that do not get 
+      compacted often. If you feel that compaction is happening too often without much benefit, you
+      can try raising this value. Default: the value of LONG.MAX_VALUE, expressed in bytes.</description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.ratio</name>
+    <value>1.2F</value>
+    <description>For minor compaction, this ratio is used to determine whether a given StoreFile 
+      which is larger than hbase.hstore.compaction.min.size is eligible for compaction. Its
+      effect is to limit compaction of large StoreFiles. The value of hbase.hstore.compaction.ratio
+      is expressed as a floating-point decimal. A large ratio, such as 10, will produce a single 
+      giant StoreFile. Conversely, a low value, such as .25, will produce behavior similar to the 
+      BigTable compaction algorithm, producing four StoreFiles. A moderate value of between 1.0 and
+      1.4 is recommended. When tuning this value, you are balancing write costs with read costs. 
+      Raising the value (to something like 1.4) will have more write costs, because you will 
+      compact larger StoreFiles. However, during reads, HBase will need to seek through fewer 
+      StoreFiles to accomplish the read. Consider this approach if you cannot take advantage of 
+      Bloom filters. Otherwise, you can lower this value to something like 1.0 to reduce the 
+      background cost of writes, and use Bloom filters to control the number of StoreFiles touched 
+      during reads. For most cases, the default value is appropriate.</description>
+  </property>
+  <property>
+    <name>hbase.hstore.compaction.ratio.offpeak</name>
+    <value>5.0F</value>
+    <description>Allows you to set a different (by default, more aggressive) ratio for determining
+      whether larger StoreFiles are included in compactions during off-peak hours. Works in the 
+      same way as hbase.hstore.compaction.ratio. Only applies if hbase.offpeak.start.hour and 
+      hbase.offpeak.end.hour are also enabled.</description>
+  </property>
+  <property>
+    <name>hbase.offpeak.start.hour</name>
+    <value>-1</value>
+    <description>The start of off-peak hours, expressed as an integer between 0 and 23, inclusive.
+      Set to -1 to disable off-peak.</description>
+  </property>
+  <property>
+    <name>hbase.offpeak.end.hour</name>
+    <value>-1</value>
+    <description>The end of off-peak hours, expressed as an integer between 0 and 23, inclusive. Set
+      to -1 to disable off-peak.</description>
+  </property>
+  <property>
+    <name>hbase.regionserver.thread.compaction.throttle</name>
+    <value>2560</value>
+    <description>There are two different thread pools for compactions, one for large compactions and
+      the other for small compactions. This helps to keep compaction of lean tables (such as
+        <systemitem>hbase:meta</systemitem>) fast. If a compaction is larger than this threshold, it
+      goes into the large compaction pool. In most cases, the default value is appropriate. Default:
+      2 x hbase.hstore.compaction.max x hbase.hregion.memstore.flush.size (which defaults to 128).
+      The value field assumes that the value of hbase.hregion.memstore.flush.size is unchanged from
+      the default.</description>
   </property>
   <property>
     <name>hbase.hstore.compaction.kv.max</name>
     <value>10</value>
-    <description>How many KeyValues to read and then write in a batch when flushing
-        or compacting.  Do less if big KeyValues and problems with OOME.
-        Do more if wide, small rows.</description>
+    <description>The maximum number of KeyValues to read and then write in a batch when flushing or
+      compacting. Set this lower if you have big KeyValues and problems with Out Of Memory
+      Exceptions Set this higher if you have wide, small rows. </description>
   </property>
   <property>
     <name>hbase.storescanner.parallel.seek.enable</name>
@@ -686,7 +763,7 @@ possible configurations would overwhelm and obscure the important.
     <name>hfile.block.cache.size</name>
     <value>0.4</value>
     <description>Percentage of maximum heap (-Xmx setting) to allocate to block cache
-        used by HFile/StoreFile. Default of 0.4 means allocate 40%.
+        used by a StoreFile. Default of 0.4 means allocate 40%.
         Set to 0 to disable but it's not recommended; you need at least
         enough cache to hold the storefile indices.</description>
   </property>
