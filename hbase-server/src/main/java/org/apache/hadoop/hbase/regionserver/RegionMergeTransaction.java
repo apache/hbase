@@ -31,22 +31,17 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
-import org.apache.hadoop.hbase.coordination.RegionMergeCoordination.RegionMergeDetails;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.SplitTransaction.LoggingProgressable;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Executes region merge as a "transaction". It is similar with
@@ -89,7 +84,6 @@ public class RegionMergeTransaction {
   private final Path mergesdir;
   // We only merge adjacent regions if forcible is false
   private final boolean forcible;
-  private boolean useCoordinationForAssignment;
 
   /**
    * Types to add to the transaction journal. Each enum is a step in the merge
@@ -140,8 +134,6 @@ public class RegionMergeTransaction {
       "Failed to close region: already closed by another thread");
 
   private RegionServerCoprocessorHost rsCoprocessorHost = null;
-
-  private RegionMergeDetails rmd;
 
   /**
    * Constructor
@@ -231,14 +223,6 @@ public class RegionMergeTransaction {
    */
   public HRegion execute(final Server server,
  final RegionServerServices services) throws IOException {
-    useCoordinationForAssignment =
-        server == null ? true : ConfigUtil.useZKForAssignment(server.getConfiguration());
-    if (rmd == null) {
-      rmd =
-          server != null && server.getCoordinatedStateManager() != null ? ((BaseCoordinatedStateManager) server
-              .getCoordinatedStateManager()).getRegionMergeCoordination().getDefaultDetails()
-              : null;
-    }
     if (rsCoprocessorHost == null) {
       rsCoprocessorHost = server != null ?
         ((HRegionServer) server).getRegionServerCoprocessorHost() : null;
@@ -253,11 +237,6 @@ public class RegionMergeTransaction {
   public HRegion stepsAfterPONR(final Server server, final RegionServerServices services,
       HRegion mergedRegion) throws IOException {
     openMergedRegion(server, services, mergedRegion);
-    if (useCoordination(server)) {
-      ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-          .getRegionMergeCoordination().completeRegionMergeTransaction(services, mergedRegionInfo,
-            region_a, region_b, rmd, mergedRegion);
-    }
     if (rsCoprocessorHost != null) {
       rsCoprocessorHost.postMerge(this.region_a, this.region_b, mergedRegion);
     }
@@ -322,33 +301,14 @@ public class RegionMergeTransaction {
     // will determine whether the region is merged or not in case of failures.
     // If it is successful, master will roll-forward, if not, master will
     // rollback
-    if (!testing && useCoordinationForAssignment) {
-      if (metaEntries.isEmpty()) {
-        MetaTableAccessor.mergeRegions(server.getShortCircuitConnection(),
-          mergedRegion.getRegionInfo(), region_a.getRegionInfo(), region_b.getRegionInfo(),
-          server.getServerName());
-      } else {
-        mergeRegionsAndPutMetaEntries(server.getShortCircuitConnection(),
-          mergedRegion.getRegionInfo(), region_a.getRegionInfo(), region_b.getRegionInfo(),
-          server.getServerName(), metaEntries);
-      }
-    } else if (services != null && !useCoordinationForAssignment) {
-      if (!services.reportRegionStateTransition(TransitionCode.MERGE_PONR,
-          mergedRegionInfo, region_a.getRegionInfo(), region_b.getRegionInfo())) {
-        // Passed PONR, let SSH clean it up
-        throw new IOException("Failed to notify master that merge passed PONR: "
-          + region_a.getRegionInfo().getRegionNameAsString() + " and "
-          + region_b.getRegionInfo().getRegionNameAsString());
-      }
+    if (services != null && !services.reportRegionStateTransition(TransitionCode.MERGE_PONR,
+        mergedRegionInfo, region_a.getRegionInfo(), region_b.getRegionInfo())) {
+      // Passed PONR, let SSH clean it up
+      throw new IOException("Failed to notify master that merge passed PONR: "
+        + region_a.getRegionInfo().getRegionNameAsString() + " and "
+        + region_b.getRegionInfo().getRegionNameAsString());
     }
     return mergedRegion;
-  }
-
-  private void mergeRegionsAndPutMetaEntries(HConnection hConnection,
-      HRegionInfo mergedRegion, HRegionInfo regionA, HRegionInfo regionB,
-      ServerName serverName, List<Mutation> metaEntries) throws IOException {
-    prepareMutationsForMerge(mergedRegion, regionA, regionB, serverName, metaEntries);
-    MetaTableAccessor.mutateMetaTable(hConnection, metaEntries);
   }
 
   public void prepareMutationsForMerge(HRegionInfo mergedRegion, HRegionInfo regionA,
@@ -380,40 +340,13 @@ public class RegionMergeTransaction {
 
   public HRegion stepsBeforePONR(final Server server, final RegionServerServices services,
       boolean testing) throws IOException {
-    if (rmd == null) {
-      rmd =
-          server != null && server.getCoordinatedStateManager() != null ? ((BaseCoordinatedStateManager) server
-              .getCoordinatedStateManager()).getRegionMergeCoordination().getDefaultDetails()
-              : null;
-    }
-
-    // If server doesn't have a coordination state manager, don't do coordination actions.
-    if (useCoordination(server)) {
-      try {
-        ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-            .getRegionMergeCoordination().startRegionMergeTransaction(mergedRegionInfo,
-              server.getServerName(), region_a.getRegionInfo(), region_b.getRegionInfo());
-      } catch (IOException e) {
-        throw new IOException("Failed to start region merge transaction for "
-            + this.mergedRegionInfo.getRegionNameAsString(), e);
-      }
-    } else if (services != null && !useCoordinationForAssignment) {
-      if (!services.reportRegionStateTransition(TransitionCode.READY_TO_MERGE,
-          mergedRegionInfo, region_a.getRegionInfo(), region_b.getRegionInfo())) {
-        throw new IOException("Failed to get ok from master to merge "
-          + region_a.getRegionInfo().getRegionNameAsString() + " and "
-          + region_b.getRegionInfo().getRegionNameAsString());
-      }
+    if (services != null && !services.reportRegionStateTransition(TransitionCode.READY_TO_MERGE,
+        mergedRegionInfo, region_a.getRegionInfo(), region_b.getRegionInfo())) {
+      throw new IOException("Failed to get ok from master to merge "
+        + region_a.getRegionInfo().getRegionNameAsString() + " and "
+        + region_b.getRegionInfo().getRegionNameAsString());
     }
     this.journal.add(JournalEntry.SET_MERGING);
-    if (useCoordination(server)) {
-      // After creating the merge node, wait for master to transition it
-      // from PENDING_MERGE to MERGING so that we can move on. We want master
-      // knows about it and won't transition any region which is merging.
-      ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-          .getRegionMergeCoordination().waitForRegionMergeTransaction(services, mergedRegionInfo,
-            region_a, region_b, rmd);
-    }
 
     this.region_a.getRegionFileSystem().createMergesDir();
     this.journal.add(JournalEntry.CREATED_MERGE_DIR);
@@ -431,19 +364,6 @@ public class RegionMergeTransaction {
     // Nothing to unroll here if failure -- clean up of CREATE_MERGE_DIR will
     // clean this up.
     mergeStoreFiles(hstoreFilesOfRegionA, hstoreFilesOfRegionB);
-
-    if (useCoordination(server)) {
-      try {
-        // Do the final check in case any merging region is moved somehow. If so, the transition
-        // will fail.
-        ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-            .getRegionMergeCoordination().confirmRegionMergeTransaction(this.mergedRegionInfo,
-              region_a.getRegionInfo(), region_b.getRegionInfo(), server.getServerName(), rmd);
-      } catch (IOException e) {
-        throw new IOException("Failed setting MERGING on "
-            + this.mergedRegionInfo.getRegionNameAsString(), e);
-      }
-    }
 
     // Log to the journal that we are creating merged region. We could fail
     // halfway through. If we do, we could have left
@@ -578,20 +498,13 @@ public class RegionMergeTransaction {
     merged.openHRegion(reporter);
 
     if (services != null) {
-      try {
-        if (useCoordinationForAssignment) {
-          services.postOpenDeployTasks(merged);
-        } else if (!services.reportRegionStateTransition(TransitionCode.MERGED,
-            mergedRegionInfo, region_a.getRegionInfo(), region_b.getRegionInfo())) {
-          throw new IOException("Failed to report merged region to master: "
-            + mergedRegionInfo.getShortNameToLog());
-        }
-        services.addToOnlineRegions(merged);
-      } catch (KeeperException ke) {
-        throw new IOException(ke);
+      if (!services.reportRegionStateTransition(TransitionCode.MERGED,
+          mergedRegionInfo, region_a.getRegionInfo(), region_b.getRegionInfo())) {
+        throw new IOException("Failed to report merged region to master: "
+          + mergedRegionInfo.getShortNameToLog());
       }
+      services.addToOnlineRegions(merged);
     }
-
   }
 
   /**
@@ -652,10 +565,7 @@ public class RegionMergeTransaction {
       switch (je) {
 
         case SET_MERGING:
-        if (useCoordination(server)) {
-          ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-              .getRegionMergeCoordination().clean(this.mergedRegionInfo);
-          } else if (services != null && !useCoordinationForAssignment
+          if (services != null
               && !services.reportRegionStateTransition(TransitionCode.MERGE_REVERTED,
                   mergedRegionInfo, region_a.getRegionInfo(), region_b.getRegionInfo())) {
             return false;
@@ -733,13 +643,6 @@ public class RegionMergeTransaction {
   Path getMergesDir() {
     return this.mergesdir;
   }
-
-  private boolean useCoordination(final Server server) {
-    return server != null && useCoordinationForAssignment
-        && server.getCoordinatedStateManager() != null;
-  }
-
-
 
   /**
    * Checks if the given region has merge qualifier in hbase:meta

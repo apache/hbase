@@ -95,13 +95,11 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -1505,10 +1503,8 @@ public class TestDistributedLogSplitting {
     return count;
   }
 
-  private void blockUntilNoRIT(ZooKeeperWatcher zkw, HMaster master)
-  throws KeeperException, InterruptedException {
-    ZKAssign.blockUntilNoRIT(zkw);
-    master.assignmentManager.waitUntilNoRegionsInTransition(60000);
+  private void blockUntilNoRIT(ZooKeeperWatcher zkw, HMaster master) throws Exception {
+    TEST_UTIL.waitUntilNoRegionsInTransition(60000);
   }
 
   private void putData(HRegion region, byte[] startRow, int numRows, byte [] qf,

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.zookeeper;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -92,8 +93,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   public String backupMasterAddressesZNode;
   // znode containing the current cluster state
   public String clusterStateZNode;
-  // znode used for region transitioning and assignment
-  public String assignmentZNode;
   // znode used for table disabling/enabling
   public String tableZNode;
   // znode containing the unique cluster ID
@@ -111,11 +110,9 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
 
 
   // Certain ZooKeeper nodes need to be world-readable
-  public static final ArrayList<ACL> CREATOR_ALL_AND_WORLD_READABLE =
-    new ArrayList<ACL>() { {
-      add(new ACL(ZooDefs.Perms.READ,ZooDefs.Ids.ANYONE_ID_UNSAFE));
-      add(new ACL(ZooDefs.Perms.ALL,ZooDefs.Ids.AUTH_IDS));
-    }};
+  public static final List<ACL> CREATOR_ALL_AND_WORLD_READABLE =
+    Arrays.asList(new ACL(ZooDefs.Perms.READ,ZooDefs.Ids.ANYONE_ID_UNSAFE),
+      new ACL(ZooDefs.Perms.ALL,ZooDefs.Ids.AUTH_IDS));
 
   private final Configuration conf;
 
@@ -171,9 +168,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     try {
       // Create all the necessary "directories" of znodes
       ZKUtil.createWithParents(this, baseZNode);
-      if (conf.getBoolean("hbase.assignment.usezk", false)) {
-        ZKUtil.createAndFailSilent(this, assignmentZNode);
-      }
       ZKUtil.createAndFailSilent(this, rsZNode);
       ZKUtil.createAndFailSilent(this, drainingZNode);
       ZKUtil.createAndFailSilent(this, tableZNode);
@@ -220,8 +214,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
         conf.get("zookeeper.znode.backup.masters", "backup-masters"));
     clusterStateZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.state", "running"));
-    assignmentZNode = ZKUtil.joinZNode(baseZNode,
-        conf.get("zookeeper.znode.unassigned", "region-in-transition"));
     tableZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.tableEnableDisable", "table"));
     clusterIdZNode = ZKUtil.joinZNode(baseZNode,

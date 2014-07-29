@@ -45,9 +45,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -94,16 +92,9 @@ public class TestRegionReplicas {
 
   @AfterClass
   public static void afterClass() throws Exception {
+    HRegionServer.TEST_SKIP_REPORTING_TRANSITION = false;
     table.close();
     HTU.shutdownMiniCluster();
-  }
-
-  @After
-  public void after() throws Exception {
-    // Clean the state if the test failed before cleaning the znode
-    // It does not manage all bad failures, so if there are multiple failures, only
-    //  the first one should be looked at.
-    ZKAssign.deleteNodeFailSilent(HTU.getZooKeeperWatcher(), hriPrimary);
   }
 
   private HRegionServer getRS() {
@@ -111,9 +102,8 @@ public class TestRegionReplicas {
   }
 
   private void openRegion(HRegionInfo hri) throws Exception {
-    ZKAssign.createNodeOffline(HTU.getZooKeeperWatcher(), hri, getRS().getServerName());
     // first version is '0'
-    AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(getRS().getServerName(), hri, 0, null, null);
+    AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(getRS().getServerName(), hri, null, null);
     AdminProtos.OpenRegionResponse responseOpen = getRS().getRSRpcServices().openRegion(null, orr);
     Assert.assertTrue(responseOpen.getOpeningStateCount() == 1);
     Assert.assertTrue(responseOpen.getOpeningState(0).
@@ -122,16 +112,12 @@ public class TestRegionReplicas {
   }
 
   private void closeRegion(HRegionInfo hri) throws Exception {
-    ZKAssign.createNodeClosing(HTU.getZooKeeperWatcher(), hri, getRS().getServerName());
-
     AdminProtos.CloseRegionRequest crr = RequestConverter.buildCloseRegionRequest(getRS().getServerName(),
-        hri.getEncodedName(), true);
+        hri.getEncodedName());
     AdminProtos.CloseRegionResponse responseClose = getRS().getRSRpcServices().closeRegion(null, crr);
     Assert.assertTrue(responseClose.getClosed());
 
     checkRegionIsClosed(hri.getEncodedName());
-
-    ZKAssign.deleteClosedNode(HTU.getZooKeeperWatcher(), hri.getEncodedName(), getRS().getServerName());
   }
 
   private void checkRegionIsOpened(String encodedRegionName) throws Exception {
@@ -141,9 +127,6 @@ public class TestRegionReplicas {
     }
 
     Assert.assertTrue(getRS().getRegionByEncodedName(encodedRegionName).isAvailable());
-
-    Assert.assertTrue(
-        ZKAssign.deleteOpenedNode(HTU.getZooKeeperWatcher(), encodedRegionName, getRS().getServerName()));
   }
 
 

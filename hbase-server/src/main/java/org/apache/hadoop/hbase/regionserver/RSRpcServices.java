@@ -50,11 +50,11 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
@@ -66,7 +66,6 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.coordination.CloseRegionCoordination;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
@@ -146,7 +145,6 @@ import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
-import org.apache.hadoop.hbase.coordination.OpenRegionCoordination;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -927,10 +925,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
       requestCount.increment();
       LOG.info("Close " + encodedRegionName + ", moving to " + sn);
-      CloseRegionCoordination.CloseRegionDetails crd = regionServer.getCoordinatedStateManager()
-        .getCloseRegionCoordination().parseFromProtoRequest(request);
-
-      boolean closed = regionServer.closeRegion(encodedRegionName, false, crd, sn);
+      boolean closed = regionServer.closeRegion(encodedRegionName, false, sn);
       CloseRegionResponse.Builder builder = CloseRegionResponse.newBuilder().setClosed(closed);
       return builder.build();
     } catch (IOException ie) {
@@ -1236,11 +1231,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     for (RegionOpenInfo regionOpenInfo : request.getOpenInfoList()) {
       final HRegionInfo region = HRegionInfo.convert(regionOpenInfo.getRegion());
-      OpenRegionCoordination coordination = regionServer.getCoordinatedStateManager().
-        getOpenRegionCoordination();
-      OpenRegionCoordination.OpenRegionDetails ord =
-        coordination.parseFromProtoRequest(regionOpenInfo);
-
       HTableDescriptor htd;
       try {
         final HRegion onlineRegion = regionServer.getFromOnlineRegions(region.getEncodedName());
@@ -1284,10 +1274,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           region.getEncodedNameAsBytes(), Boolean.TRUE);
 
         if (Boolean.FALSE.equals(previous)) {
-          // There is a close in progress. We need to mark this open as failed in ZK.
-
-          coordination.tryTransitionFromOfflineToFailedOpen(regionServer, region, ord);
-
+          // There is a close in progress. This should not happen any more.
           throw new RegionAlreadyInTransitionException("Received OPEN for the region:"
             + region.getRegionNameAsString() + " , which we are already trying to CLOSE ");
         }
@@ -1324,12 +1311,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // Need to pass the expected version in the constructor.
           if (region.isMetaRegion()) {
             regionServer.service.submit(new OpenMetaHandler(
-              regionServer, regionServer, region, htd, coordination, ord));
+              regionServer, regionServer, region, htd));
           } else {
             regionServer.updateRegionFavoredNodesMapping(region.getEncodedName(),
               regionOpenInfo.getFavoredNodesList());
             regionServer.service.submit(new OpenRegionHandler(
-              regionServer, regionServer, region, htd, coordination, ord));
+              regionServer, regionServer, region, htd));
           }
         }
 

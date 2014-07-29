@@ -52,24 +52,4 @@ public abstract class BaseCoordinatedStateManager implements CoordinatedStateMan
   @Override
   public abstract TableStateManager getTableStateManager() throws InterruptedException,
     CoordinatedStateException;
-
-  /**
-   * Method to retrieve coordination for split transaction.
-   */
-  abstract public SplitTransactionCoordination getSplitTransactionCoordination();
-
-  /**
-   * Method to retrieve coordination for closing region operations.
-   */
-  public abstract CloseRegionCoordination getCloseRegionCoordination();
-
-  /**
-   * Method to retrieve coordination for opening region operations.
-   */
-  public abstract OpenRegionCoordination getOpenRegionCoordination();
-
-  /**
-   * Method to retrieve coordination for region merge transaction
-   */
-  public abstract  RegionMergeCoordination getRegionMergeCoordination();
 }

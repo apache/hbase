@@ -64,7 +64,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.R
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Triple;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -159,7 +159,7 @@ public class ServerManager {
    * handler is not enabled, is queued up.
    * <p>
    * So this is a set of region servers known to be dead but not submitted to
-   * ServerShutdownHander for processing yet.
+   * ServerShutdownHandler for processing yet.
    */
   private Set<ServerName> queuedDeadServers = new HashSet<ServerName>();
 
@@ -310,7 +310,7 @@ public class ServerManager {
    * Check is a server of same host and port already exists,
    * if not, or the existed one got a smaller start code, record it.
    *
-   * @param sn the server to check and record
+   * @param serverName the server to check and record
    * @param sl the server load on the server
    * @return true if the server is recorded, otherwise, false
    */
@@ -717,12 +717,10 @@ public class ServerManager {
    * <p>
    * @param server server to open a region
    * @param region region to open
-   * @param versionOfOfflineNode that needs to be present in the offline node
-   * when RS tries to change the state from OFFLINE to other states.
    * @param favoredNodes
    */
   public RegionOpeningState sendRegionOpen(final ServerName server,
-      HRegionInfo region, int versionOfOfflineNode, List<ServerName> favoredNodes)
+      HRegionInfo region, List<ServerName> favoredNodes)
   throws IOException {
     AdminService.BlockingInterface admin = getRsAdmin(server);
     if (admin == null) {
@@ -730,8 +728,8 @@ public class ServerManager {
         " failed because no RPC connection found to this server");
       return RegionOpeningState.FAILED_OPENING;
     }
-    OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(server, 
-      region, versionOfOfflineNode, favoredNodes, 
+    OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(server,
+      region, favoredNodes,
       (RecoveryMode.LOG_REPLAY == this.services.getMasterFileSystem().getLogRecoveryMode()));
     try {
       OpenRegionResponse response = admin.openRegion(null, request);
@@ -751,7 +749,7 @@ public class ServerManager {
    * @return a list of region opening states
    */
   public List<RegionOpeningState> sendRegionOpen(ServerName server,
-      List<Triple<HRegionInfo, Integer, List<ServerName>>> regionOpenInfos)
+      List<Pair<HRegionInfo, List<ServerName>>> regionOpenInfos)
   throws IOException {
     AdminService.BlockingInterface admin = getRsAdmin(server);
     if (admin == null) {
@@ -760,7 +758,7 @@ public class ServerManager {
       return null;
     }
 
-    OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(regionOpenInfos, 
+    OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(regionOpenInfos,
       (RecoveryMode.LOG_REPLAY == this.services.getMasterFileSystem().getLogRecoveryMode()));
     try {
       OpenRegionResponse response = admin.openRegion(null, request);
@@ -777,15 +775,11 @@ public class ServerManager {
    * have the specified region or the region is being split.
    * @param server server to open a region
    * @param region region to open
-   * @param versionOfClosingNode
-   *   the version of znode to compare when RS transitions the znode from
-   *   CLOSING state.
    * @param dest - if the region is moved to another server, the destination server. null otherwise.
-   * @return true if server acknowledged close, false if not
    * @throws IOException
    */
   public boolean sendRegionClose(ServerName server, HRegionInfo region,
-    int versionOfClosingNode, ServerName dest, boolean transitionInZK) throws IOException {
+      ServerName dest) throws IOException {
     if (server == null) throw new NullPointerException("Passed server is null");
     AdminService.BlockingInterface admin = getRsAdmin(server);
     if (admin == null) {
@@ -795,12 +789,12 @@ public class ServerManager {
         " failed because no RPC connection found to this server");
     }
     return ProtobufUtil.closeRegion(admin, server, region.getRegionName(),
-      versionOfClosingNode, dest, transitionInZK);
+      dest);
   }
 
   public boolean sendRegionClose(ServerName server,
-      HRegionInfo region, int versionOfClosingNode) throws IOException {
-    return sendRegionClose(server, region, versionOfClosingNode, null, true);
+      HRegionInfo region) throws IOException {
+    return sendRegionClose(server, region, null);
   }
 
   /**

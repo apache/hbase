@@ -34,21 +34,17 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.RegionTransition;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.zookeeper.KeeperException;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -351,28 +347,6 @@ public class RegionStates {
 
   /**
    * Update a region state. It will be put in transition if not already there.
-   *
-   * If we can't find the region info based on the region name in
-   * the transition, log a warning and return null.
-   */
-  public RegionState updateRegionState(
-      final RegionTransition transition, final State state) {
-    byte [] regionName = transition.getRegionName();
-    HRegionInfo regionInfo = getRegionInfo(regionName);
-    if (regionInfo == null) {
-      String prettyRegionName = HRegionInfo.prettyPrint(
-        HRegionInfo.encodeRegionName(regionName));
-      LOG.warn("Failed to find region " + prettyRegionName
-        + " in updating its state to " + state
-        + " based on region transition " + transition);
-      return null;
-    }
-    return updateRegionState(regionInfo, state,
-      transition.getServerName());
-  }
-
-  /**
-   * Update a region state. It will be put in transition if not already there.
    */
   public RegionState updateRegionState(
       final HRegionInfo hri, final State state, final ServerName serverName) {
@@ -548,8 +522,7 @@ public class RegionStates {
   /**
    * A server is offline, all regions on it are dead.
    */
-  public synchronized List<HRegionInfo> serverOffline(
-      final ZooKeeperWatcher watcher, final ServerName sn) {
+  public synchronized List<HRegionInfo> serverOffline(final ServerName sn) {
     // Offline all regions on this server not already in transition.
     List<HRegionInfo> rits = new ArrayList<HRegionInfo>();
     Set<HRegionInfo> assignedRegions = serverHoldings.get(sn);
@@ -565,13 +538,7 @@ public class RegionStates {
         regionsToOffline.add(region);
       } else if (isRegionInState(region, State.SPLITTING, State.MERGING)) {
         LOG.debug("Offline splitting/merging region " + getRegionState(region));
-        try {
-          // Delete the ZNode if exists
-          ZKAssign.deleteNodeFailSilent(watcher, region);
-          regionsToOffline.add(region);
-        } catch (KeeperException ke) {
-          server.abort("Unexpected ZK exception deleting node " + region, ke);
-        }
+        regionsToOffline.add(region);
       }
     }
 

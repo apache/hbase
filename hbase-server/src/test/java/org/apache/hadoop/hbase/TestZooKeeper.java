@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -500,8 +499,7 @@ public class TestZooKeeper {
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
       htd.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
       admin.createTable(htd, SPLIT_KEYS);
-      ZooKeeperWatcher zooKeeperWatcher = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
-      ZKAssign.blockUntilNoRIT(zooKeeperWatcher);
+      TEST_UTIL.waitUntilNoRegionsInTransition(60000);
       m.getZooKeeper().close();
       MockLoadBalancer.retainAssignCalled = false;
       m.abort("Test recovery from zk session expired",
@@ -524,8 +522,7 @@ public class TestZooKeeper {
    * RS goes down.
    */
   @Test(timeout = 300000)
-  public void testLogSplittingAfterMasterRecoveryDueToZKExpiry() throws IOException,
-      KeeperException, InterruptedException {
+  public void testLogSplittingAfterMasterRecoveryDueToZKExpiry() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     cluster.startRegionServer();
     HMaster m = cluster.getMaster();
@@ -541,8 +538,7 @@ public class TestZooKeeper {
       HColumnDescriptor hcd = new HColumnDescriptor("col");
       htd.addFamily(hcd);
       admin.createTable(htd, SPLIT_KEYS);
-      ZooKeeperWatcher zooKeeperWatcher = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
-      ZKAssign.blockUntilNoRIT(zooKeeperWatcher);
+      TEST_UTIL.waitUntilNoRegionsInTransition(60000);
       table = new HTable(TEST_UTIL.getConfiguration(), tableName);
       Put p;
       int numberOfPuts;

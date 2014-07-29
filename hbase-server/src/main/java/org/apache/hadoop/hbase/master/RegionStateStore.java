@@ -22,16 +22,15 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
@@ -40,7 +39,6 @@ import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ConfigUtil;
 
 import com.google.common.base.Preconditions;
 
@@ -59,7 +57,6 @@ public class RegionStateStore {
   private volatile HTableInterface metaTable;
   private volatile boolean initialized;
 
-  private final boolean noPersistence;
   private final Server server;
 
   /**
@@ -131,25 +128,19 @@ public class RegionStateStore {
   }
 
   RegionStateStore(final Server server) {
-    Configuration conf = server.getConfiguration();
-    // No need to persist if using ZK but not migrating
-    noPersistence = ConfigUtil.useZKForAssignment(conf)
-      && !conf.getBoolean("hbase.assignment.usezk.migrating", false);
     this.server = server;
     initialized = false;
   }
 
   @SuppressWarnings("deprecation")
   void start() throws IOException {
-    if (!noPersistence) {
-      if (server instanceof RegionServerServices) {
-        metaRegion = ((RegionServerServices)server).getFromOnlineRegions(
-          HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
-      }
-      if (metaRegion == null) {
-        metaTable = new HTable(TableName.META_TABLE_NAME,
-          server.getShortCircuitConnection());
-      }
+    if (server instanceof RegionServerServices) {
+      metaRegion = ((RegionServerServices)server).getFromOnlineRegions(
+        HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
+    }
+    if (metaRegion == null) {
+      metaTable = new HTable(TableName.META_TABLE_NAME,
+        server.getShortCircuitConnection());
     }
     initialized = true;
   }
@@ -170,7 +161,7 @@ public class RegionStateStore {
   @SuppressWarnings("deprecation")
   void updateRegionState(long openSeqNum,
       RegionState newState, RegionState oldState) {
-    if (noPersistence || !initialized) {
+    if (!initialized) {
       return;
     }
 

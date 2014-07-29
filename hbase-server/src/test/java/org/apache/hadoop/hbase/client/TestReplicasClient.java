@@ -19,6 +19,18 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +55,6 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -53,23 +64,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Random;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
-
 /**
  * Tests for region replicas. Sad that we cannot isolate these without bringing up a whole
  * cluster. See {@link org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster}.
  */
 @Category(MediumTests.class)
+@SuppressWarnings("deprecation")
 public class TestReplicasClient {
   private static final Log LOG = LogFactory.getLog(TestReplicasClient.class);
 
@@ -187,11 +187,13 @@ public class TestReplicasClient {
       } catch (MasterNotRunningException ignored) {
       }
     }
+    ha.close();
     LOG.info("Master has stopped");
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
+    HRegionServer.TEST_SKIP_REPORTING_TRANSITION = false;
     if (table != null) table.close();
     HTU.shutdownMiniCluster();
   }
@@ -219,8 +221,6 @@ public class TestReplicasClient {
       closeRegion(hriPrimary);
     } catch (Exception ignored) {
     }
-    ZKAssign.deleteNodeFailSilent(HTU.getZooKeeperWatcher(), hriPrimary);
-    ZKAssign.deleteNodeFailSilent(HTU.getZooKeeperWatcher(), hriSecondary);
 
     HTU.getHBaseAdmin().getConnection().clearRegionCache();
   }
@@ -233,10 +233,9 @@ public class TestReplicasClient {
     try {
       if (isRegionOpened(hri)) return;
     } catch (Exception e){}
-    ZKAssign.createNodeOffline(HTU.getZooKeeperWatcher(), hri, getRS().getServerName());
     // first version is '0'
     AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(
-      getRS().getServerName(), hri, 0, null, null);
+      getRS().getServerName(), hri, null, null);
     AdminProtos.OpenRegionResponse responseOpen = getRS().getRSRpcServices().openRegion(null, orr);
     Assert.assertEquals(responseOpen.getOpeningStateCount(), 1);
     Assert.assertEquals(responseOpen.getOpeningState(0),
@@ -245,27 +244,19 @@ public class TestReplicasClient {
   }
 
   private void closeRegion(HRegionInfo hri) throws Exception {
-    ZKAssign.createNodeClosing(HTU.getZooKeeperWatcher(), hri, getRS().getServerName());
-
     AdminProtos.CloseRegionRequest crr = RequestConverter.buildCloseRegionRequest(
-      getRS().getServerName(), hri.getEncodedName(), true);
+      getRS().getServerName(), hri.getEncodedName());
     AdminProtos.CloseRegionResponse responseClose = getRS()
         .getRSRpcServices().closeRegion(null, crr);
     Assert.assertTrue(responseClose.getClosed());
 
     checkRegionIsClosed(hri.getEncodedName());
-
-    ZKAssign.deleteClosedNode(HTU.getZooKeeperWatcher(), hri.getEncodedName(), null);
   }
 
   private void checkRegionIsOpened(HRegionInfo hri) throws Exception {
-
     while (!getRS().getRegionsInTransitionInRS().isEmpty()) {
       Thread.sleep(1);
     }
-
-    Assert.assertTrue(
-        ZKAssign.deleteOpenedNode(HTU.getZooKeeperWatcher(), hri.getEncodedName(), null));
   }
 
   private boolean isRegionOpened(HRegionInfo hri) throws Exception {

@@ -244,7 +244,7 @@ public class TestIOFencing {
     c.setClass(HConstants.REGION_IMPL, regionClass, HRegion.class);
     c.setBoolean("dfs.support.append", true);
     // Encourage plenty of flushes
-    c.setLong("hbase.hregion.memstore.flush.size", 200000);
+    c.setLong("hbase.hregion.memstore.flush.size", 100000);
     c.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY, ConstantSizeRegionSplitPolicy.class.getName());
     // Only run compaction when we tell it to
     c.setInt("hbase.hstore.compaction.min",1);

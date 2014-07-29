@@ -39,16 +39,11 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
-import org.apache.hadoop.hbase.coordination.SplitTransactionCoordination;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
-import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.PairOfSameType;
@@ -90,8 +85,6 @@ public class SplitTransaction {
   private HRegionInfo hri_a;
   private HRegionInfo hri_b;
   private long fileSplitTimeout = 30000;
-  public SplitTransactionCoordination.SplitTransactionDetails std;
-  boolean useZKForAssignment;
 
   /*
    * Row to split around
@@ -275,52 +268,23 @@ public class SplitTransaction {
     // will determine whether the region is split or not in case of failures.
     // If it is successful, master will roll-forward, if not, master will rollback
     // and assign the parent region.
-    if (!testing && useZKForAssignment) {
-      if (metaEntries == null || metaEntries.isEmpty()) {
-        MetaTableAccessor.splitRegion(server.getShortCircuitConnection(),
-          parent.getRegionInfo(), daughterRegions.getFirst().getRegionInfo(),
-          daughterRegions.getSecond().getRegionInfo(), server.getServerName());
-      } else {
-        offlineParentInMetaAndputMetaEntries(server.getShortCircuitConnection(),
-          parent.getRegionInfo(), daughterRegions.getFirst().getRegionInfo(), daughterRegions
-              .getSecond().getRegionInfo(), server.getServerName(), metaEntries);
-      }
-    } else if (services != null && !useZKForAssignment) {
-      if (!services.reportRegionStateTransition(TransitionCode.SPLIT_PONR,
-          parent.getRegionInfo(), hri_a, hri_b)) {
-        // Passed PONR, let SSH clean it up
-        throw new IOException("Failed to notify master that split passed PONR: "
-          + parent.getRegionInfo().getRegionNameAsString());
-      }
+    if (services != null && !services.reportRegionStateTransition(TransitionCode.SPLIT_PONR,
+        parent.getRegionInfo(), hri_a, hri_b)) {
+      // Passed PONR, let SSH clean it up
+      throw new IOException("Failed to notify master that split passed PONR: "
+        + parent.getRegionInfo().getRegionNameAsString());
     }
     return daughterRegions;
   }
 
   public PairOfSameType<HRegion> stepsBeforePONR(final Server server,
       final RegionServerServices services, boolean testing) throws IOException {
-
-    if (useCoordinatedStateManager(server)) {
-      if (std == null) {
-        std =
-            ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-                .getSplitTransactionCoordination().getDefaultDetails();
-      }
-      ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-          .getSplitTransactionCoordination().startSplitTransaction(parent, server.getServerName(),
-            hri_a, hri_b);
-    } else if (services != null && !useZKForAssignment) {
-      if (!services.reportRegionStateTransition(TransitionCode.READY_TO_SPLIT,
-          parent.getRegionInfo(), hri_a, hri_b)) {
-        throw new IOException("Failed to get ok from master to split "
-          + parent.getRegionNameAsString());
-      }
+    if (services != null && !services.reportRegionStateTransition(TransitionCode.READY_TO_SPLIT,
+        parent.getRegionInfo(), hri_a, hri_b)) {
+      throw new IOException("Failed to get ok from master to split "
+        + parent.getRegionNameAsString());
     }
     this.journal.add(JournalEntry.SET_SPLITTING);
-    if (useCoordinatedStateManager(server)) {
-      ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-          .getSplitTransactionCoordination().waitForSplitTransaction(services, parent, hri_a,
-            hri_b, std);
-    }
 
     this.parent.getRegionFileSystem().createSplitsDir();
     this.journal.add(JournalEntry.CREATE_SPLIT_DIR);
@@ -415,24 +379,14 @@ public class SplitTransaction {
           bOpener.getName(), bOpener.getException());
       }
       if (services != null) {
-        try {
-          if (useZKForAssignment) {
-            // add 2nd daughter first (see HBASE-4335)
-            services.postOpenDeployTasks(b);
-          } else if (!services.reportRegionStateTransition(TransitionCode.SPLIT,
-              parent.getRegionInfo(), hri_a, hri_b)) {
-            throw new IOException("Failed to report split region to master: "
-              + parent.getRegionInfo().getShortNameToLog());
-          }
-          // Should add it to OnlineRegions
-          services.addToOnlineRegions(b);
-          if (useZKForAssignment) {
-            services.postOpenDeployTasks(a);
-          }
-          services.addToOnlineRegions(a);
-        } catch (KeeperException ke) {
-          throw new IOException(ke);
+        if (!services.reportRegionStateTransition(TransitionCode.SPLIT,
+            parent.getRegionInfo(), hri_a, hri_b)) {
+          throw new IOException("Failed to report split region to master: "
+            + parent.getRegionInfo().getShortNameToLog());
         }
+        // Should add it to OnlineRegions
+        services.addToOnlineRegions(b);
+        services.addToOnlineRegions(a);
       }
     }
   }
@@ -450,13 +404,6 @@ public class SplitTransaction {
   public PairOfSameType<HRegion> execute(final Server server,
       final RegionServerServices services)
   throws IOException {
-    useZKForAssignment = server == null ? true :
-      ConfigUtil.useZKForAssignment(server.getConfiguration());
-    if (useCoordinatedStateManager(server)) {
-      std =
-          ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-              .getSplitTransactionCoordination().getDefaultDetails();
-    }
     PairOfSameType<HRegion> regions = createDaughters(server, services);
     if (this.parent.getCoprocessorHost() != null) {
       this.parent.getCoprocessorHost().preSplitAfterPONR();
@@ -468,42 +415,11 @@ public class SplitTransaction {
       final RegionServerServices services, PairOfSameType<HRegion> regions)
       throws IOException {
     openDaughters(server, services, regions.getFirst(), regions.getSecond());
-    if (useCoordinatedStateManager(server)) {
-      ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-          .getSplitTransactionCoordination().completeSplitTransaction(services, regions.getFirst(),
-            regions.getSecond(), std, parent);
-    }
     // Coprocessor callback
     if (parent.getCoprocessorHost() != null) {
       parent.getCoprocessorHost().postSplit(regions.getFirst(), regions.getSecond());
     }
-
-
     return regions;
-  }
-
-  private void offlineParentInMetaAndputMetaEntries(HConnection hConnection,
-      HRegionInfo parent, HRegionInfo splitA, HRegionInfo splitB,
-      ServerName serverName, List<Mutation> metaEntries) throws IOException {
-    List<Mutation> mutations = metaEntries;
-    HRegionInfo copyOfParent = new HRegionInfo(parent);
-    copyOfParent.setOffline(true);
-    copyOfParent.setSplit(true);
-
-    //Put for parent
-    Put putParent = MetaTableAccessor.makePutFromRegionInfo(copyOfParent);
-    MetaTableAccessor.addDaughtersToPut(putParent, splitA, splitB);
-    mutations.add(putParent);
-    
-    //Puts for daughters
-    Put putA = MetaTableAccessor.makePutFromRegionInfo(splitA);
-    Put putB = MetaTableAccessor.makePutFromRegionInfo(splitB);
-
-    addLocation(putA, serverName, 1); //these are new regions, openSeqNum = 1 is fine.
-    addLocation(putB, serverName, 1);
-    mutations.add(putA);
-    mutations.add(putB);
-    MetaTableAccessor.mutateMetaTable(hConnection, mutations);
   }
 
   public Put addLocation(final Put p, final ServerName sn, long openSeqNum) {
@@ -586,10 +502,6 @@ public class SplitTransaction {
       }
       return true;
     }
-  }
-
-  private boolean useCoordinatedStateManager(final Server server) {
-    return server != null && useZKForAssignment && server.getCoordinatedStateManager() != null;
   }
 
   private void splitStoreFiles(final Map<byte[], List<StoreFile>> hstoreFilesToSplit)
@@ -707,10 +619,7 @@ public class SplitTransaction {
       switch(je) {
 
       case SET_SPLITTING:
-        if (useCoordinatedStateManager(server) && server instanceof HRegionServer) {
-          ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-              .getSplitTransactionCoordination().clean(this.parent.getRegionInfo());
-        } else if (services != null && !useZKForAssignment
+        if (services != null
             && !services.reportRegionStateTransition(TransitionCode.SPLIT_REVERTED,
                 parent.getRegionInfo(), hri_a, hri_b)) {
           return false;

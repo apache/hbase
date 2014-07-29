@@ -34,16 +34,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -52,14 +51,13 @@ import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
@@ -74,6 +72,7 @@ import com.google.common.collect.Sets;
 import com.google.protobuf.ServiceException;
 
 @Category(LargeTests.class)
+@SuppressWarnings("deprecation")
 public class TestEndToEndSplitTransaction {
   private static final Log LOG = LogFactory.getLog(TestEndToEndSplitTransaction.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -109,7 +108,6 @@ public class TestEndToEndSplitTransaction {
         .getRegionName();
     HRegion region = server.getRegion(regionName);
     SplitTransaction split = new SplitTransaction(region, splitRow);
-    split.useZKForAssignment = ConfigUtil.useZKForAssignment(conf);
     split.prepare();
 
     // 1. phase I
@@ -126,14 +124,10 @@ public class TestEndToEndSplitTransaction {
     // 3. finish phase II
     // note that this replicates some code from SplitTransaction
     // 2nd daughter first
-    if (split.useZKForAssignment) {
-      server.postOpenDeployTasks(regions.getSecond());
-    } else {
     server.reportRegionStateTransition(
       RegionServerStatusProtos.RegionStateTransition.TransitionCode.SPLIT,
       region.getRegionInfo(), regions.getFirst().getRegionInfo(),
       regions.getSecond().getRegionInfo());
-    }
 
     // Add to online regions
     server.addToOnlineRegions(regions.getSecond());
@@ -143,21 +137,11 @@ public class TestEndToEndSplitTransaction {
     // past splitkey is ok.
     assertTrue(test(con, tableName, lastRow, server));
 
-    // first daughter second
-    if (split.useZKForAssignment) {
-      server.postOpenDeployTasks(regions.getFirst());
-    }
     // Add to online regions
     server.addToOnlineRegions(regions.getFirst());
     assertTrue(test(con, tableName, firstRow, server));
     assertTrue(test(con, tableName, lastRow, server));
 
-    if (split.useZKForAssignment) {
-      // 4. phase III
-      ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-        .getSplitTransactionCoordination().completeSplitTransaction(server, regions.getFirst(),
-          regions.getSecond(), split.std, region);
-    }
     assertTrue(test(con, tableName, firstRow, server));
     assertTrue(test(con, tableName, lastRow, server));
   }
@@ -341,7 +325,7 @@ public class TestEndToEndSplitTransaction {
         verifyStartEndKeys(keys);
 
         //HTable.getRegionsInfo()
-        Map<HRegionInfo, ServerName> regions = table.getRegionLocations();
+         Map<HRegionInfo, ServerName> regions = table.getRegionLocations();
         verifyTableRegions(regions.keySet());
       } finally {
         IOUtils.closeQuietly(table);

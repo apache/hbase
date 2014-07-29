@@ -359,7 +359,7 @@ public class MasterRpcServices extends RSRpcServices
       }
       LOG.info(master.getClientIdAuditPrefix()
         + " assign " + regionInfo.getRegionNameAsString());
-      master.assignmentManager.assign(regionInfo, true, true);
+      master.assignmentManager.assign(regionInfo, true);
       if (master.cpHost != null) {
         master.cpHost.postAssign(regionInfo);
       }
@@ -1074,6 +1074,7 @@ public class MasterRpcServices extends RSRpcServices
    *
    */
   @Override
+  @SuppressWarnings("deprecation")
   public OfflineRegionResponse offlineRegion(RpcController controller,
       OfflineRegionRequest request) throws ServiceException {
     final byte [] regionName = request.getRegion().getValue().toByteArray();
@@ -1203,6 +1204,7 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  @SuppressWarnings("deprecation")
   public UnassignRegionResponse unassignRegion(RpcController controller,
       UnassignRegionRequest req) throws ServiceException {
     try {

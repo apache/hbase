@@ -23,10 +23,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.coordination.CloseRegionCoordination;
 
 /**
- * Handles closing of the root region on a region server.
+ * Handles closing of the meta region on a region server.
  */
 @InterfaceAudience.Private
 public class CloseMetaHandler extends CloseRegionHandler {
@@ -35,9 +34,7 @@ public class CloseMetaHandler extends CloseRegionHandler {
   public CloseMetaHandler(final Server server,
       final RegionServerServices rsServices,
       final HRegionInfo regionInfo,
-      final boolean abort, CloseRegionCoordination closeRegionCoordination,
-      CloseRegionCoordination.CloseRegionDetails crd) {
-    super(server, rsServices, regionInfo, abort, closeRegionCoordination,
-      crd, EventType.M_RS_CLOSE_META);
+      final boolean abort) {
+    super(server, rsServices, regionInfo, abort, EventType.M_RS_CLOSE_META, null);
   }
 }

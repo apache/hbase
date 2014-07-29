@@ -22,7 +22,6 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
 
-import org.apache.commons.configuration.Configuration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -104,7 +103,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionReq
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.hbase.util.Triple;
 
 import com.google.protobuf.ByteString;
 
@@ -708,14 +706,12 @@ public final class RequestConverter {
   * @return a protocol buffer OpenRegionRequest
   */
  public static OpenRegionRequest
-     buildOpenRegionRequest(final List<Triple<HRegionInfo, Integer,
+     buildOpenRegionRequest(final List<Pair<HRegionInfo,
          List<ServerName>>> regionOpenInfos, Boolean openForReplay) {
    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
-   for (Triple<HRegionInfo, Integer, List<ServerName>> regionOpenInfo: regionOpenInfos) {
-     Integer second = regionOpenInfo.getSecond();
-     int versionOfOfflineNode = second == null ? -1 : second.intValue();
-     builder.addOpenInfo(buildRegionOpenInfo(regionOpenInfo.getFirst(), versionOfOfflineNode, 
-       regionOpenInfo.getThird(), openForReplay));
+   for (Pair<HRegionInfo, List<ServerName>> regionOpenInfo: regionOpenInfos) {
+     builder.addOpenInfo(buildRegionOpenInfo(regionOpenInfo.getFirst(),
+       regionOpenInfo.getSecond(), openForReplay));
    }
    return builder.build();
  }
@@ -725,16 +721,15 @@ public final class RequestConverter {
   *
   * @param server the serverName for the RPC
   * @param region the region to open
-  * @param versionOfOfflineNode that needs to be present in the offline node
   * @param favoredNodes
   * @param openForReplay
   * @return a protocol buffer OpenRegionRequest
   */
  public static OpenRegionRequest buildOpenRegionRequest(ServerName server,
-     final HRegionInfo region, final int versionOfOfflineNode, List<ServerName> favoredNodes,
+     final HRegionInfo region, List<ServerName> favoredNodes,
      Boolean openForReplay) {
    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
-   builder.addOpenInfo(buildRegionOpenInfo(region, versionOfOfflineNode, favoredNodes, 
+   builder.addOpenInfo(buildRegionOpenInfo(region, favoredNodes,
      openForReplay));
    if (server != null) {
      builder.setServerStartCode(server.getStartcode());
@@ -765,33 +760,21 @@ public final class RequestConverter {
   * Create a CloseRegionRequest for a given region name
   *
   * @param regionName the name of the region to close
-  * @param transitionInZK indicator if to transition in ZK
   * @return a CloseRegionRequest
   */
  public static CloseRegionRequest buildCloseRegionRequest(ServerName server,
-     final byte[] regionName, final boolean transitionInZK) {
-   CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
-   RegionSpecifier region = buildRegionSpecifier(
-     RegionSpecifierType.REGION_NAME, regionName);
-   builder.setRegion(region);
-   builder.setTransitionInZK(transitionInZK);
-   if (server != null) {
-     builder.setServerStartCode(server.getStartcode());
-   }
-   return builder.build();
+     final byte[] regionName) {
+   return buildCloseRegionRequest(server, regionName, null);
  }
 
   public static CloseRegionRequest buildCloseRegionRequest(ServerName server,
-    final byte[] regionName, final int versionOfClosingNode,
-    ServerName destinationServer, final boolean transitionInZK) {
+    final byte[] regionName, ServerName destinationServer) {
     CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
     builder.setRegion(region);
-    builder.setVersionOfClosingNode(versionOfClosingNode);
-    builder.setTransitionInZK(transitionInZK);
     if (destinationServer != null){
-      builder.setDestinationServer(ProtobufUtil.toServerName( destinationServer) );
+      builder.setDestinationServer(ProtobufUtil.toServerName(destinationServer));
     }
     if (server != null) {
       builder.setServerStartCode(server.getStartcode());
@@ -803,18 +786,15 @@ public final class RequestConverter {
   * Create a CloseRegionRequest for a given encoded region name
   *
   * @param encodedRegionName the name of the region to close
-  * @param transitionInZK indicator if to transition in ZK
   * @return a CloseRegionRequest
   */
  public static CloseRegionRequest
-     buildCloseRegionRequest(ServerName server, final String encodedRegionName,
-       final boolean transitionInZK) {
+     buildCloseRegionRequest(ServerName server, final String encodedRegionName) {
    CloseRegionRequest.Builder builder = CloseRegionRequest.newBuilder();
    RegionSpecifier region = buildRegionSpecifier(
      RegionSpecifierType.ENCODED_REGION_NAME,
      Bytes.toBytes(encodedRegionName));
    builder.setRegion(region);
-   builder.setTransitionInZK(transitionInZK);
    if (server != null) {
      builder.setServerStartCode(server.getStartcode());
    }
@@ -1498,13 +1478,10 @@ public final class RequestConverter {
    * Create a RegionOpenInfo based on given region info and version of offline node
    */
   private static RegionOpenInfo buildRegionOpenInfo(
-      final HRegionInfo region, final int versionOfOfflineNode,
+      final HRegionInfo region,
       final List<ServerName> favoredNodes, Boolean openForReplay) {
     RegionOpenInfo.Builder builder = RegionOpenInfo.newBuilder();
     builder.setRegion(HRegionInfo.convert(region));
-    if (versionOfOfflineNode >= 0) {
-      builder.setVersionOfOfflineNode(versionOfOfflineNode);
-    }
     if (favoredNodes != null) {
       for (ServerName server : favoredNodes) {
         builder.addFavoredNodes(ProtobufUtil.toServerName(server));

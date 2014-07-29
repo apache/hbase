@@ -99,7 +99,6 @@ import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -109,8 +108,6 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TaskLog;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
@@ -1470,6 +1467,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Modify a table, synchronous. Waiting logic similar to that of {@code admin.rb#alter_status}.
    */
+  @SuppressWarnings("serial")
   public static void modifyTableSync(Admin admin, HTableDescriptor desc)
       throws IOException, InterruptedException {
     admin.modifyTable(desc.getTableName(), desc);
@@ -3009,30 +3007,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return zkw;
   }
 
-  /**
-   * Creates a znode with OPENED state.
-   * @param TEST_UTIL
-   * @param region
-   * @param serverName
-   * @return
-   * @throws IOException
-   * @throws org.apache.hadoop.hbase.ZooKeeperConnectionException
-   * @throws KeeperException
-   * @throws NodeExistsException
-   */
-  public static ZooKeeperWatcher createAndForceNodeToOpenedState(
-      HBaseTestingUtility TEST_UTIL, HRegion region,
-      ServerName serverName) throws ZooKeeperConnectionException,
-      IOException, KeeperException, NodeExistsException {
-    ZooKeeperWatcher zkw = getZooKeeperWatcher(TEST_UTIL);
-    ZKAssign.createNodeOffline(zkw, region.getRegionInfo(), serverName);
-    int version = ZKAssign.transitionNodeOpening(zkw, region
-        .getRegionInfo(), serverName);
-    ZKAssign.transitionNodeOpened(zkw, region.getRegionInfo(), serverName,
-        version);
-    return zkw;
-  }
-
   public static void assertKVListsEqual(String additionalMsg,
       final List<? extends Cell> expected,
       final List<? extends Cell> actual) {
@@ -3438,6 +3412,16 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
        return getHBaseAdmin().isTableEnabled(tableName);
       }
     };
+  }
+
+  /**
+   * Wait until no regions in transition.
+   * @param timeout How long to wait.
+   * @throws Exception
+   */
+  public void waitUntilNoRegionsInTransition(
+      final long timeout) throws Exception {
+    waitFor(timeout, predicateNoRegionsInTransition());
   }
 
   /**

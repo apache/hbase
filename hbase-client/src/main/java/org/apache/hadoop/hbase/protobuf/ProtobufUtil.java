@@ -1142,6 +1142,7 @@ public final class ProtobufUtil {
     return toMutation(type, mutation, builder, HConstants.NO_NONCE);
   }
 
+  @SuppressWarnings("deprecation")
   public static MutationProto toMutation(final MutationType type, final Mutation mutation,
       MutationProto.Builder builder, long nonce)
   throws IOException {
@@ -1616,13 +1617,12 @@ public final class ProtobufUtil {
    *
    * @param admin
    * @param regionName
-   * @param transitionInZK
    * @throws IOException
    */
   public static void closeRegion(final AdminService.BlockingInterface admin,
-      final ServerName server, final byte[] regionName, final boolean transitionInZK) throws IOException {
+      final ServerName server, final byte[] regionName) throws IOException {
     CloseRegionRequest closeRegionRequest =
-      RequestConverter.buildCloseRegionRequest(server, regionName, transitionInZK);
+      RequestConverter.buildCloseRegionRequest(server, regionName);
     try {
       admin.closeRegion(null, closeRegionRequest);
     } catch (ServiceException se) {
@@ -1636,18 +1636,15 @@ public final class ProtobufUtil {
    *
    * @param admin
    * @param regionName
-   * @param versionOfClosingNode
    * @return true if the region is closed
    * @throws IOException
    */
   public static boolean closeRegion(final AdminService.BlockingInterface admin,
-      final ServerName server,
-      final byte[] regionName,
-      final int versionOfClosingNode, final ServerName destinationServer,
-      final boolean transitionInZK) throws IOException {
+      final ServerName server, final byte[] regionName,
+      final ServerName destinationServer) throws IOException {
     CloseRegionRequest closeRegionRequest =
       RequestConverter.buildCloseRegionRequest(server,
-        regionName, versionOfClosingNode, destinationServer, transitionInZK);
+        regionName, destinationServer);
     try {
       CloseRegionResponse response = admin.closeRegion(null, closeRegionRequest);
       return ResponseConverter.isClosed(response);
@@ -1666,7 +1663,7 @@ public final class ProtobufUtil {
   public static void openRegion(final AdminService.BlockingInterface admin,
       ServerName server, final HRegionInfo region) throws IOException {
     OpenRegionRequest request =
-      RequestConverter.buildOpenRegionRequest(server, region, -1, null, null);
+      RequestConverter.buildOpenRegionRequest(server, region, null, null);
     try {
       admin.openRegion(null, request);
     } catch (ServiceException se) {
@@ -2488,6 +2485,7 @@ public final class ProtobufUtil {
     }
   }
 
+  @SuppressWarnings("deprecation")
   public static CompactionDescriptor toCompactionDescriptor(HRegionInfo info, byte[] family,
       List<Path> inputPaths, List<Path> outputPaths, Path storeDir) {
     // compaction descriptor contains relative paths.

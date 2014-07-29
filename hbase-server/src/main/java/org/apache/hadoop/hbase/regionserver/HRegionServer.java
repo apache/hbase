@@ -76,7 +76,6 @@ import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
-import org.apache.hadoop.hbase.coordination.CloseRegionCoordination;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
@@ -123,7 +122,6 @@ import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
-import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -149,6 +147,7 @@ import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.data.Stat;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.ServiceException;
 
@@ -162,6 +161,12 @@ public class HRegionServer extends HasThread implements
     RegionServerServices, LastSequenceId {
 
   public static final Log LOG = LogFactory.getLog(HRegionServer.class);
+
+  /**
+   * For testing only!  Set to true to skip notifying region assignment to master .
+   */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="MS_SHOULD_BE_FINAL")
+  public static boolean TEST_SKIP_REPORTING_TRANSITION = false;
 
   /*
    * Strings to be used in forming the exception message for
@@ -410,8 +415,6 @@ public class HRegionServer extends HasThread implements
 
   protected BaseCoordinatedStateManager csm;
 
-  private final boolean useZKForAssignment;
-
   /**
    * Starts a HRegionServer at the default location.
    * @param conf
@@ -427,10 +430,9 @@ public class HRegionServer extends HasThread implements
    * @param conf
    * @param csm implementation of CoordinatedStateManager to be used
    * @throws IOException
-   * @throws InterruptedException
    */
   public HRegionServer(Configuration conf, CoordinatedStateManager csm)
-      throws IOException, InterruptedException {
+      throws IOException {
     this.fsOk = true;
     this.conf = conf;
     checkCodecs(this.conf);
@@ -478,8 +480,6 @@ public class HRegionServer extends HasThread implements
         abort("Uncaught exception in service thread " + t.getName(), e);
       }
     };
-
-    useZKForAssignment = ConfigUtil.useZKForAssignment(conf);
 
     // Set 'fs.defaultFS' to match the filesystem on hbase.rootdir else
     // underlying hadoop hdfs accessors will be going against wrong filesystem
@@ -1719,14 +1719,12 @@ public class HRegionServer extends HasThread implements
     // Update flushed sequence id of a recovering region in ZK
     updateRecoveringRegionLastFlushedSequenceId(r);
 
-    // Update ZK, or META
     if (r.getRegionInfo().isMetaRegion()) {
       MetaTableLocator.setMetaLocation(getZooKeeper(), serverName);
-    } else if (useZKForAssignment) {
-      MetaTableAccessor.updateRegionLocation(shortCircuitConnection, r.getRegionInfo(),
-        this.serverName, openSeqNum);
     }
-    if (!useZKForAssignment && !reportRegionStateTransition(
+
+    // Notify master
+    if (!reportRegionStateTransition(
         TransitionCode.OPENED, openSeqNum, r.getRegionInfo())) {
       throw new IOException("Failed to report opened region to master: "
         + r.getRegionNameAsString());
@@ -1743,6 +1741,22 @@ public class HRegionServer extends HasThread implements
   @Override
   public boolean reportRegionStateTransition(
       TransitionCode code, long openSeqNum, HRegionInfo... hris) {
+    if (TEST_SKIP_REPORTING_TRANSITION) {
+      // This is for testing only in case there is no master
+      // to handle the region transition report at all.
+      if (code == TransitionCode.OPENED) {
+        Preconditions.checkArgument(hris != null && hris.length == 1);
+        try {
+          MetaTableAccessor.updateRegionLocation(shortCircuitConnection,
+            hris[0], serverName, openSeqNum);
+          return true;
+        } catch (IOException e) {
+          LOG.info("Failed to update meta", e);
+          return false;
+        }
+      }
+    }
+
     ReportRegionStateTransitionRequest.Builder builder =
       ReportRegionStateTransitionRequest.newBuilder();
     builder.setServer(ProtobufUtil.toServerName(serverName));
@@ -2428,9 +2442,7 @@ public class HRegionServer extends HasThread implements
    */
   private void closeRegionIgnoreErrors(HRegionInfo region, final boolean abort) {
     try {
-      CloseRegionCoordination.CloseRegionDetails details =
-        csm.getCloseRegionCoordination().getDetaultDetails();
-      if (!closeRegion(region.getEncodedName(), abort, details, null)) {
+      if (!closeRegion(region.getEncodedName(), abort, null)) {
         LOG.warn("Failed to close " + region.getRegionNameAsString() +
             " - ignoring and continuing");
       }
@@ -2455,13 +2467,11 @@ public class HRegionServer extends HasThread implements
    *
    * @param encodedName Region to close
    * @param abort True if we are aborting
-   * @param crd details about closing region coordination-coordinated task
    * @return True if closed a region.
    * @throws NotServingRegionException if the region is not online
    * @throws RegionAlreadyInTransitionException if the region is already closing
    */
-  protected boolean closeRegion(String encodedName, final boolean abort,
-      CloseRegionCoordination.CloseRegionDetails crd, final ServerName sn)
+  protected boolean closeRegion(String encodedName, final boolean abort, final ServerName sn)
       throws NotServingRegionException, RegionAlreadyInTransitionException {
     //Check for permissions to close.
     HRegion actualRegion = this.getFromOnlineRegions(encodedName);
@@ -2485,7 +2495,7 @@ public class HRegionServer extends HasThread implements
         // We're going to try to do a standard close then.
         LOG.warn("The opening for region " + encodedName + " was done before we could cancel it." +
             " Doing a standard close now");
-        return closeRegion(encodedName, abort, crd, sn);
+        return closeRegion(encodedName, abort, sn);
       }
       // Let's get the region from the online region list again
       actualRegion = this.getFromOnlineRegions(encodedName);
@@ -2519,11 +2529,9 @@ public class HRegionServer extends HasThread implements
     CloseRegionHandler crh;
     final HRegionInfo hri = actualRegion.getRegionInfo();
     if (hri.isMetaRegion()) {
-      crh = new CloseMetaHandler(this, this, hri, abort,
-        csm.getCloseRegionCoordination(), crd);
+      crh = new CloseMetaHandler(this, this, hri, abort);
     } else {
-      crh = new CloseRegionHandler(this, this, hri, abort,
-        csm.getCloseRegionCoordination(), crd, sn);
+      crh = new CloseRegionHandler(this, this, hri, abort, sn);
     }
     this.service.submit(crh);
     return true;

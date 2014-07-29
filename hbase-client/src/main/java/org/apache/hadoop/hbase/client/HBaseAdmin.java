@@ -1427,7 +1427,7 @@ public class HBaseAdmin implements Admin {
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     // Close the region without updating zk state.
     CloseRegionRequest request =
-      RequestConverter.buildCloseRegionRequest(sn, encodedRegionName, false);
+      RequestConverter.buildCloseRegionRequest(sn, encodedRegionName);
     try {
       CloseRegionResponse response = admin.closeRegion(null, request);
       boolean isRegionClosed = response.getClosed();
@@ -1452,7 +1452,7 @@ public class HBaseAdmin implements Admin {
   throws IOException {
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     // Close the region without updating zk state.
-    ProtobufUtil.closeRegion(admin, sn, hri.getRegionName(), false);
+    ProtobufUtil.closeRegion(admin, sn, hri.getRegionName());
   }
 
   /**

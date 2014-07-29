@@ -28,15 +28,18 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.MetaScanner;
-import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -46,8 +49,6 @@ public class TestRestartCluster {
   private static final Log LOG = LogFactory.getLog(TestRestartCluster.class);
   private HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  private static final byte[] TABLENAME = Bytes.toBytes("master_transitions");
-  private static final byte [][] FAMILIES = {Bytes.toBytes("a")};
   private static final byte [][] TABLES = {
       Bytes.toBytes("restartTableOne"),
       Bytes.toBytes("restartTableTwo"),
@@ -57,35 +58,6 @@ public class TestRestartCluster {
 
   @After public void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
-  }
-
-  @Test (timeout=300000) public void testRestartClusterAfterKill()
-  throws Exception {
-    UTIL.getConfiguration().setBoolean("hbase.assignment.usezk", true);
-    UTIL.startMiniZKCluster();
-    ZooKeeperWatcher zooKeeper =
-      new ZooKeeperWatcher(UTIL.getConfiguration(), "cluster1", null, true);
-
-    // create the unassigned region, throw up a region opened state for META
-    String unassignedZNode = zooKeeper.assignmentZNode;
-    ZKUtil.createAndFailSilent(zooKeeper, unassignedZNode);
-
-    ServerName sn = ServerName.valueOf(HMaster.MASTER, 1, System.currentTimeMillis());
-
-    ZKAssign.createNodeOffline(zooKeeper, HRegionInfo.FIRST_META_REGIONINFO, sn);
-
-    LOG.debug("Created UNASSIGNED zNode for ROOT and hbase:meta regions in state " +
-        EventType.M_ZK_REGION_OFFLINE);
-
-    // start the HB cluster
-    LOG.info("Starting HBase cluster...");
-    UTIL.startMiniCluster(2);
-
-    UTIL.createTable(TABLENAME, FAMILIES);
-    LOG.info("Created a table, waiting for table to be available...");
-    UTIL.waitTableAvailable(TABLENAME, 60*1000);
-
-    LOG.info("Master deleted unassigned region and started up successfully.");
   }
 
   @Test (timeout=300000)
@@ -153,8 +125,7 @@ public class TestRestartCluster {
     }
 
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
-    AssignmentManager am = master.getAssignmentManager();
-    am.waitUntilNoRegionsInTransition(120000);
+    UTIL.waitUntilNoRegionsInTransition(120000);
 
     // We don't have to use SnapshotOfRegionAssignmentFromMeta.
     // We use it here because AM used to use it to load all user region placements

@@ -26,12 +26,12 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
@@ -48,6 +48,7 @@ import org.junit.experimental.categories.Category;
  * Test {@link org.apache.hadoop.hbase.MetaTableAccessor}.
  */
 @Category(MediumTests.class)
+@SuppressWarnings("deprecation")
 public class TestMetaTableAccessor {
   private static final Log LOG = LogFactory.getLog(TestMetaTableAccessor.class);
   private static final  HBaseTestingUtility UTIL = new HBaseTestingUtility();

@@ -26,13 +26,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.coordination.CloseRegionCoordination;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.util.ConfigUtil;
 
 /**
  * Handles closing of a region on a region server.
@@ -41,7 +39,7 @@ import org.apache.hadoop.hbase.util.ConfigUtil;
 public class CloseRegionHandler extends EventHandler {
   // NOTE on priorities shutting down.  There are none for close. There are some
   // for open.  I think that is right.  On shutdown, we want the meta to close
-  // before root and both to close after the user regions have closed.  What
+  // after the user regions have closed.  What
   // about the case where master tells us to shutdown a catalog region and we
   // have a running queue of user regions to close?
   private static final Log LOG = LogFactory.getLog(CloseRegionHandler.class);
@@ -53,9 +51,6 @@ public class CloseRegionHandler extends EventHandler {
   // when we are aborting.
   private final boolean abort;
   private ServerName destination;
-  private CloseRegionCoordination closeRegionCoordination;
-  private CloseRegionCoordination.CloseRegionDetails closeRegionDetails;
-  private final boolean useZKForAssignment;
 
   /**
    * This method used internally by the RegionServer to close out regions.
@@ -63,49 +58,25 @@ public class CloseRegionHandler extends EventHandler {
    * @param rsServices
    * @param regionInfo
    * @param abort If the regionserver is aborting.
-   * @param closeRegionCoordination consensus for closing regions
-   * @param crd object carrying details about region close task.
+   * @param destination
    */
   public CloseRegionHandler(final Server server,
       final RegionServerServices rsServices,
       final HRegionInfo regionInfo, final boolean abort,
-      CloseRegionCoordination closeRegionCoordination,
-      CloseRegionCoordination.CloseRegionDetails crd) {
-    this(server, rsServices,  regionInfo, abort, closeRegionCoordination, crd,
-      EventType.M_RS_CLOSE_REGION, null);
-  }
-
-  public CloseRegionHandler(final Server server,
-      final RegionServerServices rsServices,
-      final HRegionInfo regionInfo, final boolean abort,
-      CloseRegionCoordination closeRegionCoordination,
-      CloseRegionCoordination.CloseRegionDetails crd,
       ServerName destination) {
-    this(server, rsServices, regionInfo, abort, closeRegionCoordination, crd,
+    this(server, rsServices, regionInfo, abort,
       EventType.M_RS_CLOSE_REGION, destination);
   }
 
-  public CloseRegionHandler(final Server server,
+  protected CloseRegionHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo,
-      boolean abort, CloseRegionCoordination closeRegionCoordination,
-      CloseRegionCoordination.CloseRegionDetails crd, EventType eventType) {
-    this(server, rsServices, regionInfo, abort, closeRegionCoordination, crd, eventType, null);
-  }
-
-    protected CloseRegionHandler(final Server server,
-      final RegionServerServices rsServices, HRegionInfo regionInfo,
-      boolean abort, CloseRegionCoordination closeRegionCoordination,
-      CloseRegionCoordination.CloseRegionDetails crd,
-      EventType eventType, ServerName destination) {
+      boolean abort, EventType eventType, ServerName destination) {
     super(server, eventType);
     this.server = server;
     this.rsServices = rsServices;
     this.regionInfo = regionInfo;
     this.abort = abort;
     this.destination = destination;
-    this.closeRegionCoordination = closeRegionCoordination;
-    this.closeRegionDetails = crd;
-    useZKForAssignment = ConfigUtil.useZKForAssignment(server.getConfiguration());
   }
 
   public HRegionInfo getRegionInfo() {
@@ -128,16 +99,8 @@ public class CloseRegionHandler extends EventHandler {
 
       // Close the region
       try {
-        if (useZKForAssignment && closeRegionCoordination.checkClosingState(
-            regionInfo, closeRegionDetails)) {
-          return;
-        }
-
-        // TODO: If we need to keep updating CLOSING stamp to prevent against
-        // a timeout if this is long-running, need to spin up a thread?
         if (region.close(abort) == null) {
-          // This region got closed.  Most likely due to a split. So instead
-          // of doing the setClosedState() below, let's just ignore cont
+          // This region got closed.  Most likely due to a split.
           // The split message will clean up the master state.
           LOG.warn("Can't close region: was already closed during close(): " +
             regionInfo.getRegionNameAsString());
@@ -153,12 +116,7 @@ public class CloseRegionHandler extends EventHandler {
       }
 
       this.rsServices.removeFromOnlineRegions(region, destination);
-      if (!useZKForAssignment) {
-        rsServices.reportRegionStateTransition(TransitionCode.CLOSED, regionInfo);
-      } else {
-        closeRegionCoordination.setClosedState(region, this.server.getServerName(),
-          closeRegionDetails);
-      }
+      rsServices.reportRegionStateTransition(TransitionCode.CLOSED, regionInfo);
 
       // Done!  Region is closed on this RS
       LOG.debug("Closed " + region.getRegionNameAsString());

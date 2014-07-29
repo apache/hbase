@@ -40,10 +40,7 @@ import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -474,7 +471,7 @@ public class TestScannersFromClientSide {
     int i = cluster.getServerWith(regionName);
     HRegionServer rs = cluster.getRegionServer(i);
     ProtobufUtil.closeRegion(
-      rs.getRSRpcServices(), rs.getServerName(), regionName, false);
+      rs.getRSRpcServices(), rs.getServerName(), regionName);
     long startTime = EnvironmentEdgeManager.currentTimeMillis();
     long timeOut = 300000;
     while (true) {
@@ -487,27 +484,19 @@ public class TestScannersFromClientSide {
     }
 
     // Now open the region again.
-    ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
-    try {
-      HMaster master = cluster.getMaster();
-      RegionStates states = master.getAssignmentManager().getRegionStates();
-      states.regionOffline(hri);
-      states.updateRegionState(hri, State.OPENING);
-      if (ConfigUtil.useZKForAssignment(TEST_UTIL.getConfiguration())) {
-        ZKAssign.createNodeOffline(zkw, hri, loc.getServerName());
+    HMaster master = cluster.getMaster();
+    RegionStates states = master.getAssignmentManager().getRegionStates();
+    states.regionOffline(hri);
+    states.updateRegionState(hri, State.OPENING);
+    ProtobufUtil.openRegion(rs.getRSRpcServices(), rs.getServerName(), hri);
+    startTime = EnvironmentEdgeManager.currentTimeMillis();
+    while (true) {
+      if (rs.getOnlineRegion(regionName) != null) {
+        break;
       }
-      ProtobufUtil.openRegion(rs.getRSRpcServices(), rs.getServerName(), hri);
-      startTime = EnvironmentEdgeManager.currentTimeMillis();
-      while (true) {
-        if (rs.getOnlineRegion(regionName) != null) {
-          break;
-        }
-        assertTrue("Timed out in open the testing region",
-          EnvironmentEdgeManager.currentTimeMillis() < startTime + timeOut);
-        Thread.sleep(500);
-      }
-    } finally {
-      ZKAssign.deleteNodeFailSilent(zkw, hri);
+      assertTrue("Timed out in open the testing region",
+        EnvironmentEdgeManager.currentTimeMillis() < startTime + timeOut);
+      Thread.sleep(500);
     }
 
     // c0:0, c1:1

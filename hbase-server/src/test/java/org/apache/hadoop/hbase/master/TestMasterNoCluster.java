@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -200,7 +199,7 @@ public class TestMasterNoCluster {
         // Fake a successful close.
         Mockito.doReturn(true).when(spy).
           sendRegionClose((ServerName)Mockito.any(), (HRegionInfo)Mockito.any(),
-            Mockito.anyInt(), (ServerName)Mockito.any(), Mockito.anyBoolean());
+            (ServerName)Mockito.any());
         return spy;
       }
 
@@ -235,13 +234,8 @@ public class TestMasterNoCluster {
         request.setLoad(ServerLoad.EMPTY_SERVERLOAD.obtainServerLoadPB());
         master.getMasterRpcServices().regionServerReport(null, request.build());
       }
-      ZooKeeperWatcher zkw = master.getZooKeeper();
-      // Master should now come up.
+       // Master should now come up.
       while (!master.isInitialized()) {
-        // Fake meta is closed on rs0, try several times in case the event is lost
-        // due to race with HMaster#assignMeta
-        ZKAssign.transitionNodeClosed(zkw,
-          HRegionInfo.FIRST_META_REGIONINFO, sn0, -1);
         Threads.sleep(100);
       }
       assertTrue(master.isInitialized());

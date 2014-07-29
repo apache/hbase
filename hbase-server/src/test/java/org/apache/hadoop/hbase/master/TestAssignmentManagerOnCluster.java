@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.ServerLoad;
@@ -47,28 +48,22 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -85,7 +80,8 @@ public class TestAssignmentManagerOnCluster {
   final static Configuration conf = TEST_UTIL.getConfiguration();
   private static Admin admin;
 
-  static void setupOnce() throws Exception {
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
     // Using the our load balancer to control region plans
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
       MyLoadBalancer.class, LoadBalancer.class);
@@ -96,13 +92,6 @@ public class TestAssignmentManagerOnCluster {
 
     TEST_UTIL.startMiniCluster(1, 4, null, MyMaster.class, MyRegionServer.class);
     admin = TEST_UTIL.getHBaseAdmin();
-  }
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    // Use ZK for region assignment
-    conf.setBoolean("hbase.assignment.usezk", true);
-    setupOnce();
   }
 
   @AfterClass
@@ -186,11 +175,6 @@ public class TestAssignmentManagerOnCluster {
       RegionPlan plan = new RegionPlan(hri, null, deadServer);
       am.addPlan(hri.getEncodedName(), plan);
       master.assignRegion(hri);
-
-      int version = ZKAssign.transitionNode(master.getZooKeeper(), hri,
-        destServer, EventType.M_ZK_REGION_OFFLINE,
-        EventType.RS_ZK_REGION_OPENING, 0);
-      assertEquals("TansitionNode should fail", -1, version);
 
       TEST_UTIL.waitFor(60000, new Waiter.Predicate<Exception>() {
         @Override
@@ -402,7 +386,7 @@ public class TestAssignmentManagerOnCluster {
       // region is closing now, will be re-assigned automatically.
       // now, let's forcefully assign it again. it should be
       // assigned properly and no double-assignment
-      am.assign(hri, true, true);
+      am.assign(hri, true);
 
       // let's check if it's assigned after it's out of transition
       am.waitOnRegionToClearRegionsInTransition(hri);
@@ -572,20 +556,7 @@ public class TestAssignmentManagerOnCluster {
         }
       }
       am.regionOffline(hri);
-      ZooKeeperWatcher zkw = TEST_UTIL.getHBaseCluster().getMaster().getZooKeeper();
       am.getRegionStates().updateRegionState(hri, State.PENDING_OPEN, destServerName);
-      if (ConfigUtil.useZKForAssignment(conf)) {
-        ZKAssign.createNodeOffline(zkw, hri, destServerName);
-        ZKAssign.transitionNodeOpening(zkw, hri, destServerName);
-  
-        // Wait till the event is processed and the region is in transition
-        long timeoutTime = System.currentTimeMillis() + 20000;
-        while (!am.getRegionStates().isRegionInTransition(hri)) {
-          assertTrue("Failed to process ZK opening event in time",
-            System.currentTimeMillis() < timeoutTime);
-          Thread.sleep(100);
-        }
-      }
 
       am.getTableStateManager().setTableState(table, ZooKeeperProtos.Table.State.DISABLING);
       List<HRegionInfo> toAssignRegions = am.processServerShutdown(destServerName);
@@ -775,7 +746,7 @@ public class TestAssignmentManagerOnCluster {
       }
 
       // You can't assign a dead region before SSH
-      am.assign(hri, true, true);
+      am.assign(hri, true);
       RegionState state = regionStates.getRegionState(hri);
       assertTrue(state.isFailedClose());
 
@@ -833,7 +804,7 @@ public class TestAssignmentManagerOnCluster {
       assertTrue(regionStates.isRegionOffline(hri));
 
       // You can't assign a disabled region
-      am.assign(hri, true, true);
+      am.assign(hri, true);
       assertTrue(regionStates.isRegionOffline(hri));
 
       // You can't unassign a disabled region either
@@ -991,7 +962,7 @@ public class TestAssignmentManagerOnCluster {
       }
 
       // Wait till no more RIT, the region should be offline.
-      am.waitUntilNoRegionsInTransition(60000);
+      TEST_UTIL.waitUntilNoRegionsInTransition(60000);
       assertTrue(regionStates.isRegionOffline(hri));
     } finally {
       MyRegionServer.abortedServer = null;

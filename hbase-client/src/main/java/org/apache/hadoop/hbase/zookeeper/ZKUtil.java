@@ -263,10 +263,6 @@ public class ZKUtil {
     private final String keytabFile;
     private final String principal;
 
-    public JaasConfiguration(String loginContextName, String principal) {
-      this(loginContextName, principal, null, true);
-    }
-
     public JaasConfiguration(String loginContextName, String principal, String keytabFile) {
       this(loginContextName, principal, keytabFile, keytabFile == null || keytabFile.length() == 0);
     }
@@ -951,7 +947,7 @@ public class ZKUtil {
          conf.get("hbase.zookeeper.client.keytab.file") != null);
   }
 
-  private static ArrayList<ACL> createACL(ZooKeeperWatcher zkw, String node) {
+  private static List<ACL> createACL(ZooKeeperWatcher zkw, String node) {
     if (isSecureZooKeeper(zkw.getConfiguration())) {
       // Certain znodes are accessed directly by the client,
       // so they must be readable by non-authenticated clients
@@ -961,7 +957,6 @@ public class ZKUtil {
           (node.equals(zkw.clusterIdZNode) == true) ||
           (node.equals(zkw.rsZNode) == true) ||
           (node.equals(zkw.backupMasterAddressesZNode) == true) ||
-          (node.startsWith(zkw.assignmentZNode) == true) ||
           (node.startsWith(zkw.tableZNode) == true)) {
         return ZooKeeperWatcher.CREATOR_ALL_AND_WORLD_READABLE;
       }
@@ -1779,8 +1774,6 @@ public class ZKUtil {
       " byte(s) of data from znode " + znode +
       (watcherSet? " and set watcher; ": "; data=") +
       (data == null? "null": data.length == 0? "empty": (
-          znode.startsWith(zkw.assignmentZNode)?
-            ZKAssign.toString(data): // We should not be doing this reaching into another class
           znode.startsWith(zkw.metaServerZNode)?
             getServerNameOrEmptyString(data):
           znode.startsWith(zkw.backupMasterAddressesZNode)?

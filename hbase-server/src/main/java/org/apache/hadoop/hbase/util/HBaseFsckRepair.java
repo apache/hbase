@@ -147,12 +147,13 @@ public class HBaseFsckRepair {
    * Contacts a region server and waits up to hbase.hbck.close.timeout ms
    * (default 120s) to close the region.  This bypasses the active hmaster.
    */
+  @SuppressWarnings("deprecation")
   public static void closeRegionSilentlyAndWait(Admin admin,
       ServerName server, HRegionInfo region) throws IOException, InterruptedException {
     HConnection connection = admin.getConnection();
     AdminService.BlockingInterface rs = connection.getAdmin(server);
     try {
-      ProtobufUtil.closeRegion(rs, server, region.getRegionName(), false);
+      ProtobufUtil.closeRegion(rs, server, region.getRegionName());
     } catch (IOException e) {
       LOG.warn("Exception when closing region: " + region.getRegionNameAsString(), e);
     }

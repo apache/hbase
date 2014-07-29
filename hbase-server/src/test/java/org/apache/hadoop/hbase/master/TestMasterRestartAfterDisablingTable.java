@@ -37,9 +37,6 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.zookeeper.KeeperException;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -63,8 +60,6 @@ public class TestMasterRestartAfterDisablingTable {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     log("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();
-    ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "testmasterRestart", null);
-    HMaster master = cluster.getMaster();
 
     // Create a table with regions
     TableName table = TableName.valueOf("tableRestart");
@@ -75,7 +70,7 @@ public class TestMasterRestartAfterDisablingTable {
         NUM_REGIONS_TO_CREATE);
     numRegions += 1; // catalogs
     log("Waiting for no more RIT\n");
-    blockUntilNoRIT(zkw, master);
+    TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     log("Disabling table\n");
     TEST_UTIL.getHBaseAdmin().disableTable(table);
 
@@ -106,7 +101,7 @@ public class TestMasterRestartAfterDisablingTable {
     admin.enableTable(table);
     admin.close();
     log("Waiting for no more RIT\n");
-    blockUntilNoRIT(zkw, master);
+    TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     log("Verifying there are " + numRegions + " assigned on cluster\n");
     regions = HBaseTestingUtility.getAllOnlineRegions(cluster);
     assertEquals("The assigned regions were not onlined after master"
@@ -121,12 +116,6 @@ public class TestMasterRestartAfterDisablingTable {
 
   private void log(String msg) {
     LOG.debug("\n\nTRR: " + msg + "\n");
-  }
-
-  private void blockUntilNoRIT(ZooKeeperWatcher zkw, HMaster master)
-      throws KeeperException, InterruptedException {
-    ZKAssign.blockUntilNoRIT(zkw);
-    master.assignmentManager.waitUntilNoRegionsInTransition(60000);
   }
 }
 

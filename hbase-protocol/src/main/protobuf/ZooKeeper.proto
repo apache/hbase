@@ -59,21 +59,6 @@ message ClusterUp {
 }
 
 /**
- * What we write under unassigned up in zookeeper as a region moves through
- * open/close, etc., regions.  Details a region in transition.
- */
-message RegionTransition {
-  // Code for EventType gotten by doing o.a.h.h.EventHandler.EventType.getCode()
-  required uint32 event_type_code = 1;
-  // Full regionname in bytes
-  required bytes region_name = 2;
-  required uint64 create_time = 3;
-  // The region server where the transition will happen or is happening
-  required ServerName server_name = 4;
-  optional bytes payload = 5;
-}
-
-/**
  * WAL SplitLog directory znodes have this for content.  Used doing distributed
  * WAL splitting.  Holds current state and name of server that originated split.
  */

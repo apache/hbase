@@ -37,13 +37,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -94,20 +93,14 @@ public class TestRegionMergeTransactionOnCluster {
   private static HMaster master;
   private static Admin admin;
 
-  static void setupOnce() throws Exception {
+  @BeforeClass
+  public static void beforeAllTests() throws Exception {
     // Start a cluster
     TEST_UTIL.startMiniCluster(NB_SERVERS);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     master = cluster.getMaster();
     master.balanceSwitch(false);
     admin = TEST_UTIL.getHBaseAdmin();
-  }
-
-  @BeforeClass
-  public static void beforeAllTests() throws Exception {
-    // Use ZK for region assignment
-    TEST_UTIL.getConfiguration().setBoolean("hbase.assignment.usezk", true);
-    setupOnce();
   }
 
   @AfterClass
@@ -148,7 +141,7 @@ public class TestRegionMergeTransactionOnCluster {
     }
 
     // We should not be able to assign it again
-    am.assign(hri, true, true);
+    am.assign(hri, true);
     assertFalse("Merged region can't be assigned",
       regionStates.isRegionInTransition(hri));
     assertTrue(regionStates.isRegionInState(hri, State.MERGED));
@@ -162,6 +155,7 @@ public class TestRegionMergeTransactionOnCluster {
     table.close();
   }
 
+  @SuppressWarnings("deprecation")
   @Test
   public void testCleanMergeReference() throws Exception {
     LOG.info("Starting testCleanMergeReference");

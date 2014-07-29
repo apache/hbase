@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.util.Date;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -28,8 +27,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 
 /**
  * State of a Region while undergoing transitions.
- * Region state cannot be modified except the stamp field.
- * So it is almost immutable.
+ * This class is immutable.
  */
 @InterfaceAudience.Private
 public class RegionState {
@@ -58,16 +56,10 @@ public class RegionState {
                     // master doesn't know it's already created
   }
 
-  // Many threads can update the state at the stamp at the same time
-  private final AtomicLong stamp;
-  private HRegionInfo hri;
-
-  private volatile ServerName serverName;
-  private volatile State state;
-
-  public RegionState() {
-    this.stamp = new AtomicLong(System.currentTimeMillis());
-  }
+  private final long stamp;
+  private final HRegionInfo hri;
+  private final ServerName serverName;
+  private final State state;
 
   public RegionState(HRegionInfo region, State state) {
     this(region, state, System.currentTimeMillis(), null);
@@ -82,12 +74,8 @@ public class RegionState {
       State state, long stamp, ServerName serverName) {
     this.hri = region;
     this.state = state;
-    this.stamp = new AtomicLong(stamp);
+    this.stamp = stamp;
     this.serverName = serverName;
-  }
-
-  public void updateTimestampToNow() {
-    setTimestamp(System.currentTimeMillis());
   }
 
   public State getState() {
@@ -95,7 +83,7 @@ public class RegionState {
   }
 
   public long getStamp() {
-    return stamp.get();
+    return stamp;
   }
 
   public HRegionInfo getRegion() {
@@ -248,12 +236,10 @@ public class RegionState {
    * A slower (but more easy-to-read) stringification
    */
   public String toDescriptiveString() {
-    long lstamp = stamp.get();
-    long relTime = System.currentTimeMillis() - lstamp;
-    
+    long relTime = System.currentTimeMillis() - stamp;
     return hri.getRegionNameAsString()
       + " state=" + state
-      + ", ts=" + new Date(lstamp) + " (" + (relTime/1000) + "s ago)"
+      + ", ts=" + new Date(stamp) + " (" + (relTime/1000) + "s ago)"
       + ", server=" + serverName;
   }
 
@@ -378,10 +364,6 @@ public class RegionState {
     }
 
     return new RegionState(HRegionInfo.convert(proto.getRegionInfo()),state,proto.getStamp(),null);
-  }
-
-  protected void setTimestamp(final long timestamp) {
-    stamp.set(timestamp);
   }
 
   /**

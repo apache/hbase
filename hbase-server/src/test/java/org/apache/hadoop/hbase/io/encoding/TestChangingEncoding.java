@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -194,7 +193,7 @@ public class TestChangingEncoding {
     // wait for regions out of transition. Otherwise, for online
     // encoding change, verification phase may be flaky because
     // regions could be still in transition.
-    ZKAssign.blockUntilNoRIT(TEST_UTIL.getZooKeeperWatcher());
+    TEST_UTIL.waitUntilNoRegionsInTransition(TIMEOUT_MS);
   }
 
   @Test(timeout=TIMEOUT_MS)

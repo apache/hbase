@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -45,9 +44,6 @@ import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.util.ConfigUtil;
-import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Process server shutdown.
@@ -162,24 +158,15 @@ public class ServerShutdownHandler extends EventHandler {
           server.getMetaTableLocator().waitMetaRegionLocation(server.getZooKeeper());
           // Skip getting user regions if the server is stopped.
           if (!this.server.isStopped()) {
-            if (ConfigUtil.useZKForAssignment(server.getConfiguration())) {
-              hris = MetaTableAccessor.getServerUserRegions(this.server.getShortCircuitConnection(),
-                this.serverName).keySet();
-            } else {
-              // Not using ZK for assignment, regionStates has everything we want
-              hris = am.getRegionStates().getServerRegions(serverName);
-              if (hris != null) {
-                hris.remove(HRegionInfo.FIRST_META_REGIONINFO);
-              }
+            hris = am.getRegionStates().getServerRegions(serverName);
+            if (hris != null) {
+              hris.remove(HRegionInfo.FIRST_META_REGIONINFO);
             }
           }
           break;
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
           throw (InterruptedIOException)new InterruptedIOException().initCause(e);
-        } catch (IOException ioe) {
-          LOG.info("Received exception accessing hbase:meta during server shutdown of " +
-            serverName + ", retrying hbase:meta read", ioe);
         }
       }
       if (this.server.isStopped()) {
@@ -249,15 +236,8 @@ public class ServerShutdownHandler extends EventHandler {
                   LOG.info("Skip assigning region in transition on other server" + rit);
                   continue;
                 }
-                try{
-                  //clean zk node
-                  LOG.info("Reassigning region with rs = " + rit + " and deleting zk node if exists");
-                  ZKAssign.deleteNodeFailSilent(services.getZooKeeper(), hri);
-                  regionStates.updateRegionState(hri, State.OFFLINE);
-                } catch (KeeperException ke) {
-                  this.server.abort("Unexpected ZK exception deleting unassigned node " + hri, ke);
-                  return;
-                }
+                LOG.info("Reassigning region with rs = " + rit);
+                regionStates.updateRegionState(hri, State.OFFLINE);
               } else if (regionStates.isRegionInState(
                   hri, State.SPLITTING_NEW, State.MERGING_NEW)) {
                 regionStates.updateRegionState(hri, State.OFFLINE);
@@ -274,7 +254,6 @@ public class ServerShutdownHandler extends EventHandler {
                 // but though we did assign we will not be clearing the znode in CLOSING state.
                 // Doing this will have no harm. See HBASE-5927
                 regionStates.updateRegionState(hri, State.OFFLINE);
-                am.deleteClosingOrClosedNode(hri, rit.getServerName());
                 am.offlineDisabledRegion(hri);
               } else {
                 LOG.warn("THIS SHOULD NOT HAPPEN: unexpected region in transition "

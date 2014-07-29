@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.coordination;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.Server;
@@ -32,23 +30,13 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Private
 public class ZkCoordinatedStateManager extends BaseCoordinatedStateManager {
-  private static final Log LOG = LogFactory.getLog(ZkCoordinatedStateManager.class);
   protected Server server;
   protected ZooKeeperWatcher watcher;
-  protected SplitTransactionCoordination splitTransactionCoordination;
-  protected CloseRegionCoordination closeRegionCoordination;
-  protected OpenRegionCoordination openRegionCoordination;
-  protected RegionMergeCoordination regionMergeCoordination;
 
   @Override
   public void initialize(Server server) {
     this.server = server;
     this.watcher = server.getZooKeeper();
-
-    splitTransactionCoordination = new ZKSplitTransactionCoordination(this, watcher);
-    closeRegionCoordination = new ZkCloseRegionCoordination(this, watcher);
-    openRegionCoordination = new ZkOpenRegionCoordination(this, watcher);
-    regionMergeCoordination = new ZkRegionMergeCoordination(this, watcher);
   }
 
   @Override
@@ -64,25 +52,5 @@ public class ZkCoordinatedStateManager extends BaseCoordinatedStateManager {
     } catch (KeeperException e) {
       throw new CoordinatedStateException(e);
     }
-  }
-
-  @Override
-  public SplitTransactionCoordination getSplitTransactionCoordination() {
-    return splitTransactionCoordination;
-  }
-
-  @Override
-  public CloseRegionCoordination getCloseRegionCoordination() {
-    return closeRegionCoordination;
-  }
-
-  @Override
-  public OpenRegionCoordination getOpenRegionCoordination() {
-    return openRegionCoordination;
-  }
-
-  @Override
-  public RegionMergeCoordination getRegionMergeCoordination() {
-    return regionMergeCoordination;
   }
 }
