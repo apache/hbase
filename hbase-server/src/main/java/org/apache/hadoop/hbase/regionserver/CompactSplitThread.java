@@ -37,11 +37,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
@@ -486,7 +486,8 @@ public class CompactSplitThread implements CompactionRequestor {
           }
         }
       } catch (IOException ex) {
-        IOException remoteEx = RemoteExceptionHandler.checkIOException(ex);
+        IOException remoteEx =
+            ex instanceof RemoteException ? ((RemoteException) ex).unwrapRemoteException() : ex;
         LOG.error("Compaction failed " + this, remoteEx);
         if (remoteEx != ex) {
           LOG.info("Compaction failed at original callstack: " + formatStackTrace(ex));

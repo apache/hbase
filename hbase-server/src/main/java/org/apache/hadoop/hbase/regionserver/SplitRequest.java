@@ -23,9 +23,9 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
@@ -112,7 +112,8 @@ class SplitRequest implements Runnable {
           + st.getSecondDaughter().getRegionNameAsString() + ". Split took "
           + StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
     } catch (IOException ex) {
-      LOG.error("Split failed " + this, RemoteExceptionHandler.checkIOException(ex));
+      ex = ex instanceof RemoteException ? ((RemoteException) ex).unwrapRemoteException() : ex;
+      LOG.error("Split failed " + this, ex);
       server.checkFileSystem();
     } finally {
       if (this.parent.getCoprocessorHost() != null) {
@@ -120,7 +121,7 @@ class SplitRequest implements Runnable {
           this.parent.getCoprocessorHost().postCompleteSplit();
         } catch (IOException io) {
           LOG.error("Split failed " + this,
-              RemoteExceptionHandler.checkIOException(io));
+            io instanceof RemoteException ? ((RemoteException) io).unwrapRemoteException() : io);
         }
       }
       releaseTableLock();

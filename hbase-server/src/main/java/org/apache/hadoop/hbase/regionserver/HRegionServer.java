@@ -64,15 +64,14 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HealthCheckChore;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZNodeClearer;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -1112,7 +1111,8 @@ public class HRegionServer extends HasThread implements
       try {
         this.hlogForMeta.close();
       } catch (Throwable e) {
-        LOG.error("Metalog close and delete failed", RemoteExceptionHandler.checkThrowable(e));
+        e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
+        LOG.error("Metalog close and delete failed", e);
       }
     }
     if (this.hlog != null) {
@@ -1123,7 +1123,8 @@ public class HRegionServer extends HasThread implements
           hlog.close();
         }
       } catch (Throwable e) {
-        LOG.error("Close and delete failed", RemoteExceptionHandler.checkThrowable(e));
+        e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
+        LOG.error("Close and delete failed", e);
       }
     }
   }
@@ -2623,10 +2624,11 @@ public class HRegionServer extends HasThread implements
       LOG.debug("NotServingRegionException; " + t.getMessage());
       return t;
     }
+    Throwable e = t instanceof RemoteException ? ((RemoteException) t).unwrapRemoteException() : t;
     if (msg == null) {
-      LOG.error("", RemoteExceptionHandler.checkThrowable(t));
+      LOG.error("", e);
     } else {
-      LOG.error(msg, RemoteExceptionHandler.checkThrowable(t));
+      LOG.error(msg, e);
     }
     if (!rpcServices.checkOOME(t)) {
       checkFileSystem();

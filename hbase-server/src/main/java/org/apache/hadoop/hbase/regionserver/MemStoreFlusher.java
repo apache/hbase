@@ -43,15 +43,15 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 import org.htrace.Trace;
 import org.htrace.TraceScope;
-import org.apache.hadoop.hbase.util.Counter;
 
 import com.google.common.base.Preconditions;
 
@@ -434,9 +434,11 @@ class MemStoreFlusher implements FlushRequester {
               this.server.compactSplitThread.requestSystemCompaction(
                   region, Thread.currentThread().getName());
             } catch (IOException e) {
-              LOG.error(
+                e = e instanceof RemoteException ?
+                        ((RemoteException)e).unwrapRemoteException() : e;
+            	LOG.error(
                 "Cache flush failed for region " + Bytes.toStringBinary(region.getRegionName()),
-                RemoteExceptionHandler.checkIOException(e));
+                e);
             }
           }
         }
@@ -494,9 +496,11 @@ class MemStoreFlusher implements FlushRequester {
       server.abort("Replay of HLog required. Forcing server shutdown", ex);
       return false;
     } catch (IOException ex) {
-      LOG.error("Cache flush failed" +
-        (region != null ? (" for region " + Bytes.toStringBinary(region.getRegionName())) : ""),
-        RemoteExceptionHandler.checkIOException(ex));
+      ex = ex instanceof RemoteException ? ((RemoteException) ex).unwrapRemoteException() : ex;
+      LOG.error(
+        "Cache flush failed"
+            + (region != null ? (" for region " + Bytes.toStringBinary(region.getRegionName()))
+                : ""), ex);
       if (!server.checkFileSystem()) {
         return false;
       }

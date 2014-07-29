@@ -23,9 +23,9 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
@@ -118,8 +118,8 @@ class RegionMergeRequest implements Runnable {
           + ". Region merge took "
           + StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTimeMillis(), startTime));
     } catch (IOException ex) {
-      LOG.error("Merge failed " + this,
-          RemoteExceptionHandler.checkIOException(ex));
+      ex = ex instanceof RemoteException ? ((RemoteException) ex).unwrapRemoteException() : ex;
+      LOG.error("Merge failed " + this, ex);
       server.checkFileSystem();
     } finally {
       releaseTableLock();

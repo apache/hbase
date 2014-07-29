@@ -28,9 +28,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.ipc.RemoteException;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
@@ -123,7 +123,8 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
       FileStatus[] files = FSUtils.listStatus(this.fs, this.oldFileDir);
       checkAndDeleteEntries(files);
     } catch (IOException e) {
-      e = RemoteExceptionHandler.checkIOException(e);
+      e = e instanceof RemoteException ?
+              ((RemoteException)e).unwrapRemoteException() : e;
       LOG.warn("Error while cleaning the logs", e);
     }
   }
@@ -182,8 +183,9 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
       // if the directory still has children, we can't delete it, so we are done
       if (!allChildrenDeleted) return false;
     } catch (IOException e) {
-      e = RemoteExceptionHandler.checkIOException(e);
-      LOG.warn("Error while listing directory: " + dir, e);
+        e = e instanceof RemoteException ?
+                ((RemoteException)e).unwrapRemoteException() : e;
+    	LOG.warn("Error while listing directory: " + dir, e);
       // couldn't list directory, so don't try to delete, and don't return success
       return false;
     }
@@ -261,7 +263,8 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
               + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");
         }
       } catch (IOException e) {
-        e = RemoteExceptionHandler.checkIOException(e);
+        e = e instanceof RemoteException ?
+                  ((RemoteException)e).unwrapRemoteException() : e;
         LOG.warn("Error while deleting: " + filePath, e);
       }
     }

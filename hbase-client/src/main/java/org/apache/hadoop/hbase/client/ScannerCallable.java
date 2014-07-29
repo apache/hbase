@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -236,7 +235,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
           }
           IOException ioe = e;
           if (e instanceof RemoteException) {
-            ioe = RemoteExceptionHandler.decodeRemoteException((RemoteException)e);
+            ioe = ((RemoteException) e).unwrapRemoteException();
           }
           if (logScannerActivity && (ioe instanceof UnknownScannerException)) {
             try {

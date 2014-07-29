@@ -56,15 +56,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.CoordinatedStateException;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -112,6 +111,7 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MultipleIOException;
+import org.apache.hadoop.ipc.RemoteException;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -361,7 +361,7 @@ public class HLogSplitter {
       ZKSplitLog.markCorrupted(rootDir, logfile.getPath().getName(), fs);
       isCorrupted = true;
     } catch (IOException e) {
-      e = RemoteExceptionHandler.checkIOException(e);
+      e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
       throw e;
     } finally {
       LOG.debug("Finishing writing output logs and closing down.");
@@ -1276,7 +1276,8 @@ public class HLogSplitter {
         wap.incrementEdits(editsCount);
         wap.incrementNanoTime(System.nanoTime() - startTime);
       } catch (IOException e) {
-        e = RemoteExceptionHandler.checkIOException(e);
+          e = e instanceof RemoteException ?
+                  ((RemoteException)e).unwrapRemoteException() : e;
         LOG.fatal(" Got while writing log entry to log", e);
         throw e;
       }
@@ -1625,7 +1626,7 @@ public class HLogSplitter {
         rsw.incrementEdits(actions.size());
         rsw.incrementNanoTime(System.nanoTime() - startTime);
       } catch (IOException e) {
-        e = RemoteExceptionHandler.checkIOException(e);
+        e = e instanceof RemoteException ? ((RemoteException) e).unwrapRemoteException() : e;
         LOG.fatal(" Got while writing log entry to log", e);
         throw e;
       }

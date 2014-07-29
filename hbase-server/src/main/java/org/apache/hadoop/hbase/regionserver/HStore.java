@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -87,6 +86,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -1615,7 +1615,8 @@ public class HStore implements Store {
         this.fs.removeStoreFiles(this.getColumnFamilyName(), compactedFiles);
       }
     } catch (IOException e) {
-      e = RemoteExceptionHandler.checkIOException(e);
+      e = e instanceof RemoteException ?
+                ((RemoteException)e).unwrapRemoteException() : e;
       LOG.error("Failed removing compacted files in " + this +
         ". Files we were trying to remove are " + compactedFiles.toString() +
         "; some of them may have been already removed", e);
