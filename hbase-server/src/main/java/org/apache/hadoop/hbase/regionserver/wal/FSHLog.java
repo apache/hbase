@@ -823,14 +823,21 @@ class FSHLog implements HLog, Syncable {
 
   /**
    * Cleans up current writer closing it and then puts in place the passed in
-   * <code>nextWriter</code>
-   * 
-   * @param oldPath
-   * @param newPath
-   * @param nextWriter
-   * @param nextHdfsOut
-   * @return <code>newPath</code>
-   * @throws IOException
+   * <code>nextWriter</code>.
+   *
+   * In the case of creating a new WAL, oldPath will be null.
+   *
+   * In the case of rolling over from one file to the next, none of the params will be null.
+   *
+   * In the case of closing out this FSHLog with no further use newPath, nextWriter, and
+   * nextHdfsOut will be null.
+   *
+   * @param oldPath may be null
+   * @param newPath may be null
+   * @param nextWriter may be null
+   * @param nextHdfsOut may be null
+   * @return the passed in <code>newPath</code>
+   * @throws IOException if there is a problem flushing or closing the underlying FS
    */
   Path replaceWriter(final Path oldPath, final Path newPath, FSHLog.Writer nextWriter,
       final FSDataOutputStream nextHdfsOut)
@@ -885,6 +892,7 @@ class FSHLog implements HLog, Syncable {
       this.hdfs_out = nextHdfsOut;
       int oldNumEntries = this.numEntries.get();
       this.numEntries.set(0);
+      final String newPathString = (null == newPath ? null : FSUtils.getPath(newPath));
       if (oldPath != null) {
         this.byWalRegionSequenceIds.put(oldPath, this.highestRegionSequenceIds);
         this.highestRegionSequenceIds = new HashMap<byte[], Long>();
@@ -892,9 +900,9 @@ class FSHLog implements HLog, Syncable {
         this.totalLogSize.addAndGet(oldFileLen);
         LOG.info("Rolled WAL " + FSUtils.getPath(oldPath) + " with entries=" + oldNumEntries +
           ", filesize=" + StringUtils.byteDesc(oldFileLen) + "; new WAL " +
-          FSUtils.getPath(newPath));
+          newPathString);
       } else {
-        LOG.info("New WAL " + FSUtils.getPath(newPath));
+        LOG.info("New WAL " + newPathString);
       }
     } catch (InterruptedException ie) {
       // Perpetuate the interrupt
