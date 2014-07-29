@@ -170,7 +170,8 @@ HTable table = new HTable(conf, tablename);
       <para> Expect a ~10% performance penalty for encrypted communication. </para>
     </section>
 
-    <section>
+
+    <section xml:id="security.client.thrift">
       <title>Client-side Configuration for Secure Operation - Thrift Gateway</title>
       <para> Add the following to the <code>hbase-site.xml</code> file for every Thrift gateway: <programlisting><![CDATA[
 <property>
@@ -186,7 +187,8 @@ HTable table = new HTable(conf, tablename);
 </property>
     ]]></programlisting>
       </para>
-      <para> Substitute the appropriate credential and keytab for $USER and $KEYTAB respectively. </para>
+      <para> Substitute the appropriate credential and keytab for <replaceable>$USER</replaceable>
+        and <replaceable>$KEYTAB</replaceable> respectively. </para>
       <para>In order to use the Thrift API principal to interact with HBase, it is also necessary to
         add the <code>hbase.thrift.kerberos.principal</code> to the <code>_acl_</code> table. For
         example, to give the Thrift API principal, <code>thrift_server</code>, administrative
@@ -201,7 +203,57 @@ grant 'thrift_server', 'RWCA'
         authentication will be performed by the Thrift gateway itself. All client access via the
         Thrift gateway will use the Thrift gateway's credential and have its privilege. </para>
     </section>
-
+    <section xml:id="security.gateway.thrift">
+      <title>Configure the Thrift Gateway to Authenticate on Behalf of the Client</title>
+      <para><xref linkend="security.client.thrift"/> describes how to authenticate a Thrift client
+        to HBase using a fixed user. As an alternative, you can configure the Thrift gateway to
+        authenticate to HBase on the client's behalf, and to access HBase using a proxy user. This
+        was implemented in <link xlink:href="https://issues.apache.org/jira/browse/HBASE-11349"
+          >HBASE-11349</link> for Thrift 1, and <link
+          xlink:href="https://issues.apache.org/jira/browse/HBASE-11474">HBASE-11474</link> for
+        Thrift 2.</para>
+      <note>
+        <title>Limitations with Thrift Framed Transport</title>
+        <para>If you use framed transport, you cannot yet take advantage of this feature, because
+          SASL does not work with Thrift framed transport at this time.</para>
+      </note>
+      <para>To enable it, do the following.</para>
+      <procedure>
+        <step>
+          <para>Be sure Thrift is running in secure mode, by following the procedure described in
+              <xref linkend="security.client.thrift"/>.</para>
+        </step>
+        <step>
+          <para>Be sure that HBase is configured to allow proxy users, as described in <xref
+              linkend="security.rest.gateway"/>.</para>
+        </step>
+        <step>
+          <para>In <filename>hbase-site.xml</filename> for each cluster node running a Thrift
+            gateway, set the property <code>hbase.thrift.security.qop</code> to one of the following
+            three values:</para>
+          <itemizedlist>
+            <listitem>
+              <para><literal>auth-conf</literal> - authentication, integrity, and confidentiality
+                checking</para>
+            </listitem>
+            <listitem>
+              <para><literal>auth-int</literal> - authentication and integrity checking</para>
+            </listitem>
+            <listitem>
+              <para><literal>auth</literal> - authentication checking only</para>
+            </listitem>
+          </itemizedlist>
+        </step>
+        <step>
+          <para>Restart the Thrift gateway processes for the changes to take effect. If a node is
+            running Thrift, the output of the <command>jps</command> command will list a
+              <code>ThriftServer</code> process. To stop Thrift on a node, run the command
+              <command>bin/hbase-daemon.sh stop thrift</command>. To start Thrift on a node, run the
+            command <command>bin/hbase-daemon.sh start thrift</command>.</para>
+        </step>
+      </procedure>
+    </section>
+    
     <section>
       <title>Client-side Configuration for Secure Operation - REST Gateway</title>
       <para> Add the following to the <code>hbase-site.xml</code> file for every REST gateway: </para>
@@ -215,7 +267,8 @@ grant 'thrift_server', 'RWCA'
   <value>$USER/_HOST@HADOOP.LOCALDOMAIN</value>
 </property>
     ]]></programlisting>
-      <para> Substitute the appropriate credential and keytab for $USER and $KEYTAB respectively. </para>
+      <para> Substitute the appropriate credential and keytab for <replaceable>$USER</replaceable>
+        and <replaceable>$KEYTAB</replaceable> respectively. </para>
       <para> The REST gateway will authenticate with HBase using the supplied credential. No
         authentication will be performed by the REST gateway itself. All client access via the REST
         gateway will use the REST gateway's credential and have its privilege. </para>
@@ -233,7 +286,7 @@ grant 'rest_server', 'RWCA'
       </para>
     </section>
 
-    <section>
+    <section xml:id="security.rest.gateway">
       <title>REST Gateway Impersonation Configuration</title>
       <para> By default, the REST gateway doesn't support impersonation. It accesses the HBase on
         behalf of clients as the user configured as in the previous section. To the HBase server,
