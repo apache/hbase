@@ -28,13 +28,14 @@
 -->
 
     <title>Thrift API and Filter Language</title>
-    <para>Apache <link
-            xlink:href="http://thrift.apache.org/">Thrift</link> is a cross-platform, cross-language
-        development framework. HBase includes a Thrift API and filter language. The Thrift API
-        relies on client and server processes. Documentation about the HBase Thrift API is located
-        at <link
-            xlink:href="http://wiki.apache.org/hadoop/Hbase/ThriftApi" />. The rest of this chapter
-        discusses the filter language provided by the Thrift API.</para>
+    <para>Apache <link xlink:href="http://thrift.apache.org/">Thrift</link> is a cross-platform,
+        cross-language development framework. HBase includes a Thrift API and filter language. The
+        Thrift API relies on client and server processes. Documentation about the HBase Thrift API
+        is located at <link xlink:href="http://wiki.apache.org/hadoop/Hbase/ThriftApi"/>. </para>
+    <para>You can configure Thrift for secure authentication at the server and client side, by
+        following the procedures in <xref linkend="security.client.thrift"/> and <xref
+            linkend="security.gateway.thrift"/>. </para>
+    <para>The rest of this chapter discusses the filter language provided by the Thrift API.</para>
     <section
         xml:id="thrift.filter-language">
         <title>Filter Language</title>
