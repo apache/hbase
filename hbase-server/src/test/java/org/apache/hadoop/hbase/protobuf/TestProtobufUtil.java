@@ -291,15 +291,21 @@ public class TestProtobufUtil {
     scanBuilder.addColumn(columnBuilder.build());
 
     ClientProtos.Scan proto = scanBuilder.build();
-    // default fields
+
+    // Verify default values
     assertEquals(1, proto.getMaxVersions());
     assertEquals(true, proto.getCacheBlocks());
 
+    // Verify fields survive ClientProtos.Scan -> Scan -> ClientProtos.Scan
+    // conversion
     scanBuilder = ClientProtos.Scan.newBuilder(proto);
-    scanBuilder.setMaxVersions(1);
-    scanBuilder.setCacheBlocks(true);
+    scanBuilder.setMaxVersions(2);
+    scanBuilder.setCacheBlocks(false);
+    scanBuilder.setCaching(1024);
+    ClientProtos.Scan expectedProto = scanBuilder.build();
 
-    Scan scan = ProtobufUtil.toScan(proto);
-    assertEquals(scanBuilder.build(), ProtobufUtil.toScan(scan));
+    ClientProtos.Scan actualProto = ProtobufUtil.toScan(
+        ProtobufUtil.toScan(expectedProto));
+    assertEquals(expectedProto, actualProto);
   }
 }
