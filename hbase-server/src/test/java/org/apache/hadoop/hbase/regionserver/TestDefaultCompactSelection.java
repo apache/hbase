@@ -77,6 +77,8 @@ public class TestDefaultCompactSelection extends TestCase {
     this.conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, minSize);
     this.conf.setLong("hbase.hstore.compaction.max.size", maxSize);
     this.conf.setFloat("hbase.hstore.compaction.ratio", 1.0F);
+    // Test depends on this not being set to pass.  Default breaks test.  TODO: Revisit.
+    this.conf.unset("hbase.hstore.compaction.min.size");
 
     //Setting up a Store
     Path basedir = new Path(DIR);

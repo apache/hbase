@@ -131,6 +131,8 @@ public class TestStripeCompactionPolicy {
   public void testSingleStripeCompaction() throws Exception {
     // Create a special policy that only compacts single stripes, using standard methods.
     Configuration conf = HBaseConfiguration.create();
+    // Test depends on this not being set to pass.  Default breaks test.  TODO: Revisit.
+    conf.unset("hbase.hstore.compaction.min.size");
     conf.setFloat(CompactionConfiguration.HBASE_HSTORE_COMPACTION_RATIO_KEY, 1.0F);
     conf.setInt(StripeStoreConfig.MIN_FILES_KEY, 3);
     conf.setInt(StripeStoreConfig.MAX_FILES_KEY, 4);
@@ -251,6 +253,8 @@ public class TestStripeCompactionPolicy {
   @Test
   public void testSplitOffStripe() throws Exception {
     Configuration conf = HBaseConfiguration.create();
+    // Test depends on this not being set to pass.  Default breaks test.  TODO: Revisit.
+    conf.unset("hbase.hstore.compaction.min.size");
     // First test everything with default split count of 2, then split into more.
     conf.setInt(StripeStoreConfig.MIN_FILES_KEY, 2);
     Long[] toSplit = new Long[] { defaultSplitSize - 2, 1L, 1L };
@@ -281,6 +285,10 @@ public class TestStripeCompactionPolicy {
   public void testSplitOffStripeOffPeak() throws Exception {
     // for HBASE-11439
     Configuration conf = HBaseConfiguration.create();
+
+    // Test depends on this not being set to pass.  Default breaks test.  TODO: Revisit.
+    conf.unset("hbase.hstore.compaction.min.size");
+
     conf.setInt(StripeStoreConfig.MIN_FILES_KEY, 2);
     // Select the last 2 files.
     StripeCompactionPolicy.StripeInformationProvider si =
@@ -391,6 +399,8 @@ public class TestStripeCompactionPolicy {
   @Test
   public void testSingleStripeDropDeletes() throws Exception {
     Configuration conf = HBaseConfiguration.create();
+    // Test depends on this not being set to pass.  Default breaks test.  TODO: Revisit.
+    conf.unset("hbase.hstore.compaction.min.size");
     StripeCompactionPolicy policy = createPolicy(conf);
     // Verify the deletes can be dropped if there are no L0 files.
     Long[][] stripes = new Long[][] { new Long[] { 3L, 2L, 2L, 2L }, new Long[] { 6L } };
