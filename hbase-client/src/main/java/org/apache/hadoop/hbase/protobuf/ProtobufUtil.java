@@ -833,6 +833,9 @@ public final class ProtobufUtil {
     if (scan.getRowOffsetPerColumnFamily() > 0) {
       scanBuilder.setStoreOffset(scan.getRowOffsetPerColumnFamily());
     }
+    if (scan.getCaching() > 0) {
+      scanBuilder.setCaching(scan.getCaching());
+    }
     return scanBuilder.build();
   }
 
@@ -908,6 +911,9 @@ public final class ProtobufUtil {
           scan.addFamily(family);
         }
       }
+    }
+    if (proto.hasCaching()) {
+      scan.setCaching(proto.getCaching());
     }
     return scan;
   }
