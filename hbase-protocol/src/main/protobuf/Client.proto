@@ -233,6 +233,7 @@ message Scan {
   optional bool load_column_families_on_demand = 13; /* DO NOT add defaults to load_column_families_on_demand. */
   optional bool small = 14;
   optional bool reversed = 15 [default = false];
+  optional uint32 caching = 17;
 }
 
 /**

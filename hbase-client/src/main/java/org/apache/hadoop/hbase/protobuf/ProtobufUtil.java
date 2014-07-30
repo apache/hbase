@@ -864,6 +864,9 @@ public final class ProtobufUtil {
     if (scan.isReversed()) {
       scanBuilder.setReversed(scan.isReversed());
     }
+    if (scan.getCaching() > 0) {
+      scanBuilder.setCaching(scan.getCaching());
+    }
     return scanBuilder.build();
   }
 
@@ -942,6 +945,9 @@ public final class ProtobufUtil {
     }
     if (proto.hasReversed()) {
       scan.setReversed(proto.getReversed());
+    }
+    if (proto.hasCaching()) {
+      scan.setCaching(proto.getCaching());
     }
     return scan;
   }
