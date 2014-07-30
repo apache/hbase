@@ -106,6 +106,7 @@ public class TestNamespaceUpgrade {
     File untar = untar(new File(testdir.toString()));
     // Now copy the untar up into hdfs so when we start hbase, we'll run from it.
     Configuration conf = TEST_UTIL.getConfiguration();
+    conf.setBoolean("hbase.assignment.usezk", true);
     FsShell shell = new FsShell(conf);
     FileSystem fs = FileSystem.get(conf);
     // find where hbase will root itself, so we can copy filesystem there
