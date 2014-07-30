@@ -96,6 +96,8 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
+import java.util.UUID;
+
 /**
  * Tool to load the output of HFileOutputFormat into an existing table.
  * @see #usage()
@@ -104,7 +106,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @InterfaceStability.Stable
 public class LoadIncrementalHFiles extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(LoadIncrementalHFiles.class);
-  static final AtomicLong regionCount = new AtomicLong(0);
   private HBaseAdmin hbAdmin;
 
   public static final String NAME = "completebulkload";
@@ -467,9 +468,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   // unique file name for the table
-  String getUniqueName(TableName tableName) {
-    String name = tableName + "," + regionCount.incrementAndGet();
-    return name;
+  private String getUniqueName() {
+    return UUID.randomUUID().toString().replaceAll("-", "");
   }
 
   protected List<LoadQueueItem> splitStoreFile(final LoadQueueItem item,
@@ -484,7 +484,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     LOG.info("HFile at " + hfilePath + " no longer fits inside a single " +
     "region. Splitting...");
 
-    String uniqueName = getUniqueName(table.getName());
+    String uniqueName = getUniqueName();
     HColumnDescriptor familyDesc = table.getTableDescriptor().getFamily(item.family);
     Path botOut = new Path(tmpDir, uniqueName + ".bottom");
     Path topOut = new Path(tmpDir, uniqueName + ".top");
