@@ -904,6 +904,9 @@ public final class ProtobufUtil {
     if (scan.getConsistency() == Consistency.TIMELINE) {
       scanBuilder.setConsistency(toConsistency(scan.getConsistency()));
     }
+    if (scan.getCaching() > 0) {
+      scanBuilder.setCaching(scan.getCaching());
+    }
     return scanBuilder.build();
   }
 
@@ -985,6 +988,9 @@ public final class ProtobufUtil {
     }
     if (proto.hasConsistency()) {
       scan.setConsistency(toConsistency(proto.getConsistency()));
+    }
+    if (proto.hasCaching()) {
+      scan.setCaching(proto.getCaching());
     }
     return scan;
   }
