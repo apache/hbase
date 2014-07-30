@@ -397,6 +397,11 @@ public final class HConstants {
     "hbase.hregionserver.hlog.split.workers.num";
 
   /**
+   * The default number of threads used for splitting logs in parallel.
+   */
+  public static final int DEFAULT_HREGIONSERVER_SPLITLOG_WORKERS_NUM = 3;
+
+  /**
    * If using quorum reads from HDFS, the maximum size of the thread pool.
    * value <= 0 disables quorum reads.
    */

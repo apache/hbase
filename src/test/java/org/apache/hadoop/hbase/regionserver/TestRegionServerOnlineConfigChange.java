@@ -364,5 +364,24 @@ public class TestRegionServerOnlineConfigChange extends TestCase {
     assertEquals(tableDescPropCustomVal, s1.conf.get(tableDescProp));
     assertEquals(tableDescPropCustomVal, s2.conf.get(tableDescProp));
   }
-}
 
+  public void testSetSplitLogWorkerThreadCount() {
+    int firstLogWorkerLimit = 5;
+    int secondLogWorkerLimit = 10;
+    int thirdLogWorkerLimit = 3;
+
+    assertEquals(HConstants.DEFAULT_HREGIONSERVER_SPLITLOG_WORKERS_NUM, rs1.getNumberOfSplitLogWorkerThreads());
+
+    conf.setInt(HConstants.HREGIONSERVER_SPLITLOG_WORKERS_NUM, firstLogWorkerLimit);
+    HRegionServer.configurationManager.notifyAllObservers(conf);
+    assertEquals(firstLogWorkerLimit, rs1.getNumberOfSplitLogWorkerThreads());
+
+    conf.setInt(HConstants.HREGIONSERVER_SPLITLOG_WORKERS_NUM, secondLogWorkerLimit);
+    HRegionServer.configurationManager.notifyAllObservers(conf);
+    assertEquals(secondLogWorkerLimit, rs1.getNumberOfSplitLogWorkerThreads());
+
+    conf.setInt(HConstants.HREGIONSERVER_SPLITLOG_WORKERS_NUM, thirdLogWorkerLimit);
+    HRegionServer.configurationManager.notifyAllObservers(conf);
+    assertEquals(thirdLogWorkerLimit, rs1.getNumberOfSplitLogWorkerThreads());
+  }
+}

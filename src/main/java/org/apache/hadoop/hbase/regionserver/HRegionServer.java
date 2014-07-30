@@ -1976,16 +1976,8 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
       this.server.start();
       isRpcServerRunning = true;
     }
-    int numSplitLogWorkers = conf.getInt(HConstants.HREGIONSERVER_SPLITLOG_WORKERS_NUM, 3);
-    // Create the log splitting worker and start it
-    this.splitLogWorkers = new ArrayList<SplitLogWorker>(numSplitLogWorkers);
-    for (int i = 0; i < numSplitLogWorkers; i++) {
-      SplitLogWorker splitLogWorker = new SplitLogWorker(this.zooKeeperWrapper,
-          this.getConfiguration(), this.serverInfo.getServerName(),
-          logCloseThreadPool, masterRef);
-      this.splitLogWorkers.add(splitLogWorker);
-      splitLogWorker.start();
-    }
+    int numSplitLogWorkers = conf.getInt(HConstants.HREGIONSERVER_SPLITLOG_WORKERS_NUM, HConstants.DEFAULT_HREGIONSERVER_SPLITLOG_WORKERS_NUM);
+    this.setNumberOfSplitLogWorkerThreads(numSplitLogWorkers);
     // start the scanner prefetch threadpool
     int numHandlers = conf.getInt("hbase.regionserver.handler.count", 10);
     scanPrefetchThreadPool =
@@ -1994,6 +1986,62 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
 
     LOG.info("HRegionServer started at: " +
       this.serverInfo.getServerAddress().toString());
+  }
+
+  /**
+   * Set the number of {@link SplitLogWorker} threads available. This is
+   * intended to be called at any time during the HRegionServer's lifetime,
+   * first called during {@link #startServiceThreads()}, and will create the
+   * backing {@link ArrayList} if it doesn't already exist.
+   *
+   * When the number of worker threads to use is less than the number of
+   * workers in use, extraneous workers are stopped. Worker threads at the
+   * start of the {@link ArrayList} are left alone, threads beyond index
+   * (numWorkers - 1) are stopped.
+   *
+   * When the number of worker threads to use is greater than the number of
+   * workers in use, the appropriate number of additional {@link SplitLogWorker}
+   * threads are added.
+   *
+   * @param numWorkers The number of worker threads to have running.
+   */
+  private void setNumberOfSplitLogWorkerThreads(int numWorkers) {
+    if (numWorkers <= 0 || (this.splitLogWorkers != null && numWorkers == this.splitLogWorkers.size())) {
+      // Don't accept zero or fewer workers, and don't do anything if we try to
+      // set the same number of threads already in use.
+      return;
+    }
+
+    if (null == this.splitLogWorkers) {
+      this.splitLogWorkers = new ArrayList<SplitLogWorker>(numWorkers);
+    }
+
+    if (numWorkers < this.splitLogWorkers.size()) {
+      // Fewer workers, stop threads
+      for (int idx = this.splitLogWorkers.size() - 1; idx >= numWorkers; idx--) {
+        this.splitLogWorkers.remove(idx).stop();
+      }
+    } else {
+      // More workers, spin up threads
+      int workersNeeded = numWorkers - this.splitLogWorkers.size();
+      do {
+        SplitLogWorker splitLogWorker = new SplitLogWorker(this.zooKeeperWrapper,
+          this.getConfiguration(), this.serverInfo.getServerName(),
+          logCloseThreadPool, masterRef);
+        this.splitLogWorkers.add(splitLogWorker);
+        splitLogWorker.start();
+        workersNeeded--;
+      } while (workersNeeded > 0);
+    }
+  }
+
+  /**
+   * Get the number of {@link SplitLogWorker} threads currently available.
+   *
+   * @return The number of {@link SplitLotWorker} threads currently running.
+   */
+  public int getNumberOfSplitLogWorkerThreads() {
+    return this.splitLogWorkers.size();
   }
 
   /*
@@ -4181,6 +4229,8 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
         HConstants.HDFS_QUORUM_READ_THREADS_MAX, HConstants.DEFAULT_HDFS_QUORUM_READ_THREADS_MAX);
     long timeout = conf.getLong(
         HConstants.HDFS_QUORUM_READ_TIMEOUT_MILLIS, HConstants.DEFAULT_HDFS_QUORUM_READ_TIMEOUT_MILLIS);
+    int numSplitLogWorkers = conf.getInt(
+        HConstants.HREGIONSERVER_SPLITLOG_WORKERS_NUM, HConstants.DEFAULT_HREGIONSERVER_SPLITLOG_WORKERS_NUM);
 
     boolean origProfiling = enableServerSideProfilingForAllCalls.get();
     boolean newProfiling = conf.getBoolean(
@@ -4199,6 +4249,11 @@ public class HRegionServer implements HRegionServerIf, HBaseRPCErrorHandler,
     if (timeout != this.quorumReadTimeoutMillis) {
       LOG.info("HDFS quorum read timeout is changed from " + this.quorumReadTimeoutMillis + " to " + timeout);
       this.setHDFSQuorumReadTimeoutMillis(timeout);
+    }
+
+    if (numSplitLogWorkers != this.splitLogWorkers.size()) {
+      LOG.info("Number of SplitLogWorker threads is changed from " + this.splitLogWorkers.size() + " to " + numSplitLogWorkers);
+      this.setNumberOfSplitLogWorkerThreads(numSplitLogWorkers);
     }
 
     HRegionServer.useSeekNextUsingHint =
