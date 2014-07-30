@@ -388,6 +388,8 @@ public class TestAssignmentManagerOnCluster {
       AssignmentManager am = master.getAssignmentManager();
       assertTrue(am.waitForAssignment(hri));
 
+      ServerName sn = am.getRegionStates().getRegionServerOfRegion(hri);
+      TEST_UTIL.assertRegionOnServer(hri, sn, 6000);
       MyRegionObserver.preCloseEnabled.set(true);
       am.unassign(hri);
       RegionState state = am.getRegionStates().getRegionState(hri);
