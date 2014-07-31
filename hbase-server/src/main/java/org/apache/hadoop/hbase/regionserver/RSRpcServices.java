@@ -139,6 +139,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResul
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
@@ -1181,14 +1182,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws ServiceException
    */
   @Override
+  @SuppressWarnings("deprecation")
   @QosPriority(priority=HConstants.HIGH_QOS)
   public OpenRegionResponse openRegion(final RpcController controller,
       final OpenRegionRequest request) throws ServiceException {
-    try {
-      checkOpen();
-    } catch (IOException ie) {
-      throw new ServiceException(ie);
-    }
     requestCount.increment();
     if (request.hasServerStartCode()) {
       // check that we are the same server that this RPC is intended for.
@@ -1205,6 +1202,38 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     final Map<TableName, HTableDescriptor> htds =
         new HashMap<TableName, HTableDescriptor>(regionCount);
     final boolean isBulkAssign = regionCount > 1;
+    try {
+      checkOpen();
+    } catch (IOException ie) {
+      TableName tableName = null;
+      if (regionCount == 1) {
+        RegionInfo ri = request.getOpenInfo(0).getRegion();
+        if (ri != null) {
+          tableName = ProtobufUtil.toTableName(ri.getTableName());
+        }
+      }
+      if (!TableName.META_TABLE_NAME.equals(tableName)) {
+        throw new ServiceException(ie);
+      }
+      // We are assigning meta, wait a little for regionserver to finish initialization.
+      int timeout = regionServer.conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT) >> 2; // Quarter of RPC timeout
+      long endTime = System.currentTimeMillis() + timeout;
+      synchronized (regionServer.online) {
+        try {
+          while (System.currentTimeMillis() <= endTime
+              && !regionServer.isStopped() && !regionServer.isOnline()) {
+            regionServer.online.wait(100);
+          }
+          checkOpen();
+        } catch (InterruptedException t) {
+          Thread.currentThread().interrupt();
+          throw new ServiceException(t);
+        } catch (IOException e) {
+          throw new ServiceException(e);
+        }
+      }
+    }
     for (RegionOpenInfo regionOpenInfo : request.getOpenInfoList()) {
       final HRegionInfo region = HRegionInfo.convert(regionOpenInfo.getRegion());
       OpenRegionCoordination coordination = regionServer.getCoordinatedStateManager().
