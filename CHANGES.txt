@@ -1,4 +1,25 @@
 HBase Change Log
+Release 0.94.22 - 07/31/2014
+Bug
+
+    [HBASE-10645] - Fix wrapping of Requests Counts Regionserver level metrics
+    [HBASE-11360] - SnapshotFileCache causes too many cache refreshes
+    [HBASE-11479] - SecureConnection can't be closed when SecureClient is stopping because InterruptedException won't be caught in SecureClient#setupIOstreams()
+    [HBASE-11496] - HBASE-9745 broke cygwin CLASSPATH translation
+    [HBASE-11552] - Read/Write requests count metric value is too short
+    [HBASE-11565] - Stale connection could stay for a while
+    [HBASE-11633] - [0.94] port HBASE-11217 Race between SplitLogManager task creation + TimeoutMonitor
+
+Improvement
+
+    [HBASE-2217] - VM OPTS for shell only
+    [HBASE-7910] - Dont use reflection for security
+    [HBASE-11444] - Remove use of reflection for User#getShortName
+    [HBASE-11450] - Improve file size info in SnapshotInfo tool
+    [HBASE-11480] - ClientScanner might not close the HConnection created in construction
+    [HBASE-11623] - mutateRowsWithLocks might require updatesLock.readLock with waitTime=0
+
+
 Release 0.94.21 - 06/27/2014
 Bug
 
