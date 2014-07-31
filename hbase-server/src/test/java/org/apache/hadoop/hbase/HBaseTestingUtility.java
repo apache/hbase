@@ -103,6 +103,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TaskLog;
@@ -511,6 +512,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public MiniDFSCluster startMiniDFSCluster(int servers, final String hosts[])
   throws Exception {
     createDirsAndSetProperties();
+    EditLogFileOutputStream.setShouldSkipFsyncForTesting(true);
 
     // Error level to skip some warnings specific to the minicluster. See HBASE-4709
     org.apache.log4j.Logger.getLogger(org.apache.hadoop.metrics2.util.MBeans.class).
