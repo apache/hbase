@@ -4992,7 +4992,7 @@ public class HRegion implements HeapSize { // , Writable{
         acquiredRowLocks.add(getRowLock(row));
       }
       // 3. Region lock
-      lock(this.updatesLock.readLock(), acquiredRowLocks.size());
+      lock(this.updatesLock.readLock(), acquiredRowLocks.size() == 0 ? 1 : acquiredRowLocks.size());
       locked = true;
       // Get a mvcc write number
       mvccNum = MultiVersionConsistencyControl.getPreAssignedWriteNumber(this.sequenceId);
