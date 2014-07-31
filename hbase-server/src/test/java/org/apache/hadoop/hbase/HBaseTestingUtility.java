@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -506,6 +507,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public MiniDFSCluster startMiniDFSCluster(int servers, final String hosts[])
   throws Exception {
     createDirsAndSetProperties();
+    try {
+      Method m = Class.forName("org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream")
+          .getMethod("setShouldSkipFsyncForTesting", new Class<?> []{ boolean.class });
+      m.invoke(null, new Object[] {true});
+    } catch (ClassNotFoundException e) {
+      LOG.info("EditLogFileOutputStream not found");
+    }
 
     // Error level to skip some warnings specific to the minicluster. See HBASE-4709
     org.apache.log4j.Logger.getLogger(org.apache.hadoop.metrics2.util.MBeans.class).
