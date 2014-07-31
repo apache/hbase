@@ -56,6 +56,8 @@ public class TestSecureLoadIncrementalHFiles extends  TestLoadIncrementalHFiles{
 
     // Wait for the ACL table to become available
     util.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
+
+    setupNamespace();
   }
 
 }
