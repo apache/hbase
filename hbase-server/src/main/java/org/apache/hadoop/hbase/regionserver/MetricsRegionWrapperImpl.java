@@ -18,17 +18,19 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.metrics2.MetricsExecutor;
-
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+
+import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.metrics2.MetricsExecutor;
 
 public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable {
 
@@ -41,6 +43,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private long numStoreFiles;
   private long memstoreSize;
   private long storeFileSize;
+  private Map<String, DescriptiveStatistics> coprocessorTimes;
 
   private ScheduledFuture<?> regionMetricsUpdateTask;
 
@@ -50,6 +53,7 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
     this.runnable = new HRegionMetricsWrapperRunnable();
     this.regionMetricsUpdateTask = this.executor.scheduleWithFixedDelay(this.runnable, PERIOD,
       PERIOD, TimeUnit.SECONDS);
+    this.coprocessorTimes = new HashMap<String, DescriptiveStatistics>();
   }
 
   @Override
@@ -148,12 +152,19 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       numStoreFiles = tempNumStoreFiles;
       memstoreSize = tempMemstoreSize;
       storeFileSize = tempStoreFileSize;
+      coprocessorTimes = region.getCoprocessorHost().getCoprocessorExecutionStatistics();
+
     }
   }
 
   @Override
   public void close() throws IOException {
     regionMetricsUpdateTask.cancel(true);
+  }
+
+  @Override
+  public Map<String, DescriptiveStatistics> getCoprocessorExecutionStatistics() {
+    return coprocessorTimes;
   }
 
 }

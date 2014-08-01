@@ -21,9 +21,13 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
@@ -32,6 +36,7 @@ import org.apache.commons.collections.map.AbstractReferenceMap;
 import org.apache.commons.collections.map.ReferenceMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -71,6 +76,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 
@@ -95,6 +101,9 @@ public class RegionCoprocessorHost
     private HRegion region;
     private RegionServerServices rsServices;
     ConcurrentMap<String, Object> sharedData;
+    private static final int LATENCY_BUFFER_SIZE = 100;
+    private final BlockingQueue<Long> coprocessorTimeNanos = new ArrayBlockingQueue<Long>(
+        LATENCY_BUFFER_SIZE);
 
     /**
      * Constructor
@@ -130,6 +139,17 @@ public class RegionCoprocessorHost
     public ConcurrentMap<String, Object> getSharedData() {
       return sharedData;
     }
+
+    public void offerExecutionLatency(long latencyNanos) {
+      coprocessorTimeNanos.offer(latencyNanos);
+    }
+
+    public Collection<Long> getExecutionLatenciesNanos() {
+      final List<Long> latencies = Lists.newArrayListWithCapacity(coprocessorTimeNanos.size());
+      coprocessorTimeNanos.drainTo(latencies);
+      return latencies;
+    }
+
   }
 
   /** The region server services */
@@ -289,9 +309,11 @@ public class RegionCoprocessorHost
    * @throws IOException Signals that an I/O exception has occurred.
    */
   public void preOpen() throws IOException {
+
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -303,11 +325,13 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
       }
     }
+
   }
 
   /**
@@ -317,6 +341,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -328,11 +353,13 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
       }
     }
+
   }
 
   /**
@@ -342,6 +369,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -353,6 +381,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -368,6 +397,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -379,8 +409,10 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
       }
     }
+
   }
 
   /**
@@ -391,6 +423,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -402,9 +435,11 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
       }
       shutdown(env);
     }
+
   }
 
   /**
@@ -418,6 +453,7 @@ public class RegionCoprocessorHost
     InternalScanner s = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -430,6 +466,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -453,6 +490,7 @@ public class RegionCoprocessorHost
     boolean bypass = false;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -466,6 +504,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -486,6 +525,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -498,11 +538,13 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
       }
     }
+
   }
 
   /**
@@ -520,6 +562,7 @@ public class RegionCoprocessorHost
     InternalScanner s = scanner;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -533,6 +576,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -553,6 +597,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -581,6 +626,7 @@ public class RegionCoprocessorHost
     InternalScanner s = scanner;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -593,6 +639,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -609,6 +656,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -620,6 +668,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -638,6 +687,7 @@ public class RegionCoprocessorHost
     InternalScanner s = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -650,6 +700,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -666,6 +717,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -677,6 +729,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -692,6 +745,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -703,6 +757,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -718,6 +773,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -729,11 +785,13 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
       }
     }
+
   }
 
   /**
@@ -744,6 +802,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -755,11 +814,13 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
       }
     }
+
   }
 
   /**
@@ -772,6 +833,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -783,6 +845,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -796,6 +859,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -808,6 +872,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -820,6 +885,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -831,6 +897,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -846,6 +913,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -857,6 +925,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -872,6 +941,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -883,6 +953,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -898,6 +969,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -909,6 +981,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -931,6 +1004,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -943,6 +1017,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -962,6 +1037,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -973,6 +1049,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -991,6 +1068,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1003,6 +1081,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1021,6 +1100,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1032,6 +1112,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1051,6 +1132,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1063,6 +1145,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1082,6 +1165,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1093,6 +1177,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1114,6 +1199,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1126,6 +1212,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1150,6 +1237,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1164,6 +1252,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1183,6 +1272,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1194,6 +1284,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1214,6 +1305,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1226,6 +1318,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1245,6 +1338,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1256,6 +1350,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1274,6 +1369,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1286,11 +1382,13 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
       }
     }
+
     return bypass;
   }
 
@@ -1303,6 +1401,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1314,6 +1413,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1327,6 +1427,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1339,6 +1440,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1366,6 +1468,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1379,6 +1482,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1406,6 +1510,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1419,6 +1524,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1444,6 +1550,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1456,6 +1563,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1484,6 +1592,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1497,6 +1606,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1524,6 +1634,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1537,6 +1648,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1561,6 +1673,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1573,6 +1686,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1593,6 +1707,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1605,6 +1720,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1625,6 +1741,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1637,6 +1754,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1657,6 +1775,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1669,6 +1788,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1689,6 +1809,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1701,6 +1822,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1718,6 +1840,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1729,6 +1852,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1745,6 +1869,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1756,6 +1881,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1776,6 +1902,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1788,6 +1915,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1807,6 +1935,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1819,6 +1948,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1837,6 +1967,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1848,6 +1979,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1871,6 +2003,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1889,6 +2022,7 @@ public class RegionCoprocessorHost
         }
       }
     }
+
     return bypass ? hasNext : null;
   }
 
@@ -1906,6 +2040,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1918,6 +2053,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1942,6 +2078,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1954,6 +2091,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -1972,6 +2110,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -1984,22 +2123,24 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
       }
     }
+
     return bypass;
   }
 
   /**
-   * @param s the scanner
    * @exception IOException Exception
    */
   public void postScannerClose(final InternalScanner s) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -2011,6 +2152,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -2031,6 +2173,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -2043,6 +2186,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -2062,6 +2206,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -2073,6 +2218,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -2090,6 +2236,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -2102,6 +2249,7 @@ public class RegionCoprocessorHost
           currentThread.setContextClassLoader(cl);
         }
         bypass |= ctx.shouldBypass();
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -2121,6 +2269,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env: coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -2133,6 +2282,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -2145,6 +2295,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -2156,6 +2307,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -2167,6 +2319,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -2178,6 +2331,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -2203,6 +2357,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -2215,6 +2370,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -2240,6 +2396,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -2252,6 +2409,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -2265,6 +2423,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -2277,6 +2436,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -2290,6 +2450,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof EndpointObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -2302,6 +2463,7 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
@@ -2315,6 +2477,7 @@ public class RegionCoprocessorHost
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof EndpointObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -2327,17 +2490,20 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
       }
     }
+
   }
 
   public DeleteTracker postInstantiateDeleteTracker(DeleteTracker tracker) throws IOException {
     ObserverContext<RegionCoprocessorEnvironment> ctx = null;
     for (RegionEnvironment env : coprocessors) {
       if (env.getInstance() instanceof RegionObserver) {
+        long startTime = System.nanoTime();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
@@ -2350,11 +2516,30 @@ public class RegionCoprocessorHost
         } finally {
           currentThread.setContextClassLoader(cl);
         }
+        env.offerExecutionLatency(System.nanoTime() - startTime);
         if (ctx.shouldComplete()) {
           break;
         }
       }
     }
     return tracker;
+  }
+
+  public Map<String, DescriptiveStatistics> getCoprocessorExecutionStatistics() {
+    Map<String, DescriptiveStatistics> results = new HashMap<String, DescriptiveStatistics>();
+    for (RegionEnvironment env : coprocessors) {
+      DescriptiveStatistics ds = new DescriptiveStatistics();
+      if (env.getInstance() instanceof RegionObserver) {
+        for (Long time : env.getExecutionLatenciesNanos()) {
+          ds.addValue(time);
+        }
+        // Ensures that web ui circumvents the display of NaN values when there are zero samples.
+        if (ds.getN() == 0) {
+          ds.addValue(0);
+        }
+        results.put(env.getInstance().getClass().getSimpleName(), ds);
+      }
+    }
+    return results;
   }
 }

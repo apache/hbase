@@ -35,6 +35,8 @@ public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
       "Sum of filesize on all files entering a finished, successful or aborted, compaction";
   String NUM_FILES_COMPACTED_DESC =
       "Number of files that were input for finished, successful or aborted, compactions";
+  String COPROCESSOR_EXECUTION_STATISTICS = "coprocessorExecutionStatistics";
+  String COPROCESSOR_EXECUTION_STATISTICS_DESC = "Statistics for coprocessor execution times";
 
   /**
    * Close the region's metrics as this region is closing.
