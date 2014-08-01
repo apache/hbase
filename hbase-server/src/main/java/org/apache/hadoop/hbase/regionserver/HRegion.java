@@ -5797,16 +5797,17 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   void forceSplit(byte[] sp) {
-    // NOTE : this HRegion will go away after the forced split is successful
-    //        therefore, no reason to clear this value
+    // This HRegion will go away after the forced split is successful
+    // But if a forced split fails, we need to clear forced split.
     this.splitRequest = true;
     if (sp != null) {
       this.explicitSplitPoint = sp;
     }
   }
 
-  void clearSplit_TESTS_ONLY() {
+  void clearSplit() {
     this.splitRequest = false;
+    this.explicitSplitPoint = null;
   }
 
   /**
