@@ -1262,6 +1262,14 @@ possible configurations would overwhelm and obscure the important.
       hbase.http.staticuser.user property.
     </description>
   </property>
+    <property>
+    <name>hbase.security.visibility.mutations.checkauths</name>
+    <value>false</value>
+    <description>
+      This property if enabled, will check whether the labels in the visibility expression are associated
+      with the user issuing the mutation
+    </description>
+  </property>
   <property>
     <name>hbase.http.max.threads</name>
     <value>10</value>

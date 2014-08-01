@@ -173,6 +173,21 @@ public class VisibilityLabelsManager {
   }
 
   /**
+   * Returns the list of ordinals of authentications associated with the user
+   *
+   * @param user
+   * @return the list of ordinals
+   */
+  public Set<Integer> getAuthsAsOrdinals(String user) {
+    this.lock.readLock().lock();
+    try {
+      return userAuths.get(user);
+    } finally {
+      this.lock.readLock().unlock();
+    }
+  }
+
+  /**
    * Writes the labels data to zookeeper node.
    * @param data
    * @param labelsOrUserAuths true for writing labels and false for user auths.
