@@ -123,6 +123,9 @@ class SplitRequest implements Runnable {
               RemoteExceptionHandler.checkIOException(io));
         }
       }
+      if (parent.shouldForceSplit()) {
+        parent.clearSplit();
+      }
       releaseTableLock();
     }
   }

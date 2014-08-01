@@ -913,7 +913,7 @@ public class TestStore {
     Assert.assertNull(store.getSplitPoint());
     store.getHRegion().forceSplit(null);
     Assert.assertNull(store.getSplitPoint());
-    store.getHRegion().clearSplit_TESTS_ONLY();
+    store.getHRegion().clearSplit();
   }
 
   @Test

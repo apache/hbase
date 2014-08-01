@@ -140,6 +140,7 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 
@@ -2080,8 +2081,10 @@ public class TestHRegion {
     SplitTransaction st = new SplitTransaction(parent, midkey);
     // If prepare does not return true, for some reason -- logged inside in
     // the prepare call -- we are not ready to split just now. Just return.
-    if (!st.prepare())
+    if (!st.prepare()) {
+      parent.clearSplit();
       return null;
+    }
     try {
       result = st.execute(null, null);
     } catch (IOException ioe) {
@@ -2096,6 +2099,9 @@ public class TestHRegion {
         LOG.info("Failed rollback of failed split of " + parent.getRegionNameAsString()
             + " -- aborting server", e);
       }
+    }
+    finally {
+      parent.clearSplit();
     }
     return new HRegion[] { result.getFirst(), result.getSecond() };
   }
@@ -3029,6 +3035,74 @@ public class TestHRegion {
     HRegion[] regions = null;
     try {
       regions = splitRegion(region, Bytes.toBytes("" + splitRow));
+      // Opening the regions returned.
+      for (int i = 0; i < regions.length; i++) {
+        regions[i] = HRegion.openHRegion(regions[i], null);
+      }
+      // Verifying that the region has been split
+      assertEquals(2, regions.length);
+
+      // Verifying that all data is still there and that data is in the right
+      // place
+      verifyData(regions[0], startRow, numRows, qualifier, families);
+      verifyData(regions[1], splitRow, numRows, qualifier, families);
+
+    } finally {
+      HRegion.closeHRegion(this.region);
+      this.region = null;
+    }
+  }
+
+  @Test
+  public void testClearForceSplit() throws IOException {
+    byte[] qualifier = Bytes.toBytes("qualifier");
+    Configuration hc = initSplit();
+    int numRows = 10;
+    byte[][] families = { fam1, fam3 };
+
+    // Setting up region
+    String method = this.getName();
+    this.region = initHRegion(tableName, method, hc, families);
+
+    // Put data in region
+    int startRow = 100;
+    putData(startRow, numRows, qualifier, families);
+    int splitRow = startRow + numRows;
+    byte[] splitRowBytes = Bytes.toBytes("" + splitRow);
+    putData(splitRow, numRows, qualifier, families);
+    region.flushcache();
+
+    HRegion[] regions = null;
+    try {
+      // Set force split
+      region.forceSplit(splitRowBytes);
+      assertTrue(region.shouldForceSplit());
+      // Split point should be the force split row
+      assertTrue(Bytes.equals(splitRowBytes, region.checkSplit()));
+
+      // Add a store that has references.
+      HStore storeMock = Mockito.mock(HStore.class);
+      Mockito.when(storeMock.hasReferences()).thenReturn(true);
+      Mockito.when(storeMock.getFamily()).thenReturn(new HColumnDescriptor("cf"));
+      Mockito.when(storeMock.close()).thenReturn(ImmutableList.<StoreFile>of());
+      Mockito.when(storeMock.getColumnFamilyName()).thenReturn("cf");
+      region.stores.put(Bytes.toBytes(storeMock.getColumnFamilyName()), storeMock);
+      assertTrue(region.hasReferences());
+
+      // Will not split since the store has references.
+      regions = splitRegion(region, splitRowBytes);
+      assertNull(regions);
+
+      // Region force split should be cleared after the split try.
+      assertFalse(region.shouldForceSplit());
+
+      // Remove the store that has references.
+      region.stores.remove(Bytes.toBytes(storeMock.getColumnFamilyName()));
+      assertFalse(region.hasReferences());
+
+      // Now we can split.
+      regions = splitRegion(region, splitRowBytes);
+
       // Opening the regions returned.
       for (int i = 0; i < regions.length; i++) {
         regions[i] = HRegion.openHRegion(regions[i], null);
