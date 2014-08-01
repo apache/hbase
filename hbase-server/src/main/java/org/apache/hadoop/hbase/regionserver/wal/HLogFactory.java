@@ -167,6 +167,10 @@ public class HLogFactory {
      */
     private static Class<? extends Writer> logWriterClass;
 
+    static void resetLogWriterClass() {
+      logWriterClass = null;
+    }
+
     /**
      * Create a writer for the WAL.
      * @return A WAL writer.  Close when done with it.
