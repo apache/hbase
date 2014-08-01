@@ -577,7 +577,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // Update meta with new PB serialization if required. i.e migrate all HRI to PB serialization
     // in meta. This must happen before we assign all user regions or else the assignment will
     // fail.
-    MetaMigrationConvertingToPB.updateMetaIfNecessary(this);
+    if (this.conf.getBoolean("hbase.MetaMigrationConvertingToPB", true)) {
+      MetaMigrationConvertingToPB.updateMetaIfNecessary(this);
+    }
 
     // Fix up assignment manager status
     status.setStatus("Starting assignment manager");
