@@ -265,7 +265,7 @@
       <example>
         <title>Example RegionObserver Configuration</title>
         <para>In this example, one RegionObserver is configured for all the HBase tables.</para>
-        <screen><![CDATA[
+        <screen language="xml"><![CDATA[
 <property>
     <name>hbase.coprocessor.region.classes</name>
     <value>org.apache.hadoop.hbase.coprocessor.AggregateImplementation</value>

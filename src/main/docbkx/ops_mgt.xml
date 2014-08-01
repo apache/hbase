@@ -46,7 +46,7 @@
       <para> There is a Canary class can help users to canary-test the HBase cluster status, with
         every column-family for every regions or regionservers granularity. To see the usage, use
         the <literal>--help</literal> parameter. </para>
-      <screen>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -help
+      <screen language="bourne">$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -help
 
 Usage: bin/hbase org.apache.hadoop.hbase.tool.Canary [opts] [table1 [table2]...] | [regionserver1 [regionserver2]..]
  where [opts] are:
@@ -61,7 +61,7 @@ Usage: bin/hbase org.apache.hadoop.hbase.tool.Canary [opts] [table1 [table2]...]
    -t &lt;N>         timeout for a check, default is 600000 (milliseconds)</screen>
       <para> This tool will return non zero error codes to user for collaborating with other
         monitoring tools, such as Nagios. The error code definitions are: </para>
-      <programlisting>private static final int USAGE_EXIT_CODE = 1;
+      <programlisting language="java">private static final int USAGE_EXIT_CODE = 1;
 private static final int INIT_ERROR_EXIT_CODE = 2;
 private static final int TIMEOUT_ERROR_EXIT_CODE = 3;
 private static final int ERROR_EXIT_CODE = 4;</programlisting>
@@ -113,7 +113,7 @@ private static final int ERROR_EXIT_CODE = 4;</programlisting>
       <para> Following are some examples based on the previous given case. </para>
       <section>
         <title>Canary test for every column family (store) of every region of every table</title>
-        <screen>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary
+        <screen language="bourne">$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary
             
 3/12/09 03:26:32 INFO tool.Canary: read from region test-01,,1386230156732.0e3c7d77ffb6361ea1b996ac1042ca9a. column family cf1 in 2ms
 13/12/09 03:26:32 INFO tool.Canary: read from region test-01,,1386230156732.0e3c7d77ffb6361ea1b996ac1042ca9a. column family cf2 in 2ms
@@ -134,14 +134,14 @@ private static final int ERROR_EXIT_CODE = 4;</programlisting>
         <title>Canary test for every column family (store) of every region of specific
           table(s)</title>
         <para> You can also test one or more specific tables.</para>
-        <screen>$ ${HBASE_HOME}/bin/hbase orghapache.hadoop.hbase.tool.Canary test-01 test-02</screen>
+        <screen language="bourne">$ ${HBASE_HOME}/bin/hbase orghapache.hadoop.hbase.tool.Canary test-01 test-02</screen>
       </section>
 
       <section>
         <title>Canary test with regionserver granularity</title>
         <para> This will pick one small piece of data from each regionserver, and can also put your
           resionserver name as input options for canary-test specific regionservers.</para>
-        <screen>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -regionserver
+        <screen language="bourne">$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.tool.Canary -regionserver
             
 13/12/09 06:05:17 INFO tool.Canary: Read from table:test-01 on region server:rs2 in 72ms
 13/12/09 06:05:17 INFO tool.Canary: Read from table:test-02 on region server:rs3 in 34ms
@@ -150,7 +150,7 @@ private static final int ERROR_EXIT_CODE = 4;</programlisting>
       <section>
         <title>Canary test with regular expression pattern</title>
         <para> This will test both table test-01 and test-02.</para>
-        <screen>$ ${HBASE_HOME}/bin/hbase orghapache.hadoop.hbase.tool.Canary -e test-0[1-2]</screen>
+        <screen language="bourne">$ ${HBASE_HOME}/bin/hbase orghapache.hadoop.hbase.tool.Canary -e test-0[1-2]</screen>
       </section>
 
       <section>
@@ -158,10 +158,10 @@ private static final int ERROR_EXIT_CODE = 4;</programlisting>
         <para> Run repeatedly with interval defined in option -interval whose default value is 6
           seconds. This daemon will stop itself and return non-zero error code if any error occurs,
           due to the default value of option -f is true.</para>
-        <screen>$ ${HBASE_HOME}/bin/hbase orghapache.hadoop.hbase.tool.Canary -daemon</screen>
+        <screen language="bourne">$ ${HBASE_HOME}/bin/hbase orghapache.hadoop.hbase.tool.Canary -daemon</screen>
         <para>Run repeatedly with internal 5 seconds and will not stop itself even error occurs in
           the test.</para>
-        <screen>$ ${HBASE_HOME}/bin/hbase orghapache.hadoop.hbase.tool.Canary -daemon -interval 50000 -f false</screen>
+        <screen language="bourne">$ ${HBASE_HOME}/bin/hbase orghapache.hadoop.hbase.tool.Canary -daemon -interval 50000 -f false</screen>
       </section>
 
       <section>
@@ -171,7 +171,7 @@ private static final int ERROR_EXIT_CODE = 4;</programlisting>
           Master, which would bring the clients hung. So we provide the timeout option to kill the
           canary test forcefully and return non-zero error code as well. This run sets the timeout
           value to 60 seconds, the default value is 600 seconds.</para>
-        <screen>$ ${HBASE_HOME}/bin/hbase orghapache.hadoop.hbase.tool.Canary -t 600000</screen>
+        <screen language="bourne">$ ${HBASE_HOME}/bin/hbase orghapache.hadoop.hbase.tool.Canary -t 600000</screen>
       </section>
 
     </section>
@@ -194,7 +194,7 @@ private static final int ERROR_EXIT_CODE = 4;</programlisting>
           <replaceable>UtilityName</replaceable> with the utility you want to run. This command
         assumes you have set the environment variable <literal>HBASE_HOME</literal> to the directory
         where HBase is unpacked on your server.</para>
-      <screen>
+      <screen language="bourne">
 ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.mapreduce.<replaceable>UtilityName</replaceable>        
       </screen>
       <para>The following utilities are available:</para>
@@ -267,13 +267,13 @@ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.mapreduce.<replaceable>UtilityNa
             <filename>recovered.edits</filename>. directory.</para>
 
         <para>You can get a textual dump of a WAL file content by doing the following:</para>
-        <screen> $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.FSHLog --dump hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012 </screen>
+        <screen language="bourne"> $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.FSHLog --dump hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012 </screen>
         <para>The return code will be non-zero if issues with the file so you can test wholesomeness
           of file by redirecting <varname>STDOUT</varname> to <code>/dev/null</code> and testing the
           program return.</para>
 
         <para>Similarly you can force a split of a log file directory by doing:</para>
-        <screen> $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.FSHLog --split hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/</screen>
+        <screen language="bourne"> $ ./bin/hbase org.apache.hadoop.hbase.regionserver.wal.FSHLog --split hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/</screen>
 
         <section
           xml:id="hlog_tool.prettyprint">
@@ -297,7 +297,7 @@ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.mapreduce.<replaceable>UtilityNa
         cluster or another cluster. The target table must first exist. The usage is as
         follows:</para>
 
-      <screen>
+      <screen language="bourne">
 $ <userinput>./bin/hbase org.apache.hadoop.hbase.mapreduce.CopyTable --help </userinput>       
 /bin/hbase org.apache.hadoop.hbase.mapreduce.CopyTable --help
 Usage: CopyTable [general options] [--starttime=X] [--endtime=Y] [--new.name=NEW] [--peer.adr=ADR] &lt;tablename&gt;
@@ -355,7 +355,7 @@ For performance consider the following general options:
       <title>Export</title>
       <para>Export is a utility that will dump the contents of table to HDFS in a sequence file.
         Invoke via:</para>
-      <screen>$ bin/hbase org.apache.hadoop.hbase.mapreduce.Export &lt;tablename&gt; &lt;outputdir&gt; [&lt;versions&gt; [&lt;starttime&gt; [&lt;endtime&gt;]]]
+      <screen language="bourne">$ bin/hbase org.apache.hadoop.hbase.mapreduce.Export &lt;tablename&gt; &lt;outputdir&gt; [&lt;versions&gt; [&lt;starttime&gt; [&lt;endtime&gt;]]]
 </screen>
 
       <para>Note: caching for the input Scan is configured via
@@ -366,11 +366,11 @@ For performance consider the following general options:
       <title>Import</title>
       <para>Import is a utility that will load data that has been exported back into HBase. Invoke
         via:</para>
-      <screen>$ bin/hbase org.apache.hadoop.hbase.mapreduce.Import &lt;tablename&gt; &lt;inputdir&gt;
+      <screen language="bourne">$ bin/hbase org.apache.hadoop.hbase.mapreduce.Import &lt;tablename&gt; &lt;inputdir&gt;
 </screen>
       <para>To import 0.94 exported files in a 0.96 cluster or onwards, you need to set system
         property "hbase.import.version" when running the import command as below:</para>
-      <screen>$ bin/hbase -Dhbase.import.version=0.94 org.apache.hadoop.hbase.mapreduce.Import &lt;tablename&gt; &lt;inputdir&gt;
+      <screen language="bourne">$ bin/hbase -Dhbase.import.version=0.94 org.apache.hadoop.hbase.mapreduce.Import &lt;tablename&gt; &lt;inputdir&gt;
 </screen>
     </section>
     <section
@@ -380,11 +380,11 @@ For performance consider the following general options:
         usages: loading data from TSV format in HDFS into HBase via Puts, and preparing StoreFiles
         to be loaded via the <code>completebulkload</code>. </para>
       <para>To load data via Puts (i.e., non-bulk loading):</para>
-      <screen>$ bin/hbase org.apache.hadoop.hbase.mapreduce.ImportTsv -Dimporttsv.columns=a,b,c &lt;tablename&gt; &lt;hdfs-inputdir&gt;
+      <screen language="bourne">$ bin/hbase org.apache.hadoop.hbase.mapreduce.ImportTsv -Dimporttsv.columns=a,b,c &lt;tablename&gt; &lt;hdfs-inputdir&gt;
 </screen>
 
       <para>To generate StoreFiles for bulk-loading:</para>
-      <programlisting>$ bin/hbase org.apache.hadoop.hbase.mapreduce.ImportTsv -Dimporttsv.columns=a,b,c -Dimporttsv.bulk.output=hdfs://storefile-outputdir &lt;tablename&gt; &lt;hdfs-data-inputdir&gt;
+      <programlisting language="bourne">$ bin/hbase org.apache.hadoop.hbase.mapreduce.ImportTsv -Dimporttsv.columns=a,b,c -Dimporttsv.bulk.output=hdfs://storefile-outputdir &lt;tablename&gt; &lt;hdfs-data-inputdir&gt;
 </programlisting>
       <para>These generated StoreFiles can be loaded into HBase via <xref
           linkend="completebulkload" />. </para>
@@ -438,7 +438,7 @@ row10	c1	c2
           </screen>
         </para>
         <para>For ImportTsv to use this imput file, the command line needs to look like this:</para>
-        <screen>
+        <screen language="bourne">
  HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-VERSION.jar importtsv -Dimporttsv.columns=HBASE_ROW_KEY,d:c1,d:c2 -Dimporttsv.bulk.output=hdfs://storefileoutput datatsv hdfs://inputfile
  </screen>
         <para> ... and in this example the first column is the rowkey, which is why the
@@ -467,10 +467,10 @@ row10	c1	c2
           linkend="importtsv" />. </para>
       <para>There are two ways to invoke this utility, with explicit classname and via the
         driver:</para>
-      <screen>$ bin/hbase org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles &lt;hdfs://storefileoutput&gt; &lt;tablename&gt;
+      <screen language="bourne">$ bin/hbase org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles &lt;hdfs://storefileoutput&gt; &lt;tablename&gt;
 </screen>
       <para> .. and via the Driver..</para>
-      <screen>HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-VERSION.jar completebulkload &lt;hdfs://storefileoutput&gt; &lt;tablename&gt;
+      <screen language="bourne">HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-VERSION.jar completebulkload &lt;hdfs://storefileoutput&gt; &lt;tablename&gt;
 </screen>
       <section
         xml:id="completebulkload.warning">
@@ -493,10 +493,10 @@ row10	c1	c2
       <para>WALPlayer can also generate HFiles for later bulk importing, in that case only a single
         table and no mapping can be specified. </para>
       <para>Invoke via:</para>
-      <screen>$ bin/hbase org.apache.hadoop.hbase.mapreduce.WALPlayer [options] &lt;wal inputdir&gt; &lt;tables&gt; [&lt;tableMappings>]&gt;
+      <screen language="bourne">$ bin/hbase org.apache.hadoop.hbase.mapreduce.WALPlayer [options] &lt;wal inputdir&gt; &lt;tables&gt; [&lt;tableMappings>]&gt;
 </screen>
       <para>For example:</para>
-      <screen>$ bin/hbase org.apache.hadoop.hbase.mapreduce.WALPlayer /backuplogdir oldTable1,oldTable2 newTable1,newTable2
+      <screen language="bourne">$ bin/hbase org.apache.hadoop.hbase.mapreduce.WALPlayer /backuplogdir oldTable1,oldTable2 newTable1,newTable2
 </screen>
       <para> WALPlayer, by default, runs as a mapreduce job. To NOT run WALPlayer as a mapreduce job
         on your cluster, force it to run all in the local process by adding the flags
@@ -511,7 +511,7 @@ row10	c1	c2
         sanity check to ensure that HBase can read all the blocks of a table if there are any
         concerns of metadata inconsistency. It will run the mapreduce all in a single process but it
         will run faster if you have a MapReduce cluster in place for it to exploit.</para>
-      <screen>$ bin/hbase org.apache.hadoop.hbase.mapreduce.RowCounter &lt;tablename&gt; [&lt;column1&gt; &lt;column2&gt;...]
+      <screen language="bourne">$ bin/hbase org.apache.hadoop.hbase.mapreduce.RowCounter &lt;tablename&gt; [&lt;column1&gt; &lt;column2&gt;...]
 </screen>
       <para>Note: caching for the input Scan is configured via
           <code>hbase.client.scanner.caching</code> in the job configuration. </para>
@@ -542,7 +542,7 @@ row10	c1	c2
       <para>The program allows you to limit the scope of the run. Provide a row regex or prefix to
         limit the rows to analyze. Use <code>hbase.mapreduce.scan.column.family</code> to specify
         scanning a single column family.</para>
-      <screen>$ bin/hbase org.apache.hadoop.hbase.mapreduce.CellCounter &lt;tablename&gt; &lt;outputDir&gt; [regex or prefix]</screen>
+      <screen language="bourne">$ bin/hbase org.apache.hadoop.hbase.mapreduce.CellCounter &lt;tablename&gt; &lt;outputDir&gt; [regex or prefix]</screen>
       <para>Note: just like RowCounter, caching for the input Scan is configured via
           <code>hbase.client.scanner.caching</code> in the job configuration. </para>
     </section>
@@ -585,7 +585,7 @@ row10	c1	c2
       <title>Merge</title>
       <para>Merge is a utility that can merge adjoining regions in the same table (see
         org.apache.hadoop.hbase.util.Merge).</para>
-      <programlisting>$ bin/hbase org.apache.hadoop.hbase.util.Merge &lt;tablename&gt; &lt;region1&gt; &lt;region2&gt;
+      <programlisting language="bourne">$ bin/hbase org.apache.hadoop.hbase.util.Merge &lt;tablename&gt; &lt;region1&gt; &lt;region2&gt;
 </programlisting>
       <para>If you feel you have too many regions and want to consolidate them, Merge is the utility
         you need. Merge must run be done when the cluster is down. See the <link
@@ -609,7 +609,7 @@ row10	c1	c2
       <title>Node Decommission</title>
       <para>You can stop an individual RegionServer by running the following script in the HBase
         directory on the particular node:</para>
-      <screen>$ ./bin/hbase-daemon.sh stop regionserver</screen>
+      <screen language="bourne">$ ./bin/hbase-daemon.sh stop regionserver</screen>
       <para> The RegionServer will first close all regions and then shut itself down. On shutdown,
         the RegionServer's ephemeral node in ZooKeeper will expire. The master will notice the
         RegionServer gone and will treat it as a 'crashed' server; it will reassign the nodes the
@@ -627,7 +627,7 @@ row10	c1	c2
         the RegionServer's znode gone. In Apache HBase 0.90.2, we added facility for having a node
         gradually shed its load and then shutdown itself down. Apache HBase 0.90.2 added the
           <filename>graceful_stop.sh</filename> script. Here is its usage:</para>
-      <screen>$ ./bin/graceful_stop.sh
+      <screen language="bourne">$ ./bin/graceful_stop.sh
 Usage: graceful_stop.sh [--config &amp;conf-dir>] [--restart] [--reload] [--thrift] [--rest] &amp;hostname>
  thrift      If we should stop/start thrift before/after the hbase stop/start
  rest        If we should stop/start rest before/after the hbase stop/start
@@ -729,7 +729,7 @@ false
       <para> You can also ask this script to restart a RegionServer after the shutdown AND move its
         old regions back into place. The latter you might do to retain data locality. A primitive
         rolling restart might be effected by running something like the following:</para>
-      <screen>$ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i; done &amp;> /tmp/log.txt &amp;</screen>
+      <screen language="bourne">$ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i; done &amp;> /tmp/log.txt &amp;</screen>
       <para> Tail the output of <filename>/tmp/log.txt</filename> to follow the scripts progress.
         The above does RegionServers only. The script will also disable the load balancer before
         moving the regions. You'd need to do the master update separately. Do it before you run the
@@ -741,18 +741,18 @@ false
         </listitem>
         <listitem>
           <para>Run hbck to ensure the cluster consistent
-            <programlisting>$ ./bin/hbase hbck</programlisting> Effect repairs if inconsistent.
+            <programlisting language="bourne">$ ./bin/hbase hbck</programlisting> Effect repairs if inconsistent.
           </para>
         </listitem>
         <listitem>
           <para>Restart the Master:
-            <programlisting>$ ./bin/hbase-daemon.sh stop master; ./bin/hbase-daemon.sh start master</programlisting>
+            <programlisting language="bourne">$ ./bin/hbase-daemon.sh stop master; ./bin/hbase-daemon.sh start master</programlisting>
           </para>
         </listitem>
         <listitem>
           <para>Run the <filename>graceful_stop.sh</filename> script per RegionServer. For
             example:</para>
-          <programlisting>$ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i; done &amp;> /tmp/log.txt &amp;
+          <programlisting language="bourne">$ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i; done &amp;> /tmp/log.txt &amp;
             </programlisting>
           <para> If you are running thrift or rest servers on the RegionServer, pass --thrift or
             --rest options (See usage for <filename>graceful_stop.sh</filename> script). </para>
@@ -1678,7 +1678,7 @@ false
       <para>To turn on the snapshot support just set the <varname>hbase.snapshot.enabled</varname>
         property to true. (Snapshots are enabled by default in 0.95+ and off by default in
         0.94.6+)</para>
-      <programlisting>
+      <programlisting language="java">
   &lt;property>
     &lt;name>hbase.snapshot.enabled&lt;/name>
     &lt;value>true&lt;/value>
@@ -1690,7 +1690,7 @@ false
       <title>Take a Snapshot</title>
       <para>You can take a snapshot of a table regardless of whether it is enabled or disabled. The
         snapshot operation doesn't involve any data copying.</para>
-      <screen>
+      <screen language="bourne">
 $ ./bin/hbase shell
 hbase> snapshot 'myTable', 'myTableSnapshot-122112'
         </screen>
@@ -1699,7 +1699,7 @@ hbase> snapshot 'myTable', 'myTableSnapshot-122112'
       xml:id="ops.snapshots.list">
       <title>Listing Snapshots</title>
       <para>List all snapshots taken (by printing the names and relative information).</para>
-      <screen>
+      <screen language="bourne">
 $ ./bin/hbase shell
 hbase> list_snapshots
         </screen>
@@ -1709,7 +1709,7 @@ hbase> list_snapshots
       <title>Deleting Snapshots</title>
       <para>You can remove a snapshot, and the files retained for that snapshot will be removed if
         no longer needed.</para>
-      <screen>
+      <screen language="bourne">
 $ ./bin/hbase shell
 hbase> delete_snapshot 'myTableSnapshot-122112'
         </screen>
@@ -1720,7 +1720,7 @@ hbase> delete_snapshot 'myTableSnapshot-122112'
       <para>From a snapshot you can create a new table (clone operation) with the same data that you
         had when the snapshot was taken. The clone operation, doesn't involve data copies, and a
         change to the cloned table doesn't impact the snapshot or the original table.</para>
-      <screen>
+      <screen language="bourne">
 $ ./bin/hbase shell
 hbase> clone_snapshot 'myTableSnapshot-122112', 'myNewTestTable'
         </screen>
@@ -1731,7 +1731,7 @@ hbase> clone_snapshot 'myTableSnapshot-122112', 'myNewTestTable'
       <para>The restore operation requires the table to be disabled, and the table will be restored
         to the state at the time when the snapshot was taken, changing both data and schema if
         required.</para>
-      <screen>
+      <screen language="bourne">
 $ ./bin/hbase shell
 hbase> disable 'myTable'
 hbase> restore_snapshot 'myTableSnapshot-122112'
@@ -1763,14 +1763,14 @@ hbase> restore_snapshot 'myTableSnapshot-122112'
         hbase cluster does not have to be online.</para>
       <para>To copy a snapshot called MySnapshot to an HBase cluster srv2 (hdfs:///srv2:8082/hbase)
         using 16 mappers:</para>
-      <programlisting>$ bin/hbase class org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16</programlisting>
+      <programlisting language="bourne">$ bin/hbase class org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16</programlisting>
       <formalpara>
         <title>Limiting Bandwidth Consumption</title>
         <para>You can limit the bandwidth consumption when exporting a snapshot, by specifying the
             <code>-bandwidth</code> parameter, which expects an integer representing megabytes per
           second. The following example limits the above example to 200 MB/sec.</para>
       </formalpara>
-        <programlisting>$ bin/hbase class org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16 -bandwidth 200</programlisting>
+        <programlisting language="bourne">$ bin/hbase class org.apache.hadoop.hbase.snapshot.ExportSnapshot -snapshot MySnapshot -copy-to hdfs://srv2:8082/hbase -mappers 16 -bandwidth 200</programlisting>
     </section>
   </section>
   <!--  snapshots -->
@@ -2035,7 +2035,7 @@ hbase shell> clone_snapshot 'tableSnapshot', 'newTableName'
 hbase shell> delete_snapshot 'tableSnapshot'
 hbase shell> drop 'tableName']]></screen>
     <para>or in code it would be as follows:</para>
-    <programlisting role="Java" language="Java">void rename(HBaseAdmin admin, String oldTableName, String newTableName) {
+    <programlisting language="Java">void rename(HBaseAdmin admin, String oldTableName, String newTableName) {
   String snapshotName = randomName();
   admin.disableTable(oldTableName);
   admin.snapshot(snapshotName, oldTableName);

@@ -90,9 +90,9 @@
             <section xml:id="eclipse.commandline">
             <title>Import into eclipse with the command line</title>
             <para>For those not inclined to use m2eclipse, you can generate the Eclipse files from the command line. First, run (you should only have to do this once):
-            <programlisting>mvn clean install -DskipTests</programlisting>
+            <programlisting language="bourne">mvn clean install -DskipTests</programlisting>
             and then close Eclipse and execute...
-            <programlisting>mvn eclipse:eclipse</programlisting>
+            <programlisting language="bourne">mvn eclipse:eclipse</programlisting>
             ... from your local HBase project directory in your workspace to generate some new <filename>.project</filename>
             and <filename>.classpath</filename>files.  Then reopen Eclipse, or refresh your eclipse project (F5), and import
             the .project file in the HBase directory to a workspace.
@@ -136,11 +136,11 @@ Access restriction: The method getLong(Object, long) from the type Unsafe is not
        <title>Basic Compile</title>
        <para>Thanks to maven, building HBase is pretty easy. You can read about the various maven commands in <xref linkend="maven.build.commands"/>,
            but the simplest command to compile HBase from its java source code is:
-       <programlisting>
+           <programlisting language="bourne">
 mvn package -DskipTests
        </programlisting>
        Or, to clean up before compiling:
-       <programlisting>
+       <programlisting language="bourne">
 mvn clean package -DskipTests
        </programlisting>
        With Eclipse set up as explained above in <xref linkend="eclipse"/>, you can also simply use the build command in Eclipse.
@@ -152,14 +152,14 @@ mvn clean package -DskipTests
             <para>
               The protobuf files are located <filename>hbase-protocol/src/main/protobuf</filename>.
               For the change to be effective, you will need to regenerate the classes. You can use maven profile compile-protobuf to do this.
-            <programlisting>
+            <programlisting language="bourne">
 mvn compile -Dcompile-protobuf
 or
 mvn compile -Pcompile-protobuf
             </programlisting>
 
 You may also want to define protoc.path for the protoc binary
-             <programlisting>
+             <programlisting language="bourne">
 mvn compile -Dcompile-protobuf -Dprotoc.path=/opt/local/bin/protoc
              </programlisting> Read the <filename>hbase-protocol/README.txt</filename> for more details.
            </para>
@@ -212,7 +212,7 @@ mvn compile -Dcompile-protobuf -Dprotoc.path=/opt/local/bin/protoc
          build do this for you, you need to make sure you have a properly configured
          <filename>settings.xml</filename> in your local repository under <filename>.m2</filename>.
             Here is my <filename>~/.m2/settings.xml</filename>.
-        <programlisting><![CDATA[<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+        <programlisting language="xml"><![CDATA[<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
                       http://maven.apache.org/xsd/settings-1.0.0.xsd">
@@ -287,7 +287,7 @@ under the respective release documentation folders.
             publish a SNAPSHOT, you must keep the <emphasis>-SNAPSHOT</emphasis> suffix on the hbase version.
              The <link xlink:href="http://mojo.codehaus.org/versions-maven-plugin/">Versions Maven Plugin</link> can be of use here.  To
              set a version in all the many poms of the hbase multi-module project, do something like this:
-             <programlisting>$ mvn clean org.codehaus.mojo:versions-maven-plugin:1.3.1:set -DnewVersion=0.96.0</programlisting>
+             <programlisting language="bourne">$ mvn clean org.codehaus.mojo:versions-maven-plugin:1.3.1:set -DnewVersion=0.96.0</programlisting>
              Checkin the <filename>CHANGES.txt</filename> and any version changes.
         </para>
         <para>
@@ -296,7 +296,7 @@ under the respective release documentation folders.
         </para>
         <para>Now, build the src tarball.  This tarball is hadoop version independent.  It is just the pure src code and documentation without a particular hadoop taint, etc.
             Add the <varname>-Prelease</varname> profile when building; it checks files for licenses and will fail the build if unlicensed files present.
-            <programlisting>$ MAVEN_OPTS="-Xmx2g" mvn clean install -DskipTests assembly:single -Dassembly.file=hbase-assembly/src/main/assembly/src.xml -Prelease</programlisting>
+            <programlisting language="bourne">$ MAVEN_OPTS="-Xmx2g" mvn clean install -DskipTests assembly:single -Dassembly.file=hbase-assembly/src/main/assembly/src.xml -Prelease</programlisting>
             Undo the tarball and make sure it looks good.  A good test for the src tarball being 'complete' is to see if
             you can build new tarballs from this source bundle.
             If the source tarball is good, save it off to a <emphasis>version directory</emphasis>, i.e a directory somewhere where you are collecting
@@ -309,7 +309,7 @@ under the respective release documentation folders.
             Do it in two steps. First install into the local repository and then generate documentation and assemble the tarball
             (Otherwise build complains that hbase modules are not in maven repo when we try to do it all in the one go especially on fresh repo).
             It seems that you need the install goal in both steps.
-            <programlisting>$ MAVEN_OPTS="-Xmx3g" mvn clean install -DskipTests -Prelease
+            <programlisting language="bourne">$ MAVEN_OPTS="-Xmx3g" mvn clean install -DskipTests -Prelease
 $ MAVEN_OPTS="-Xmx3g" mvn install -DskipTests site assembly:single -Prelease</programlisting>
 Undo the generated tarball and check it out.  Look at doc. and see if it runs, etc.
 If good, copy the tarball to the above mentioned <emphasis>version directory</emphasis>.
@@ -320,7 +320,7 @@ If good, copy the tarball to the above mentioned <emphasis>version directory</em
 This time we use the <varname>apache-release</varname> profile instead of just <varname>release</varname> profile when doing mvn deploy;
 it will invoke the apache pom referenced by our poms.  It will also sign your artifacts published to mvn as long as your settings.xml in your local <filename>.m2</filename>
 repository is configured correctly (your <filename>settings.xml</filename> adds your gpg password property to the apache profile).
-<programlisting>$ MAVEN_OPTS="-Xmx3g" mvn deploy -DskipTests -Papache-release</programlisting>
+<programlisting language="bourne">$ MAVEN_OPTS="-Xmx3g" mvn deploy -DskipTests -Papache-release</programlisting>
 The last command above copies all artifacts up to a temporary staging apache mvn repo in an 'open' state.
 We'll need to do more work on these maven artifacts to make them generally available.
 </para>
@@ -379,7 +379,7 @@ or borked, just delete the 'open' staged artifacts.
     <para>
         If all checks out, next put the <emphasis>version directory</emphasis> up on people.apache.org.  You will need to sign and fingerprint them before you
         push them up. In the <emphasis>version directory</emphasis> do this:
-        <programlisting>$ for i in *.tar.gz; do echo $i; gpg --print-mds $i > $i.mds ; done
+        <programlisting language="bourne">$ for i in *.tar.gz; do echo $i; gpg --print-mds $i > $i.mds ; done
 $ for i in *.tar.gz; do echo $i; gpg --armor --output $i.asc --detach-sig $i  ; done
 $ cd ..
 # Presuming our 'version directory' is named 0.96.0RC0, now copy it up to people.apache.org.
@@ -396,7 +396,7 @@ $ rsync -av 0.96.0RC0 people.apache.org:public_html
           <para>Make sure your <filename>settings.xml</filename> is set up properly (see above for how).
               Make sure the hbase version includes <varname>-SNAPSHOT</varname> as a suffix.  Here is how I published SNAPSHOTS of
               a release that had an hbase version of 0.96.0 in its poms.
-          <programlisting>$ MAVEN_OPTS="-Xmx3g" mvn clean install -DskipTests  javadoc:aggregate site assembly:single -Prelease
+          <programlisting language="bourne">$ MAVEN_OPTS="-Xmx3g" mvn clean install -DskipTests  javadoc:aggregate site assembly:single -Prelease
  $ MAVEN_OPTS="-Xmx3g" mvn -DskipTests  deploy -Papache-release</programlisting>
 </para>
 <para>The <filename>make_rc.sh</filename> script mentioned above in the
@@ -436,7 +436,7 @@ $ rsync -av 0.96.0RC0 people.apache.org:public_html
           (see <xref linkend="submitting.patches"/>). Your Jira should contain a summary of the changes in each
           section (see <link xlink:href="https://issues.apache.org/jira/browse/HBASE-6081">HBASE-6081</link> for an example).</para>
       <para>To generate the site locally while you're working on it, run:
-      <programlisting>mvn site</programlisting>
+      <programlisting language="bourne">mvn site</programlisting>
       Then you can load up the generated HTML files in your browser (file are under <filename>/target/site</filename>).</para>
       </section>
       <section xml:id="hbase.org.site.publishing">
@@ -446,14 +446,14 @@ $ rsync -av 0.96.0RC0 people.apache.org:public_html
           Finally, check it in.  For example, if trunk is checked out out at <filename>/Users/stack/checkouts/trunk</filename>
           and the hbase website, hbase.apache.org, is checked out at <filename>/Users/stack/checkouts/hbase.apache.org/trunk</filename>, to update
           the site, do the following:
-          <programlisting>
+          <programlisting language="bourne">
               # Build the site and deploy it to the checked out directory
               # Getting the javadoc into site is a little tricky.  You have to build it before you invoke 'site'.
               $ MAVEN_OPTS=" -Xmx3g" mvn clean install -DskipTests javadoc:aggregate site  site:stage -DstagingDirectory=/Users/stack/checkouts/hbase.apache.org/trunk
           </programlisting>
           Now check the deployed site by viewing in a brower, browse to file:////Users/stack/checkouts/hbase.apache.org/trunk/index.html and check all is good.
           If all checks out, commit it and your new build will show up immediately at http://hbase.apache.org
-          <programlisting>
+          <programlisting language="bourne">
               $ cd /Users/stack/checkouts/hbase.apache.org/trunk
               $ svn status
               # Do an svn add of any new content...
@@ -500,16 +500,16 @@ HBase have a character not usually seen in other projects.</para>
   <title>Running Tests in other Modules</title>
   <para>If the module you are developing in has no other dependencies on other HBase modules, then
   you can cd into that module and just run:</para>
-  <programlisting>mvn test</programlisting>
+  <programlisting language="bourne">mvn test</programlisting>
   <para>which will just run the tests IN THAT MODULE. If there are other dependencies on other modules,
   then you will have run the command from the ROOT HBASE DIRECTORY. This will run the tests in the other
   modules, unless you specify to skip the tests in that module. For instance, to skip the tests in the hbase-server module,
   you would run:</para>
-  <programlisting>mvn clean test -PskipServerTests</programlisting>
+  <programlisting language="bourne">mvn clean test -PskipServerTests</programlisting>
   <para>from the top level directory to run all the tests in modules other than hbase-server. Note that you
   can specify to skip tests in multiple modules as well as just for a single module. For example, to skip
   the tests in <classname>hbase-server</classname> and <classname>hbase-common</classname>, you would run:</para>
-  <programlisting>mvn clean test -PskipServerTests -PskipCommonTests</programlisting>
+  <programlisting language="bourne">mvn clean test -PskipServerTests -PskipCommonTests</programlisting>
   <para>Also, keep in mind that if you are running tests in the <classname>hbase-server</classname> module you will need to
   apply the maven profiles discussed in <xref linkend="hbase.unittests.cmds"/> to get the tests to run properly.</para>
   </section>
@@ -522,7 +522,7 @@ integration with corresponding JUnit <link xlink:href="http://www.junit.org/node
 <classname>SmallTests</classname>, <classname>MediumTests</classname>,
 <classname>LargeTests</classname>, <classname>IntegrationTests</classname>.
 JUnit categories are denoted using java annotations and look like this in your unit test code.</para>
-<programlisting>...
+<programlisting language="java">...
 @Category(SmallTests.class)
 public class TestHRegionInfo {
   @Test
@@ -589,7 +589,7 @@ public class TestHRegionInfo {
             <section
                 xml:id="hbase.unittests.cmds.test">
                 <title>Default: small and medium category tests </title>
-                <para>Running <programlisting>mvn test</programlisting> will execute all small tests
+                <para>Running <programlisting language="bourne">mvn test</programlisting> will execute all small tests
                     in a single JVM (no fork) and then medium tests in a separate JVM for each test
                     instance. Medium tests are NOT executed if there is an error in a small test.
                     Large tests are NOT executed. There is one report for small tests, and one
@@ -599,7 +599,7 @@ public class TestHRegionInfo {
             <section
                 xml:id="hbase.unittests.cmds.test.runAllTests">
                 <title>Running all tests</title>
-                <para>Running <programlisting>mvn test -P runAllTests</programlisting> will execute
+                <para>Running <programlisting language="bourne">mvn test -P runAllTests</programlisting> will execute
                     small tests in a single JVM then medium and large tests in a separate JVM for
                     each test. Medium and large tests are NOT executed if there is an error in a
                     small test. Large tests are NOT executed if there is an error in a small or
@@ -611,11 +611,11 @@ public class TestHRegionInfo {
                 xml:id="hbase.unittests.cmds.test.localtests.mytest">
                 <title>Running a single test or all tests in a package</title>
                 <para>To run an individual test, e.g. <classname>MyTest</classname>, do
-                    <programlisting>mvn test -Dtest=MyTest</programlisting> You can also pass
+                    <programlisting language="bourne">mvn test -Dtest=MyTest</programlisting> You can also pass
                     multiple, individual tests as a comma-delimited list:
-                    <programlisting>mvn test -Dtest=MyTest1,MyTest2,MyTest3</programlisting> You can
+                    <programlisting language="bourne">mvn test -Dtest=MyTest1,MyTest2,MyTest3</programlisting> You can
                     also pass a package, which will run all tests under the package:
-                    <programlisting>mvn test '-Dtest=org.apache.hadoop.hbase.client.*'</programlisting>
+                    <programlisting language="bourne">mvn test '-Dtest=org.apache.hadoop.hbase.client.*'</programlisting>
                 </para>
 
                 <para> When <code>-Dtest</code> is specified, <code>localTests</code> profile will
@@ -656,10 +656,10 @@ public class TestHRegionInfo {
                     can as well use a ramdisk. You will need 2Gb of memory to run all tests. You
                     will also need to delete the files between two test run. The typical way to
                     configure a ramdisk on Linux is:</para>
-                <screen>$ sudo mkdir /ram2G
+                <screen language="bourne">$ sudo mkdir /ram2G
 sudo mount -t tmpfs -o size=2048M tmpfs /ram2G</screen>
                 <para>You can then use it to run all HBase tests with the command: </para>
-                <screen>mvn test
+                <screen language="bourne">mvn test
                         -P runAllTests -Dsurefire.secondPartThreadCount=12
                         -Dtest.build.data.basedirectory=/ram2G</screen>
             </section>
@@ -848,7 +848,7 @@ ConnectionCount=1 (was 1) </screen>
                     tests that are in the HBase integration test group. After you have completed
                         <command>mvn install -DskipTests</command> You can run just the integration
                     tests by invoking:</para>
-                <programlisting>
+                <programlisting language="bourne">
 cd hbase-it
 mvn verify</programlisting>
                 <para>If you just want to run the integration tests in top-level, you need to run
@@ -890,9 +890,9 @@ mvn verify</programlisting>
                 <para> If you have an already-setup HBase cluster, you can launch the integration
                     tests by invoking the class <code>IntegrationTestsDriver</code>. You may have to
                     run test-compile first. The configuration will be picked by the bin/hbase
-                    script. <programlisting>mvn test-compile</programlisting> Then launch the tests
+                    script. <programlisting language="bourne">mvn test-compile</programlisting> Then launch the tests
                     with:</para>
-                <programlisting>bin/hbase [--config config_dir] org.apache.hadoop.hbase.IntegrationTestsDriver</programlisting>
+                <programlisting language="bourne">bin/hbase [--config config_dir] org.apache.hadoop.hbase.IntegrationTestsDriver</programlisting>
                 <para>Pass <code>-h</code> to get usage on this sweet tool. Running the
                     IntegrationTestsDriver without any argument will launch tests found under
                         <code>hbase-it/src/test</code>, having
@@ -968,7 +968,7 @@ mvn verify</programlisting>
                     ChaosMonkey uses the configuration from the bin/hbase script, thus no extra
                     configuration needs to be done. You can invoke the ChaosMonkey by
                     running:</para>
-                <programlisting>bin/hbase org.apache.hadoop.hbase.util.ChaosMonkey</programlisting>
+                <programlisting language="bourne">bin/hbase org.apache.hadoop.hbase.util.ChaosMonkey</programlisting>
                 <para> This will output smt like: </para>
                 <screen>
 12/11/19 23:21:57 INFO util.ChaosMonkey: Using ChaosMonkey Policy: class org.apache.hadoop.hbase.util.ChaosMonkey$PeriodicRandomActionPolicy, period:60000
@@ -1021,7 +1021,7 @@ As you can see from the log, ChaosMonkey started the default PeriodicRandomActio
     <classname>org.apache.hadoop.hbase.chaos.factories.MonkeyConstants</classname> class. 
     If any chaos monkey configuration is missing from the property file, then the default values are assumed.
     For example:</para>
-    <programlisting>
+    <programlisting language="bourne">
 $<userinput>bin/hbase org.apache.hadoop.hbase.IntegrationTestIngest -m slowDeterministic -monkeyProps monkey.properties</userinput>
     </programlisting>
     <para>The above command will start the integration tests and chaos monkey passing the properties file <filename>monkey.properties</filename>. 
@@ -1046,7 +1046,7 @@ batch.restart.rs.ratio=0.4f
        </para>
        <section xml:id="maven.build.commands.compile">
           <title>Compile</title>
-          <programlisting>
+          <programlisting language="bourne">
 mvn compile
           </programlisting>
        </section>
@@ -1063,7 +1063,7 @@ mvn compile
 	  By default, in 0.96 and earlier, we will build with Hadoop-1.0.x. 
           As of 0.98, Hadoop 1.x is deprecated and Hadoop 2.x is the default.
           To change the version to build against, add a hadoop.profile property when you invoke <command>mvn</command>:</para>
-         <programlisting>mvn -Dhadoop.profile=1.0 ...</programlisting>
+         <programlisting language="bourne">mvn -Dhadoop.profile=1.0 ...</programlisting>
          <para>
          The above will build against whatever explicit hadoop 1.x version we have in our <filename>pom.xml</filename> as our '1.0' version.
          Tests may not all pass so you may need to pass <code>-DskipTests</code> unless you are inclined to fix the failing tests.</para>
@@ -1083,7 +1083,7 @@ pecularity that is probably fixable but we've not spent the time trying to figur
          <para> In earilier versions of Apache HBase, you can build against older versions of Apache
                 Hadoop, notably, Hadoop 0.22.x and 0.23.x. If you are running, for example
                 HBase-0.94 and wanted to build against Hadoop 0.23.x, you would run with:</para>
-          <programlisting>mvn -Dhadoop.profile=22 ...</programlisting>
+          <programlisting language="bourne">mvn -Dhadoop.profile=22 ...</programlisting>
       </section>
     </section>
 
@@ -1154,7 +1154,7 @@ pecularity that is probably fixable but we've not spent the time trying to figur
                 <para>HBase uses <link
                         xlink:href="http://junit.org">JUnit</link> 4 for unit tests</para>
                 <para>This example will add unit tests to the following example class:</para>
-                <programlisting>
+                <programlisting language="java">
 public class MyHBaseDAO {
 
     public static void insertRecord(HTableInterface table, HBaseTestObj obj)
@@ -1174,7 +1174,7 @@ public class MyHBaseDAO {
 }                
             </programlisting>
                 <para>The first step is to add JUnit dependencies to your Maven POM file:</para>
-                <programlisting><![CDATA[
+                <programlisting language="xml"><![CDATA[
 <dependency>
     <groupId>junit</groupId>
     <artifactId>junit</artifactId>
@@ -1184,7 +1184,7 @@ public class MyHBaseDAO {
                 ]]></programlisting>
                 <para>Next, add some unit tests to your code. Tests are annotated with
                         <literal>@Test</literal>. Here, the unit tests are in bold.</para>
-                <programlisting>
+                <programlisting language="java">
 public class TestMyHbaseDAOData {
   @Test
   public void testCreatePut() throws Exception {
@@ -1222,7 +1222,7 @@ public class TestMyHbaseDAOData {
                         linkend="unit.tests" />, to test the <code>insertRecord</code>
                     method.</para>
                 <para>First, add a dependency for Mockito to your Maven POM file.</para>
-                <programlisting><![CDATA[
+                <programlisting language="xml"><![CDATA[
 <dependency>
     <groupId>org.mockito</groupId>
     <artifactId>mockito-all</artifactId>
@@ -1232,7 +1232,7 @@ public class TestMyHbaseDAOData {
                    ]]></programlisting>
                 <para>Next, add a <code>@RunWith</code> annotation to your test class, to direct it
                     to use Mockito.</para>
-                <programlisting>
+                <programlisting language="java">
 <userinput>@RunWith(MockitoJUnitRunner.class)</userinput>
 public class TestMyHBaseDAO{
   @Mock 
@@ -1283,7 +1283,7 @@ public class TestMyHBaseDAO{
                         <literal>MyTest</literal>, which has one column family called
                         <literal>CF</literal>, the reducer of such a job could look like the
                     following:</para>
-                <programlisting><![CDATA[
+                <programlisting language="java"><![CDATA[
 public class MyReducer extends TableReducer<Text, Text, ImmutableBytesWritable> {
    public static final byte[] CF = "CF".getBytes();
    public static final byte[] QUALIFIER = "CQ-1".getBytes();
@@ -1304,7 +1304,7 @@ public class MyReducer extends TableReducer<Text, Text, ImmutableBytesWritable> 
                 </programlisting>
                 <para>To test this code, the first step is to add a dependency to MRUnit to your
                     Maven POM file. </para>
-                <programlisting><![CDATA[
+                <programlisting language="xml"><![CDATA[
 <dependency>
    <groupId>org.apache.mrunit</groupId>
    <artifactId>mrunit</artifactId>
@@ -1313,7 +1313,7 @@ public class MyReducer extends TableReducer<Text, Text, ImmutableBytesWritable> 
 </dependency>                    
                     ]]></programlisting>
                 <para>Next, use the ReducerDriver provided by MRUnit, in your Reducer job.</para>
-                <programlisting><![CDATA[
+                <programlisting language="java"><![CDATA[
 public class MyReducerTest {
     ReduceDriver<Text, Text, ImmutableBytesWritable, Writable> reduceDriver;
     byte[] CF = "CF".getBytes();
@@ -1367,7 +1367,7 @@ strValue2 = "DATA2";
                     tests using a <firstterm>mini-cluster</firstterm>. The first step is to add some
                     dependencies to your Maven POM file. Check the versions to be sure they are
                     appropriate.</para>
-                <programlisting><![CDATA[
+                <programlisting language="xml"><![CDATA[
 <dependency>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-common</artifactId>
@@ -1401,7 +1401,7 @@ strValue2 = "DATA2";
                     ]]></programlisting>
                 <para>This code represents an integration test for the MyDAO insert shown in <xref
                         linkend="unit.tests" />.</para>
-                <programlisting>
+                <programlisting language="java">
 public class MyHBaseIntegrationTest {
     private static HBaseTestingUtility utility;
     byte[] CF = "CF".getBytes();
@@ -1567,12 +1567,12 @@ public class MyHBaseIntegrationTest {
            <para>If you are developing Apache HBase, frequently it is useful to test your changes against a more-real cluster than what you find in unit tests. In this case, HBase can be run directly from the source in local-mode.
            All you need to do is run:
            </para>
-           <programlisting>${HBASE_HOME}/bin/start-hbase.sh</programlisting>
+           <programlisting language="bourne">${HBASE_HOME}/bin/start-hbase.sh</programlisting>
            <para>
            This will spin up a full local-cluster, just as if you had packaged up HBase and installed it on your machine.
            </para>
            <para>Keep in mind that you will need to have installed HBase into your local maven repository for the in-situ cluster to work properly. That is, you will need to run:</para>
-           <programlisting>mvn clean install -DskipTests</programlisting>
+           <programlisting language="bourne">mvn clean install -DskipTests</programlisting>
            <para>to ensure that maven can find the correct classpath and dependencies. Generally, the above command
            is just a good thing to try running first, if maven is acting oddly.</para>
            </section> <!-- run.insitu -->
@@ -1638,7 +1638,7 @@ public class MyHBaseIntegrationTest {
           selected resource when generating the patch is a directory.  Patch files can reflect changes in multiple files. </para>
       <para>
           Generating patches using git:</para>
-<screen>$ git diff --no-prefix  > HBASE_XXXX.patch</screen>
+<screen language="bourne">$ git diff --no-prefix  > HBASE_XXXX.patch</screen>
               <para>
               Don't forget the 'no-prefix' option; and generate the diff from the root directory of project
       </para>
@@ -1686,20 +1686,20 @@ public class MyHBaseIntegrationTest {
           <section xml:id="common.patch.feedback.space.invaders">
             <title>Space Invaders</title>
             <para>Rather than do this...
-<programlisting>
+<programlisting language="java">
 if ( foo.equals( bar ) ) {     // don't do this
 </programlisting>
 			... do this instead...
-<programlisting>
+<programlisting language="java">
 if (foo.equals(bar)) {
 </programlisting>
           </para>
           <para>Also, rather than do this...
-<programlisting>
+<programlisting language="java">
 foo = barArray[ i ];     // don't do this
 </programlisting>
 			... do this instead...
-<programlisting>
+<programlisting language="java">
 foo = barArray[i];
 </programlisting>
           </para>
@@ -1707,12 +1707,12 @@ foo = barArray[i];
           <section xml:id="common.patch.feedback.autogen">
             <title>Auto Generated Code</title>
             <para>Auto-generated code in Eclipse often looks like this...
-<programlisting>
+<programlisting language="java">
  public void readFields(DataInput arg0) throws IOException {    // don't do this
    foo = arg0.readUTF();                                       // don't do this
 </programlisting>
 			... do this instead ...
-<programlisting>
+<programlisting language="java">
  public void readFields(DataInput di) throws IOException {
    foo = di.readUTF();
 </programlisting>
@@ -1723,11 +1723,11 @@ foo = barArray[i];
             <title>Long Lines</title>
             <para>
             Keep lines less than 100 characters.
-<programlisting>
+<programlisting language="java">
 Bar bar = foo.veryLongMethodWithManyArguments(argument1, argument2, argument3, argument4, argument5, argument6, argument7, argument8, argument9);  // don't do this
 </programlisting>
 			... do something like this instead ...
-<programlisting>
+<programlisting language="java">
 Bar bar = foo.veryLongMethodWithManyArguments(
  argument1, argument2, argument3,argument4, argument5, argument6, argument7, argument8, argument9);
 </programlisting>
@@ -1737,8 +1737,8 @@ Bar bar = foo.veryLongMethodWithManyArguments(
             <title>Trailing Spaces</title>
             <para>
             This happens more than people would imagine.
-<programlisting>
-Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the semicolon instead of a line break.
+<programlisting language="java">
+Bar bar = foo.getBar();     &lt;--- imagine there is an extra space(s) after the semicolon instead of a line break.
 </programlisting>
             Make sure there's a line-break after the end of your code, and also avoid lines that have nothing
             but whitespace.
@@ -1772,7 +1772,7 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
                     findbugs files locally.  Sometimes, you may have to write code smarter than
                     Findbugs. You can annotate your code to tell Findbugs you know what you're
                     doing, by annotating your class with:
-                    <programlisting>@edu.umd.cs.findbugs.annotations.SuppressWarnings(
+                    <programlisting language="java">@edu.umd.cs.findbugs.annotations.SuppressWarnings(
                     value="HE_EQUALS_USE_HASHCODE",
                     justification="I know what I'm doing")</programlisting>
             </para>
@@ -1785,7 +1785,7 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
             <title>Javadoc - Useless Defaults</title>
             <para>Don't just leave the @param arguments the way your IDE generated them.  Don't do
                 this...</para>
-<programlisting>
+<programlisting language="java">
   /**
    *
    * @param bar             &lt;---- don't do this!!!!
@@ -1853,7 +1853,7 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
                         <para>patch 1:</para>
                         <itemizedlist>
                             <listitem>
-                                <screen>$ git diff --no-prefix > HBASE_XXXX-1.patch</screen>
+                                <screen language="bourne">$ git diff --no-prefix > HBASE_XXXX-1.patch</screen>
                             </listitem>
                         </itemizedlist>
                     </listitem>
@@ -1862,12 +1862,12 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
                         <itemizedlist>
                             <listitem>
                                 <para>create a new git branch</para>
-                                <screen>$ git checkout -b my_branch</screen>
+                                <screen language="bourne">$ git checkout -b my_branch</screen>
                             </listitem>
                             <listitem>
                                 <para>save your work</para>
-                                <screen>$ git add file1 file2 </screen>
-                                <screen>$ git commit -am 'saved after HBASE_XXXX-1.patch'</screen>
+                                <screen language="bourne">$ git add file1 file2 </screen>
+                                <screen language="bourne">$ git commit -am 'saved after HBASE_XXXX-1.patch'</screen>
                                 <para>now you have your own branch, that is different from remote
                                     master branch</para>
                             </listitem>
@@ -1876,7 +1876,7 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
                             </listitem>
                             <listitem>
                                 <para>create second patch</para>
-                                <screen>$ git diff --no-prefix > HBASE_XXXX-2.patch</screen>
+                                <screen language="bourne">$ git diff --no-prefix > HBASE_XXXX-2.patch</screen>
                             </listitem>
                         </itemizedlist>
 

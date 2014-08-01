@@ -300,25 +300,25 @@
         <para> A namespace can be created, removed or altered. Namespace membership is determined
           during table creation by specifying a fully-qualified table name of the form:</para>
 
-        <programlisting><![CDATA[<table namespace>:<table qualifier>]]></programlisting>
+        <programlisting language="xml"><![CDATA[<table namespace>:<table qualifier>]]></programlisting>
 
 
         <example>
           <title>Examples</title>
 
-          <programlisting>
+          <programlisting language="bourne">
 #Create a namespace
 create_namespace 'my_ns'
             </programlisting>
-          <programlisting>
+          <programlisting language="bourne">
 #create my_table in my_ns namespace
 create 'my_ns:my_table', 'fam'
           </programlisting>
-          <programlisting>
+          <programlisting language="bourne">
 #drop namespace
 drop_namespace 'my_ns'
           </programlisting>
-          <programlisting>
+          <programlisting language="bourne">
 #alter namespace
 alter_namespace 'my_ns', {METHOD => 'set', 'PROPERTY_NAME' => 'PROPERTY_VALUE'}
         </programlisting>
@@ -340,7 +340,7 @@ alter_namespace 'my_ns', {METHOD => 'set', 'PROPERTY_NAME' => 'PROPERTY_VALUE'}
         <example>
           <title>Examples</title>
 
-          <programlisting>
+          <programlisting language="bourne">
 #namespace=foo and table qualifier=bar
 create 'foo:bar', 'fam'
 
@@ -429,7 +429,7 @@ create 'bar', 'fam'
           populated with rows with keys "row1", "row2", "row3", and then another set of rows with
           the keys "abc1", "abc2", and "abc3". The following example shows how startRow and stopRow
           can be applied to a Scan instance to return the rows beginning with "row".</para>
-        <programlisting>
+        <programlisting language="java">
 public static final byte[] CF = "cf".getBytes();
 public static final byte[] ATTR = "attr".getBytes();
 ...
@@ -562,7 +562,7 @@ try {
           xml:id="default_get_example">
           <title>Default Get Example</title>
           <para>The following Get will only retrieve the current version of the row</para>
-          <programlisting>
+          <programlisting language="java">
 public static final byte[] CF = "cf".getBytes();
 public static final byte[] ATTR = "attr".getBytes();
 ...
@@ -575,7 +575,7 @@ byte[] b = r.getValue(CF, ATTR);  // returns current version of value
           xml:id="versioned_get_example">
           <title>Versioned Get Example</title>
           <para>The following Get will return the last 3 versions of the row.</para>
-          <programlisting>
+          <programlisting language="java">
 public static final byte[] CF = "cf".getBytes();
 public static final byte[] ATTR = "attr".getBytes();
 ...
@@ -603,7 +603,7 @@ List&lt;KeyValue&gt; kv = r.getColumn(CF, ATTR);  // returns all versions of thi
             <title>Implicit Version Example</title>
             <para>The following Put will be implicitly versioned by HBase with the current
               time.</para>
-            <programlisting>
+            <programlisting language="java">
 public static final byte[] CF = "cf".getBytes();
 public static final byte[] ATTR = "attr".getBytes();
 ...
@@ -616,7 +616,7 @@ htable.put(put);
             xml:id="explicit_version_example">
             <title>Explicit Version Example</title>
             <para>The following Put has the version timestamp explicitly set.</para>
-            <programlisting>
+            <programlisting language="java">
 public static final byte[] CF = "cf".getBytes();
 public static final byte[] ATTR = "attr".getBytes();
 ...
@@ -815,7 +815,7 @@ htable.put(put);
         Be sure to use the correct version of the HBase JAR for your system. The backticks
           (<literal>`</literal> symbols) cause ths shell to execute the sub-commands, setting the
         CLASSPATH as part of the command. This example assumes you use a BASH-compatible shell. </para>
-      <screen>$ <userinput>HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-0.90.0.jar rowcounter usertable</userinput></screen>
+      <screen language="bourne">$ <userinput>HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-0.90.0.jar rowcounter usertable</userinput></screen>
       <para>When the command runs, internally, the HBase JAR finds the dependencies it needs for
         zookeeper, guava, and its other dependencies on the passed <envar>HADOOP_CLASSPATH</envar>
         and adds the JARs to the MapReduce job configuration. See the source at
@@ -826,7 +826,7 @@ htable.put(put);
         <screen>java.lang.RuntimeException: java.lang.ClassNotFoundException: org.apache.hadoop.hbase.mapreduce.RowCounter$RowCounterMapper</screen>
         <para>If this occurs, try modifying the command as follows, so that it uses the HBase JARs
           from the <filename>target/</filename> directory within the build environment.</para>
-        <screen>$ <userinput>HADOOP_CLASSPATH=${HBASE_HOME}/target/hbase-0.90.0-SNAPSHOT.jar:`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/target/hbase-0.90.0-SNAPSHOT.jar rowcounter usertable</userinput></screen>
+        <screen language="bourne">$ <userinput>HADOOP_CLASSPATH=${HBASE_HOME}/target/hbase-0.90.0-SNAPSHOT.jar:`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/target/hbase-0.90.0-SNAPSHOT.jar rowcounter usertable</userinput></screen>
       </note>
       <caution>
         <title>Notice to Mapreduce users of HBase 0.96.1 and above</title>
@@ -876,14 +876,14 @@ Exception in thread "main" java.lang.IllegalAccessError: class
             <code>HADOOP_CLASSPATH</code> environment variable at job submission time. When
           launching jobs that package their dependencies, all three of the following job launching
           commands satisfy this requirement:</para>
-        <screen>
+        <screen language="bourne">
 $ <userinput>HADOOP_CLASSPATH=/path/to/hbase-protocol.jar:/path/to/hbase/conf hadoop jar MyJob.jar MyJobMainClass</userinput>
 $ <userinput>HADOOP_CLASSPATH=$(hbase mapredcp):/path/to/hbase/conf hadoop jar MyJob.jar MyJobMainClass</userinput>
 $ <userinput>HADOOP_CLASSPATH=$(hbase classpath) hadoop jar MyJob.jar MyJobMainClass</userinput>
         </screen>
         <para>For jars that do not package their dependencies, the following command structure is
           necessary:</para>
-        <screen>
+        <screen language="bourne">
 $ <userinput>HADOOP_CLASSPATH=$(hbase mapredcp):/etc/hbase/conf hadoop jar MyApp.jar MyJobMainClass -libjars $(hbase mapredcp | tr ':' ',')</userinput> ...
         </screen>
         <para>See also <link
@@ -898,7 +898,7 @@ $ <userinput>HADOOP_CLASSPATH=$(hbase mapredcp):/etc/hbase/conf hadoop jar MyApp
       <para>The HBase JAR also serves as a Driver for some bundled mapreduce jobs. To learn about
         the bundled MapReduce jobs, run the following command.</para>
 
-      <screen>$ <userinput>${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-0.90.0-SNAPSHOT.jar</userinput>
+      <screen language="bourne">$ <userinput>${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-0.90.0-SNAPSHOT.jar</userinput>
 <computeroutput>An example program must be given as the first argument.
 Valid program names are:
   copytable: Export a table from local cluster to peer cluster
@@ -910,7 +910,7 @@ Valid program names are:
     </screen>
       <para>Each of the valid program names are bundled MapReduce jobs. To run one of the jobs,
         model your command after the following example.</para>
-      <screen>$ <userinput>${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-0.90.0-SNAPSHOT.jar rowcounter myTable</userinput></screen>
+      <screen language="bourne">$ <userinput>${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-0.90.0-SNAPSHOT.jar rowcounter myTable</userinput></screen>
     </section>
 
     <section>
@@ -972,7 +972,7 @@ Valid program names are:
         xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html">RowCounter</link>
         MapReduce job uses <code>TableInputFormat</code> and does a count of all rows in the specified
         table. To run it, use the following command: </para>
-      <screen>$ <userinput>./bin/hadoop jar hbase-X.X.X.jar</userinput></screen> 
+      <screen language="bourne">$ <userinput>./bin/hadoop jar hbase-X.X.X.jar</userinput></screen> 
       <para>This will
         invoke the HBase MapReduce Driver class. Select <literal>rowcounter</literal> from the choice of jobs
         offered. This will print rowcouner usage advice to standard output. Specify the tablename,
@@ -1011,7 +1011,7 @@ Valid program names are:
         <para>The following is an example of using HBase as a MapReduce source in read-only manner.
           Specifically, there is a Mapper instance but no Reducer, and nothing is being emitted from
           the Mapper. There job would be defined as follows...</para>
-        <programlisting>
+        <programlisting language="java">
 Configuration config = HBaseConfiguration.create();
 Job job = new Job(config, "ExampleRead");
 job.setJarByClass(MyReadJob.class);     // class that contains mapper
@@ -1038,7 +1038,7 @@ if (!b) {
   </programlisting>
         <para>...and the mapper instance would extend <link
             xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/TableMapper.html">TableMapper</link>...</para>
-        <programlisting>
+        <programlisting language="java">
 public static class MyMapper extends TableMapper&lt;Text, Text&gt; {
 
   public void map(ImmutableBytesWritable row, Result value, Context context) throws InterruptedException, IOException {
@@ -1052,7 +1052,7 @@ public static class MyMapper extends TableMapper&lt;Text, Text&gt; {
         <title>HBase MapReduce Read/Write Example</title>
         <para>The following is an example of using HBase both as a source and as a sink with
           MapReduce. This example will simply copy data from one table to another.</para>
-        <programlisting>
+        <programlisting language="java">
 Configuration config = HBaseConfiguration.create();
 Job job = new Job(config,"ExampleReadWrite");
 job.setJarByClass(MyReadWriteJob.class);    // class that contains mapper
@@ -1091,7 +1091,7 @@ if (!b) {
         <para>The following is the example mapper, which will create a <classname>Put</classname>
           and matching the input <classname>Result</classname> and emit it. Note: this is what the
           CopyTable utility does. </para>
-        <programlisting>
+        <programlisting language="java">
 public static class MyMapper extends TableMapper&lt;ImmutableBytesWritable, Put&gt;  {
 
 	public void map(ImmutableBytesWritable row, Result value, Context context) throws IOException, InterruptedException {
@@ -1125,7 +1125,7 @@ public static class MyMapper extends TableMapper&lt;ImmutableBytesWritable, Put&
         <para>The following example uses HBase as a MapReduce source and sink with a summarization
           step. This example will count the number of distinct instances of a value in a table and
           write those summarized counts in another table.
-          <programlisting>
+          <programlisting language="java">
 Configuration config = HBaseConfiguration.create();
 Job job = new Job(config,"ExampleSummary");
 job.setJarByClass(MySummaryJob.class);     // class that contains mapper and reducer
@@ -1156,7 +1156,7 @@ if (!b) {
           In this example mapper a column with a String-value is chosen as the value to summarize
           upon. This value is used as the key to emit from the mapper, and an
             <classname>IntWritable</classname> represents an instance counter.
-          <programlisting>
+          <programlisting language="java">
 public static class MyMapper extends TableMapper&lt;Text, IntWritable&gt;  {
 	public static final byte[] CF = "cf".getBytes();
 	public static final byte[] ATTR1 = "attr1".getBytes();
@@ -1174,7 +1174,7 @@ public static class MyMapper extends TableMapper&lt;Text, IntWritable&gt;  {
     </programlisting>
           In the reducer, the "ones" are counted (just like any other MR example that does this),
           and then emits a <classname>Put</classname>.
-          <programlisting>
+          <programlisting language="java">
 public static class MyTableReducer extends TableReducer&lt;Text, IntWritable, ImmutableBytesWritable&gt;  {
 	public static final byte[] CF = "cf".getBytes();
 	public static final byte[] COUNT = "count".getBytes();
@@ -1199,7 +1199,7 @@ public static class MyTableReducer extends TableReducer&lt;Text, IntWritable, Im
         <para>This very similar to the summary example above, with exception that this is using
           HBase as a MapReduce source but HDFS as the sink. The differences are in the job setup and
           in the reducer. The mapper remains the same. </para>
-        <programlisting>
+        <programlisting language="java">
 Configuration config = HBaseConfiguration.create();
 Job job = new Job(config,"ExampleSummaryToFile");
 job.setJarByClass(MySummaryFileJob.class);     // class that contains mapper and reducer
@@ -1228,7 +1228,7 @@ if (!b) {
         <para>As stated above, the previous Mapper can run unchanged with this example. As for the
           Reducer, it is a "generic" Reducer instead of extending TableMapper and emitting
           Puts.</para>
-        <programlisting>
+        <programlisting language="java">
  public static class MyReducer extends Reducer&lt;Text, IntWritable, Text, IntWritable&gt;  {
 
 	public void reduce(Text key, Iterable&lt;IntWritable&gt; values, Context context) throws IOException, InterruptedException {
@@ -1268,7 +1268,7 @@ if (!b) {
           reducers. Neither is right or wrong, it depends on your use-case. Recognize that the more
           reducers that are assigned to the job, the more simultaneous connections to the RDBMS will
           be created - this will scale, but only to a point. </para>
-        <programlisting>
+        <programlisting language="java">
  public static class MyRdbmsReducer extends Reducer&lt;Text, IntWritable, Text, IntWritable&gt;  {
 
 	private Connection c = null;
@@ -1299,7 +1299,7 @@ if (!b) {
       <para>Although the framework currently allows one HBase table as input to a MapReduce job,
         other HBase tables can be accessed as lookup tables, etc., in a MapReduce job via creating
         an HTable instance in the setup method of the Mapper.
-        <programlisting>public class MyMapper extends TableMapper&lt;Text, LongWritable&gt; {
+        <programlisting language="java">public class MyMapper extends TableMapper&lt;Text, LongWritable&gt; {
   private HTable myOtherTable;
 
   public void setup(Context context) {
@@ -1519,11 +1519,11 @@ if (!b) {
             xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HBaseConfiguration">HBaseConfiguration</link>
           instance. This will ensure sharing of ZooKeeper and socket instances to the RegionServers
           which is usually what you want. For example, this is preferred:</para>
-          <programlisting>HBaseConfiguration conf = HBaseConfiguration.create();
+          <programlisting language="java">HBaseConfiguration conf = HBaseConfiguration.create();
 HTable table1 = new HTable(conf, "myTable");
 HTable table2 = new HTable(conf, "myTable");</programlisting>
           <para>as opposed to this:</para>
-          <programlisting>HBaseConfiguration conf1 = HBaseConfiguration.create();
+          <programlisting language="java">HBaseConfiguration conf1 = HBaseConfiguration.create();
 HTable table1 = new HTable(conf1, "myTable");
 HBaseConfiguration conf2 = HBaseConfiguration.create();
 HTable table2 = new HTable(conf2, "myTable");</programlisting>
@@ -1537,7 +1537,7 @@ HTable table2 = new HTable(conf2, "myTable");</programlisting>
               the following example:</para>
             <example>
               <title>Pre-Creating a <code>HConnection</code></title>
-              <programlisting>// Create a connection to the cluster.
+              <programlisting language="java">// Create a connection to the cluster.
 HConnection connection = HConnectionManager.createConnection(Configuration);
 HTableInterface table = connection.getTable("myTable");
 // use table as needed, the table returned is lightweight
@@ -1594,7 +1594,7 @@ connection.close();</programlisting>
           represents a list of Filters with a relationship of <code>FilterList.Operator.MUST_PASS_ALL</code> or
           <code>FilterList.Operator.MUST_PASS_ONE</code> between the Filters.  The following example shows an 'or' between two
           Filters (checking for either 'my value' or 'my other value' on the same attribute).</para>
-<programlisting>
+<programlisting language="java">
 FilterList list = new FilterList(FilterList.Operator.MUST_PASS_ONE);
 SingleColumnValueFilter filter1 = new SingleColumnValueFilter(
 	cf,
@@ -1627,7 +1627,7 @@ scan.setFilter(list);
             </code>), inequality (<code>CompareOp.NOT_EQUAL</code>), or ranges (e.g.,
               <code>CompareOp.GREATER</code>). The following is example of testing equivalence a
             column to a String value "my value"...</para>
-          <programlisting>
+          <programlisting language="java">
 SingleColumnValueFilter filter = new SingleColumnValueFilter(
 	cf,
 	column,
@@ -1650,7 +1650,7 @@ scan.setFilter(filter);
           <para><link
               xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/RegexStringComparator.html">RegexStringComparator</link>
             supports regular expressions for value comparisons.</para>
-          <programlisting>
+          <programlisting language="java">
 RegexStringComparator comp = new RegexStringComparator("my.");   // any value that starts with 'my'
 SingleColumnValueFilter filter = new SingleColumnValueFilter(
 	cf,
@@ -1671,7 +1671,7 @@ scan.setFilter(filter);
               xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/filter/SubstringComparator.html">SubstringComparator</link>
             can be used to determine if a given substring exists in a value. The comparison is
             case-insensitive. </para>
-          <programlisting>
+          <programlisting language="java">
 SubstringComparator comp = new SubstringComparator("y val");   // looking for 'my value'
 SingleColumnValueFilter filter = new SingleColumnValueFilter(
 	cf,
@@ -1728,7 +1728,7 @@ scan.setFilter(filter);
           <para>Note: The same column qualifier can be used in different column families. This
             filter returns all matching columns. </para>
           <para>Example: Find all columns in a row and family that start with "abc"</para>
-          <programlisting>
+          <programlisting language="java">
 HTableInterface t = ...;
 byte[] row = ...;
 byte[] family = ...;
@@ -1758,7 +1758,7 @@ rs.close();
             prefixes. It can be used to efficiently get discontinuous sets of columns from very wide
             rows. </para>
           <para>Example: Find all columns in a row and family that start with "abc" or "xyz"</para>
-          <programlisting>
+          <programlisting language="java">
 HTableInterface t = ...;
 byte[] row = ...;
 byte[] family = ...;
@@ -1791,7 +1791,7 @@ rs.close();
             filter returns all matching columns. </para>
           <para>Example: Find all columns in a row and family between "bbbb" (inclusive) and "bbdd"
             (inclusive)</para>
-          <programlisting>
+          <programlisting language="java">
 HTableInterface t = ...;
 byte[] row = ...;
 byte[] family = ...;
@@ -2018,7 +2018,7 @@ rs.close();
                 was accessed. Catalog tables are configured like this. This group is the last one
                 considered during evictions.</para>
             <para>To mark a column family as in-memory, call
-                <programlisting>HColumnDescriptor.setInMemory(true);</programlisting> if creating a table from java,
+                <programlisting language="java">HColumnDescriptor.setInMemory(true);</programlisting> if creating a table from java,
                 or set <command>IN_MEMORY => true</command> when creating or altering a table in
                 the shell: e.g.  <programlisting>hbase(main):003:0> create  't', {NAME => 'f', IN_MEMORY => 'true'}</programlisting></para>
             </listitem>
@@ -2218,7 +2218,7 @@ rs.close();
               <step>
                 <para>Next, add the following configuration to the RegionServer's
                     <filename>hbase-site.xml</filename>.</para>
-                <programlisting>
+                <programlisting language="xml">
 <![CDATA[<property>
   <name>hbase.bucketcache.ioengine</name>
   <value>offheap</value>
@@ -2461,7 +2461,7 @@ rs.close();
                     ZooKeeper splitlog node (<filename>/hbase/splitlog</filename>) as tasks. You can
                   view the contents of the splitlog by issuing the following
                     <command>zkcli</command> command. Example output is shown.</para>
-                  <screen>ls /hbase/splitlog
+                  <screen language="bourne">ls /hbase/splitlog
 [hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2F.logs%2Fhost8.sample.com%2C57020%2C1340474893275-splitting%2Fhost8.sample.com%253A57020.1340474893900, 
 hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2F.logs%2Fhost3.sample.com%2C57020%2C1340474893299-splitting%2Fhost3.sample.com%253A57020.1340474893931, 
 hdfs%3A%2F%2Fhost2.sample.com%3A56020%2Fhbase%2F.logs%2Fhost4.sample.com%2C57020%2C1340474893287-splitting%2Fhost4.sample.com%253A57020.1340474893946]                  
@@ -2846,7 +2846,7 @@ ctime = Sat Jun 23 11:13:40 PDT 2012
           Typically a custom split policy should extend HBase's default split policy: <link xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/ConstantSizeRegionSplitPolicy.html">ConstantSizeRegionSplitPolicy</link>.
           </para>
           <para>The policy can set globally through the HBaseConfiguration used or on a per table basis:
-<programlisting>
+<programlisting language="java">
 HTableDescriptor myHtd = ...;
 myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName());
 </programlisting>
@@ -2867,7 +2867,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
         opens merged region on the regionserver and reports the merge to Master at last.
         </para>
         <para>An example of region merges in the hbase shell
-          <programlisting>$ hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME'
+          <programlisting language="bourne">$ hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME'
           hbase> merge_region 'ENCODED_REGIONNAME', 'ENCODED_REGIONNAME', true
           </programlisting>
           It's an asynchronous operation and call returns immediately without waiting merge completed.
@@ -2969,10 +2969,10 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
 
         <para>To view a textualized version of hfile content, you can do use
         the <classname>org.apache.hadoop.hbase.io.hfile.HFile
-        </classname>tool. Type the following to see usage:<programlisting><code>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile </code> </programlisting>For
+        </classname>tool. Type the following to see usage:<programlisting language="bourne"><code>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile </code> </programlisting>For
         example, to view the content of the file
         <filename>hdfs://10.81.47.41:8020/hbase/TEST/1418428042/DSMP/4759508618286845475</filename>,
-        type the following:<programlisting> <code>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile -v -f hdfs://10.81.47.41:8020/hbase/TEST/1418428042/DSMP/4759508618286845475 </code> </programlisting>If
+        type the following:<programlisting language="bourne"> <code>$ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.io.hfile.HFile -v -f hdfs://10.81.47.41:8020/hbase/TEST/1418428042/DSMP/4759508618286845475 </code> </programlisting>If
         you leave off the option -v to see just a summary on the hfile. See
         usage for other things to do with the <classname>HFile</classname>
         tool.</para>
@@ -3818,7 +3818,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
                 <step>
                   <para>Run one of following commands in the HBase shell. Replace the table name
                       <literal>orders_table</literal> with the name of your table.</para>
-                  <screen>
+                  <screen language="sql">
 <userinput>alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}</userinput>
 <userinput>alter 'orders_table', {NAME => 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}}</userinput>
 <userinput>create 'orders_table', 'blobs_cf', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}</userinput>                  
@@ -3842,7 +3842,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
                   <para>Set the <varname>hbase.hstore.engine.class</varname> option to either nil or
                       <literal>org.apache.hadoop.hbase.regionserver.DefaultStoreEngine</literal>.
                     Either option has the same effect.</para>
-                  <screen>
+                  <screen language="sql">
 <userinput>alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => ''}</userinput>
                 </screen>
                 </step>
@@ -3861,7 +3861,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
                 column family, after disabling the table. If you use HBase shell, the general
                 command pattern is as follows:</para>
 
-              <programlisting>
+              <programlisting language="sql">
 alter 'orders_table', CONFIGURATION => {'key' => 'value', ..., 'key' => 'value'}}
               </programlisting>
               <section
@@ -4061,7 +4061,7 @@ alter 'orders_table', CONFIGURATION => {'key' => 'value', ..., 'key' => 'value'}
         where <code>importtsv</code> or your MapReduce job put its results, and
         the table name to import into. For example:
       </para>
-      <screen>$ hadoop jar hbase-VERSION.jar completebulkload [-c /path/to/hbase/config/hbase-site.xml] /user/todd/myoutput mytable</screen>
+      <screen language="bourne">$ hadoop jar hbase-VERSION.jar completebulkload [-c /path/to/hbase/config/hbase-site.xml] /user/todd/myoutput mytable</screen>
       <para>
         The <code>-c config-file</code> option can be used to specify a file
         containing the appropriate hbase parameters (e.g., hbase-site.xml) if
@@ -4143,7 +4143,7 @@ alter 'orders_table', CONFIGURATION => {'key' => 'value', ..., 'key' => 'value'}
 	       <title>Timeline Consistency </title>
 	         <para>
 			With this feature, HBase introduces a Consistency definition, which can be provided per read operation (get or scan).
-	<programlisting>
+	<programlisting language="java">
 public enum Consistency {
     STRONG,
     TIMELINE
@@ -4254,7 +4254,7 @@ public enum Consistency {
 		</para>
 		<section>
 			<title>Server side properties</title>
-			<programlisting><![CDATA[
+			<programlisting language="xml"><![CDATA[
 <property>
     <name>hbase.regionserver.storefile.refresh.period</name>
     <value>0</value>
@@ -4274,7 +4274,7 @@ public enum Consistency {
 				<title>Client side properties</title>
           <para> Ensure to set the following for all clients (and servers) that will use region
             replicas. </para>			
-			  <programlisting><![CDATA[
+			  <programlisting language="xml"><![CDATA[
 <property>
     <name>hbase.ipc.client.allowsInterrupt</name>
     <value>true</value>
@@ -4325,7 +4325,7 @@ flush 't1'
 
 	</section>
 	<section><title>Java</title>
-	<programlisting><![CDATA[
+	<programlisting language="java"><![CDATA[
 HTableDescriptor htd = new HTableDesctiptor(TableName.valueOf(“test_table”)); 
 htd.setRegionReplication(2);
 ...
@@ -4362,7 +4362,7 @@ hbase(main):001:0> get 't1','r6', {CONSISTENCY => "TIMELINE"}
 ]]></programlisting>
           <para> You can simulate a region server pausing or becoming unavailable and do a read from
             the secondary replica: </para>	
-				  <programlisting><![CDATA[
+				  <programlisting language="bourne"><![CDATA[
 $ kill -STOP <pid or primary region server>
 
 hbase(main):001:0> get 't1','r6', {CONSISTENCY => "TIMELINE"}
@@ -4376,14 +4376,14 @@ hbase> scan 't1', {CONSISTENCY => 'TIMELINE'}
 			<title>Java</title>
           <para>You can set set the consistency for Gets and Scans and do requests as
             follows.</para> 
-	<programlisting><![CDATA[
+	<programlisting language="java"><![CDATA[
 Get get = new Get(row);
 get.setConsistency(Consistency.TIMELINE);
 ...
 Result result = table.get(get); 
 ]]></programlisting>
           <para>You can also pass multiple gets: </para>
-	<programlisting><![CDATA[
+	<programlisting language="java"><![CDATA[
 Get get1 = new Get(row);
 get1.setConsistency(Consistency.TIMELINE);
 ...
@@ -4393,7 +4393,7 @@ gets.add(get1);
 Result[] results = table.get(gets); 
 ]]></programlisting>
           <para>And Scans: </para>
-	<programlisting><![CDATA[
+	<programlisting language="java"><![CDATA[
 Scan scan = new Scan();
 scan.setConsistency(Consistency.TIMELINE);
 ...
@@ -4402,7 +4402,7 @@ ResultScanner scanner = table.getScanner(scan);
           <para>You can inspect whether the results are coming from primary region or not by calling
             the Result.isStale() method: </para>
 
-	<programlisting><![CDATA[
+	<programlisting language="java"><![CDATA[
 Result result = table.get(get); 
 if (result.isStale()) {
   ...
@@ -4649,7 +4649,7 @@ identifying mode and a multi-phase read-write repair mode.
 	<section>
 	  <title>Running hbck to identify inconsistencies</title>
 <para>To check to see if your HBase cluster has corruptions, run hbck against your HBase cluster:</para>
-<programlisting>
+<programlisting language="bourne">
 $ ./bin/hbase hbck
 </programlisting>
 	<para>
@@ -4661,13 +4661,13 @@ A run of hbck will report a list of inconsistencies along with a brief descripti
 tables affected. The using the <code>-details</code> option will report more details including a representative
 listing of all the splits present in all the tables.
 	</para>
-<programlisting>
+<programlisting language="bourne">
 $ ./bin/hbase hbck -details
 </programlisting>
 <para>If you just want to know if some tables are corrupted, you can limit hbck to identify inconsistencies
 in only specific tables. For example the following command would only attempt to check table
 TableFoo and TableBar. The benefit is that hbck will run in less time.</para>
-<programlisting>
+<programlisting language="bourne">
 $ ./bin/hbase hbck TableFoo TableBar
 </programlisting>
 	</section>
@@ -4726,12 +4726,12 @@ assigned or multiply assigned regions.</para>
 	</itemizedlist>
 	To fix deployment and assignment problems you can run this command:
 </para>
-<programlisting>
+<programlisting language="bourne">
 $ ./bin/hbase hbck -fixAssignments
 </programlisting>
 <para>To fix deployment and assignment problems as well as repairing incorrect meta rows you can
 run this command:</para>
-<programlisting>
+<programlisting language="bourne">
 $ ./bin/hbase hbck -fixAssignments -fixMeta
 </programlisting>
 <para>There are a few classes of table integrity problems that are low risk repairs. The first two are
@@ -4743,12 +4743,12 @@ The third low-risk class is hdfs region holes. This can be repaired by using the
 If holes are detected you can use -fixHdfsHoles and should include -fixMeta and -fixAssignments to make the new region consistent.</para>
 		</listitem>
 	</itemizedlist>
-<programlisting>
+<programlisting language="bourne">
 $ ./bin/hbase hbck -fixAssignments -fixMeta -fixHdfsHoles
 </programlisting>
 <para>Since this is a common operation, we’ve added a the <code>-repairHoles</code> flag that is equivalent to the
 previous command:</para>
-<programlisting>
+<programlisting language="bourne">
 $ ./bin/hbase hbck -repairHoles
 </programlisting>
 <para>If inconsistencies still remain after these steps, you most likely have table integrity problems
@@ -4800,14 +4800,14 @@ integrity options.</para>
 	</itemizedlist>
 <para>Finally, there are safeguards to limit repairs to only specific tables. For example the following
 command would only attempt to check and repair table TableFoo and TableBar.</para>
-<screen>
+<screen language="bourne">
 $ ./bin/hbase hbck -repair TableFoo TableBar
 </screen>
 	<section><title>Special cases: Meta is not properly assigned</title>
 <para>There are a few special cases that hbck can handle as well.
 Sometimes the meta table’s only region is inconsistently assigned or deployed. In this case
 there is a special <code>-fixMetaOnly</code> option that can try to fix meta assignments.</para>
-<screen>
+<screen language="bourne">
 $ ./bin/hbase hbck -fixMetaOnly -fixAssignments
 </screen>
 	</section>
@@ -4825,7 +4825,7 @@ directory, loads as much information from region metadata files (.regioninfo fil
 from the file system. If the region metadata has proper table integrity, it sidelines the original root
 and meta table directories, and builds new ones with pointers to the region directories and their
 data.</para>
-<screen>
+<screen language="bourne">
 $ ./bin/hbase org.apache.hadoop.hbase.util.hbck.OfflineMetaRepair
 </screen>
 <para>NOTE: This tool is not as clever as uberhbck but can be used to bootstrap repairs that uberhbck
@@ -5085,7 +5085,7 @@ This option should not normally be used, and it is not in <code>-fixAll</code>.
               linkend="hbase.native.platform" />), you can make a symbolic link from HBase to the native Hadoop
             libraries. This assumes the two software installs are colocated. For example, if my
             'platform' is Linux-amd64-64:
-            <programlisting>$ cd $HBASE_HOME
+            <programlisting language="bourne">$ cd $HBASE_HOME
 $ mkdir lib/native
 $ ln -s $HADOOP_HOME/lib/native lib/native/Linux-amd64-64</programlisting>
             Use the compression tool to check that LZ4 is installed on all nodes. Start up (or restart)
@@ -5128,7 +5128,7 @@ hbase(main):003:0> <userinput>alter 'TestTable', {NAME => 'info', COMPRESSION =>
           <title>CompressionTest</title>
           <para>You can use the CompressionTest tool to verify that your compressor is available to
             HBase:</para>
-          <screen>
+          <screen language="bourne">
  $ hbase org.apache.hadoop.hbase.util.CompressionTest hdfs://<replaceable>host/path/to/hbase</replaceable> snappy       
           </screen>
         </section>
@@ -5192,7 +5192,7 @@ DESCRIPTION                                          ENABLED
         parameter, usage advice is printed for each option.</para>
         <example>
           <title><command>LoadTestTool</command> Usage</title>
-          <screen><![CDATA[
+          <screen language="bourne"><![CDATA[
 $ bin/hbase org.apache.hadoop.hbase.util.LoadTestTool -h            
 usage: bin/hbase org.apache.hadoop.hbase.util.LoadTestTool <options>
 Options:
@@ -5248,7 +5248,7 @@ Options:
         </example>
         <example>
           <title>Example Usage of LoadTestTool</title>
-          <screen>
+          <screen language="bourne">
 $ hbase org.apache.hadoop.hbase.util.LoadTestTool -write 1:10:100 -num_keys 1000000
           -read 100:30 -num_tables 1 -data_block_encoding NONE -tn load_test_tool_NONE
           </screen>

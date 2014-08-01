@@ -40,7 +40,7 @@
   <example>
     <title>Create a Table Using Java</title>
     <para>This example has been tested on HBase 0.96.1.1.</para>
-    <programlisting>
+    <programlisting language="java">
 package com.example.hbase.admin;
 
 import java.io.IOException;
@@ -90,7 +90,7 @@ public class CreateSchema {
   <example>
     <title>Add, Modify, and Delete a Table</title>
     <para>This example has been tested on HBase 0.96.1.1.</para>
-    <programlisting>
+    <programlisting language="java">
 public static void upgradeFrom0 (Configuration config) {
 
     try {

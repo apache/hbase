@@ -73,7 +73,7 @@
               operation that must be added to the <code>hbase-site.xml</code> file on every server
               machine in the cluster. Required for even the most basic interactions with a secure
               Hadoop configuration, independent of HBase security. </para>
-            <programlisting><![CDATA[
+            <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.regionserver.kerberos.principal</name>
   <value>hbase/_HOST@YOUR-REALM.COM</value>
@@ -117,7 +117,7 @@
         underlying HDFS configuration is secure.</para>
       <para> Add the following to the <code>hbase-site.xml</code> file on every server machine in
         the cluster: </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.security.authentication</name>
   <value>kerberos</value>
@@ -140,7 +140,7 @@
       <para>First, refer to <xref linkend="security.prerequisites" /> and ensure that your
         underlying HDFS configuration is secure.</para>
       <para> Add the following to the <code>hbase-site.xml</code> file on every client: </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.security.authentication</name>
   <value>kerberos</value>
@@ -154,7 +154,7 @@
       <para> Once HBase is configured for secure RPC it is possible to optionally configure
         encrypted communication. To do so, add the following to the <code>hbase-site.xml</code> file
         on every client: </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.rpc.protection</name>
   <value>privacy</value>
@@ -162,7 +162,7 @@
     ]]></programlisting>
       <para> This configuration property can also be set on a per connection basis. Set it in the
           <code>Configuration</code> supplied to <code>HTable</code>: </para>
-      <programlisting>
+      <programlisting language="java">
 Configuration conf = HBaseConfiguration.create();
 conf.set("hbase.rpc.protection", "privacy");
 HTable table = new HTable(conf, tablename);
@@ -173,7 +173,7 @@ HTable table = new HTable(conf, tablename);
 
     <section xml:id="security.client.thrift">
       <title>Client-side Configuration for Secure Operation - Thrift Gateway</title>
-      <para> Add the following to the <code>hbase-site.xml</code> file for every Thrift gateway: <programlisting><![CDATA[
+      <para> Add the following to the <code>hbase-site.xml</code> file for every Thrift gateway: <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.thrift.keytab.file</name>
   <value>/etc/hbase/conf/hbase.keytab</value>
@@ -193,7 +193,7 @@ HTable table = new HTable(conf, tablename);
         add the <code>hbase.thrift.kerberos.principal</code> to the <code>_acl_</code> table. For
         example, to give the Thrift API principal, <code>thrift_server</code>, administrative
         access, a command such as this one will suffice: </para>
-      <programlisting><![CDATA[
+      <programlisting language="sql"><![CDATA[
 grant 'thrift_server', 'RWCA'
     ]]></programlisting>
       <para>For more information about ACLs, please see the <link
@@ -257,7 +257,7 @@ grant 'thrift_server', 'RWCA'
     <section>
       <title>Client-side Configuration for Secure Operation - REST Gateway</title>
       <para> Add the following to the <code>hbase-site.xml</code> file for every REST gateway: </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.rest.keytab.file</name>
   <value>$KEYTAB</value>
@@ -276,7 +276,7 @@ grant 'thrift_server', 'RWCA'
         add the <code>hbase.rest.kerberos.principal</code> to the <code>_acl_</code> table. For
         example, to give the REST API principal, <code>rest_server</code>, administrative access, a
         command such as this one will suffice: </para>
-      <programlisting><![CDATA[
+      <programlisting language="sql"><![CDATA[
 grant 'rest_server', 'RWCA'
     ]]></programlisting>
       <para>For more information about ACLs, please see the <link
@@ -298,7 +298,7 @@ grant 'rest_server', 'RWCA'
         region servers) to allow proxy users; configure REST gateway to enable impersonation. </para>
       <para> To allow proxy users, add the following to the <code>hbase-site.xml</code> file for
         every HBase server: </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
   <name>hadoop.security.authorization</name>
   <value>true</value>
@@ -316,7 +316,7 @@ grant 'rest_server', 'RWCA'
         $GROUPS. </para>
       <para> To enable REST gateway impersonation, add the following to the
           <code>hbase-site.xml</code> file for every REST gateway. </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.rest.authentication.type</name>
   <value>kerberos</value>
@@ -367,7 +367,7 @@ grant 'rest_server', 'RWCA'
           <title>Server-side Configuration for Simple User Access Operation</title>
           <para> Add the following to the <code>hbase-site.xml</code> file on every server machine
             in the cluster: </para>
-          <programlisting><![CDATA[
+          <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.security.authentication</name>
   <value>simple</value>
@@ -387,7 +387,7 @@ grant 'rest_server', 'RWCA'
     ]]></programlisting>
           <para> For 0.94, add the following to the <code>hbase-site.xml</code> file on every server
             machine in the cluster: </para>
-          <programlisting><![CDATA[
+          <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.rpc.engine</name>
   <value>org.apache.hadoop.hbase.ipc.SecureRpcEngine</value>
@@ -408,7 +408,7 @@ grant 'rest_server', 'RWCA'
         <section>
           <title>Client-side Configuration for Simple User Access Operation</title>
           <para> Add the following to the <code>hbase-site.xml</code> file on every client: </para>
-          <programlisting><![CDATA[
+          <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.security.authentication</name>
   <value>simple</value>
@@ -416,7 +416,7 @@ grant 'rest_server', 'RWCA'
     ]]></programlisting>
           <para> For 0.94, add the following to the <code>hbase-site.xml</code> file on every server
             machine in the cluster: </para>
-          <programlisting><![CDATA[
+          <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.rpc.engine</name>
   <value>org.apache.hadoop.hbase.ipc.SecureRpcEngine</value>
@@ -432,7 +432,7 @@ grant 'rest_server', 'RWCA'
           <para>The Thrift gateway user will need access. For example, to give the Thrift API user,
               <code>thrift_server</code>, administrative access, a command such as this one will
             suffice: </para>
-          <programlisting><![CDATA[
+          <programlisting language="sql"><![CDATA[
 grant 'thrift_server', 'RWCA'
     ]]></programlisting>
           <para>For more information about ACLs, please see the <link
@@ -452,7 +452,7 @@ grant 'thrift_server', 'RWCA'
           <para>The REST gateway user will need access. For example, to give the REST API user,
               <code>rest_server</code>, administrative access, a command such as this one will
             suffice: </para>
-          <programlisting><![CDATA[
+          <programlisting language="sql"><![CDATA[
 grant 'rest_server', 'RWCA'
     ]]></programlisting>
           <para>For more information about ACLs, please see the <link
@@ -476,7 +476,7 @@ grant 'rest_server', 'RWCA'
       format. Some of the usecases that uses the tags are Visibility labels, Cell level ACLs, etc. </para>
     <para> HFile V3 version from 0.98 onwards supports tags and this feature can be turned on using
       the following configuration </para>
-    <programlisting><![CDATA[
+    <programlisting language="xml"><![CDATA[
 <property>
   <name>hfile.format.version</name>
   <value>3</value>
@@ -488,7 +488,7 @@ grant 'rest_server', 'RWCA'
     <para> The way rowkeys, column families, qualifiers and values are encoded using different
       Encoding Algos, similarly the tags can also be encoded. Tag encoding can be turned on per CF.
       Default is always turn ON. To turn on the tag encoding on the HFiles use </para>
-    <programlisting><![CDATA[
+    <programlisting language="java"><![CDATA[
 HColumnDescriptor#setCompressTags(boolean compressTags)
     ]]></programlisting>
     <para> Note that encoding of tags takes place only if the DataBlockEncoder is enabled for the
@@ -496,14 +496,14 @@ HColumnDescriptor#setCompressTags(boolean compressTags)
     <para> As we compress the WAL entries using Dictionary the tags present in the WAL can also be
       compressed using Dictionary. Every tag is compressed individually using WAL Dictionary. To
       turn ON tag compression in WAL dictionary enable the property </para>
-    <programlisting><![CDATA[
+    <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.regionserver.wal.tags.enablecompression</name>
   <value>true</value>
 </property>
     ]]></programlisting>
     <para> To add tags to every cell during Puts, the following apis are provided </para>
-    <programlisting><![CDATA[
+    <programlisting language="java"><![CDATA[
 Put#add(byte[] family, byte [] qualifier, byte [] value, Tag[] tag)
 Put#add(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tag)
     ]]></programlisting>
@@ -1392,7 +1392,7 @@ Put#add(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tag)
         processes before setting up ACLs. </para>
       <para> To enable the AccessController, modify the <code>hbase-site.xml</code> file on every
         server machine in the cluster to look like: </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.coprocessor.master.classes</name>
   <value>org.apache.hadoop.hbase.security.access.AccessController</value>
@@ -1413,21 +1413,21 @@ Put#add(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tag)
         on configuring it refer to <link
           linkend="hbase.accesscontrol.configuration">Access Control</link> section. </para>
       <para> The ACLs can be specified for every mutation using the APIs </para>
-      <programlisting><![CDATA[
+      <programlisting language="java"><![CDATA[
 Mutation.setACL(String user, Permission perms)
 Mutation.setACL(Map<String, Permission> perms)
     ]]></programlisting>
       <para> For example, to provide read permission to an user ‘user1’ then </para>
-      <programlisting><![CDATA[
+      <programlisting language="java"><![CDATA[
 put.setACL(“user1”, new Permission(Permission.Action.READ))
     ]]></programlisting>
       <para> Generally the ACL applied on the table and CF takes precedence over Cell level ACL. In
         order to make the cell level ACL to take precedence use the following API, </para>
-      <programlisting><![CDATA[
+      <programlisting language="java"><![CDATA[
 Mutation.setACLStrategy(boolean cellFirstStrategy)
     ]]></programlisting>
       <para> Please note that inorder to use this feature, HFile V3 version should be turned on. </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
   <name>hfile.format.version</name>
   <value>3</value>
@@ -1445,7 +1445,7 @@ Mutation.setACLStrategy(boolean cellFirstStrategy)
 
       <example>
         <title>Grant</title>
-        <programlisting><![CDATA[
+        <programlisting language="sql"><![CDATA[
 grant <user|@group> <permissions> [ <table> [ <column family> [ <column qualifier> ] ] ]
         ]]></programlisting>
       </example>
@@ -1463,7 +1463,7 @@ grant <user|@group> <permissions> [ <table> [ <column family> [ <column qualifie
       <example>
         <title>Revoke</title>
 
-        <programlisting><![CDATA[
+        <programlisting language="sql"><![CDATA[
 revoke <user|@group> [ <table> [ <column family> [ <column qualifier> ] ] ]
     ]]></programlisting>
       </example>
@@ -1472,7 +1472,7 @@ revoke <user|@group> [ <table> [ <column family> [ <column qualifier> ] ] ]
 
         <para> The <code>alter</code> command has been extended to allow ownership
           assignment:</para>
-        <programlisting><![CDATA[
+        <programlisting language="sql"><![CDATA[
 alter 'tablename', {OWNER => 'username|@group'}
 ]]></programlisting>
       </example>
@@ -1524,7 +1524,7 @@ user_permission <table>
     <para> You have to enable the secure bulk load to work properly. You can modify the
         <code>hbase-site.xml</code> file on every server machine in the cluster and add the
       SecureBulkLoadEndpoint class to the list of regionserver coprocessors: </para>
-    <programlisting><![CDATA[
+    <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.bulkload.staging.dir</name>
   <value>/tmp/hbase-staging</value>
@@ -1554,7 +1554,7 @@ user_permission <table>
       the cell or even know of its existence. </para>
     <para> Visibility expressions like the above can be added when storing or mutating a cell using
       the API, </para>
-    <programlisting>Mutation#setCellVisibility(new CellVisibility(String labelExpession));</programlisting>
+    <programlisting language="java">Mutation#setCellVisibility(new CellVisibility(String labelExpession));</programlisting>
     <para> Where the labelExpression could be &#39;( secret | topsecret ) &amp; !probationary&#39; </para>
     <para> We build the user&#39;s label set in the RPC context when a request is first received by
       the HBase RegionServer. How users are associated with labels is pluggable. The default plugin
@@ -1609,7 +1609,7 @@ user_permission <table>
       <para> HBase stores cell level labels as cell tags. HFile version 3 adds the cell tags
         support. Be sure to use HFile version 3 by setting this property in every server site
         configuration file: </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 		  <property>
 		    <name>hfile.format.version</name>
 			<value>3</value>
@@ -1618,7 +1618,7 @@ user_permission <table>
       <para> You will also need to make sure the VisibilityController coprocessor is active on every
         table to protect by adding it to the list of system coprocessors in the server site
         configuration files: </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.coprocessor.master.classes</name>
 <value>org.apache.hadoop.hbase.security.visibility.VisibilityController</value>
@@ -1680,7 +1680,7 @@ user_permission <table>
       xml:id="hbase.encryption.server.configuration">
       <title>Configuration</title>
       <para> Create a secret key of appropriate length for AES. </para>
-      <screen><![CDATA[
+      <screen language="bourne"><![CDATA[
 $ keytool -keystore /path/to/hbase/conf/hbase.jks \
   -storetype jceks -storepass <password> \
   -genseckey -keyalg AES -keysize 128 \
@@ -1693,7 +1693,7 @@ $ keytool -keystore /path/to/hbase/conf/hbase.jks \
         the HBase service account. </para>
       <para> Configure HBase daemons to use a key provider backed by the KeyStore files for
         retrieving the cluster master key as needed. </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
     <name>hbase.crypto.keyprovider</name>
     <value>org.apache.hadoop.hbase.io.crypto.KeyStoreKeyProvider</value>
@@ -1705,7 +1705,7 @@ $ keytool -keystore /path/to/hbase/conf/hbase.jks \
         ]]></programlisting>
       <para> By default the HBase service account name will be used to resolve the cluster master
         key, but you can store it with any arbitrary alias and configure HBase appropriately: </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
     <name>hbase.crypto.master.key.name</name>
     <value>hbase</value>
@@ -1715,14 +1715,14 @@ $ keytool -keystore /path/to/hbase/conf/hbase.jks \
         should also have its permissions set to be readable only by the HBase service account. </para>
       <para> Transparent encryption is a feature of HFile version 3. Be sure to use HFile version 3
         by setting this property in every server site configuration file: </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
     <name>hfile.format.version</name>
     <value>3</value>
 </property>
         ]]></programlisting>
       <para> Finally, configure the secure WAL in every server site configuration file: </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
     <name>hbase.regionserver.hlog.reader.impl</name>
     <value>org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader</value>
@@ -1769,7 +1769,7 @@ $ keytool -keystore /path/to/hbase/conf/hbase.jks \
       <para> Master key rotation can be achieved by updating the KeyStore to contain a new master
         key, as described above, with also the old master key added to the KeyStore under a
         different alias. Then, configure fallback to the old master key in the HBase site file: </para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <property>
     <name>hbase.crypto.master.alternate.key.name</name>
     <value>hbase.old</value>

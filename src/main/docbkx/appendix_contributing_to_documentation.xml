@@ -107,7 +107,7 @@
                 <para>For each issue you work on, create a new branch. One convention that works
                     well for naming the branches is to name a given branch the same as the JIRA it
                     relates to:</para>
-                <screen>$ git checkout -b HBASE-123456</screen>
+                <screen language="bourne">$ git checkout -b HBASE-123456</screen>
             </step>
             <step>
                 <para>Make your suggested changes on your branch, committing your changes to your
@@ -123,8 +123,8 @@
                         sure you have built HBase at least once, in order to fetch all the Maven
                         dependencies you need.</para>
                 </note>
-                <screen>$ mvn clean install -DskipTests               # Builds HBase</screen>
-                <screen>$ mvn clean site -DskipTests                  # Builds the website and documentation</screen>
+                <screen language="bourne">$ mvn clean install -DskipTests               # Builds HBase</screen>
+                <screen language="bourne">$ mvn clean site -DskipTests                  # Builds the website and documentation</screen>
                 <para>If any errors occur, address them.</para>
             </step>
             <step>
@@ -132,7 +132,7 @@
                     the area of the code you are working in has had a lot of changes lately, make
                     sure you rebase your branch against the remote master and take care of any
                     conflicts before submitting your patch.</para>
-                <screen>
+                <screen language="bourne">
 $ git checkout HBASE-123456
 $ git rebase origin/master                
                 </screen>
@@ -141,7 +141,7 @@ $ git rebase origin/master
                 <para>Generate your patch against the remote master. Run the following command from
                     the top level of your git repository (usually called
                     <literal>hbase</literal>):</para>
-                <screen>$ git diff --no-prefix origin/master > HBASE-123456.patch</screen>
+                <screen language="bourne">$ git diff --no-prefix origin/master > HBASE-123456.patch</screen>
                 <para>The name of the patch should contain the JIRA ID. Look over the patch file to
                     be sure that you did not change any additional files by accident and that there
                     are no other surprises. When you are satisfied, attach the patch to the JIRA and
@@ -227,7 +227,7 @@ $ git rebase origin/master
             recommended that you use a &lt;figure&gt; Docbook element for an image. This allows
             screen readers to navigate to the image and also provides alternative text for the
             image. The following is an example of a &lt;figure&gt; element.</para>
-        <programlisting><![CDATA[<figure>
+        <programlisting language="xml"><![CDATA[<figure>
   <title>HFile Version 1</title>
   <mediaobject>
     <imageobject>
@@ -295,7 +295,7 @@ $ git rebase origin/master
                         render as block-level elements (they take the whole width of the page), it
                         is better to mark them up as siblings to the paragraphs around them, like
                         this:</para>
-                    <programlisting><![CDATA[<para>This is the paragraph.</para>
+                    <programlisting language="xml"><![CDATA[<para>This is the paragraph.</para>
 <note>
     <para>This is an admonition which occurs after the paragraph.</para>
 </note>]]></programlisting>
@@ -312,7 +312,7 @@ $ git rebase origin/master
                         consist of things other than plain text, they need to be wrapped in some
                         element. If they are plain text, they need to be inclosed in &lt;para&gt;
                         tags. This is tedious but necessary for validity.</para>
-                    <programlisting><![CDATA[<itemizedlist>
+                    <programlisting language="xml"><![CDATA[<itemizedlist>
     <listitem>
         <para>This is a paragraph.</para>
     </listitem>
@@ -367,7 +367,7 @@ $ git rebase origin/master
                                 the content. Also, to avoid having an extra blank line at the
                                 beginning of the programlisting output, do not put the CDATA
                                 element on its own line. For example:</para>
-                            <programlisting><![CDATA[        <programlisting>
+                            <programlisting language="bourne"><![CDATA[        <programlisting>
 case $1 in
   --cleanZk|--cleanHdfs|--cleanAll)
     matches="yes" ;;
@@ -394,6 +394,29 @@ esac
                         that in a separate JIRA where you do not change any content. Be careful
                         because some XML editors do a bulk-reformat when you open a new file,
                         especially if you use GUI mode in the editor.</para>
+                </answer>
+            </qandaentry>
+            <qandaentry>
+                <question>
+                    <para>Syntax Highlighting</para>
+                </question>
+                <answer>
+                    <para>The HBase Reference Guide uses the <link
+                            xlink:href="http://sourceforge.net/projects/xslthl/files/xslthl/2.1.0/"
+                            >XSLT Syntax Highlighting</link> Maven module for syntax highlighting.
+                        To enable syntax highlighting for a given &lt;programlisting&gt; or
+                        &lt;screen&gt; (or possibly other elements), add the attribute
+                                <literal>language=<replaceable>LANGUAGE_OF_CHOICE</replaceable></literal>
+                        to the element, as in the following example:</para>
+                    <programlisting language="xml"><![CDATA[
+<programlisting language="xml">
+    <foo>bar</foo>
+    <bar>foo</bar>
+</programlisting>]]></programlisting>
+                    <para>Several syntax types are supported. The most interesting ones for the
+                        HBase Reference Guide are <literal>java</literal>, <literal>xml</literal>,
+                            <literal>sql</literal>, and <literal>bourne</literal> (for BASH shell
+                        output or Linux command-line examples).</para>
                 </answer>
             </qandaentry>
         </qandaset>

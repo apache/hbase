@@ -22,6 +22,7 @@
  */
 -->
   <xsl:import href="urn:docbkx:stylesheet"/>
+  <xsl:import href="urn:docbkx:stylesheet/highlight.xsl"/>
   <xsl:output method="html" encoding="UTF-8" indent="no"/>
 
   <xsl:template name="user.header.content">

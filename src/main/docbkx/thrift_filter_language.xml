@@ -348,13 +348,13 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting>KeyOnlyFilter ()</programlisting>
+                                <programlisting language="java">KeyOnlyFilter ()</programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>KeyOnlyFilter ()"</programlisting>
+                                <programlisting language="java">KeyOnlyFilter ()"</programlisting>
                             </listitem>
                         </itemizedlist>
                     </listitem>
@@ -368,13 +368,13 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting>FirstKeyOnlyFilter ()</programlisting>
+                                <programlisting language="java">FirstKeyOnlyFilter ()</programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>FirstKeyOnlyFilter ()</programlisting>
+                                <programlisting language="java">FirstKeyOnlyFilter ()</programlisting>
                             </listitem>
                         </itemizedlist>
                     </listitem>
@@ -388,13 +388,13 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting>PrefixFilter (‘&lt;row_prefix>’)</programlisting>
+                                <programlisting language="java">PrefixFilter (‘&lt;row_prefix>’)</programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>PrefixFilter (‘Row’)</programlisting>
+                                <programlisting language="java">PrefixFilter (‘Row’)</programlisting>
                             </listitem>
                         </itemizedlist>
                     </listitem>
@@ -409,13 +409,13 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting>ColumnPrefixFilter(‘&lt;column_prefix>’)</programlisting>
+                                <programlisting language="java">ColumnPrefixFilter(‘&lt;column_prefix>’)</programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>ColumnPrefixFilter(‘Col’)</programlisting>
+                                <programlisting language="java">ColumnPrefixFilter(‘Col’)</programlisting>
                             </listitem>
                         </itemizedlist>
                     </listitem>
@@ -430,13 +430,13 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting>MultipleColumnPrefixFilter(‘&lt;column_prefix>’, ‘&lt;column_prefix>’, …, ‘&lt;column_prefix>’)</programlisting>
+                                <programlisting language="java">MultipleColumnPrefixFilter(‘&lt;column_prefix>’, ‘&lt;column_prefix>’, …, ‘&lt;column_prefix>’)</programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>MultipleColumnPrefixFilter(‘Col1’, ‘Col2’)</programlisting>
+                                <programlisting language="java">MultipleColumnPrefixFilter(‘Col1’, ‘Col2’)</programlisting>
                             </listitem>
                         </itemizedlist>
                     </listitem>
@@ -449,14 +449,14 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting>ColumnCountGetFilter
+                                <programlisting language="java">ColumnCountGetFilter
                         (‘&lt;limit>’)</programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>ColumnCountGetFilter (4)</programlisting>
+                                <programlisting language="java">ColumnCountGetFilter (4)</programlisting>
                             </listitem>
                         </itemizedlist>
                     </listitem>
@@ -469,13 +469,13 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting>PageFilter (‘&lt;page_size&gt;’)</programlisting>
+                                <programlisting language="java">PageFilter (‘&lt;page_size&gt;’)</programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>PageFilter (2)</programlisting>
+                                <programlisting language="java">PageFilter (2)</programlisting>
                             </listitem>
                         </itemizedlist>
                     </listitem>
@@ -489,13 +489,13 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting>ColumnPaginationFilter(‘&lt;limit>’, ‘&lt;offset>’)</programlisting>
+                                <programlisting language="java">ColumnPaginationFilter(‘&lt;limit>’, ‘&lt;offset>’)</programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>ColumnPaginationFilter (3, 5)</programlisting>
+                                <programlisting language="java">ColumnPaginationFilter (3, 5)</programlisting>
                             </listitem>
                         </itemizedlist>
                     </listitem>
@@ -509,13 +509,13 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting>InclusiveStopFilter(‘&lt;stop_row_key>’)</programlisting>
+                                <programlisting language="java">InclusiveStopFilter(‘&lt;stop_row_key>’)</programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>InclusiveStopFilter ('Row2')</programlisting>
+                                <programlisting language="java">InclusiveStopFilter ('Row2')</programlisting>
                             </listitem>
                         </itemizedlist>
                     </listitem>
@@ -528,13 +528,13 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting>TimeStampsFilter (&lt;timestamp>, &lt;timestamp>, ... ,&lt;timestamp>)</programlisting>
+                                <programlisting language="java">TimeStampsFilter (&lt;timestamp>, &lt;timestamp>, ... ,&lt;timestamp>)</programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>TimeStampsFilter (5985489, 48895495, 58489845945)</programlisting>
+                                <programlisting language="java">TimeStampsFilter (5985489, 48895495, 58489845945)</programlisting>
                             </listitem>
                         </itemizedlist>
                     </listitem>
@@ -549,13 +549,13 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting>RowFilter (&lt;compareOp>, ‘&lt;row_comparator>’)</programlisting>
+                                <programlisting language="java">RowFilter (&lt;compareOp>, ‘&lt;row_comparator>’)</programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>RowFilter (&lt;=, ‘xyz)</programlisting>
+                                <programlisting language="java">RowFilter (&lt;=, ‘xyz)</programlisting>
                             </listitem>
                         </itemizedlist>
                     </listitem>
@@ -570,13 +570,13 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting>QualifierFilter (&lt;compareOp&gt;, ‘&lt;qualifier_comparator>’)</programlisting>
+                                <programlisting language="java">QualifierFilter (&lt;compareOp&gt;, ‘&lt;qualifier_comparator>’)</programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>QualifierFilter (=, ‘Column1’)</programlisting>
+                                <programlisting language="java">QualifierFilter (=, ‘Column1’)</programlisting>
                             </listitem>
                         </itemizedlist>
                     </listitem>
@@ -591,13 +591,13 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting>QualifierFilter (&lt;compareOp>,‘&lt;qualifier_comparator>’)</programlisting>
+                                <programlisting language="java">QualifierFilter (&lt;compareOp>,‘&lt;qualifier_comparator>’)</programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>QualifierFilter (=,‘Column1’)</programlisting>
+                                <programlisting language="java">QualifierFilter (=,‘Column1’)</programlisting>
                             </listitem>
                         </itemizedlist>
                     </listitem>
@@ -611,13 +611,13 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting>ValueFilter (&lt;compareOp>,‘&lt;value_comparator>’) </programlisting>
+                                <programlisting language="java">ValueFilter (&lt;compareOp>,‘&lt;value_comparator>’) </programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>ValueFilter (!=, ‘Value’)</programlisting>
+                                <programlisting language="java">ValueFilter (!=, ‘Value’)</programlisting>
                             </listitem>
                         </itemizedlist>
                     </listitem>
@@ -640,26 +640,26 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting><![CDATA[DependentColumnFilter (‘<family>’,‘<qualifier>’, <boolean>, <compare operator>, ‘<value
+                                <programlisting language="java"><![CDATA[DependentColumnFilter (‘<family>’,‘<qualifier>’, <boolean>, <compare operator>, ‘<value
                         comparator’)]]></programlisting>
                             </listitem>
                             <listitem>
-                                <programlisting><![CDATA[DependentColumnFilter (‘<family>’,‘<qualifier>’, <boolean>)]]></programlisting>
+                                <programlisting language="java"><![CDATA[DependentColumnFilter (‘<family>’,‘<qualifier>’, <boolean>)]]></programlisting>
                             </listitem>
                             <listitem>
-                                <programlisting>DependentColumnFilter (‘&lt;family>’,‘&lt;qualifier>’)</programlisting>
+                                <programlisting language="java">DependentColumnFilter (‘&lt;family>’,‘&lt;qualifier>’)</programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>DependentColumnFilter (‘conf’, ‘blacklist’, false, >=, ‘zebra’)</programlisting>
+                                <programlisting language="java">DependentColumnFilter (‘conf’, ‘blacklist’, false, >=, ‘zebra’)</programlisting>
                             </listitem>
                             <listitem>
-                                <programlisting>DependentColumnFilter (‘conf’, 'blacklist', true)</programlisting>
+                                <programlisting language="java">DependentColumnFilter (‘conf’, 'blacklist', true)</programlisting>
                             </listitem>
                             <listitem>
-                                <programlisting>DependentColumnFilter (‘conf’, 'blacklist')</programlisting>
+                                <programlisting language="java">DependentColumnFilter (‘conf’, 'blacklist')</programlisting>
                             </listitem>
                         </itemizedlist>
                     </listitem>
@@ -683,16 +683,16 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting>SingleColumnValueFilter(‘&lt;family>’,‘&lt;qualifier>’, &lt;compare operator>, ‘&lt;comparator>’, &lt;filterIfColumnMissing_boolean>, &lt;latest_version_boolean>)</programlisting>
+                                <programlisting language="java">SingleColumnValueFilter(‘&lt;family>’,‘&lt;qualifier>’, &lt;compare operator>, ‘&lt;comparator>’, &lt;filterIfColumnMissing_boolean>, &lt;latest_version_boolean>)</programlisting>
                             </listitem>
                             <listitem>
-                                <programlisting>SingleColumnValueFilter(‘&lt;family>’, ‘&lt;qualifier>, &lt;compare operator>, ‘&lt;comparator>’)</programlisting>
+                                <programlisting language="java">SingleColumnValueFilter(‘&lt;family>’, ‘&lt;qualifier>, &lt;compare operator>, ‘&lt;comparator>’)</programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>SingleColumnValueFilter (‘FamilyA’, ‘Column1’, &lt;=, ‘abc’, true, false)</programlisting>
+                                <programlisting language="java">SingleColumnValueFilter (‘FamilyA’, ‘Column1’, &lt;=, ‘abc’, true, false)</programlisting>
                             </listitem>
                             <listitem>
                                 <programlisting>SingleColumnValueFilter (‘FamilyA’, ‘Column1’, &lt;=, ‘abc’)</programlisting>
@@ -710,19 +710,19 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting>SingleColumnValueExcludeFilter('&lt;family>', '&lt;qualifier>', &lt;compare operator>, '&lt;comparator>', &lt;latest_version_boolean>, &lt;filterIfColumnMissing_boolean>)</programlisting>
+                                <programlisting language="java">SingleColumnValueExcludeFilter('&lt;family>', '&lt;qualifier>', &lt;compare operator>, '&lt;comparator>', &lt;latest_version_boolean>, &lt;filterIfColumnMissing_boolean>)</programlisting>
                             </listitem>
                             <listitem>
-                                <programlisting>SingleColumnValueExcludeFilter('&lt;family>', '&lt;qualifier>', &lt;compare operator>, '&lt;comparator>')</programlisting>
+                                <programlisting language="java">SingleColumnValueExcludeFilter('&lt;family>', '&lt;qualifier>', &lt;compare operator>, '&lt;comparator>')</programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>SingleColumnValueExcludeFilter (‘FamilyA’, ‘Column1’, ‘&lt;=’, ‘abc’, ‘false’, ‘true’)</programlisting>
+                                <programlisting language="java">SingleColumnValueExcludeFilter (‘FamilyA’, ‘Column1’, ‘&lt;=’, ‘abc’, ‘false’, ‘true’)</programlisting>
                             </listitem>
                             <listitem>
-                                <programlisting>SingleColumnValueExcludeFilter (‘FamilyA’, ‘Column1’, ‘&lt;=’, ‘abc’)</programlisting>
+                                <programlisting language="java">SingleColumnValueExcludeFilter (‘FamilyA’, ‘Column1’, ‘&lt;=’, ‘abc’)</programlisting>
                             </listitem>
                         </itemizedlist>
                     </listitem>
@@ -739,13 +739,13 @@ is evaluated as
                         <itemizedlist>
                             <title>Syntax</title>
                             <listitem>
-                                <programlisting>ColumnRangeFilter (‘&lt;minColumn>’, &lt;minColumnInclusive_bool>, ‘&lt;maxColumn>’, &lt;maxColumnInclusive_bool>)</programlisting>
+                                <programlisting language="java">ColumnRangeFilter (‘&lt;minColumn>’, &lt;minColumnInclusive_bool>, ‘&lt;maxColumn>’, &lt;maxColumnInclusive_bool>)</programlisting>
                             </listitem>
                         </itemizedlist>
                         <itemizedlist>
                             <title>Example</title>
                             <listitem>
-                                <programlisting>ColumnRangeFilter (‘abc’, true, ‘xyz’, false)</programlisting>
+                                <programlisting language="java">ColumnRangeFilter (‘abc’, true, ‘xyz’, false)</programlisting>
                             </listitem>
                         </itemizedlist>
                     </listitem>

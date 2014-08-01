@@ -44,7 +44,7 @@
         xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/HBaseAdmin.html">HBaseAdmin</link>
       in the Java API. </para>
     <para>Tables must be disabled when making ColumnFamily modifications, for example:</para>
-    <programlisting>
+    <programlisting language="java">
 Configuration config = HBaseConfiguration.create();
 HBaseAdmin admin = new HBaseAdmin(conf);
 String table = "myTable";
@@ -184,7 +184,7 @@ admin.enableTable(table);
           in those eight bytes. If you stored this number as a String -- presuming a byte per
           character -- you need nearly 3x the bytes. </para>
         <para>Not convinced? Below is some sample code that you can run on your own.</para>
-        <programlisting>
+        <programlisting language="java">
 // long
 //
 long l = 1234567890L;
@@ -307,7 +307,7 @@ COLUMN                                        CELL
         are accessible in the keyspace. </para>
       <para>To conclude this example, the following is an example of how appropriate splits can be
         pre-created for hex-keys:. </para>
-      <programlisting><![CDATA[public static boolean createTable(HBaseAdmin admin, HTableDescriptor table, byte[][] splits)
+      <programlisting language="java"><![CDATA[public static boolean createTable(HBaseAdmin admin, HTableDescriptor table, byte[][] splits)
 throws IOException {
   try {
     admin.createTable( table, splits );
@@ -580,7 +580,7 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
           timestamps, by performing a mod operation on the timestamp. If time-oriented scans are
           important, this could be a useful approach. Attention must be paid to the number of
           buckets, because this will require the same number of scans to return results.</para>
-        <programlisting>
+        <programlisting language="java">
 long bucket = timestamp % numBuckets;
         </programlisting>
         <para>… to construct:</para>
@@ -1041,13 +1041,13 @@ long bucket = timestamp % numBuckets;
 ]]></programlisting>
 
       <para>The other option we had was to do this entirely using:</para>
-      <programlisting><![CDATA[
+      <programlisting language="xml"><![CDATA[
 <FixedWidthUserName><FixedWidthPageNum0>:<FixedWidthLength><FixedIdNextPageNum><ValueId1><ValueId2><ValueId3>...
 <FixedWidthUserName><FixedWidthPageNum1>:<FixedWidthLength><FixedIdNextPageNum><ValueId1><ValueId2><ValueId3>...
     		]]></programlisting>
       <para> where each row would contain multiple values. So in one case reading the first thirty
         values would be: </para>
-      <programlisting><![CDATA[
+      <programlisting language="java"><![CDATA[
 scan { STARTROW => 'FixedWidthUsername' LIMIT => 30}
     		]]></programlisting>
       <para>And in the second case it would be </para>

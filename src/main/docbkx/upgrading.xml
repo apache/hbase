@@ -158,7 +158,7 @@
                 <para>HDFS and ZooKeeper should be up and running during the upgrade process.</para>
             </note>
             <para>hbase-0.96.0 comes with an upgrade script. Run
-                <programlisting>$ bin/hbase upgrade</programlisting> to see its usage. The script
+                <programlisting language="bourne">$ bin/hbase upgrade</programlisting> to see its usage. The script
                 has two main modes: -check, and -execute. </para>
             <section>
                 <title>check</title>
@@ -205,7 +205,7 @@ There are some HFileV1, or corrupt files (files with incorrect major version)
                 <para>By default, the check step scans the hbase root directory (defined as
                     hbase.rootdir in the configuration). To scan a specific directory only, pass the
                         <emphasis>-dir</emphasis> option.</para>
-                <screen>$ bin/hbase upgrade -check -dir /myHBase/testTable</screen>
+                <screen language="bourne">$ bin/hbase upgrade -check -dir /myHBase/testTable</screen>
                 <para>The above command would detect HFileV1s in the /myHBase/testTable directory. </para>
                 <para> Once the check step reports all the HFileV1 files have been rewritten, it is
                     safe to proceed with the upgrade. </para>
@@ -246,7 +246,7 @@ There are some HFileV1, or corrupt files (files with incorrect major version)
                 <para> To run the <emphasis>execute</emphasis> step, make sure that first you have
                     copied hbase-0.96.0 binaries everywhere under servers and under clients. Make
                     sure the 0.94.0 cluster is down. Then do as follows:</para>
-                <screen>$ bin/hbase upgrade -execute</screen>
+                <screen language="bourne">$ bin/hbase upgrade -execute</screen>
                 <para>Here is some sample output.</para>
                 <programlisting>
 Starting Namespace upgrade
@@ -265,7 +265,7 @@ Successfully completed Log splitting
          </programlisting>
                 <para> If the output from the execute step looks good, stop the zookeeper instance
                     you started to do the upgrade:
-                    <programlisting>$ ./hbase/bin/hbase-daemon.sh stop zookeeper</programlisting>
+                    <programlisting language="bourne">$ ./hbase/bin/hbase-daemon.sh stop zookeeper</programlisting>
                     Now start up hbase-0.96.0. </para>
             </section>
             <section

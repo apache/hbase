@@ -475,7 +475,7 @@ hbase> <userinput>create 'mytable',{NAME => 'colfam1', BLOOMFILTER => 'ROWCOL'}<
       <title>Constants</title>
       <para>When people get started with HBase they have a tendency to write code that looks like
         this:</para>
-      <programlisting>
+      <programlisting language="java">
 Get get = new Get(rowkey);
 Result r = htable.get(get);
 byte[] b = r.getValue(Bytes.toBytes("cf"), Bytes.toBytes("attr"));  // returns current version of value
@@ -483,7 +483,7 @@ byte[] b = r.getValue(Bytes.toBytes("cf"), Bytes.toBytes("attr"));  // returns c
       <para>But especially when inside loops (and MapReduce jobs), converting the columnFamily and
         column-names to byte-arrays repeatedly is surprisingly expensive. It's better to use
         constants for the byte-arrays, like this:</para>
-      <programlisting>
+      <programlisting language="java">
 public static final byte[] CF = "cf".getBytes();
 public static final byte[] ATTR = "attr".getBytes();
 ...
@@ -517,14 +517,14 @@ byte[] b = r.getValue(CF, ATTR);  // returns current version of value
       <para>There are two different approaches to pre-creating splits. The first approach is to rely
         on the default <code>HBaseAdmin</code> strategy (which is implemented in
           <code>Bytes.split</code>)... </para>
-      <programlisting>
-byte[] startKey = ...;   	// your lowest keuy
+      <programlisting language="java">
+byte[] startKey = ...;   	// your lowest key
 byte[] endKey = ...;   		// your highest key
 int numberOfRegions = ...;	// # of regions to create
 admin.createTable(table, startKey, endKey, numberOfRegions);
       </programlisting>
       <para>And the other approach is to define the splits yourself... </para>
-      <programlisting>
+      <programlisting language="java">
 byte[][] splits = ...;   // create your own splits
 admin.createTable(table, splits);
 </programlisting>
@@ -676,7 +676,7 @@ admin.createTable(table, splits);
           <code>Scan.HINT_LOOKAHEAD</code> can be set the on Scan object. The following code
         instructs the RegionServer to attempt two iterations of next before a seek is
         scheduled:</para>
-      <programlisting>
+      <programlisting language="java">
 Scan scan = new Scan();
 scan.addColumn(...);
 scan.setAttribute(Scan.HINT_LOOKAHEAD, Bytes.toBytes(2));
@@ -701,7 +701,7 @@ table.getScanner(scan);
           xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/ResultScanner.html">ResultScanners</link>
         you can cause problems on the RegionServers. Always have ResultScanner processing enclosed
         in try/catch blocks...</para>
-      <programlisting>
+      <programlisting language="java">
 Scan scan = new Scan();
 // set attrs...
 ResultScanner rs = htable.getScanner(scan);
@@ -907,7 +907,7 @@ htable.close();
           shortcircuit reads configuration page</link> for how to enable the latter, better version
         of shortcircuit. For example, here is a minimal config. enabling short-circuit reads added
         to <filename>hbase-site.xml</filename>: </para>
-      <programlisting><![CDATA[<property>
+      <programlisting language="xml"><![CDATA[<property>
   <name>dfs.client.read.shortcircuit</name>
   <value>true</value>
   <description>
