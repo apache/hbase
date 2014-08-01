@@ -93,6 +93,8 @@ if [ $# = 0 ]; then
   echo "  clean           Run the HBase clean up script"
   echo "  classpath       Dump hbase CLASSPATH"
   echo "  mapredcp        Dump CLASSPATH entries required by mapreduce"
+  echo "  pe              Run PerformanceEvaluation"
+  echo "  ltt             Run LoadTestTool"
   echo "  version         Print the version"
   echo "  CLASSNAME       Run the class named CLASSNAME"
   exit 1
@@ -338,6 +340,12 @@ elif [ "$COMMAND" = "mapredcp" ] ; then
 elif [ "$COMMAND" = "classpath" ] ; then
   echo $CLASSPATH
   exit 0
+elif [ "$COMMAND" = "pe" ] ; then
+  CLASS='org.apache.hadoop.hbase.PerformanceEvaluation'
+  HBASE_OPTS="$HBASE_OPTS $HBASE_PE_OPTS"
+elif [ "$COMMAND" = "ltt" ] ; then
+  CLASS='org.apache.hadoop.hbase.util.LoadTestTool'
+  HBASE_OPTS="$HBASE_OPTS $HBASE_LTT_OPTS"
 elif [ "$COMMAND" = "version" ] ; then
   CLASS='org.apache.hadoop.hbase.util.VersionInfo'
 else
