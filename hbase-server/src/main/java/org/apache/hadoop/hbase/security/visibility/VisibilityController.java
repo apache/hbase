@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -52,11 +53,11 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -114,6 +115,7 @@ import org.apache.hadoop.hbase.security.visibility.expression.LeafExpressionNode
 import org.apache.hadoop.hbase.security.visibility.expression.NonLeafExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.Operator;
 import org.apache.hadoop.hbase.util.ByteRange;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
@@ -122,7 +124,6 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.protobuf.ByteString;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
@@ -155,6 +156,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   private boolean acOn = false;
   private Configuration conf;
   private volatile boolean initialized = false;
+  private boolean checkAuths = false;
   /** Mapping of scanner instances to the user who created them */
   private Map<InternalScanner,String> scannerOwners =
       new MapMaker().weakKeys().makeMap();
@@ -620,6 +622,8 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
         initialize(e);
       }
     } else {
+      checkAuths = e.getEnvironment().getConfiguration()
+          .getBoolean(VisibilityConstants.CHECK_AUTHS_FOR_MUTATION, false);
       this.initialized = true;
     }
   }
@@ -692,6 +696,11 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     }
     // TODO this can be made as a global LRU cache at HRS level?
     Map<String, List<Tag>> labelCache = new HashMap<String, List<Tag>>();
+    Set<Integer> auths = null;
+    User user = getActiveUser();
+    if (checkAuths && user != null && user.getShortName() != null) {
+      auths = this.visibilityManager.getAuthsAsOrdinals(user.getShortName());
+    }
     for (int i = 0; i < miniBatchOp.size(); i++) {
       Mutation m = miniBatchOp.getOperation(i);
       CellVisibility cellVisibility = null;
@@ -717,7 +726,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
             List<Tag> visibilityTags = labelCache.get(labelsExp);
             if (visibilityTags == null) {
               try {
-                visibilityTags = createVisibilityTags(labelsExp, true);
+                visibilityTags = createVisibilityTags(labelsExp, true, auths, user.getShortName());
               } catch (ParseException e) {
                 miniBatchOp.setOperationStatus(i,
                     new OperationStatus(SANITY_CHECK_FAILURE, e.getMessage()));
@@ -777,7 +786,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     if (cellVisibility != null) {
       String labelsExp = cellVisibility.getExpression();
       try {
-        visibilityTags = createVisibilityTags(labelsExp, false);
+        visibilityTags = createVisibilityTags(labelsExp, false, null, null);
       } catch (ParseException e) {
         throw new IOException("Invalid cell visibility expression " + labelsExp, e);
       } catch (InvalidLabelException e) {
@@ -911,8 +920,9 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     return true;
   }
 
-  private List<Tag> createVisibilityTags(String visibilityLabelsExp, boolean addSerializationTag)
-      throws IOException, ParseException, InvalidLabelException {
+  private List<Tag> createVisibilityTags(String visibilityLabelsExp, boolean addSerializationTag,
+      Set<Integer> auths, String userName) throws IOException, ParseException,
+      InvalidLabelException {
     ExpressionNode node = null;
     node = this.expressionParser.parse(visibilityLabelsExp);
     node = this.expressionExpander.expand(node);
@@ -926,7 +936,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       tags.add(VisibilityUtils.VIS_SERIALIZATION_TAG);
     }
     if (node.isSingleNode()) {
-      getLabelOrdinals(node, labelOrdinals);
+      getLabelOrdinals(node, labelOrdinals, auths, userName);
       writeLabelOrdinalsToStream(labelOrdinals, dos);
       tags.add(new Tag(VisibilityUtils.VISIBILITY_TAG_TYPE, baos.toByteArray()));
       baos.reset();
@@ -934,14 +944,14 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       NonLeafExpressionNode nlNode = (NonLeafExpressionNode) node;
       if (nlNode.getOperator() == Operator.OR) {
         for (ExpressionNode child : nlNode.getChildExps()) {
-          getLabelOrdinals(child, labelOrdinals);
+          getLabelOrdinals(child, labelOrdinals, auths, userName);
           writeLabelOrdinalsToStream(labelOrdinals, dos);
           tags.add(new Tag(VisibilityUtils.VISIBILITY_TAG_TYPE, baos.toByteArray()));
           baos.reset();
           labelOrdinals.clear();
         }
       } else {
-        getLabelOrdinals(nlNode, labelOrdinals);
+        getLabelOrdinals(nlNode, labelOrdinals, auths, userName);
         writeLabelOrdinalsToStream(labelOrdinals, dos);
         tags.add(new Tag(VisibilityUtils.VISIBILITY_TAG_TYPE, baos.toByteArray()));
         baos.reset();
@@ -958,8 +968,8 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     }
   }
 
-  private void getLabelOrdinals(ExpressionNode node, List<Integer> labelOrdinals)
-      throws IOException, InvalidLabelException {
+  private void getLabelOrdinals(ExpressionNode node, List<Integer> labelOrdinals,
+      Set<Integer> auths, String userName) throws IOException, InvalidLabelException {
     if (node.isSingleNode()) {
       String identifier = null;
       int labelOrdinal = 0;
@@ -970,12 +980,14 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
           LOG.trace("The identifier is "+identifier);
         }
         labelOrdinal = this.visibilityManager.getLabelOrdinal(identifier);
+        checkAuths(auths, userName, labelOrdinal, identifier);
       } else {
         // This is a NOT node.
         LeafExpressionNode lNode = (LeafExpressionNode) ((NonLeafExpressionNode) node)
             .getChildExps().get(0);
         identifier = lNode.getIdentifier();
         labelOrdinal = this.visibilityManager.getLabelOrdinal(identifier);
+        checkAuths(auths, userName, labelOrdinal, identifier);
         labelOrdinal = -1 * labelOrdinal; // Store NOT node as -ve ordinal.
       }
       if (labelOrdinal == 0) {
@@ -985,11 +997,21 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     } else {
       List<ExpressionNode> childExps = ((NonLeafExpressionNode) node).getChildExps();
       for (ExpressionNode child : childExps) {
-        getLabelOrdinals(child, labelOrdinals);
+        getLabelOrdinals(child, labelOrdinals, auths, userName);
       }
     }
   }
-  
+
+  private void checkAuths(Set<Integer> auths, String userName, int labelOrdinal, String identifier)
+      throws IOException {
+    if (checkAuths && !isSystemOrSuperUser()) {
+      if (auths == null || (!auths.contains(labelOrdinal))) {
+        throw new AccessDeniedException("Visibility label " + identifier
+            + " not authorized for the user " + userName);
+      }
+    }
+  }
+
   @Override
   public RegionScanner preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan,
       RegionScanner s) throws IOException {
@@ -1231,6 +1253,11 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
     if (cellVisibility == null) {
       return newCell;
     }
+    Set<Integer> auths = null;
+    User user = getActiveUser();
+    if (checkAuths && user != null && user.getShortName() != null) {
+      auths = this.visibilityManager.getAuthsAsOrdinals(user.getShortName());
+    }
     // Adding all other tags
     Iterator<Tag> tagsItr = CellUtil.tagsIterator(newCell.getTagsArray(), newCell.getTagsOffset(),
         newCell.getTagsLength());
@@ -1242,7 +1269,8 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       }
     }
     try {
-      tags.addAll(createVisibilityTags(cellVisibility.getExpression(), true));
+      tags.addAll(createVisibilityTags(cellVisibility.getExpression(), true, auths,
+          user.getShortName()));
     } catch (ParseException e) {
       throw new IOException(e);
     }
