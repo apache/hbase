@@ -631,11 +631,31 @@ public abstract class FSUtils {
   public static void setVersion(FileSystem fs, Path rootdir, String version,
       int wait, int retries) throws IOException {
     Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
+    Path tempVersionFile = new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY + Path.SEPARATOR +
+      HConstants.VERSION_FILE_NAME);
     while (true) {
       try {
-        FSDataOutputStream s = fs.create(versionFile);
-        s.write(toVersionByteArray(version));
-        s.close();
+        // Write the version to a temporary file
+        FSDataOutputStream s = fs.create(tempVersionFile);
+        try {
+          s.write(toVersionByteArray(version));
+          s.close();
+          s = null;
+          // Move the temp version file to its normal location. Returns false
+          // if the rename failed. Throw an IOE in that case.
+          if (!fs.rename(tempVersionFile, versionFile)) {
+            throw new IOException("Unable to move temp version file to " + versionFile);
+          }
+        } finally {
+          // Cleaning up the temporary if the rename failed would be trying
+          // too hard. We'll unconditionally create it again the next time
+          // through anyway, files are overwritten by default by create().
+
+          // Attempt to close the stream on the way out if it is still open.
+          try {
+            if (s != null) s.close();
+          } catch (IOException ignore) { }
+        }
         LOG.debug("Created version file at " + rootdir.toString() + " with version=" + version);
         return;
       } catch (IOException e) {
