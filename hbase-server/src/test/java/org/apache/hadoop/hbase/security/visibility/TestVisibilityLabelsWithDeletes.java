@@ -85,9 +85,7 @@ public class TestVisibilityLabelsWithDeletes {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
-    conf.setInt("hfile.format.version", 3);
-    conf.set("hbase.coprocessor.master.classes", VisibilityController.class.getName());
-    conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());
+    VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
         ScanLabelGenerator.class);
     conf.set("hbase.superuser", "admin");

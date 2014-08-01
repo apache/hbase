@@ -22,7 +22,6 @@ import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LA
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.security.User;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
@@ -37,9 +36,8 @@ public class TestVisibilityLabelsWithDistributedLogReplay extends TestVisibility
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
-    conf.setInt("hfile.format.version", 3);
-    conf.set("hbase.coprocessor.master.classes", VisibilityController.class.getName());
-    conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());
+    VisibilityTestUtil.enableVisiblityLabels(conf);
+
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
         ScanLabelGenerator.class);
     conf.set("hbase.superuser", "admin");

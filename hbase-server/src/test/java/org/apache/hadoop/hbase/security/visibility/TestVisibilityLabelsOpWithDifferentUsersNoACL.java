@@ -60,11 +60,9 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
-    conf.setInt("hfile.format.version", 3);
+    VisibilityTestUtil.enableVisiblityLabels(conf);
     String currentUser = User.getCurrent().getName();
     conf.set("hbase.superuser", "admin,"+currentUser);
-    conf.set("hbase.coprocessor.master.classes", VisibilityController.class.getName());
-    conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());
     TEST_UTIL.startMiniCluster(2);
 
     // Wait for the labels table to become available
