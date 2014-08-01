@@ -59,6 +59,9 @@ public class ProtobufLogWriter extends WriterBase {
   }
 
   protected WALHeader buildWALHeader(WALHeader.Builder builder) throws IOException {
+    if (!builder.hasWriterClsName()) {
+      builder.setWriterClsName(ProtobufLogWriter.class.getSimpleName());
+    }
     return builder.build();
   }
 

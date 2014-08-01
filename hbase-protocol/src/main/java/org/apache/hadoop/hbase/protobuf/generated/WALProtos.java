@@ -122,6 +122,21 @@ public final class WALProtos {
      * <code>optional bool has_tag_compression = 3;</code>
      */
     boolean getHasTagCompression();
+
+    // optional string writer_cls_name = 4;
+    /**
+     * <code>optional string writer_cls_name = 4;</code>
+     */
+    boolean hasWriterClsName();
+    /**
+     * <code>optional string writer_cls_name = 4;</code>
+     */
+    java.lang.String getWriterClsName();
+    /**
+     * <code>optional string writer_cls_name = 4;</code>
+     */
+    com.google.protobuf.ByteString
+        getWriterClsNameBytes();
   }
   /**
    * Protobuf type {@code WALHeader}
@@ -187,6 +202,11 @@ public final class WALProtos {
             case 24: {
               bitField0_ |= 0x00000004;
               hasTagCompression_ = input.readBool();
+              break;
+            }
+            case 34: {
+              bitField0_ |= 0x00000008;
+              writerClsName_ = input.readBytes();
               break;
             }
           }
@@ -277,10 +297,54 @@ public final class WALProtos {
       return hasTagCompression_;
     }
 
+    // optional string writer_cls_name = 4;
+    public static final int WRITER_CLS_NAME_FIELD_NUMBER = 4;
+    private java.lang.Object writerClsName_;
+    /**
+     * <code>optional string writer_cls_name = 4;</code>
+     */
+    public boolean hasWriterClsName() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>optional string writer_cls_name = 4;</code>
+     */
+    public java.lang.String getWriterClsName() {
+      java.lang.Object ref = writerClsName_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          writerClsName_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string writer_cls_name = 4;</code>
+     */
+    public com.google.protobuf.ByteString
+        getWriterClsNameBytes() {
+      java.lang.Object ref = writerClsName_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        writerClsName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private void initFields() {
       hasCompression_ = false;
       encryptionKey_ = com.google.protobuf.ByteString.EMPTY;
       hasTagCompression_ = false;
+      writerClsName_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -303,6 +367,9 @@ public final class WALProtos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeBool(3, hasTagCompression_);
       }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeBytes(4, getWriterClsNameBytes());
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -323,6 +390,10 @@ public final class WALProtos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(3, hasTagCompression_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(4, getWriterClsNameBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -362,6 +433,11 @@ public final class WALProtos {
         result = result && (getHasTagCompression()
             == other.getHasTagCompression());
       }
+      result = result && (hasWriterClsName() == other.hasWriterClsName());
+      if (hasWriterClsName()) {
+        result = result && getWriterClsName()
+            .equals(other.getWriterClsName());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -386,6 +462,10 @@ public final class WALProtos {
       if (hasHasTagCompression()) {
         hash = (37 * hash) + HAS_TAG_COMPRESSION_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getHasTagCompression());
+      }
+      if (hasWriterClsName()) {
+        hash = (37 * hash) + WRITER_CLS_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getWriterClsName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -502,6 +582,8 @@ public final class WALProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         hasTagCompression_ = false;
         bitField0_ = (bitField0_ & ~0x00000004);
+        writerClsName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
 
@@ -542,6 +624,10 @@ public final class WALProtos {
           to_bitField0_ |= 0x00000004;
         }
         result.hasTagCompression_ = hasTagCompression_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.writerClsName_ = writerClsName_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -566,6 +652,11 @@ public final class WALProtos {
         }
         if (other.hasHasTagCompression()) {
           setHasTagCompression(other.getHasTagCompression());
+        }
+        if (other.hasWriterClsName()) {
+          bitField0_ |= 0x00000008;
+          writerClsName_ = other.writerClsName_;
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -692,6 +783,80 @@ public final class WALProtos {
       public Builder clearHasTagCompression() {
         bitField0_ = (bitField0_ & ~0x00000004);
         hasTagCompression_ = false;
+        onChanged();
+        return this;
+      }
+
+      // optional string writer_cls_name = 4;
+      private java.lang.Object writerClsName_ = "";
+      /**
+       * <code>optional string writer_cls_name = 4;</code>
+       */
+      public boolean hasWriterClsName() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional string writer_cls_name = 4;</code>
+       */
+      public java.lang.String getWriterClsName() {
+        java.lang.Object ref = writerClsName_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          writerClsName_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string writer_cls_name = 4;</code>
+       */
+      public com.google.protobuf.ByteString
+          getWriterClsNameBytes() {
+        java.lang.Object ref = writerClsName_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          writerClsName_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string writer_cls_name = 4;</code>
+       */
+      public Builder setWriterClsName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        writerClsName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string writer_cls_name = 4;</code>
+       */
+      public Builder clearWriterClsName() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        writerClsName_ = getDefaultInstance().getWriterClsName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string writer_cls_name = 4;</code>
+       */
+      public Builder setWriterClsNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        writerClsName_ = value;
         onChanged();
         return this;
       }
@@ -7664,36 +7829,37 @@ public final class WALProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\tWAL.proto\032\013HBase.proto\"Y\n\tWALHeader\022\027\n" +
+      "\n\tWAL.proto\032\013HBase.proto\"r\n\tWALHeader\022\027\n" +
       "\017has_compression\030\001 \001(\010\022\026\n\016encryption_key" +
-      "\030\002 \001(\014\022\033\n\023has_tag_compression\030\003 \001(\010\"\240\002\n\006" +
-      "WALKey\022\033\n\023encoded_region_name\030\001 \002(\014\022\022\n\nt" +
-      "able_name\030\002 \002(\014\022\033\n\023log_sequence_number\030\003" +
-      " \002(\004\022\022\n\nwrite_time\030\004 \002(\004\022\035\n\ncluster_id\030\005" +
-      " \001(\0132\005.UUIDB\002\030\001\022\034\n\006scopes\030\006 \003(\0132\014.Family" +
-      "Scope\022\032\n\022following_kv_count\030\007 \001(\r\022\032\n\013clu" +
-      "ster_ids\030\010 \003(\0132\005.UUID\022\022\n\nnonceGroup\030\t \001(" +
-      "\004\022\r\n\005nonce\030\n \001(\004\022\034\n\024orig_sequence_number",
-      "\030\013 \001(\004\"=\n\013FamilyScope\022\016\n\006family\030\001 \002(\014\022\036\n" +
-      "\nscope_type\030\002 \002(\0162\n.ScopeType\"\276\001\n\024Compac" +
-      "tionDescriptor\022\022\n\ntable_name\030\001 \002(\014\022\033\n\023en" +
-      "coded_region_name\030\002 \002(\014\022\023\n\013family_name\030\003" +
-      " \002(\014\022\030\n\020compaction_input\030\004 \003(\t\022\031\n\021compac" +
-      "tion_output\030\005 \003(\t\022\026\n\016store_home_dir\030\006 \002(" +
-      "\t\022\023\n\013region_name\030\007 \001(\014\"\353\002\n\017FlushDescript" +
-      "or\022,\n\006action\030\001 \002(\0162\034.FlushDescriptor.Flu" +
-      "shAction\022\022\n\ntable_name\030\002 \002(\014\022\033\n\023encoded_" +
-      "region_name\030\003 \002(\014\022\035\n\025flush_sequence_numb",
-      "er\030\004 \001(\004\022<\n\rstore_flushes\030\005 \003(\0132%.FlushD" +
-      "escriptor.StoreFlushDescriptor\032Y\n\024StoreF" +
-      "lushDescriptor\022\023\n\013family_name\030\001 \002(\014\022\026\n\016s" +
-      "tore_home_dir\030\002 \002(\t\022\024\n\014flush_output\030\003 \003(" +
-      "\t\"A\n\013FlushAction\022\017\n\013START_FLUSH\020\000\022\020\n\014COM" +
-      "MIT_FLUSH\020\001\022\017\n\013ABORT_FLUSH\020\002\"\014\n\nWALTrail" +
-      "er*F\n\tScopeType\022\033\n\027REPLICATION_SCOPE_LOC" +
-      "AL\020\000\022\034\n\030REPLICATION_SCOPE_GLOBAL\020\001B?\n*or" +
-      "g.apache.hadoop.hbase.protobuf.generated" +
-      "B\tWALProtosH\001\210\001\000\240\001\001"
+      "\030\002 \001(\014\022\033\n\023has_tag_compression\030\003 \001(\010\022\027\n\017w" +
+      "riter_cls_name\030\004 \001(\t\"\240\002\n\006WALKey\022\033\n\023encod" +
+      "ed_region_name\030\001 \002(\014\022\022\n\ntable_name\030\002 \002(\014" +
+      "\022\033\n\023log_sequence_number\030\003 \002(\004\022\022\n\nwrite_t" +
+      "ime\030\004 \002(\004\022\035\n\ncluster_id\030\005 \001(\0132\005.UUIDB\002\030\001" +
+      "\022\034\n\006scopes\030\006 \003(\0132\014.FamilyScope\022\032\n\022follow" +
+      "ing_kv_count\030\007 \001(\r\022\032\n\013cluster_ids\030\010 \003(\0132" +
+      "\005.UUID\022\022\n\nnonceGroup\030\t \001(\004\022\r\n\005nonce\030\n \001(",
+      "\004\022\034\n\024orig_sequence_number\030\013 \001(\004\"=\n\013Famil" +
+      "yScope\022\016\n\006family\030\001 \002(\014\022\036\n\nscope_type\030\002 \002" +
+      "(\0162\n.ScopeType\"\276\001\n\024CompactionDescriptor\022" +
+      "\022\n\ntable_name\030\001 \002(\014\022\033\n\023encoded_region_na" +
+      "me\030\002 \002(\014\022\023\n\013family_name\030\003 \002(\014\022\030\n\020compact" +
+      "ion_input\030\004 \003(\t\022\031\n\021compaction_output\030\005 \003" +
+      "(\t\022\026\n\016store_home_dir\030\006 \002(\t\022\023\n\013region_nam" +
+      "e\030\007 \001(\014\"\353\002\n\017FlushDescriptor\022,\n\006action\030\001 " +
+      "\002(\0162\034.FlushDescriptor.FlushAction\022\022\n\ntab" +
+      "le_name\030\002 \002(\014\022\033\n\023encoded_region_name\030\003 \002",
+      "(\014\022\035\n\025flush_sequence_number\030\004 \001(\004\022<\n\rsto" +
+      "re_flushes\030\005 \003(\0132%.FlushDescriptor.Store" +
+      "FlushDescriptor\032Y\n\024StoreFlushDescriptor\022" +
+      "\023\n\013family_name\030\001 \002(\014\022\026\n\016store_home_dir\030\002" +
+      " \002(\t\022\024\n\014flush_output\030\003 \003(\t\"A\n\013FlushActio" +
+      "n\022\017\n\013START_FLUSH\020\000\022\020\n\014COMMIT_FLUSH\020\001\022\017\n\013" +
+      "ABORT_FLUSH\020\002\"\014\n\nWALTrailer*F\n\tScopeType" +
+      "\022\033\n\027REPLICATION_SCOPE_LOCAL\020\000\022\034\n\030REPLICA" +
+      "TION_SCOPE_GLOBAL\020\001B?\n*org.apache.hadoop" +
+      ".hbase.protobuf.generatedB\tWALProtosH\001\210\001",
+      "\000\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -7705,7 +7871,7 @@ public final class WALProtos {
           internal_static_WALHeader_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_WALHeader_descriptor,
-              new java.lang.String[] { "HasCompression", "EncryptionKey", "HasTagCompression", });
+              new java.lang.String[] { "HasCompression", "EncryptionKey", "HasTagCompression", "WriterClsName", });
           internal_static_WALKey_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_WALKey_fieldAccessorTable = new
