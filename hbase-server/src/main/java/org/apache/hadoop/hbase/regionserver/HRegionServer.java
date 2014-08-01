@@ -235,6 +235,7 @@ import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.data.Stat;
 import org.cliffc.high_scale_lib.Counter;
 
@@ -4592,26 +4593,32 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         minSeqIdForLogReplay = storeSeqIdForReplay;
       }
     }
-    long lastRecordedFlushedSequenceId = -1;
-    String nodePath = ZKUtil.joinZNode(this.zooKeeper.recoveringRegionsZNode,
-      region.getEncodedName());
-    // recovering-region level
-    byte[] data = ZKUtil.getData(zkw, nodePath);
-    if (data != null) {
-      lastRecordedFlushedSequenceId = SplitLogManager.parseLastFlushedSequenceIdFrom(data);
-    }
-    if (data == null || lastRecordedFlushedSequenceId < minSeqIdForLogReplay) {
-      ZKUtil.setData(zkw, nodePath, ZKUtil.positionToByteArray(minSeqIdForLogReplay));
-    }
-    if (previousRSName != null) {
-      // one level deeper for the failed RS
-      nodePath = ZKUtil.joinZNode(nodePath, previousRSName);
-      ZKUtil.setData(zkw, nodePath,
-        ZKUtil.regionSequenceIdsToByteArray(minSeqIdForLogReplay, maxSeqIdInStores));
-      LOG.debug("Update last flushed sequence id of region " + region.getEncodedName() + " for "
-          + previousRSName);
-    } else {
-      LOG.warn("Can't find failed region server for recovering region " + region.getEncodedName());
+    
+    try {
+      long lastRecordedFlushedSequenceId = -1;
+      String nodePath = ZKUtil.joinZNode(this.zooKeeper.recoveringRegionsZNode,
+        region.getEncodedName());
+      // recovering-region level
+      byte[] data = ZKUtil.getData(zkw, nodePath);
+      if (data != null) {
+        lastRecordedFlushedSequenceId = SplitLogManager.parseLastFlushedSequenceIdFrom(data);
+      }
+      if (data == null || lastRecordedFlushedSequenceId < minSeqIdForLogReplay) {
+        ZKUtil.setData(zkw, nodePath, ZKUtil.positionToByteArray(minSeqIdForLogReplay));
+      }
+      if (previousRSName != null) {
+        // one level deeper for the failed RS
+        nodePath = ZKUtil.joinZNode(nodePath, previousRSName);
+        ZKUtil.setData(zkw, nodePath,
+          ZKUtil.regionSequenceIdsToByteArray(minSeqIdForLogReplay, maxSeqIdInStores));
+        LOG.debug("Update last flushed sequence id of region " + region.getEncodedName() + " for "
+            + previousRSName);
+      } else {
+        LOG.warn("Can't find failed region server for recovering region " + region.getEncodedName());
+      }
+    } catch (NoNodeException ignore) {
+      LOG.debug("Region " + region.getEncodedName() + 
+        " must have completed recovery because its recovery znode has been removed", ignore);
     }
   }
 
