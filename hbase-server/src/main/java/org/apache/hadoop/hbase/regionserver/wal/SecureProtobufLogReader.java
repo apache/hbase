@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import java.io.IOException;
 import java.security.Key;
 import java.security.KeyException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -38,15 +40,25 @@ public class SecureProtobufLogReader extends ProtobufLogReader {
   private static final Log LOG = LogFactory.getLog(SecureProtobufLogReader.class);
 
   private Decryptor decryptor = null;
+  private static List<String> writerClsNames = new ArrayList<String>();
+  static {
+    writerClsNames.add(ProtobufLogWriter.class.getSimpleName());
+    writerClsNames.add(SecureProtobufLogWriter.class.getSimpleName());
+  }
 
   @Override
-  protected boolean readHeader(WALHeader.Builder builder, FSDataInputStream stream)
+  protected List<String> getWriterClsNames() {
+    return writerClsNames;
+  }
+
+  @Override
+  protected WALHdrResult readHeader(WALHeader.Builder builder, FSDataInputStream stream)
       throws IOException {
-    boolean result = super.readHeader(builder, stream);
+    WALHdrResult result = super.readHeader(builder, stream);
     // We need to unconditionally handle the case where the WAL has a key in
     // the header, meaning it is encrypted, even if ENABLE_WAL_ENCRYPTION is
     // no longer set in the site configuration.
-    if (result && builder.hasEncryptionKey()) {
+    if (result == WALHdrResult.SUCCESS && builder.hasEncryptionKey()) {
       // Serialized header data has been merged into the builder from the
       // stream.
 

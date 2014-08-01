@@ -23,7 +23,9 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -66,7 +68,16 @@ public class ProtobufLogReader extends ReaderBase {
   // in the hlog, the inputstream's position is equal to walEditsStopOffset.
   private long walEditsStopOffset;
   private boolean trailerPresent;
+  private static List<String> writerClsNames = new ArrayList<String>();
+  static {
+    writerClsNames.add(ProtobufLogWriter.class.getSimpleName());
+  }
 
+  enum WALHdrResult {
+    EOF,                   // stream is at EOF when method starts
+    SUCCESS,
+    UNKNOWN_WRITER_CLS     // name of writer class isn't recognized
+  }
   public ProtobufLogReader() {
     super();
   }
@@ -95,11 +106,26 @@ public class ProtobufLogReader extends ReaderBase {
     initInternal(stream, true);
   }
 
-  protected boolean readHeader(Builder builder, FSDataInputStream stream) throws IOException {
-    return builder.mergeDelimitedFrom(stream);
+  /*
+   * Returns names of the accepted writer classes
+   */
+  protected List<String> getWriterClsNames() {
+    return writerClsNames;
   }
 
-  private void initInternal(FSDataInputStream stream, boolean isFirst) throws IOException {
+  protected WALHdrResult readHeader(Builder builder, FSDataInputStream stream)
+      throws IOException {
+     boolean res = builder.mergeDelimitedFrom(stream);
+     if (!res) return WALHdrResult.EOF;
+     if (builder.hasWriterClsName() &&
+         !getWriterClsNames().contains(builder.getWriterClsName())) {
+       return WALHdrResult.UNKNOWN_WRITER_CLS;
+     }
+     return WALHdrResult.SUCCESS;
+  }
+
+  private void initInternal(FSDataInputStream stream, boolean isFirst)
+      throws IOException {
     close();
     long expectedPos = PB_WAL_MAGIC.length;
     if (stream == null) {
@@ -111,9 +137,12 @@ public class ProtobufLogReader extends ReaderBase {
     }
     // Initialize metadata or, when we reset, just skip the header.
     WALProtos.WALHeader.Builder builder = WALProtos.WALHeader.newBuilder();
-    boolean hasHeader = readHeader(builder, stream);
-    if (!hasHeader) {
+    WALHdrResult walHdrRes = readHeader(builder, stream);
+    if (walHdrRes == WALHdrResult.EOF) {
       throw new EOFException("Couldn't read WAL PB header");
+    }
+    if (walHdrRes == WALHdrResult.UNKNOWN_WRITER_CLS) {
+      throw new IOException("Got unknown writer class: " + builder.getWriterClsName());
     }
     if (isFirst) {
       WALProtos.WALHeader header = builder.build();

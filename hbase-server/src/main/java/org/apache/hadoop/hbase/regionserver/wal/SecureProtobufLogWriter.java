@@ -44,6 +44,7 @@ public class SecureProtobufLogWriter extends ProtobufLogWriter {
 
   @Override
   protected WALHeader buildWALHeader(WALHeader.Builder builder) throws IOException {
+    builder.setWriterClsName(SecureProtobufLogWriter.class.getSimpleName());
     if (conf.getBoolean(HConstants.ENABLE_WAL_ENCRYPTION, false)) {
       // Get an instance of our cipher
       Cipher cipher = Encryption.getCipher(conf,
