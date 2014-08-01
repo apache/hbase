@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.junit.Test;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+
+import java.util.Map;
+
+import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.junit.Test;
 
 public class TestMetricsRegionSourceImpl {
 
@@ -119,6 +122,11 @@ public class TestMetricsRegionSourceImpl {
     @Override
     public long getNumCompactionsCompleted() {
       return 0;
+    }
+
+    @Override
+    public Map<String, DescriptiveStatistics> getCoprocessorExecutionStatistics() {
+      return null;
     }
   }
 }

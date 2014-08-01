@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 
 
@@ -31,10 +30,12 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 public class MetricsRegion {
 
   private final MetricsRegionSource source;
+  private MetricsRegionWrapper regionWrapper;
 
   public MetricsRegion(final MetricsRegionWrapper wrapper) {
     source = CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
                                              .createRegion(wrapper);
+    this.regionWrapper = wrapper;
   }
 
   public void close() {
@@ -68,4 +69,9 @@ public class MetricsRegion {
   MetricsRegionSource getSource() {
     return source;
   }
+
+  public MetricsRegionWrapper getRegionWrapper() {
+    return regionWrapper;
+  }
+
 }

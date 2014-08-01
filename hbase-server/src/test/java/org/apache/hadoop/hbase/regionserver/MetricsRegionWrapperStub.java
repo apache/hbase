@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
+
 public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
 
   @Override
@@ -78,5 +83,10 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   @Override
   public long getNumCompactionsCompleted() {
     return 0;
+  }
+
+  @Override
+  public Map<String, DescriptiveStatistics> getCoprocessorExecutionStatistics() {
+    return new HashMap<String, DescriptiveStatistics>();
   }
 }
