@@ -215,6 +215,9 @@ public class CompactSplitThread implements CompactionRequestor {
     if (midKey == null) {
       LOG.debug("Region " + r.getRegionNameAsString() +
         " not splittable because midkey=null");
+      if (r.shouldForceSplit()) {
+        r.clearSplit();
+      }
       return;
     }
     try {
