@@ -781,13 +781,22 @@
             <version>4.4</version>
             <scope>runtime</scope>
           </dependency>
+          <dependency>
+              <groupId>net.sf.xslthl</groupId>
+              <artifactId>xslthl</artifactId>
+              <version>2.1.0</version>
+              <scope>runtime</scope>
+            </dependency>
         </dependencies>
         <configuration>
+          <highlightSource>1</highlightSource>
+          <imgSrcPath>${basedir}/src/main/site/resources/images/</imgSrcPath>
           <sourceDirectory>${basedir}/src/main/docbkx</sourceDirectory>
           <xincludeSupported>true</xincludeSupported>
           <useIdAsFilename>true</useIdAsFilename>
           <sectionAutolabelMaxDepth>100</sectionAutolabelMaxDepth>
           <sectionAutolabel>true</sectionAutolabel>
+          <htmlStylesheet>${baserdir}/src/main/site/resources/css/freebsd_docbook.css</htmlStylesheet>
           <sectionLabelIncludesComponentLabel>true</sectionLabelIncludesComponentLabel>
           <htmlCustomization>${basedir}/src/main/docbkx/customization.xsl</htmlCustomization>
           <tocMaxDepth>2</tocMaxDepth>
@@ -804,8 +813,6 @@
             <configuration>
               <navigShowtitles>true</navigShowtitles>
               <chunkedOutput>true</chunkedOutput>
-              <imgSrcPath>${basedir}/src/main/site/resources/images/</imgSrcPath>
-              <htmlStylesheet>../css/freebsd_docbook.css</htmlStylesheet>
               <targetDirectory>${basedir}/target/docbkx/book</targetDirectory>
               <preProcess>
                 <copy todir="target/docbkx/book/images">
@@ -824,8 +831,6 @@
             </goals>
             <phase>pre-site</phase>
             <configuration>
-                <imgSrcPath>${basedir}/src/main/site/resources/images/</imgSrcPath>
-              <htmlStylesheet>css/freebsd_docbook.css</htmlStylesheet>
               <targetDirectory>${basedir}/target/docbkx/</targetDirectory>
               <preProcess>
                 <copy todir="target/docbkx/images">
