@@ -673,7 +673,7 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.hstore.compaction.min.size</name>
     <value>134217728</value>
     <description>A StoreFile smaller than this size will always be eligible for minor compaction. 
-      HFiles this size or larger are evaluated by hbase.store.compaction.ratio to determine if 
+      HFiles this size or larger are evaluated by hbase.hstore.compaction.ratio to determine if 
       they are eligible. Because this limit represents the "automatic include"limit for all 
       StoreFiles smaller than this value, this value may need to be reduced in write-heavy 
       environments where many StoreFiles in the 1-2 MB range are being flushed, because every 

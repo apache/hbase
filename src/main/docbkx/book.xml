@@ -3262,7 +3262,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
                             </listitem>
                             <listitem>
                               <para>For each StoreFile, its size multiplied by
-                                  <varname>hbase.store.compaction.ratio</varname> (or
+                                  <varname>hbase.hstore.compaction.ratio</varname> (or
                                   <varname>hbase.hstore.compaction.ratio.offpeak</varname> if
                                 off-peak hours are configured and it is during off-peak hours) is
                                 less than the sum of the sizes of the other HFiles in the
@@ -3359,10 +3359,10 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
                     locality on the StoreFile.</para>
                 </step>
                 <step>
-                  <para>The value of the <varname>hbase.store.compaction.ratio</varname> parameter
+                  <para>The value of the <varname>hbase.hstore.compaction.ratio</varname> parameter
                     is multiplied by the sum of StoreFiles smaller than a given file, to determine
                     whether that StoreFile is selected for compaction during a minor compaction. For
-                    instance, if hbase.store.compaction.ratio is 1.2, FileX is 5 mb, FileY is 2 mb,
+                    instance, if hbase.hstore.compaction.ratio is 1.2, FileX is 5 mb, FileY is 2 mb,
                     and FileZ is 3 mb:</para>
                   <screen>5 &lt;= 1.2 x (2 + 3)            or           5 &lt;= 6</screen>
                   <para>In this scenario, FileX is eligible for minor compaction. If FileX were 7
@@ -3438,7 +3438,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
                       <entry>hbase.hstore.compaction.min.size</entry>
                       <entry><para>A StoreFile smaller than this size will always be eligible for
                           minor compaction. StoreFiles this size or larger are evaluated by
-                            <varname>hbase.store.compaction.ratio</varname> to determine if they are
+                            <varname>hbase.hstore.compaction.ratio</varname> to determine if they are
                           eligible.</para>
                         <para>Because this limit represents the "automatic include" limit for
                           all StoreFiles smaller than this value, this value may need to be reduced
@@ -3579,7 +3579,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
 </programlisting>
               Important knobs: <itemizedlist>
                 <listitem>
-                  <para><code>hbase.store.compaction.ratio</code> Ratio used in compaction file
+                  <para><code>hbase.hstore.compaction.ratio</code> Ratio used in compaction file
                     selection algorithm (default 1.2f).</para>
                 </listitem>
                 <listitem>
@@ -3614,7 +3614,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
                 <code>TestCompactSelection</code>.</para>
             <itemizedlist>
               <listitem>
-                <para><code>hbase.store.compaction.ratio</code> = 1.0f </para>
+                <para><code>hbase.hstore.compaction.ratio</code> = 1.0f </para>
               </listitem>
               <listitem>
                 <para><code>hbase.hstore.compaction.min</code> = 3 (files) </para>
@@ -3660,7 +3660,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
             <para>This example mirrors an example from the unit test
                 <code>TestCompactSelection</code>. <itemizedlist>
                 <listitem>
-                  <para><code>hbase.store.compaction.ratio</code> = 1.0f </para>
+                  <para><code>hbase.hstore.compaction.ratio</code> = 1.0f </para>
                 </listitem>
                 <listitem>
                   <para><code>hbase.hstore.compaction.min</code> = 3 (files) </para>
@@ -3702,7 +3702,7 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
             <para>This example mirrors an example from the unit test
                 <code>TestCompactSelection</code>. <itemizedlist>
                 <listitem>
-                  <para><code>hbase.store.compaction.ratio</code> = 1.0f </para>
+                  <para><code>hbase.hstore.compaction.ratio</code> = 1.0f </para>
                 </listitem>
                 <listitem>
                   <para><code>hbase.hstore.compaction.min</code> = 3 (files) </para>
