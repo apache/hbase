@@ -933,7 +933,7 @@ public class HRegion implements HeapSize { // , Writable{
     return this.writeRequestsCount.get();
   }
 
-  MetricsRegion getMetrics() {
+  public MetricsRegion getMetrics() {
     return metricsRegion;
   }
 
