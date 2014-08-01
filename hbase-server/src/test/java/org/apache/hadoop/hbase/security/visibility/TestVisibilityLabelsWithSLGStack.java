@@ -65,9 +65,7 @@ public class TestVisibilityLabelsWithSLGStack {
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
-    conf.setInt("hfile.format.version", 3);
-    conf.set("hbase.coprocessor.master.classes", VisibilityController.class.getName());
-    conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());
+    VisibilityTestUtil.enableVisiblityLabels(conf);
     String classes = SimpleScanLabelGenerator.class.getCanonicalName() + " , "
         + LabelFilteringScanLabelGenerator.class.getCanonicalName();
     conf.setStrings(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, classes);
