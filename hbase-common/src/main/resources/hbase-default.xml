@@ -1210,4 +1210,12 @@ possible configurations would overwhelm and obscure the important.
     procedure. After implementing your own MasterProcedureManager, just put it in HBase's classpath
     and add the fully qualified class name here.</description>
   </property>
+  <property>
+    <name>hbase.security.visibility.mutations.checkauths</name>
+    <value>false</value>
+    <description>
+      This property if enabled, will check whether the labels in the visibility expression are associated
+      with the user issuing the mutation
+    </description>
+  </property>
 </configuration>
