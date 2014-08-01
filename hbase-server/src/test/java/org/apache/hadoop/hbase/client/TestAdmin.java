@@ -87,7 +87,10 @@ import com.google.protobuf.ServiceException;
 public class TestAdmin {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private HBaseAdmin admin;
+  private Admin admin;
+  // We use actual HBaseAdmin instance instead of going via Admin interface in
+  // here because makes use of an internal HBA method (TODO: Fix.).
+  private HBaseAdmin rawAdminInstance;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -107,7 +110,7 @@ public class TestAdmin {
 
   @Before
   public void setUp() throws Exception {
-    this.admin = TEST_UTIL.getHBaseAdmin();
+    this.admin = this.rawAdminInstance = TEST_UTIL.getHBaseAdmin();
   }
 
   @After
@@ -152,7 +155,7 @@ public class TestAdmin {
     HColumnDescriptor nonexistentHcd = new HColumnDescriptor(nonexistent);
     Exception exception = null;
     try {
-      this.admin.addColumn(nonexistent, nonexistentHcd);
+      this.admin.addColumn(TableName.valueOf(nonexistent), nonexistentHcd);
     } catch (IOException e) {
       exception = e;
     }
@@ -160,7 +163,7 @@ public class TestAdmin {
 
     exception = null;
     try {
-      this.admin.deleteTable(nonexistent);
+      this.admin.deleteTable(TableName.valueOf(nonexistent));
     } catch (IOException e) {
       exception = e;
     }
@@ -168,7 +171,7 @@ public class TestAdmin {
 
     exception = null;
     try {
-      this.admin.deleteColumn(nonexistent, nonexistent);
+      this.admin.deleteColumn(TableName.valueOf(nonexistent), Bytes.toBytes(nonexistent));
     } catch (IOException e) {
       exception = e;
     }
@@ -176,7 +179,7 @@ public class TestAdmin {
 
     exception = null;
     try {
-      this.admin.disableTable(nonexistent);
+      this.admin.disableTable(TableName.valueOf(nonexistent));
     } catch (IOException e) {
       exception = e;
     }
@@ -184,7 +187,7 @@ public class TestAdmin {
 
     exception = null;
     try {
-      this.admin.enableTable(nonexistent);
+      this.admin.enableTable(TableName.valueOf(nonexistent));
     } catch (IOException e) {
       exception = e;
     }
@@ -192,7 +195,7 @@ public class TestAdmin {
 
     exception = null;
     try {
-      this.admin.modifyColumn(nonexistent, nonexistentHcd);
+      this.admin.modifyColumn(TableName.valueOf(nonexistent), nonexistentHcd);
     } catch (IOException e) {
       exception = e;
     }
@@ -210,9 +213,9 @@ public class TestAdmin {
 
     // Now make it so at least the table exists and then do tests against a
     // nonexistent column family -- see if we get right exceptions.
-    final String tableName =
-        "testDeleteEditUnknownColumnFamilyAndOrTable" + System.currentTimeMillis();
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+    final TableName tableName =
+      TableName.valueOf("testDeleteEditUnknownColumnFamilyAndOrTable" + System.currentTimeMillis());
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor("cf"));
     this.admin.createTable(htd);
     try {
@@ -244,7 +247,7 @@ public class TestAdmin {
     final byte [] row = Bytes.toBytes("row");
     final byte [] qualifier = Bytes.toBytes("qualifier");
     final byte [] value = Bytes.toBytes("value");
-    final byte [] table = Bytes.toBytes("testDisableAndEnableTable");
+    final TableName table = TableName.valueOf("testDisableAndEnableTable");
     HTable ht = TEST_UTIL.createTable(table, HConstants.CATALOG_FAMILY);
     Put put = new Put(row);
     put.add(HConstants.CATALOG_FAMILY, qualifier, value);
@@ -513,7 +516,7 @@ public class TestAdmin {
   @Test (timeout=300000)
   public void testShouldFailOnlineSchemaUpdateIfOnlineSchemaIsNotEnabled()
       throws Exception {
-    final byte[] tableName = Bytes.toBytes("changeTableSchemaOnlineFailure");
+    final TableName tableName = TableName.valueOf("changeTableSchemaOnlineFailure");
     TEST_UTIL.getMiniHBaseCluster().getMaster().getConfiguration().setBoolean(
         "hbase.online.schema.update.enable", false);
     HTableDescriptor[] tables = admin.listTables();
@@ -654,7 +657,7 @@ public class TestAdmin {
   @Test (timeout=300000)
   public void testCreateTableWithRegions() throws IOException, InterruptedException {
 
-    byte[] tableName = Bytes.toBytes("testCreateTableWithRegions");
+    TableName tableName = TableName.valueOf("testCreateTableWithRegions");
 
     byte [][] splitKeys = {
         new byte [] { 1, 1, 1 },
@@ -669,11 +672,11 @@ public class TestAdmin {
     };
     int expectedRegions = splitKeys.length + 1;
 
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, splitKeys);
 
-    boolean tableAvailable = admin.isTableAvailable(Bytes.toString(tableName), splitKeys);
+    boolean tableAvailable = admin.isTableAvailable(tableName, splitKeys);
     assertTrue("Table should be created with splitKyes + 1 rows in META", tableAvailable);
 
     HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
@@ -729,9 +732,9 @@ public class TestAdmin {
 
     expectedRegions = 10;
 
-    byte [] TABLE_2 = Bytes.add(tableName, Bytes.toBytes("_2"));
+    TableName TABLE_2 = TableName.valueOf(tableName.getNameAsString() + "_2");
 
-    desc = new HTableDescriptor(TableName.valueOf(TABLE_2));
+    desc = new HTableDescriptor(TABLE_2);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     admin.createTable(desc, startKey, endKey, expectedRegions);
@@ -785,9 +788,9 @@ public class TestAdmin {
 
     expectedRegions = 5;
 
-    byte [] TABLE_3 = Bytes.add(tableName, Bytes.toBytes("_3"));
+    TableName TABLE_3 = TableName.valueOf(tableName.getNameAsString() + "_3");
 
-    desc = new HTableDescriptor(TableName.valueOf(TABLE_3));
+    desc = new HTableDescriptor(TABLE_3);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     admin.createTable(desc, startKey, endKey, expectedRegions);
@@ -812,8 +815,8 @@ public class TestAdmin {
         new byte [] { 2, 2, 2 }
     };
 
-    byte [] TABLE_4 = Bytes.add(tableName, Bytes.toBytes("_4"));
-    desc = new HTableDescriptor(TableName.valueOf(TABLE_4));
+    TableName TABLE_4 = TableName.valueOf(tableName.getNameAsString() + "_4");
+    desc = new HTableDescriptor(TABLE_4);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     HBaseAdmin ladmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     try {
@@ -828,8 +831,8 @@ public class TestAdmin {
 
   @Test (timeout=300000)
   public void testTableAvailableWithRandomSplitKeys() throws Exception {
-    byte[] tableName = Bytes.toBytes("testTableAvailableWithRandomSplitKeys");
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    TableName tableName = TableName.valueOf("testTableAvailableWithRandomSplitKeys");
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor("col"));
     byte[][] splitKeys = new byte[1][];
     splitKeys = new byte [][] {
@@ -837,7 +840,7 @@ public class TestAdmin {
         new byte [] { 2, 2, 2 }
     };
     admin.createTable(desc);
-    boolean tableAvailable = admin.isTableAvailable(Bytes.toString(tableName), splitKeys);
+    boolean tableAvailable = admin.isTableAvailable(tableName, splitKeys);
     assertFalse("Table should be created with 1 row in META", tableAvailable);
   }
 
@@ -874,7 +877,7 @@ public class TestAdmin {
 
   @Test (timeout=120000)
   public void testTableExist() throws IOException {
-    final byte [] table = Bytes.toBytes("testTableExist");
+    final TableName table = TableName.valueOf("testTableExist");
     boolean exist;
     exist = this.admin.tableExists(table);
     assertEquals(false, exist);
@@ -907,13 +910,13 @@ public class TestAdmin {
    */
   @Test (timeout=300000)
   public void testEnableTableRetainAssignment() throws IOException {
-    byte[] tableName = Bytes.toBytes("testEnableTableAssignment");
+    final TableName tableName = TableName.valueOf("testEnableTableAssignment");
     byte[][] splitKeys = { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 },
         new byte[] { 3, 3, 3 }, new byte[] { 4, 4, 4 }, new byte[] { 5, 5, 5 },
         new byte[] { 6, 6, 6 }, new byte[] { 7, 7, 7 }, new byte[] { 8, 8, 8 },
         new byte[] { 9, 9, 9 } };
     int expectedRegions = splitKeys.length + 1;
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, splitKeys);
     HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
@@ -1167,7 +1170,7 @@ public class TestAdmin {
     Thread [] threads = new Thread [count];
     final AtomicInteger successes = new AtomicInteger(0);
     final AtomicInteger failures = new AtomicInteger(0);
-    final HBaseAdmin localAdmin = this.admin;
+    final Admin localAdmin = this.admin;
     for (int i = 0; i < count; i++) {
       threads[i] = new Thread(Integer.toString(i)) {
         @Override
@@ -1309,8 +1312,7 @@ public class TestAdmin {
    */
   @Test (expected=TableNotEnabledException.class, timeout=300000)
   public void testTableNotEnabledExceptionWithATable() throws IOException {
-    final byte [] name = Bytes.toBytes(
-      "testTableNotEnabledExceptionWithATable");
+    final TableName name = TableName.valueOf("testTableNotEnabledExceptionWithATable");
     TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY).close();
     this.admin.disableTable(name);
     this.admin.disableTable(name);
@@ -1322,8 +1324,7 @@ public class TestAdmin {
    */
   @Test (expected=TableNotDisabledException.class, timeout=300000)
   public void testTableNotDisabledExceptionWithATable() throws IOException {
-    final byte [] name = Bytes.toBytes(
-      "testTableNotDisabledExceptionWithATable");
+    final TableName name = TableName.valueOf("testTableNotDisabledExceptionWithATable");
     HTable t = TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
     try {
     this.admin.enableTable(name);
@@ -1539,7 +1540,7 @@ public class TestAdmin {
   @Test (timeout=300000)
   public void testGetTableRegions() throws IOException {
 
-    byte[] tableName = Bytes.toBytes("testGetTableRegions");
+    final TableName tableName = TableName.valueOf("testGetTableRegions");
 
     int expectedRegions = 10;
 
@@ -1548,7 +1549,7 @@ public class TestAdmin {
     byte [] endKey =   { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
 
 
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, startKey, endKey, expectedRegions);
 
@@ -1744,13 +1745,13 @@ public class TestAdmin {
   @Test (timeout=300000)
   public void testIsEnabledOrDisabledOnUnknownTable() throws Exception {
     try {
-      admin.isTableEnabled(Bytes.toBytes("unkownTable"));
+      admin.isTableEnabled(TableName.valueOf("unkownTable"));
       fail("Test should fail if isTableEnabled called on unknown table.");
     } catch (IOException e) {
     }
 
     try {
-      admin.isTableDisabled(Bytes.toBytes("unkownTable"));
+      admin.isTableDisabled(TableName.valueOf("unkownTable"));
       fail("Test should fail if isTableDisabled called on unknown table.");
     } catch (IOException e) {
     }
@@ -1767,9 +1768,9 @@ public class TestAdmin {
     HRegionLocation regionLocation = t.getRegionLocation("mmm");
     HRegionInfo region = regionLocation.getRegionInfo();
     byte[] regionName = region.getRegionName();
-    Pair<HRegionInfo, ServerName> pair = admin.getRegion(regionName);
+    Pair<HRegionInfo, ServerName> pair = rawAdminInstance.getRegion(regionName);
     assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
-    pair = admin.getRegion(region.getEncodedNameAsBytes());
+    pair = rawAdminInstance.getRegion(region.getEncodedNameAsBytes());
     assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
   }
 }
