@@ -786,15 +786,28 @@ public abstract class FSUtils {
       int wait) throws IOException {
     while (true) {
       try {
-        Path filePath = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
-        FSDataOutputStream s = fs.create(filePath);
+        Path idFile = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
+        Path tempIdFile = new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY +
+          Path.SEPARATOR + HConstants.CLUSTER_ID_FILE_NAME);
+        // Write the id file to a temporary location
+        FSDataOutputStream s = fs.create(tempIdFile);
         try {
           s.write(clusterId.toByteArray());
-        } finally {
           s.close();
+          s = null;
+          // Move the temporary file to its normal location. Throw an IOE if
+          // the rename failed
+          if (!fs.rename(tempIdFile, idFile)) {
+            throw new IOException("Unable to move temp version file to " + idFile);
+          }
+        } finally {
+          // Attempt to close the stream if still open on the way out
+          try {
+            if (s != null) s.close();
+          } catch (IOException ignore) { }
         }
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Created cluster ID file at " + filePath.toString() + " with ID: " + clusterId);
+          LOG.debug("Created cluster ID file at " + idFile.toString() + " with ID: " + clusterId);
         }
         return;
       } catch (IOException ioe) {
