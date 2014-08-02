@@ -470,13 +470,17 @@ public abstract class FSUtils {
   public static void setVersion(FileSystem fs, Path rootdir, String version,
       int wait, int retries) throws IOException {
     Path versionFile = new Path(rootdir, HConstants.VERSION_FILE_NAME);
+    Path tmpFile = new Path(new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY), HConstants.VERSION_FILE_NAME);
     while (true) {
       try {
-        FSDataOutputStream s = fs.create(versionFile);
+        FSDataOutputStream s = fs.create(tmpFile);
         s.writeUTF(version);
+        s.close();
+        if (!fs.rename(tmpFile, versionFile)) {
+          throw new IOException("Unable to move temp version file to " + versionFile);
+        }
         LOG.debug("Created version file at " + rootdir.toString() +
             " set its version at:" + version);
-        s.close();
         return;
       } catch (IOException e) {
         if (retries > 0) {
@@ -567,14 +571,18 @@ public abstract class FSUtils {
    */
   public static void setClusterId(FileSystem fs, Path rootdir, String clusterId,
       int wait) throws IOException {
+    Path idFfile = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
+    Path tmpFile = new Path(new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY), HConstants.CLUSTER_ID_FILE_NAME);
     while (true) {
       try {
-        Path filePath = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
-        FSDataOutputStream s = fs.create(filePath);
+        FSDataOutputStream s = fs.create(tmpFile);
         s.writeUTF(clusterId);
         s.close();
+        if (!fs.rename(tmpFile, idFfile)) {
+          throw new IOException("Unable to move temp version file to " + idFfile);
+        }
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Created cluster ID file at " + filePath.toString() +
+          LOG.debug("Created cluster ID file at " + idFfile.toString() +
               " with ID: " + clusterId);
         }
         return;
