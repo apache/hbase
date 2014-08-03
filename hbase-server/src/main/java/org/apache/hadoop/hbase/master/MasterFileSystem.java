@@ -129,7 +129,8 @@ public class MasterFileSystem {
     HFileSystem.addLocationsOrderInterceptor(conf);
     try {
       this.splitLogManager = new SplitLogManager(master.getZooKeeper(), master.getConfiguration(),
-          master, services, master.getServerName());
+ master, services,
+              master.getServerName(), masterRecovery);
     } catch (KeeperException e) {
       throw new IOException(e);
     }
