@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.security.visibility.expression;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+@InterfaceAudience.Private
 public enum Operator {
   AND('&'), OR('|'), NOT('!');
 

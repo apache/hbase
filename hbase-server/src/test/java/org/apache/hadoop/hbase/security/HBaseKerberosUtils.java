@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 
 import com.google.common.base.Strings;
 
+@InterfaceAudience.Private
 class HBaseKerberosUtils {
   public static final String KRB_PRINCIPAL = "hbase.regionserver.kerberos.principal";
   public static final String KRB_KEYTAB_FILE = "hbase.regionserver.keytab.file";

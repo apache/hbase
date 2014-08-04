@@ -18,10 +18,12 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.Bytes;
 
+@InterfaceAudience.Private
 public class SecureBulkLoadUtil {
   private final static String BULKLOAD_STAGING_DIR = "hbase.bulkload.staging.dir";
 

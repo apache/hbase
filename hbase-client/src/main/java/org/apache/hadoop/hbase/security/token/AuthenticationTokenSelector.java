@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.token;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
@@ -27,6 +28,7 @@ import org.apache.hadoop.security.token.TokenSelector;
 
 import java.util.Collection;
 
+@InterfaceAudience.Private
 public class AuthenticationTokenSelector
     implements TokenSelector<AuthenticationTokenIdentifier> {
   private static Log LOG = LogFactory.getLog(AuthenticationTokenSelector.class);

@@ -19,6 +19,9 @@
 
 package org.apache.hadoop.hbase.security;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
+@InterfaceAudience.Private
 public enum SaslStatus {
   SUCCESS (0),
   ERROR (1);

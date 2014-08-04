@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.access;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -31,6 +32,7 @@ import java.io.IOException;
  * Represents an authorization for access over the given table, column family
  * plus qualifier, for the given user.
  */
+@InterfaceAudience.Private
 public class UserPermission extends TablePermission {
   private static Log LOG = LogFactory.getLog(UserPermission.class);
 

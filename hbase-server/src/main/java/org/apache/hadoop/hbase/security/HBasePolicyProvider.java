@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.security;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
@@ -31,6 +32,7 @@ import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
  * Implementation of secure Hadoop policy provider for mapping
  * protocol interfaces to hbase-policy.xml entries.
  */
+@InterfaceAudience.Private
 public class HBasePolicyProvider extends PolicyProvider {
   protected final static Service[] services = {
       new Service("security.client.protocol.acl", ClientService.BlockingInterface.class),
