@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -227,7 +228,7 @@ public class OfflineMetaRebuildTestCore {
 
   protected void wipeOutMeta() throws IOException {
     // Mess it up by blowing up meta.
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     Scan s = new Scan();
     HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
     ResultScanner scanner = meta.getScanner(s);

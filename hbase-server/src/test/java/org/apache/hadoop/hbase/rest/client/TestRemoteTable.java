@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -58,7 +59,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
 public class TestRemoteTable {
-  private static final String TABLE = "TestRemoteTable";
+  private static final TableName TABLE = TableName.valueOf("TestRemoteTable");
   private static final byte[] ROW_1 = Bytes.toBytes("testrow1");
   private static final byte[] ROW_2 = Bytes.toBytes("testrow2");
   private static final byte[] ROW_3 = Bytes.toBytes("testrow3");
@@ -88,12 +89,12 @@ public class TestRemoteTable {
 
   @Before
   public void before() throws Exception  {
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(TABLE)) {
       if (admin.isTableEnabled(TABLE)) admin.disableTable(TABLE);
       admin.deleteTable(TABLE);
     }
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
+    HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(new HColumnDescriptor(COLUMN_1).setMaxVersions(3));
     htd.addFamily(new HColumnDescriptor(COLUMN_2).setMaxVersions(3));
     htd.addFamily(new HColumnDescriptor(COLUMN_3).setMaxVersions(3));
@@ -116,7 +117,7 @@ public class TestRemoteTable {
     remoteTable = new RemoteHTable(
       new Client(new Cluster().add("localhost", 
           REST_TEST_UTIL.getServletPort())),
-        TEST_UTIL.getConfiguration(), TABLE);
+        TEST_UTIL.getConfiguration(), TABLE.toBytes());
   }
   
   @After

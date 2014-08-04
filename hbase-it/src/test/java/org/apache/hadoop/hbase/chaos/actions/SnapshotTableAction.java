@@ -19,13 +19,15 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 
 /**
 * Action that tries to take a snapshot of a table.
 */
 public class SnapshotTableAction extends Action {
-  private final String tableName;
+  private final TableName tableName;
   private final long sleepTime;
 
   public SnapshotTableAction(String tableName) {
@@ -33,7 +35,7 @@ public class SnapshotTableAction extends Action {
   }
 
   public SnapshotTableAction(int sleepTime, String tableName) {
-    this.tableName = tableName;
+    this.tableName = TableName.valueOf(tableName);
     this.sleepTime = sleepTime;
   }
 
@@ -41,7 +43,7 @@ public class SnapshotTableAction extends Action {
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     String snapshotName = tableName + "-it-" + System.currentTimeMillis();
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
 
     LOG.info("Performing action: Snapshot table " + tableName);
     admin.snapshot(snapshotName, tableName);

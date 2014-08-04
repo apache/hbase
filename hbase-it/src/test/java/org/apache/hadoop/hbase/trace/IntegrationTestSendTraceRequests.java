@@ -25,6 +25,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -58,11 +60,11 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
 
   public static final String TABLE_NAME_DEFAULT = "SendTracesTable";
   public static final String COLUMN_FAMILY_DEFAULT = "D";
-  private String tableName = TABLE_NAME_DEFAULT;
-  private String familyName = COLUMN_FAMILY_DEFAULT;
+  private TableName tableName = TableName.valueOf(TABLE_NAME_DEFAULT);
+  private byte[] familyName = Bytes.toBytes(COLUMN_FAMILY_DEFAULT);
   private IntegrationTestingUtility util;
   private Random random = new Random();
-  private HBaseAdmin admin;
+  private Admin admin;
   private SpanReceiverHost receiverHost;
 
   public static void main(String[] args) throws Exception {
@@ -83,8 +85,8 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
     String tableNameString = cmd.getOptionValue(TABLE_ARG, TABLE_NAME_DEFAULT);
     String familyString = cmd.getOptionValue(CF_ARG, COLUMN_FAMILY_DEFAULT);
 
-    this.tableName = tableNameString;
-    this.familyName = familyString;
+    this.tableName = TableName.valueOf(tableNameString);
+    this.familyName = Bytes.toBytes(familyString);
   }
 
   @Override
@@ -248,20 +250,18 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
           Put p = new Put(Bytes.toBytes(rk));
           for (int y = 0; y < 10; y++) {
             random.nextBytes(value);
-            p.add(Bytes.toBytes(familyName),
-                Bytes.toBytes(random.nextLong()),
-                value);
+            p.add(familyName, Bytes.toBytes(random.nextLong()), value);
           }
           ht.put(p);
         }
         if ((x % 1000) == 0) {
-          admin.flush(Bytes.toBytes(tableName));
+          admin.flush(tableName.toBytes());
         }
       } finally {
         traceScope.close();
       }
     }
-    admin.flush(Bytes.toBytes(tableName));
+    admin.flush(tableName.toBytes());
     return rowKeys;
   }
 

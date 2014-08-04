@@ -88,9 +88,6 @@ public class TestAdmin {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Admin admin;
-  // We use actual HBaseAdmin instance instead of going via Admin interface in
-  // here because makes use of an internal HBA method (TODO: Fix.).
-  private HBaseAdmin rawAdminInstance;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -110,7 +107,7 @@ public class TestAdmin {
 
   @Before
   public void setUp() throws Exception {
-    this.admin = this.rawAdminInstance = TEST_UTIL.getHBaseAdmin();
+    this.admin = TEST_UTIL.getHBaseAdmin();
   }
 
   @After
@@ -151,11 +148,12 @@ public class TestAdmin {
   @Test (timeout=300000)
   public void testDeleteEditUnknownColumnFamilyAndOrTable() throws IOException {
     // Test we get exception if we try to
-    final String nonexistent = "nonexistent";
-    HColumnDescriptor nonexistentHcd = new HColumnDescriptor(nonexistent);
+    final TableName nonexistentTable = TableName.valueOf("nonexistent");
+    final byte[] nonexistentColumn = Bytes.toBytes("nonexistent");
+    HColumnDescriptor nonexistentHcd = new HColumnDescriptor(nonexistentColumn);
     Exception exception = null;
     try {
-      this.admin.addColumn(TableName.valueOf(nonexistent), nonexistentHcd);
+      this.admin.addColumn(nonexistentTable, nonexistentHcd);
     } catch (IOException e) {
       exception = e;
     }
@@ -163,7 +161,7 @@ public class TestAdmin {
 
     exception = null;
     try {
-      this.admin.deleteTable(TableName.valueOf(nonexistent));
+      this.admin.deleteTable(nonexistentTable);
     } catch (IOException e) {
       exception = e;
     }
@@ -171,7 +169,7 @@ public class TestAdmin {
 
     exception = null;
     try {
-      this.admin.deleteColumn(TableName.valueOf(nonexistent), Bytes.toBytes(nonexistent));
+      this.admin.deleteColumn(nonexistentTable, nonexistentColumn);
     } catch (IOException e) {
       exception = e;
     }
@@ -179,7 +177,7 @@ public class TestAdmin {
 
     exception = null;
     try {
-      this.admin.disableTable(TableName.valueOf(nonexistent));
+      this.admin.disableTable(nonexistentTable);
     } catch (IOException e) {
       exception = e;
     }
@@ -187,7 +185,7 @@ public class TestAdmin {
 
     exception = null;
     try {
-      this.admin.enableTable(TableName.valueOf(nonexistent));
+      this.admin.enableTable(nonexistentTable);
     } catch (IOException e) {
       exception = e;
     }
@@ -195,7 +193,7 @@ public class TestAdmin {
 
     exception = null;
     try {
-      this.admin.modifyColumn(TableName.valueOf(nonexistent), nonexistentHcd);
+      this.admin.modifyColumn(nonexistentTable, nonexistentHcd);
     } catch (IOException e) {
       exception = e;
     }
@@ -203,7 +201,7 @@ public class TestAdmin {
 
     exception = null;
     try {
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(nonexistent));
+      HTableDescriptor htd = new HTableDescriptor(nonexistentTable);
       htd.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
       this.admin.modifyTable(htd.getTableName(), htd);
     } catch (IOException e) {
@@ -1759,6 +1757,10 @@ public class TestAdmin {
 
   @Test (timeout=300000)
   public void testGetRegion() throws Exception {
+    // We use actual HBaseAdmin instance instead of going via Admin interface in
+    // here because makes use of an internal HBA method (TODO: Fix.).
+    HBaseAdmin rawAdmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+
     final String name = "testGetRegion";
     LOG.info("Started " + name);
     final byte [] nameBytes = Bytes.toBytes(name);
@@ -1768,9 +1770,9 @@ public class TestAdmin {
     HRegionLocation regionLocation = t.getRegionLocation("mmm");
     HRegionInfo region = regionLocation.getRegionInfo();
     byte[] regionName = region.getRegionName();
-    Pair<HRegionInfo, ServerName> pair = rawAdminInstance.getRegion(regionName);
+    Pair<HRegionInfo, ServerName> pair = rawAdmin.getRegion(regionName);
     assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
-    pair = rawAdminInstance.getRegion(region.getEncodedNameAsBytes());
+    pair = rawAdmin.getRegion(region.getEncodedNameAsBytes());
     assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
   }
 }

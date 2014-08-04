@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -156,7 +157,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
 
     // flush the table
     LOG.info("Flushing the table");
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
     admin.flush(getTablename());
 
     // re-open the regions to make sure that the replicas are up to date
@@ -166,8 +167,8 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
       Threads.sleep(refreshTime);
     } else {
       LOG.info("Reopening the table");
-      admin.disableTable(getTablename());
-      admin.enableTable(getTablename());
+      admin.disableTable(TableName.valueOf(getTablename()));
+      admin.enableTable(TableName.valueOf(getTablename()));
     }
 
     // We should only start the ChaosMonkey after the readers are started and have cached

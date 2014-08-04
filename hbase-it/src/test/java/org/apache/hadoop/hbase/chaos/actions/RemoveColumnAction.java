@@ -24,6 +24,8 @@ import java.util.Set;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -31,15 +33,15 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Action that removes a column family.
  */
 public class RemoveColumnAction extends Action {
-  private final byte[] tableName;
+  private final TableName tableName;
   private final Set<String> protectedColumns;
   private final String tableNameString;
-  private HBaseAdmin admin;
+  private Admin admin;
   private Random random;
 
   public RemoveColumnAction(String tableName, Set<String> protectedColumns) {
     tableNameString = tableName;
-    this.tableName = Bytes.toBytes(tableName);
+    this.tableName = TableName.valueOf(tableName);
     this.protectedColumns = protectedColumns;
     random = new Random();
   }

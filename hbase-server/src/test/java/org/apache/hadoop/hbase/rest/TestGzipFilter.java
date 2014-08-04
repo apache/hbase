@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -50,7 +51,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
 public class TestGzipFilter {
-  private static final String TABLE = "TestGzipFilter";
+  private static final TableName TABLE = TableName.valueOf("TestGzipFilter");
   private static final String CFA = "a";
   private static final String COLUMN_1 = CFA + ":1";
   private static final String COLUMN_2 = CFA + ":2";
@@ -68,11 +69,11 @@ public class TestGzipFilter {
     REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
     client = new Client(new Cluster().add("localhost",
       REST_TEST_UTIL.getServletPort()));
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(TABLE)) {
       return;
     }
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
+    HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(new HColumnDescriptor(CFA));
     admin.createTable(htd);
   }

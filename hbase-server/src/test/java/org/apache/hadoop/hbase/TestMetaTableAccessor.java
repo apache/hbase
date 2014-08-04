@@ -29,6 +29,7 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -209,7 +210,7 @@ public class TestMetaTableAccessor {
     assertFalse(MetaTableAccessor.tableExists(hConnection, name));
     UTIL.createTable(name, HConstants.CATALOG_FAMILY);
     assertTrue(MetaTableAccessor.tableExists(hConnection, name));
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     admin.disableTable(name);
     admin.deleteTable(name);
     assertFalse(MetaTableAccessor.tableExists(hConnection, name));

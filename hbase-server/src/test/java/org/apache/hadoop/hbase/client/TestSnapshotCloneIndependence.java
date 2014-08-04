@@ -189,7 +189,7 @@ public class TestSnapshotCloneIndependence {
     FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
     Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
 
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     final long startTime = System.currentTimeMillis();
     final TableName localTableName =
         TableName.valueOf(STRING_TABLE_NAME + startTime);
@@ -210,7 +210,7 @@ public class TestSnapshotCloneIndependence {
       if (!online) {
         admin.enableTable(localTableName);
       }
-      byte[] cloneTableName = Bytes.toBytes("test-clone-" + localTableName);
+      TableName cloneTableName = TableName.valueOf("test-clone-" + localTableName);
       admin.cloneSnapshot(snapshotName, cloneTableName);
 
       HTable clonedTable = new HTable(UTIL.getConfiguration(), cloneTableName);
@@ -267,7 +267,7 @@ public class TestSnapshotCloneIndependence {
     Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
 
     // Create a table
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     final long startTime = System.currentTimeMillis();
     final TableName localTableName =
         TableName.valueOf(STRING_TABLE_NAME + startTime);
@@ -286,7 +286,7 @@ public class TestSnapshotCloneIndependence {
       admin.enableTable(localTableName);
     }
 
-    byte[] cloneTableName = Bytes.toBytes("test-clone-" + localTableName);
+    TableName cloneTableName = TableName.valueOf("test-clone-" + localTableName);
 
     // Clone the snapshot
     byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
@@ -323,7 +323,7 @@ public class TestSnapshotCloneIndependence {
     Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
 
     // Create a table
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     final long startTime = System.currentTimeMillis();
     final TableName localTableName =
         TableName.valueOf(STRING_TABLE_NAME + startTime);
@@ -339,7 +339,7 @@ public class TestSnapshotCloneIndependence {
     if (!online) {
       admin.enableTable(localTableName);
     }
-    byte[] cloneTableName = Bytes.toBytes("test-clone-" + localTableName);
+    TableName cloneTableName = TableName.valueOf("test-clone-" + localTableName);
 
     // Clone the snapshot
     byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);

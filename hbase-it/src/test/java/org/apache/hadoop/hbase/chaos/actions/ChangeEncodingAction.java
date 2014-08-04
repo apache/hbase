@@ -23,6 +23,8 @@ import java.util.Random;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -31,15 +33,13 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Action that changes the encoding on a column family from a list of tables.
  */
 public class ChangeEncodingAction extends Action {
-  private final byte[] tableName;
-  private final String tableNameString;
+  private final TableName tableName;
 
-  private HBaseAdmin admin;
+  private Admin admin;
   private Random random;
 
   public ChangeEncodingAction(String tableName) {
-    tableNameString = tableName;
-    this.tableName = Bytes.toBytes(tableName);
+    this.tableName = TableName.valueOf(tableName);
     this.random = new Random();
   }
 
@@ -58,7 +58,7 @@ public class ChangeEncodingAction extends Action {
       return;
     }
 
-    LOG.debug("Performing action: Changing encodings on " + tableNameString);
+    LOG.debug("Performing action: Changing encodings on " + tableName);
     // possible DataBlockEncoding id's
     int[] possibleIds = {0, 2, 3, 4/*, 6*/};
     for (HColumnDescriptor descriptor : columnDescriptors) {

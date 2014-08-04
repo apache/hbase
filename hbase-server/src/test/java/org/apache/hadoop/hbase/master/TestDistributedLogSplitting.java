@@ -781,7 +781,7 @@ public class TestDistributedLogSplitting {
     makeHLog(hrs.getWAL(), regions, "table", "family", NUM_LOG_LINES, 100);
     
     LOG.info("Disabling table\n");
-    TEST_UTIL.getHBaseAdmin().disableTable(Bytes.toBytes("disableTable"));
+    TEST_UTIL.getHBaseAdmin().disableTable(TableName.valueOf("disableTable"));
     
     // abort RS
     LOG.info("Aborting region server: " + hrs.getServerName());
@@ -1361,7 +1361,7 @@ public class TestDistributedLogSplitting {
   HTable installTable(ZooKeeperWatcher zkw, String tname, String fname, int nrs, 
       int existingRegions) throws Exception {
     // Create a table with regions
-    byte [] table = Bytes.toBytes(tname);
+    TableName table = TableName.valueOf(tname);
     byte [] family = Bytes.toBytes(fname);
     LOG.info("Creating table with " + nrs + " regions");
     HTable ht = TEST_UTIL.createTable(table, family);
@@ -1617,7 +1617,7 @@ public class TestDistributedLogSplitting {
           final HRegionServer destRS = hrs;
           // the RS doesn't have regions of the specified table so we need move one to this RS
           List<HRegionInfo> tableRegions =
-              TEST_UTIL.getHBaseAdmin().getTableRegions(Bytes.toBytes(tableName));
+              TEST_UTIL.getHBaseAdmin().getTableRegions(TableName.valueOf(tableName));
           final HRegionInfo hri = tableRegions.get(0);
           TEST_UTIL.getHBaseAdmin().move(hri.getEncodedNameAsBytes(),
             Bytes.toBytes(destRS.getServerName().getServerName()));

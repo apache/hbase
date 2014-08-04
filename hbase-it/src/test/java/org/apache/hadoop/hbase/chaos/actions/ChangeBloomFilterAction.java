@@ -23,6 +23,8 @@ import java.util.Random;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -32,30 +34,27 @@ import org.apache.hadoop.hbase.util.Bytes;
  * table
  */
 public class ChangeBloomFilterAction extends Action {
-  private final byte[] tableNameBytes;
   private final long sleepTime;
-  private final String tableName;
+  private final TableName tableName;
 
   public ChangeBloomFilterAction(String tableName) {
     this(-1, tableName);
   }
 
   public ChangeBloomFilterAction(int sleepTime, String tableName) {
-    this.tableNameBytes = Bytes.toBytes(tableName);
     this.sleepTime = sleepTime;
-    this.tableName = tableName;
+    this.tableName = TableName.valueOf(tableName);
   }
 
   @Override
   public void perform() throws Exception {
     Random random = new Random();
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
 
     LOG.info("Performing action: Change bloom filter on all columns of table "
         + tableName);
-    HTableDescriptor tableDescriptor = admin.getTableDescriptor(Bytes
-        .toBytes(tableName));
+    HTableDescriptor tableDescriptor = admin.getTableDescriptor(tableName);
     HColumnDescriptor[] columnDescriptors = tableDescriptor.getColumnFamilies();
 
     if (columnDescriptors == null || columnDescriptors.length == 0) {

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.chaos.actions;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.TableName;
 
@@ -39,7 +40,7 @@ public class TruncateTableAction extends Action {
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
 
     boolean preserveSplits = random.nextBoolean();
     LOG.info("Performing action: Truncate table " + tableName.getNameAsString() +

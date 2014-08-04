@@ -25,7 +25,9 @@ import java.util.List;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -34,8 +36,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 */
 public class MoveRegionsOfTableAction extends Action {
   private final long sleepTime;
-  private final byte[] tableNameBytes;
-  private final String tableName;
+  private final TableName tableName;
   private final long maxTime;
 
   public MoveRegionsOfTableAction(String tableName) {
@@ -44,8 +45,7 @@ public class MoveRegionsOfTableAction extends Action {
 
   public MoveRegionsOfTableAction(long sleepTime, long maxSleepTime, String tableName) {
     this.sleepTime = sleepTime;
-    this.tableNameBytes = Bytes.toBytes(tableName);
-    this.tableName = tableName;
+    this.tableName = TableName.valueOf(tableName);
     this.maxTime = maxSleepTime;
   }
 
@@ -55,12 +55,12 @@ public class MoveRegionsOfTableAction extends Action {
       Thread.sleep(sleepTime);
     }
 
-    HBaseAdmin admin = this.context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
+    Admin admin = this.context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
     Collection<ServerName> serversList = admin.getClusterStatus().getServers();
     ServerName[] servers = serversList.toArray(new ServerName[serversList.size()]);
 
     LOG.info("Performing action: Move regions of table " + tableName);
-    List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
+    List<HRegionInfo> regions = admin.getTableRegions(tableName);
     if (regions == null || regions.isEmpty()) {
       LOG.info("Table " + tableName + " doesn't have regions to move");
       return;

@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
@@ -49,7 +50,7 @@ public class IntegrationTestManyRegions {
 
   protected static final Log LOG
     = LogFactory.getLog(IntegrationTestManyRegions.class);
-  protected static final String TABLE_NAME = CLASS_NAME;
+  protected static final TableName TABLE_NAME = TableName.valueOf(CLASS_NAME);
   protected static final String COLUMN_NAME = "f";
   protected static final String REGION_COUNT_KEY
     = String.format("hbase.%s.regions", CLASS_NAME);
@@ -80,7 +81,7 @@ public class IntegrationTestManyRegions {
     util.initializeCluster(REGION_SERVER_COUNT);
     LOG.info("Cluster initialized");
 
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
     if (admin.tableExists(TABLE_NAME)) {
       LOG.info(String.format("Deleting existing table %s.", TABLE_NAME));
       if (admin.isTableEnabled(TABLE_NAME)) admin.disableTable(TABLE_NAME);
@@ -93,7 +94,7 @@ public class IntegrationTestManyRegions {
   @After
   public void tearDown() throws IOException {
     LOG.info("Cleaning up after test.");
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
     if (admin.tableExists(TABLE_NAME)) {
       if (admin.isTableEnabled(TABLE_NAME)) admin.disableTable(TABLE_NAME);
       admin.deleteTable(TABLE_NAME);
@@ -122,10 +123,10 @@ public class IntegrationTestManyRegions {
 
   private static class Worker implements Runnable {
     private final CountDownLatch doneSignal;
-    private final HBaseAdmin admin;
+    private final Admin admin;
     private boolean success = false;
 
-    public Worker(final CountDownLatch doneSignal, final HBaseAdmin admin) {
+    public Worker(final CountDownLatch doneSignal, final Admin admin) {
       this.doneSignal = doneSignal;
       this.admin = admin;
     }
@@ -137,7 +138,7 @@ public class IntegrationTestManyRegions {
     @Override
     public void run() {
       long startTime, endTime;
-      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
+      HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
       desc.addFamily(new HColumnDescriptor(COLUMN_NAME));
       SplitAlgorithm algo = new RegionSplitter.HexStringSplit();
       byte[][] splits = algo.split(REGION_COUNT);

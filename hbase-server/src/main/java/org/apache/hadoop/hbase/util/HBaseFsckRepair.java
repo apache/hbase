@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
@@ -143,7 +144,7 @@ public class HBaseFsckRepair {
    * Contacts a region server and waits up to hbase.hbck.close.timeout ms
    * (default 120s) to close the region.  This bypasses the active hmaster.
    */
-  public static void closeRegionSilentlyAndWait(HBaseAdmin admin,
+  public static void closeRegionSilentlyAndWait(Admin admin,
       ServerName server, HRegionInfo region) throws IOException, InterruptedException {
     HConnection connection = admin.getConnection();
     AdminService.BlockingInterface rs = connection.getAdmin(server);

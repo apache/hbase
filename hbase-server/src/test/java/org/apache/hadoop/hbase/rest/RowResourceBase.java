@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
@@ -101,8 +102,8 @@ public class RowResourceBase {
 
   @Before
   public void beforeMethod() throws Exception {
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
-    if (admin.tableExists(TABLE)) {
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+    if (admin.tableExists(TableName.valueOf(TABLE))) {
       TEST_UTIL.deleteTable(Bytes.toBytes(TABLE));
     }
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
@@ -113,8 +114,8 @@ public class RowResourceBase {
 
   @After
   public void afterMethod() throws Exception {
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
-    if (admin.tableExists(TABLE)) {
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+    if (admin.tableExists(TableName.valueOf(TABLE))) {
       TEST_UTIL.deleteTable(Bytes.toBytes(TABLE));
     }
   }

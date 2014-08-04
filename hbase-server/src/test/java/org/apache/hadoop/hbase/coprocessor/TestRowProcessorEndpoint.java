@@ -33,6 +33,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -85,7 +86,7 @@ public class TestRowProcessorEndpoint {
 
   static final Log LOG = LogFactory.getLog(TestRowProcessorEndpoint.class);
 
-  private static final byte[] TABLE = Bytes.toBytes("testtable");
+  private static final TableName TABLE = TableName.valueOf("testtable");
   private final static byte[] ROW = Bytes.toBytes("testrow");
   private final static byte[] ROW2 = Bytes.toBytes("testrow2");
   private final static byte[] FAM = Bytes.toBytes("friendlist");

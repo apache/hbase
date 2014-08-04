@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -283,7 +284,7 @@ public class TestCoprocessorEndpoint {
 
   @Test
   public void testMasterCoprocessorService() throws Throwable {
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
     final TestProtos.EchoRequestProto request =
         TestProtos.EchoRequestProto.newBuilder().setMessage("hello").build();
     TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface service =
@@ -314,7 +315,7 @@ public class TestCoprocessorEndpoint {
 
   @Test
   public void testMasterCoprocessorError() throws Throwable {
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
     TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface service =
         TestRpcServiceProtos.TestProtobufRpcProto.newBlockingStub(admin.coprocessorService());
     try {

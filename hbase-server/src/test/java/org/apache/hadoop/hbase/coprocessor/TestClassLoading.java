@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.TestServerCustomProtocol;
@@ -55,7 +56,7 @@ public class TestClassLoading {
 
   private static MiniDFSCluster cluster;
 
-  static final String tableName = "TestClassLoading";
+  static final TableName tableName = TableName.valueOf("TestClassLoading");
   static final String cpName1 = "TestCP1";
   static final String cpName2 = "TestCP2";
   static final String cpName3 = "TestCP3";
@@ -137,7 +138,7 @@ public class TestClassLoading {
     LOG.info("Copied jar file to HDFS: " + jarFileOnHDFS2);
 
     // create a table that references the coprocessors
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor("test"));
       // without configuration values
     htd.setValue("COPROCESSOR$1", jarFileOnHDFS1.toString() + "|" + cpName1 +
@@ -145,7 +146,7 @@ public class TestClassLoading {
       // with configuration values
     htd.setValue("COPROCESSOR$2", jarFileOnHDFS2.toString() + "|" + cpName2 +
       "|" + Coprocessor.PRIORITY_USER + "|k1=v1,k2=v2,k3=v3");
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(tableName)) {
       if (admin.isTableEnabled(tableName)) {
         admin.disableTable(tableName);
@@ -166,7 +167,7 @@ public class TestClassLoading {
     MiniHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
     for (HRegion region:
         hbase.getRegionServer(0).getOnlineRegionsLocalContext()) {
-      if (region.getRegionNameAsString().startsWith(tableName)) {
+      if (region.getRegionNameAsString().startsWith(tableName.getNameAsString())) {
         foundTableRegion = true;
         CoprocessorEnvironment env;
         env = region.getCoprocessorHost().findCoprocessorEnvironment(cpName1);
@@ -226,7 +227,7 @@ public class TestClassLoading {
     htd.addFamily(new HColumnDescriptor("test"));
     htd.setValue("COPROCESSOR$1", getLocalPath(jarFile) + "|" + cpName3 + "|" +
       Coprocessor.PRIORITY_USER);
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(htd);
     waitForTable(htd.getTableName());
 
@@ -252,7 +253,7 @@ public class TestClassLoading {
     htd.addFamily(new HColumnDescriptor("test"));
     htd.setValue("COPROCESSOR$1", getLocalPath(jarFile) + "|" + cpName4 + "|" +
       Coprocessor.PRIORITY_USER);
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(htd);
     waitForTable(htd.getTableName());
 
@@ -296,7 +297,7 @@ public class TestClassLoading {
         " | org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver | | k=v ";
 
     // create a table that references the jar
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor("test"));
 
     // add 3 coprocessors by setting htd attributes directly.
@@ -314,7 +315,7 @@ public class TestClassLoading {
     htd.addCoprocessor(cpName6, new Path(getLocalPath(jarFile6)),
         Coprocessor.PRIORITY_USER, kvs);
 
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(tableName)) {
       if (admin.isTableEnabled(tableName)) {
         admin.disableTable(tableName);
@@ -333,7 +334,7 @@ public class TestClassLoading {
     MiniHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
     for (HRegion region:
         hbase.getRegionServer(0).getOnlineRegionsLocalContext()) {
-      if (region.getRegionNameAsString().startsWith(tableName)) {
+      if (region.getRegionNameAsString().startsWith(tableName.getNameAsString())) {
         found_1 = found_1 ||
             (region.getCoprocessorHost().findCoprocessor(cpName1) != null);
         found_2 = found_2 ||
@@ -398,7 +399,7 @@ public class TestClassLoading {
     LOG.info("Copied jar file to HDFS: " + jarFileOnHDFS);
 
     // create a table that references the coprocessors
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor("test"));
       // without configuration values
     htd.setValue("COPROCESSOR$1", jarFileOnHDFS.toString() + "|" + cpName1 +
@@ -406,7 +407,7 @@ public class TestClassLoading {
       // with configuration values
     htd.setValue("COPROCESSOR$2", jarFileOnHDFS.toString() + "|" + cpName2 +
       "|" + Coprocessor.PRIORITY_USER + "|k1=v1,k2=v2,k3=v3");
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(tableName)) {
       if (admin.isTableEnabled(tableName)) {
         admin.disableTable(tableName);
@@ -422,7 +423,7 @@ public class TestClassLoading {
     MiniHBaseCluster hbase = TEST_UTIL.getHBaseCluster();
     for (HRegion region:
         hbase.getRegionServer(0).getOnlineRegionsLocalContext()) {
-      if (region.getRegionNameAsString().startsWith(tableName)) {
+      if (region.getRegionNameAsString().startsWith(tableName.getNameAsString())) {
         CoprocessorEnvironment env;
         env = region.getCoprocessorHost().findCoprocessorEnvironment(cpName1);
         if (env != null) {

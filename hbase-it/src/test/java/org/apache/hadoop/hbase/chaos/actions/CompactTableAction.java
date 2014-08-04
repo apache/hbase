@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -47,7 +48,7 @@ public class CompactTableAction extends Action {
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
     boolean major = RandomUtils.nextInt(100) < majorRatio;
 
     LOG.info("Performing action: Compact table " + tableName + ", major=" + major);

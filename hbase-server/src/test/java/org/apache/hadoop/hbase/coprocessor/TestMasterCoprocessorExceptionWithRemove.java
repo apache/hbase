@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -191,7 +192,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
 
     boolean threwDNRE = false;
     try {
-      HBaseAdmin admin = UTIL.getHBaseAdmin();
+      Admin admin = UTIL.getHBaseAdmin();
       admin.createTable(htd1);
     } catch (IOException e) {
       if (e.getClass().getName().equals("org.apache.hadoop.hbase.DoNotRetryIOException")) {
@@ -218,7 +219,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
     // by creating another table: should not have a problem this time.
     HTableDescriptor htd2 = new HTableDescriptor(TableName.valueOf(TEST_TABLE2));
     htd2.addFamily(new HColumnDescriptor(TEST_FAMILY2));
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     try {
       admin.createTable(htd2);
     } catch (IOException e) {

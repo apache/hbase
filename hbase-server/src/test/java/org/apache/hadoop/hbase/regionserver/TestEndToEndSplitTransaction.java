@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
@@ -223,7 +224,7 @@ public class TestEndToEndSplitTransaction {
     HTable table;
     TableName tableName;
     byte[] family;
-    HBaseAdmin admin;
+    Admin admin;
     HRegionServer rs;
 
     RegionSplitter(HTable table) throws IOException {
@@ -398,7 +399,7 @@ public class TestEndToEndSplitTransaction {
 
   /* some utility methods for split tests */
 
-  public static void flushAndBlockUntilDone(HBaseAdmin admin, HRegionServer rs, byte[] regionName)
+  public static void flushAndBlockUntilDone(Admin admin, HRegionServer rs, byte[] regionName)
       throws IOException, InterruptedException {
     log("flushing region: " + Bytes.toStringBinary(regionName));
     admin.flush(regionName);
@@ -409,7 +410,7 @@ public class TestEndToEndSplitTransaction {
     }
   }
 
-  public static void compactAndBlockUntilDone(HBaseAdmin admin, HRegionServer rs, byte[] regionName)
+  public static void compactAndBlockUntilDone(Admin admin, HRegionServer rs, byte[] regionName)
       throws IOException, InterruptedException {
     log("Compacting region: " + Bytes.toStringBinary(regionName));
     admin.majorCompact(regionName);

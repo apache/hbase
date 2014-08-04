@@ -54,11 +54,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Waiter.Predicate;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -1468,7 +1470,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Modify a table, synchronous. Waiting logic similar to that of {@code admin.rb#alter_status}.
    */
-  public static void modifyTableSync(HBaseAdmin admin, HTableDescriptor desc)
+  public static void modifyTableSync(Admin admin, HTableDescriptor desc)
       throws IOException, InterruptedException {
     admin.modifyTable(desc.getTableName(), desc);
     Pair<Integer, Integer> status = new Pair<Integer, Integer>() {{
@@ -1494,7 +1496,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Set the number of Region replicas.
    */
-  public static void setReplicas(HBaseAdmin admin, TableName table, int replicaCount)
+  public static void setReplicas(Admin admin, TableName table, int replicaCount)
       throws IOException, InterruptedException {
     admin.disableTable(table);
     HTableDescriptor desc = admin.getTableDescriptor(table);
@@ -2041,8 +2043,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     HConnection conn = table.getConnection();
     conn.clearRegionCache();
     // assign all the new regions IF table is enabled.
-    HBaseAdmin admin = getHBaseAdmin();
-    if (admin.isTableEnabled(table.getTableName())) {
+    Admin admin = getHBaseAdmin();
+    if (admin.isTableEnabled(table.getName())) {
       for(HRegionInfo hri : newRegions) {
         admin.assign(hri.getRegionName());
       }
@@ -2469,15 +2471,15 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Returns a HBaseAdmin instance.
+   * Returns a Admin instance.
    * This instance is shared between HBaseTestingUtility instance users.
    * Closing it has no effect, it will be closed automatically when the
    * cluster shutdowns
    *
-   * @return The HBaseAdmin instance.
+   * @return An Admin instance.
    * @throws IOException
    */
-  public synchronized HBaseAdmin getHBaseAdmin()
+  public synchronized Admin getHBaseAdmin()
   throws IOException {
     if (hbaseAdmin == null){
       hbaseAdmin = new HBaseAdminForTests(getConfiguration());
@@ -2648,7 +2650,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     waitTableAvailable(getHBaseAdmin(), table, 30000);
   }
 
-  public void waitTableAvailable(HBaseAdmin admin, byte[] table)
+  public void waitTableAvailable(Admin admin, byte[] table)
       throws InterruptedException, IOException {
     waitTableAvailable(admin, table, 30000);
   }
@@ -2665,10 +2667,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     waitTableAvailable(getHBaseAdmin(), table, timeoutMillis);
   }
 
-  public void waitTableAvailable(HBaseAdmin admin, byte[] table, long timeoutMillis)
+  public void waitTableAvailable(Admin admin, byte[] table, long timeoutMillis)
   throws InterruptedException, IOException {
     long startWait = System.currentTimeMillis();
-    while (!admin.isTableAvailable(table)) {
+    while (!admin.isTableAvailable(TableName.valueOf(table))) {
       assertTrue("Timed out waiting for table to become available " +
         Bytes.toStringBinary(table),
         System.currentTimeMillis() - startWait < timeoutMillis);
@@ -2690,7 +2692,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     waitTableEnabled(getHBaseAdmin(), table, 30000);
   }
 
-  public void waitTableEnabled(HBaseAdmin admin, byte[] table)
+  public void waitTableEnabled(Admin admin, byte[] table)
       throws InterruptedException, IOException {
     waitTableEnabled(admin, table, 30000);
   }
@@ -2709,12 +2711,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     waitTableEnabled(getHBaseAdmin(), table, timeoutMillis);
   }
 
-  public void waitTableEnabled(HBaseAdmin admin, byte[] table, long timeoutMillis)
+  public void waitTableEnabled(Admin admin, byte[] table, long timeoutMillis)
   throws InterruptedException, IOException {
+    TableName tableName = TableName.valueOf(table);
     long startWait = System.currentTimeMillis();
     waitTableAvailable(admin, table, timeoutMillis);
     long remainder = System.currentTimeMillis() - startWait;
-    while (!admin.isTableEnabled(table)) {
+    while (!admin.isTableEnabled(tableName)) {
       assertTrue("Timed out waiting for table to become available and enabled " +
          Bytes.toStringBinary(table),
          System.currentTimeMillis() - remainder < timeoutMillis);
@@ -2726,7 +2729,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     // Below we do a get.  The get will retry if a NotServeringRegionException or a
     // RegionOpeningException.  It is crass but when done all will be online.
     try {
-      Canary.sniff(admin, TableName.valueOf(table));
+      Canary.sniff(admin, tableName);
     } catch (Exception e) {
       throw new IOException(e);
     }
@@ -3276,7 +3279,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
 
     int totalNumberOfRegions = 0;
-    HBaseAdmin admin = new HBaseAdmin(conf);
+    HConnection unmanagedConnection = HConnectionManager.createConnection(conf);
+    Admin admin = unmanagedConnection.getAdmin();
+
     try {
       // create a table a pre-splits regions.
       // The number of splits is set as:
@@ -3303,6 +3308,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           " already exists, continuing");
     } finally {
       admin.close();
+      unmanagedConnection.close();
     }
     return totalNumberOfRegions;
   }

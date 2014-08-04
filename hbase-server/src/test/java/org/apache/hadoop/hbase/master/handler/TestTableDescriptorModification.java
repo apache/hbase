@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -80,7 +81,7 @@ public class TestTableDescriptorModification {
 
   @Test
   public void testModifyTable() throws IOException {
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     // Create a table with one family
     HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
     baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
@@ -103,7 +104,7 @@ public class TestTableDescriptorModification {
 
   @Test
   public void testAddColumn() throws IOException {
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     // Create a table with two families
     HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
     baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
@@ -123,7 +124,7 @@ public class TestTableDescriptorModification {
 
   @Test
   public void testDeleteColumn() throws IOException {
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     // Create a table with two families
     HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
     baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
@@ -144,7 +145,7 @@ public class TestTableDescriptorModification {
 
   private void verifyTableDescriptor(final TableName tableName,
                                      final byte[]... families) throws IOException {
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
 
     // Verify descriptor from master
     HTableDescriptor htd = admin.getTableDescriptor(tableName);

@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.ScannerCallable;
@@ -77,11 +78,9 @@ public class TestFlushSnapshotFromClient {
   private static final Log LOG = LogFactory.getLog(TestFlushSnapshotFromClient.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final int NUM_RS = 2;
-  private static final String STRING_TABLE_NAME = "test";
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
   private static final byte[] TEST_QUAL = Bytes.toBytes("q");
-  private static final TableName TABLE_NAME =
-      TableName.valueOf(STRING_TABLE_NAME);
+  private static final TableName TABLE_NAME = TableName.valueOf("test");
   private final int DEFAULT_NUM_ROWS = 100;
 
   /**
@@ -142,7 +141,7 @@ public class TestFlushSnapshotFromClient {
    */
   @Test (timeout=300000)
   public void testFlushTableSnapshot() throws Exception {
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
@@ -157,7 +156,7 @@ public class TestFlushSnapshotFromClient {
     // take a snapshot of the enabled table
     String snapshotString = "offlineTableSnapshot";
     byte[] snapshot = Bytes.toBytes(snapshotString);
-    admin.snapshot(snapshotString, STRING_TABLE_NAME, SnapshotDescription.Type.FLUSH);
+    admin.snapshot(snapshotString, TABLE_NAME, SnapshotDescription.Type.FLUSH);
     LOG.debug("Snapshot completed.");
 
     // make sure we have the snapshot
@@ -181,7 +180,7 @@ public class TestFlushSnapshotFromClient {
    */
   @Test(timeout=30000)
   public void testSkipFlushTableSnapshot() throws Exception {
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
@@ -196,7 +195,7 @@ public class TestFlushSnapshotFromClient {
     // take a snapshot of the enabled table
     String snapshotString = "skipFlushTableSnapshot";
     byte[] snapshot = Bytes.toBytes(snapshotString);
-    admin.snapshot(snapshotString, STRING_TABLE_NAME, SnapshotDescription.Type.SKIPFLUSH);
+    admin.snapshot(snapshotString, TABLE_NAME, SnapshotDescription.Type.SKIPFLUSH);
     LOG.debug("Snapshot completed.");
 
     // make sure we have the snapshot
@@ -225,7 +224,7 @@ public class TestFlushSnapshotFromClient {
    */
   @Test (timeout=300000)
   public void testFlushTableSnapshotWithProcedure() throws Exception {
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
@@ -241,7 +240,7 @@ public class TestFlushSnapshotFromClient {
     String snapshotString = "offlineTableSnapshot";
     byte[] snapshot = Bytes.toBytes(snapshotString);
     Map<String, String> props = new HashMap<String, String>();
-    props.put("table", STRING_TABLE_NAME);
+    props.put("table", TABLE_NAME.getNameAsString());
     admin.execProcedure(SnapshotManager.ONLINE_SNAPSHOT_CONTROLLER_DESCRIPTION,
         snapshotString, props);
 
@@ -265,19 +264,19 @@ public class TestFlushSnapshotFromClient {
 
   @Test (timeout=300000)
   public void testSnapshotFailsOnNonExistantTable() throws Exception {
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
-    String tableName = "_not_a_table";
+    TableName tableName = TableName.valueOf("_not_a_table");
 
     // make sure the table doesn't exist
     boolean fail = false;
     do {
     try {
-      admin.getTableDescriptor(Bytes.toBytes(tableName));
+      admin.getTableDescriptor(tableName);
       fail = true;
       LOG.error("Table:" + tableName + " already exists, checking a new name");
-      tableName = tableName+"!";
+      tableName = TableName.valueOf(tableName+"!");
     } catch (TableNotFoundException e) {
       fail = false;
       }
@@ -294,7 +293,7 @@ public class TestFlushSnapshotFromClient {
 
   @Test(timeout = 300000)
   public void testAsyncFlushSnapshot() throws Exception {
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     SnapshotDescription snapshot = SnapshotDescription.newBuilder().setName("asyncSnapshot")
         .setTable(TABLE_NAME.getNameAsString())
         .setType(SnapshotDescription.Type.FLUSH)
@@ -316,7 +315,7 @@ public class TestFlushSnapshotFromClient {
   @Test (timeout=300000)
   public void testSnapshotStateAfterMerge() throws Exception {
     int numRows = DEFAULT_NUM_ROWS;
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
     // load the table so we have some data
@@ -324,12 +323,12 @@ public class TestFlushSnapshotFromClient {
 
     // Take a snapshot
     String snapshotBeforeMergeName = "snapshotBeforeMerge";
-    admin.snapshot(snapshotBeforeMergeName, STRING_TABLE_NAME, SnapshotDescription.Type.FLUSH);
+    admin.snapshot(snapshotBeforeMergeName, TABLE_NAME, SnapshotDescription.Type.FLUSH);
 
     // Clone the table
-    String cloneBeforeMergeName = "cloneBeforeMerge";
+    TableName cloneBeforeMergeName = TableName.valueOf("cloneBeforeMerge");
     admin.cloneSnapshot(snapshotBeforeMergeName, cloneBeforeMergeName);
-    SnapshotTestingUtils.waitForTableToBeOnline(UTIL, TableName.valueOf(cloneBeforeMergeName));
+    SnapshotTestingUtils.waitForTableToBeOnline(UTIL, cloneBeforeMergeName);
 
     // Merge two regions
     List<HRegionInfo> regions = admin.getTableRegions(TABLE_NAME);
@@ -351,13 +350,13 @@ public class TestFlushSnapshotFromClient {
     assertEquals(numRegionsAfterMerge, admin.getTableRegions(TABLE_NAME).size());
 
     // Clone the table
-    String cloneAfterMergeName = "cloneAfterMerge";
+    TableName cloneAfterMergeName = TableName.valueOf("cloneAfterMerge");
     admin.cloneSnapshot(snapshotBeforeMergeName, cloneAfterMergeName);
-    SnapshotTestingUtils.waitForTableToBeOnline(UTIL, TableName.valueOf(cloneAfterMergeName));
+    SnapshotTestingUtils.waitForTableToBeOnline(UTIL, cloneAfterMergeName);
 
     SnapshotTestingUtils.verifyRowCount(UTIL, TABLE_NAME, numRows);
-    SnapshotTestingUtils.verifyRowCount(UTIL, TableName.valueOf(cloneBeforeMergeName), numRows);
-    SnapshotTestingUtils.verifyRowCount(UTIL, TableName.valueOf(cloneAfterMergeName), numRows);
+    SnapshotTestingUtils.verifyRowCount(UTIL, cloneBeforeMergeName, numRows);
+    SnapshotTestingUtils.verifyRowCount(UTIL, cloneAfterMergeName, numRows);
 
     // test that we can delete the snapshot
     UTIL.deleteTable(cloneAfterMergeName);
@@ -367,7 +366,7 @@ public class TestFlushSnapshotFromClient {
   @Test (timeout=300000)
   public void testTakeSnapshotAfterMerge() throws Exception {
     int numRows = DEFAULT_NUM_ROWS;
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
     // load the table so we have some data
@@ -393,16 +392,16 @@ public class TestFlushSnapshotFromClient {
 
     // Take a snapshot
     String snapshotName = "snapshotAfterMerge";
-    SnapshotTestingUtils.snapshot(admin, snapshotName, STRING_TABLE_NAME,
+    SnapshotTestingUtils.snapshot(admin, snapshotName, TABLE_NAME.getNameAsString(),
       SnapshotDescription.Type.FLUSH, 3);
 
     // Clone the table
-    String cloneName = "cloneMerge";
+    TableName cloneName = TableName.valueOf("cloneMerge");
     admin.cloneSnapshot(snapshotName, cloneName);
-    SnapshotTestingUtils.waitForTableToBeOnline(UTIL, TableName.valueOf(cloneName));
+    SnapshotTestingUtils.waitForTableToBeOnline(UTIL, cloneName);
 
     SnapshotTestingUtils.verifyRowCount(UTIL, TABLE_NAME, numRows);
-    SnapshotTestingUtils.verifyRowCount(UTIL, TableName.valueOf(cloneName), numRows);
+    SnapshotTestingUtils.verifyRowCount(UTIL, cloneName, numRows);
 
     // test that we can delete the snapshot
     UTIL.deleteTable(cloneName);
@@ -414,7 +413,7 @@ public class TestFlushSnapshotFromClient {
   @Test (timeout=300000)
   public void testFlushCreateListDestroy() throws Exception {
     LOG.debug("------- Starting Snapshot test -------------");
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
     // load the table so we have some data
@@ -423,8 +422,7 @@ public class TestFlushSnapshotFromClient {
     String snapshotName = "flushSnapshotCreateListDestroy";
     FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
     Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
-    SnapshotTestingUtils.createSnapshotAndValidate(admin,
-      TableName.valueOf(STRING_TABLE_NAME), Bytes.toString(TEST_FAM),
+    SnapshotTestingUtils.createSnapshotAndValidate(admin, TABLE_NAME, Bytes.toString(TEST_FAM),
       snapshotName, rootDir, fs, true);
   }
 
@@ -435,12 +433,10 @@ public class TestFlushSnapshotFromClient {
    */
   @Test(timeout=300000)
   public void testConcurrentSnapshottingAttempts() throws IOException, InterruptedException {
-    final String STRING_TABLE2_NAME = STRING_TABLE_NAME + "2";
-    final TableName TABLE2_NAME =
-        TableName.valueOf(STRING_TABLE2_NAME);
+    final TableName TABLE2_NAME = TableName.valueOf(TABLE_NAME + "2");
 
     int ssNum = 20;
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
     // create second testing table
@@ -460,7 +456,7 @@ public class TestFlushSnapshotFromClient {
       @Override
       public void run() {
         try {
-          HBaseAdmin admin = UTIL.getHBaseAdmin();
+          Admin admin = UTIL.getHBaseAdmin();
           LOG.info("Submitting snapshot request: " + ClientSnapshotDescriptionUtils.toString(ss));
           admin.takeSnapshotAsync(ss);
         } catch (Exception e) {
@@ -541,7 +537,7 @@ public class TestFlushSnapshotFromClient {
 
   private void waitRegionsAfterMerge(final long numRegionsAfterMerge)
       throws IOException, InterruptedException {
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     // Verify that there's one region less
     long startTime = System.currentTimeMillis();
     while (admin.getTableRegions(TABLE_NAME).size() != numRegionsAfterMerge) {

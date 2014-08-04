@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -85,7 +86,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TEST_TABLE));
       htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
       try {
-        HBaseAdmin admin = UTIL.getHBaseAdmin();
+        Admin admin = UTIL.getHBaseAdmin();
         admin.createTable(htd);
         fail("BuggyMasterObserver failed to throw an exception.");
       } catch (IOException e) {

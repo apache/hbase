@@ -22,7 +22,9 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -30,27 +32,25 @@ import org.apache.hadoop.hbase.util.Bytes;
 * Action that tries to split a random region of a table.
 */
 public class SplitRandomRegionOfTableAction extends Action {
-  private final byte[] tableNameBytes;
   private final long sleepTime;
-  private final String tableName;
+  private final TableName tableName;
 
   public SplitRandomRegionOfTableAction(String tableName) {
     this(-1, tableName);
   }
 
   public SplitRandomRegionOfTableAction(int sleepTime, String tableName) {
-    this.tableNameBytes = Bytes.toBytes(tableName);
     this.sleepTime = sleepTime;
-    this.tableName = tableName;
+    this.tableName = TableName.valueOf(tableName);
   }
 
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
 
     LOG.info("Performing action: Split random region of table " + tableName);
-    List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
+    List<HRegionInfo> regions = admin.getTableRegions(tableName);
     if (regions == null || regions.isEmpty()) {
       LOG.info("Table " + tableName + " doesn't have regions to split");
       return;

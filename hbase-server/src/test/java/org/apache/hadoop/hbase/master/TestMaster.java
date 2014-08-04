@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
@@ -47,7 +48,7 @@ public class TestMaster {
   private static final TableName TABLENAME =
       TableName.valueOf("TestMaster");
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
-  private static HBaseAdmin admin;
+  private static Admin admin;
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
@@ -147,9 +148,9 @@ public class TestMaster {
 
   @Test
   public void testMoveThrowsPleaseHoldException() throws IOException {
-    byte[] tableName = Bytes.toBytes("testMoveThrowsPleaseHoldException");
+    TableName tableName = TableName.valueOf("testMoveThrowsPleaseHoldException");
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor("value");
     htd.addFamily(hcd);
 

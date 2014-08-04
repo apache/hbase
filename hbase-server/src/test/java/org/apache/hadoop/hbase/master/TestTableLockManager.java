@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -114,7 +115,7 @@ public class TestTableLockManager {
     Future<Object> shouldFinish = executor.submit(new Callable<Object>() {
       @Override
       public Object call() throws Exception {
-        HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+        Admin admin = TEST_UTIL.getHBaseAdmin();
         admin.deleteColumn(TABLE_NAME, FAMILY);
         return null;
       }
@@ -123,7 +124,7 @@ public class TestTableLockManager {
     deleteColumn.await();
 
     try {
-      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+      Admin admin = TEST_UTIL.getHBaseAdmin();
       admin.addColumn(TABLE_NAME, new HColumnDescriptor(NEW_FAMILY));
       fail("Was expecting TableLockTimeoutException");
     } catch (LockTimeoutException ex) {
@@ -166,7 +167,7 @@ public class TestTableLockManager {
     Future<Object> alterTableFuture = executor.submit(new Callable<Object>() {
       @Override
       public Object call() throws Exception {
-        HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+        Admin admin = TEST_UTIL.getHBaseAdmin();
         admin.addColumn(TABLE_NAME, new HColumnDescriptor(NEW_FAMILY));
         LOG.info("Added new column family");
         HTableDescriptor tableDesc = admin.getTableDescriptor(TABLE_NAME);
@@ -177,7 +178,7 @@ public class TestTableLockManager {
     Future<Object> disableTableFuture = executor.submit(new Callable<Object>() {
       @Override
       public Object call() throws Exception {
-        HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+        Admin admin = TEST_UTIL.getHBaseAdmin();
         admin.disableTable(TABLE_NAME);
         assertTrue(admin.isTableDisabled(TABLE_NAME));
         admin.deleteTable(TABLE_NAME);
@@ -243,7 +244,7 @@ public class TestTableLockManager {
   public void testDelete() throws Exception {
     prepareMiniCluster();
 
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     admin.disableTable(TABLE_NAME);
     admin.deleteTable(TABLE_NAME);
 
@@ -327,7 +328,7 @@ public class TestTableLockManager {
     loadTool.setConf(TEST_UTIL.getConfiguration());
     int numKeys = 10000;
     final TableName tableName = TableName.valueOf("testTableReadLock");
-    final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getHBaseAdmin();
     final HTableDescriptor desc = new HTableDescriptor(tableName);
     final byte[] family = Bytes.toBytes("test_cf");
     desc.addFamily(new HColumnDescriptor(family));

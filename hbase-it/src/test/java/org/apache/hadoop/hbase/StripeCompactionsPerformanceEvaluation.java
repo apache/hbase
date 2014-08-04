@@ -49,8 +49,8 @@ import org.junit.Assert;
 @InterfaceAudience.Private
 public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
   private static final Log LOG = LogFactory.getLog(StripeCompactionsPerformanceEvaluation.class);
-  private static final String TABLE_NAME =
-      StripeCompactionsPerformanceEvaluation.class.getSimpleName();
+  private static final TableName TABLE_NAME =
+    TableName.valueOf(StripeCompactionsPerformanceEvaluation.class.getSimpleName());
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("CF");
   private static final int MIN_NUM_SERVERS = 1;
 
@@ -199,9 +199,8 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
     status(String.format("%s test starting on %d servers; preloading 0 to %d and writing to %d",
         description, numServers, startKey, endKey));
 
-    TableName tn = TableName.valueOf(TABLE_NAME);
     if (preloadKeys > 0) {
-      MultiThreadedWriter preloader = new MultiThreadedWriter(dataGen, conf, tn);
+      MultiThreadedWriter preloader = new MultiThreadedWriter(dataGen, conf, TABLE_NAME);
       long time = System.currentTimeMillis();
       preloader.start(0, startKey, writeThreads);
       preloader.waitForFinish();
@@ -214,8 +213,8 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
       Thread.sleep(waitTime);
     }
 
-    MultiThreadedWriter writer = new MultiThreadedWriter(dataGen, conf, tn);
-    MultiThreadedReader reader = new MultiThreadedReader(dataGen, conf, tn, 100);
+    MultiThreadedWriter writer = new MultiThreadedWriter(dataGen, conf, TABLE_NAME);
+    MultiThreadedReader reader = new MultiThreadedReader(dataGen, conf, TABLE_NAME, 100);
     // reader.getMetrics().enable();
     reader.linkToWriter(writer);
 

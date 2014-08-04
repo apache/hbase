@@ -83,7 +83,7 @@ public class TestSnapshotMetadata {
   private static final int BLOCK_SIZE = 98;
   private static final int MAX_VERSIONS = 8;
 
-  private HBaseAdmin admin;
+  private Admin admin;
   private String originalTableDescription;
   private HTableDescriptor originalTableDescriptor;
   TableName originalTableName;
@@ -185,7 +185,7 @@ public class TestSnapshotMetadata {
   public void testDescribeMatchesAfterClone() throws Exception {
     // Clone the original table
     final String clonedTableNameAsString = "clone" + originalTableName;
-    final byte[] clonedTableName = Bytes.toBytes(clonedTableNameAsString);
+    final TableName clonedTableName = TableName.valueOf(clonedTableNameAsString);
     final String snapshotNameAsString = "snapshot" + originalTableName
         + System.currentTimeMillis();
     final byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);

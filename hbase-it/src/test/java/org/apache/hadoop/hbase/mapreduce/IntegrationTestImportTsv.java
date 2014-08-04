@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -274,7 +275,7 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
       } catch (Exception e) {
         throw new IOException("Underlying MapReduce job failed. Aborting commit.", e);
       } finally {
-        if (util.getHBaseAdmin().tableExists(table)) {
+        if (util.getHBaseAdmin().tableExists(TableName.valueOf(table))) {
           util.deleteTable(table);
         }
       }

@@ -66,7 +66,7 @@ public class TestRestoreSnapshotFromClient {
   private int snapshot0Rows;
   private int snapshot1Rows;
   private TableName tableName;
-  private HBaseAdmin admin;
+  private Admin admin;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {

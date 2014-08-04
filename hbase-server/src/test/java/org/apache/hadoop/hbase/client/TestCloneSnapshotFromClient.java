@@ -62,7 +62,7 @@ public class TestCloneSnapshotFromClient {
   private int snapshot0Rows;
   private int snapshot1Rows;
   private TableName tableName;
-  private HBaseAdmin admin;
+  private Admin admin;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -148,7 +148,7 @@ public class TestCloneSnapshotFromClient {
   @Test(expected=SnapshotDoesNotExistException.class)
   public void testCloneNonExistentSnapshot() throws IOException, InterruptedException {
     String snapshotName = "random-snapshot-" + System.currentTimeMillis();
-    String tableName = "random-table-" + System.currentTimeMillis();
+    TableName tableName = TableName.valueOf("random-table-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName, tableName);
   }
 

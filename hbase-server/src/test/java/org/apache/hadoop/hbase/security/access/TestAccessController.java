@@ -49,10 +49,13 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
@@ -205,7 +208,7 @@ public class TestAccessController extends SecureTestUtil {
   @Before
   public void setUp() throws Exception {
     // Create the test table (owner added to the _acl_ table)
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE.getTableName());
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY);
     hcd.setMaxVersions(100);
@@ -911,7 +914,7 @@ public class TestAccessController extends SecureTestUtil {
 
       HTable table = new HTable(conf, tableName);
       try {
-        HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+        Admin admin = TEST_UTIL.getHBaseAdmin();
         TEST_UTIL.waitTableEnabled(admin, tableName.getName());
         LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
         loader.doBulkLoad(loadPath, table);
@@ -1031,7 +1034,7 @@ public class TestAccessController extends SecureTestUtil {
     final byte[] qualifier = Bytes.toBytes("q");
 
     // create table
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(tableName)) {
       admin.disableTable(tableName);
       admin.deleteTable(tableName);
@@ -1305,7 +1308,7 @@ public class TestAccessController extends SecureTestUtil {
     final byte[] qualifier = Bytes.toBytes("q");
 
     // create table
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(tableName)) {
       admin.disableTable(tableName);
       admin.deleteTable(tableName);
@@ -1419,7 +1422,7 @@ public class TestAccessController extends SecureTestUtil {
     final byte[] qualifier = Bytes.toBytes("q");
 
     // create table
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(tableName)) {
       admin.disableTable(tableName);
       admin.deleteTable(tableName);
@@ -1884,7 +1887,7 @@ public class TestAccessController extends SecureTestUtil {
       Permission.Action.ADMIN, Permission.Action.CREATE, Permission.Action.READ,
         Permission.Action.WRITE);
 
-    final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    final Admin admin = TEST_UTIL.getHBaseAdmin();
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE2);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
     admin.createTable(htd);
@@ -1955,7 +1958,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction listTablesAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+        Admin admin = TEST_UTIL.getHBaseAdmin();
         try {
           admin.listTables();
         } finally {
@@ -1968,7 +1971,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction getTableDescAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+        Admin admin = TEST_UTIL.getHBaseAdmin();
         try {
           admin.getTableDescriptor(TEST_TABLE.getTableName());
         } finally {
@@ -1997,12 +2000,14 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction deleteTableAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+        HConnection unmanagedConnection = HConnectionManager.createConnection(TEST_UTIL.getConfiguration());
+        Admin admin = unmanagedConnection.getAdmin();
         try {
           admin.disableTable(TEST_TABLE.getTableName());
           admin.deleteTable(TEST_TABLE.getTableName());
         } finally {
           admin.close();
+          unmanagedConnection.close();
         }
         return null;
       }

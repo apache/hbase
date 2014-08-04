@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -196,7 +197,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     if (replicaCount == NUM_REPLICA_COUNT_DEFAULT) return;
 
     TableName t = TableName.valueOf(getTablename());
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
     HTableDescriptor desc = admin.getTableDescriptor(t);
     desc.addCoprocessor(SlowMeCoproScanOperations.class.getName());
     HBaseTestingUtility.modifyTableSync(admin, desc);
@@ -226,7 +227,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
   }
 
   private void setupTable() throws IOException, InterruptedException {
-    if (util.getHBaseAdmin().tableExists(getTablename())) {
+    if (util.getHBaseAdmin().tableExists(TableName.valueOf(getTablename()))) {
       util.deleteTable(getTablename());
     }
 

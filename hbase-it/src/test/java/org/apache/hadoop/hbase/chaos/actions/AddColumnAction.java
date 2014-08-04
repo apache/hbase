@@ -23,6 +23,8 @@ import java.io.IOException;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -30,13 +32,11 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Action the adds a column family to a table.
  */
 public class AddColumnAction extends Action {
-  private final byte[] tableName;
-  private final String tableNameString;
-  private HBaseAdmin admin;
+  private final TableName tableName;
+  private Admin admin;
 
   public AddColumnAction(String tableName) {
-    tableNameString = tableName;
-    this.tableName = Bytes.toBytes(tableName);
+    this.tableName = TableName.valueOf(tableName);
   }
 
   @Override
@@ -55,7 +55,7 @@ public class AddColumnAction extends Action {
       columnDescriptor = new HColumnDescriptor(RandomStringUtils.randomAlphabetic(5));
     }
 
-    LOG.debug("Performing action: Adding " + columnDescriptor + " to " + tableNameString);
+    LOG.debug("Performing action: Adding " + columnDescriptor + " to " + tableName);
 
     tableDescriptor.addFamily(columnDescriptor);
     admin.modifyTable(tableName, tableDescriptor);

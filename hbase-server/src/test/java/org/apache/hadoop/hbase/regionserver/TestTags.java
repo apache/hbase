@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -114,7 +115,7 @@ public class TestTags {
       // colDesc.setDataBlockEncoding(DataBlockEncoding.NONE);
       colDesc.setDataBlockEncoding(DataBlockEncoding.PREFIX_TREE);
       desc.addFamily(colDesc);
-      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+      Admin admin = TEST_UTIL.getHBaseAdmin();
       admin.createTable(desc);
       byte[] value = Bytes.toBytes("value");
       table = new HTable(TEST_UTIL.getConfiguration(), tableName);
@@ -192,7 +193,7 @@ public class TestTags {
       // colDesc.setDataBlockEncoding(DataBlockEncoding.NONE);
       colDesc.setDataBlockEncoding(DataBlockEncoding.PREFIX_TREE);
       desc.addFamily(colDesc);
-      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+      Admin admin = TEST_UTIL.getHBaseAdmin();
       admin.createTable(desc);
 
       table = new HTable(TEST_UTIL.getConfiguration(), tableName);
@@ -295,7 +296,7 @@ public class TestTags {
       colDesc.setBlockCacheEnabled(true);
       colDesc.setDataBlockEncoding(encoding);
       desc.addFamily(colDesc);
-      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+      Admin admin = TEST_UTIL.getHBaseAdmin();
       admin.createTable(desc);
       try {
         table = new HTable(TEST_UTIL.getConfiguration(), tableName);
