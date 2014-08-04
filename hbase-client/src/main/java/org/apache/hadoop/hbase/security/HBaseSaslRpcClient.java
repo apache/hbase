@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.SaslInputStream;
@@ -52,6 +53,7 @@ import com.google.common.annotations.VisibleForTesting;
  * A utility class that encapsulates SASL logic for RPC client.
  * Copied from <code>org.apache.hadoop.security</code>
  */
+@InterfaceAudience.Private
 public class HBaseSaslRpcClient {
   public static final Log LOG = LogFactory.getLog(HBaseSaslRpcClient.class);
 

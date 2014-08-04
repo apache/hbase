@@ -19,12 +19,14 @@
 package org.apache.hadoop.hbase.security;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.hadoop.classification.InterfaceAudience;
 
 import java.util.Map;
 import java.util.TreeMap;
 
 import javax.security.sasl.Sasl;
 
+@InterfaceAudience.Private
 public class SaslUtil {
   public static final String SASL_DEFAULT_REALM = "default";
   public static final Map<String, String> SASL_PROPS =

@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.TableName;
@@ -43,6 +44,7 @@ import com.google.common.collect.Lists;
 /**
  * Performs authorization checks for a given user's assigned permissions
  */
+@InterfaceAudience.Private
 public class TableAuthManager {
   private static class PermissionCache<T extends Permission> {
     /** Cache of user permissions */

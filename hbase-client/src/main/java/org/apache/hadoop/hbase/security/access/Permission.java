@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.security.access;
 import com.google.common.collect.Maps;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.VersionedWritable;
 
@@ -36,6 +38,8 @@ import java.util.Map;
  *
  * @see TablePermission
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class Permission extends VersionedWritable {
   protected static final byte VERSION = 0;
   public enum Action {

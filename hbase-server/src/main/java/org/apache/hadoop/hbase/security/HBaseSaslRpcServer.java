@@ -32,6 +32,7 @@ import javax.security.sasl.RealmCallback;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
@@ -43,6 +44,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 /**
  * A utility class for dealing with SASL on RPC server
  */
+@InterfaceAudience.Private
 public class HBaseSaslRpcServer {
   public static final Log LOG = LogFactory.getLog(HBaseSaslRpcServer.class);
 

@@ -27,7 +27,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class VisibilityLabelsValidator {
-  // We follow Accumulo parity for valid visibility labels.
   private static final boolean[] validAuthChars = new boolean[256];
 
   public static final String regex = "[A-Za-z_\\-\\:\\/\\.0-9]+";

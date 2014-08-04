@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.access;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -34,6 +35,7 @@ import java.io.IOException;
  * given table.  If the family property is <code>null</code>, it implies
  * full table access.
  */
+@InterfaceAudience.Private
 public class TablePermission extends Permission {
   private static Log LOG = LogFactory.getLog(TablePermission.class);
 

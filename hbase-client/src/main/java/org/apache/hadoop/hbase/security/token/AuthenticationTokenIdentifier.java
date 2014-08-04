@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.security.token;
 
 import com.google.protobuf.ByteString;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -31,6 +32,7 @@ import java.io.IOException;
 /**
  * Represents the identity information stored in an HBase authentication token.
  */
+@InterfaceAudience.Private
 public class AuthenticationTokenIdentifier extends TokenIdentifier {
   public static final Text AUTH_TOKEN_TYPE = new Text("HBASE_AUTH_TOKEN");
 

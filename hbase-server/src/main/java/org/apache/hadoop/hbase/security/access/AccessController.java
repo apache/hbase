@@ -29,6 +29,7 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
@@ -144,6 +145,7 @@ import com.google.protobuf.Service;
  * commands.
  * </p>
  */
+@InterfaceAudience.Private
 public class AccessController extends BaseRegionObserver
     implements MasterObserver, RegionServerObserver,
       AccessControlService.Interface, CoprocessorService, EndpointObserver {
