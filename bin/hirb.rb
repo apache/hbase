@@ -78,6 +78,7 @@ for arg in ARGV
     log_level = org.apache.log4j.Level::DEBUG
     $fullBackTrace = true
     @shell_debug = true
+    found.push(arg)
     puts "Setting DEBUG log level..."
   else
     # Presume it a script. Save it off for running later below
@@ -91,6 +92,10 @@ end
 
 # Delete all processed args
 found.each { |arg| ARGV.delete(arg) }
+# Make sure debug flag gets back to IRB
+if @shell_debug
+  ARGV.unshift('-d')
+end
 
 # Set logging level to avoid verboseness
 org.apache.log4j.Logger.getLogger("org.apache.zookeeper").setLevel(log_level)
