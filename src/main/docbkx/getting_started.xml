@@ -149,8 +149,9 @@ $ cd hbase-<![CDATA[<?eval ${project.version}?>]]>-hadoop2/
           <para>The <filename>bin/start-hbase.sh</filename> script is provided as a convenient way
             to start HBase. Issue the command, and if all goes well, a message is logged to standard
             output showing that HBase started successfully. You can use the <command>jps</command>
-            command to verify that you have one running process called <literal>HMaster</literal>
-            and at least one called <literal>HRegionServer</literal>.</para>
+            command to verify that you have one running process called <literal>HMaster</literal>.
+            In standalone mode HBase runs all daemons within this single JVM, i.e. the HMaster, a
+            single HRegionServer, and the ZooKeeper daemon.</para>
           <note><para>Java needs to be installed and available. If you get an error indicating that
             Java is not installed, but it is on your system, perhaps in a non-standard location,
             edit the <filename>conf/hbase-env.sh</filename> file and modify the
