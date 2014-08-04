@@ -1634,6 +1634,16 @@ public class MyHBaseIntegrationTest {
           repository.  Patch files can also be easily generated from Eclipse, for example by selecting "Team -&gt; Create Patch".
           Patches can also be created by git diff and svn diff.
           </para>
+          <para xml:id="patch.master.first">Make patches against the master branch. Do the master
+              branch first even if you want the patch in another branch altogether.  We operate by
+              apply fixes first to the master branch and then backporting.  Another reason to patch
+              master first is because our patch testing system only works against the master branch.
+              Attach your patch to your JIRA and then mark the issue 'Patch Available'.  This will prompt
+              the HadoopQA system to run your
+              patch through all unit tests and report back the results to the JIRA. It may take a few hours
+              for your patch to be run. HadoopQA runs the most recently attached patch to the JIRA regardless.
+              If you want to rerun your patch against HadoopQA perhaps to verify that indeed a certain test
+          failure is the result of your patch, then reattach your patch and it will be run again.</para>
           <para>Please submit one patch-file per Jira.  For example, if multiple files are changed make sure the
           selected resource when generating the patch is a directory.  Patch files can reflect changes in multiple files. </para>
       <para>
