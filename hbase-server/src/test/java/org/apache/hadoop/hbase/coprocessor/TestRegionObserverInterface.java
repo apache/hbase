@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -486,14 +487,14 @@ public class TestRegionObserverInterface {
    */
   @Test
   public void testCompactionOverride() throws Exception {
-    byte[] compactTable = Bytes.toBytes("TestCompactionOverride");
-    HBaseAdmin admin = util.getHBaseAdmin();
+    TableName compactTable = TableName.valueOf("TestCompactionOverride");
+    Admin admin = util.getHBaseAdmin();
     if (admin.tableExists(compactTable)) {
       admin.disableTable(compactTable);
       admin.deleteTable(compactTable);
     }
 
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(compactTable));
+    HTableDescriptor htd = new HTableDescriptor(compactTable);
     htd.addFamily(new HColumnDescriptor(A));
     htd.addCoprocessor(EvenOnlyCompactor.class.getName());
     admin.createTable(htd);
@@ -515,7 +516,7 @@ public class TestRegionObserverInterface {
 
     // force a compaction
     long ts = System.currentTimeMillis();
-    admin.flush(compactTable);
+    admin.flush(compactTable.toBytes());
     // wait for flush
     for (int i=0; i<10; i++) {
       if (compactor.lastFlush >= ts) {
@@ -527,7 +528,7 @@ public class TestRegionObserverInterface {
     LOG.debug("Flush complete");
 
     ts = compactor.lastFlush;
-    admin.majorCompact(compactTable);
+    admin.majorCompact(compactTable.toBytes());
     // wait for compaction
     for (int i=0; i<30; i++) {
       if (compactor.lastCompaction >= ts) {

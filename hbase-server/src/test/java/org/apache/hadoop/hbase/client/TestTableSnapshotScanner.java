@@ -88,7 +88,7 @@ public class TestTableSnapshotScanner {
     } else {
       util.createTable(tableName, FAMILIES);
     }
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
 
     // put some stuff in the table
     HTable table = new HTable(util.getConfiguration(), tableName);

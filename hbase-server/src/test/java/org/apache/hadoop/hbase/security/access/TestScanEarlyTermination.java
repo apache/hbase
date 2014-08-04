@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -111,7 +112,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
 
   @Before
   public void setUp() throws Exception {
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE.getTableName());
     htd.setOwner(USER_OWNER);
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY1);

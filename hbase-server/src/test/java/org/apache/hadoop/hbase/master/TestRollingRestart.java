@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -76,7 +77,7 @@ public class  TestRollingRestart {
     HMaster master = cluster.getMaster();
 
     // Create a table with regions
-    byte [] table = Bytes.toBytes("tableRestart");
+    TableName table = TableName.valueOf("tableRestart");
     byte [] family = Bytes.toBytes("family");
     log("Creating table with " + NUM_REGIONS_TO_CREATE + " regions");
     HTable ht = TEST_UTIL.createTable(table, family);

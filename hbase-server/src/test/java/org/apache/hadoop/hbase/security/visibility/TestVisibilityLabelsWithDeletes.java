@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -518,7 +519,7 @@ public class TestVisibilityLabelsWithDeletes {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     HTable table = null;
     try {
-      HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+      Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
       HColumnDescriptor colDesc = new HColumnDescriptor(fam);
       colDesc.setMaxVersions(5);
       HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -600,7 +601,7 @@ public class TestVisibilityLabelsWithDeletes {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     HTable table = null;
     try {
-      HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+      Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
       HColumnDescriptor colDesc = new HColumnDescriptor(fam);
       colDesc.setMaxVersions(5);
       HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -682,7 +683,7 @@ public class TestVisibilityLabelsWithDeletes {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     HTable table = null;
     try {
-      HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+      Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
       HColumnDescriptor colDesc = new HColumnDescriptor(fam);
       colDesc.setMaxVersions(5);
       HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -738,7 +739,7 @@ public class TestVisibilityLabelsWithDeletes {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     HTable table = null;
     try {
-      HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+      Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
       HColumnDescriptor colDesc = new HColumnDescriptor(fam);
       colDesc.setMaxVersions(5);
       HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -927,7 +928,7 @@ public class TestVisibilityLabelsWithDeletes {
   private HTable doPuts(TableName tableName) throws IOException, InterruptedIOException,
       RetriesExhaustedWithDetailsException, InterruptedException {
     HTable table;
-    HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+    Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
     HColumnDescriptor colDesc = new HColumnDescriptor(fam);
     colDesc.setMaxVersions(5);
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -969,7 +970,7 @@ public class TestVisibilityLabelsWithDeletes {
   private HTable doPutsWithDiffCols(TableName tableName) throws IOException,
       InterruptedIOException, RetriesExhaustedWithDetailsException, InterruptedException {
     HTable table;
-    HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+    Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
     HColumnDescriptor colDesc = new HColumnDescriptor(fam);
     colDesc.setMaxVersions(5);
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -1004,7 +1005,7 @@ public class TestVisibilityLabelsWithDeletes {
   private HTable doPutsWithoutVisibility(TableName tableName) throws IOException,
       InterruptedIOException, RetriesExhaustedWithDetailsException, InterruptedException {
     HTable table;
-    HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+    Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
     HColumnDescriptor colDesc = new HColumnDescriptor(fam);
     colDesc.setMaxVersions(5);
     HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -1454,7 +1455,7 @@ public class TestVisibilityLabelsWithDeletes {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     HTable table = null;
     try {
-      HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+      Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
       HColumnDescriptor colDesc = new HColumnDescriptor(fam);
       colDesc.setMaxVersions(5);
       HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -1507,7 +1508,7 @@ public class TestVisibilityLabelsWithDeletes {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     HTable table = null;
     try {
-      HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+      Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
       HColumnDescriptor colDesc = new HColumnDescriptor(fam);
       colDesc.setMaxVersions(5);
       HTableDescriptor desc = new HTableDescriptor(tableName);
@@ -2916,7 +2917,7 @@ public class TestVisibilityLabelsWithDeletes {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     HTable table = null;
     try {
-      HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+      Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
       HColumnDescriptor colDesc = new HColumnDescriptor(fam);
       colDesc.setMaxVersions(5);
       HTableDescriptor desc = new HTableDescriptor(tableName);

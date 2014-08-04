@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -66,7 +67,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
 public class TestScannersWithLabels {
-  private static final String TABLE = "TestScannersWithLabels";
+  private static final TableName TABLE = TableName.valueOf("TestScannersWithLabels");
   private static final String CFA = "a";
   private static final String CFB = "b";
   private static final String COLUMN_1 = CFA + ":1";
@@ -86,7 +87,7 @@ public class TestScannersWithLabels {
   private static Unmarshaller unmarshaller;
   private static Configuration conf;
 
-  private static int insertData(String tableName, String column, double prob) throws IOException {
+  private static int insertData(TableName tableName, String column, double prob) throws IOException {
     Random rng = new Random();
     int count = 0;
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
@@ -142,11 +143,11 @@ public class TestScannersWithLabels {
         ScannerModel.class);
     marshaller = context.createMarshaller();
     unmarshaller = context.createUnmarshaller();
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(TABLE)) {
       return;
     }
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
+    HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(new HColumnDescriptor(CFA));
     htd.addFamily(new HColumnDescriptor(CFB));
     admin.createTable(htd);

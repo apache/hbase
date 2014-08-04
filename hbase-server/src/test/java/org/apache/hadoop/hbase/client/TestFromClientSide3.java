@@ -405,7 +405,7 @@ public class TestFromClientSide3 {
   @Test
   public void testGetEmptyRow() throws Exception {
     //Create a table and put in 1 row
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes.toBytes("test")));
     desc.addFamily(new HColumnDescriptor(FAMILY));
     admin.createTable(desc);

@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
@@ -82,7 +83,7 @@ public class TestAssignmentManagerOnCluster {
   private final static byte[] FAMILY = Bytes.toBytes("FAMILY");
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   final static Configuration conf = TEST_UTIL.getConfiguration();
-  private static HBaseAdmin admin;
+  private static Admin admin;
 
   static void setupOnce() throws Exception {
     // Using the our load balancer to control region plans
@@ -302,7 +303,7 @@ public class TestAssignmentManagerOnCluster {
   public void testMoveRegionOfDeletedTable() throws Exception {
     TableName table =
         TableName.valueOf("testMoveRegionOfDeletedTable");
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     try {
       HRegionInfo hri = createTableAndGetOneRegion(table);
 
@@ -807,11 +808,11 @@ public class TestAssignmentManagerOnCluster {
    */
   @Test (timeout=60000)
   public void testAssignDisabledRegion() throws Exception {
-    String table = "testAssignDisabledRegion";
+    TableName table = TableName.valueOf("testAssignDisabledRegion");
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     MyMaster master = null;
     try {
-      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
+      HTableDescriptor desc = new HTableDescriptor(table);
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
@@ -839,7 +840,7 @@ public class TestAssignmentManagerOnCluster {
       am.unassign(hri, true);
       assertTrue(regionStates.isRegionOffline(hri));
     } finally {
-      TEST_UTIL.deleteTable(Bytes.toBytes(table));
+      TEST_UTIL.deleteTable(table);
     }
   }
 

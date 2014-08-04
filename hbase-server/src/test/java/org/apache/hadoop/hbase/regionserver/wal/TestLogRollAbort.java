@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -49,7 +50,7 @@ import org.junit.experimental.categories.Category;
 public class TestLogRollAbort {
   private static final Log LOG = LogFactory.getLog(TestLogRolling.class);
   private static MiniDFSCluster dfsCluster;
-  private static HBaseAdmin admin;
+  private static Admin admin;
   private static MiniHBaseCluster cluster;
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

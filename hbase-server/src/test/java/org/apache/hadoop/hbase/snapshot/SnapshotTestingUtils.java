@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -84,7 +85,7 @@ public class SnapshotTestingUtils {
    * @throws IOException
    *           if the admin operation fails
    */
-  public static void assertNoSnapshots(HBaseAdmin admin) throws IOException {
+  public static void assertNoSnapshots(Admin admin) throws IOException {
     assertEquals("Have some previous snapshots", 0, admin.listSnapshots()
         .size());
   }
@@ -94,7 +95,7 @@ public class SnapshotTestingUtils {
    * name and table match the passed in parameters.
    */
   public static List<SnapshotDescription> assertExistsMatchingSnapshot(
-      HBaseAdmin admin, String snapshotName, TableName tableName)
+      Admin admin, String snapshotName, TableName tableName)
       throws IOException {
     // list the snapshot
     List<SnapshotDescription> snapshots = admin.listSnapshots();
@@ -114,7 +115,7 @@ public class SnapshotTestingUtils {
   /**
    * Make sure that there is only one snapshot returned from the master
    */
-  public static void assertOneSnapshotThatMatches(HBaseAdmin admin,
+  public static void assertOneSnapshotThatMatches(Admin admin,
       SnapshotDescription snapshot) throws IOException {
     assertOneSnapshotThatMatches(admin, snapshot.getName(),
         TableName.valueOf(snapshot.getTable()));
@@ -125,7 +126,7 @@ public class SnapshotTestingUtils {
    * name and table match the passed in parameters.
    */
   public static List<SnapshotDescription> assertOneSnapshotThatMatches(
-      HBaseAdmin admin, String snapshotName, TableName tableName)
+      Admin admin, String snapshotName, TableName tableName)
       throws IOException {
     // list the snapshot
     List<SnapshotDescription> snapshots = admin.listSnapshots();
@@ -142,7 +143,7 @@ public class SnapshotTestingUtils {
    * name and table match the passed in parameters.
    */
   public static List<SnapshotDescription> assertOneSnapshotThatMatches(
-      HBaseAdmin admin, byte[] snapshot, TableName tableName) throws IOException {
+      Admin admin, byte[] snapshot, TableName tableName) throws IOException {
     return assertOneSnapshotThatMatches(admin, Bytes.toString(snapshot),
         tableName);
   }
@@ -153,7 +154,7 @@ public class SnapshotTestingUtils {
    */
   public static void confirmSnapshotValid(
       SnapshotDescription snapshotDescriptor, TableName tableName,
-      byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs)
+      byte[] testFamily, Path rootDir, Admin admin, FileSystem fs)
       throws IOException {
     ArrayList nonEmptyTestFamilies = new ArrayList(1);
     nonEmptyTestFamilies.add(testFamily);
@@ -166,7 +167,7 @@ public class SnapshotTestingUtils {
    */
   public static void confirmEmptySnapshotValid(
       SnapshotDescription snapshotDescriptor, TableName tableName,
-      byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs)
+      byte[] testFamily, Path rootDir, Admin admin, FileSystem fs)
       throws IOException {
     ArrayList emptyTestFamilies = new ArrayList(1);
     emptyTestFamilies.add(testFamily);
@@ -183,7 +184,7 @@ public class SnapshotTestingUtils {
   public static void confirmSnapshotValid(
       SnapshotDescription snapshotDescriptor, TableName tableName,
       List<byte[]> nonEmptyTestFamilies, List<byte[]> emptyTestFamilies,
-      Path rootDir, HBaseAdmin admin, FileSystem fs) throws IOException {
+      Path rootDir, Admin admin, FileSystem fs) throws IOException {
     final Configuration conf = admin.getConfiguration();
 
     // check snapshot dir
@@ -265,14 +266,14 @@ public class SnapshotTestingUtils {
    * Take snapshot with maximum of numTries attempts, ignoring CorruptedSnapshotException
    * except for the last CorruptedSnapshotException
    */
-  public static void snapshot(HBaseAdmin admin,
+  public static void snapshot(Admin admin,
       final String snapshotName, final String tableName,
       SnapshotDescription.Type type, int numTries) throws IOException {
     int tries = 0;
     CorruptedSnapshotException lastEx = null;
     while (tries++ < numTries) {
       try {
-        admin.snapshot(snapshotName, tableName, type);
+        admin.snapshot(snapshotName, TableName.valueOf(tableName), type);
         return;
       } catch (CorruptedSnapshotException cse) {
         LOG.warn("Got CorruptedSnapshotException", cse);
@@ -282,12 +283,12 @@ public class SnapshotTestingUtils {
     throw lastEx;
   }
 
-  public static void cleanupSnapshot(HBaseAdmin admin, byte[] tableName)
+  public static void cleanupSnapshot(Admin admin, byte[] tableName)
       throws IOException {
     SnapshotTestingUtils.cleanupSnapshot(admin, Bytes.toString(tableName));
   }
 
-  public static void cleanupSnapshot(HBaseAdmin admin, String snapshotName)
+  public static void cleanupSnapshot(Admin admin, String snapshotName)
       throws IOException {
     // delete the taken snapshot
     admin.deleteSnapshot(snapshotName);
@@ -356,7 +357,7 @@ public class SnapshotTestingUtils {
    * not empty. Note that this will leave the table disabled
    * in the case of an offline snapshot.
    */
-  public static void createSnapshotAndValidate(HBaseAdmin admin,
+  public static void createSnapshotAndValidate(Admin admin,
       TableName tableName, String familyName, String snapshotNameString,
       Path rootDir, FileSystem fs, boolean onlineSnapshot)
       throws Exception {
@@ -370,7 +371,7 @@ public class SnapshotTestingUtils {
    * Take a snapshot of the specified table and verify the given families.
    * Note that this will leave the table disabled in the case of an offline snapshot.
    */
-  public static void createSnapshotAndValidate(HBaseAdmin admin,
+  public static void createSnapshotAndValidate(Admin admin,
       TableName tableName, List<byte[]> nonEmptyFamilyNames, List<byte[]> emptyFamilyNames,
       String snapshotNameString, Path rootDir, FileSystem fs, boolean onlineSnapshot)
         throws Exception {
@@ -702,7 +703,7 @@ public class SnapshotTestingUtils {
     table.put(put);
   }
 
-  public static void deleteAllSnapshots(final HBaseAdmin admin)
+  public static void deleteAllSnapshots(final Admin admin)
       throws IOException {
     // Delete all the snapshots
     for (SnapshotDescription snapshot: admin.listSnapshots()) {
@@ -729,7 +730,7 @@ public class SnapshotTestingUtils {
     }
   }
 
-  public static void verifyReplicasCameOnline(TableName tableName, HBaseAdmin admin,
+  public static void verifyReplicasCameOnline(TableName tableName, Admin admin,
       int regionReplication) throws IOException {
     List<HRegionInfo> regions = admin.getTableRegions(tableName);
     HashSet<HRegionInfo> set = new HashSet<HRegionInfo>();

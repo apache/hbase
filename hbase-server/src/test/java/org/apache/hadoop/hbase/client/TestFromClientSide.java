@@ -5450,7 +5450,7 @@ public class TestFromClientSide {
   }
 
   private void checkTableIsLegal(HTableDescriptor htd) throws IOException {
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(htd);
     assertTrue(admin.tableExists(htd.getTableName()));
     admin.disableTable(htd.getTableName());
@@ -5458,7 +5458,7 @@ public class TestFromClientSide {
   }
 
   private void checkTableIsIllegal(HTableDescriptor htd) throws IOException {
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     try {
       admin.createTable(htd);
       fail();

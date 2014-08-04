@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -50,7 +51,7 @@ public class TestClientOperationInterrupt {
   private static final Log LOG = LogFactory.getLog(TestClientOperationInterrupt.class);
 
   private static HBaseTestingUtility util;
-  private static final byte[] tableName = Bytes.toBytes("test");
+  private static final TableName tableName = TableName.valueOf("test");
   private static final byte[] dummy = Bytes.toBytes("dummy");
   private static final byte[] row1 = Bytes.toBytes("r1");
   private static final byte[] test = Bytes.toBytes("test");
@@ -73,7 +74,7 @@ public class TestClientOperationInterrupt {
     util = new HBaseTestingUtility(conf);
     util.startMiniCluster();
 
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
     if (admin.tableExists(tableName)) {
       if (admin.isTableEnabled(tableName)) {
         admin.disableTable(tableName);

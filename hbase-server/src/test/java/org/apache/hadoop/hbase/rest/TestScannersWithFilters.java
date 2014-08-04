@@ -33,6 +33,7 @@ import javax.xml.bind.Unmarshaller;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -75,7 +76,7 @@ public class TestScannersWithFilters {
 
   private static final Log LOG = LogFactory.getLog(TestScannersWithFilters.class);
 
-  private static final String TABLE = "TestScannersWithFilters";
+  private static final TableName TABLE = TableName.valueOf("TestScannersWithFilters");
 
   private static final byte [][] ROWS_ONE = {
     Bytes.toBytes("testRowOne-0"), Bytes.toBytes("testRowOne-1"),
@@ -128,9 +129,9 @@ public class TestScannersWithFilters {
     unmarshaller = context.createUnmarshaller();
     client = new Client(new Cluster().add("localhost", 
       REST_TEST_UTIL.getServletPort()));
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     if (!admin.tableExists(TABLE)) {
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
+      HTableDescriptor htd = new HTableDescriptor(TABLE);
       htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
       htd.addFamily(new HColumnDescriptor(FAMILIES[1]));
       admin.createTable(htd);

@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -261,7 +262,7 @@ public class TestHBaseFsck {
    * This method is used to undeploy a region -- close it and attempt to
    * remove its state from the Master.
    */
-  private void undeployRegion(HBaseAdmin admin, ServerName sn,
+  private void undeployRegion(Admin admin, ServerName sn,
       HRegionInfo hri) throws IOException, InterruptedException {
     try {
       HBaseFsckRepair.closeRegionSilentlyAndWait(admin, sn, hri);
@@ -482,7 +483,7 @@ public class TestHBaseFsck {
     Path tableinfo = null;
     try {
       setupTable(table);
-      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+      Admin admin = TEST_UTIL.getHBaseAdmin();
 
       Path hbaseTableDir = FSUtils.getTableDir(
           FSUtils.getRootDir(conf), table);
@@ -585,8 +586,7 @@ public class TestHBaseFsck {
   /**
    * Get region info from local cluster.
    */
-  Map<ServerName, List<String>> getDeployedHRIs(
-      final HBaseAdmin admin) throws IOException {
+  Map<ServerName, List<String>> getDeployedHRIs(final Admin admin) throws IOException {
     ClusterStatus status = admin.getClusterStatus();
     Collection<ServerName> regionServers = status.getServers();
     Map<ServerName, List<String>> mm =
@@ -645,7 +645,7 @@ public class TestHBaseFsck {
       // different regions with the same start/endkeys since it doesn't
       // differentiate on ts/regionId!  We actually need to recheck
       // deployments!
-      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+      Admin admin = TEST_UTIL.getHBaseAdmin();
       while (findDeployedHSI(getDeployedHRIs(admin), hriDupe) == null) {
         Thread.sleep(250);
       }
@@ -803,7 +803,7 @@ public class TestHBaseFsck {
             }
           }
 
-          HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+          Admin admin = TEST_UTIL.getHBaseAdmin();
           HBaseFsckRepair.closeRegionSilentlyAndWait(admin,
             cluster.getRegionServer(k).getServerName(), hbi.getHdfsHRI());
           admin.offline(regionName);
@@ -1388,7 +1388,7 @@ public class TestHBaseFsck {
       HRegionInfo hri = location.getRegionInfo();
 
       // do a regular split
-      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+      Admin admin = TEST_UTIL.getHBaseAdmin();
       byte[] regionName = location.getRegionInfo().getRegionName();
       admin.split(location.getRegionInfo().getRegionName(), Bytes.toBytes("BM"));
       TestEndToEndSplitTransaction.blockUntilRegionSplit(
@@ -1438,7 +1438,7 @@ public class TestHBaseFsck {
       HRegionInfo hri = location.getRegionInfo();
 
       // do a regular split
-      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+      Admin admin = TEST_UTIL.getHBaseAdmin();
       byte[] regionName = location.getRegionInfo().getRegionName();
       admin.split(location.getRegionInfo().getRegionName(), Bytes.toBytes("BM"));
       TestEndToEndSplitTransaction.blockUntilRegionSplit(
@@ -1831,7 +1831,7 @@ public class TestHBaseFsck {
       assertEquals(hfcc.getMissing().size(), missing);
 
       // its been fixed, verify that we can enable
-      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+      Admin admin = TEST_UTIL.getHBaseAdmin();
       admin.enableTableAsync(table);
       while (!admin.isTableEnabled(table)) {
         try {
@@ -2211,7 +2211,14 @@ public class TestHBaseFsck {
     HRegionInfo hri = metaLocation.getRegionInfo();
     if (unassign) {
       LOG.info("Undeploying meta region " + hri + " from server " + hsa);
-      undeployRegion(new HBaseAdmin(conf), hsa, hri);
+      HConnection unmanagedConnection = HConnectionManager.createConnection(conf);
+      Admin admin = unmanagedConnection.getAdmin();
+      try {
+        undeployRegion(admin, hsa, hri);
+      } finally {
+        admin.close();
+        unmanagedConnection.close();
+      }
     }
 
     if (regionInfoOnly) {
@@ -2291,7 +2298,7 @@ public class TestHBaseFsck {
       assertNotEquals(region1, region2);
 
       // do a region merge
-      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+      Admin admin = TEST_UTIL.getHBaseAdmin();
       admin.mergeRegions(region1.getEncodedNameAsBytes(),
           region2.getEncodedNameAsBytes(), false);
 

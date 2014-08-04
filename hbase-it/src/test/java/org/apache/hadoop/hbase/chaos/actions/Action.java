@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -129,7 +130,7 @@ public class Action {
 
     LOG.info("Moving " + victimRegions.size() + " regions from " + fromServers.size()
         + " servers to " + toServers.size() + " different servers");
-    HBaseAdmin admin = this.context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
+    Admin admin = this.context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
     for (byte[] victimRegion : victimRegions) {
       int targetIx = RandomUtils.nextInt(toServers.size());
       admin.move(victimRegion, Bytes.toBytes(toServers.get(targetIx).getServerName()));
@@ -137,7 +138,7 @@ public class Action {
   }
 
   protected void forceBalancer() throws Exception {
-    HBaseAdmin admin = this.context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
+    Admin admin = this.context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
     boolean result = admin.balancer();
     if (!result) {
       LOG.error("Balancer didn't succeed");

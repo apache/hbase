@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -58,22 +59,21 @@ public class TestHRegionOnCluster {
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
 
     try {
-      final byte[] TABLENAME = Bytes
-          .toBytes("testDataCorrectnessReplayingRecoveredEdits");
+      final TableName TABLENAME = TableName.valueOf("testDataCorrectnessReplayingRecoveredEdits");
       final byte[] FAMILY = Bytes.toBytes("family");
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       HMaster master = cluster.getMaster();
 
       // Create table
-      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(TABLENAME));
+      HTableDescriptor desc = new HTableDescriptor(TABLENAME);
       desc.addFamily(new HColumnDescriptor(FAMILY));
-      HBaseAdmin hbaseAdmin = TEST_UTIL.getHBaseAdmin();
+      Admin hbaseAdmin = TEST_UTIL.getHBaseAdmin();
       hbaseAdmin.createTable(desc);
 
       assertTrue(hbaseAdmin.isTableAvailable(TABLENAME));
 
       // Put data: r1->v1
-      Log.info("Loading r1 to v1 into " + Bytes.toString(TABLENAME));
+      Log.info("Loading r1 to v1 into " + TABLENAME);
       HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
       putDataAndVerify(table, "r1", FAMILY, "v1", 1);
 
@@ -95,7 +95,7 @@ public class TestHRegionOnCluster {
       } while (cluster.getServerWith(regionInfo.getRegionName()) == originServerNum);
 
       // Put data: r2->v2
-      Log.info("Loading r2 to v2 into " + Bytes.toString(TABLENAME));
+      Log.info("Loading r2 to v2 into " + TABLENAME);
       putDataAndVerify(table, "r2", FAMILY, "v2", 2);
 
       TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
@@ -108,7 +108,7 @@ public class TestHRegionOnCluster {
       } while (cluster.getServerWith(regionInfo.getRegionName()) == targetServerNum);
 
       // Put data: r3->v3
-      Log.info("Loading r3 to v3 into " + Bytes.toString(TABLENAME));
+      Log.info("Loading r3 to v3 into " + TABLENAME);
       putDataAndVerify(table, "r3", FAMILY, "v3", 3);
 
       // Kill target server
@@ -125,7 +125,7 @@ public class TestHRegionOnCluster {
       cluster.getRegionServerThreads().get(originServerNum).join();
 
       // Put data: r4->v4
-      Log.info("Loading r4 to v4 into " + Bytes.toString(TABLENAME));
+      Log.info("Loading r4 to v4 into " + TABLENAME);
       putDataAndVerify(table, "r4", FAMILY, "v4", 4);
 
     } finally {

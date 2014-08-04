@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -1012,9 +1013,8 @@ public class TestMasterObserver {
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static byte[] TEST_SNAPSHOT = Bytes.toBytes("observed_snapshot");
-  private static TableName TEST_TABLE =
-      TableName.valueOf("observed_table");
-  private static byte[] TEST_CLONE = Bytes.toBytes("observed_clone");
+  private static TableName TEST_TABLE = TableName.valueOf("observed_table");
+  private static TableName TEST_CLONE = TableName.valueOf("observed_clone");
   private static byte[] TEST_FAMILY = Bytes.toBytes("fam1");
   private static byte[] TEST_FAMILY2 = Bytes.toBytes("fam2");
   private static byte[] TEST_FAMILY3 = Bytes.toBytes("fam3");
@@ -1073,7 +1073,7 @@ public class TestMasterObserver {
     // create a table
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
 
     tableCreationLatch = new CountDownLatch(1);
     admin.createTable(htd);
@@ -1236,7 +1236,7 @@ public class TestMasterObserver {
     // create a table
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
 
     tableCreationLatch = new CountDownLatch(1);
     admin.createTable(htd);
@@ -1294,7 +1294,7 @@ public class TestMasterObserver {
 
 
     // create a table
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     admin.createNamespace(NamespaceDescriptor.create(testNamespace).build());
     assertTrue("Test namespace should be created", cp.wasCreateNamespaceCalled());
 
@@ -1332,7 +1332,7 @@ public class TestMasterObserver {
     assertTrue("Test namespace should not be created", cp.preCreateNamespaceCalledOnly());
   }
 
-  private void modifyTableSync(HBaseAdmin admin, TableName tableName, HTableDescriptor htd)
+  private void modifyTableSync(Admin admin, TableName tableName, HTableDescriptor htd)
       throws IOException {
     admin.modifyTable(tableName, htd);
     //wait until modify table finishes

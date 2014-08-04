@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -57,7 +58,7 @@ import org.junit.experimental.categories.Category;
  * w.r.t. essential column family optimization
  */
 public class TestSCVFWithMiniCluster {
-  private static final String HBASE_TABLE_NAME = "TestSCVFWithMiniCluster";
+  private static final TableName HBASE_TABLE_NAME = TableName.valueOf("TestSCVFWithMiniCluster");
 
   private static final byte[] FAMILY_A = Bytes.toBytes("a");
   private static final byte[] FAMILY_B = Bytes.toBytes("b");
@@ -77,7 +78,7 @@ public class TestSCVFWithMiniCluster {
 
     util.startMiniCluster(1);
 
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
     destroy(admin, HBASE_TABLE_NAME);
     create(admin, HBASE_TABLE_NAME, FAMILY_A, FAMILY_B);
     admin.close();
@@ -215,9 +216,9 @@ public class TestSCVFWithMiniCluster {
     verify(scan);
   }
 
-  private static void create(HBaseAdmin admin, String tableName, byte[]... families)
+  private static void create(Admin admin, TableName tableName, byte[]... families)
       throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     for (byte[] family : families) {
       HColumnDescriptor colDesc = new HColumnDescriptor(family);
       colDesc.setMaxVersions(1);
@@ -231,7 +232,7 @@ public class TestSCVFWithMiniCluster {
     }
   }
 
-  private static void destroy(HBaseAdmin admin, String tableName) throws IOException {
+  private static void destroy(Admin admin, TableName tableName) throws IOException {
     try {
       admin.disableTable(tableName);
       admin.deleteTable(tableName);

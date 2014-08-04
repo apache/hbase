@@ -22,7 +22,9 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -31,8 +33,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 */
 public class MoveRandomRegionOfTableAction extends Action {
   private final long sleepTime;
-  private final byte[] tableNameBytes;
-  private final String tableName;
+  private final TableName tableName;
 
   public MoveRandomRegionOfTableAction(String tableName) {
     this(-1, tableName);
@@ -40,8 +41,7 @@ public class MoveRandomRegionOfTableAction extends Action {
 
   public MoveRandomRegionOfTableAction(long sleepTime, String tableName) {
     this.sleepTime = sleepTime;
-    this.tableNameBytes = Bytes.toBytes(tableName);
-    this.tableName = tableName;
+    this.tableName = TableName.valueOf(tableName);
   }
 
   @Override
@@ -51,10 +51,10 @@ public class MoveRandomRegionOfTableAction extends Action {
     }
 
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
 
     LOG.info("Performing action: Move random region of table " + tableName);
-    List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
+    List<HRegionInfo> regions = admin.getTableRegions(tableName);
     if (regions == null || regions.isEmpty()) {
       LOG.info("Table " + tableName + " doesn't have regions to move");
       return;

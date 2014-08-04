@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -26,28 +28,26 @@ import org.apache.hadoop.hbase.util.Bytes;
 * Action that tries to flush a table.
 */
 public class FlushTableAction extends Action {
-  private final byte[] tableNameBytes;
   private final long sleepTime;
-  private final String tableName;
+  private final TableName tableName;
 
   public FlushTableAction(String tableName) {
     this(-1, tableName);
   }
 
   public FlushTableAction(int sleepTime, String tableName) {
-    this.tableNameBytes = Bytes.toBytes(tableName);
     this.sleepTime = sleepTime;
-    this.tableName = tableName;
+    this.tableName = TableName.valueOf(tableName);
   }
 
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
 
     LOG.info("Performing action: Flush table " + tableName);
     try {
-      admin.flush(tableNameBytes);
+      admin.flush(tableName.toBytes());
     } catch (Exception ex) {
       LOG.warn("Flush failed, might be caused by other chaos: " + ex.getMessage());
     }

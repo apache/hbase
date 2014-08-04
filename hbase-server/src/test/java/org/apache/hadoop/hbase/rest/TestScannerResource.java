@@ -33,6 +33,7 @@ import javax.xml.bind.Unmarshaller;
 import org.apache.commons.httpclient.Header;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -55,7 +56,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
 public class TestScannerResource {
-  private static final String TABLE = "TestScannerResource";
+  private static final TableName TABLE = TableName.valueOf("TestScannerResource");
   private static final String NONEXISTENT_TABLE = "ThisTableDoesNotExist";
   private static final String CFA = "a";
   private static final String CFB = "b";
@@ -73,7 +74,7 @@ public class TestScannerResource {
   private static int expectedRows2;
   private static Configuration conf;
 
-  static int insertData(Configuration conf, String tableName, String column, double prob)
+  static int insertData(Configuration conf, TableName tableName, String column, double prob)
       throws IOException {
     Random rng = new Random();
     int count = 0;
@@ -163,11 +164,11 @@ public class TestScannerResource {
       ScannerModel.class);
     marshaller = context.createMarshaller();
     unmarshaller = context.createUnmarshaller();
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(TABLE)) {
       return;
     }
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
+    HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(new HColumnDescriptor(CFA));
     htd.addFamily(new HColumnDescriptor(CFB));
     admin.createTable(htd);

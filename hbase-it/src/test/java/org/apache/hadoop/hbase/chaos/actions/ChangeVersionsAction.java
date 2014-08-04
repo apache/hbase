@@ -23,6 +23,8 @@ import java.util.Random;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -32,15 +34,15 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Always keeps at least 1 as the number of versions.
  */
 public class ChangeVersionsAction extends Action {
-  private final byte[] tableName;
+  private final TableName tableName;
   private final String tableNameString;
 
-  private HBaseAdmin admin;
+  private Admin admin;
   private Random random;
 
   public ChangeVersionsAction(String tableName) {
     tableNameString = tableName;
-    this.tableName = Bytes.toBytes(tableName);
+    this.tableName = TableName.valueOf(tableName);
     this.random = new Random();
   }
 

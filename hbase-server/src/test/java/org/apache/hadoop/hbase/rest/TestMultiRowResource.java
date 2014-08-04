@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.rest;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
@@ -49,7 +50,7 @@ import static org.junit.Assert.assertEquals;
 @Category(MediumTests.class)
 public class TestMultiRowResource {
 
-  private static final String TABLE = "TestRowResource";
+  private static final TableName TABLE = TableName.valueOf("TestRowResource");
   private static final String CFA = "a";
   private static final String CFB = "b";
   private static final String COLUMN_1 = CFA + ":1";
@@ -82,11 +83,11 @@ public class TestMultiRowResource {
     marshaller = context.createMarshaller();
     unmarshaller = context.createUnmarshaller();
     client = new Client(new Cluster().add("localhost", REST_TEST_UTIL.getServletPort()));
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(TABLE)) {
       return;
     }
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
+    HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(new HColumnDescriptor(CFA));
     htd.addFamily(new HColumnDescriptor(CFB));
     admin.createTable(htd);

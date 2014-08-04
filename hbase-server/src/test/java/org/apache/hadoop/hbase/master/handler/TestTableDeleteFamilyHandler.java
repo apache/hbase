@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -97,7 +98,7 @@ public class TestTableDeleteFamilyHandler {
   @Test
   public void deleteColumnFamilyWithMultipleRegions() throws Exception {
 
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     HTableDescriptor beforehtd = admin.getTableDescriptor(TABLENAME);
 
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
@@ -135,7 +136,7 @@ public class TestTableDeleteFamilyHandler {
 
     // TEST - Disable and delete the column family
     admin.disableTable(TABLENAME);
-    admin.deleteColumn(TABLENAME.getName(), "cf2");
+    admin.deleteColumn(TABLENAME, Bytes.toBytes("cf2"));
 
     // 5 - Check if only 2 column families exist in the descriptor
     HTableDescriptor afterhtd = admin.getTableDescriptor(TABLENAME);

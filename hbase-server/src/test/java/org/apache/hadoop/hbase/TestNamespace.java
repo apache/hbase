@@ -33,6 +33,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -58,7 +59,7 @@ public class TestNamespace {
   private static HMaster master;
   protected final static int NUM_SLAVES_BASE = 4;
   private static HBaseTestingUtility TEST_UTIL;
-  protected static HBaseAdmin admin;
+  protected static Admin admin;
   protected static HBaseCluster cluster;
   private static ZKNamespaceManager zkNamespaceManager;
   private String prefix = "TestNamespace";
@@ -198,8 +199,8 @@ public class TestNamespace {
     String nsName = prefix+"_"+testName;
     LOG.info(testName);
 
-    byte[] tableName = Bytes.toBytes("my_table");
-    byte[] tableNameFoo = Bytes.toBytes(nsName+":my_table");
+    TableName tableName = TableName.valueOf("my_table");
+    TableName tableNameFoo = TableName.valueOf(nsName+":my_table");
     //create namespace and verify
     admin.createNamespace(NamespaceDescriptor.create(nsName).build());
     TEST_UTIL.createTable(tableName, Bytes.toBytes(nsName));
@@ -276,13 +277,13 @@ public class TestNamespace {
 
   @Test
   public void createTableInSystemNamespace() throws Exception {
-    String tableName = "hbase:createTableInSystemNamespace";
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    TableName tableName = TableName.valueOf("hbase:createTableInSystemNamespace");
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor colDesc = new HColumnDescriptor("cf1");
     desc.addFamily(colDesc);
     admin.createTable(desc);
     assertEquals(0, admin.listTables().length);
-    assertTrue(admin.tableExists(Bytes.toBytes(tableName)));
+    assertTrue(admin.tableExists(tableName));
     admin.disableTable(desc.getTableName());
     admin.deleteTable(desc.getTableName());
   }

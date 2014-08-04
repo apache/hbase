@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
@@ -117,7 +118,7 @@ public class TestHFileArchiving {
         TableName.valueOf("testRemovesRegionDirOnArchive");
     UTIL.createTable(TABLE_NAME, TEST_FAM);
 
-    final HBaseAdmin admin = UTIL.getHBaseAdmin();
+    final Admin admin = UTIL.getHBaseAdmin();
 
     // get the current store files for the region
     List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);

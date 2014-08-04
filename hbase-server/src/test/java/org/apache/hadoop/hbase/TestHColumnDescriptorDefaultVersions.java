@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -76,7 +77,7 @@ public class TestHColumnDescriptorDefaultVersions {
 
   @Test
   public void testCreateTableWithDefault() throws IOException {
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     // Create a table with one family
     HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
@@ -97,7 +98,7 @@ public class TestHColumnDescriptorDefaultVersions {
     TEST_UTIL.getConfiguration().setInt("hbase.column.max.version", 3);
     TEST_UTIL.startMiniCluster(1);
 
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     // Create a table with one family
     HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
@@ -119,7 +120,7 @@ public class TestHColumnDescriptorDefaultVersions {
     TEST_UTIL.getConfiguration().setInt("hbase.column.max.version", 3);
     TEST_UTIL.startMiniCluster(1);
 
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     // Create a table with one family
     HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
     HColumnDescriptor hcd =
@@ -140,7 +141,7 @@ public class TestHColumnDescriptorDefaultVersions {
 
   private void verifyHColumnDescriptor(int expected, final TableName tableName,
       final byte[]... families) throws IOException {
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
 
     // Verify descriptor from master
     HTableDescriptor htd = admin.getTableDescriptor(tableName);

@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -52,7 +54,7 @@ import org.junit.experimental.categories.Category;
 @Category(MediumTests.class)
 public class TestRegionObserverBypass {
   private static HBaseTestingUtility util;
-  private static final byte[] tableName = Bytes.toBytes("test");
+  private static final TableName tableName = TableName.valueOf("test");
   private static final byte[] dummy = Bytes.toBytes("dummy");
   private static final byte[] row1 = Bytes.toBytes("r1");
   private static final byte[] row2 = Bytes.toBytes("r2");
@@ -75,7 +77,7 @@ public class TestRegionObserverBypass {
 
   @Before
   public void setUp() throws Exception {
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
     if (admin.tableExists(tableName)) {
       if (admin.isTableEnabled(tableName)) {
         admin.disableTable(tableName);

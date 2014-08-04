@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -453,7 +454,7 @@ public final class Canary implements Tool {
    * Canary entry point for specified table.
    * @throws Exception
    */
-  public static void sniff(final HBaseAdmin admin, TableName tableName) throws Exception {
+  public static void sniff(final Admin admin, TableName tableName) throws Exception {
     sniff(admin, new StdOutSink(), tableName.getNameAsString());
   }
 
@@ -461,10 +462,10 @@ public final class Canary implements Tool {
    * Canary entry point for specified table.
    * @throws Exception
    */
-  private static void sniff(final HBaseAdmin admin, final Sink sink, String tableName)
+  private static void sniff(final Admin admin, final Sink sink, String tableName)
       throws Exception {
-    if (admin.isTableAvailable(tableName)) {
-      sniff(admin, sink, admin.getTableDescriptor(tableName.getBytes()));
+    if (admin.isTableAvailable(TableName.valueOf(tableName))) {
+      sniff(admin, sink, admin.getTableDescriptor(TableName.valueOf(tableName)));
     } else {
       LOG.warn(String.format("Table %s is not available", tableName));
     }
@@ -473,7 +474,7 @@ public final class Canary implements Tool {
   /*
    * Loops over regions that owns this table, and output some information abouts the state.
    */
-  private static void sniff(final HBaseAdmin admin, final Sink sink, HTableDescriptor tableDesc)
+  private static void sniff(final Admin admin, final Sink sink, HTableDescriptor tableDesc)
       throws Exception {
     HTable table = null;
 
@@ -484,7 +485,7 @@ public final class Canary implements Tool {
     }
 
     try {
-      for (HRegionInfo region : admin.getTableRegions(tableDesc.getName())) {
+      for (HRegionInfo region : admin.getTableRegions(tableDesc.getTableName())) {
         try {
           sniffRegion(admin, sink, region, table);
         } catch (Exception e) {
@@ -502,7 +503,7 @@ public final class Canary implements Tool {
    * failure.
    */
   private static void sniffRegion(
-      final HBaseAdmin admin,
+      final Admin admin,
       final Sink sink,
       HRegionInfo region,
       HTable table) throws Exception {

@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -157,7 +158,7 @@ public class TestOpenTableInCoprocessor {
     other.addFamily(new HColumnDescriptor(family));
 
 
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     admin.createTable(primary);
     admin.createTable(other);
 

@@ -125,7 +125,7 @@ public class TestSnapshotFromClient {
    */
   @Test (timeout=300000)
   public void testMetaTablesSnapshot() throws Exception {
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     byte[] snapshotName = Bytes.toBytes("metaSnapshot");
 
     try {
@@ -143,7 +143,7 @@ public class TestSnapshotFromClient {
    */
   @Test (timeout=300000)
   public void testSnapshotDeletionWithRegex() throws Exception {
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
@@ -179,7 +179,7 @@ public class TestSnapshotFromClient {
    */
   @Test (timeout=300000)
   public void testOfflineTableSnapshot() throws Exception {
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
@@ -232,7 +232,7 @@ public class TestSnapshotFromClient {
 
   @Test (timeout=300000)
   public void testSnapshotFailsOnNonExistantTable() throws Exception {
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
     String tableName = "_not_a_table";
@@ -241,7 +241,7 @@ public class TestSnapshotFromClient {
     boolean fail = false;
     do {
     try {
-      admin.getTableDescriptor(Bytes.toBytes(tableName));
+      admin.getTableDescriptor(TableName.valueOf(tableName));
       fail = true;
           LOG.error("Table:" + tableName + " already exists, checking a new name");
       tableName = tableName+"!";
@@ -252,7 +252,7 @@ public class TestSnapshotFromClient {
 
     // snapshot the non-existant table
     try {
-      admin.snapshot("fail", tableName);
+      admin.snapshot("fail", TableName.valueOf(tableName));
       fail("Snapshot succeeded even though there is not table.");
     } catch (SnapshotCreationException e) {
       LOG.info("Correctly failed to snapshot a non-existant table:" + e.getMessage());
@@ -263,7 +263,7 @@ public class TestSnapshotFromClient {
   public void testOfflineTableSnapshotWithEmptyRegions() throws Exception {
     // test with an empty table with one region
 
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
+    Admin admin = UTIL.getHBaseAdmin();
     // make sure we don't fail on listing snapshots
     SnapshotTestingUtils.assertNoSnapshots(admin);
 

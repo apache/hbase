@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.IntegrationTestBase;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -382,7 +383,7 @@ public void cleanUpCluster() throws Exception {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TEST_NAME));
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
 
-    HBaseAdmin admin = getTestingUtil(getConf()).getHBaseAdmin();
+    Admin admin = getTestingUtil(getConf()).getHBaseAdmin();
     admin.createTable(htd, Bytes.toBytes(0L), Bytes.toBytes(-1L), 40);
 
     doLoad(getConf(), htd);

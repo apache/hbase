@@ -93,7 +93,8 @@ public class TestNamespaceUpgrade {
       {"1","2","3","4","5","6","7","8","9"};
   private final static String currentKeys[] =
       {"1","2","3","4","5","6","7","8","9","A"};
-  private final static String tables[] = {"foo", "ns1.foo","ns.two.foo"};
+  private final static TableName tables[] =
+    {TableName.valueOf("foo"), TableName.valueOf("ns1.foo"), TableName.valueOf("ns.two.foo")};
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -133,7 +134,7 @@ public class TestNamespaceUpgrade {
     doFsCommand(shell, new String [] {"-lsr", "/"});
     TEST_UTIL.startMiniHBaseCluster(1, 1);
 
-    for(String table: tables) {
+    for(TableName table: tables) {
       int count = 0;
       for(Result res: new HTable(TEST_UTIL.getConfiguration(), table).getScanner(new Scan())) {
         assertEquals(currentKeys[count++], Bytes.toString(res.getRow()));
@@ -150,7 +151,7 @@ public class TestNamespaceUpgrade {
       count++;
     }
     assertEquals(3, count);
-    assertFalse(TEST_UTIL.getHBaseAdmin().tableExists("_acl_"));
+    assertFalse(TEST_UTIL.getHBaseAdmin().tableExists(TableName.valueOf("_acl_")));
 
     //verify ACL table was compacted
     List<HRegion> regions = TEST_UTIL.getMiniHBaseCluster().getRegions(secureTable.getName());
@@ -197,8 +198,8 @@ public class TestNamespaceUpgrade {
   public void testSnapshots() throws IOException, InterruptedException {
     String snapshots[][] = {snapshot1Keys, snapshot2Keys};
     for(int i = 1; i <= snapshots.length; i++) {
-      for(String table: tables) {
-        TEST_UTIL.getHBaseAdmin().cloneSnapshot(table+"_snapshot"+i, table+"_clone"+i);
+      for(TableName table: tables) {
+        TEST_UTIL.getHBaseAdmin().cloneSnapshot(table+"_snapshot"+i, TableName.valueOf(table+"_clone"+i));
         FSUtils.logFileSystemState(FileSystem.get(TEST_UTIL.getConfiguration()),
             FSUtils.getRootDir(TEST_UTIL.getConfiguration()),
             LOG);
@@ -216,14 +217,15 @@ public class TestNamespaceUpgrade {
   public void testRenameUsingSnapshots() throws Exception {
     String newNS = "newNS";
     TEST_UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(newNS).build());
-    for(String table: tables) {
+    for(TableName table: tables) {
       int count = 0;
       for(Result res: new HTable(TEST_UTIL.getConfiguration(), table).getScanner(new
           Scan())) {
         assertEquals(currentKeys[count++], Bytes.toString(res.getRow()));
       }
       TEST_UTIL.getHBaseAdmin().snapshot(table + "_snapshot3", table);
-      final String newTableName = newNS + TableName.NAMESPACE_DELIM + table + "_clone3";
+      final TableName newTableName =
+        TableName.valueOf(newNS + TableName.NAMESPACE_DELIM + table + "_clone3");
       TEST_UTIL.getHBaseAdmin().cloneSnapshot(table + "_snapshot3", newTableName);
       Thread.sleep(1000);
       count = 0;
@@ -233,14 +235,14 @@ public class TestNamespaceUpgrade {
       }
       FSUtils.logFileSystemState(TEST_UTIL.getTestFileSystem(), TEST_UTIL.getDefaultRootDirPath()
           , LOG);
-      Assert.assertEquals(newTableName, currentKeys.length, count);
-      TEST_UTIL.getHBaseAdmin().flush(newTableName);
-      TEST_UTIL.getHBaseAdmin().majorCompact(newTableName);
+      Assert.assertEquals(newTableName + "", currentKeys.length, count);
+      TEST_UTIL.getHBaseAdmin().flush(newTableName.toBytes());
+      TEST_UTIL.getHBaseAdmin().majorCompact(newTableName.toBytes());
       TEST_UTIL.waitFor(30000, new Waiter.Predicate<IOException>() {
         @Override
         public boolean evaluate() throws IOException {
           try {
-            return TEST_UTIL.getHBaseAdmin().getCompactionState(newTableName) ==
+            return TEST_UTIL.getHBaseAdmin().getCompactionState(newTableName.toBytes()) ==
                 AdminProtos.GetRegionInfoResponse.CompactionState.NONE;
           } catch (InterruptedException e) {
             throw new IOException(e);
@@ -251,10 +253,11 @@ public class TestNamespaceUpgrade {
 
     String nextNS = "nextNS";
     TEST_UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(nextNS).build());
-    for(String table: tables) {
-      String srcTable = newNS + TableName.NAMESPACE_DELIM + table + "_clone3";
+    for(TableName table: tables) {
+      TableName srcTable = TableName.valueOf(newNS + TableName.NAMESPACE_DELIM + table + "_clone3");
       TEST_UTIL.getHBaseAdmin().snapshot(table + "_snapshot4", srcTable);
-      String newTableName = nextNS + TableName.NAMESPACE_DELIM + table + "_clone4";
+      TableName newTableName =
+        TableName.valueOf(nextNS + TableName.NAMESPACE_DELIM + table + "_clone4");
       TEST_UTIL.getHBaseAdmin().cloneSnapshot(table+"_snapshot4", newTableName);
       FSUtils.logFileSystemState(TEST_UTIL.getTestFileSystem(), TEST_UTIL.getDefaultRootDirPath(),
         LOG);
@@ -263,7 +266,7 @@ public class TestNamespaceUpgrade {
           Scan())) {
         assertEquals(currentKeys[count++], Bytes.toString(res.getRow()));
       }
-      Assert.assertEquals(newTableName, currentKeys.length, count);
+      Assert.assertEquals(newTableName + "", currentKeys.length, count);
     }
   }
 

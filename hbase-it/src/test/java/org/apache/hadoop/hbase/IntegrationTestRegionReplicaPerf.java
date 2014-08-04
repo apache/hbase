@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.chaos.actions.RestartRsHoldingTableAction;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
 import org.apache.hadoop.hbase.chaos.policies.Policy;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
@@ -86,9 +87,9 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
    */
   static class PerfEvalCallable implements Callable<TimingResult> {
     private final Queue<String> argv = new LinkedList<String>();
-    private final HBaseAdmin admin;
+    private final Admin admin;
 
-    public PerfEvalCallable(HBaseAdmin admin, String argv) {
+    public PerfEvalCallable(Admin admin, String argv) {
       // TODO: this API is awkward, should take HConnection, not HBaseAdmin
       this.admin = admin;
       this.argv.addAll(Arrays.asList(argv.split(" ")));

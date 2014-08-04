@@ -29,6 +29,8 @@ import javax.xml.bind.JAXBException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
@@ -95,8 +97,8 @@ public class TestSchemaResource {
     TableSchemaModel model;
     Response response;
 
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
-    assertFalse(admin.tableExists(TABLE1));
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+    assertFalse(admin.tableExists(TableName.valueOf(TABLE1)));
 
     // create the table
     model = testTableSchemaModel.buildTestModel(TABLE1);
@@ -133,7 +135,7 @@ public class TestSchemaResource {
     // delete the table and make sure HBase concurs
     response = client.delete(schemaPath);
     assertEquals(response.getCode(), 200);
-    assertFalse(admin.tableExists(TABLE1));
+    assertFalse(admin.tableExists(TableName.valueOf(TABLE1)));
   }
 
   @Test
@@ -142,8 +144,8 @@ public class TestSchemaResource {
     TableSchemaModel model;
     Response response;
 
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
-    assertFalse(admin.tableExists(TABLE2));
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+    assertFalse(admin.tableExists(TableName.valueOf(TABLE2)));
 
     // create the table
     model = testTableSchemaModel.buildTestModel(TABLE2);
@@ -184,7 +186,7 @@ public class TestSchemaResource {
     // delete the table and make sure HBase concurs
     response = client.delete(schemaPath);
     assertEquals(response.getCode(), 200);
-    assertFalse(admin.tableExists(TABLE2));
+    assertFalse(admin.tableExists(TableName.valueOf(TABLE2)));
   }
 
 }

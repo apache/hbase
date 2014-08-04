@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -183,7 +184,7 @@ public class TestAssignmentListener {
   @Test(timeout=60000)
   public void testAssignmentListener() throws IOException, InterruptedException {
     AssignmentManager am = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
 
     DummyAssignmentListener listener = new DummyAssignmentListener();
     am.registerListener(listener);

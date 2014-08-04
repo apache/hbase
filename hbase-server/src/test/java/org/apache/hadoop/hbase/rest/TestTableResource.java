@@ -31,6 +31,7 @@ import javax.xml.bind.JAXBException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -56,7 +57,7 @@ import org.junit.experimental.categories.Category;
 public class TestTableResource {
   private static final Log LOG = LogFactory.getLog(TestTableResource.class);
 
-  private static String TABLE = "TestTableResource";
+  private static TableName TABLE = TableName.valueOf("TestTableResource");
   private static String COLUMN_FAMILY = "test";
   private static String COLUMN = COLUMN_FAMILY + ":qualifier";
   private static Map<HRegionInfo, ServerName> regionMap;
@@ -78,11 +79,11 @@ public class TestTableResource {
         TableInfoModel.class,
         TableListModel.class,
         TableRegionModel.class);
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    Admin admin = TEST_UTIL.getHBaseAdmin();
     if (admin.tableExists(TABLE)) {
       return;
     }
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
+    HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(new HColumnDescriptor(COLUMN_FAMILY));
     admin.createTable(htd);
     HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
@@ -106,7 +107,7 @@ public class TestTableResource {
     Map<HRegionInfo, ServerName> m = table.getRegionLocations();
     assertEquals(m.size(), 1);
     // tell the master to split the table
-    admin.split(TABLE);
+    admin.split(TABLE.toBytes());
     // give some time for the split to happen
 
     long timeout = System.currentTimeMillis() + (15 * 1000);
@@ -139,7 +140,7 @@ public class TestTableResource {
     assertTrue(tables.hasNext());
     while (tables.hasNext()) {
       TableModel table = tables.next();
-      if (table.getName().equals(TABLE)) {
+      if (table.getName().equals(TABLE.getNameAsString())) {
         found = true;
         break;
       }
@@ -148,7 +149,7 @@ public class TestTableResource {
   }
 
   void checkTableInfo(TableInfoModel model) {
-    assertEquals(model.getName(), TABLE);
+    assertEquals(model.getName(), TABLE.getNameAsString());
     Iterator<TableRegionModel> regions = model.getRegions().iterator();
     assertTrue(regions.hasNext());
     while (regions.hasNext()) {

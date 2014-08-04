@@ -23,6 +23,8 @@ import java.util.List;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -30,8 +32,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Action to merge regions of a table.
  */
 public class MergeRandomAdjacentRegionsOfTableAction extends Action {
-  private final byte[] tableNameBytes;
-  private final String tableName;
+  private final TableName tableName;
   private final long sleepTime;
 
   public MergeRandomAdjacentRegionsOfTableAction(String tableName) {
@@ -39,18 +40,17 @@ public class MergeRandomAdjacentRegionsOfTableAction extends Action {
   }
 
   public MergeRandomAdjacentRegionsOfTableAction(int sleepTime, String tableName) {
-    this.tableNameBytes = Bytes.toBytes(tableName);
-    this.tableName = tableName;
+    this.tableName = TableName.valueOf(tableName);
     this.sleepTime = sleepTime;
   }
 
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
 
     LOG.info("Performing action: Merge random adjacent regions of table " + tableName);
-    List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
+    List<HRegionInfo> regions = admin.getTableRegions(tableName);
     if (regions == null || regions.size() < 2) {
       LOG.info("Table " + tableName + " doesn't have enough regions to merge");
       return;

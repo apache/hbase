@@ -51,7 +51,7 @@ public class TestConstraint {
       .getLog(TestConstraint.class);
 
   private static HBaseTestingUtility util;
-  private static final byte[] tableName = Bytes.toBytes("test");
+  private static final TableName tableName = TableName.valueOf("test");
   private static final byte[] dummy = Bytes.toBytes("dummy");
   private static final byte[] row1 = Bytes.toBytes("r1");
   private static final byte[] test = Bytes.toBytes("test");
@@ -72,7 +72,7 @@ public class TestConstraint {
   public void testConstraintPasses() throws Exception {
     // create the table
     // it would be nice if this was also a method on the util
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     for (byte[] family : new byte[][] { dummy, test }) {
       desc.addFamily(new HColumnDescriptor(family));
     }
@@ -103,7 +103,7 @@ public class TestConstraint {
 
     // create the table
     // it would be nice if this was also a method on the util
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     for (byte[] family : new byte[][] { dummy, test }) {
       desc.addFamily(new HColumnDescriptor(family));
     }
@@ -140,7 +140,7 @@ public class TestConstraint {
   @Test
   public void testDisableConstraint() throws Throwable {
     // create the table
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     // add a family to the table
     for (byte[] family : new byte[][] { dummy, test }) {
       desc.addFamily(new HColumnDescriptor(family));
@@ -175,7 +175,7 @@ public class TestConstraint {
   @Test
   public void testDisableConstraints() throws Throwable {
     // create the table
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     // add a family to the table
     for (byte[] family : new byte[][] { dummy, test }) {
       desc.addFamily(new HColumnDescriptor(family));
@@ -207,7 +207,7 @@ public class TestConstraint {
   @Test
   public void testIsUnloaded() throws Exception {
     // create the table
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     // add a family to the table
     for (byte[] family : new byte[][] { dummy, test }) {
       desc.addFamily(new HColumnDescriptor(family));

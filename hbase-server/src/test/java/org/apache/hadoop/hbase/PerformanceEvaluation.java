@@ -50,6 +50,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -274,7 +275,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
    * {@code opts.presplitRegions} is specified or when the existing table's
    * region replica count doesn't match {@code opts.replicas}.
    */
-  static boolean checkTable(HBaseAdmin admin, TestOptions opts) throws IOException {
+  static boolean checkTable(Admin admin, TestOptions opts) throws IOException {
     TableName tableName = TableName.valueOf(opts.tableName);
     boolean needsDelete = false, exists = admin.tableExists(tableName);
     boolean isReadCmd = opts.cmdName.toLowerCase().contains("read")

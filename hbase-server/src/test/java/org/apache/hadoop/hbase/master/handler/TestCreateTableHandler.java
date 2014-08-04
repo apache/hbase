@@ -69,10 +69,10 @@ public class TestCreateTableHandler {
 
   @Test (timeout=300000)
   public void testCreateTableCalledTwiceAndFirstOneInProgress() throws Exception {
-    final byte[] tableName = Bytes.toBytes("testCreateTableCalledTwiceAndFirstOneInProgress");
+    final TableName tableName = TableName.valueOf("testCreateTableCalledTwiceAndFirstOneInProgress");
     final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     final HMaster m = cluster.getMaster();
-    final HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(FAMILYNAME));
     final HRegionInfo[] hRegionInfos = new HRegionInfo[] { new HRegionInfo(desc.getTableName(), null,
         null) };
@@ -96,10 +96,10 @@ public class TestCreateTableHandler {
 
   @Test (timeout=300000)
   public void testCreateTableWithSplitRegion() throws Exception {
-    final byte[] tableName = Bytes.toBytes("testCreateTableWithSplitRegion");
+    final TableName tableName = TableName.valueOf("testCreateTableWithSplitRegion");
     final MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     final HMaster m = cluster.getMaster();
-    final HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(FAMILYNAME));
     byte[] splitPoint = Bytes.toBytes("split-point");
     long ts = System.currentTimeMillis();

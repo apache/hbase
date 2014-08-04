@@ -67,7 +67,7 @@ public class TestMasterRestartAfterDisablingTable {
     HMaster master = cluster.getMaster();
 
     // Create a table with regions
-    byte[] table = Bytes.toBytes("tableRestart");
+    TableName table = TableName.valueOf("tableRestart");
     byte[] family = Bytes.toBytes("family");
     log("Creating table with " + NUM_REGIONS_TO_CREATE + " regions");
     HTable ht = TEST_UTIL.createTable(table, family);

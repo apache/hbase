@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Waiter.Predicate;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -78,20 +79,20 @@ public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
 
     // Update the test table schema so HFiles from this point will be written with
     // encryption features enabled.
-    final HBaseAdmin admin = util.getHBaseAdmin();
+    final Admin admin = util.getHBaseAdmin();
     HTableDescriptor tableDescriptor =
-        new HTableDescriptor(admin.getTableDescriptor(Bytes.toBytes(getTablename())));
+        new HTableDescriptor(admin.getTableDescriptor(TableName.valueOf(getTablename())));
     for (HColumnDescriptor columnDescriptor: tableDescriptor.getColumnFamilies()) {
       columnDescriptor.setEncryptionType("AES");
       LOG.info("Updating CF schema for " + getTablename() + "." +
         columnDescriptor.getNameAsString());
-      admin.disableTable(getTablename());
-      admin.modifyColumn(getTablename(), columnDescriptor);
-      admin.enableTable(getTablename());
+      admin.disableTable(TableName.valueOf(getTablename()));
+      admin.modifyColumn(TableName.valueOf(getTablename()), columnDescriptor);
+      admin.enableTable(TableName.valueOf(getTablename()));
       util.waitFor(30000, 1000, true, new Predicate<IOException>() {
         @Override
         public boolean evaluate() throws IOException {
-          return admin.isTableAvailable(getTablename());
+          return admin.isTableAvailable(TableName.valueOf(getTablename()));
         }
       });
     }

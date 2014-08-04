@@ -23,7 +23,9 @@ import java.util.List;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -31,10 +33,9 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Region that queues a compaction of a random region from the table.
  */
 public class CompactRandomRegionOfTableAction extends Action {
-  private final byte[] tableNameBytes;
   private final int majorRatio;
   private final long sleepTime;
-  private final String tableName;
+  private final TableName tableName;
 
   public CompactRandomRegionOfTableAction(
       String tableName, float majorRatio) {
@@ -43,21 +44,20 @@ public class CompactRandomRegionOfTableAction extends Action {
 
   public CompactRandomRegionOfTableAction(
       int sleepTime, String tableName, float majorRatio) {
-    this.tableNameBytes = Bytes.toBytes(tableName);
     this.majorRatio = (int) (100 * majorRatio);
     this.sleepTime = sleepTime;
-    this.tableName = tableName;
+    this.tableName = TableName.valueOf(tableName);
   }
 
   @Override
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
-    HBaseAdmin admin = util.getHBaseAdmin();
+    Admin admin = util.getHBaseAdmin();
     boolean major = RandomUtils.nextInt(100) < majorRatio;
 
     LOG.info("Performing action: Compact random region of table "
       + tableName + ", major=" + major);
-    List<HRegionInfo> regions = admin.getTableRegions(tableNameBytes);
+    List<HRegionInfo> regions = admin.getTableRegions(tableName);
     if (regions == null || regions.isEmpty()) {
       LOG.info("Table " + tableName + " doesn't have regions to compact");
       return;
