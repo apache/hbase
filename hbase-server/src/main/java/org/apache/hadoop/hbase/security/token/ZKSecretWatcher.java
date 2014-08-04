@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -33,6 +34,7 @@ import org.apache.zookeeper.KeeperException;
 /**
  * Synchronizes token encryption keys across cluster nodes.
  */
+@InterfaceAudience.Private
 public class ZKSecretWatcher extends ZooKeeperListener {
   private static final String DEFAULT_ROOT_NODE = "tokenauth";
   private static final String DEFAULT_KEYS_PARENT = "keys";

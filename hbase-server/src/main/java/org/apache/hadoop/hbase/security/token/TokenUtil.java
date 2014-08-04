@@ -25,6 +25,7 @@ import java.security.PrivilegedExceptionAction;
 import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -41,6 +42,7 @@ import org.apache.hadoop.security.token.Token;
 /**
  * Utility methods for obtaining authentication tokens.
  */
+@InterfaceAudience.Private
 public class TokenUtil {
   private static Log LOG = LogFactory.getLog(TokenUtil.class);
 

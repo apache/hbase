@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.security.access;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
  * access succeeds, then there is no need to impose the overhead of this filter.
  * </p>
  */
+@InterfaceAudience.Private
 class AccessControlFilter extends FilterBase {
 
   public static enum Strategy {

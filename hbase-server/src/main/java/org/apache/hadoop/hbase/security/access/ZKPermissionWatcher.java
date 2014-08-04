@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.access;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -40,6 +41,7 @@ import java.util.List;
  * instances on all other cluster hosts watch the znodes for updates, which
  * trigger updates in the {@link TableAuthManager} permission cache.
  */
+@InterfaceAudience.Private
 public class ZKPermissionWatcher extends ZooKeeperListener {
   private static Log LOG = LogFactory.getLog(ZKPermissionWatcher.class);
   // parent node for permissions lists

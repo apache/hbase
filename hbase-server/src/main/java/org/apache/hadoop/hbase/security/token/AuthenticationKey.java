@@ -25,6 +25,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Arrays;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
@@ -33,6 +34,7 @@ import org.apache.hadoop.io.WritableUtils;
  * Represents a secret key used for signing and verifying authentication tokens
  * by {@link AuthenticationTokenSecretManager}.
  */
+@InterfaceAudience.Private
 public class AuthenticationKey implements Writable {
   private int id;
   private long expirationDate;

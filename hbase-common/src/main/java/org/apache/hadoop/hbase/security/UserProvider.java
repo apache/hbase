@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.security;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.BaseConfigurable;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -27,6 +28,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 /**
  * Provide an instance of a user. Allows custom {@link User} creation.
  */
+
+@InterfaceAudience.Private
 public class UserProvider extends BaseConfigurable {
 
   private static final String USER_PROVIDER_CONF_KEY = "hbase.client.userprovider.class";

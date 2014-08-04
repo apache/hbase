@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.security;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import java.io.DataInput;
@@ -26,6 +27,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /** Authentication method */
+@InterfaceAudience.Private
 public enum AuthMethod {
   SIMPLE((byte) 80, "", UserGroupInformation.AuthenticationMethod.SIMPLE),
   KERBEROS((byte) 81, "GSSAPI", UserGroupInformation.AuthenticationMethod.KERBEROS),
