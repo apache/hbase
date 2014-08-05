@@ -1,5 +1,56 @@
 HBase Change Log
 
+Release 0.98.5 - 8/11/2014
+
+** Sub-task
+    * [HBASE-11318] - Classes in security subpackages missing @InterfaceAudience annotations.
+    * [HBASE-11384] - [Visibility Controller]Check for users covering authorizations for every mutation
+    * [HBASE-11559] - Add dumping of DATA block usage to the BlockCache JSON report.
+    * [HBASE-11651] - Add conf which disables MetaMigrationConvertingToPB check (for experts only)
+
+** Bug
+    * [HBASE-11064] - Odd behaviors of TableName for empty namespace
+    * [HBASE-11360] - SnapshotFileCache causes too many cache refreshes
+    * [HBASE-11388] - The order parameter is wrong when invoking the constructor of the ReplicationPeer In the method "getPeer" of the class ReplicationPeersZKImpl
+    * [HBASE-11518] - doc update for how to create non-shared HConnection
+    * [HBASE-11534] - Remove broken JAVA_HOME autodetection in hbase-config.sh
+    * [HBASE-11537] - Avoid synchronization on instances of ConcurrentMap
+    * [HBASE-11541] - Wrong result when scaning meta with startRow
+    * [HBASE-11545] - mapred.TableSnapshotInputFormat is missing InterfaceAudience annotation
+    * [HBASE-11551] - BucketCache$WriterThread.run() doesn't handle exceptions correctly
+    * [HBASE-11554] - Remove Reusable poolmap Rpc client type.
+    * [HBASE-11555] - TableSnapshotRegionSplit should be public
+    * [HBASE-11558] - Caching set on Scan object gets lost when using TableMapReduceUtil in 0.95+
+    * [HBASE-11561] - deprecate ImmutableBytesWritable.getSize and replace with getLength
+    * [HBASE-11565] - Stale connection could stay for a while
+    * [HBASE-11579] - CopyTable should check endtime value only if != 0
+    * [HBASE-11586] - HFile's HDFS op latency sampling code is not used
+    * [HBASE-11588] - RegionServerMetricsWrapperRunnable misused the 'period' parameter
+    * [HBASE-11594] - Unhandled NoNodeException in distributed log replay mode 
+    * [HBASE-11609] - LoadIncrementalHFiles fails if the namespace is specified
+    * [HBASE-11620] - Record the class name of Writer in WAL header so that only proper Reader can open the WAL file
+    * [HBASE-11632] - Region split needs to clear force split flag at the end of SplitRequest run
+    * [HBASE-11654] - WAL Splitting dirs are not deleted after replay.
+    * [HBASE-11662] - Launching shell with long-form --debug fails
+    * [HBASE-11668] - Re-add HBASE_LIBRARY_PATH to bin/hbase
+
+** Improvement
+    * [HBASE-2217] - VM OPTS for shell only
+    * [HBASE-3270] - When we create the .version file, we should create it in a tmp location and then move it into place
+    * [HBASE-7910] - Dont use reflection for security
+    * [HBASE-11480] - ClientScanner might not close the HConnection created in construction
+    * [HBASE-11516] - Track time spent in executing coprocessors in each region.
+    * [HBASE-11557] - Counter.class should always be added as dependencyJar
+    * [HBASE-11566] - make ExportSnapshot extendable by removing 'final' 
+    * [HBASE-11583] - Refactoring out the configuration changes for enabling VisibilityLabels in the unit tests.
+    * [HBASE-11623] - mutateRowsWithLocks might require updatesLock.readLock with waitTime=0
+    * [HBASE-11649] - Add shortcut commands to bin/hbase for test tools
+    * [HBASE-11650] - Write hbase.id to a temporary location and move into place
+
+** Task
+    * [HBASE-11621] - Make MiniDFSCluster run faster
+
+
 Release 0.98.4 - 7/21/2014
 
 ** Sub-task
