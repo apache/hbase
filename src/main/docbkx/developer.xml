@@ -146,6 +146,13 @@ mvn clean package -DskipTests
        With Eclipse set up as explained above in <xref linkend="eclipse"/>, you can also simply use the build command in Eclipse.
        To create the full installable HBase package takes a little bit more work, so read on.
        </para>
+       <note>
+         <title>JDK Version Requirements</title>
+         <para>
+           Starting with HBase 1.0 you must use Java 7 or later to build from source code. See <xref linkend="java" /> for more complete
+           information about supported JDK versions.
+         </para>
+       </note>
       </section>
       <section xml:id="build.protobuf"><title>Build Protobuf</title>
             <para>You may need to change the protobuf definitions that reside in the hbase-protocol module or other modules.</para>
