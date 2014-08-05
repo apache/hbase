@@ -692,7 +692,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       // success
       return toRetry;
     } catch (IOException e) {
-      LOG.error("Encountered unrecoverable error from region server", e);
+      LOG.error("Encountered unrecoverable error from region server, additional details: "
+          + svrCallable.getExceptionMessageAdditionalDetail(), e);
       throw e;
     }
   }
