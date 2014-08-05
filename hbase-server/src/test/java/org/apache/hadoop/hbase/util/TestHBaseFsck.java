@@ -657,8 +657,8 @@ public class TestHBaseFsck {
       meta.put(put);
       meta.flushCommits();
       // assign the new replica
-      HBaseFsckRepair.fixUnassigned(TEST_UTIL.getHBaseAdmin(), newHri);
-      HBaseFsckRepair.waitUntilAssigned(TEST_UTIL.getHBaseAdmin(), newHri);
+      HBaseFsckRepair.fixUnassigned((HBaseAdmin)TEST_UTIL.getHBaseAdmin(), newHri);
+      HBaseFsckRepair.waitUntilAssigned((HBaseAdmin)TEST_UTIL.getHBaseAdmin(), newHri);
       // now reset the meta row to its original value
       Delete delete = new Delete(metaKey);
       delete.deleteColumns(HConstants.CATALOG_FAMILY, MetaTableAccessor.getServerColumn(2));
