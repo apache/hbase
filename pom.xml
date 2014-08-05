@@ -899,7 +899,7 @@
       yyyy-MM-dd'T'HH:mm
     </maven.build.timestamp.format>
     <buildDate>${maven.build.timestamp}</buildDate>
-    <compileSource>1.6</compileSource>
+    <compileSource>1.7</compileSource>
     <!-- Dependencies -->
     <hadoop-two.version>2.4.0</hadoop-two.version>
     <commons-cli.version>1.2</commons-cli.version>

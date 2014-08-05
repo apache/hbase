@@ -18,7 +18,7 @@
 
 @rem Set environment variables here.
 
-@rem The java implementation to use.  Java 1.6 required.
+@rem The java implementation to use.  Java 1.7+ required.
 @rem set JAVA_HOME=c:\apps\java
 
 @rem Extra Java CLASSPATH elements.  Optional.

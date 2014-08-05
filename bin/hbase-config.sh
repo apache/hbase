@@ -131,7 +131,7 @@ if [ -z "$JAVA_HOME" ]; then
 | Please download the latest Sun JDK from the Sun Java web site        |
 |       > http://java.sun.com/javase/downloads/ <                      |
 |                                                                      |
-| HBase requires Java 1.6 or later.                                    |
+| HBase requires Java 1.7 or later.                                    |
 | NOTE: This script will find Sun Java whether you install using the   |
 |       binary or the RPM based installer.                             |
 +======================================================================+

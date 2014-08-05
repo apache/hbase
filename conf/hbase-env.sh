@@ -25,7 +25,7 @@
 # so try to keep things idempotent unless you want to take an even deeper look
 # into the startup scripts (bin/hbase, etc.)
 
-# The java implementation to use.  Java 1.6 required.
+# The java implementation to use.  Java 1.7+ required.
 # export JAVA_HOME=/usr/java/jdk1.6.0/
 
 # Extra Java CLASSPATH elements.  Optional.
