@@ -132,11 +132,10 @@ public class TestDistributedLogSplitting {
     conf.getLong("hbase.splitlog.max.resubmit", 0);
     // Make the failure test faster
     conf.setInt("zookeeper.recovery.retry", 0);
-    TEST_UTIL.shutdownMiniHBaseCluster();
     TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.setDFSCluster(dfsCluster);
     TEST_UTIL.setZkCluster(zkCluster);
-    TEST_UTIL.startMiniHBaseCluster(NUM_MASTERS, num_rs);
+    TEST_UTIL.startMiniHBaseCluster(num_master, num_rs);
     cluster = TEST_UTIL.getHBaseCluster();
     LOG.info("Waiting for active/ready master");
     cluster.waitForActiveAndReadyMaster();
