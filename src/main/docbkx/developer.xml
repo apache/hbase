@@ -32,6 +32,16 @@
     <para>This chapter will be of interest only to those building and developing Apache HBase (i.e., as opposed to
     just downloading the latest distribution).
     </para>
+    <section xml:id="dev.contributing">
+      <title>Contributing</title>
+      <para>
+        If you are looking to contribute to Apache HBase, look for issues in JIRA
+        tagged with the label 'beginner': <link xlink:href="https://issues.apache.org/jira/issues/?jql=project%20%3D%20HBASE%20AND%20labels%20in%20(beginner)">project = HBASE AND labels in (beginner)</link>.  These are issues HBase contributors have
+        deemed worthy but not of immediate priority and a good way to ramp on
+        HBase internals<footnote><para>See <link xlink:href="http://search-hadoop.com/m/DHED43re96">What label is used for issues that are good on ramps for new contributors?</link>
+        from the dev mailing list for background.</para></footnote>.
+      </para>
+    </section>
     <section xml:id="repos">
       <title>Apache HBase Repositories</title>
       <para>There are two different repositories for Apache HBase: Subversion (SVN) and Git.
