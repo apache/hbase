@@ -5,9 +5,9 @@
  * The ASF licenses this file to You under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance with
  * the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -69,20 +69,20 @@ import org.codehaus.jackson.JsonGenerator;
  * For example <code>http://.../jmx?qry=Hadoop:*</code> will return
  * all hadoop metrics exposed through JMX.
  * <p>
- * The optional <code>get</code> parameter is used to query an specific 
+ * The optional <code>get</code> parameter is used to query an specific
  * attribute of a JMX bean.  The format of the URL is
  * <code>http://.../jmx?get=MXBeanName::AttributeName<code>
  * <p>
- * For example 
+ * For example
  * <code>
  * http://../jmx?get=Hadoop:service=NameNode,name=NameNodeInfo::ClusterId
  * </code> will return the cluster id of the namenode mxbean.
  * <p>
- * If the <code>qry</code> or the <code>get</code> parameter is not formatted 
- * correctly then a 400 BAD REQUEST http response code will be returned. 
+ * If the <code>qry</code> or the <code>get</code> parameter is not formatted
+ * correctly then a 400 BAD REQUEST http response code will be returned.
  * <p>
- * If a resouce such as a mbean or attribute can not be found, 
- * a 404 SC_NOT_FOUND http response code will be returned. 
+ * If a resouce such as a mbean or attribute can not be found,
+ * a 404 SC_NOT_FOUND http response code will be returned.
  * <p>
  * The return format is JSON and in the form
  * <p>
@@ -99,23 +99,23 @@ import org.codehaus.jackson.JsonGenerator;
  *  <p>
  *  The servlet attempts to convert the the JMXBeans into JSON. Each
  *  bean's attributes will be converted to a JSON object member.
- *  
+ *
  *  If the attribute is a boolean, a number, a string, or an array
- *  it will be converted to the JSON equivalent. 
- *  
+ *  it will be converted to the JSON equivalent.
+ *
  *  If the value is a {@link CompositeData} then it will be converted
  *  to a JSON object with the keys as the name of the JSON member and
  *  the value is converted following these same rules.
- *  
+ *
  *  If the value is a {@link TabularData} then it will be converted
  *  to an array of the {@link CompositeData} elements that it contains.
- *  
+ *
  *  All other objects will be converted to a string and output as such.
- *  
+ *
  *  The bean's name and modelerType will be returned for all beans.
  *
  *  Optional paramater "callback" should be used to deliver JSONP response.
- *  
+ *
  */
 public class JMXJsonServlet extends HttpServlet {
   private static final Log LOG = LogFactory.getLog(JMXJsonServlet.class);
@@ -145,7 +145,7 @@ public class JMXJsonServlet extends HttpServlet {
 
   /**
    * Process a GET request for the specified resource.
-   * 
+   *
    * @param request
    *          The servlet request we are processing
    * @param response
@@ -163,7 +163,7 @@ public class JMXJsonServlet extends HttpServlet {
       PrintWriter writer = null;
       try {
         writer = response.getWriter();
- 
+
         // "callback" parameter implies JSONP outpout
         jsonpcb = request.getParameter(CALLBACK_PARAM);
         if (jsonpcb != null) {
@@ -221,10 +221,10 @@ public class JMXJsonServlet extends HttpServlet {
   }
 
   // --------------------------------------------------------- Private Methods
-  private void listBeans(JsonGenerator jg, ObjectName qry, String attribute, 
-      HttpServletResponse response) 
+  private void listBeans(JsonGenerator jg, ObjectName qry, String attribute,
+      HttpServletResponse response)
   throws IOException {
-    LOG.debug("Listing beans for "+qry);
+    LOG.trace("Listing beans for "+qry);
     Set<ObjectName> names = null;
     names = mBeanServer.queryNames(qry, null);
 
@@ -244,10 +244,21 @@ public class JMXJsonServlet extends HttpServlet {
             prs = "modelerType";
             code = (String) mBeanServer.getAttribute(oname, prs);
           }
-          if (attribute!=null) {
+          if (attribute != null) {
             prs = attribute;
             attributeinfo = mBeanServer.getAttribute(oname, prs);
           }
+        } catch (RuntimeMBeanException e) {
+         // UnsupportedOperationExceptions happen in the normal course of business,
+         // so no need to log them as errors all the time.
+         if (e.getCause() instanceof UnsupportedOperationException) {
+           if (LOG.isTraceEnabled()) {
+             LOG.trace("Getting attribute " + prs + " of " + oname + " threw " + e);
+           }
+         } else {
+           LOG.error("Getting attribute " + prs + " of " + oname + " threw an exception", e);
+         }
+         return;
         } catch (AttributeNotFoundException e) {
           // If the modelerType attribute was not found, the class name is used
           // instead.
@@ -266,7 +277,7 @@ public class JMXJsonServlet extends HttpServlet {
               + " threw an exception", e);
         } catch ( ReflectionException e ) {
           // This happens when the code inside the JMX bean (setter?? from the
-          // java docs) threw an exception, so log it and fall back on the 
+          // java docs) threw an exception, so log it and fall back on the
           // class name
           LOG.error("getting attribute " + prs + " of " + oname
               + " threw an exception", e);
@@ -290,7 +301,7 @@ public class JMXJsonServlet extends HttpServlet {
 
       jg.writeStartObject();
       jg.writeStringField("name", oname.toString());
-      
+
       jg.writeStringField("modelerType", code);
       if ((attribute != null) && (attributeinfo == null)) {
         jg.writeStringField("result", "ERROR");
@@ -302,7 +313,7 @@ public class JMXJsonServlet extends HttpServlet {
         response.setStatus(HttpServletResponse.SC_NOT_FOUND);
         return;
       }
-      
+
       if (attribute != null) {
         writeAttribute(jg, attribute, attributeinfo);
       } else {
@@ -316,7 +327,8 @@ public class JMXJsonServlet extends HttpServlet {
     jg.writeEndArray();
   }
 
-  private void writeAttribute(JsonGenerator jg, ObjectName oname, MBeanAttributeInfo attr) throws IOException {
+  private void writeAttribute(JsonGenerator jg, ObjectName oname, MBeanAttributeInfo attr)
+  throws IOException {
     if (!attr.isReadable()) {
       return;
     }
@@ -335,7 +347,9 @@ public class JMXJsonServlet extends HttpServlet {
       // UnsupportedOperationExceptions happen in the normal course of business,
       // so no need to log them as errors all the time.
       if (e.getCause() instanceof UnsupportedOperationException) {
-        LOG.debug("getting attribute "+attName+" of "+oname+" threw an exception", e);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Getting attribute " + attName + " of " + oname + " threw " + e);
+        }
       } else {
         LOG.error("getting attribute "+attName+" of "+oname+" threw an exception", e);
       }
@@ -374,12 +388,12 @@ public class JMXJsonServlet extends HttpServlet {
 
     writeAttribute(jg, attName, value);
   }
-  
+
   private void writeAttribute(JsonGenerator jg, String attName, Object value) throws IOException {
     jg.writeFieldName(attName);
     writeObject(jg, value);
   }
-  
+
   private void writeObject(JsonGenerator jg, Object value) throws IOException {
     if(value == null) {
       jg.writeNull();
