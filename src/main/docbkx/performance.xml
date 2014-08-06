@@ -564,16 +564,17 @@ admin.createTable(table, splits);
     <section
       xml:id="perf.hbase.client.putwal">
       <title>HBase Client: Turn off WAL on Puts</title>
-      <para>A frequently discussed option for increasing throughput on <classname>Put</classname>s
-        is to call <code>writeToWAL(false)</code>. Turning this off means that the RegionServer will
-          <emphasis>not</emphasis> write the <classname>Put</classname> to the Write Ahead Log, only
-        into the memstore, HOWEVER the consequence is that if there is a RegionServer failure
-          <emphasis>there will be data loss</emphasis>. If <code>writeToWAL(false)</code> is used,
-        do so with extreme caution. You may find in actuality that it makes little difference if
-        your load is well distributed across the cluster. </para>
+      <para>A frequent request is to disable the WAL to increase performance of Puts. This is only
+        appropriate for bulk loads, as it puts your data at risk by removing the protection of the
+        WAL in the event of a region server crash. Bulk loads can be re-run in the event of a crash,
+        with little risk of data loss.</para>
+      <warning>
+        <para>If you disable the WAL for anything other than bulk loads, your data is at
+          risk.</para></warning>
       <para>In general, it is best to use WAL for Puts, and where loading throughput is a concern to
-        use <link
-          linkend="perf.batch.loading">bulk loading</link> techniques instead. </para>
+        use <link linkend="perf.batch.loading">bulk loading</link> techniques instead. For normal
+        Puts, you are not likely to see a performance improvement which would outweigh the risk. To
+        disable the WAL, see <xref linkend="wal.disable"/>.</para>
     </section>
     <section
       xml:id="perf.hbase.client.regiongroup">
