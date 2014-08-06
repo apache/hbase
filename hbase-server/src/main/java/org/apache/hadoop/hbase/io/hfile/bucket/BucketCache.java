@@ -658,6 +658,8 @@ public class BucketCache implements BlockCache, HeapSize {
             + StringUtils.byteDesc(memory));
       }
 
+    } catch (Throwable t) {
+      LOG.warn("Failed freeing space", t);
     } finally {
       cacheStats.evict();
       freeInProgress = false;
