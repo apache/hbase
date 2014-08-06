@@ -415,7 +415,14 @@ public class ClientScanner extends AbstractClientScanner {
             }
             // Else, its signal from depths of ScannerCallable that we need to reset the scanner.
             if (this.lastResult != null) {
+              // The region has moved. We need to open a brand new scanner at
+              // the new location.
+              // Reset the startRow to the row we've seen last so that the new
+              // scanner starts at the correct row. Otherwise we may see previously
+              // returned rows again.
+              // (ScannerCallable by now has "relocated" the correct region)
               this.scan.setStartRow(this.lastResult.getRow());
+
               // Skip first row returned.  We already let it out on previous
               // invocation.
               skipFirst = true;
