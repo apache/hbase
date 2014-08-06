@@ -225,7 +225,7 @@ public class JMXJsonServlet extends HttpServlet {
   private void listBeans(JsonGenerator jg, ObjectName qry, String attribute, 
       HttpServletResponse response) 
   throws IOException {
-    LOG.debug("Listing beans for "+qry);
+    LOG.trace("Listing beans for "+qry);
     Set<ObjectName> names = null;
     names = mBeanServer.queryNames(qry, null);
 
@@ -245,7 +245,7 @@ public class JMXJsonServlet extends HttpServlet {
             prs = "modelerType";
             code = (String) mBeanServer.getAttribute(oname, prs);
           }
-          if (attribute!=null) {
+          if (attribute != null) {
             prs = attribute;
             attributeinfo = mBeanServer.getAttribute(oname, prs);
           }
@@ -253,9 +253,11 @@ public class JMXJsonServlet extends HttpServlet {
          // UnsupportedOperationExceptions happen in the normal course of business,
          // so no need to log them as errors all the time.
          if (e.getCause() instanceof UnsupportedOperationException) {
-           LOG.debug("getting attribute " + oname + " of "+oname+" threw an exception", e);
+           if (LOG.isTraceEnabled()) {
+             LOG.trace("Getting attribute " + prs + " of " + oname + " threw " + e);
+           }
          } else {
-           LOG.error("getting attribute " + oname + " of "+oname+" threw an exception", e);
+           LOG.error("Getting attribute " + prs + " of " + oname + " threw an exception", e);
          }
          return;
         } catch (AttributeNotFoundException e) {
@@ -326,7 +328,8 @@ public class JMXJsonServlet extends HttpServlet {
     jg.writeEndArray();
   }
 
-  private void writeAttribute(JsonGenerator jg, ObjectName oname, MBeanAttributeInfo attr) throws IOException {
+  private void writeAttribute(JsonGenerator jg, ObjectName oname, MBeanAttributeInfo attr)
+  throws IOException {
     if (!attr.isReadable()) {
       return;
     }
@@ -345,7 +348,9 @@ public class JMXJsonServlet extends HttpServlet {
       // UnsupportedOperationExceptions happen in the normal course of business,
       // so no need to log them as errors all the time.
       if (e.getCause() instanceof UnsupportedOperationException) {
-        LOG.debug("getting attribute "+attName+" of "+oname+" threw an exception", e);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Getting attribute " + attName + " of " + oname + " threw " + e);
+        }
       } else {
         LOG.error("getting attribute "+attName+" of "+oname+" threw an exception", e);
       }
