@@ -2620,6 +2620,21 @@ ctime = Sat Jun 23 11:13:40 PDT 2012
             </section>
           </section>
         </section>
+        <section xml:id="wal.disable">
+          <title>Disabling the WAL</title>
+          <para>It is possible to disable the WAL, to improve performace in certain specific
+            situations. However, disabling the WAL puts your data at risk. The only situation where
+            this is recommended is during a bulk load. This is because, in the event of a problem,
+            the bulk load can be re-run with no risk of data loss.</para>
+          <para>The WAL is disabled by calling the HBase client field
+              <code>Mutation.writeToWAL(false)</code>. Use the
+              <code>Mutation.setDurability(Durability.SKIP_WAL)</code> and Mutation.getDurability()
+            methods to set and get the field's value. There is no way to disable the WAL for only a
+            specific table.</para>
+          <warning>
+            <para>If you disable the WAL for anything other than bulk loads, your data is at
+              risk.</para></warning>
+        </section>
       </section>
 
     </section>  <!--  regionserver -->
