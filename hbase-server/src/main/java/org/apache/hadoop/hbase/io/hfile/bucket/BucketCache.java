@@ -1316,9 +1316,6 @@ public class BucketCache implements BlockCache, HeapSize {
 
           @Override
           public int compareTo(CachedBlock other) {
-<<<<<<< HEAD
-            return (int)(this.getOffset() - other.getOffset());
-=======
             int diff = this.getFilename().compareTo(other.getFilename());
             if (diff != 0) return diff;
             diff = (int)(this.getOffset() - other.getOffset());
@@ -1343,7 +1340,6 @@ public class BucketCache implements BlockCache, HeapSize {
             } else {
               return false;
             }
->>>>>>> 4997908... HBASE-11678 BucketCache ramCache fills heap after running a few hours
           }
         };
       }
