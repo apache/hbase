@@ -158,7 +158,7 @@ public class TestIPC {
     TestRpcServer(RpcScheduler scheduler) throws IOException {
       super(null, "testRpcServer",
           Lists.newArrayList(new BlockingServiceAndInterface(SERVICE, null)),
-        new InetSocketAddress("0.0.0.0", 0), CONF, scheduler);
+        new InetSocketAddress("localhost", 0), CONF, scheduler);
     }
 
     @Override

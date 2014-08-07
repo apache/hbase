@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BucketEntry;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 
@@ -414,7 +415,9 @@ public final class BucketAllocator {
     assert blockSize > 0;
     BucketSizeInfo bsi = roundUpToBucketSizeInfo(blockSize);
     if (bsi == null) {
-      throw new BucketAllocatorException("Allocation too big size=" + blockSize);
+      throw new BucketAllocatorException("Allocation too big size=" + blockSize +
+        "; adjust BucketCache sizes " + CacheConfig.BUCKET_CACHE_BUCKETS_KEY +
+        " to accomodate if size seems reasonable and you want it cached.");
     }
     long offset = bsi.allocateBlock();
 

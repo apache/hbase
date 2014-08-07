@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
- 
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -491,12 +491,9 @@ public class LruBlockCache implements BlockCache, HeapSize {
       if(bytesToFree <= 0) return;
 
       // Instantiate priority buckets
-      BlockBucket bucketSingle = new BlockBucket(bytesToFree, blockSize,
-          singleSize());
-      BlockBucket bucketMulti = new BlockBucket(bytesToFree, blockSize,
-          multiSize());
-      BlockBucket bucketMemory = new BlockBucket(bytesToFree, blockSize,
-          memorySize());
+      BlockBucket bucketSingle = new BlockBucket(bytesToFree, blockSize, singleSize());
+      BlockBucket bucketMulti = new BlockBucket(bytesToFree, blockSize, multiSize());
+      BlockBucket bucketMemory = new BlockBucket(bytesToFree, blockSize, memorySize());
 
       // Scan entire map putting into appropriate buckets
       for(LruCachedBlock cachedBlock : map.values()) {
@@ -594,7 +591,6 @@ public class LruBlockCache implements BlockCache, HeapSize {
    * to configuration parameters and their relatives sizes.
    */
   private class BlockBucket implements Comparable<BlockBucket> {
-
     private LruCachedBlockQueue queue;
     private long totalSize = 0;
     private long bucketSize;
@@ -640,10 +636,14 @@ public class LruBlockCache implements BlockCache, HeapSize {
       if (that == null || !(that instanceof BlockBucket)){
         return false;
       }
-
-      return compareTo(( BlockBucket)that) == 0;
+      return compareTo((BlockBucket)that) == 0;
     }
 
+    @Override
+    public int hashCode() {
+      // Nothing distingushing about each instance unless I pass in a 'name' or something
+      return super.hashCode();
+    }
   }
 
   /**
@@ -702,18 +702,20 @@ public class LruBlockCache implements BlockCache, HeapSize {
       while (this.go) {
         synchronized(this) {
           try {
-            this.wait();
+            this.wait(1000 * 10/*Don't wait for ever*/);
           } catch(InterruptedException e) {}
         }
         LruBlockCache cache = this.cache.get();
-        if(cache == null) break;
+        if (cache == null) break;
         cache.evict();
       }
     }
 
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NN_NAKED_NOTIFY",
+        justification="This is what we want")
     public void evict() {
       synchronized(this) {
-        this.notifyAll(); // FindBugs NN_NAKED_NOTIFY
+        this.notifyAll();
       }
     }
 
@@ -850,7 +852,30 @@ public class LruBlockCache implements BlockCache, HeapSize {
 
           @Override
           public int compareTo(CachedBlock other) {
-            return (int)(other.getOffset() - this.getOffset());
+            int diff = this.getFilename().compareTo(other.getFilename());
+            if (diff != 0) return diff;
+            diff = (int)(this.getOffset() - other.getOffset());
+            if (diff != 0) return diff;
+            if (other.getCachedTime() < 0 || this.getCachedTime() < 0) {
+              throw new IllegalStateException("" + this.getCachedTime() + ", " +
+                other.getCachedTime());
+            }
+            return (int)(other.getCachedTime() - this.getCachedTime());
+          }
+
+          @Override
+          public int hashCode() {
+            return b.hashCode();
+          }
+
+          @Override
+          public boolean equals(Object obj) {
+            if (obj instanceof CachedBlock) {
+              CachedBlock cb = (CachedBlock)obj;
+              return compareTo(cb) == 0;
+            } else {
+              return false;
+            }
           }
         };
       }

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.procedure;
 
+import static org.junit.Assert.assertArrayEquals;
+
 import java.io.IOException;
 import java.util.HashMap;
 
