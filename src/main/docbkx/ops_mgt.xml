@@ -1141,10 +1141,10 @@ false
       replicate and keeps track of the current position inside ZooKeeper to simplify failure
       recovery. That position, as well as the queue of WALs to process, may be different for every
       slave cluster.</para>
-    
+
     <para>The clusters participating in replication can be of different sizes. The master
       cluster relies on randomization to attempt to balance the stream of replication on the slave clusters</para>
-    
+
     <para>HBase supports master/master and cyclic replication as well as replication to multiple
       slaves.</para>
     
@@ -1264,6 +1264,14 @@ false
             <para>HBase replication maintains its state in ZooKeeper. By default, the state is
               contained in the base node <filename>/hbase/replication</filename>. This node contains
               two child nodes, the <code>Peers</code> znode and the <code>RS</code> znode.</para>
+            <warning>
+              <para>Replication may be disrupted and data loss may occur if you delete the
+                replication tree (<filename>/hbase/replication/</filename>) from ZooKeeper. This is
+                despite the information about invariants at <xref
+                  linkend="design.invariants.zk.data"/>. Follow progress on this issue at <link
+                  xlink:href="https://issues.apache.org/jira/browse/HBASE-10295"
+                >HBASE-10295</link>.</para>
+            </warning>
           </listitem>
         </varlistentry>
         <varlistentry>

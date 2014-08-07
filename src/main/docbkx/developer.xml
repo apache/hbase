@@ -1569,13 +1569,32 @@ public class MyHBaseIntegrationTest {
            <para>We don't have many but what we have we list below.  All are subject to challenge of
            course but until then, please hold to the rules of the road.
            </para>
-          <section xml:id="design.invariants.zk.data">
-            <title>No permanent state in ZooKeeper</title>
-          <para>ZooKeeper state should transient (treat it like memory). If deleted, hbase
-          should be able to recover and essentially be in the same state<footnote><para>There are currently
-          a few exceptions that we need to fix around whether a table is enabled or disabled</para></footnote>.
-          </para>
-          </section>
+            <section xml:id="design.invariants.zk.data">
+                <title>No permanent state in ZooKeeper</title>
+                <para>ZooKeeper state should transient (treat it like memory). If ZooKeeper state is
+                    deleted, hbase should be able to recover and essentially be in the same
+                    state.</para>
+                <itemizedlist>
+                    <title>Exceptions</title>
+                    <listitem>
+                        <para>There are currently a few exceptions that we need to fix around
+                            whether a table is enabled or disabled.</para>
+                    </listitem>
+                    <listitem>
+                        <para>Replication data is currently stored only in ZooKeeper. Deleting
+                            ZooKeeper data related to replication may cause replication to be
+                            disabled. Do not delete the replication tree,
+                                <filename>/hbase/replication/</filename>.</para>
+                        <warning>
+                            <para>Replication may be disrupted and data loss may occur if you delete
+                                the replication tree (<filename>/hbase/replication/</filename>) from
+                                ZooKeeper. Follow progress on this issue at <link
+                                    xlink:href="https://issues.apache.org/jira/browse/HBASE-10295"
+                                    >HBASE-10295</link>.</para>
+                        </warning>
+                    </listitem>
+                </itemizedlist>
+            </section>
 
            </section> <!-- design.invariants -->
 
