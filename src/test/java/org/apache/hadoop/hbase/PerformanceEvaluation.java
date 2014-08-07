@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
+import org.apache.hadoop.hbase.io.hfile.Compression;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -101,6 +102,7 @@ import org.apache.hadoop.util.LineReader;
 public class PerformanceEvaluation {
   protected static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
 
+  public static final byte[] COMPRESSION = Bytes.toBytes("NONE");
   public static final byte[] TABLE_NAME = Bytes.toBytes("TestTable");
   public static final byte[] FAMILY_NAME = Bytes.toBytes("info");
   public static final byte[] QUALIFIER_NAME = Bytes.toBytes("data");
@@ -122,6 +124,8 @@ public class PerformanceEvaluation {
   private boolean nomapred = false;
   private int N = 1;
   private int R = ROWS_PER_GB;
+  private byte[] tableName = TABLE_NAME;
+  private Compression.Algorithm compression = Compression.Algorithm.NONE;
   private float sampleRate = 1.0f;
   private boolean flushCommits = true;
   private boolean reportLatency = false;
@@ -511,8 +515,9 @@ public class PerformanceEvaluation {
 
   protected HTableDescriptor getTableDescriptor() {
     if (TABLE_DESCRIPTOR == null) {
-      TABLE_DESCRIPTOR = new HTableDescriptor(TABLE_NAME);
+      TABLE_DESCRIPTOR = new HTableDescriptor(tableName);
       HColumnDescriptor family = new HColumnDescriptor(FAMILY_NAME);
+      family.setCompressionType(compression);
       TABLE_DESCRIPTOR.addFamily(family);
     }
     return TABLE_DESCRIPTOR;
@@ -1185,7 +1190,23 @@ public class PerformanceEvaluation {
    */
   public static byte[] generateValue(final Random r) {
     byte [] b = new byte [VALUE_LENGTH];
-    r.nextBytes(b);
+    int i = 0;
+
+    for(i = 0; i < (ROW_LENGTH-8); i += 8) {
+      b[i] = (byte) (65 + r.nextInt(26));
+      b[i+1] = b[i];
+      b[i+2] = b[i];
+      b[i+3] = b[i];
+      b[i+4] = b[i];
+      b[i+5] = b[i];
+      b[i+6] = b[i];
+      b[i+7] = b[i];
+    }
+
+    byte a = (byte) (65 + r.nextInt(26));
+    for(; i < ROW_LENGTH; i++) {
+      b[i] = a;
+    }
     return b;
   }
 
@@ -1294,13 +1315,16 @@ public class PerformanceEvaluation {
       System.err.println(message);
     }
     System.err.println("Usage: java " + this.getClass().getName() + " \\");
-    System.err.println("  [--miniCluster] [--nomapred] [--rows=ROWS] <command> <nclients>");
+    System.err.println("  [--miniCluster] [--nomapred] [--rows=ROWS] [--table=NAME] \\");
+    System.err.println("  [--compress=TYPE] <command> <nclients>");
     System.err.println();
     System.err.println("Options:");
     System.err.println(" miniCluster     Run the test on an HBaseMiniCluster");
     System.err.println(" nomapred        Run multiple clients using threads " +
       "(rather than use mapreduce)");
     System.err.println(" rows            Rows each client runs. Default: One million");
+    System.err.println(" table           Alternate table name. Default: 'TestTable'");
+    System.err.println(" compress        Compression type to use (GZ, LZO, ...). Default: 'NONE'");
     System.err.println(" sampleRate      Execute test on a sample of total " +
       "rows. Only supported by randomRead. Default: 1.0");
     System.err.println(" flushCommits    Used to determine if the test should flush the table. " +
@@ -1377,6 +1401,18 @@ public class PerformanceEvaluation {
         final String sampleRate = "--sampleRate=";
         if (cmd.startsWith(sampleRate)) {
           this.sampleRate = Float.parseFloat(cmd.substring(sampleRate.length()));
+          continue;
+        }
+
+        final String table = "--table=";
+        if (cmd.startsWith(table)) {
+          this.tableName = Bytes.toBytes(cmd.substring(table.length()));
+          continue;
+        }
+
+        final String compress = "--compress=";
+        if (cmd.startsWith(compress)) {
+          this.compression = Compression.Algorithm.valueOf(cmd.substring(compress.length()));
           continue;
         }
 
