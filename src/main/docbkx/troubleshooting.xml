@@ -1267,6 +1267,215 @@ sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.ensureInitial
 
   </section>
 
+  <section>
+    <title>HBase and HDFS</title>
+    <para>General configuration guidance for Apache HDFS is out of the scope of this guide. Refer to
+      the documentation available at <link
+        xlink:href="http://hadoop.apache.org/">http://hadoop.apache.org/</link> for extensive
+      information about configuring HDFS. This section deals with HDFS in terms of HBase. </para>
+    
+    <para>In most cases, HBase stores its data in Apache HDFS. This includes the HFiles containing
+      the data, as well as the write-ahead logs (WALs) which store data before it is written to the
+      HFiles and protect against RegionServer crashes. HDFS provides reliability and protection to
+      data in HBase because it is distributed. To operate with the most efficiency, HBase needs data
+    to be available locally. Therefore, it is a good practice to run an HDFS datanode on each
+    RegionServer.</para>
+    <variablelist>
+      <title>Important Information and Guidelines for HBase and HDFS</title>
+      <varlistentry>
+        <term>HBase is a client of HDFS.</term>
+        <listitem>
+          <para>HBase is an HDFS client, using the HDFS <code>DFSClient</code> class, and references
+            to this class appear in HBase logs with other HDFS client log messages.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Configuration is necessary in multiple places.</term>
+        <listitem>
+          <para>Some HDFS configurations relating to HBase need to be done at the HDFS (server) side.
+            Others must be done within HBase (at the client side). Other settings need
+            to be set at both the server and client side.
+          </para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Write errors which affect HBase may be logged in the HDFS logs rather than HBase logs.</term>
+        <listitem>
+          <para>When writing, HDFS pipelines communications from one datanode to another. HBase
+            communicates to both the HDFS namenode and datanode, using the HDFS client classes.
+            Communication problems between datanodes are logged in the HDFS logs, not the HBase
+            logs.</para>
+          <para>HDFS writes are always local when possible. HBase RegionServers should not
+            experience many write errors, because they write the local datanode. If the datanode
+            cannot replicate the blocks, the errors are logged in HDFS, not in the HBase
+            RegionServer logs.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>HBase communicates with HDFS using two different ports.</term>
+        <listitem>
+          <para>HBase communicates with datanodes using the <code>ipc.Client</code> interface and
+            the <code>DataNode</code> class. References to these will appear in HBase logs. Each of
+            these communication channels use a different port (50010 and 50020 by default). The
+            ports are configured in the HDFS configuration, via the
+              <code>dfs.datanode.address</code> and <code>dfs.datanode.ipc.address</code>
+            parameters.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Errors may be logged in HBase, HDFS, or both.</term>
+        <listitem>
+          <para>When troubleshooting HDFS issues in HBase, check logs in both places for errors.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>HDFS takes a while to mark a node as dead. You can configure HDFS to avoid using stale
+          datanodes.</term>
+        <listitem>
+          <para>By default, HDFS does not mark a node as dead until it is unreachable for 630
+            seconds. In Hadoop 1.1 and Hadoop 2.x, this can be alleviated by enabling checks for
+            stale datanodes, though this check is disabled by default. You can enable the check for
+            reads and writes separately, via <code>dfs.namenode.avoid.read.stale.datanode</code> and
+              <code>dfs.namenode.avoid.write.stale.datanode settings</code>. A stale datanode is one
+            that has not been reachable for <code>dfs.namenode.stale.datanode.interval</code>
+            (default is 30 seconds). Stale datanodes are avoided, and marked as the last possible
+            target for a read or write operation. For configuration details, see the HDFS
+            documentation.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Settings for HDFS retries and timeouts are important to HBase.</term>
+        <listitem>
+          <para>You can configure settings for various retries and timeouts. Always refer to the
+            HDFS documentation for current recommendations and defaults. Some of the settings
+            important to HBase are listed here. Defaults are current as of Hadoop 2.3. Check the
+            Hadoop documentation for the most current values and recommendations.</para>
+          <variablelist>
+            <title>Retries</title>
+            <varlistentry>
+              <term><code>ipc.client.connect.max.retries</code> (default: 10)</term>
+              <listitem>
+                <para>The number of times a client will attempt to establish a connection with the
+                  server. This value sometimes needs to be increased. You can specify different
+                  setting for the maximum number of retries if a timeout occurs. For SASL
+                  connections, the number of retries is hard-coded at 15 and cannot be
+                  configured.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+              <term><code>ipc.client.connect.max.retries.on.timeouts</code> (default: 45)</term>
+              <listitem><para>The number of times a client will attempt to establish a connection
+                with the server in the event of a timeout. If some retries are due to timeouts and
+                some are due to other reasons, this counter is added to
+                <code>ipc.client.connect.max.retries</code>, so the maximum number of retries for
+                all reasons could be the combined value.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+              <term><code>dfs.client.block.write.retries</code> (default: 3)</term>
+              <listitem><para>How many times the client attempts to write to the datanode. After the
+              number of retries is reached, the client reconnects to the namenode to get a new
+              location of a datanode. You can try increasing this value.</para></listitem>
+            </varlistentry>
+          </variablelist>
+          <variablelist>
+            <title>HDFS Heartbeats</title>
+            <para>HDFS heartbeats are entirely on the HDFS side, between the namenode and datanodes.</para>
+            <varlistentry>
+              <term><code>dfs.heartbeat.interval</code> (default: 3)</term>
+              <listitem><para>The interval at which a node heartbeats.</para></listitem>
+            </varlistentry>
+            <varlistentry>
+              <term><code>dfs.namenode.heartbeat.recheck-interval</code> (default: 300000)</term>
+              <listitem>
+                <para>The interval of time between heartbeat checks. The total time before a node is
+                  marked as stale is determined by the following formula, which works out to 10
+                  minutes and 30 seconds:</para>
+                <screen> 2 * (dfs.namenode.heartbeat.recheck-interval) + 10 * 1000 * (dfs.heartbeat.interval)</screen>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term><code>dfs.namenode.stale.datanode.interval</code> (default: 3000)</term>
+              <listitem>
+                <para>How long (in milliseconds) a node can go without a heartbeat before it is
+                  determined to be stale, if the other options to do with stale datanodes are
+                  configured (off by default).</para></listitem>
+            </varlistentry>
+          </variablelist>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+    <variablelist>
+      <title>Connection Timeouts</title>
+      <para>Connection timeouts occur between the client (HBASE) and the HDFS datanode. They may
+        occur when establishing a connection, attempting to read, or attempting to write. The two
+        settings below are used in combination, and affect connections between the DFSClient and the
+        datanode, the ipc.cClient and the datanode, and communication between two datanodes. </para>
+      <varlistentry>
+        <term><code>dfs.client.socket-timeout</code> (default: 60000)</term>
+        <listitem>
+          <para>The amount of time before a client connection times out when establishing a
+            connection or reading. The value is expressed in milliseconds, so the default is 60
+            seconds.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><code>dfs.datanode.socket.write.timeout</code> (default: 480000)</term>
+        <listitem>
+          <para>The amount of time before a write operation times out. The default is 8
+            minutes, expressed as milliseconds.</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+    <variablelist>
+      <title>Typical Error Logs</title>
+      <para>The following types of errors are often seen in the logs.</para>
+      <varlistentry>
+        <term><code>INFO HDFS.DFSClient: Failed to connect to /xxx50010, add to deadNodes and
+            continue java.net.SocketTimeoutException: 60000 millis timeout while waiting for channel
+            to be ready for connect. ch : java.nio.channels.SocketChannel[connection-pending
+            remote=/region-server-1:50010]</code></term>
+        <listitem>
+          <para>All datanodes for a block are dead, and recovery is not possible. Here is the
+            sequence of events that leads to this error:</para>
+          <itemizedlist>
+            <listitem>
+              <para>The client attempts to connect to a dead datanode.</para>
+            </listitem>
+            <listitem>
+              <para>The connection fails, so the client moves down the list of datanodes and tries
+                the next one. It also fails.</para>
+            </listitem>
+            <listitem>
+              <para>When the client exhausts its entire list, it sleeps for 3 seconds and requests a
+              new list. It is very likely to receive the exact same list as before, in which case
+              the error occurs again.</para>
+            </listitem>
+          </itemizedlist>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term><code>INFO org.apache.hadoop.HDFS.DFSClient: Exception in createBlockOutputStream
+            java.net.SocketTimeoutException: 69000 millis timeout while waiting for channel to be
+            ready for connect. ch : java.nio.channels.SocketChannel[connection-pending remote=/
+            xxx:50010]</code></term>
+        <listitem>
+          <para>This type of error indicates a write issue. In this case, the master wants to split
+            the log. It does not have a local datanode so it tries to connect to a remote datanode,
+            but the datanode is dead.</para>
+          <para>In this situation, there will be three retries (by default). If all retries fail, a
+            message like the following is logged:</para>
+          <screen>
+WARN HDFS.DFSClient: DataStreamer Exception: java.io.IOException: Unable to create new block
+          </screen>
+          <para>If the operation was an attempt to split the log, the following type of message may
+            also appear:</para>
+          <screen>
+FATAL wal.HLogSplitter: WriterThread-xxx Got while writing log entry to log            
+          </screen>
+        </listitem>
+      </varlistentry>
+    </variablelist>
+  </section>
+
   <section
     xml:id="trouble.tests">
     <title>Running unit or integration tests</title>
