@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.hadoop.hbase.MetaMigrationConvertingToPB;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
@@ -571,11 +570,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     for (ServerName tmpServer : previouslyFailedServers) {
       this.serverManager.processDeadServer(tmpServer, true);
     }
-
-    // Update meta with new PB serialization if required. i.e migrate all HRI to PB serialization
-    // in meta. This must happen before we assign all user regions or else the assignment will
-    // fail.
-    MetaMigrationConvertingToPB.updateMetaIfNecessary(this);
 
     // Fix up assignment manager status
     status.setStatus("Starting assignment manager");
