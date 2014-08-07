@@ -53,7 +53,7 @@ import com.google.protobuf.ServiceException;
  */
 @Category(MediumTests.class)
 public class TestProtoBufRpc {
-  public final static String ADDRESS = "0.0.0.0";
+  public final static String ADDRESS = "localhost";
   public static int PORT = 0;
   private InetSocketAddress isa;
   private Configuration conf;
