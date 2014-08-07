@@ -214,13 +214,13 @@ public class TestCacheConfig {
    */
   @Test
   public void testOffHeapBucketCacheConfig() {
-    this.conf.set(CacheConfig.BUCKET_CACHE_IOENGINE_KEY, "offheap");
+    this.conf.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
     doBucketCacheConfigTest();
   }
 
   @Test
   public void testOnHeapBucketCacheConfig() {
-    this.conf.set(CacheConfig.BUCKET_CACHE_IOENGINE_KEY, "heap");
+    this.conf.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "heap");
     doBucketCacheConfigTest();
   }
 
@@ -231,7 +231,7 @@ public class TestCacheConfig {
       Path p = new Path(htu.getDataTestDir(), "bc.txt");
       FileSystem fs = FileSystem.get(this.conf);
       fs.create(p).close();
-      this.conf.set(CacheConfig.BUCKET_CACHE_IOENGINE_KEY, "file:" + p);
+      this.conf.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "file:" + p);
       doBucketCacheConfigTest();
     } finally {
       htu.cleanupTestDir();
@@ -240,7 +240,7 @@ public class TestCacheConfig {
 
   private void doBucketCacheConfigTest() {
     final int bcSize = 100;
-    this.conf.setInt(CacheConfig.BUCKET_CACHE_SIZE_KEY, bcSize);
+    this.conf.setInt(HConstants.BUCKET_CACHE_SIZE_KEY, bcSize);
     CacheConfig cc = new CacheConfig(this.conf);
     basicBlockCacheOps(cc, false, false);
     assertTrue(cc.getBlockCache() instanceof CombinedBlockCache);
@@ -263,7 +263,7 @@ public class TestCacheConfig {
    */
   @Test (timeout=10000)
   public void testBucketCacheConfigL1L2Setup() {
-    this.conf.set(CacheConfig.BUCKET_CACHE_IOENGINE_KEY, "offheap");
+    this.conf.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
     // Make lru size is smaller than bcSize for sure.  Need this to be true so when eviction
     // from L1 happens, it does not fail because L2 can't take the eviction because block too big.
     this.conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.001f);
@@ -272,7 +272,7 @@ public class TestCacheConfig {
     final int bcSize = 100;
     long bcExpectedSize = 100 * 1024 * 1024; // MB.
     assertTrue(lruExpectedSize < bcExpectedSize);
-    this.conf.setInt(CacheConfig.BUCKET_CACHE_SIZE_KEY, bcSize);
+    this.conf.setInt(HConstants.BUCKET_CACHE_SIZE_KEY, bcSize);
     this.conf.setBoolean(CacheConfig.BUCKET_CACHE_COMBINED_KEY, false);
     CacheConfig cc = new CacheConfig(this.conf);
     basicBlockCacheOps(cc, false, false);
@@ -317,8 +317,8 @@ public class TestCacheConfig {
    */
   @Test
   public void testCacheDataInL1() {
-    this.conf.set(CacheConfig.BUCKET_CACHE_IOENGINE_KEY, "offheap");
-    this.conf.setInt(CacheConfig.BUCKET_CACHE_SIZE_KEY, 100);
+    this.conf.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
+    this.conf.setInt(HConstants.BUCKET_CACHE_SIZE_KEY, 100);
     CacheConfig cc = new CacheConfig(this.conf);
     assertTrue(cc.getBlockCache() instanceof CombinedBlockCache);
     CombinedBlockCache cbc = (CombinedBlockCache)cc.getBlockCache();
