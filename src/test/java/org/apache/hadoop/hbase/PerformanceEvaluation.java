@@ -54,9 +54,10 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.FilterAllFilter;
+import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PageFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
-import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
@@ -132,8 +133,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
   private DataBlockEncoding blockEncoding = DataBlockEncoding.NONE;
   private float sampleRate = 1.0f;
   private boolean flushCommits = true;
-  private boolean reportLatency = false;
   private boolean writeToWAL = true;
+  private boolean reportLatency = false;
+  private boolean filterAll = false;
   private int presplitRegions = 0;
 
   private static final Path PERF_EVAL_DIR = new Path("performance_evaluation");
@@ -147,7 +149,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
         "clients=(\\d+),\\s+" +
         "flushCommits=(\\w+),\\s+" +
         "writeToWAL=(\\w+),\\s+" +
-        "reportLatency=(\\w+)");
+        "reportLatency=(\\w+),\\s+" +
+        "filterAll=(\\w+)");
 
   /**
    * Enum for map metrics.  Keep it out here rather than inside in the Map
@@ -225,11 +228,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private boolean flushCommits = false;
     private boolean writeToWAL = true;
     private boolean reportLatency = false;
+    private boolean filterAll = false;
 
     public PeInputSplit() {}
 
     public PeInputSplit(int startRow, int rows, int totalRows, float sampleRate,
-        int clients, boolean flushCommits, boolean writeToWAL, boolean reportLatency) {
+        int clients, boolean flushCommits, boolean writeToWAL, boolean reportLatency,
+        boolean filterAll) {
       this.startRow = startRow;
       this.rows = rows;
       this.totalRows = totalRows;
@@ -238,6 +243,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.flushCommits = flushCommits;
       this.writeToWAL = writeToWAL;
       this.reportLatency = reportLatency;
+      this.filterAll = filterAll;
     }
 
     @Override
@@ -250,6 +256,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.flushCommits = in.readBoolean();
       this.writeToWAL = in.readBoolean();
       this.reportLatency = in.readBoolean();
+      this.filterAll = in.readBoolean();
     }
 
     @Override
@@ -262,6 +269,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       out.writeBoolean(flushCommits);
       out.writeBoolean(writeToWAL);
       out.writeBoolean(reportLatency);
+      out.writeBoolean(filterAll);
     }
 
     @Override
@@ -305,6 +313,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public boolean isReportLatency() {
       return reportLatency;
     }
+
+    public boolean isFilterAll() {
+      return filterAll;
+    }
   }
 
   /**
@@ -340,6 +352,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
             boolean flushCommits = Boolean.parseBoolean(m.group(6));
             boolean writeToWAL = Boolean.parseBoolean(m.group(7));
             boolean reportLatency = Boolean.parseBoolean(m.group(8));
+            boolean filterAll = Boolean.parseBoolean(m.group(9));
 
             LOG.debug("split["+ splitList.size() + "] " +
                      " startRow=" + startRow +
@@ -349,11 +362,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
                      " clients=" + clients +
                      " flushCommits=" + flushCommits +
                      " writeToWAL=" + writeToWAL +
-                     " reportLatency=" + reportLatency);
+                     " reportLatency=" + reportLatency +
+                     " filterAll=" + filterAll);
 
             PeInputSplit newSplit =
               new PeInputSplit(startRow, rows, totalRows, sampleRate, clients,
-                flushCommits, writeToWAL, reportLatency);
+                flushCommits, writeToWAL, reportLatency, filterAll);
             splitList.add(newSplit);
           }
         }
@@ -475,7 +489,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       long elapsedTime = this.pe.runOneClient(this.cmd, value.getStartRow(),
         value.getRows(), value.getTotalRows(), value.getSampleRate(),
         value.isFlushCommits(), value.isWriteToWAL(), value.isReportLatency(),
-        status);
+        value.isFilterAll(), status);
       // Collect how much time the thing took. Report as map output and
       // to the ELAPSED_TIME counter.
       context.getCounter(Counter.ELAPSED_TIME).increment(elapsedTime);
@@ -580,7 +594,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
           try {
             long elapsedTime = pe.runOneClient(cmd, index * perClientRows,
                perClientRows, R, sampleRate, flushCommits, writeToWAL,
-               reportLatency, new Status() {
+               reportLatency, filterAll, new Status() {
                   public void setStatus(final String msg) throws IOException {
                     LOG.info("client-" + getName() + " " + msg);
                   }
@@ -679,7 +693,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
           ", clients=" + this.N +
           ", flushCommits=" + this.flushCommits +
           ", writeToWAL=" + this.writeToWAL +
-          ", reportLatency=" + this.reportLatency;
+          ", reportLatency=" + this.reportLatency +
+          ", filterAll=" + this.filterAll;
           int hash = h.hash(Bytes.toBytes(s));
           m.put(hash, s);
         }
@@ -733,11 +748,13 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private boolean flushCommits;
     private boolean writeToWAL = true;
     private boolean reportLatency;
+    private boolean filterAll;
 
     TestOptions() {}
 
     TestOptions(int startRow, int perClientRunRows, int totalRows, float sampleRate,
-        byte[] tableName, boolean flushCommits, boolean writeToWAL, boolean reportLatency) {
+        byte[] tableName, boolean flushCommits, boolean writeToWAL, boolean reportLatency,
+        boolean filterAll) {
       this.startRow = startRow;
       this.perClientRunRows = perClientRunRows;
       this.totalRows = totalRows;
@@ -746,6 +763,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.flushCommits = flushCommits;
       this.writeToWAL = writeToWAL;
       this.reportLatency = reportLatency;
+      this.filterAll = filterAll;
     }
 
     public int getStartRow() {
@@ -779,6 +797,10 @@ public class PerformanceEvaluation extends Configured implements Tool {
     public boolean isReportLatency() {
       return reportLatency;
     }
+
+    public boolean isFilterAll() {
+      return filterAll;
+    }
   }
 
   /*
@@ -807,6 +829,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     protected boolean flushCommits;
     protected boolean writeToWAL;
     protected boolean reportlatency;
+    protected boolean filterAll;
 
     /**
      * Note that all subclasses of this class must provide a public contructor
@@ -825,6 +848,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       this.flushCommits = options.isFlushCommits();
       this.writeToWAL = options.isWriteToWAL();
       this.reportlatency = options.isReportLatency();
+      this.filterAll = options.isFilterAll();
     }
 
     private String generateStatus(final int sr, final int i, final int lr) {
@@ -900,7 +924,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
     void testRow(final int i) throws IOException {
       Scan scan = new Scan(getRandomRow(this.rand, this.totalRows));
       scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-      scan.setFilter(new WhileMatchFilter(new PageFilter(120)));
+      FilterList list = new FilterList();
+      if (this.filterAll) {
+        list.addFilter(new FilterAllFilter());
+      }
+      list.addFilter(new WhileMatchFilter(new PageFilter(120)));
+      scan.setFilter(list);
       ResultScanner s = this.table.getScanner(scan);
       for (Result rr; (rr = s.next()) != null;) ;
       s.close();
@@ -925,6 +954,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
       Pair<byte[], byte[]> startAndStopRow = getStartAndStopRow();
       Scan scan = new Scan(startAndStopRow.getFirst(), startAndStopRow.getSecond());
       scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      if (this.filterAll) {
+        scan.setFilter(new FilterAllFilter());
+      }
       ResultScanner s = this.table.getScanner(scan);
       int count = 0;
       for (Result rr; (rr = s.next()) != null;) {
@@ -1022,6 +1054,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (i % everyN == 0) {
         Get get = new Get(getRandomRow(this.rand, this.totalRows));
         get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+        if (this.filterAll) {
+          get.setFilter(new FilterAllFilter());
+        }
         long start = System.nanoTime();
         this.table.get(get);
         if (this.reportLatency) {
@@ -1087,6 +1122,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
       if (this.testScanner == null) {
         Scan scan = new Scan(format(this.startRow));
         scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+        if (this.filterAll) {
+          scan.setFilter(new FilterAllFilter());
+        }
         this.testScanner = table.getScanner(scan);
       }
       testScanner.next();
@@ -1103,6 +1141,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     void testRow(final int i) throws IOException {
       Get get = new Get(format(i));
       get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
+      if (this.filterAll) {
+        get.setFilter(new FilterAllFilter());
+      }
       table.get(get);
     }
   }
@@ -1144,13 +1185,17 @@ public class PerformanceEvaluation extends Configured implements Tool {
     }
 
     protected Scan constructScan(byte[] valuePrefix) throws IOException {
-      Filter filter = new SingleColumnValueFilter(
-          FAMILY_NAME, QUALIFIER_NAME, CompareFilter.CompareOp.EQUAL,
-          new BinaryComparator(valuePrefix)
-      );
       Scan scan = new Scan();
       scan.addColumn(FAMILY_NAME, QUALIFIER_NAME);
-      scan.setFilter(filter);
+      FilterList list = new FilterList();
+      list.addFilter(new SingleColumnValueFilter(
+          FAMILY_NAME, QUALIFIER_NAME, CompareFilter.CompareOp.EQUAL,
+          new BinaryComparator(valuePrefix)
+      ));
+      if (this.filterAll) {
+        list.addFilter(new FilterAllFilter());
+      }
+      scan.setFilter(list);
       return scan;
     }
   }
@@ -1223,7 +1268,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   long runOneClient(final Class<? extends Test> cmd, final int startRow,
       final int perClientRunRows, final int totalRows, final float sampleRate,
       boolean flushCommits, boolean writeToWAL, boolean reportLatency,
-      final Status status)
+      boolean filterAll, final Status status)
   throws IOException {
     status.setStatus("Start " + cmd + " at offset " + startRow + " for " +
       perClientRunRows + " rows");
@@ -1231,7 +1276,8 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     Test t = null;
     TestOptions options = new TestOptions(startRow, perClientRunRows, totalRows,
-      sampleRate, getTableDescriptor().getName(), flushCommits, writeToWAL, reportLatency);
+      sampleRate, getTableDescriptor().getName(), flushCommits, writeToWAL, reportLatency,
+      filterAll);
     try {
       Constructor<? extends Test> constructor = cmd.getDeclaredConstructor(
           Configuration.class, TestOptions.class, Status.class);
@@ -1264,7 +1310,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       admin = new HBaseAdmin(getConf());
       checkTable(admin);
       runOneClient(cmd, 0, this.R, this.R, this.sampleRate, this.flushCommits,
-        this.writeToWAL, this.writeToWAL, status);
+        this.writeToWAL, this.reportLatency, this.filterAll, status);
     } catch (Exception e) {
       LOG.error("Failed", e);
     } finally {
@@ -1339,6 +1385,9 @@ public class PerformanceEvaluation extends Configured implements Tool {
     System.err.println(" writeToWAL      Set writeToWAL on puts. Default: True");
     System.err.println(" presplit        Create presplit table. Recommended for accurate perf " +
       "analysis (see guide).  Default: disabled");
+    System.err.println(" filterAll       Helps to filter out all the rows on the server side"
+        + " there by not returning any thing back to the client.  Helps to check the server side"
+        + " performance.  Uses FilterAllFilter internally. ");
     System.err.println(" latency         Set to report operation latencies. " +
       "Currently only supported by randomRead test. Default: False");
     System.err.println();
@@ -1455,6 +1504,12 @@ public class PerformanceEvaluation extends Configured implements Tool {
         final String latency = "--latency";
         if (cmd.startsWith(latency)) {
           this.reportLatency = true;
+          continue;
+        }
+
+        final String filterOutAll = "--filterAll";
+        if (cmd.startsWith(filterOutAll)) {
+          this.filterAll = true;
           continue;
         }
 
