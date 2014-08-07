@@ -1746,15 +1746,17 @@ public class HRegionServer extends HasThread implements
       // to handle the region transition report at all.
       if (code == TransitionCode.OPENED) {
         Preconditions.checkArgument(hris != null && hris.length == 1);
-        try {
-          MetaTableAccessor.updateRegionLocation(shortCircuitConnection,
-            hris[0], serverName, openSeqNum);
-          return true;
-        } catch (IOException e) {
-          LOG.info("Failed to update meta", e);
-          return false;
+        if (!hris[0].isMetaRegion()) {
+          try {
+            MetaTableAccessor.updateRegionLocation(shortCircuitConnection,
+              hris[0], serverName, openSeqNum);
+          } catch (IOException e) {
+            LOG.info("Failed to update meta", e);
+            return false;
+          }
         }
       }
+      return true;
     }
 
     ReportRegionStateTransitionRequest.Builder builder =
