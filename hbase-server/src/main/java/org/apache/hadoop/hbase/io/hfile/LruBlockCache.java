@@ -503,12 +503,9 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       if(bytesToFree <= 0) return;
 
       // Instantiate priority buckets
-      BlockBucket bucketSingle = new BlockBucket(bytesToFree, blockSize,
-          singleSize());
-      BlockBucket bucketMulti = new BlockBucket(bytesToFree, blockSize,
-          multiSize());
-      BlockBucket bucketMemory = new BlockBucket(bytesToFree, blockSize,
-          memorySize());
+      BlockBucket bucketSingle = new BlockBucket(bytesToFree, blockSize, singleSize());
+      BlockBucket bucketMulti = new BlockBucket(bytesToFree, blockSize, multiSize());
+      BlockBucket bucketMemory = new BlockBucket(bytesToFree, blockSize, memorySize());
 
       // Scan entire map putting into appropriate buckets
       for(LruCachedBlock cachedBlock : map.values()) {
@@ -606,7 +603,6 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
    * to configuration parameters and their relatives sizes.
    */
   private class BlockBucket implements Comparable<BlockBucket> {
-
     private LruCachedBlockQueue queue;
     private long totalSize = 0;
     private long bucketSize;
@@ -652,10 +648,14 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       if (that == null || !(that instanceof BlockBucket)){
         return false;
       }
-
-      return compareTo(( BlockBucket)that) == 0;
+      return compareTo((BlockBucket)that) == 0;
     }
 
+    @Override
+    public int hashCode() {
+      // Nothing distingushing about each instance unless I pass in a 'name' or something
+      return super.hashCode();
+    }
   }
 
   /**
@@ -714,18 +714,20 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
       while (this.go) {
         synchronized(this) {
           try {
-            this.wait();
+            this.wait(1000 * 10/*Don't wait for ever*/);
           } catch(InterruptedException e) {}
         }
         LruBlockCache cache = this.cache.get();
-        if(cache == null) break;
+        if (cache == null) break;
         cache.evict();
       }
     }
 
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NN_NAKED_NOTIFY",
+        justification="This is what we want")
     public void evict() {
       synchronized(this) {
-        this.notifyAll(); // FindBugs NN_NAKED_NOTIFY
+        this.notifyAll();
       }
     }
 
@@ -870,6 +872,11 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
                 other.getCachedTime());
             }
             return (int)(other.getCachedTime() - this.getCachedTime());
+          }
+
+          @Override
+          public int hashCode() {
+            return b.hashCode();
           }
 
           @Override
