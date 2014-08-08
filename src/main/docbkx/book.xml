@@ -2113,9 +2113,11 @@ rs.close();
           </para>
 
           <para>Fetching will always be slower when fetching from BucketCache,
-              as compared with the native onheap LruBlockCache. However, latencies tend to be
-              less erratic across time, because there is less garbage collection. This is why
-              you'd use BucketCache, so your latencies are less erratic and to mitigate GCs
+              as compared to the native onheap LruBlockCache. However, latencies tend to be
+              less erratic across time, because there is less garbage collection when you use
+              BucketCache since it is managing BlockCache allocations, not the GC. If the
+              BucketCache is deployed in offheap mode, this memory is not managed by the
+              GC at all. This is why you'd use BucketCache, so your latencies are less erratic and to mitigate GCs
               and heap fragmentation.  See Nick Dimiduk's <link
               xlink:href="http://www.n10k.com/blog/blockcache-101/">BlockCache 101</link> for
             comparisons running onheap vs offheap tests. Also see
