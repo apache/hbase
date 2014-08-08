@@ -1647,18 +1647,16 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         LOG.error("Error call master coprocessor preShutdown()", ioe);
       }
     }
-    if (this.assignmentManager != null) {
-      this.assignmentManager.shutdown();
+
+    if (this.serverManager != null) {
+      this.serverManager.shutdownCluster();
     }
-    try {
-      if (this.clusterStatusTracker != null){
+    if (this.clusterStatusTracker != null){
+      try {
         this.clusterStatusTracker.setClusterDown();
-        if (this.serverManager != null) {
-          this.serverManager.shutdownCluster();
-        }
+      } catch (KeeperException e) {
+        LOG.error("ZooKeeper exception trying to set cluster as down in ZK", e);
       }
-    } catch (KeeperException e) {
-      LOG.error("ZooKeeper exception trying to set cluster as down in ZK", e);
     }
   }
 

@@ -874,7 +874,7 @@ public class MasterRpcServices extends RSRpcServices
   public IsMasterRunningResponse isMasterRunning(RpcController c,
       IsMasterRunningRequest req) throws ServiceException {
     try {
-      master.checkInitialized();
+      master.checkServiceStarted();
       return IsMasterRunningResponse.newBuilder().setIsMasterRunning(
         !master.isStopped()).build();
     } catch (IOException e) {

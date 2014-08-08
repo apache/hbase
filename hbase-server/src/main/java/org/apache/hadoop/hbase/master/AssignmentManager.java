@@ -1521,11 +1521,6 @@ public class AssignmentManager extends ZooKeeperListener {
     if (isDisabledorDisablingRegionInRIT(region)) {
       return;
     }
-    if (this.serverManager.isClusterShutdown()) {
-      LOG.info("Cluster shutdown is set; skipping assign of " +
-        region.getRegionNameAsString());
-      return;
-    }
     String encodedName = region.getEncodedName();
     Lock lock = locker.acquireLock(encodedName);
     try {
@@ -3284,6 +3279,8 @@ public class AssignmentManager extends ZooKeeperListener {
     synchronized (zkEventWorkerWaitingList){
       zkEventWorkerWaitingList.clear();
     }
+
+    // Shutdown the threadpool executor service
     threadPoolExecutorService.shutdownNow();
     zkEventWorkers.shutdownNow();
     regionStateStore.stop();
