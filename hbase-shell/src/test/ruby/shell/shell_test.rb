@@ -66,4 +66,14 @@ class ShellTest < Test::Unit::TestCase
   define_test "Shell::Shell#command should execute a command" do
     @shell.command('version')
   end
+
+  #-------------------------------------------------------------------------------
+
+  define_test "Shell::Shell interactive mode should not throw" do
+    # incorrect number of arguments
+    @shell.command('create', 'foo')
+    @shell.command('create', 'foo', 'family_1')
+    # create a table that exists
+    @shell.command('create', 'foo', 'family_1')
+  end
 end
