@@ -2137,6 +2137,19 @@ rs.close();
                 and would surely evict data that's currently in use. </para>
             </listitem>
           </itemizedlist>
+          <section xml:id="data.blocks.in.fscache">
+            <title>Caching META blocks only (DATA blocks in fscache)</title>
+            <para>An interesting setup is one where we cache META blocks only and we read DATA
+              blocks in on each access. If the DATA blocks fit inside fscache, this alternative
+              may make sense when access is completely random across a very large dataset.
+              To enable this setup, alter your table and for each column family
+              set <varname>BLOCKCACHE => 'false'</varname>.  You are 'disabling' the
+              BlockCache for this column family only you can never disable the caching of
+              META blocks. Since
+              <link xlink:href="https://issues.apache.org/jira/browse/HBASE-4683">HBASE-4683 Always cache index and bloom blocks</link>,
+              we will cache META blocks even if the BlockCache is disabled.
+            </para>
+          </section>
         </section>
         <section
           xml:id="offheap.blockcache">
