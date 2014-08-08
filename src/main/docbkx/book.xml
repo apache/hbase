@@ -2409,6 +2409,9 @@ rs.close();
                     memory currently used by the server can be found on the
                     <varname>java.nio.type=BufferPool,name=direct</varname>
                     bean.
+                    <footnote><para>Terracotta has a <link xlink:href="http://terracotta.org/documentation/4.0/bigmemorygo/configuration/storage-options">good write up</link> on using offheap memory in java.
+                        It is for their product BigMemory but alot of the issues noted apply
+                        in general to any attempt at going offheap. Check it out.</para></footnote>
                 </para>
             </note>
               <note xml:id="hbase.bucketcache.percentage.in.combinedcache"><title>hbase.bucketcache.percentage.in.combinedcache</title>
