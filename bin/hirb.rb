@@ -19,6 +19,12 @@
 # File passed to org.jruby.Main by bin/hbase.  Pollutes jirb with hbase imports
 # and hbase  commands and then loads jirb.  Outputs a banner that tells user
 # where to find help, shell version, and loads up a custom hirb.
+#
+# In noninteractive mode, runs commands from stdin until completion or an error.
+# On success will exit with status 0, on any problem will exit non-zero. Callers
+# should only rely on "not equal to 0", because the current error exit code of 1
+# will likely be updated to diffentiate e.g. invalid commands, incorrect args,
+# permissions, etc.
 
 # TODO: Interrupt a table creation or a connection to a bad master.  Currently
 # has to time out.  Below we've set down the retries for rpc and hbase but
@@ -54,12 +60,16 @@ Usage: shell [OPTIONS] [SCRIPTFILE [ARGUMENTS]]
 
  -d | --debug                   Set DEBUG log levels.
  -h | --help                    This help.
+ -n | --noninteractive          Do not run within an IRB session
+                                and exit with non-zero status on
+                                first error.
 HERE
 found = []
 format = 'console'
 script2run = nil
 log_level = org.apache.log4j.Level::ERROR
 @shell_debug = false
+interactive = true
 for arg in ARGV
   if arg =~ /^--format=(.+)/i
     format = $1
@@ -80,6 +90,9 @@ for arg in ARGV
     @shell_debug = true
     found.push(arg)
     puts "Setting DEBUG log level..."
+  elsif arg == '-n' || arg == '--noninteractive'
+    interactive = false
+    found.push(arg)
   else
     # Presume it a script. Save it off for running later below
     # after we've set up some environment.
@@ -118,10 +131,11 @@ require 'shell/formatter'
 @hbase = Hbase::Hbase.new
 
 # Setup console
-@shell = Shell::Shell.new(@hbase, @formatter)
+@shell = Shell::Shell.new(@hbase, @formatter, interactive)
 @shell.debug = @shell_debug
 
 # Add commands to this namespace
+# TODO avoid polluting main namespace by using a binding
 @shell.export_commands(self)
 
 # Add help command
@@ -158,38 +172,75 @@ end
 # Include hbase constants
 include HBaseConstants
 
-# If script2run, try running it.  Will go on to run the shell unless
+# If script2run, try running it.  If we're in interactive mode, will go on to run the shell unless
 # script calls 'exit' or 'exit 0' or 'exit errcode'.
 load(script2run) if script2run
 
-# Output a banner message that tells users where to go for help
-@shell.print_banner
+if interactive
+  # Output a banner message that tells users where to go for help
+  @shell.print_banner
 
-require "irb"
-require 'irb/hirb'
+  require "irb"
+  require 'irb/hirb'
 
-module IRB
-  def self.start(ap_path = nil)
-    $0 = File::basename(ap_path, ".rb") if ap_path
+  module IRB
+    def self.start(ap_path = nil)
+      $0 = File::basename(ap_path, ".rb") if ap_path
 
-    IRB.setup(ap_path)
-    @CONF[:IRB_NAME] = 'hbase'
-    @CONF[:AP_NAME] = 'hbase'
-    @CONF[:BACK_TRACE_LIMIT] = 0 unless $fullBackTrace
+      IRB.setup(ap_path)
+      @CONF[:IRB_NAME] = 'hbase'
+      @CONF[:AP_NAME] = 'hbase'
+      @CONF[:BACK_TRACE_LIMIT] = 0 unless $fullBackTrace
 
-    if @CONF[:SCRIPT]
-      hirb = HIRB.new(nil, @CONF[:SCRIPT])
-    else
-      hirb = HIRB.new
+      if @CONF[:SCRIPT]
+        hirb = HIRB.new(nil, @CONF[:SCRIPT])
+      else
+        hirb = HIRB.new
+      end
+
+      @CONF[:IRB_RC].call(hirb.context) if @CONF[:IRB_RC]
+      @CONF[:MAIN_CONTEXT] = hirb.context
+
+      catch(:IRB_EXIT) do
+        hirb.eval_input
+      end
     end
+  end
 
-    @CONF[:IRB_RC].call(hirb.context) if @CONF[:IRB_RC]
-    @CONF[:MAIN_CONTEXT] = hirb.context
-
-    catch(:IRB_EXIT) do
-      hirb.eval_input
+  IRB.start
+else
+  begin
+    # Noninteractive mode: if there is input on stdin, do a simple REPL.
+    # XXX Note that this purposefully uses STDIN and not Kernel.gets
+    #     in order to maintain compatibility with previous behavior where
+    #     a user could pass in script2run and then still pipe commands on
+    #     stdin.
+    require "irb/ruby-lex"
+    require "irb/workspace"
+    workspace = IRB::WorkSpace.new(binding())
+    scanner = RubyLex.new
+    scanner.set_input(STDIN)
+    scanner.each_top_level_statement do |statement, linenum|
+       puts(workspace.evaluate(nil, statement, 'stdin', linenum))
+    end
+  # XXX We're catching Exception on purpose, because we want to include
+  #     unwrapped java exceptions, syntax errors, eval failures, etc.
+  rescue Exception => exception
+    message = exception.to_s
+    # exception unwrapping in shell means we'll have to handle Java exceptions
+    # as a special case in order to format them properly.
+    if exception.kind_of? java.lang.Exception
+      $stderr.puts "java exception"
+      message = exception.get_message
+    end
+    # Include the 'ERROR' string to try to make transition easier for scripts that
+    # may have already been relying on grepping output.
+    puts "ERROR #{exception.class}: #{message}"
+    if $fullBacktrace
+      # re-raising the will include a backtrace and exit.
+      raise exception
+    else
+      exit 1
     end
   end
 end
-
-IRB.start

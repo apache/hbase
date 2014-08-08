@@ -71,13 +71,16 @@ module Shell
   class Shell
     attr_accessor :hbase
     attr_accessor :formatter
+    attr_accessor :interactive
+    alias interactive? interactive
 
     @debug = false
     attr_accessor :debug
 
-    def initialize(hbase, formatter)
+    def initialize(hbase, formatter, interactive=true)
       self.hbase = hbase
       self.formatter = formatter
+      self.interactive = interactive
     end
 
     def hbase_admin
