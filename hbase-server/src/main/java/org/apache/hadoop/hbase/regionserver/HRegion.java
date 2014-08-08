@@ -1684,12 +1684,11 @@ public class HRegion implements HeapSize { // , Writable{
       }
       return new FlushResult(FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY, "Nothing to flush");
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Started memstore flush for " + this +
-        ", current region memstore size " +
-        StringUtils.humanReadableInt(this.memstoreSize.get()) +
-        ((wal != null)? "": "; wal is null, using passed sequenceid=" + myseqid));
-    }
+
+    LOG.info("Started memstore flush for " + this +
+      ", current region memstore size " +
+      StringUtils.humanReadableInt(this.memstoreSize.get()) +
+      ((wal != null)? "": "; wal is null, using passed sequenceid=" + myseqid));
 
     // Stop updates while we snapshot the memstore of all stores. We only have
     // to do this for a moment.  Its quick.  The subsequent sequence id that
