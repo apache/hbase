@@ -508,7 +508,7 @@ public class RegionStates {
       ServerName oldServerName = regionAssignments.remove(hri);
       if (oldServerName != null && serverHoldings.containsKey(oldServerName)
           && (newState == State.MERGED || newState == State.SPLIT
-            || tableStateManager.isTableState(hri.getTable(),
+            || hri.isMetaRegion() || tableStateManager.isTableState(hri.getTable(),
               ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING))) {
         // Offline the region only if it's merged/split, or the table is disabled/disabling.
         // Otherwise, offline it from this server only when it is online on a different server.

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -98,6 +99,51 @@ public class TestAssignmentManagerOnCluster {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  /**
+   * This tests restarting meta regionserver
+   */
+  @Test (timeout=180000)
+  public void testRestartMetaRegionServer() throws Exception {
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    boolean stoppedARegionServer = false;
+    try {
+      HMaster master = cluster.getMaster();
+      RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+      ServerName metaServerName = regionStates.getRegionServerOfRegion(
+        HRegionInfo.FIRST_META_REGIONINFO);
+      if (master.getServerName().equals(metaServerName)) {
+        // Move meta off master
+        metaServerName = cluster.getLiveRegionServerThreads()
+          .get(0).getRegionServer().getServerName();
+        master.move(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
+          Bytes.toBytes(metaServerName.getServerName()));
+        TEST_UTIL.waitUntilNoRegionsInTransition(60000);
+      }
+      assertNotEquals("Meta should be moved off master",
+        metaServerName, master.getServerName());
+      cluster.killRegionServer(metaServerName);
+      stoppedARegionServer = true;
+      cluster.waitForRegionServerToStop(metaServerName, 60000);
+
+      // Wait for SSH to finish
+      final ServerManager serverManager = master.getServerManager();
+      TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return !serverManager.areDeadServersInProgress();
+        }
+      });
+
+      // Now, make sure meta is assigned
+      assertTrue("Meta should be assigned",
+        regionStates.isRegionOnline(HRegionInfo.FIRST_META_REGIONINFO));
+    } finally {
+      if (stoppedARegionServer) {
+        cluster.startRegionServer();
+      }
+    }
   }
 
   /**
