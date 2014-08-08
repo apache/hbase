@@ -168,9 +168,6 @@ public class ServerShutdownHandler extends EventHandler {
             } else {
               // Not using ZK for assignment, regionStates has everything we want
               hris = am.getRegionStates().getServerRegions(serverName);
-              if (hris != null) {
-                hris.remove(HRegionInfo.FIRST_META_REGIONINFO);
-              }
             }
           }
           break;
