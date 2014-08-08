@@ -122,6 +122,15 @@ public class HeapMemorySizeUtil {
     // L1 block cache is always on heap
     float l1CachePercent = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
         HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
+    float l2CachePercent = getL2BlockCacheHeapPercent(conf);
+    return l1CachePercent + l2CachePercent;
+  }
+
+  /**
+   * @param conf
+   * @return The on heap size for L2 block cache.
+   */
+  public static float getL2BlockCacheHeapPercent(Configuration conf) {
     float l2CachePercent = 0.0F;
     String bucketCacheIOEngineName = conf.get(HConstants.BUCKET_CACHE_IOENGINE_KEY, null);
     // L2 block cache can be on heap when IOEngine is "heap"
@@ -131,6 +140,6 @@ public class HeapMemorySizeUtil {
       l2CachePercent = bucketCachePercentage < 1 ? bucketCachePercentage
           : (bucketCachePercentage * 1024 * 1024) / mu.getMax();
     }
-    return l1CachePercent + l2CachePercent;
+    return l2CachePercent;
   }
 }
