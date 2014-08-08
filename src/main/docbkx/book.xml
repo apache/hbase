@@ -1950,7 +1950,7 @@ rs.close();
           option, and configuration options for each.</para>
 
       <note><title>Block Cache Reporting: UI</title>
-      <para>See the RegionServer UI for detail on caching deploy.  Since HBase 1.0, the
+      <para>See the RegionServer UI for detail on caching deploy.  Since HBase-0.98.4, the
           Block Cache detail has been significantly extended showing configurations,
           sizings, current usage, and even detail on block counts and types.</para>
   </note>
@@ -1972,7 +1972,11 @@ rs.close();
               you'd use BucketCache, so your latencies are less erratic and to mitigate GCs
               and heap fragmentation.  See Nick Dimiduk's <link
               xlink:href="http://www.n10k.com/blog/blockcache-101/">BlockCache 101</link> for
-              comparisons running onheap vs offheap tests.
+            comparisons running onheap vs offheap tests. Also see
+            <link xlink:href="http://people.apache.org/~stack/bc/">Comparing BlockCache Deploys</link>
+            which finds that if your dataset fits inside your LruBlockCache deploy, use it otherwise
+            if you are experiencing cache churn (or you want your cache to exist beyond the
+            vagaries of java GC), use BucketCache.
               </para>
 
               <para>When you enable BucketCache, you are enabling a two tier caching
@@ -2208,11 +2212,11 @@ rs.close();
               </para>
               <step>
                 <para>First, edit the RegionServer's <filename>hbase-env.sh</filename> and set
-                  -XX:MaxDirectMemorySize to a value greater than the offheap size wanted, in
+                  <varname>-XX:MaxDirectMemorySize</varname> to a value greater than the offheap size wanted, in
                   this case, 4 GB (expressed as 4G).  Lets set it to 5G.  That'll be 4G
                   for our offheap cache and 1G for any other uses of offheap memory (there are
                   other users of offheap memory other than BlockCache; e.g. DFSClient 
-                  in RegionServer can make use of offheap memory).</para>
+                  in RegionServer can make use of offheap memory). See <xref linkend="direct.memory" />.</para>
                 <programlisting>-XX:MaxDirectMemorySize=5G</programlisting>
               </step>
               <step>
@@ -2258,6 +2262,10 @@ rs.close();
                     easy to quantify; it is the number of open hfiles * <varname>hbase.dfs.client.read.shortcircuit.buffer.size</varname>
                     where hbase.dfs.client.read.shortcircuit.buffer.size is set to 128k in HBase -- see <filename>hbase-default.xml</filename>
                     default configurations).
+                        Direct memory, which is part of the Java process heap, is separate from the object
+                        heap allocated by -Xmx. The value allocated by MaxDirectMemorySize must not exceed
+                        physical RAM, and is likely to be less than the total available RAM due to other
+                        memory requirements and system constraints.
                 </para>
                 <para>You can see how much memory -- onheap and offheap/direct -- a RegionServer is configured to use
                     and how much it is using at any one time by looking at the
