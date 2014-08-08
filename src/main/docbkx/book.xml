@@ -2282,7 +2282,11 @@ rs.close();
                 </para>
                 <para>You can see how much memory -- onheap and offheap/direct -- a RegionServer is configured to use
                     and how much it is using at any one time by looking at the
-                    <emphasis>Server Metrics: Memory</emphasis> tab in the UI.
+                    <emp hasis>Server Metrics: Memory</emphasis> tab in the UI.
+                    It can also be gotten via JMX.  In particular the direct
+                    memory currently used by the server can be found on the
+                    <varname>java.nio.type=BufferPool,name=direct</varname>
+                    bean.
                 </para>
             </note>
               <note xml:id="hbase.bucketcache.percentage.in.combinedcache"><title>hbase.bucketcache.percentage.in.combinedcache</title>
