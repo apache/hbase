@@ -644,11 +644,6 @@ public class AssignmentManager {
     if (isDisabledorDisablingRegionInRIT(region)) {
       return;
     }
-    if (this.serverManager.isClusterShutdown()) {
-      LOG.info("Cluster shutdown is set; skipping assign of " +
-        region.getRegionNameAsString());
-      return;
-    }
     String encodedName = region.getEncodedName();
     Lock lock = locker.acquireLock(encodedName);
     try {
@@ -2089,13 +2084,7 @@ public class AssignmentManager {
   }
 
   public void stop() {
-    shutdown(); // Stop executor service, etc
-  }
-
-  /**
-   * Shutdown the threadpool executor service
-   */
-  public void shutdown() {
+    // Shutdown the threadpool executor service
     threadPoolExecutorService.shutdownNow();
     regionStateStore.stop();
   }

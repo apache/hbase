@@ -670,7 +670,7 @@ public class HRegionServer extends HasThread implements
    * @return False if cluster shutdown in progress
    */
   private boolean isClusterUp() {
-    return this.clusterStatusTracker.isClusterUp();
+    return clusterStatusTracker != null && clusterStatusTracker.isClusterUp();
   }
 
   private void initializeThreads() throws IOException {
