@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -147,7 +148,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }
-
+  
   /**
    * This tests region assignment on a simulated restarted server
    */
@@ -999,6 +1000,40 @@ public class TestAssignmentManagerOnCluster {
       cluster.startRegionServer();
     }
   }
+  
+  /**
+   * Test that region state transition call is idempotent
+   */
+  @Test(timeout = 60000)
+  public void testReportRegionStateTransition() throws Exception {
+    String table = "testReportRegionStateTransition";
+    try {
+      MyRegionServer.simulateRetry = true;
+      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
+      desc.addFamily(new HColumnDescriptor(FAMILY));
+      admin.createTable(desc);
+      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      HRegionInfo hri =
+          new HRegionInfo(desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+      MetaTableAccessor.addRegionToMeta(meta, hri);
+      HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+      master.assignRegion(hri);
+      AssignmentManager am = master.getAssignmentManager();
+      am.waitForAssignment(hri);
+      RegionStates regionStates = am.getRegionStates();
+      ServerName serverName = regionStates.getRegionServerOfRegion(hri);
+      // Assert the the region is actually open on the server
+      TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
+      // Closing region should just work fine
+      admin.disableTable(TableName.valueOf(table));
+      assertTrue(regionStates.isRegionOffline(hri));
+      List<HRegionInfo> regions = TEST_UTIL.getHBaseAdmin().getOnlineRegions(serverName);
+      assertTrue(!regions.contains(hri));
+    } finally {
+      MyRegionServer.simulateRetry = false;
+      TEST_UTIL.deleteTable(Bytes.toBytes(table));
+    }
+  }
 
   static class MyLoadBalancer extends StochasticLoadBalancer {
     // For this region, if specified, always assign to nowhere
@@ -1038,11 +1073,23 @@ public class TestAssignmentManagerOnCluster {
 
   public static class MyRegionServer extends MiniHBaseClusterRegionServer {
     static volatile ServerName abortedServer = null;
+    static volatile boolean simulateRetry = false;
 
     public MyRegionServer(Configuration conf, CoordinatedStateManager cp)
       throws IOException, KeeperException,
         InterruptedException {
       super(conf, cp);
+    }
+
+    @Override
+    public boolean reportRegionStateTransition(TransitionCode code, long openSeqNum,
+        HRegionInfo... hris) {
+      if (simulateRetry) {
+        // Simulate retry by calling the method twice
+        super.reportRegionStateTransition(code, openSeqNum, hris);
+        return super.reportRegionStateTransition(code, openSeqNum, hris);
+      }
+      return super.reportRegionStateTransition(code, openSeqNum, hris);
     }
 
     @Override
