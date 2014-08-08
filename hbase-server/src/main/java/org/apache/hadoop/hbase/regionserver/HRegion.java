@@ -1711,12 +1711,11 @@ public class HRegion implements HeapSize { // , Writable{
         this.updatesLock.writeLock().unlock();
       }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Started memstore flush for " + this +
-        ", current region memstore size " +
-        StringUtils.byteDesc(this.memstoreSize.get()) +
-        ((wal != null)? "": "; wal is null, using passed sequenceid=" + myseqid));
-    }
+
+    LOG.info("Started memstore flush for " + this +
+      ", current region memstore size " +
+      StringUtils.byteDesc(this.memstoreSize.get()) +
+      ((wal != null)? "": "; wal is null, using passed sequenceid=" + myseqid));
 
     // Stop updates while we snapshot the memstore of all of these regions' stores. We only have
     // to do this for a moment.  It is quick. We also set the memstore size to zero here before we
