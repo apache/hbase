@@ -110,7 +110,6 @@ public class CallRunner {
         RequestContext.clear();
       }
       RpcServer.CurCall.set(null);
-      this.rpcServer.addCallSize(call.getSize() * -1);
       // Set the response for undelayed calls and delayed calls with
       // undelayed responses.
       if (!call.isDelayed() || !call.isReturnValueDelayed()) {
@@ -139,6 +138,9 @@ public class CallRunner {
     } catch (Exception e) {
       RpcServer.LOG.warn(Thread.currentThread().getName()
           + ": caught: " + StringUtils.stringifyException(e));
+    } finally {
+      // regardless if succesful or not we need to reset the callQueueSize
+      this.rpcServer.addCallSize(call.getSize() * -1);
     }
   }
 
