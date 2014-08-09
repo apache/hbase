@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
+import io.netty.util.internal.ConcurrentSet;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -63,8 +64,6 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 
-import io.netty.util.internal.ConcurrentSet;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -91,6 +90,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ResponseHeader;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.AuthMethod;
 import org.apache.hadoop.hbase.security.HBasePolicyProvider;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
@@ -108,7 +108,6 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.compress.CompressionCodec;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authorize.AuthorizationException;
@@ -119,8 +118,8 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.StringUtils;
-import org.htrace.TraceInfo;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.htrace.TraceInfo;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.BlockingService;
@@ -1235,7 +1234,7 @@ public class RpcServer implements RpcServerInterface {
             secretManager);
         UserGroupInformation ugi = tokenId.getUser();
         if (ugi == null) {
-          throw new AccessControlException(
+          throw new AccessDeniedException(
               "Can't retrieve username from tokenIdentifier.");
         }
         ugi.addTokenIdentifier(tokenId);
@@ -1265,7 +1264,7 @@ public class RpcServer implements RpcServerInterface {
             switch (authMethod) {
             case DIGEST:
               if (secretManager == null) {
-                throw new AccessControlException(
+                throw new AccessDeniedException(
                     "Server is not configured to do DIGEST authentication.");
               }
               saslServer = Sasl.createSaslServer(AuthMethod.DIGEST
@@ -1282,7 +1281,7 @@ public class RpcServer implements RpcServerInterface {
               }
               final String names[] = SaslUtil.splitKerberosName(fullName);
               if (names.length != 3) {
-                throw new AccessControlException(
+                throw new AccessDeniedException(
                     "Kerberos principal name does NOT have the expected "
                         + "hostname part: " + fullName);
               }
@@ -1297,7 +1296,7 @@ public class RpcServer implements RpcServerInterface {
               });
             }
             if (saslServer == null)
-              throw new AccessControlException(
+              throw new AccessDeniedException(
                   "Unable to find SASL server implementation for "
                       + authMethod.getMechanismName());
             if (LOG.isDebugEnabled()) {
@@ -1421,7 +1420,7 @@ public class RpcServer implements RpcServerInterface {
         return doBadPreambleHandling(msg, new BadAuthException(msg));
       }
       if (isSecurityEnabled && authMethod == AuthMethod.SIMPLE) {
-        AccessControlException ae = new AccessControlException("Authentication is required");
+        AccessDeniedException ae = new AccessDeniedException("Authentication is required");
         setupResponse(authFailedResponse, authFailedCall, ae, ae.getMessage());
         responder.doRespond(authFailedCall);
         throw ae;
@@ -1581,7 +1580,7 @@ public class RpcServer implements RpcServerInterface {
             && (!protocolUser.getUserName().equals(user.getUserName()))) {
           if (authMethod == AuthMethod.DIGEST) {
             // Not allowed to doAs if token authentication is used
-            throw new AccessControlException("Authenticated user (" + user
+            throw new AccessDeniedException("Authenticated user (" + user
                 + ") doesn't match what the client claims to be ("
                 + protocolUser + ")");
           } else {
@@ -1669,7 +1668,7 @@ public class RpcServer implements RpcServerInterface {
         if (!authorizeConnection()) {
           // Throw FatalConnectionException wrapping ACE so client does right thing and closes
           // down the connection instead of trying to read non-existent retun.
-          throw new AccessControlException("Connection from " + this + " for service " +
+          throw new AccessDeniedException("Connection from " + this + " for service " +
             connectionHeader.getServiceName() + " is unauthorized for user: " + user);
         }
       }
@@ -1778,7 +1777,8 @@ public class RpcServer implements RpcServerInterface {
           LOG.debug("Connection authorization failed: " + ae.getMessage(), ae);
         }
         metrics.authorizationFailure();
-        setupResponse(authFailedResponse, authFailedCall, ae, ae.getMessage());
+        setupResponse(authFailedResponse, authFailedCall,
+          new AccessDeniedException(ae), ae.getMessage());
         responder.doRespond(authFailedCall);
         return false;
       }
