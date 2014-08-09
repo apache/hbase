@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionPlacementMaintainer;
+import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FSProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -73,7 +74,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -1684,7 +1684,7 @@ public abstract class FSUtils {
    *          the action
    */
   public static void checkAccess(UserGroupInformation ugi, FileStatus file,
-      FsAction action) throws AccessControlException {
+      FsAction action) throws AccessDeniedException {
     if (ugi.getShortUserName().equals(file.getOwner())) {
       if (file.getPermission().getUserAction().implies(action)) {
         return;
@@ -1696,7 +1696,7 @@ public abstract class FSUtils {
     } else if (file.getPermission().getOtherAction().implies(action)) {
       return;
     }
-    throw new AccessControlException("Permission denied:" + " action=" + action
+    throw new AccessDeniedException("Permission denied:" + " action=" + action
         + " path=" + file.getPath() + " user=" + ugi.getShortUserName());
   }
 

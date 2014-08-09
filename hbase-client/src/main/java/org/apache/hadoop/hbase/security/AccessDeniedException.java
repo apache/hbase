@@ -41,4 +41,9 @@ public class AccessDeniedException extends DoNotRetryIOException {
   public AccessDeniedException(String s) {
     super(s);
   }
+
+  public AccessDeniedException(Throwable cause) {
+    super(cause);
+  }
+
 }

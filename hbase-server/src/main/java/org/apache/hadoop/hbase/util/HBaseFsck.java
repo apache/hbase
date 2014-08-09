@@ -104,8 +104,8 @@ import org.apache.hadoop.hbase.util.hbck.TableLockChecker;
 import org.apache.hadoop.hbase.zookeeper.MetaRegionTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
@@ -1560,7 +1560,7 @@ public class HBaseFsck extends Configured {
     }
   }
 
-  private void preCheckPermission() throws IOException, AccessControlException {
+  private void preCheckPermission() throws IOException, AccessDeniedException {
     if (shouldIgnorePreCheckPermission()) {
       return;
     }
@@ -1573,12 +1573,12 @@ public class HBaseFsck extends Configured {
     for (FileStatus file : files) {
       try {
         FSUtils.checkAccess(ugi, file, FsAction.WRITE);
-      } catch (AccessControlException ace) {
-        LOG.warn("Got AccessControlException when preCheckPermission ", ace);
+      } catch (AccessDeniedException ace) {
+        LOG.warn("Got AccessDeniedException when preCheckPermission ", ace);
         errors.reportError(ERROR_CODE.WRONG_USAGE, "Current user " + ugi.getUserName()
           + " does not have write perms to " + file.getPath()
           + ". Please rerun hbck as hdfs user " + file.getOwner());
-        throw new AccessControlException(ace);
+        throw ace;
       }
     }
   }
@@ -3999,7 +3999,7 @@ public class HBaseFsck extends Configured {
     // pre-check current user has FS write permission or not
     try {
       preCheckPermission();
-    } catch (AccessControlException ace) {
+    } catch (AccessDeniedException ace) {
       Runtime.getRuntime().exit(-1);
     } catch (IOException ioe) {
       Runtime.getRuntime().exit(-1);
