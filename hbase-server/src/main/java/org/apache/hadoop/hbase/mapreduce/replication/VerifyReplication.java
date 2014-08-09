@@ -67,6 +67,7 @@ public class VerifyReplication extends Configured implements Tool {
   public final static String NAME = "verifyrep";
   static long startTime = 0;
   static long endTime = Long.MAX_VALUE;
+  static int versions = -1;
   static String tableName = null;
   static String families = null;
   static String peerId = null;
@@ -107,6 +108,9 @@ public class VerifyReplication extends Configured implements Tool {
           }
         }
         scan.setTimeRange(startTime, endTime);
+        if (versions >= 0) {
+          scan.setMaxVersions(versions);
+        }
         HConnectionManager.execute(new HConnectable<Void>(conf) {
           @Override
           public Void connect(HConnection conn) throws IOException {
@@ -205,6 +209,9 @@ public class VerifyReplication extends Configured implements Tool {
 
     Scan scan = new Scan();
     scan.setTimeRange(startTime, endTime);
+    if (versions >= 0) {
+      scan.setMaxVersions(versions);
+    }
     if(families != null) {
       String[] fams = families.split(",");
       for(String fam : fams) {
@@ -247,6 +254,12 @@ public class VerifyReplication extends Configured implements Tool {
           continue;
         }
 
+        final String versionsArgKey = "--versions=";
+        if (cmd.startsWith(versionsArgKey)) {
+          versions = Integer.parseInt(cmd.substring(versionsArgKey.length()));
+          continue;
+        }
+
         final String familiesArgKey = "--families=";
         if (cmd.startsWith(familiesArgKey)) {
           families = cmd.substring(familiesArgKey.length());
@@ -283,6 +296,7 @@ public class VerifyReplication extends Configured implements Tool {
     System.err.println(" starttime    beginning of the time range");
     System.err.println("              without endtime means from starttime to forever");
     System.err.println(" endtime      end of the time range");
+    System.err.println(" versions     number of cell versions to verify");
     System.err.println(" families     comma-separated list of families to copy");
     System.err.println();
     System.err.println("Args:");
