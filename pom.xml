@@ -790,7 +790,7 @@
         </dependencies>
         <configuration>
           <highlightSource>1</highlightSource>
-          <imgSrcPath>${basedir}/src/main/site/resources/images/</imgSrcPath>
+          <imgSrcPath>images/</imgSrcPath>
           <sourceDirectory>${basedir}/src/main/docbkx</sourceDirectory>
           <xincludeSupported>true</xincludeSupported>
           <useIdAsFilename>true</useIdAsFilename>
