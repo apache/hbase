@@ -44,6 +44,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
+import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
@@ -67,17 +68,6 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 class MemStoreFlusher implements FlushRequester {
   static final Log LOG = LogFactory.getLog(MemStoreFlusher.class);
-  static final String MEMSTORE_SIZE_KEY = "hbase.regionserver.global.memstore.size";
-  private static final String MEMSTORE_SIZE_OLD_KEY = 
-      "hbase.regionserver.global.memstore.upperLimit";
-  private static final String MEMSTORE_SIZE_LOWER_LIMIT_KEY = 
-      "hbase.regionserver.global.memstore.size.lower.limit";
-  private static final String MEMSTORE_SIZE_LOWER_LIMIT_OLD_KEY = 
-      "hbase.regionserver.global.memstore.lowerLimit";
-
-  private static final float DEFAULT_MEMSTORE_SIZE = 0.4f;
-  // Default lower water mark limit is 95% size of memstore size.
-  private static final float DEFAULT_MEMSTORE_SIZE_LOWER_LIMIT = 0.95f;
 
   // These two data members go together.  Any entry in the one must have
   // a corresponding entry in the other.
@@ -113,10 +103,10 @@ class MemStoreFlusher implements FlushRequester {
     this.threadWakeFrequency =
       conf.getLong(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000);
     long max = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
-    float globalMemStorePercent = getGlobalMemStorePercent(conf);
+    float globalMemStorePercent = HeapMemorySizeUtil.getGlobalMemStorePercent(conf, true);
     this.globalMemStoreLimit = (long) (max * globalMemStorePercent);
     this.globalMemStoreLimitLowMarkPercent = 
-        getGlobalMemStoreLowerMark(conf, globalMemStorePercent);
+        HeapMemorySizeUtil.getGlobalMemStoreLowerMark(conf, globalMemStorePercent);
     this.globalMemStoreLimitLowMark = 
         (long) (this.globalMemStoreLimit * this.globalMemStoreLimitLowMarkPercent);
 
@@ -129,40 +119,6 @@ class MemStoreFlusher implements FlushRequester {
       ", globalMemStoreLimitLowMark=" +
       StringUtils.humanReadableInt(this.globalMemStoreLimitLowMark) +
       ", maxHeap=" + StringUtils.humanReadableInt(max));
-  }
-
-  /**
-   * Retrieve global memstore configured size as percentage of total heap.
-   */
-  static float getGlobalMemStorePercent(final Configuration c) {
-    float limit = c.getFloat(MEMSTORE_SIZE_KEY,
-        c.getFloat(MEMSTORE_SIZE_OLD_KEY, DEFAULT_MEMSTORE_SIZE));
-    if (limit > 0.8f || limit < 0.05f) {
-      LOG.warn("Setting global memstore limit to default of " + DEFAULT_MEMSTORE_SIZE
-          + " because supplied value outside allowed range of 0.05 -> 0.8");
-      limit = DEFAULT_MEMSTORE_SIZE;
-    }
-    return limit;
-  }
-
-  private static float getGlobalMemStoreLowerMark(final Configuration c, float globalMemStorePercent) {
-    String lowMarkPercentStr = c.get(MEMSTORE_SIZE_LOWER_LIMIT_KEY);
-    if (lowMarkPercentStr != null) {
-      return Float.parseFloat(lowMarkPercentStr);
-    }
-    String lowerWaterMarkOldValStr = c.get(MEMSTORE_SIZE_LOWER_LIMIT_OLD_KEY);
-    if (lowerWaterMarkOldValStr != null) {
-      LOG.warn(MEMSTORE_SIZE_LOWER_LIMIT_OLD_KEY + " is deprecated. Instead use "
-          + MEMSTORE_SIZE_LOWER_LIMIT_KEY);
-      float lowerWaterMarkOldVal = Float.parseFloat(lowerWaterMarkOldValStr);
-      if (lowerWaterMarkOldVal > globalMemStorePercent) {
-        lowerWaterMarkOldVal = globalMemStorePercent;
-        LOG.info("Setting globalMemStoreLimitLowMark == globalMemStoreLimit " + "because supplied "
-            + MEMSTORE_SIZE_LOWER_LIMIT_OLD_KEY + " was > " + MEMSTORE_SIZE_OLD_KEY);
-      }
-      return lowerWaterMarkOldVal / globalMemStorePercent;
-    }
-    return DEFAULT_MEMSTORE_SIZE_LOWER_LIMIT;
   }
 
   public Counter getUpdatesBlockedMsHighWater() {

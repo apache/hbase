@@ -1017,6 +1017,28 @@ public final class HConstants {
   public static final String HBASE_COORDINATED_STATE_MANAGER_CLASS =
     "hbase.coordinated.state.manager.class";
 
+  /**
+   * Configuration keys for Bucket cache
+   */
+  // TODO moving these bucket cache implementation specific configs to this level is violation of
+  // encapsulation. But as these has to be referred from hbase-common and bucket cache
+  // sits in hbase-server, there were no other go! Can we move the cache implementation to
+  // hbase-common?
+
+  /**
+   * Current ioengine options in include: heap, offheap and file:PATH (where PATH is the path
+   * to the file that will host the file-based cache.  See BucketCache#getIOEngineFromName() for
+   * list of supported ioengine options.
+   * <p>Set this option and a non-zero {@link #BUCKET_CACHE_SIZE_KEY} to enable bucket cache.
+   */
+  public static final String BUCKET_CACHE_IOENGINE_KEY = "hbase.bucketcache.ioengine";
+
+  /**
+   * When using bucket cache, this is a float that EITHER represents a percentage of total heap
+   * memory size to give to the cache (if < 1.0) OR, it is the capacity in megabytes of the cache.
+   */
+  public static final String BUCKET_CACHE_SIZE_KEY = "hbase.bucketcache.size";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

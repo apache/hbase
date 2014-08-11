@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.HeapMemStoreLAB.Chunk;
 import org.apache.hadoop.util.StringUtils;
 
@@ -192,7 +193,8 @@ public class MemStoreChunkPool {
         throw new IllegalArgumentException(CHUNK_POOL_MAXSIZE_KEY + " must be between 0.0 and 1.0");
       }
       long heapMax = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
-      long globalMemStoreLimit = (long) (heapMax * MemStoreFlusher.getGlobalMemStorePercent(conf));
+      long globalMemStoreLimit = (long) (heapMax * HeapMemorySizeUtil.getGlobalMemStorePercent(conf,
+          false));
       int chunkSize = conf.getInt(HeapMemStoreLAB.CHUNK_SIZE_KEY,
           HeapMemStoreLAB.CHUNK_SIZE_DEFAULT);
       int maxCount = (int) (globalMemStoreLimit * poolSizePercentage / chunkSize);

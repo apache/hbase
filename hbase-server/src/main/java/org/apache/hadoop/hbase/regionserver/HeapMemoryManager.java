@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
+import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -67,6 +68,7 @@ public class HeapMemoryManager {
   private float blockCachePercent;
   private float blockCachePercentMinRange;
   private float blockCachePercentMaxRange;
+  private float l2BlockCachePercent;
 
   private final ResizableBlockCache blockCache;
   private final FlushRequester memStoreFlusher;
@@ -96,20 +98,10 @@ public class HeapMemoryManager {
   }
 
   private boolean doInit(Configuration conf) {
-    globalMemStorePercent = MemStoreFlusher.getGlobalMemStorePercent(conf);
+    globalMemStorePercent = HeapMemorySizeUtil.getGlobalMemStorePercent(conf, false);
     blockCachePercent = conf.getFloat(HFILE_BLOCK_CACHE_SIZE_KEY,
         HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
-    int gml = (int) (globalMemStorePercent * CONVERT_TO_PERCENTAGE);
-    int bcul = (int) (blockCachePercent * CONVERT_TO_PERCENTAGE);
-    if (CONVERT_TO_PERCENTAGE - (gml + bcul) < CLUSTER_MINIMUM_MEMORY_THRESHOLD) {
-      throw new RuntimeException("Current heap configuration for MemStore and BlockCache exceeds "
-          + "the threshold required for successful cluster operation. "
-          + "The combined value cannot exceed 0.8. Please check " + "the settings for "
-          + MemStoreFlusher.MEMSTORE_SIZE_KEY + " and " + HFILE_BLOCK_CACHE_SIZE_KEY
-          + " in your configuration. " + MemStoreFlusher.MEMSTORE_SIZE_KEY + " is "
-          + globalMemStorePercent + " and " + HFILE_BLOCK_CACHE_SIZE_KEY + " is "
-          + blockCachePercent);
-    }
+    HeapMemorySizeUtil.checkForClusterFreeMemoryLimit(conf);
     // Initialize max and min range for memstore heap space
     globalMemStorePercentMinRange = conf.getFloat(MEMSTORE_SIZE_MIN_RANGE_KEY,
         globalMemStorePercent);
@@ -117,14 +109,14 @@ public class HeapMemoryManager {
         globalMemStorePercent);
     if (globalMemStorePercent < globalMemStorePercentMinRange) {
       LOG.warn("Setting " + MEMSTORE_SIZE_MIN_RANGE_KEY + " to " + globalMemStorePercent
-          + ", same value as " + MemStoreFlusher.MEMSTORE_SIZE_KEY
+          + ", same value as " + HeapMemorySizeUtil.MEMSTORE_SIZE_KEY
           + " because supplied value greater than initial memstore size value.");
       globalMemStorePercentMinRange = globalMemStorePercent;
       conf.setFloat(MEMSTORE_SIZE_MIN_RANGE_KEY, globalMemStorePercentMinRange);
     }
     if (globalMemStorePercent > globalMemStorePercentMaxRange) {
       LOG.warn("Setting " + MEMSTORE_SIZE_MAX_RANGE_KEY + " to " + globalMemStorePercent
-          + ", same value as " + MemStoreFlusher.MEMSTORE_SIZE_KEY
+          + ", same value as " + HeapMemorySizeUtil.MEMSTORE_SIZE_KEY
           + " because supplied value less than initial memstore size value.");
       globalMemStorePercentMaxRange = globalMemStorePercent;
       conf.setFloat(MEMSTORE_SIZE_MAX_RANGE_KEY, globalMemStorePercentMaxRange);
@@ -155,8 +147,9 @@ public class HeapMemoryManager {
       return false;
     }
 
-    gml = (int) (globalMemStorePercentMaxRange * CONVERT_TO_PERCENTAGE);
-    bcul = (int) (blockCachePercentMinRange * CONVERT_TO_PERCENTAGE);
+    int gml = (int) (globalMemStorePercentMaxRange * CONVERT_TO_PERCENTAGE);
+    this.l2BlockCachePercent = HeapMemorySizeUtil.getL2BlockCacheHeapPercent(conf);
+    int bcul = (int) ((blockCachePercentMinRange + l2BlockCachePercent) * CONVERT_TO_PERCENTAGE);
     if (CONVERT_TO_PERCENTAGE - (gml + bcul) < CLUSTER_MINIMUM_MEMORY_THRESHOLD) {
       throw new RuntimeException("Current heap configuration for MemStore and BlockCache exceeds "
           + "the threshold required for successful cluster operation. "
@@ -167,7 +160,7 @@ public class HeapMemoryManager {
           + blockCachePercentMinRange);
     }
     gml = (int) (globalMemStorePercentMinRange * CONVERT_TO_PERCENTAGE);
-    bcul = (int) (blockCachePercentMaxRange * CONVERT_TO_PERCENTAGE);
+    bcul = (int) ((blockCachePercentMaxRange + l2BlockCachePercent) * CONVERT_TO_PERCENTAGE);
     if (CONVERT_TO_PERCENTAGE - (gml + bcul) < CLUSTER_MINIMUM_MEMORY_THRESHOLD) {
       throw new RuntimeException("Current heap configuration for MemStore and BlockCache exceeds "
           + "the threshold required for successful cluster operation. "
@@ -258,11 +251,11 @@ public class HeapMemoryManager {
           blockCacheSize = blockCachePercentMaxRange;
         }
         int gml = (int) (memstoreSize * CONVERT_TO_PERCENTAGE);
-        int bcul = (int) (blockCacheSize * CONVERT_TO_PERCENTAGE);
+        int bcul = (int) ((blockCacheSize + l2BlockCachePercent) * CONVERT_TO_PERCENTAGE);
         if (CONVERT_TO_PERCENTAGE - (gml + bcul) < CLUSTER_MINIMUM_MEMORY_THRESHOLD) {
           LOG.info("Current heap configuration from HeapMemoryTuner exceeds "
               + "the threshold required for successful cluster operation. "
-              + "The combined value cannot exceed 0.8. " + MemStoreFlusher.MEMSTORE_SIZE_KEY
+              + "The combined value cannot exceed 0.8. " + HeapMemorySizeUtil.MEMSTORE_SIZE_KEY
               + " is " + memstoreSize + " and " + HFILE_BLOCK_CACHE_SIZE_KEY + " is "
               + blockCacheSize);
           // TODO can adjust the value so as not exceed 80%. Is that correct? may be.

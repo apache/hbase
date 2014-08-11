@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.TestCacheConfig.DataCacheEntry;
 import org.apache.hadoop.hbase.io.hfile.TestCacheConfig.IndexCacheEntry;
@@ -76,8 +77,8 @@ public class TestBlockCacheReporting {
 
   @Test
   public void testBucketCache() throws JsonGenerationException, JsonMappingException, IOException {
-    this.conf.set(CacheConfig.BUCKET_CACHE_IOENGINE_KEY, "offheap");
-    this.conf.setInt(CacheConfig.BUCKET_CACHE_SIZE_KEY, 100);
+    this.conf.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
+    this.conf.setInt(HConstants.BUCKET_CACHE_SIZE_KEY, 100);
     CacheConfig cc = new CacheConfig(this.conf);
     assertTrue(cc.getBlockCache() instanceof CombinedBlockCache);
     logPerBlock(cc.getBlockCache());

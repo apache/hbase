@@ -27,6 +27,7 @@ import static org.apache.hadoop.hbase.regionserver.HeapMemoryManager.MEMSTORE_SI
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerContext;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerResult;
 
@@ -109,8 +110,8 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
     this.blockCachePercentMaxRange = conf.getFloat(BLOCK_CACHE_SIZE_MAX_RANGE_KEY,
         conf.getFloat(HFILE_BLOCK_CACHE_SIZE_KEY, HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT));
     this.globalMemStorePercentMinRange = conf.getFloat(MEMSTORE_SIZE_MIN_RANGE_KEY,
-        MemStoreFlusher.getGlobalMemStorePercent(conf));
+        HeapMemorySizeUtil.getGlobalMemStorePercent(conf, false));
     this.globalMemStorePercentMaxRange = conf.getFloat(MEMSTORE_SIZE_MAX_RANGE_KEY,
-        MemStoreFlusher.getGlobalMemStorePercent(conf));
+        HeapMemorySizeUtil.getGlobalMemStorePercent(conf, false));
   }
 }

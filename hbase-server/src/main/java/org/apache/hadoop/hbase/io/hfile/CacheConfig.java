@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_IOENGINE_KEY;
+import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
+
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
@@ -79,21 +82,6 @@ public class CacheConfig {
    */
 
   /**
-   * Current ioengine options in include: heap, offheap and file:PATH (where PATH is the path
-   * to the file that will host the file-based cache.  See BucketCache#getIOEngineFromName() for
-   * list of supported ioengine options.
-   * 
-   * <p>Set this option and a non-zero {@link #BUCKET_CACHE_SIZE_KEY} to enable bucket cache.
-   */
-  public static final String BUCKET_CACHE_IOENGINE_KEY = "hbase.bucketcache.ioengine";
-
-  /**
-   * When using bucket cache, this is a float that EITHER represents a percentage of total heap
-   * memory size to give to the cache (if < 1.0) OR, it is the capacity in megabytes of the cache.
-   */
-  public static final String BUCKET_CACHE_SIZE_KEY = "hbase.bucketcache.size";
-
-  /**
    * If the chosen ioengine can persist its state across restarts, the path to the file to
    * persist to.
    */
@@ -123,7 +111,6 @@ public class CacheConfig {
   public static final boolean DEFAULT_BUCKET_CACHE_COMBINED = true;
   public static final int DEFAULT_BUCKET_CACHE_WRITER_THREADS = 3;
   public static final int DEFAULT_BUCKET_CACHE_WRITER_QUEUE = 64;
-  public static final float DEFAULT_BUCKET_CACHE_COMBINED_PERCENTAGE = 0.9f;
 
  /**
    * Configuration key to prefetch all blocks of a given file into the block cache
