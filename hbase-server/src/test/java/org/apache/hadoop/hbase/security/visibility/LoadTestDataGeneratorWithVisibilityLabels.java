@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.security.visibility;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.util.MultiThreadedAction.DefaultDataGenerator;
@@ -78,10 +77,8 @@ public class LoadTestDataGeneratorWithVisibilityLabels extends DefaultDataGenera
 
   @Override
   public Mutation beforeMutate(long rowkeyBase, Mutation m) throws IOException {
-    if (!(m instanceof Delete)) {
-      m.setCellVisibility(new CellVisibility(this.visibilityExps[(int) rowkeyBase
-          % this.visibilityExps.length]));
-    }
+    m.setCellVisibility(new CellVisibility(this.visibilityExps[(int) rowkeyBase
+        % this.visibilityExps.length]));
     return m;
   }
 
