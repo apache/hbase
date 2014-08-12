@@ -180,16 +180,8 @@ public class OpenRegionHandler extends EventHandler {
     // Post open deploy task:
     //   meta => update meta location in ZK
     //   other region => update meta
-    long now = System.currentTimeMillis();
-    long lastUpdate = now;
-    boolean tickleOpening = true;
     while (!signaller.get() && t.isAlive() && !this.server.isStopped() &&
         !this.rsServices.isStopping() && isRegionStillOpening()) {
-      long elapsed = now - lastUpdate;
-      if (elapsed > 120000) { // 2 minutes, no need to tickleOpening too often
-        // Only tickle OPENING if postOpenDeployTasks is taking some time.
-        lastUpdate = now;
-      }
       synchronized (signaller) {
         try {
           // Wait for 10 seconds, so that server shutdown
@@ -199,7 +191,6 @@ public class OpenRegionHandler extends EventHandler {
           // Go to the loop check.
         }
       }
-      now = System.currentTimeMillis();
     }
     // Is thread still alive?  We may have left above loop because server is
     // stopping or we timed out the edit.  Is so, interrupt it.
@@ -219,9 +210,8 @@ public class OpenRegionHandler extends EventHandler {
     }
 
     // Was there an exception opening the region?  This should trigger on
-    // InterruptedException too.  If so, we failed.  Even if tickle opening fails
-    // then it is a failure.
-    return ((!Thread.interrupted() && t.getException() == null) && tickleOpening);
+    // InterruptedException too.  If so, we failed.
+    return (!Thread.interrupted() && t.getException() == null);
   }
 
   /**
@@ -249,13 +239,16 @@ public class OpenRegionHandler extends EventHandler {
     public void run() {
       try {
         this.services.postOpenDeployTasks(this.region);
-      } catch (IOException e) {
-        server.abort("Exception running postOpenDeployTasks; region=" +
-            this.region.getRegionInfo().getEncodedName(), e);
       } catch (Throwable e) {
-        LOG.warn("Exception running postOpenDeployTasks; region=" +
-          this.region.getRegionInfo().getEncodedName(), e);
+        String msg = "Exception running postOpenDeployTasks; region=" +
+          this.region.getRegionInfo().getEncodedName();
         this.exception = e;
+        if (e instanceof IOException
+            && isRegionStillOpening(region.getRegionInfo(), services)) {
+          server.abort(msg, e);
+        } else {
+          LOG.warn(msg, e);
+        }
       }
       // We're done.  Set flag then wake up anyone waiting on thread to complete.
       this.signaller.set(true);
@@ -319,9 +312,14 @@ public class OpenRegionHandler extends EventHandler {
     }
   }
 
-  private boolean isRegionStillOpening() {
+  private static boolean isRegionStillOpening(
+      HRegionInfo regionInfo, RegionServerServices rsServices) {
     byte[] encodedName = regionInfo.getEncodedNameAsBytes();
     Boolean action = rsServices.getRegionsInTransitionInRS().get(encodedName);
     return Boolean.TRUE.equals(action); // true means opening for RIT
+  }
+
+  private boolean isRegionStillOpening() {
+    return isRegionStillOpening(regionInfo, rsServices);
   }
 }
