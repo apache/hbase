@@ -1129,10 +1129,6 @@ public class RpcClient {
 
       // Now that we notified, we can rethrow the exception if any. Otherwise we're good.
       if (writeException != null) throw writeException;
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(getName() + ": wrote request header " + TextFormat.shortDebugString(header));
-      }
     }
 
     /* Receive a response.
@@ -1150,10 +1146,6 @@ public class RpcClient {
         // Read the header
         ResponseHeader responseHeader = ResponseHeader.parseDelimitedFrom(in);
         int id = responseHeader.getCallId();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(getName() + ": got response header " +
-            TextFormat.shortDebugString(responseHeader) + ", totalSize: " + totalSize + " bytes");
-        }
         call = calls.remove(id); // call.done have to be set before leaving this method
         expectedCall = (call != null && !call.done);
         if (!expectedCall) {
@@ -1164,10 +1156,6 @@ public class RpcClient {
           // this connection.
           int readSoFar = IPCUtil.getTotalSizeWhenWrittenDelimited(responseHeader);
           int whatIsLeftToRead = totalSize - readSoFar;
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Unknown callId: " + id + ", skipping over this response of " +
-                whatIsLeftToRead + " bytes");
-          }
           IOUtils.skipFully(in, whatIsLeftToRead);
         }
         if (responseHeader.hasException()) {
