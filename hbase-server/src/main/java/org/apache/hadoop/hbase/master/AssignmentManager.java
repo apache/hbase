@@ -513,22 +513,26 @@ public class AssignmentManager extends ZooKeeperListener {
       }
     } else {
       // If any one region except meta is assigned, it's a failover.
-      for (HRegionInfo hri: regionStates.getRegionAssignments().keySet()) {
-        if (!hri.isMetaTable()) {
+      Set<ServerName> onlineServers = serverManager.getOnlineServers().keySet();
+      for (Map.Entry<HRegionInfo, ServerName> en:
+          regionStates.getRegionAssignments().entrySet()) {
+        HRegionInfo hri = en.getKey();
+        if (!hri.isMetaTable()
+            && onlineServers.contains(en.getValue())) {
           LOG.debug("Found " + hri + " out on cluster");
           failover = true;
           break;
         }
       }
-    }
-    if (!failover && nodes != null) {
-      // If any one region except meta is in transition, it's a failover.
-      for (String encodedName: nodes) {
-        RegionState regionState = regionStates.getRegionState(encodedName);
-        if (regionState != null && !regionState.getRegion().isMetaRegion()) {
-          LOG.debug("Found " + regionState + " in RITs");
-          failover = true;
-          break;
+      if (!failover && nodes != null) {
+        // If any one region except meta is in transition, it's a failover.
+        for (String encodedName: nodes) {
+          RegionState regionState = regionStates.getRegionState(encodedName);
+          if (regionState != null && !regionState.getRegion().isMetaRegion()) {
+            LOG.debug("Found " + regionState + " in RITs");
+            failover = true;
+            break;
+          }
         }
       }
     }
