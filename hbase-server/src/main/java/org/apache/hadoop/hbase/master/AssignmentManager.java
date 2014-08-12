@@ -1096,8 +1096,9 @@ public class AssignmentManager {
                   + this.server.getConfiguration().getLong(ALREADY_IN_TRANSITION_WAITTIME,
                     DEFAULT_ALREADY_IN_TRANSITION_WAITTIME);
               } else {
-                maxWaitTime = this.server.getConfiguration().
-                  getLong("hbase.regionserver.rpc.startup.waittime", 60000);
+                maxWaitTime = EnvironmentEdgeManager.currentTimeMillis()
+                  + this.server.getConfiguration().getLong(
+                    "hbase.regionserver.rpc.startup.waittime", 60000);
               }
             }
             try {
