@@ -39,7 +39,48 @@
     xml:id="tools">
     <title>HBase Tools and Utilities</title>
 
-    <para>Here we list HBase tools for administration, analysis, fixup, and debugging.</para>
+    <para>HBase provides several tools for administration, analysis, and debugging of your cluster.
+      The entry-point to most of these tools is the <filename>bin/hbase</filename> command, though
+      some tools are available in the <filename>dev-support/</filename> directory.</para>
+    <para>To see usage instructions for <filename>bin/hbase</filename> command, run it with no
+      arguments, or with the <option>-h</option> argument. These are the usage instructions for
+      HBase 0.98.x. Some commands, such as <command>version</command>, <command>pe</command>,
+        <command>ltt</command>, <command>clean</command>, are not available in previous
+      versions.</para>
+    <screen>
+$ <userinput>bin/hbase</userinput>
+<![CDATA[Usage: hbase [<options>] <command> [<args>]]]>
+Options:
+  --config DIR    Configuration direction to use. Default: ./conf
+  --hosts HOSTS   Override the list in 'regionservers' file
+
+Commands:
+Some commands take arguments. Pass no args or -h for usage.
+  shell           Run the HBase shell
+  hbck            Run the hbase 'fsck' tool
+  hlog            Write-ahead-log analyzer
+  hfile           Store file analyzer
+  zkcli           Run the ZooKeeper shell
+  upgrade         Upgrade hbase
+  master          Run an HBase HMaster node
+  regionserver    Run an HBase HRegionServer node
+  zookeeper       Run a Zookeeper server
+  rest            Run an HBase REST server
+  thrift          Run the HBase Thrift server
+  thrift2         Run the HBase Thrift2 server
+  clean           Run the HBase clean up script
+  classpath       Dump hbase CLASSPATH
+  mapredcp        Dump CLASSPATH entries required by mapreduce
+  pe              Run PerformanceEvaluation
+  ltt             Run LoadTestTool
+  version         Print the version
+  CLASSNAME       Run the class named CLASSNAME      
+    </screen>
+    <para>Some of the tools and utilities below are Java classes which are passed directly to the
+        <filename>bin/hbase</filename> command, as referred to in the last line of the usage
+      instructions. Others, such as <command>hbase shell</command> (<xref linkend="shell"/>),
+        <command>hbase upgrade</command> (<xref linkend="upgrading"/>), and <command>hbase
+        thrift</command> (<xref linkend="thrift"/>), are documented elsewhere in this guide.</para>
     <section
       xml:id="canary">
       <title>Canary</title>
@@ -566,6 +607,32 @@ row10	c1	c2
       </para>
     </section>
 
+    <section>
+      <title><command>hbase clean</command></title>
+      <para>The <command>hbase clean</command> command cleans HBase data from ZooKeeper, HDFS, or
+        both. It is appropriate to use for testing. Run it with no options for usage instructions.
+        The <command>hbase clean</command> command was introduced in HBase 0.98.</para>
+      <screen>
+$ <userinput>bin/hbase clean</userinput>
+Usage: hbase clean (--cleanZk|--cleanHdfs|--cleanAll)
+Options:
+        --cleanZk   cleans hbase related data from zookeeper.
+        --cleanHdfs cleans hbase related data from hdfs.
+        --cleanAll  cleans hbase related data from both zookeeper and hdfs.        
+      </screen>
+    </section>
+    <section>
+      <title><command>hbase pe</command></title>
+      <para>The <command>hbase pe</command> command is a shortcut provided to run the
+          <code>org.apache.hadoop.hbase.PerformanceEvaluation</code> tool, which is used for
+        testing. The <command>hbase pe</command> command was introduced in HBase 0.98.</para>
+    </section>
+    <section>
+      <title><command>hbase ltt</command></title>
+      <para>The <command>hbase ltt</command> command is a shortcut provided to run the
+        <code>rg.apache.hadoop.hbase.util.LoadTestTool</code> utility, which is used for
+        testing. The <command>hbase ltt</command> command was introduced in HBase 0.98.</para>
+    </section>
   </section>
   <!--  tools -->
 
