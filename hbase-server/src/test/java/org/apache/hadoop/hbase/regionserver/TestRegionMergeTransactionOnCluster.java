@@ -147,7 +147,7 @@ public class TestRegionMergeTransactionOnCluster {
     assertTrue(regionStates.isRegionInState(hri, State.MERGED));
 
     // We should not be able to unassign it either
-    am.unassign(hri, true, null);
+    am.unassign(hri, null);
     assertFalse("Merged region can't be unassigned",
       regionStates.isRegionInTransition(hri));
     assertTrue(regionStates.isRegionInState(hri, State.MERGED));

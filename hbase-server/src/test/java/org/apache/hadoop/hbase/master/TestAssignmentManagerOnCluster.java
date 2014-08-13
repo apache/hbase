@@ -428,7 +428,7 @@ public class TestAssignmentManagerOnCluster {
       assertEquals(RegionState.State.FAILED_CLOSE, state.getState());
 
       MyRegionObserver.preCloseEnabled.set(false);
-      am.unassign(hri, true);
+      am.unassign(hri);
 
       // region is closing now, will be re-assigned automatically.
       // now, let's forcefully assign it again. it should be
@@ -475,7 +475,7 @@ public class TestAssignmentManagerOnCluster {
       assertEquals(RegionState.State.FAILED_CLOSE, state.getState());
 
       MyRegionObserver.preCloseEnabled.set(false);
-      am.unassign(hri, true);
+      am.unassign(hri);
 
       // region may still be assigned now since it's closing,
       // let's check if it's assigned after it's out of transition
@@ -647,14 +647,13 @@ public class TestAssignmentManagerOnCluster {
       MyRegionObserver.postCloseEnabled.set(true);
       am.unassign(hri);
       // Now region should pending_close or closing
-      // Unassign it again forcefully so that we can trigger already
+      // Unassign it again so that we can trigger already
       // in transition exception. This test is to make sure this scenario
       // is handled properly.
       am.server.getConfiguration().setLong(
         AssignmentManager.ALREADY_IN_TRANSITION_WAITTIME, 1000);
-      am.unassign(hri, true);
-      RegionState state = am.getRegionStates().getRegionState(hri);
-      assertEquals(RegionState.State.FAILED_CLOSE, state.getState());
+      am.getRegionStates().updateRegionState(hri, RegionState.State.FAILED_CLOSE);
+      am.unassign(hri);
 
       // Let region closing move ahead. The region should be closed
       // properly and re-assigned automatically
@@ -798,7 +797,7 @@ public class TestAssignmentManagerOnCluster {
       assertTrue(state.isFailedClose());
 
       // You can't unassign a dead region before SSH either
-      am.unassign(hri, true);
+      am.unassign(hri);
       assertTrue(state.isFailedClose());
 
       // Enable SSH so that log can be split
@@ -855,7 +854,7 @@ public class TestAssignmentManagerOnCluster {
       assertTrue(regionStates.isRegionOffline(hri));
 
       // You can't unassign a disabled region either
-      am.unassign(hri, true);
+      am.unassign(hri);
       assertTrue(regionStates.isRegionOffline(hri));
     } finally {
       TEST_UTIL.deleteTable(table);
@@ -911,7 +910,7 @@ public class TestAssignmentManagerOnCluster {
       assertEquals(oldServerName, regionStates.getRegionServerOfRegion(hri));
 
       // Try to unassign the dead region before SSH
-      am.unassign(hri, false);
+      am.unassign(hri);
       // The region should be moved to offline since the server is dead
       RegionState state = regionStates.getRegionState(hri);
       assertTrue(state.isOffline());
@@ -990,7 +989,7 @@ public class TestAssignmentManagerOnCluster {
       assertEquals(oldServerName, regionStates.getRegionServerOfRegion(hri));
 
       // Try to unassign the dead region before SSH
-      am.unassign(hri, false);
+      am.unassign(hri);
       // The region should be moved to offline since the server is dead
       RegionState state = regionStates.getRegionState(hri);
       assertTrue(state.isOffline());

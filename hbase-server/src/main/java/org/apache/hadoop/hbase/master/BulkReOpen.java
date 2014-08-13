@@ -123,7 +123,7 @@ public class BulkReOpen extends BulkAssigner {
       if (regionStates.isRegionInTransition(region)) {
         continue;
       }
-      assignmentManager.unassign(region, false);
+      assignmentManager.unassign(region);
       while (regionStates.isRegionInTransition(region)
           && !server.isStopped()) {
         regionStates.waitForUpdate(100);

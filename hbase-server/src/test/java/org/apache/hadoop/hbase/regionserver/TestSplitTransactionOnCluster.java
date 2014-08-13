@@ -813,7 +813,7 @@ public class TestSplitTransactionOnCluster {
       assertTrue(regionStates.isRegionInState(hri, State.SPLIT));
 
       // We should not be able to unassign it either
-      am.unassign(hri, true, null);
+      am.unassign(hri, null);
       assertFalse("Split region can't be unassigned",
         regionStates.isRegionInTransition(hri));
       assertTrue(regionStates.isRegionInState(hri, State.SPLIT));

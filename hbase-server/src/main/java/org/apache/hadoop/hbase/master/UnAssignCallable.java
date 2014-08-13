@@ -41,7 +41,7 @@ public class UnAssignCallable implements Callable<Object> {
 
   @Override
   public Object call() throws Exception {
-    assignmentManager.unassign(hri, true);
+    assignmentManager.unassign(hri);
     return null;
   }
 }

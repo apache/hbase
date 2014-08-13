@@ -837,25 +837,18 @@ public class AssignmentManager {
    * on an unexpected server scenario, for an example)
    */
   private void unassign(final HRegionInfo region,
-      final RegionState state, final ServerName dest,
-      final ServerName src) {
-    ServerName server = src;
-    if (state != null) {
-      server = state.getServerName();
-    }
+      final RegionState state, final ServerName dest) {
+    ServerName server = state.getServerName();
     long maxWaitTime = -1;
     for (int i = 1; i <= this.maximumAttempts; i++) {
       if (this.server.isStopped() || this.server.isAborted()) {
         LOG.debug("Server stopped/aborted; skipping unassign of " + region);
         return;
       }
-      // ClosedRegionhandler can remove the server from this.regions
       if (!serverManager.isServerOnline(server)) {
         LOG.debug("Offline " + region.getRegionNameAsString()
           + ", no need to unassign since it's on a dead server: " + server);
-        if (state != null) {
-          regionOffline(region);
-        }
+        regionStates.updateRegionState(region, State.OFFLINE);
         return;
       }
       try {
@@ -879,12 +872,10 @@ public class AssignmentManager {
             || t instanceof ServerNotRunningYetException) {
           LOG.debug("Offline " + region.getRegionNameAsString()
             + ", it's not any more on " + server, t);
-          if (state != null) {
-            regionOffline(region);
-          }
+          regionStates.updateRegionState(region, State.OFFLINE);
           return;
-        } else if ((t instanceof FailedServerException) || (state != null &&
-            t instanceof RegionAlreadyInTransitionException)) {
+        } else if (t instanceof FailedServerException
+            || t instanceof RegionAlreadyInTransitionException) {
           long sleepTime = 0;
           Configuration conf = this.server.getConfiguration();
           if(t instanceof FailedServerException) {
@@ -963,7 +954,7 @@ public class AssignmentManager {
       }
     case FAILED_CLOSE:
     case FAILED_OPEN:
-      unassign(region, state, null, null);
+      unassign(region, state, null);
       state = regionStates.getRegionState(region);
       if (state.isFailedClose()) {
         // If we can't close the region, we can't re-assign
@@ -1296,7 +1287,7 @@ public class AssignmentManager {
    * @param region server to be unassigned
    */
   public void unassign(HRegionInfo region) {
-    unassign(region, false);
+    unassign(region, null);
   }
 
 
@@ -1312,9 +1303,9 @@ public class AssignmentManager {
    * If a RegionPlan is already set, it will remain.
    *
    * @param region server to be unassigned
-   * @param force if region should be closed even if already closing
+   * @param dest the destination server of the region
    */
-  public void unassign(HRegionInfo region, boolean force, ServerName dest) {
+  public void unassign(HRegionInfo region, ServerName dest) {
     // TODO: Method needs refactoring.  Ugly buried returns throughout.  Beware!
     LOG.debug("Starting unassign of " + region.getRegionNameAsString()
       + " (offlining), current state: " + regionStates.getRegionState(region));
@@ -1325,57 +1316,49 @@ public class AssignmentManager {
     //  creation
     ReentrantLock lock = locker.acquireLock(encodedName);
     RegionState state = regionStates.getRegionTransitionState(encodedName);
-    boolean reassign = true;
     try {
-      if (state == null) {
-        // Region is not in transition.
-        // We can unassign it only if it's not SPLIT/MERGED.
-        state = regionStates.getRegionState(encodedName);
-        if (state != null && state.isUnassignable()) {
-          LOG.info("Attempting to unassign " + state + ", ignored");
-          // Offline region will be reassigned below
-          return;
+      if (state == null || state.isFailedClose()) {
+        if (state == null) {
+          // Region is not in transition.
+          // We can unassign it only if it's not SPLIT/MERGED.
+          state = regionStates.getRegionState(encodedName);
+          if (state != null && state.isUnassignable()) {
+            LOG.info("Attempting to unassign " + state + ", ignored");
+            // Offline region will be reassigned below
+            return;
+          }
+          if (state == null || state.getServerName() == null) {
+            // We don't know where the region is, offline it.
+            // No need to send CLOSE RPC
+            LOG.warn("Attempting to unassign a region not in RegionStates"
+              + region.getRegionNameAsString() + ", offlined");
+            regionOffline(region);
+            return;
+          }
         }
-        if (state == null || state.getServerName() == null) {
-          // We don't know where the region is, offline it.
-          // No need to send CLOSE RPC
-          LOG.warn("Attempting to unassign a region not in RegionStates"
-            + region.getRegionNameAsString() + ", offlined");
-          regionOffline(region);
-          return;
-        }
-        state = regionStates.updateRegionState(region, State.PENDING_CLOSE);
+        state = regionStates.updateRegionState(
+          region, State.PENDING_CLOSE);
       } else if (state.isFailedOpen()) {
         // The region is not open yet
         regionOffline(region);
         return;
-      } else if (force && state.isPendingCloseOrClosing()) {
-        LOG.debug("Attempting to unassign " + region.getRegionNameAsString() +
-          " which is already " + state.getState()  +
-          " but forcing to send a CLOSE RPC again ");
-        if (state.isFailedClose()) {
-          state = regionStates.updateRegionState(region, State.PENDING_CLOSE);
-        }
       } else {
         LOG.debug("Attempting to unassign " +
           region.getRegionNameAsString() + " but it is " +
-          "already in transition (" + state.getState() + ", force=" + force + ")");
+          "already in transition (" + state.getState());
         return;
       }
 
-      unassign(region, state, dest, null);
+      unassign(region, state, dest);
     } finally {
       lock.unlock();
 
       // Region is expected to be reassigned afterwards
-      if (!replicasToClose.contains(region) && reassign && regionStates.isRegionOffline(region)) {
+      if (!replicasToClose.contains(region)
+          && regionStates.isRegionInState(region, State.OFFLINE)) {
         assign(region);
       }
     }
-  }
-
-  public void unassign(HRegionInfo region, boolean force){
-     unassign(region, force, null);
   }
 
   /**
@@ -2078,7 +2061,7 @@ public class AssignmentManager {
       synchronized (this.regionPlans) {
         this.regionPlans.put(plan.getRegionName(), plan);
       }
-      unassign(hri, false, plan.getDestination());
+      unassign(hri, plan.getDestination());
     } finally {
       lock.unlock();
     }

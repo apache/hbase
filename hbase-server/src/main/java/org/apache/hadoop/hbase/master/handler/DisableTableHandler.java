@@ -213,7 +213,7 @@ public class DisableTableHandler extends EventHandler {
         final HRegionInfo hri = region;
         pool.execute(Trace.wrap("DisableTableHandler.BulkDisabler",new Runnable() {
           public void run() {
-            assignmentManager.unassign(hri, true);
+            assignmentManager.unassign(hri);
           }
         }));
       }
