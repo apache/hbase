@@ -91,38 +91,129 @@
   <chapter
     xml:id="datamodel">
     <title>Data Model</title>
-    <para>In short, applications store data into an HBase table. Tables are made of rows and
-      columns. All columns in HBase belong to a particular column family. Table cells -- the
-      intersection of row and column coordinates -- are versioned. A cell’s content is an
-      uninterpreted array of bytes. </para>
-    <para>Table row keys are also byte arrays so almost anything can serve as a row key from strings
-      to binary representations of longs or even serialized data structures. Rows in HBase tables
-      are sorted by row key. The sort is byte-ordered. All table accesses are via the table row key
-      -- its primary key. </para>
+    <para>In HBase, data is stored in tables, which have rows and columns. This is a terminology
+      overlap with relational databases (RDBMSs), but this is not a helpful analogy. Instead, it can
+    be helpful to think of an HBase table as a multi-dimensional map.</para>
+    <variablelist>
+      <title>HBase Data Model Terminology</title>
+      <varlistentry>
+        <term>Table</term>
+        <listitem>
+          <para>An HBase table consists of multiple rows.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Row</term>
+        <listitem>
+          <para>A row in HBase consists of a row key and one or more columns with values associated
+            with them. Rows are sorted alphabetically by the row key as they are stored. For this
+            reason, the design of the row key is very important. The goal is to store data in such a
+            way that related rows are near each other. A common row key pattern is a website domain.
+            If your row keys are domains, you should probably store them in reverse (org.apache.www,
+            org.apache.mail, org.apache.jira). This way, all of the Apache domains are near each
+            other in the table, rather than being spread out based on the first letter of the
+            subdomain.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Column</term>
+        <listitem>
+          <para>A column in HBase consists of a column family and a column qualifier, which are
+            delimited by a <literal>:</literal> (colon) character.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Column Family</term>
+        <listitem>
+          <para>Column families physically colocate a set of columns and their values, often for
+            performance reasons. Each column family has a set of storage properties, such as whether
+            its values should be cached in memory, how its data is compressed or its row keys are
+            encoded, and others. Each row in a table has the same column
+            families, though a given row might not store anything in a given column family.</para>
+          <para>Column families are specified when you create your table, and influence the way your
+            data is stored in the underlying filesystem. Therefore, the column families should be
+            considered carefully during schema design.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Column Qualifier</term>
+        <listitem>
+          <para>A column qualifier is added to a column family to provide the index for a given
+            piece of data. Given a column family <literal>content</literal>, a column qualifier
+            might be <literal>content:html</literal>, and another might be
+            <literal>content:pdf</literal>. Though column families are fixed at table creation,
+            column qualifiers are mutable and may differ greatly between rows.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Cell</term>
+        <listitem>
+          <para>A cell is a combination of row, column family, and column qualifier, and contains a
+            value and a timestamp, which represents the value's version.</para>
+          <para>A cell's value is an uninterpreted array of bytes.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <term>Timestamp</term>
+        <listitem>
+          <para>A timestamp is written alongside each value, and is the identifier for a given
+            version of a value. By default, the timestamp represents the time on the RegionServer
+            when the data was written, but you can specify a different timestamp value when you put
+            data into the cell.</para>
+          <caution>
+            <para>Direct manipulation of timestamps is an advanced feature which is only exposed for
+              special cases that are deeply integrated with HBase, and is discouraged in general.
+              Encoding a timestamp at the application level is the preferred pattern.</para>
+          </caution>
+          <para>You can specify the maximum number of versions of a value that HBase retains, per column
+            family. When the maximum number of versions is reached, the oldest versions are 
+            eventually deleted. By default, only the newest version is kept.</para>
+        </listitem>
+      </varlistentry>
+    </variablelist>
 
     <section
       xml:id="conceptual.view">
       <title>Conceptual View</title>
+      <para>You can read a very understandable explanation of the HBase data model in the blog post <link
+          xlink:href="http://jimbojw.com/wiki/index.php?title=Understanding_Hbase_and_BigTable">Understanding
+          HBase and BigTable</link> by Jim R. Wilson. Another good explanation is available in the
+        PDF <link
+          xlink:href="http://0b4af6cdc2f0c5998459-c0245c5c937c5dedcca3f1764ecc9b2f.r43.cf2.rackcdn.com/9353-login1210_khurana.pdf">Introduction
+          to Basic Schema Design</link> by Amandeep Khurana. It may help to read different
+        perspectives to get a solid understanding of HBase schema design. The linked articles cover
+        the same ground as the information in this section.</para>
       <para> The following example is a slightly modified form of the one on page 2 of the <link
           xlink:href="http://research.google.com/archive/bigtable.html">BigTable</link> paper. There
-        is a table called <varname>webtable</varname> that contains two column families named
-          <varname>contents</varname> and <varname>anchor</varname>. In this example,
+        is a table called <varname>webtable</varname> that contains two rows
+        (<literal>com.cnn.www</literal>
+          and <literal>com.example.www</literal>), three column families named
+          <varname>contents</varname>, <varname>anchor</varname>, and <varname>people</varname>. In
+          this example, for the first row (<literal>com.cnn.www</literal>), 
           <varname>anchor</varname> contains two columns (<varname>anchor:cssnsi.com</varname>,
           <varname>anchor:my.look.ca</varname>) and <varname>contents</varname> contains one column
-          (<varname>contents:html</varname>). <note>
+          (<varname>contents:html</varname>). This example contains 5 versions of the row with the
+        row key <literal>com.cnn.www</literal>, and one version of the row with the row key
+        <literal>com.example.www</literal>. The <varname>contents:html</varname> column qualifier contains the entire
+        HTML of a given website. Qualifiers of the <varname>anchor</varname> column family each
+        contain the external site which links to the site represented by the row, along with the
+        text it used in the anchor of its link. The <varname>people</varname> column family represents
+        people associated with the site.
+      </para>
+        <note>
           <title>Column Names</title>
-          <para> By convention, a column name is made of its column family prefix and a
-              <emphasis>qualifier</emphasis>. For example, the column
-              <emphasis>contents:html</emphasis> is made up of the column family
-              <varname>contents</varname> and <varname>html</varname> qualifier. The colon character
-              (<literal>:</literal>) delimits the column family from the column family
-              <emphasis>qualifier</emphasis>. </para>
+        <para> By convention, a column name is made of its column family prefix and a
+            <emphasis>qualifier</emphasis>. For example, the column
+            <emphasis>contents:html</emphasis> is made up of the column family
+            <varname>contents</varname> and the <varname>html</varname> qualifier. The colon
+          character (<literal>:</literal>) delimits the column family from the column family
+            <emphasis>qualifier</emphasis>. </para>
         </note>
         <table
           frame="all">
           <title>Table <varname>webtable</varname></title>
           <tgroup
-            cols="4"
+            cols="5"
             align="left"
             colsep="1"
             rowsep="1">
@@ -134,12 +225,15 @@
               colname="c3" />
             <colspec
               colname="c4" />
+            <colspec
+              colname="c5" />
             <thead>
               <row>
                 <entry>Row Key</entry>
                 <entry>Time Stamp</entry>
                 <entry>ColumnFamily <varname>contents</varname></entry>
                 <entry>ColumnFamily <varname>anchor</varname></entry>
+                <entry>ColumnFamily <varname>people</varname></entry>
               </row>
             </thead>
             <tbody>
@@ -148,17 +242,20 @@
                 <entry>t9</entry>
                 <entry />
                 <entry><varname>anchor:cnnsi.com</varname> = "CNN"</entry>
+                <entry />
               </row>
               <row>
                 <entry>"com.cnn.www"</entry>
                 <entry>t8</entry>
                 <entry />
                 <entry><varname>anchor:my.look.ca</varname> = "CNN.com"</entry>
+                <entry />
               </row>
               <row>
                 <entry>"com.cnn.www"</entry>
                 <entry>t6</entry>
                 <entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry>
+                <entry />
                 <entry />
               </row>
               <row>
@@ -166,110 +263,151 @@
                 <entry>t5</entry>
                 <entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry>
                 <entry />
+                <entry />
               </row>
               <row>
                 <entry>"com.cnn.www"</entry>
                 <entry>t3</entry>
                 <entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry>
                 <entry />
+                <entry />
+              </row>
+              <row>
+                <entry>"com.example.www"</entry>
+                <entry>t5</entry>
+                <entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry>
+                <entry></entry>
+                <entry>people:author = "John Doe"</entry>
               </row>
             </tbody>
           </tgroup>
         </table>
-      </para>
+      <para>Cells in this table that appear to be empty do not take space, or in fact exist, in
+        HBase. This is what makes HBase "sparse." A tabular view is not the only possible way to
+        look at data in HBase, or even the most accurate. The following represents the same
+        information as a multi-dimensional map. This is only a mock-up for illustrative
+        purposes and may not be strictly accurate.</para>
+      <programlisting><![CDATA[
+{
+	"com.cnn.www": {
+		contents: {
+			t6: contents:html: "<html>..."
+			t5: contents:html: "<html>..."
+			t3: contents:html: "<html>..."
+		}
+		anchor: {
+			t9: anchor:cnnsi.com = "CNN"
+			t8: anchor:my.look.ca = "CNN.com"
+		}
+		people: {}
+	}
+	"com.example.www": {
+		contents: {
+			t5: contents:html: "<html>..."
+		}
+		anchor: {}
+		people: {
+			t5: people:author: "John Doe"
+		}
+	}
+}        
+        ]]></programlisting>
+
     </section>
     <section
       xml:id="physical.view">
       <title>Physical View</title>
-      <para> Although at a conceptual level tables may be viewed as a sparse set of rows. Physically
-        they are stored on a per-column family basis. New columns (i.e.,
-          <varname>columnfamily:column</varname>) can be added to any column family without
-        pre-announcing them. <table
-          frame="all">
-          <title>ColumnFamily <varname>anchor</varname></title>
-          <tgroup
-            cols="3"
-            align="left"
-            colsep="1"
-            rowsep="1">
-            <colspec
-              colname="c1" />
-            <colspec
-              colname="c2" />
-            <colspec
-              colname="c3" />
-            <thead>
-              <row>
-                <entry>Row Key</entry>
-                <entry>Time Stamp</entry>
-                <entry>Column Family <varname>anchor</varname></entry>
-              </row>
-            </thead>
-            <tbody>
-              <row>
-                <entry>"com.cnn.www"</entry>
-                <entry>t9</entry>
-                <entry><varname>anchor:cnnsi.com</varname> = "CNN"</entry>
-              </row>
-              <row>
-                <entry>"com.cnn.www"</entry>
-                <entry>t8</entry>
-                <entry><varname>anchor:my.look.ca</varname> = "CNN.com"</entry>
-              </row>
-            </tbody>
-          </tgroup>
-        </table>
-        <table
-          frame="all">
-          <title>ColumnFamily <varname>contents</varname></title>
-          <tgroup
-            cols="3"
-            align="left"
-            colsep="1"
-            rowsep="1">
-            <colspec
-              colname="c1" />
-            <colspec
-              colname="c2" />
-            <colspec
-              colname="c3" />
-            <thead>
-              <row>
-                <entry>Row Key</entry>
-                <entry>Time Stamp</entry>
-                <entry>ColumnFamily "contents:"</entry>
-              </row>
-            </thead>
-            <tbody>
-              <row>
-                <entry>"com.cnn.www"</entry>
-                <entry>t6</entry>
-                <entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry>
-              </row>
-              <row>
-                <entry>"com.cnn.www"</entry>
-                <entry>t5</entry>
-                <entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry>
-              </row>
-              <row>
-                <entry>"com.cnn.www"</entry>
-                <entry>t3</entry>
-                <entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry>
-              </row>
-            </tbody>
-          </tgroup>
-        </table> It is important to note in the diagram above that the empty cells shown in the
-        conceptual view are not stored since they need not be in a column-oriented storage format.
+      <para> Although at a conceptual level tables may be viewed as a sparse set of rows, they are
+        physically stored by column family. A new column qualifier (column_family:column_qualifier)
+        can be added to an existing column family at any time.</para>
+      <table
+        frame="all">
+        <title>ColumnFamily <varname>anchor</varname></title>
+        <tgroup
+          cols="3"
+          align="left"
+          colsep="1"
+          rowsep="1">
+          <colspec
+            colname="c1" />
+          <colspec
+            colname="c2" />
+          <colspec
+            colname="c3" />
+          <thead>
+            <row>
+              <entry>Row Key</entry>
+              <entry>Time Stamp</entry>
+              <entry>Column Family <varname>anchor</varname></entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>"com.cnn.www"</entry>
+              <entry>t9</entry>
+              <entry><varname>anchor:cnnsi.com</varname> = "CNN"</entry>
+            </row>
+            <row>
+              <entry>"com.cnn.www"</entry>
+              <entry>t8</entry>
+              <entry><varname>anchor:my.look.ca</varname> = "CNN.com"</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+      <table
+        frame="all">
+        <title>ColumnFamily <varname>contents</varname></title>
+        <tgroup
+          cols="3"
+          align="left"
+          colsep="1"
+          rowsep="1">
+          <colspec
+            colname="c1" />
+          <colspec
+            colname="c2" />
+          <colspec
+            colname="c3" />
+          <thead>
+            <row>
+              <entry>Row Key</entry>
+              <entry>Time Stamp</entry>
+              <entry>ColumnFamily "contents:"</entry>
+            </row>
+          </thead>
+          <tbody>
+            <row>
+              <entry>"com.cnn.www"</entry>
+              <entry>t6</entry>
+              <entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry>
+            </row>
+            <row>
+              <entry>"com.cnn.www"</entry>
+              <entry>t5</entry>
+              <entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry>
+            </row>
+            <row>
+              <entry>"com.cnn.www"</entry>
+              <entry>t3</entry>
+              <entry><varname>contents:html</varname> = "&lt;html&gt;..."</entry>
+            </row>
+          </tbody>
+        </tgroup>
+      </table>
+      <para>The empty cells shown in the
+        conceptual view are not stored at all.
         Thus a request for the value of the <varname>contents:html</varname> column at time stamp
           <literal>t8</literal> would return no value. Similarly, a request for an
           <varname>anchor:my.look.ca</varname> value at time stamp <literal>t9</literal> would
         return no value. However, if no timestamp is supplied, the most recent value for a
-        particular column would be returned and would also be the first one found since timestamps
+        particular column would be returned. Given multiple versions, the most recent is also the
+        first one found,  since timestamps
         are stored in descending order. Thus a request for the values of all columns in the row
           <varname>com.cnn.www</varname> if no timestamp is specified would be: the value of
-          <varname>contents:html</varname> from time stamp <literal>t6</literal>, the value of
-          <varname>anchor:cnnsi.com</varname> from time stamp <literal>t9</literal>, the value of
-          <varname>anchor:my.look.ca</varname> from time stamp <literal>t8</literal>. </para>
+          <varname>contents:html</varname> from timestamp <literal>t6</literal>, the value of
+          <varname>anchor:cnnsi.com</varname> from timestamp <literal>t9</literal>, the value of
+          <varname>anchor:my.look.ca</varname> from timestamp <literal>t8</literal>. </para>
       <para>For more information about the internals of how Apache HBase stores data, see <xref
           linkend="regions.arch" />. </para>
     </section>
