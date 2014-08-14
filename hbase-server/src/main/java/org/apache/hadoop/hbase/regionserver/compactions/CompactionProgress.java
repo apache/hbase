@@ -37,6 +37,8 @@ public class CompactionProgress {
   public long totalCompactingKVs;
   /** the completed count of key values in currently running compaction */
   public long currentCompactedKVs = 0;
+  /** the total size of data processed by the currently running compaction, in bytes */
+  public long totalCompactedSize = 0;
 
   /** Constructor
    * @param totalCompactingKVs the total Key/Value pairs to be compacted
@@ -65,5 +67,32 @@ public class CompactionProgress {
    */
   public void complete() {
     this.totalCompactingKVs = this.currentCompactedKVs;
+  }
+
+  /**
+   * @return the total compacting key values in currently running compaction
+   */
+  public long getTotalCompactingKvs() {
+    return totalCompactingKVs;
+  }
+
+  /**
+   * @return the completed count of key values in currently running compaction
+   */
+  public long getCurrentCompactedKvs() {
+    return currentCompactedKVs;
+  }
+
+  /**
+   * @return the total data size processed by the currently running compaction, in bytes
+   */
+  public long getTotalCompactedSize() {
+    return totalCompactedSize;
+  }
+
+  @Override
+  public String toString() {
+    return String.format("%d/%d (%.2f%%)", currentCompactedKVs, totalCompactingKVs,
+      100 * getProgressPct());
   }
 }
