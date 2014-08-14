@@ -343,6 +343,36 @@ public interface Store extends HeapSize, StoreConfigInformation {
 
   TableName getTableName();
 
+  /**
+   * @return The number of cells flushed to disk
+   */
+  long getFlushedCellsCount();
+
+  /**
+   * @return The total size of data flushed to disk, in bytes
+   */
+  long getFlushedCellsSize();
+
+  /**
+   * @return The number of cells processed during minor compactions
+   */
+  long getCompactedCellsCount();
+
+  /**
+   * @return The total amount of data processed during minor compactions, in bytes
+   */
+  long getCompactedCellsSize();
+
+  /**
+   * @return The number of cells processed during major compactions
+   */
+  long getMajorCompactedCellsCount();
+
+  /**
+   * @return The total amount of data processed during major compactions, in bytes
+   */
+  long getMajorCompactedCellsSize();
+
   /*
    * @param o Observer who wants to know about changes in set of Readers
    */

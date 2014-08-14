@@ -216,4 +216,34 @@ public interface MetricsRegionServerWrapper {
    * Get the amount of time that updates were blocked.
    */
   long getUpdatesBlockedTime();
+
+  /**
+   * Get the number of cells flushed to disk.
+   */
+  long getFlushedCellsCount();
+
+  /**
+   * Get the number of cells processed during minor compactions.
+   */
+  long getCompactedCellsCount();
+
+  /**
+   * Get the number of cells processed during major compactions.
+   */
+  long getMajorCompactedCellsCount();
+
+  /**
+   * Get the total amount of data flushed to disk, in bytes.
+   */
+  long getFlushedCellsSize();
+
+  /**
+   * Get the total amount of data processed during minor compactions, in bytes.
+   */
+  long getCompactedCellsSize();
+
+  /**
+   * Get the total amount of data processed during major compactions, in bytes.
+   */
+  long getMajorCompactedCellsSize();
 }

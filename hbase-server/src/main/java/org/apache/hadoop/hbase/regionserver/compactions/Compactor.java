@@ -227,8 +227,13 @@ public abstract class Compactor {
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
     List<Cell> kvs = new ArrayList<Cell>();
-    // Limit to "hbase.hstore.compaction.kv.max" (default 10) to avoid OOME
     int closeCheckInterval = HStore.getCloseCheckInterval();
+    long lastMillis;
+    if (LOG.isDebugEnabled()) {
+      lastMillis = System.currentTimeMillis();
+    } else {
+      lastMillis = 0;
+    }
     boolean hasMore;
     do {
       hasMore = scanner.next(kvs, compactionKVMax);
@@ -240,11 +245,22 @@ public abstract class Compactor {
         }
         writer.append(kv);
         ++progress.currentCompactedKVs;
+        progress.totalCompactedSize += kv.getLength();
 
         // check periodically to see if a system stop is requested
         if (closeCheckInterval > 0) {
           bytesWritten += kv.getLength();
           if (bytesWritten > closeCheckInterval) {
+            // Log the progress of long running compactions every minute if
+            // logging at DEBUG level
+            if (LOG.isDebugEnabled()) {
+              long now = System.currentTimeMillis();
+              if ((now - lastMillis) >= 60 * 1000) {
+                LOG.debug("Compaction progress: " + progress + String.format(", rate=%.2f kB/sec",
+                  (bytesWritten / 1024.0) / ((now - lastMillis) / 1000.0)));
+                lastMillis = now;
+              }
+            }
             bytesWritten = 0;
             if (!store.areWritesEnabled()) {
               progress.cancel();

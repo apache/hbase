@@ -189,6 +189,13 @@ public class HStore implements Store {
 
   private Encryption.Context cryptoContext = Encryption.Context.NONE;
 
+  private volatile long flushedCellsCount = 0;
+  private volatile long compactedCellsCount = 0;
+  private volatile long majorCompactedCellsCount = 0;
+  private volatile long flushedCellsSize = 0;
+  private volatile long compactedCellsSize = 0;
+  private volatile long majorCompactedCellsSize = 0;
+
   /**
    * Constructor
    * @param region
@@ -1157,6 +1164,13 @@ public class HStore implements Store {
       sfs = moveCompatedFilesIntoPlace(cr, newFiles);
       writeCompactionWalRecord(filesToCompact, sfs);
       replaceStoreFiles(filesToCompact, sfs);
+      if (cr.isMajor()) {
+        majorCompactedCellsCount += getCompactionProgress().totalCompactingKVs;
+        majorCompactedCellsSize += getCompactionProgress().totalCompactedSize;
+      } else {
+        compactedCellsCount += getCompactionProgress().totalCompactingKVs;
+        compactedCellsSize += getCompactionProgress().totalCompactedSize;
+      }
       // At this point the store will use new files for all new scanners.
       completeCompaction(filesToCompact, true); // Archive old files & update store size.
     } finally {
@@ -2037,6 +2051,8 @@ public class HStore implements Store {
     private MemStoreSnapshot snapshot;
     private List<Path> tempFiles;
     private List<Path> committedFiles;
+    private long cacheFlushCount;
+    private long cacheFlushSize;
 
     private StoreFlusherImpl(long cacheFlushSeqNum) {
       this.cacheFlushSeqNum = cacheFlushSeqNum;
@@ -2049,6 +2065,8 @@ public class HStore implements Store {
     @Override
     public void prepare() {
       this.snapshot = memstore.snapshot();
+      this.cacheFlushCount = snapshot.getCellsCount();
+      this.cacheFlushSize = snapshot.getSize();
       committedFiles = new ArrayList<Path>(1);
     }
 
@@ -2088,6 +2106,10 @@ public class HStore implements Store {
         }
         committedFiles.add(sf.getPath());
       }
+
+      HStore.this.flushedCellsCount += cacheFlushCount;
+      HStore.this.flushedCellsSize += cacheFlushSize;
+
       // Add new file to store files.  Clear snapshot too while we have the Store write lock.
       return HStore.this.updateStorefiles(storeFiles, snapshot.getId());
     }
@@ -2109,7 +2131,7 @@ public class HStore implements Store {
   }
 
   public static final long FIXED_OVERHEAD =
-      ClassSize.align(ClassSize.OBJECT + (16 * ClassSize.REFERENCE) + (4 * Bytes.SIZEOF_LONG)
+      ClassSize.align(ClassSize.OBJECT + (16 * ClassSize.REFERENCE) + (10 * Bytes.SIZEOF_LONG)
               + (5 * Bytes.SIZEOF_INT) + (2 * Bytes.SIZEOF_BOOLEAN));
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD
@@ -2144,5 +2166,35 @@ public class HStore implements Store {
   @Override
   public boolean hasTooManyStoreFiles() {
     return getStorefilesCount() > this.blockingFileCount;
+  }
+
+  @Override
+  public long getFlushedCellsCount() {
+    return flushedCellsCount;
+  }
+
+  @Override
+  public long getFlushedCellsSize() {
+    return flushedCellsSize;
+  }
+
+  @Override
+  public long getCompactedCellsCount() {
+    return compactedCellsCount;
+  }
+
+  @Override
+  public long getCompactedCellsSize() {
+    return compactedCellsSize;
+  }
+
+  @Override
+  public long getMajorCompactedCellsCount() {
+    return majorCompactedCellsCount;
+  }
+
+  @Override
+  public long getMajorCompactedCellsSize() {
+    return majorCompactedCellsSize;
   }
 }

@@ -66,6 +66,12 @@ class MetricsRegionServerWrapperImpl
   private volatile long numMutationsWithoutWAL = 0;
   private volatile long dataInMemoryWithoutWAL = 0;
   private volatile int percentFileLocal = 0;
+  private volatile long flushedCellsCount = 0;
+  private volatile long compactedCellsCount = 0;
+  private volatile long majorCompactedCellsCount = 0;
+  private volatile long flushedCellsSize = 0;
+  private volatile long compactedCellsSize = 0;
+  private volatile long majorCompactedCellsSize = 0;
 
   private CacheStats cacheStats;
   private ScheduledExecutorService executor;
@@ -353,6 +359,35 @@ class MetricsRegionServerWrapperImpl
     return this.regionServer.cacheFlusher.getUpdatesBlockedMsHighWater().get();
   }
 
+  @Override
+  public long getFlushedCellsCount() {
+    return flushedCellsCount;
+  }
+
+  @Override
+  public long getCompactedCellsCount() {
+    return compactedCellsCount;
+  }
+
+  @Override
+  public long getMajorCompactedCellsCount() {
+    return majorCompactedCellsCount;
+  }
+
+  @Override
+  public long getFlushedCellsSize() {
+    return flushedCellsSize;
+  }
+
+  @Override
+  public long getCompactedCellsSize() {
+    return compactedCellsSize;
+  }
+
+  @Override
+  public long getMajorCompactedCellsSize() {
+    return majorCompactedCellsSize;
+  }
 
   /**
    * This is the runnable that will be executed on the executor every PERIOD number of seconds
@@ -386,7 +421,12 @@ class MetricsRegionServerWrapperImpl
       long tempNumMutationsWithoutWAL = 0;
       long tempDataInMemoryWithoutWAL = 0;
       int tempPercentFileLocal = 0;
-
+      long tempFlushedCellsCount = 0;
+      long tempCompactedCellsCount = 0;
+      long tempMajorCompactedCellsCount = 0;
+      long tempFlushedCellsSize = 0;
+      long tempCompactedCellsSize = 0;
+      long tempMajorCompactedCellsSize = 0;
 
       for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
         tempNumMutationsWithoutWAL += r.numMutationsWithoutWAL.get();
@@ -403,6 +443,12 @@ class MetricsRegionServerWrapperImpl
           tempStorefileIndexSize += store.getStorefilesIndexSize();
           tempTotalStaticBloomSize += store.getTotalStaticBloomSize();
           tempTotalStaticIndexSize += store.getTotalStaticIndexSize();
+          tempFlushedCellsCount += store.getFlushedCellsCount();
+          tempCompactedCellsCount += store.getCompactedCellsCount();
+          tempMajorCompactedCellsCount += store.getMajorCompactedCellsCount();
+          tempFlushedCellsSize += store.getFlushedCellsSize();
+          tempCompactedCellsSize += store.getCompactedCellsSize();
+          tempMajorCompactedCellsSize += store.getMajorCompactedCellsSize();
         }
 
         hdfsBlocksDistribution.add(r.getHDFSBlocksDistribution());
@@ -459,6 +505,12 @@ class MetricsRegionServerWrapperImpl
       numMutationsWithoutWAL = tempNumMutationsWithoutWAL;
       dataInMemoryWithoutWAL = tempDataInMemoryWithoutWAL;
       percentFileLocal = tempPercentFileLocal;
+      flushedCellsCount = tempFlushedCellsCount;
+      compactedCellsCount = tempCompactedCellsCount;
+      majorCompactedCellsCount = tempMajorCompactedCellsCount;
+      flushedCellsSize = tempFlushedCellsSize;
+      compactedCellsSize = tempCompactedCellsSize;
+      majorCompactedCellsSize = tempMajorCompactedCellsSize;
     }
   }
 }
