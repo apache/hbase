@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.security.visibility;
 
-import static org.junit.Assert.fail;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.security.visibility.expression.ExpressionNode;
@@ -306,6 +306,99 @@ public class TestExpressionParser {
     executeNegativeCase("!!a");
     executeNegativeCase("( a & b ) | ( c & d e)");
     executeNegativeCase("! a");
+  }
+
+  @Test
+  public void testNonAsciiCases() throws Exception {
+    ExpressionNode node = parser.parse(CellVisibility.quote("\u0027") + "&"
+        + CellVisibility.quote("\u002b") + "|" + CellVisibility.quote("\u002d") + "&"
+        + CellVisibility.quote("\u003f"));
+    assertTrue(node instanceof NonLeafExpressionNode);
+    NonLeafExpressionNode nlNode = (NonLeafExpressionNode) node;
+    assertEquals(Operator.AND, nlNode.getOperator());
+    assertEquals(2, nlNode.getChildExps().size());
+    assertEquals("\u003f", ((LeafExpressionNode) nlNode.getChildExps().get(1)).getIdentifier());
+    assertTrue(nlNode.getChildExps().get(0) instanceof NonLeafExpressionNode);
+    nlNode = (NonLeafExpressionNode) nlNode.getChildExps().get(0);
+    assertEquals(Operator.OR, nlNode.getOperator());
+    assertEquals(2, nlNode.getChildExps().size());
+    assertEquals("\u002d", ((LeafExpressionNode) nlNode.getChildExps().get(1)).getIdentifier());
+    assertTrue(nlNode.getChildExps().get(0) instanceof NonLeafExpressionNode);
+    nlNode = (NonLeafExpressionNode) nlNode.getChildExps().get(0);
+    assertEquals(Operator.AND, nlNode.getOperator());
+    assertEquals(2, nlNode.getChildExps().size());
+    assertEquals("\u002b", ((LeafExpressionNode) nlNode.getChildExps().get(1)).getIdentifier());
+    assertEquals("\u0027", ((LeafExpressionNode) nlNode.getChildExps().get(0)).getIdentifier());
+
+    node = parser.parse(CellVisibility.quote("\u0027") + "&" + CellVisibility.quote("\u002b") + "|"
+        + CellVisibility.quote("\u002d") + "&" + CellVisibility.quote("\u003f"));
+    assertTrue(node instanceof NonLeafExpressionNode);
+    nlNode = (NonLeafExpressionNode) node;
+    assertEquals(Operator.AND, nlNode.getOperator());
+    assertEquals(2, nlNode.getChildExps().size());
+    assertEquals("\u003f", ((LeafExpressionNode) nlNode.getChildExps().get(1)).getIdentifier());
+    assertTrue(nlNode.getChildExps().get(0) instanceof NonLeafExpressionNode);
+    nlNode = (NonLeafExpressionNode) nlNode.getChildExps().get(0);
+    assertEquals(Operator.OR, nlNode.getOperator());
+    assertEquals(2, nlNode.getChildExps().size());
+    assertEquals("\u002d", ((LeafExpressionNode) nlNode.getChildExps().get(1)).getIdentifier());
+    assertTrue(nlNode.getChildExps().get(0) instanceof NonLeafExpressionNode);
+    nlNode = (NonLeafExpressionNode) nlNode.getChildExps().get(0);
+    assertEquals(Operator.AND, nlNode.getOperator());
+    assertEquals(2, nlNode.getChildExps().size());
+    assertEquals("\u002b", ((LeafExpressionNode) nlNode.getChildExps().get(1)).getIdentifier());
+    assertEquals("\u0027", ((LeafExpressionNode) nlNode.getChildExps().get(0)).getIdentifier());
+  }
+
+  @Test
+  public void testCasesSeperatedByDoubleQuotes() throws Exception {
+    ExpressionNode node = null;
+    try {
+      node = parser.parse("\u0027&\"|\u002b&\u003f");
+      fail("Excpetion must be thrown as there are special characters without quotes");
+    } catch (ParseException e) {
+    }
+    node = parser.parse(CellVisibility.quote("\u0027") + "&" + CellVisibility.quote("\"") + "|"
+        + CellVisibility.quote("\u002b" + "&" + "\u003f"));
+    assertTrue(node instanceof NonLeafExpressionNode);
+    NonLeafExpressionNode nlNode = (NonLeafExpressionNode) node;
+    assertEquals(Operator.OR, nlNode.getOperator());
+    assertEquals(2, nlNode.getChildExps().size());
+    assertEquals("\u002b" + "&" + "\u003f",
+        ((LeafExpressionNode) nlNode.getChildExps().get(1)).getIdentifier());
+    assertTrue(nlNode.getChildExps().get(0) instanceof NonLeafExpressionNode);
+    nlNode = (NonLeafExpressionNode) nlNode.getChildExps().get(0);
+    assertEquals(Operator.AND, nlNode.getOperator());
+    assertEquals(2, nlNode.getChildExps().size());
+    assertEquals("\"", ((LeafExpressionNode) nlNode.getChildExps().get(1)).getIdentifier());
+    assertEquals("\u0027", ((LeafExpressionNode) nlNode.getChildExps().get(0)).getIdentifier());
+    try {
+      node = parser.parse(CellVisibility.quote("\u0027&\\") + "|"
+          + CellVisibility.quote("\u002b" + "&" + "\\") + CellVisibility.quote("$$\""));
+      fail("Excpetion must be thrown as there is not operator");
+    } catch (ParseException e) {
+    }
+    node = parser.parse(CellVisibility.quote("\u0027" + "&" + "\\") + "|"
+        + CellVisibility.quote("\u003f" + "&" + "\\") + "&" + CellVisibility.quote("$$\""));
+    assertTrue(node instanceof NonLeafExpressionNode);
+    nlNode = (NonLeafExpressionNode) node;
+    assertEquals(Operator.AND, nlNode.getOperator());
+    assertEquals(2, nlNode.getChildExps().size());
+    assertEquals("$$\"", ((LeafExpressionNode) nlNode.getChildExps().get(1)).getIdentifier());
+    assertTrue(nlNode.getChildExps().get(0) instanceof NonLeafExpressionNode);
+    nlNode = (NonLeafExpressionNode) nlNode.getChildExps().get(0);
+    assertEquals(Operator.OR, nlNode.getOperator());
+    assertEquals(2, nlNode.getChildExps().size());
+    assertEquals("\u0027" + "&" + "\\",
+        ((LeafExpressionNode) nlNode.getChildExps().get(0)).getIdentifier());
+    assertEquals("\u003f" + "&" + "\\",
+        ((LeafExpressionNode) nlNode.getChildExps().get(1)).getIdentifier());
+    try {
+      node = parser.parse(CellVisibility.quote("\u002b&\\") + "|" + CellVisibility.quote("\u0027&\\") + "&"
+          + "\"$$");
+      fail("Excpetion must be thrown as there is no end quote");
+    } catch (ParseException e) {
+    }
   }
 
   private void executeNegativeCase(String exp) {

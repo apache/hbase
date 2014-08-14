@@ -114,56 +114,21 @@ public class TestScan {
   @Test
   public void testSetAuthorizations() {
     Scan scan = new Scan();
-    scan.setAuthorizations(new Authorizations("A", "B", "0123", "A0", "1A1", "_a"));
     try {
+      scan.setAuthorizations(new Authorizations("\u002b|\u0029"));
+      scan.setAuthorizations(new Authorizations("A", "B", "0123", "A0", "1A1", "_a"));
       scan.setAuthorizations(new Authorizations("A|B"));
-      fail("Should have failed for A|B.");
-    } catch (IllegalArgumentException e) {
-    }
-    try {
       scan.setAuthorizations(new Authorizations("A&B"));
-      fail("Should have failed for A&B.");
-    } catch (IllegalArgumentException e) {
-    }
-    try {
       scan.setAuthorizations(new Authorizations("!B"));
-      fail("Should have failed for !B.");
-    } catch (IllegalArgumentException e) {
-    }
-    try {
       scan.setAuthorizations(new Authorizations("A", "(A)"));
-      fail("Should have failed for (A).");
-    } catch (IllegalArgumentException e) {
-    }
-    try {
       scan.setAuthorizations(new Authorizations("A", "{A"));
-      fail("Should have failed for {A.");
-    } catch (IllegalArgumentException e) {
-    }
-    try {
       scan.setAuthorizations(new Authorizations(" "));
-      fail("Should have failed for empty");
-    } catch (IllegalArgumentException e) {
-    }
-    try {
       scan.setAuthorizations(new Authorizations(":B"));
-    } catch (IllegalArgumentException e) {
-      fail("Should not have failed for :B");
-    }
-    try {
       scan.setAuthorizations(new Authorizations("-B"));
-    } catch (IllegalArgumentException e) {
-      fail("Should not have failed for -B");
-    }
-    try {
       scan.setAuthorizations(new Authorizations(".B"));
-    } catch (IllegalArgumentException e) {
-      fail("Should not have failed for .B");
-    }
-    try {
       scan.setAuthorizations(new Authorizations("/B"));
     } catch (IllegalArgumentException e) {
-      fail("Should not have failed for /B");
+      fail("should not throw exception");
     }
   }
 }
