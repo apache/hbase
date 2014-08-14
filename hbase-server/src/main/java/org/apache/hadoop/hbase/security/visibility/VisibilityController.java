@@ -53,11 +53,11 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -1149,13 +1149,6 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       if (table.isSystemTable() && !table.equals(LABELS_TABLE_NAME)) {
         return null;
       }
-    } else {
-      for (String label : authorizations.getLabels()) {
-        if (!VisibilityLabelsValidator.isValidLabel(label)) {
-          throw new IllegalArgumentException("Invalid authorization label : " + label
-              + ". Authorizations cannot contain '(', ')' ,'&' ,'|', '!'" + " and cannot be empty");
-        }
-      }
     }
     Filter visibilityLabelFilter = null;
     if (this.scanLabelGenerators != null) {
@@ -1310,30 +1303,21 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
       for (VisibilityLabel visLabel : labels) {
         byte[] label = visLabel.getLabel().toByteArray();
         String labelStr = Bytes.toString(label);
-        if (VisibilityLabelsValidator.isValidLabel(label)) {
-          if (this.visibilityManager.getLabelOrdinal(labelStr) > 0) {
-            RegionActionResult.Builder failureResultBuilder = RegionActionResult.newBuilder();
-            failureResultBuilder.setException(ResponseConverter
-                .buildException(new LabelAlreadyExistsException("Label '" + labelStr
-                    + "' already exists")));
-            response.addResult(failureResultBuilder.build());
-          } else {
-            Put p = new Put(Bytes.toBytes(ordinalCounter));
-            p.addImmutable(
-                LABELS_TABLE_FAMILY, LABEL_QUALIFIER, label, LABELS_TABLE_TAGS);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Adding the label "+labelStr);
-            }
-            puts.add(p);
-            ordinalCounter++;
-            response.addResult(successResult);
-          }
-        } else {
+        if (this.visibilityManager.getLabelOrdinal(labelStr) > 0) {
           RegionActionResult.Builder failureResultBuilder = RegionActionResult.newBuilder();
           failureResultBuilder.setException(ResponseConverter
-              .buildException(new InvalidLabelException("Invalid visibility label '" + labelStr
-                  + "'")));
+              .buildException(new LabelAlreadyExistsException("Label '" + labelStr
+                  + "' already exists")));
           response.addResult(failureResultBuilder.build());
+        } else {
+          Put p = new Put(Bytes.toBytes(ordinalCounter));
+          p.addImmutable(LABELS_TABLE_FAMILY, LABEL_QUALIFIER, label, LABELS_TABLE_TAGS);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Adding the label " + labelStr);
+          }
+          puts.add(p);
+          ordinalCounter++;
+          response.addResult(successResult);
         }
       }
       OperationStatus[] opStatus = this.regionEnv.getRegion().batchMutate(

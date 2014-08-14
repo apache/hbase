@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.security.visibility;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Stack;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -35,49 +37,80 @@ public class ExpressionParser {
   private static final char AND = '&';
   private static final char NOT = '!';
   private static final char SPACE = ' ';
-
+  private static final char DOUBLE_QUOTES = '"';
   public ExpressionNode parse(String expS) throws ParseException {
     expS = expS.trim();
     Stack<ExpressionNode> expStack = new Stack<ExpressionNode>();
     int index = 0;
-    int endPos = expS.length();
     byte[] exp = Bytes.toBytes(expS);
+    int endPos = exp.length;
     while (index < endPos) {
       byte b = exp[index];
       switch (b) {
-      case OPEN_PARAN:
-        processOpenParan(expStack, expS, index);
-        index = skipSpaces(exp, index);
-        break;
-      case CLOSE_PARAN:
-        processCloseParan(expStack, expS, index);
-        index = skipSpaces(exp, index);
-        break;
-      case AND:
-      case OR:
-        processANDorOROp(getOperator(b), expStack, expS, index);
-        index = skipSpaces(exp, index);
-        break;
-      case NOT:
-        processNOTOp(expStack, expS, index);
-        break;
-      default:
-        int labelOffset = index;
-        do {
-          if (!VisibilityLabelsValidator.isValidAuthChar(exp[index])) {
-            throw new ParseException("Error parsing expression " + expS + " at column : "
-                + index);
+        case OPEN_PARAN:
+          processOpenParan(expStack, expS, index);
+          index = skipSpaces(exp, index);
+          break;
+        case CLOSE_PARAN:
+          processCloseParan(expStack, expS, index);
+          index = skipSpaces(exp, index);
+          break;
+        case AND:
+        case OR:
+          processANDorOROp(getOperator(b), expStack, expS, index);
+          index = skipSpaces(exp, index);
+          break;
+        case NOT:
+          processNOTOp(expStack, expS, index);
+          break;
+        case DOUBLE_QUOTES:
+          int labelOffset = ++index;
+          // We have to rewrite the expression within double quotes as incase of expressions 
+          // with escape characters we may have to avoid them as the original expression did
+          // not have them
+          List<Byte> list = new ArrayList<Byte>();
+          while (index < endPos && !endDoubleQuotesFound(exp[index])) {
+            if (exp[index] == '\\') {
+              index++;
+              if (exp[index] != '\\' && exp[index] != '"')
+                throw new ParseException("invalid escaping with quotes " + expS + " at column : "
+                    + index);
+            }
+            list.add(exp[index]);
+            index++;
           }
-          index++;
-        } while (index < endPos && !isEndOfLabel(exp[index]));
-        String leafExp = new String(exp, labelOffset, index - labelOffset).trim();
-        if (leafExp.isEmpty()) {
-          throw new ParseException("Error parsing expression " + expS + " at column : " + index);
-        }
-        processLabelExpNode(new LeafExpressionNode(leafExp), expStack, expS, index);
-        // We already crossed the label node index. So need to reduce 1 here.
-        index--;
-        index = skipSpaces(exp, index);
+          // The expression has come to the end. still no double quotes found 
+          if(index == endPos) {
+            throw new ParseException("No terminating quotes " + expS + " at column : " + index);
+          }
+          // This could be costly. but do we have any alternative?
+          // If we don't do this way then we may have to handle while checking the authorizations.
+          // Better to do it here.
+          byte[] array = com.google.common.primitives.Bytes.toArray(list);
+          String leafExp = new String(array).trim();
+          if (leafExp.isEmpty()) {
+            throw new ParseException("Error parsing expression " + expS + " at column : " + index);
+          }
+          processLabelExpNode(new LeafExpressionNode(leafExp), expStack, expS, index);
+          index = skipSpaces(exp, index);
+          break;
+        default:
+          labelOffset = index;
+          do {
+            if (!VisibilityLabelsValidator.isValidAuthChar(exp[index])) {
+              throw new ParseException("Error parsing expression " 
+                 + expS + " at column : " + index);
+            }
+            index++;
+          } while (index < endPos && !isEndOfLabel(exp[index]));
+          leafExp = new String(exp, labelOffset, index - labelOffset).trim();
+          if (leafExp.isEmpty()) {
+            throw new ParseException("Error parsing expression " + expS + " at column : " + index);
+          }
+          processLabelExpNode(new LeafExpressionNode(leafExp), expStack, expS, index);
+          // We already crossed the label node index. So need to reduce 1 here.
+          index--;
+          index = skipSpaces(exp, index);
       }
       index++;
     }
@@ -255,8 +288,12 @@ public class ExpressionParser {
     expStack.push(new NonLeafExpressionNode(Operator.NOT));
   }
 
+  private static boolean endDoubleQuotesFound(byte b) {
+    return (b == DOUBLE_QUOTES);
+  }
   private static boolean isEndOfLabel(byte b) {
-    return (b == OPEN_PARAN || b == CLOSE_PARAN || b == OR || b == AND || b == NOT || b == SPACE);
+    return (b == OPEN_PARAN || b == CLOSE_PARAN || b == OR || b == AND || 
+        b == NOT || b == SPACE);
   }
 
   private static Operator getOperator(byte op) {
