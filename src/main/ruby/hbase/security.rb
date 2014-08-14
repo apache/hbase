@@ -182,6 +182,8 @@ module Hbase
       rescue NameError
         raise(ArgumentError, "DISABLED: Security features are not available in this build of HBase")
       end
+      raise(ArgumentError, "Command not supported as authorization is turned off ") \
+        unless exists?(org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME)
     end
 
   end
