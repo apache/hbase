@@ -82,6 +82,12 @@ public class TestVisibilityLabels {
   private static final String PRIVATE = "private";
   private static final String CONFIDENTIAL = "confidential";
   private static final String SECRET = "secret";
+  private static final String COPYRIGHT = "\u00A9ABC";
+  private static final String ACCENT = "\u0941";
+  private static final String UNICODE_VIS_TAG = COPYRIGHT + "\"" + ACCENT + "\\" + SECRET + "\""
+      + "\u0027&\\";
+  private static final String UC1 = "\u0027\"\u002b";
+  private static final String UC2 = "\u002d\u003f";
   public static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] row1 = Bytes.toBytes("row1");
   private static final byte[] row2 = Bytes.toBytes("row2");
@@ -147,6 +153,77 @@ public class TestVisibilityLabels {
       current = cellScanner.current();
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
           current.getRowLength(), row2, 0, row2.length));
+    } finally {
+      if (table != null) {
+        table.close();
+      }
+    }
+  }
+  
+  @Test
+  public void testSimpleVisibilityLabelsWithUniCodeCharacters() throws Exception {
+    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    HTable table = createTableAndWriteDataWithLabels(tableName,
+        SECRET + "|" + CellVisibility.quote(COPYRIGHT), "(" + CellVisibility.quote(COPYRIGHT) + "&"
+            + CellVisibility.quote(ACCENT) + ")|" + CONFIDENTIAL,
+        CellVisibility.quote(UNICODE_VIS_TAG) + "&" + SECRET);
+    try {
+      Scan s = new Scan();
+      s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL, PRIVATE, COPYRIGHT, ACCENT,
+          UNICODE_VIS_TAG));
+      ResultScanner scanner = table.getScanner(s);
+      Result[] next = scanner.next(3);
+      assertTrue(next.length == 3);
+      CellScanner cellScanner = next[0].cellScanner();
+      cellScanner.advance();
+      Cell current = cellScanner.current();
+      assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
+          current.getRowLength(), row1, 0, row1.length));
+      cellScanner = next[1].cellScanner();
+      cellScanner.advance();
+      current = cellScanner.current();
+      assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
+          current.getRowLength(), row2, 0, row2.length));
+      cellScanner = next[2].cellScanner();
+      cellScanner.advance();
+      current = cellScanner.current();
+      assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
+          current.getRowLength(), row3, 0, row3.length));
+    } finally {
+      if (table != null) {
+        table.close();
+      }
+    }
+  }
+
+  @Test
+  public void testAuthorizationsWithSpecialUnicodeCharacters() throws Exception {
+    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    HTable table = createTableAndWriteDataWithLabels(tableName,
+        CellVisibility.quote(UC1) + "|" + CellVisibility.quote(UC2), CellVisibility.quote(UC1),
+        CellVisibility.quote(UNICODE_VIS_TAG));
+    try {
+      Scan s = new Scan();
+      s.setAuthorizations(new Authorizations(UC1, UC2, ACCENT,
+          UNICODE_VIS_TAG));
+      ResultScanner scanner = table.getScanner(s);
+      Result[] next = scanner.next(3);
+      assertTrue(next.length == 3);
+      CellScanner cellScanner = next[0].cellScanner();
+      cellScanner.advance();
+      Cell current = cellScanner.current();
+      assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
+          current.getRowLength(), row1, 0, row1.length));
+      cellScanner = next[1].cellScanner();
+      cellScanner.advance();
+      current = cellScanner.current();
+      assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
+          current.getRowLength(), row2, 0, row2.length));
+      cellScanner = next[2].cellScanner();
+      cellScanner.advance();
+      current = cellScanner.current();
+      assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(),
+          current.getRowLength(), row3, 0, row3.length));
     } finally {
       if (table != null) {
         table.close();
@@ -405,7 +482,7 @@ public class TestVisibilityLabels {
       }
     }
     // One label is the "system" label.
-    Assert.assertEquals("The count should be 8", 8, i);
+    Assert.assertEquals("The count should be 13", 13, i);
   }
 
   private void waitForLabelsRegionAvailability(HRegionServer regionServer) {
@@ -465,8 +542,7 @@ public class TestVisibilityLabels {
         assertEquals("org.apache.hadoop.hbase.security.visibility.LabelAlreadyExistsException",
             resultList.get(1).getException().getName());
         assertTrue(resultList.get(2).getException().getValue().isEmpty());
-        assertEquals("org.apache.hadoop.hbase.security.visibility.InvalidLabelException",
-            resultList.get(3).getException().getName());
+        assertTrue(resultList.get(3).getException().getValue().isEmpty());
         assertTrue(resultList.get(4).getException().getValue().isEmpty());
         return null;
       }
@@ -928,7 +1004,8 @@ public class TestVisibilityLabels {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
       public VisibilityLabelsResponse run() throws Exception {
-        String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE };
+        String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE, COPYRIGHT, ACCENT,
+            UNICODE_VIS_TAG, UC1, UC2 };
         try {
           VisibilityClient.addLabels(conf, labels);
         } catch (Throwable t) {

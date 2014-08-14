@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.security.visibility;
 
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -60,17 +59,12 @@ public class VisibilityLabelsValidator {
     return validAuthChars[0xff & b];
   }
 
-  static final boolean isValidLabel(byte[] label) {
+  public static final boolean isValidLabel(byte[] label) {
     for (int i = 0; i < label.length; i++) {
       if (!isValidAuthChar(label[i])) {
         return false;
       }
     }
     return true;
-  }
-
-  public static final boolean isValidLabel(String label) {
-    Matcher matcher = pattern.matcher(label);
-    return matcher.matches();
   }
 }

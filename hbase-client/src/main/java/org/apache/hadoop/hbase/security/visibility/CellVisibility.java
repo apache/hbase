@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.security.visibility;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * This contains a visibility expression which can be associated with a cell. When it is set with a
@@ -45,5 +46,41 @@ public class CellVisibility {
   @Override
   public String toString() {
     return this.expression;
+  }
+
+  /**
+   * Helps in quoting authentication Strings. Use this if unicode characters to
+   * be used in expression or special characters like '(', ')',
+   * '"','\','&','|','!'
+   */
+  public static String quote(String auth) {
+    return quote(Bytes.toBytes(auth));
+  }
+
+  /**
+   * Helps in quoting authentication Strings. Use this if unicode characters to
+   * be used in expression or special characters like '(', ')',
+   * '"','\','&','|','!'
+   */
+  public static String quote(byte[] auth) {
+    int escapeChars = 0;
+
+    for (int i = 0; i < auth.length; i++)
+      if (auth[i] == '"' || auth[i] == '\\')
+        escapeChars++;
+
+    byte[] escapedAuth = new byte[auth.length + escapeChars + 2];
+    int index = 1;
+    for (int i = 0; i < auth.length; i++) {
+      if (auth[i] == '"' || auth[i] == '\\') {
+        escapedAuth[index++] = '\\';
+      }
+      escapedAuth[index++] = auth[i];
+    }
+
+    escapedAuth[0] = '"';
+    escapedAuth[escapedAuth.length - 1] = '"';
+
+    return Bytes.toString(escapedAuth);
   }
 }

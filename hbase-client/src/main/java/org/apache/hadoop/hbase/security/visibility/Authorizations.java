@@ -36,22 +36,11 @@ public class Authorizations {
   public Authorizations(String... labels) {
     this.labels = new ArrayList<String>(labels.length);
     for (String label : labels) {
-      validateLabel(label);
       this.labels.add(label);
     }
   }
 
-  private void validateLabel(String label) {
-    if (!VisibilityLabelsValidator.isValidLabel(label)) {
-      throw new IllegalArgumentException("Invalid authorization label : " + label
-          + ". Authorizations cannot contain '(', ')' ,'&' ,'|', '!'" + " and cannot be empty");
-    }
-  }
-
   public Authorizations(List<String> labels) {
-    for (String label : labels) {
-      validateLabel(label);
-    }
     this.labels = labels;
   }
 
