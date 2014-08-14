@@ -111,7 +111,6 @@ public class CacheConfig {
   public static final boolean DEFAULT_BUCKET_CACHE_COMBINED = true;
   public static final int DEFAULT_BUCKET_CACHE_WRITER_THREADS = 3;
   public static final int DEFAULT_BUCKET_CACHE_WRITER_QUEUE = 64;
-  public static final float DEFAULT_BUCKET_CACHE_COMBINED_PERCENTAGE = 0.9f;
 
  /**
    * Configuration key to prefetch all blocks of a given file into the block cache

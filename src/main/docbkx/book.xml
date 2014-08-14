@@ -2082,8 +2082,8 @@ rs.close();
         xml:id="block.cache">
         <title>Block Cache</title>
 
-        <para>HBase provides three different BlockCache implementations: the default onheap
-          LruBlockCache, BucketCache, and SlabCache, which are both (usually) offheap. This section
+        <para>HBase provides two different BlockCache implementations: the default onheap
+          LruBlockCache and BucketCache, which is (usually) offheap. This section
           discusses benefits and drawbacks of each implementation, how to choose the appropriate
           option, and configuration options for each.</para>
 
@@ -2099,9 +2099,7 @@ rs.close();
           <para><classname>LruBlockCache</classname> is the original implementation, and is
               entirely within the Java heap. <classname>BucketCache</classname> is mainly
               intended for keeping blockcache data offheap, although BucketCache can also
-              keep data onheap and serve from a file-backed cache. There is also an older
-              offheap BlockCache, called SlabCache that has since been deprecated and
-              removed in HBase 1.0.
+              keep data onheap and serve from a file-backed cache.
           </para>
 
           <para>Fetching will always be slower when fetching from BucketCache,
@@ -2292,30 +2290,6 @@ rs.close();
         <section
           xml:id="offheap.blockcache">
           <title>Offheap Block Cache</title>
-          <section xml:id="offheap.blockcache.slabcache">
-            <title>How to Enable SlabCache</title>
-            <para><emphasis>SlabCache is deprecated and will be removed in 1.0!</emphasis></para>
-            <para> SlabCache is originally described in <link
-                xlink:href="http://blog.cloudera.com/blog/2012/01/caching-in-hbase-slabcache/">Caching
-                in Apache HBase: SlabCache</link>. Quoting from the API documentation for <link
-                xlink:href="http://hbase.apache.org/0.94/apidocs/org/apache/hadoop/hbase/io/hfile/DoubleBlockCache.html">DoubleBlockCache</link>,
-              the hosting class for SlabCache deploys,
-              DoubleBlockCache is an abstraction layer that combines two caches, the smaller onHeapCache and the
-              larger offHeapCache. CacheBlock attempts to cache the block in both caches, while
-              readblock reads first from the faster on heap cache before looking for the block in
-              the off heap cache. Metrics are the combined size and hits and misses of both
-              caches.</para>
-            <para>To enable SlabCache, set the float
-                <varname>hbase.offheapcache.percentage</varname> to some value between 0 and 1 in
-              the <filename>hbase-site.xml</filename> file on the RegionServer. The value will be multiplied by the
-              setting for <varname>-XX:MaxDirectMemorySize</varname> in the RegionServer's
-                <filename>hbase-env.sh</filename> configuration file and the result is used by
-              SlabCache as its offheap store. The onheap store will be the value of the float
-                <varname>HConstants.HFILE_BLOCK_CACHE_SIZE_KEY</varname> setting (some value between
-              0 and 1) multiplied by the size of the allocated Java heap.</para>
-            <para>Restart (or rolling restart) your cluster for the configurations to take effect.
-              Check logs for errors or unexpected behavior.</para>
-          </section>
           <section xml:id="enable.bucketcache">
             <title>How to Enable BucketCache</title>
                 <para>The usual deploy of BucketCache is via a managing class that sets up two caching tiers: an L1 onheap cache

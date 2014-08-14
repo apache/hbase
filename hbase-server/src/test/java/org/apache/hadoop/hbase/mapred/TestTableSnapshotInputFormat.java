@@ -116,9 +116,6 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
         HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT,
         job.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, -1), 0.01);
       Assert.assertEquals(
-        "Snapshot job should not use SlabCache.",
-        0, job.getFloat("hbase.offheapcache.percentage", -1), 0.01);
-      Assert.assertEquals(
         "Snapshot job should not use BucketCache.",
         0, job.getFloat("hbase.bucketcache.size", -1), 0.01);
     } finally {
