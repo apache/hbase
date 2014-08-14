@@ -207,6 +207,18 @@ public class MetricsRegionServerSourceImpl
               BLOCK_CACHE_EXPRESS_HIT_PERCENT_DESC), rsWrap.getBlockCacheHitCachingPercent())
           .addCounter(Interns.info(UPDATES_BLOCKED_TIME, UPDATES_BLOCKED_DESC),
               rsWrap.getUpdatesBlockedTime())
+          .addCounter(Interns.info(FLUSHED_CELLS, FLUSHED_CELLS_DESC),
+              rsWrap.getFlushedCellsCount())
+          .addCounter(Interns.info(COMPACTED_CELLS, COMPACTED_CELLS_DESC),
+              rsWrap.getCompactedCellsCount())
+          .addCounter(Interns.info(MAJOR_COMPACTED_CELLS, MAJOR_COMPACTED_CELLS_DESC),
+              rsWrap.getMajorCompactedCellsCount())
+          .addCounter(Interns.info(FLUSHED_CELLS_SIZE, FLUSHED_CELLS_SIZE_DESC),
+              rsWrap.getFlushedCellsSize())
+          .addCounter(Interns.info(COMPACTED_CELLS_SIZE, COMPACTED_CELLS_SIZE_DESC),
+              rsWrap.getCompactedCellsSize())
+          .addCounter(Interns.info(MAJOR_COMPACTED_CELLS_SIZE, MAJOR_COMPACTED_CELLS_SIZE_DESC),
+              rsWrap.getMajorCompactedCellsSize())
           .tag(Interns.info(ZOOKEEPER_QUORUM_NAME, ZOOKEEPER_QUORUM_DESC),
               rsWrap.getZookeeperQuorum())
           .tag(Interns.info(SERVER_NAME_NAME, SERVER_NAME_DESC), rsWrap.getServerName())

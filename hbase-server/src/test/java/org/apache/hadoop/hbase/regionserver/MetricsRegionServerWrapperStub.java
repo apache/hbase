@@ -211,4 +211,34 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
     return 1024000;
   }
 
+  @Override
+  public long getFlushedCellsCount() {
+    return 100000000;
+  }
+
+  @Override
+  public long getCompactedCellsCount() {
+    return 10000000;
+  }
+
+  @Override
+  public long getMajorCompactedCellsCount() {
+    return 1000000;
+  }
+
+  @Override
+  public long getFlushedCellsSize() {
+    return 1024000000;
+  }
+
+  @Override
+  public long getCompactedCellsSize() {
+    return 102400000;
+  }
+
+  @Override
+  public long getMajorCompactedCellsSize() {
+    return 10240000;
+  }
+
 }

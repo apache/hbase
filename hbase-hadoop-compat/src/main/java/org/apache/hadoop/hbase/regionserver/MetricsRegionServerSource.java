@@ -218,5 +218,20 @@ public interface MetricsRegionServerSource extends BaseSource {
   String SLOW_APPEND_DESC =
       "The number of Appends that took over 1000ms to complete";
 
+  String FLUSHED_CELLS = "flushedCellsCount";
+  String FLUSHED_CELLS_DESC = "The number of cells flushed to disk";
+  String FLUSHED_CELLS_SIZE = "flushedCellsSize";
+  String FLUSHED_CELLS_SIZE_DESC = "The total amount of data flushed to disk, in bytes";
+  String COMPACTED_CELLS = "compactedCellsCount";
+  String COMPACTED_CELLS_DESC = "The number of cells processed during minor compactions";
+  String COMPACTED_CELLS_SIZE = "compactedCellsSize";
+  String COMPACTED_CELLS_SIZE_DESC =
+      "The total amount of data processed during minor compactions, in bytes";
+  String MAJOR_COMPACTED_CELLS = "majorCompactedCellsCount";
+  String MAJOR_COMPACTED_CELLS_DESC =
+      "The number of cells processed during major compactions";
+  String MAJOR_COMPACTED_CELLS_SIZE = "majorCompactedCellsSize";
+  String MAJOR_COMPACTED_CELLS_SIZE_DESC =
+      "The total amount of data processed during major compactions, in bytes";
 
 }
