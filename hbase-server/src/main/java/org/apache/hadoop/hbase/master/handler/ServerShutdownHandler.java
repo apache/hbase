@@ -238,7 +238,7 @@ public class ServerShutdownHandler extends EventHandler {
               }
               toAssignRegions.add(hri);
             } else if (rit != null) {
-              if ((rit.isPendingCloseOrClosing() || rit.isOffline())
+              if ((rit.isClosing() || rit.isFailedClose() || rit.isOffline())
                   && am.getTableStateManager().isTableState(hri.getTable(),
                   ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING) ||
                   am.getReplicasToClose().contains(hri)) {

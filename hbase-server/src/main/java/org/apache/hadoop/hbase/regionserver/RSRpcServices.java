@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -1180,7 +1179,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws ServiceException
    */
   @Override
-  @SuppressWarnings("deprecation")
   @QosPriority(priority=HConstants.HIGH_QOS)
   public OpenRegionResponse openRegion(final RpcController controller,
       final OpenRegionRequest request) throws ServiceException {
@@ -1236,35 +1234,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       final HRegionInfo region = HRegionInfo.convert(regionOpenInfo.getRegion());
       HTableDescriptor htd;
       try {
-        final HRegion onlineRegion = regionServer.getFromOnlineRegions(region.getEncodedName());
+        String encodedName = region.getEncodedName();
+        byte[] encodedNameBytes = region.getEncodedNameAsBytes();
+        final HRegion onlineRegion = regionServer.getFromOnlineRegions(encodedName);
         if (onlineRegion != null) {
-          //Check if the region can actually be opened.
-          if (onlineRegion.getCoprocessorHost() != null) {
-            onlineRegion.getCoprocessorHost().preOpen();
-          }
-          // See HBASE-5094. Cross check with hbase:meta if still this RS is owning
-          // the region.
-          Pair<HRegionInfo, ServerName> p = MetaTableAccessor.getRegion(
-            regionServer.getShortCircuitConnection(), region.getRegionName());
-          if (regionServer.serverName.equals(p.getSecond())) {
-            Boolean closing = regionServer.regionsInTransitionInRS.get(region.getEncodedNameAsBytes());
-            // Map regionsInTransitionInRSOnly has an entry for a region only if the region
-            // is in transition on this RS, so here closing can be null. If not null, it can
-            // be true or false. True means the region is opening on this RS; while false
-            // means the region is closing. Only return ALREADY_OPENED if not closing (i.e.
-            // not in transition any more, or still transition to open.
-            if (!Boolean.FALSE.equals(closing)
-                && regionServer.getFromOnlineRegions(region.getEncodedName()) != null) {
-              LOG.warn("Attempted open of " + region.getEncodedName()
-                + " but already online on this server");
-              builder.addOpeningState(RegionOpeningState.ALREADY_OPENED);
-              continue;
-            }
-          } else {
-            LOG.warn("The region " + region.getEncodedName() + " is online on this server"
-              + " but hbase:meta does not have this server - continue opening.");
-            regionServer.removeFromOnlineRegions(onlineRegion, null);
-          }
+          // The region is already online. This should not happen any more.
+          String error = "Received OPEN for the region:"
+            + region.getRegionNameAsString() + ", which is already online";
+          regionServer.abort(error);
+          throw new IOException(error);
         }
         LOG.info("Open " + region.getRegionNameAsString());
         htd = htds.get(region.getTable());
@@ -1274,18 +1252,23 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
 
         final Boolean previous = regionServer.regionsInTransitionInRS.putIfAbsent(
-          region.getEncodedNameAsBytes(), Boolean.TRUE);
+          encodedNameBytes, Boolean.TRUE);
 
         if (Boolean.FALSE.equals(previous)) {
-          // There is a close in progress. This should not happen any more.
-          throw new RegionAlreadyInTransitionException("Received OPEN for the region:"
-            + region.getRegionNameAsString() + " , which we are already trying to CLOSE ");
+          if (regionServer.getFromOnlineRegions(encodedName) != null) {
+            // There is a close in progress. This should not happen any more.
+            String error = "Received OPEN for the region:"
+              + region.getRegionNameAsString() + ", which we are already trying to CLOSE";
+            regionServer.abort(error);
+            throw new IOException(error);
+          }
+          regionServer.regionsInTransitionInRS.put(encodedNameBytes, Boolean.TRUE);
         }
 
         if (Boolean.TRUE.equals(previous)) {
           // An open is in progress. This is supported, but let's log this.
           LOG.info("Receiving OPEN for the region:" +
-            region.getRegionNameAsString() + " , which we are already trying to OPEN"
+            region.getRegionNameAsString() + ", which we are already trying to OPEN"
               + " - ignoring this new request for this region.");
         }
 
@@ -1293,7 +1276,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // want to keep returning the stale moved record while we are opening/if we close again.
         regionServer.removeFromMovedRegions(region.getEncodedName());
 
-        if (previous == null) {
+        if (previous == null || !previous.booleanValue()) {
           // check if the region to be opened is marked in recovering state in ZK
           if (ZKSplitLog.isRegionMarkedRecoveringInZK(regionServer.getZooKeeper(),
               region.getEncodedName())) {

@@ -122,7 +122,7 @@ public class CloseRegionHandler extends EventHandler {
       LOG.debug("Closed " + region.getRegionNameAsString());
     } finally {
       this.rsServices.getRegionsInTransitionInRS().
-          remove(this.regionInfo.getEncodedNameAsBytes());
+        remove(this.regionInfo.getEncodedNameAsBytes(), Boolean.FALSE);
     }
   }
 }

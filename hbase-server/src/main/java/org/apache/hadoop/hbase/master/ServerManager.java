@@ -724,9 +724,8 @@ public class ServerManager {
   throws IOException {
     AdminService.BlockingInterface admin = getRsAdmin(server);
     if (admin == null) {
-      LOG.warn("Attempting to send OPEN RPC to server " + server.toString() +
+      throw new IOException("Attempting to send OPEN RPC to server " + server.toString() +
         " failed because no RPC connection found to this server");
-      return RegionOpeningState.FAILED_OPENING;
     }
     OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(server,
       region, favoredNodes,
@@ -753,9 +752,8 @@ public class ServerManager {
   throws IOException {
     AdminService.BlockingInterface admin = getRsAdmin(server);
     if (admin == null) {
-      LOG.warn("Attempting to send OPEN RPC to server " + server.toString() +
+      throw new IOException("Attempting to send OPEN RPC to server " + server.toString() +
         " failed because no RPC connection found to this server");
-      return null;
     }
 
     OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(regionOpenInfos,

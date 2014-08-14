@@ -36,10 +36,10 @@ public class RegionState {
   @InterfaceStability.Evolving
   public enum State {
     OFFLINE,        // region is in an offline state
-    PENDING_OPEN,   // sent rpc to server to open but has not begun
+    PENDING_OPEN,   // same as OPENING, to be removed
     OPENING,        // server has begun to open but not yet done
     OPEN,           // server opened region and updated meta
-    PENDING_CLOSE,  // sent rpc to server to close but has not begun
+    PENDING_CLOSE,  // same as CLOSING, to be removed
     CLOSING,        // server has begun to close but not yet done
     CLOSED,         // server closed region and updated meta
     SPLITTING,      // server started split of a region
@@ -210,28 +210,26 @@ public class RegionState {
     return serverName;
   }
 
+  /**
+   * PENDING_CLOSE (to be removed) is the same as CLOSING
+   */
   public boolean isClosing() {
-    return state == State.CLOSING;
+    return state == State.PENDING_CLOSE || state == State.CLOSING;
   }
 
   public boolean isClosed() {
     return state == State.CLOSED;
   }
 
-  public boolean isPendingClose() {
-    return state == State.PENDING_CLOSE;
-  }
-
+  /**
+   * PENDING_OPEN (to be removed) is the same as OPENING
+   */
   public boolean isOpening() {
-    return state == State.OPENING;
+    return state == State.PENDING_OPEN || state == State.OPENING;
   }
 
   public boolean isOpened() {
     return state == State.OPEN;
-  }
-
-  public boolean isPendingOpen() {
-    return state == State.PENDING_OPEN;
   }
 
   public boolean isOffline() {
@@ -268,40 +266,6 @@ public class RegionState {
 
   public boolean isMergingNew() {
     return state == State.MERGING_NEW;
-  }
-
-  public boolean isOpenOrMergingOnServer(final ServerName sn) {
-    return isOnServer(sn) && (isOpened() || isMerging());
-  }
-
-  public boolean isOpenOrMergingNewOnServer(final ServerName sn) {
-    return isOnServer(sn) && (isOpened() || isMergingNew());
-  }
-
-  public boolean isOpenOrSplittingOnServer(final ServerName sn) {
-    return isOnServer(sn) && (isOpened() || isSplitting());
-  }
-
-  public boolean isOpenOrSplittingNewOnServer(final ServerName sn) {
-    return isOnServer(sn) && (isOpened() || isSplittingNew());
-  }
-
-  public boolean isPendingOpenOrOpeningOnServer(final ServerName sn) {
-    return isOnServer(sn) && isPendingOpenOrOpening();
-  }
-
-  // Failed open is also kind of pending open
-  public boolean isPendingOpenOrOpening() {
-    return isPendingOpen() || isOpening() || isFailedOpen();
-  }
-
-  public boolean isPendingCloseOrClosingOnServer(final ServerName sn) {
-    return isOnServer(sn) && isPendingCloseOrClosing();
-  }
-
-  // Failed close is also kind of pending close
-  public boolean isPendingCloseOrClosing() {
-    return isPendingClose() || isClosing() || isFailedClose();
   }
 
   public boolean isOnServer(final ServerName sn) {

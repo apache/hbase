@@ -561,7 +561,8 @@ public class RegionStates {
         // Offline state is also kind of pending open if the region is in
         // transition. The region could be in failed_close state too if we have
         // tried several times to open it while this region server is not reachable)
-        if (state.isPendingOpenOrOpening() || state.isFailedClose() || state.isOffline()) {
+        if (isOneOfStates(state, State.OPENING, State.PENDING_OPEN,
+            State.FAILED_OPEN, State.FAILED_CLOSE, State.OFFLINE)) {
           LOG.info("Found region in " + state + " to be reassigned by SSH for " + sn);
           rits.add(hri);
         } else {
@@ -722,6 +723,12 @@ public class RegionStates {
   synchronized void setLastRegionServerOfRegion(
       final ServerName serverName, final String encodedName) {
     lastAssignments.put(encodedName, serverName);
+  }
+
+  synchronized boolean isRegionOnServer(
+      final HRegionInfo hri, final ServerName serverName) {
+    Set<HRegionInfo> regions = serverHoldings.get(serverName);
+    return regions == null ? false : regions.contains(hri);
   }
 
   void splitRegion(HRegionInfo p,

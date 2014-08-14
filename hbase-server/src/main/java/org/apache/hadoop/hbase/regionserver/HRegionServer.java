@@ -2480,10 +2480,9 @@ public class HRegionServer extends HasThread implements
    * @param abort True if we are aborting
    * @return True if closed a region.
    * @throws NotServingRegionException if the region is not online
-   * @throws RegionAlreadyInTransitionException if the region is already closing
    */
   protected boolean closeRegion(String encodedName, final boolean abort, final ServerName sn)
-      throws NotServingRegionException, RegionAlreadyInTransitionException {
+      throws NotServingRegionException {
     //Check for permissions to close.
     HRegion actualRegion = this.getFromOnlineRegions(encodedName);
     if ((actualRegion != null) && (actualRegion.getCoprocessorHost() != null)) {
@@ -2518,15 +2517,8 @@ public class HRegionServer extends HasThread implements
       }
     } else if (Boolean.FALSE.equals(previous)) {
       LOG.info("Received CLOSE for the region: " + encodedName +
-        " ,which we are already trying to CLOSE, but not completed yet");
-      // The master will retry till the region is closed. We need to do this since
-      // the region could fail to close somehow. If we mark the region closed in master
-      // while it is not, there could be data loss.
-      // If the region stuck in closing for a while, and master runs out of retries,
-      // master will move the region to failed_to_close. Later on, if the region
-      // is indeed closed, master can properly re-assign it.
-      throw new RegionAlreadyInTransitionException("The region " + encodedName +
-        " was already closing. New CLOSE request is ignored.");
+        ", which we are already trying to CLOSE, but not completed yet");
+      return true;
     }
 
     if (actualRegion == null) {

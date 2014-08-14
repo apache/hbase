@@ -191,12 +191,10 @@ public class TestAssignmentManagerOnCluster {
 
       // Region is assigned now. Let's assign it again.
       // Master should not abort, and region should be assigned.
-      RegionState oldState = regionStates.getRegionState(hri);
       TEST_UTIL.getHBaseAdmin().assign(hri.getRegionName());
       master.getAssignmentManager().waitForAssignment(hri);
       RegionState newState = regionStates.getRegionState(hri);
-      assertTrue(newState.isOpened()
-        && newState.getStamp() != oldState.getStamp());
+      assertTrue(newState.isOpened());
     } finally {
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
@@ -231,7 +229,7 @@ public class TestAssignmentManagerOnCluster {
       // Use the first server as the destination server
       ServerName destServer = onlineServers.iterator().next();
 
-      // Created faked dead server
+      // Created faked dead server that is still online in master
       deadServer = ServerName.valueOf(destServer.getHostname(),
           destServer.getPort(), destServer.getStartcode() - 100L);
       master.serverManager.recordNewServerWithLock(deadServer, ServerLoad.EMPTY_SERVERLOAD);
@@ -415,14 +413,11 @@ public class TestAssignmentManagerOnCluster {
   }
 
   /**
-   * This test should not be flaky. If it is flaky, it means something
-   * wrong with AssignmentManager which should be reported and fixed
-   *
-   * This tests forcefully assign a region while it's closing and re-assigned.
+   * This tests assign a region while it's closing.
    */
   @Test (timeout=60000)
-  public void testForceAssignWhileClosing() throws Exception {
-    String table = "testForceAssignWhileClosing";
+  public void testAssignWhileClosing() throws Exception {
+    String table = "testAssignWhileClosing";
     try {
       HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
       desc.addFamily(new HColumnDescriptor(FAMILY));
@@ -664,14 +659,6 @@ public class TestAssignmentManagerOnCluster {
 
       MyRegionObserver.postCloseEnabled.set(true);
       am.unassign(hri);
-      // Now region should pending_close or closing
-      // Unassign it again so that we can trigger already
-      // in transition exception. This test is to make sure this scenario
-      // is handled properly.
-      am.server.getConfiguration().setLong(
-        AssignmentManager.ALREADY_IN_TRANSITION_WAITTIME, 1000);
-      am.getRegionStates().updateRegionState(hri, RegionState.State.FAILED_CLOSE);
-      am.unassign(hri);
 
       // Let region closing move ahead. The region should be closed
       // properly and re-assigned automatically
@@ -727,7 +714,7 @@ public class TestAssignmentManagerOnCluster {
       am.unassign(hri);
       RegionState state = am.getRegionStates().getRegionState(hri);
       ServerName oldServerName = state.getServerName();
-      assertTrue(state.isPendingOpenOrOpening() && oldServerName != null);
+      assertTrue(state.isOpening() && oldServerName != null);
 
       // Now the region is stuck in opening
       // Let's forcefully re-assign it to trigger closing/opening
@@ -816,6 +803,7 @@ public class TestAssignmentManagerOnCluster {
 
       // You can't unassign a dead region before SSH either
       am.unassign(hri);
+      state = regionStates.getRegionState(hri);
       assertTrue(state.isFailedClose());
 
       // Enable SSH so that log can be split
