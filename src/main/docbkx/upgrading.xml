@@ -398,27 +398,6 @@ Successfully completed Log splitting
                 setup a secure HBase is on the way. </para>
         </section>
 
-        <section
-            xml:id="slabcache">
-            <title>Experimental off-heap cache: SlabCache</title>
-            <para> A new cache was contributed to 0.92.0 to act as a solution between using the
-                “on-heap” cache which is the current LRU cache the region servers have and the
-                operating system cache which is out of our control. To enable
-                    <emphasis>SlabCache</emphasis>, as this feature is being called, set
-                “-XX:MaxDirectMemorySize” in hbase-env.sh to the value for maximum direct memory
-                size and specify <property>hbase.offheapcache.percentage</property> in
-                    <filename>hbase-site.xml</filename> with the percentage that you want to
-                dedicate to off-heap cache. This should only be set for servers and not for clients.
-                Use at your own risk. See this blog post, <link
-                    xlink:href="http://www.cloudera.com/blog/2012/01/caching-in-hbase-slabcache/">Caching
-                    in Apache HBase: SlabCache</link>, for additional information on this new
-                experimental feature. </para>
-            <para>This feature has mostly been eclipsed in later HBases. See <link
-                    xlink:href="https://issues.apache.org/jira/browse/HBASE-7404 ">HBASE-7404 Bucket
-                    Cache:A solution about CMS,Heap Fragment and Big Cache on HBASE</link>,
-                etc.</para>
-        </section>
-
         <section>
             <title>Changes in HBase replication </title>
             <para>0.92.0 adds two new features: multi-slave and multi-master replication. The way to
