@@ -426,7 +426,7 @@ public class CacheConfig {
         if (configuredBucketSizes != null) {
           bucketSizes = new int[configuredBucketSizes.length];
           for (int i = 0; i < configuredBucketSizes.length; i++) {
-            bucketSizes[i] = Integer.parseInt(configuredBucketSizes[i]);
+            bucketSizes[i] = Integer.parseInt(configuredBucketSizes[i].trim());
           }
         }
         if (combinedWithLru) {

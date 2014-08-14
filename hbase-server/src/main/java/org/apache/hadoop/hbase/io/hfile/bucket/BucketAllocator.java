@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Ints;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -298,11 +300,8 @@ public final class BucketAllocator {
   BucketAllocator(long availableSpace, int[] bucketSizes)
       throws BucketAllocatorException {
     this.bucketSizes = bucketSizes == null ? DEFAULT_BUCKET_SIZES : bucketSizes;
-    int largestBucket = this.bucketSizes[0];
-    for (int i : this.bucketSizes) {
-      largestBucket = Math.max(largestBucket, i);
-    }
-    this.bigItemSize = largestBucket;
+    Arrays.sort(this.bucketSizes);
+    this.bigItemSize = Ints.max(this.bucketSizes);
     this.bucketCapacity = FEWEST_ITEMS_IN_BUCKET * bigItemSize;
     buckets = new Bucket[(int) (availableSpace / bucketCapacity)];
     if (buckets.length < this.bucketSizes.length)
