@@ -54,7 +54,15 @@ files.each do |file|
   end
 end
 
-if !Test::Unit::AutoRunner.run
+# If this system property is set, we'll use it to filter the test cases.
+runner_args = []
+if java.lang.System.get_property('shell.test')
+  shell_test_pattern = java.lang.System.get_property('shell.test')
+  puts "Only running tests that match #{shell_test_pattern}"
+  runner_args << "--testcase=#{shell_test_pattern}"
+end
+# first couple of args are to match the defaults, so we can pass options to limit the tests run
+if !(Test::Unit::AutoRunner.run(false, nil, runner_args))
   raise "Shell unit tests failed. Check output file for details."
 end
 
