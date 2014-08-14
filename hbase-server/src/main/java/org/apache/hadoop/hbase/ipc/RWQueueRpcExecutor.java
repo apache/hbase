@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Action;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
@@ -40,6 +41,7 @@ import com.google.protobuf.Message;
 
 /**
  * RPC Executor that uses different queues for reads and writes.
+ * With the options to use different queues/executors for gets and scans.
  * Each handler has its own queue and there is no stealing.
  */
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
@@ -51,20 +53,34 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   private final Random balancer = new Random();
   private final int writeHandlersCount;
   private final int readHandlersCount;
+  private final int scanHandlersCount;
   private final int numWriteQueues;
   private final int numReadQueues;
+  private final int numScanQueues;
 
   public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
       final float readShare, final int maxQueueLength) {
-    this(name, handlerCount, numQueues, readShare, maxQueueLength,
+    this(name, handlerCount, numQueues, readShare, maxQueueLength, 0, LinkedBlockingQueue.class);
+  }
+
+  public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
+      final float readShare, final float scanShare, final int maxQueueLength) {
+    this(name, handlerCount, numQueues, readShare, scanShare, maxQueueLength,
       LinkedBlockingQueue.class);
   }
 
   public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
       final float readShare, final int maxQueueLength,
       final Class<? extends BlockingQueue> readQueueClass, Object... readQueueInitArgs) {
+    this(name, handlerCount, numQueues, readShare, 0, maxQueueLength,
+      readQueueClass, readQueueInitArgs);
+  }
+
+  public RWQueueRpcExecutor(final String name, final int handlerCount, final int numQueues,
+      final float readShare, final float scanShare, final int maxQueueLength,
+      final Class<? extends BlockingQueue> readQueueClass, Object... readQueueInitArgs) {
     this(name, calcNumWriters(handlerCount, readShare), calcNumReaders(handlerCount, readShare),
-      calcNumWriters(numQueues, readShare), calcNumReaders(numQueues, readShare),
+      calcNumWriters(numQueues, readShare), calcNumReaders(numQueues, readShare), scanShare,
       LinkedBlockingQueue.class, new Object[] {maxQueueLength},
       readQueueClass, ArrayUtils.addAll(new Object[] {maxQueueLength}, readQueueInitArgs));
   }
@@ -73,23 +89,45 @@ public class RWQueueRpcExecutor extends RpcExecutor {
       final int numWriteQueues, final int numReadQueues,
       final Class<? extends BlockingQueue> writeQueueClass, Object[] writeQueueInitArgs,
       final Class<? extends BlockingQueue> readQueueClass, Object[] readQueueInitArgs) {
-    super(name, Math.max(writeHandlers + readHandlers, numWriteQueues + numReadQueues));
+    this(name, writeHandlers, readHandlers, numWriteQueues, numReadQueues, 0,
+      writeQueueClass, writeQueueInitArgs, readQueueClass, readQueueInitArgs);
+  }
+
+  public RWQueueRpcExecutor(final String name, int writeHandlers, int readHandlers,
+      int numWriteQueues, int numReadQueues, float scanShare,
+      final Class<? extends BlockingQueue> writeQueueClass, Object[] writeQueueInitArgs,
+      final Class<? extends BlockingQueue> readQueueClass, Object[] readQueueInitArgs) {
+    super(name, Math.max(writeHandlers, numWriteQueues) + Math.max(readHandlers, numReadQueues));
+
+    int numScanQueues = Math.max(0, (int)Math.floor(numReadQueues * scanShare));
+    int scanHandlers = Math.max(0, (int)Math.floor(readHandlers * scanShare));
+    if ((numReadQueues - numScanQueues) > 0) {
+      numReadQueues -= numScanQueues;
+      readHandlers -= scanHandlers;
+    } else {
+      numScanQueues = 0;
+      scanHandlers = 0;
+    }
 
     this.writeHandlersCount = Math.max(writeHandlers, numWriteQueues);
     this.readHandlersCount = Math.max(readHandlers, numReadQueues);
+    this.scanHandlersCount = Math.max(scanHandlers, numScanQueues);
     this.numWriteQueues = numWriteQueues;
     this.numReadQueues = numReadQueues;
+    this.numScanQueues = numScanQueues;
 
     queues = new ArrayList<BlockingQueue<CallRunner>>(writeHandlersCount + readHandlersCount);
     LOG.debug(name + " writeQueues=" + numWriteQueues + " writeHandlers=" + writeHandlersCount +
-              " readQueues=" + numReadQueues + " readHandlers=" + readHandlersCount);
+              " readQueues=" + numReadQueues + " readHandlers=" + readHandlersCount +
+              ((numScanQueues == 0) ? "" : " scanQueues=" + numScanQueues +
+                " scanHandlers=" + scanHandlersCount));
 
     for (int i = 0; i < numWriteQueues; ++i) {
       queues.add((BlockingQueue<CallRunner>)
         ReflectionUtils.newInstance(writeQueueClass, writeQueueInitArgs));
     }
 
-    for (int i = 0; i < numReadQueues; ++i) {
+    for (int i = 0; i < (numReadQueues + numScanQueues); ++i) {
       queues.add((BlockingQueue<CallRunner>)
         ReflectionUtils.newInstance(readQueueClass, readQueueInitArgs));
     }
@@ -99,6 +137,8 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   protected void startHandlers(final int port) {
     startHandlers(".write", writeHandlersCount, queues, 0, numWriteQueues, port);
     startHandlers(".read", readHandlersCount, queues, numWriteQueues, numReadQueues, port);
+    startHandlers(".scan", scanHandlersCount, queues,
+                  numWriteQueues + numReadQueues, numScanQueues, port);
   }
 
   @Override
@@ -107,6 +147,8 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     int queueIndex;
     if (isWriteRequest(call.getHeader(), call.param)) {
       queueIndex = balancer.nextInt(numWriteQueues);
+    } else if (numScanQueues > 0 && isScanRequest(call.getHeader(), call.param)) {
+      queueIndex = numWriteQueues + numReadQueues + balancer.nextInt(numScanQueues);
     } else {
       queueIndex = numWriteQueues + balancer.nextInt(numReadQueues);
     }
@@ -125,6 +167,19 @@ public class RWQueueRpcExecutor extends RpcExecutor {
           }
         }
       }
+    }
+    if (methodName.equalsIgnoreCase("mutate")) {
+      return true;
+    }
+    return false;
+  }
+
+  private boolean isScanRequest(final RequestHeader header, final Message param) {
+    String methodName = header.getMethodName();
+    if (methodName.equalsIgnoreCase("scan")) {
+      // The first scan request will be executed as a "short read"
+      ScanRequest request = (ScanRequest)param;
+      return request.hasScannerId();
     }
     return false;
   }

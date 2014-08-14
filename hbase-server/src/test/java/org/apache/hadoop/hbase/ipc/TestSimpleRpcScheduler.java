@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.ipc.RpcServer.Call;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,6 +47,7 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Matchers.eq;
@@ -185,39 +187,9 @@ public class TestSimpleRpcScheduler {
       when(priority.getDeadline(eq(hugeHead), any(Message.class))).thenReturn(100L);
 
       final ArrayList<Integer> work = new ArrayList<Integer>();
-
-      doAnswer(new Answer<Object>() {
-        @Override
-        public Object answer(InvocationOnMock invocation) {
-          synchronized (work) {
-            work.add(10);
-          }
-          Threads.sleepWithoutInterrupt(100);
-          return null;
-        }
-      }).when(smallCallTask).run();
-
-      doAnswer(new Answer<Object>() {
-        @Override
-        public Object answer(InvocationOnMock invocation) {
-          synchronized (work) {
-            work.add(50);
-          }
-          Threads.sleepWithoutInterrupt(100);
-          return null;
-        }
-      }).when(largeCallTask).run();
-
-      doAnswer(new Answer<Object>() {
-        @Override
-        public Object answer(InvocationOnMock invocation) {
-          synchronized (work) {
-            work.add(100);
-          }
-          Threads.sleepWithoutInterrupt(100);
-          return null;
-        }
-      }).when(hugeCallTask).run();
+      doAnswerTaskExecution(smallCallTask, work, 10, 250);
+      doAnswerTaskExecution(largeCallTask, work, 50, 250);
+      doAnswerTaskExecution(hugeCallTask, work, 100, 250);
 
       scheduler.dispatch(smallCallTask);
       scheduler.dispatch(smallCallTask);
@@ -252,5 +224,85 @@ public class TestSimpleRpcScheduler {
     } finally {
       scheduler.stop();
     }
+  }
+
+  @Test
+  public void testScanQueues() throws Exception {
+    Configuration schedConf = HBaseConfiguration.create();
+    schedConf.setFloat(SimpleRpcScheduler.CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 1.0f);
+    schedConf.setFloat(SimpleRpcScheduler.CALL_QUEUE_READ_SHARE_CONF_KEY, 0.7f);
+    schedConf.setFloat(SimpleRpcScheduler.CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0.5f);
+
+    PriorityFunction priority = mock(PriorityFunction.class);
+    when(priority.getPriority(any(RequestHeader.class), any(Message.class)))
+      .thenReturn(HConstants.NORMAL_QOS);
+
+    RpcScheduler scheduler = new SimpleRpcScheduler(schedConf, 3, 1, 1, priority,
+                                                    HConstants.QOS_THRESHOLD);
+    try {
+      scheduler.start();
+
+      CallRunner putCallTask = mock(CallRunner.class);
+      RpcServer.Call putCall = mock(RpcServer.Call.class);
+      RequestHeader putHead = RequestHeader.newBuilder().setMethodName("mutate").build();
+      when(putCallTask.getCall()).thenReturn(putCall);
+      when(putCall.getHeader()).thenReturn(putHead);
+
+      CallRunner getCallTask = mock(CallRunner.class);
+      RpcServer.Call getCall = mock(RpcServer.Call.class);
+      RequestHeader getHead = RequestHeader.newBuilder().setMethodName("get").build();
+      when(getCallTask.getCall()).thenReturn(getCall);
+      when(getCall.getHeader()).thenReturn(getHead);
+
+      CallRunner scanCallTask = mock(CallRunner.class);
+      RpcServer.Call scanCall = mock(RpcServer.Call.class);
+      scanCall.param = ScanRequest.newBuilder().setScannerId(1).build();
+      RequestHeader scanHead = RequestHeader.newBuilder().setMethodName("scan").build();
+      when(scanCallTask.getCall()).thenReturn(scanCall);
+      when(scanCall.getHeader()).thenReturn(scanHead);
+
+      ArrayList<Integer> work = new ArrayList<Integer>();
+      doAnswerTaskExecution(putCallTask, work, 1, 1000);
+      doAnswerTaskExecution(getCallTask, work, 2, 1000);
+      doAnswerTaskExecution(scanCallTask, work, 3, 1000);
+
+      // There are 3 queues: [puts], [gets], [scans]
+      // so the calls will be interleaved
+      scheduler.dispatch(putCallTask);
+      scheduler.dispatch(putCallTask);
+      scheduler.dispatch(putCallTask);
+      scheduler.dispatch(getCallTask);
+      scheduler.dispatch(getCallTask);
+      scheduler.dispatch(getCallTask);
+      scheduler.dispatch(scanCallTask);
+      scheduler.dispatch(scanCallTask);
+      scheduler.dispatch(scanCallTask);
+
+      while (work.size() < 6) {
+        Threads.sleepWithoutInterrupt(100);
+      }
+
+      for (int i = 0; i < work.size() - 2; i += 3) {
+        assertNotEquals(work.get(i + 0), work.get(i + 1));
+        assertNotEquals(work.get(i + 0), work.get(i + 2));
+        assertNotEquals(work.get(i + 1), work.get(i + 2));
+      }
+    } finally {
+      scheduler.stop();
+    }
+  }
+
+  private void doAnswerTaskExecution(final CallRunner callTask,
+      final ArrayList<Integer> results, final int value, final int sleepInterval) {
+    doAnswer(new Answer<Object>() {
+      @Override
+      public Object answer(InvocationOnMock invocation) {
+        synchronized (results) {
+          results.add(value);
+        }
+        Threads.sleepWithoutInterrupt(sleepInterval);
+        return null;
+      }
+    }).when(callTask).run();
   }
 }
