@@ -87,7 +87,7 @@ public class ExpressionParser {
           // If we don't do this way then we may have to handle while checking the authorizations.
           // Better to do it here.
           byte[] array = com.google.common.primitives.Bytes.toArray(list);
-          String leafExp = new String(array).trim();
+          String leafExp = Bytes.toString(array).trim();
           if (leafExp.isEmpty()) {
             throw new ParseException("Error parsing expression " + expS + " at column : " + index);
           }
