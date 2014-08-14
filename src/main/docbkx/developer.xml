@@ -513,6 +513,44 @@ HBase have a character not usually seen in other projects.</para>
                 the tests must be strict unit tests and just test the class under test - no use of
                 the HBaseTestingUtility or minicluster is allowed (or even possible given the
                 dependency tree).</para>
+  <section xml:id="hbase.moduletest.shell">
+    <title>Testing the HBase Shell</title>
+    <para>
+      The HBase shell and its tests are predominantly written in jruby. In order to make these
+      tests run as a part of the standard build, there is a single JUnit test,
+      <classname>TestShell</classname>, that takes care of loading the jruby implemented tests and
+      running them. You can run all of these tests from the top level with:
+    </para>
+    <programlisting language="bourne">
+      mvn clean test -Dtest=TestShell
+    </programlisting>
+    <para>
+      Alternatively, you may limit the shell tests that run using the system variable
+      <classname>shell.test</classname>. This value may specify a particular test case by name. For
+      example, the tests that cover the shell commands for altering tables are contained in the test
+      case <classname>AdminAlterTableTest</classname> and you can run them with:
+    </para>
+    <programlisting language="bourne">
+      mvn clean test -Dtest=TestShell -Dshell.test=AdminAlterTableTest
+    </programlisting>
+    <para>
+      You may also use a <link xlink:href=
+      "http://docs.ruby-doc.com/docs/ProgrammingRuby/html/language.html#UJ">Ruby Regular Expression
+      literal</link> (in the <classname>/pattern/</classname> style) to select a set of test cases.
+      You can run all of the HBase admin related tests, including both the normal administration and
+      the security administration, with the command:
+    </para>
+    <programlisting language="bourne">
+      mvn clean test -Dtest=TestShell -Dshell.test=/.*Admin.*Test/
+    </programlisting>
+    <para>
+      In the event of a test failure, you can see details by examining the XML version of the
+      surefire report results
+    </para>
+    <programlisting language="bourne">
+      vim hbase-shell/target/surefire-reports/TEST-org.apache.hadoop.hbase.client.TestShell.xml
+    </programlisting>
+  </section>
   <section xml:id="hbase.moduletest.run">
   <title>Running Tests in other Modules</title>
   <para>If the module you are developing in has no other dependencies on other HBase modules, then
