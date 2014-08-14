@@ -21,9 +21,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 public class FilterAllFilter extends FilterBase {
 
@@ -32,7 +29,12 @@ public class FilterAllFilter extends FilterBase {
 
   @Override
   public ReturnCode filterKeyValue(Cell v) throws IOException {
-    return ReturnCode.INCLUDE;
+    return ReturnCode.SKIP;
+  }
+
+  @Override
+  public boolean hasFilterRow() {
+    return true;
   }
 
   @Override
@@ -41,12 +43,7 @@ public class FilterAllFilter extends FilterBase {
   }
 
   public static FilterAllFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
-    FilterProtos.FilterAllFilter proto;
-    try {
-      proto = FilterProtos.FilterAllFilter.parseFrom(pbBytes);
-    } catch (InvalidProtocolBufferException e) {
-      throw new DeserializationException(e);
-    }
+    // No options to parse, so why bother
     return new FilterAllFilter();
   }
 
