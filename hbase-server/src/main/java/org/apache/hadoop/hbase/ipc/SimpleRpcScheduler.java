@@ -38,7 +38,10 @@ import org.apache.hadoop.hbase.util.BoundedPriorityBlockingQueue;
 public class SimpleRpcScheduler extends RpcScheduler {
   public static final Log LOG = LogFactory.getLog(SimpleRpcScheduler.class);
 
-  public static final String CALL_QUEUE_READ_SHARE_CONF_KEY = "hbase.ipc.server.callqueue.read.share";
+  public static final String CALL_QUEUE_READ_SHARE_CONF_KEY =
+      "hbase.ipc.server.callqueue.read.ratio";
+  public static final String CALL_QUEUE_SCAN_SHARE_CONF_KEY =
+      "hbase.ipc.server.callqueue.scan.ratio";
   public static final String CALL_QUEUE_HANDLER_FACTOR_CONF_KEY =
       "hbase.ipc.server.callqueue.handler.factor";
 
@@ -112,6 +115,7 @@ public class SimpleRpcScheduler extends RpcScheduler {
 
     String callQueueType = conf.get(CALL_QUEUE_TYPE_CONF_KEY, CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE);
     float callqReadShare = conf.getFloat(CALL_QUEUE_READ_SHARE_CONF_KEY, 0);
+    float callqScanShare = conf.getFloat(CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0);
 
     float callQueuesHandlersFactor = conf.getFloat(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 0);
     int numCallQueues = Math.max(1, (int)Math.round(handlerCount * callQueuesHandlersFactor));
@@ -123,10 +127,11 @@ public class SimpleRpcScheduler extends RpcScheduler {
       if (callQueueType.equals(CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE)) {
         CallPriorityComparator callPriority = new CallPriorityComparator(conf, this.priority);
         callExecutor = new RWQueueRpcExecutor("default", handlerCount, numCallQueues,
-            callqReadShare, maxQueueLength, BoundedPriorityBlockingQueue.class, callPriority);
+            callqReadShare, callqScanShare, maxQueueLength,
+            BoundedPriorityBlockingQueue.class, callPriority);
       } else {
         callExecutor = new RWQueueRpcExecutor("default", handlerCount, numCallQueues,
-            callqReadShare, maxQueueLength);
+            callqReadShare, callqScanShare, maxQueueLength);
       }
     } else {
       // multiple queues

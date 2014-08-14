@@ -187,13 +187,50 @@ possible configurations would overwhelm and obscure the important.
       A value of 0 means a single queue shared between all the handlers.
       A value of 1 means that each handler has its own queue.</description>
   </property>
-  <property>
-    <name>hbase.ipc.server.callqueue.read.share</name>
+<property>
+    <name>hbase.ipc.server.callqueue.read.ratio</name>
     <value>0</value>
     <description>Split the call queues into read and write queues.
-      A value of 0 indicate to not split the call queues.
-      A value of 0.5 means there will be the same number of read and write queues
+      The specified interval (which should be between 0.0 and 1.0)
+      will be multiplied by the number of call queues.
+      A value of 0 indicate to not split the call queues, meaning that both read and write
+      requests will be pushed to the same set of queues.
+      A value lower than 0.5 means that there will be less read queues than write queues.
+      A value of 0.5 means there will be the same number of read and write queues.
+      A value greater than 0.5 means that there will be more read queues than write queues.
       A value of 1.0 means that all the queues except one are used to dispatch read requests.
+
+      Example: Given the total number of call queues being 10
+      a read.ratio of 0 means that: the 10 queues will contain both read/write requests.
+      a read.ratio of 0.3 means that: 3 queues will contain only read requests
+      and 7 queues will contain only write requests.
+      a read.ratio of 0.5 means that: 5 queues will contain only read requests
+      and 5 queues will contain only write requests.
+      a read.ratio of 0.8 means that: 8 queues will contain only read requests
+      and 2 queues will contain only write requests.
+      a read.ratio of 1 means that: 9 queues will contain only read requests
+      and 1 queues will contain only write requests.
+    </description>
+  </property>
+  <property>
+    <name>hbase.ipc.server.callqueue.scan.ratio</name>
+    <value>0</value>
+    <description>Given the number of read call queues, calculated from the total number
+      of call queues multiplied by the callqueue.read.ratio, the scan.ratio property
+      will split the read call queues into small-read and long-read queues.
+      A value lower than 0.5 means that there will be less long-read queues than short-read queues.
+      A value of 0.5 means that there will be the same number of short-read and long-read queues.
+      A value greater than 0.5 means that there will be more long-read queues than short-read queues
+      A value of 0 or 1 indicate to use the same set of queues for gets and scans.
+
+      Example: Given the total number of read call queues being 8
+      a scan.ratio of 0 or 1 means that: 8 queues will contain both long and short read requests.
+      a scan.ratio of 0.3 means that: 2 queues will contain only long-read requests
+      and 6 queues will contain only short-read requests.
+      a scan.ratio of 0.5 means that: 4 queues will contain only long-read requests
+      and 4 queues will contain only short-read requests.
+      a scan.ratio of 0.8 means that: 6 queues will contain only long-read requests
+      and 2 queues will contain only short-read requests.
     </description>
   </property>
   <property>
