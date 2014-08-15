@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
+import org.apache.hadoop.hbase.security.visibility.VisibilityTestUtil;
 import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
 import org.junit.AfterClass;
@@ -51,8 +52,10 @@ public class TestShell {
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     TEST_UTIL.getConfiguration().setBoolean(CoprocessorHost.ABORT_ON_ERROR_KEY, false);
+    TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
     // Security setup configuration
     SecureTestUtil.enableSecurity(TEST_UTIL.getConfiguration());
+    VisibilityTestUtil.enableVisiblityLabels(TEST_UTIL.getConfiguration());
 
     TEST_UTIL.startMiniCluster();
 
