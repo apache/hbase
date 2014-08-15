@@ -282,6 +282,13 @@ public class TestRegionSplitter {
         verifyBounds(expectedBounds, tableName);
     }
 
+  @Test
+  public void noopRollingSplit() throws Exception {
+    final List<byte[]> expectedBounds = new ArrayList<byte[]>();
+    expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
+    rollingSplitAndVerify(TestRegionSplitter.class.getSimpleName(), "UniformSplit", expectedBounds);
+  }
+
     private void rollingSplitAndVerify(String tableName, String splitClass,
             List<byte[]> expectedBounds)  throws Exception {
         final Configuration conf = UTIL.getConfiguration();
