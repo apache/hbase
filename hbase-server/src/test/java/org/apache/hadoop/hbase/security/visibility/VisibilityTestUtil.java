@@ -13,6 +13,8 @@ package org.apache.hadoop.hbase.security.visibility;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+
 
 /**
  * Utility methods for testing visibility labels.
@@ -21,8 +23,18 @@ public class VisibilityTestUtil {
 
   public static void enableVisiblityLabels(Configuration conf) throws IOException {
     conf.setInt("hfile.format.version", 3);
-    conf.set("hbase.coprocessor.master.classes", VisibilityController.class.getName());
-    conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());
+    appendCoprocessor(conf, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      VisibilityController.class.getName());
+    appendCoprocessor(conf, CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+      VisibilityController.class.getName());
+  }
+
+  private static void appendCoprocessor(Configuration conf, String property, String value) {
+    if (conf.get(property) == null) {
+      conf.set(property, VisibilityController.class.getName());
+    } else {
+      conf.set(property, conf.get(property) + "," + VisibilityController.class.getName());
+    }
   }
 
 }
