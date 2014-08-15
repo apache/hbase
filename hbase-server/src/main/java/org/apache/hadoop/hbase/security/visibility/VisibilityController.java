@@ -498,7 +498,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   @Override
   public boolean preBalanceSwitch(ObserverContext<MasterCoprocessorEnvironment> ctx,
       boolean newValue) throws IOException {
-    return false;
+    return newValue;
   }
 
   @Override
