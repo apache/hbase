@@ -132,10 +132,7 @@ module Hbase
     define_test "put should work with attributes" do
        @test_table.put("123", "x:a", 4, {ATTRIBUTES=>{'mykey'=>'myvalue'}})
     end
-    
-    define_test "put should work with VISIBILITY" do
-       @test_table.put("123", "x:a", 4, {VISIBILITY=>'mykey'})
-    end
+
     #-------------------------------------------------------------------------------
 
     define_test "delete should work without timestamp" do
@@ -206,9 +203,6 @@ module Hbase
       
       @test_table.put(3, "x:a", 21, {ATTRIBUTES=>{'mykey'=>'myvalue'}})
       @test_table.put(3, "x:b", 22, @test_ts, {ATTRIBUTES=>{'mykey'=>'myvalue'}})
-      
-      @test_table.put(4, "x:a", 31, {VISIBILITY=>'mykey'})
-      @test_table.put(4, "x:b", 32, @test_ts, {VISIBILITY=>'mykey'})
 
     end
 
@@ -237,14 +231,6 @@ module Hbase
     
     define_test "get should work for data written with Attributes" do
       res = @test_table._get_internal('3')
-      assert_not_nil(res)
-      assert_kind_of(Hash, res)
-      assert_not_nil(res['x:a'])
-      assert_not_nil(res['x:b'])
-    end
-    
-     define_test "get should work for data written with Visibility" do
-      res = @test_table._get_internal('4')
       assert_not_nil(res)
       assert_kind_of(Hash, res)
       assert_not_nil(res['x:a'])
