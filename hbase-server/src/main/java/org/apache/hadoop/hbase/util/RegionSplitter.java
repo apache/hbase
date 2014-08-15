@@ -584,8 +584,10 @@ public class RegionSplitter {
       LOG.debug("TOTAL TIME = "
           + org.apache.hadoop.util.StringUtils.formatTime(tDiff));
       LOG.debug("Splits = " + splitCount);
-      LOG.debug("Avg Time / Split = "
-          + org.apache.hadoop.util.StringUtils.formatTime(tDiff / splitCount));
+      if (0 < splitCount) {
+        LOG.debug("Avg Time / Split = "
+            + org.apache.hadoop.util.StringUtils.formatTime(tDiff / splitCount));
+      }
 
       splitOut.close();
       if (table != null){
