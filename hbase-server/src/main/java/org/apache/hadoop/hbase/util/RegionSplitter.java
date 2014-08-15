@@ -532,16 +532,20 @@ public class RegionSplitter {
           admin.split(table.getTableName(), split);
 
           LinkedList<Pair<byte[], byte[]>> finished = Lists.newLinkedList();
+          LinkedList<Pair<byte[], byte[]>> local_finished = Lists.newLinkedList();
           if (conf.getBoolean("split.verify", true)) {
             // we need to verify and rate-limit our splits
             outstanding.addLast(dr);
             // with too many outstanding splits, wait for some to finish
             while (outstanding.size() >= MAX_OUTSTANDING) {
-              finished = splitScan(outstanding, table, splitAlgo);
-              if (finished.isEmpty()) {
+              LOG.debug("Wait for outstanding splits " + outstanding.size());
+              local_finished = splitScan(outstanding, table, splitAlgo);
+              if (local_finished.isEmpty()) {
                 Thread.sleep(30 * 1000);
               } else {
-                outstanding.removeAll(finished);
+                finished.addAll(local_finished);
+                outstanding.removeAll(local_finished);
+                LOG.debug(local_finished.size() + " outstanding splits finished");
               }
             }
           } else {
@@ -565,6 +569,7 @@ public class RegionSplitter {
       }
       if (conf.getBoolean("split.verify", true)) {
         while (!outstanding.isEmpty()) {
+          LOG.debug("Finally Wait for outstanding splits " + outstanding.size());
           LinkedList<Pair<byte[], byte[]>> finished = splitScan(outstanding,
               table, splitAlgo);
           if (finished.isEmpty()) {
@@ -574,7 +579,9 @@ public class RegionSplitter {
             for (Pair<byte[], byte[]> region : finished) {
               splitOut.writeChars("- " + splitAlgo.rowToStr(region.getFirst())
                   + " " + splitAlgo.rowToStr(region.getSecond()) + "\n");
+              splitCount++;
             }
+            LOG.debug("Finally " + finished.size() + " outstanding splits finished");
           }
         }
       }
