@@ -778,7 +778,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   }
 
   protected void abortServer(final String coprocessorName, final Throwable e) {
-    String message = "The coprocessor " + coprocessorName + " threw an unexpected exception";
+    String message = "The coprocessor " + coprocessorName + " threw " + e.toString();
     LOG.error(message, e);
     if (abortable != null) {
       abortable.abort(message, e);
