@@ -80,1529 +80,785 @@ public class MasterCoprocessorHost
   }
 
   public boolean preCreateNamespace(final NamespaceDescriptor ns) throws IOException {
-    boolean bypass = false;
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preCreateNamespace(ctx, ns);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        bypass |= ctx.shouldBypass();
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preCreateNamespace(ctx, ns);
       }
-    }
-    return bypass;
+    });
   }
 
   public void postCreateNamespace(final NamespaceDescriptor ns) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postCreateNamespace(ctx, ns);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postCreateNamespace(ctx, ns);
       }
-    }
+    });
   }
 
   public boolean preDeleteNamespace(final String namespaceName) throws IOException {
-    boolean bypass = false;
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preDeleteNamespace(ctx, namespaceName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        bypass |= ctx.shouldBypass();
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preDeleteNamespace(ctx, namespaceName);
       }
-    }
-    return bypass;
+    });
   }
 
   public void postDeleteNamespace(final String namespaceName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postDeleteNamespace(ctx, namespaceName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postDeleteNamespace(ctx, namespaceName);
       }
-    }
+    });
   }
 
   public boolean preModifyNamespace(final NamespaceDescriptor ns) throws IOException {
-    boolean bypass = false;
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preModifyNamespace(ctx, ns);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        bypass |= ctx.shouldBypass();
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preModifyNamespace(ctx, ns);
       }
-    }
-    return bypass;
+    });
   }
 
   public void postModifyNamespace(final NamespaceDescriptor ns) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postModifyNamespace(ctx, ns);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postModifyNamespace(ctx, ns);
       }
-    }
+    });
   }
 
   /* Implementation of hooks for invoking MasterObservers */
 
   public void preCreateTable(final HTableDescriptor htd, final HRegionInfo[] regions)
-    throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preCreateTable(ctx, htd, regions);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preCreateTable(ctx, htd, regions);
       }
-    }
+    });
   }
 
   public void postCreateTable(final HTableDescriptor htd, final HRegionInfo[] regions)
-    throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postCreateTable(ctx, htd, regions);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postCreateTable(ctx, htd, regions);
       }
-    }
+    });
   }
 
   public void preCreateTableHandler(final HTableDescriptor htd, final HRegionInfo[] regions)
       throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).preCreateTableHandler(ctx, htd, regions);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preCreateTableHandler(ctx, htd, regions);
       }
-    }
+    });
   }
 
   public void postCreateTableHandler(final HTableDescriptor htd, final HRegionInfo[] regions)
       throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).postCreateTableHandler(ctx, htd, regions);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postCreateTableHandler(ctx, htd, regions);
       }
-    }
+    });
   }
 
   public void preDeleteTable(final TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preDeleteTable(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preDeleteTable(ctx, tableName);
       }
-    }
+    });
   }
 
   public void postDeleteTable(final TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postDeleteTable(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postDeleteTable(ctx, tableName);
       }
-    }
+    });
   }
 
   public void preDeleteTableHandler(final TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).preDeleteTableHandler(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preDeleteTableHandler(ctx, tableName);
       }
-    }
+    });
   }
 
   public void postDeleteTableHandler(final TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).postDeleteTableHandler(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postDeleteTableHandler(ctx, tableName);
       }
-    }
+    });
   }
 
-  public void preTruncateTable(TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        try {
-          ((MasterObserver)env.getInstance()).preTruncateTable(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+  public void preTruncateTable(final TableName tableName) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preTruncateTable(ctx, tableName);
       }
-    }
+    });
   }
 
-  public void postTruncateTable(TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        try {
-          ((MasterObserver)env.getInstance()).postTruncateTable(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+  public void postTruncateTable(final TableName tableName) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postTruncateTable(ctx, tableName);
       }
-    }
+    });
   }
 
-  public void preTruncateTableHandler(TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        try {
-          ((MasterObserver) env.getInstance()).preTruncateTableHandler(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+  public void preTruncateTableHandler(final TableName tableName) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preTruncateTableHandler(ctx, tableName);
       }
-    }
+    });
   }
 
-  public void postTruncateTableHandler(TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        try {
-          ((MasterObserver) env.getInstance()).postTruncateTableHandler(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+  public void postTruncateTableHandler(final TableName tableName) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postTruncateTableHandler(ctx, tableName);
       }
-    }
+    });
   }
 
   public void preModifyTable(final TableName tableName, final HTableDescriptor htd)
       throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preModifyTable(ctx, tableName, htd);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preModifyTable(ctx, tableName, htd);
       }
-    }
+    });
   }
 
   public void postModifyTable(final TableName tableName, final HTableDescriptor htd)
       throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postModifyTable(ctx, tableName, htd);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postModifyTable(ctx, tableName, htd);
       }
-    }
+    });
   }
 
   public void preModifyTableHandler(final TableName tableName, final HTableDescriptor htd)
       throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).preModifyTableHandler(ctx, tableName, htd);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preModifyTableHandler(ctx, tableName, htd);
       }
-    }
+    });
   }
 
   public void postModifyTableHandler(final TableName tableName, final HTableDescriptor htd)
       throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).postModifyTableHandler(ctx, tableName, htd);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postModifyTableHandler(ctx, tableName, htd);
       }
-    }
+    });
   }
 
   public boolean preAddColumn(final TableName tableName, final HColumnDescriptor column)
       throws IOException {
-    boolean bypass = false;
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preAddColumn(ctx, tableName, column);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        bypass |= ctx.shouldBypass();
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preAddColumn(ctx, tableName, column);
       }
-    }
-    return bypass;
+    });
   }
 
   public void postAddColumn(final TableName tableName, final HColumnDescriptor column)
       throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postAddColumn(ctx, tableName, column);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postAddColumn(ctx, tableName, column);
       }
-    }
+    });
   }
 
   public boolean preAddColumnHandler(final TableName tableName, final HColumnDescriptor column)
       throws IOException {
-    boolean bypass = false;
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).preAddColumnHandler(ctx, tableName, column);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        bypass |= ctx.shouldBypass();
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preAddColumnHandler(ctx, tableName, column);
       }
-    }
-    return bypass;
+    });
   }
 
   public void postAddColumnHandler(final TableName tableName, final HColumnDescriptor column)
       throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).postAddColumnHandler(ctx, tableName, column);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postAddColumnHandler(ctx, tableName, column);
       }
-    }
+    });
   }
 
   public boolean preModifyColumn(final TableName tableName, final HColumnDescriptor descriptor)
       throws IOException {
-    boolean bypass = false;
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preModifyColumn(ctx, tableName, descriptor);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        bypass |= ctx.shouldBypass();
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preModifyColumn(ctx, tableName, descriptor);
       }
-    }
-    return bypass;
+    });
   }
 
   public void postModifyColumn(final TableName tableName, final HColumnDescriptor descriptor)
       throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postModifyColumn(ctx, tableName, descriptor);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postModifyColumn(ctx, tableName, descriptor);
       }
-    }
+    });
   }
 
   public boolean preModifyColumnHandler(final TableName tableName,
       final HColumnDescriptor descriptor) throws IOException {
-    boolean bypass = false;
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).preModifyColumnHandler(ctx, tableName, descriptor);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        bypass |= ctx.shouldBypass();
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preModifyColumnHandler(ctx, tableName, descriptor);
       }
-    }
-    return bypass;
+    });
   }
 
   public void postModifyColumnHandler(final TableName tableName,
       final HColumnDescriptor descriptor) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).postModifyColumnHandler(ctx, tableName, descriptor);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postModifyColumnHandler(ctx, tableName, descriptor);
       }
-    }
+    });
   }
 
   public boolean preDeleteColumn(final TableName tableName, final byte [] c) throws IOException {
-    boolean bypass = false;
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preDeleteColumn(ctx, tableName, c);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        bypass |= ctx.shouldBypass();
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preDeleteColumn(ctx, tableName, c);
       }
-    }
-    return bypass;
+    });
   }
 
   public void postDeleteColumn(final TableName tableName, final byte [] c) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postDeleteColumn(ctx, tableName, c);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postDeleteColumn(ctx, tableName, c);
       }
-    }
+    });
   }
 
   public boolean preDeleteColumnHandler(final TableName tableName, final byte[] c)
       throws IOException {
-    boolean bypass = false;
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).preDeleteColumnHandler(ctx, tableName, c);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        bypass |= ctx.shouldBypass();
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preDeleteColumnHandler(ctx, tableName, c);
       }
-    }
-    return bypass;
+    });
   }
 
   public void postDeleteColumnHandler(final TableName tableName, final byte[] c)
       throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).postDeleteColumnHandler(ctx, tableName, c);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postDeleteColumnHandler(ctx, tableName, c);
       }
-    }
+    });
   }
 
   public void preEnableTable(final TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preEnableTable(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preEnableTable(ctx, tableName);
       }
-    }
+    });
   }
 
   public void postEnableTable(final TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postEnableTable(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postEnableTable(ctx, tableName);
       }
-    }
+    });
   }
 
   public void preEnableTableHandler(final TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).preEnableTableHandler(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preEnableTableHandler(ctx, tableName);
       }
-    }
+    });
   }
 
   public void postEnableTableHandler(final TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).postEnableTableHandler(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postEnableTableHandler(ctx, tableName);
       }
-    }
+    });
   }
 
   public void preDisableTable(final TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preDisableTable(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preDisableTable(ctx, tableName);
       }
-    }
+    });
   }
 
   public void postDisableTable(final TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postDisableTable(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postDisableTable(ctx, tableName);
       }
-    }
+    });
   }
 
   public void preDisableTableHandler(final TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).preDisableTableHandler(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preDisableTableHandler(ctx, tableName);
       }
-    }
+    });
   }
 
   public void postDisableTableHandler(final TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).postDisableTableHandler(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postDisableTableHandler(ctx, tableName);
       }
-    }
+    });
   }
 
   public boolean preMove(final HRegionInfo region, final ServerName srcServer,
       final ServerName destServer) throws IOException {
-    boolean bypass = false;
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preMove(ctx, region, srcServer, destServer);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        bypass |= ctx.shouldBypass();
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preMove(ctx, region, srcServer, destServer);
       }
-    }
-    return bypass;
+    });
   }
 
   public void postMove(final HRegionInfo region, final ServerName srcServer,
       final ServerName destServer) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postMove(ctx, region, srcServer, destServer);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postMove(ctx, region, srcServer, destServer);
       }
-    }
+    });
   }
 
   public boolean preAssign(final HRegionInfo regionInfo) throws IOException {
-    boolean bypass = false;
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).preAssign(ctx, regionInfo);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        bypass |= ctx.shouldBypass();
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preAssign(ctx, regionInfo);
       }
-    }
-    return bypass;
+    });
   }
 
   public void postAssign(final HRegionInfo regionInfo) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postAssign(ctx, regionInfo);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postAssign(ctx, regionInfo);
       }
-    }
+    });
   }
 
   public boolean preUnassign(final HRegionInfo regionInfo, final boolean force)
       throws IOException {
-    boolean bypass = false;
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preUnassign(ctx, regionInfo, force);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        bypass |= ctx.shouldBypass();
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preUnassign(ctx, regionInfo, force);
       }
-    }
-    return bypass;
+    });
   }
 
   public void postUnassign(final HRegionInfo regionInfo, final boolean force) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postUnassign(ctx, regionInfo, force);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postUnassign(ctx, regionInfo, force);
       }
-    }
+    });
   }
 
   public void preRegionOffline(final HRegionInfo regionInfo) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).preRegionOffline(ctx, regionInfo);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preRegionOffline(ctx, regionInfo);
       }
-    }
+    });
   }
 
   public void postRegionOffline(final HRegionInfo regionInfo) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).postRegionOffline(ctx, regionInfo);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postRegionOffline(ctx, regionInfo);
       }
-    }
+    });
   }
 
   public boolean preBalance() throws IOException {
-    boolean bypass = false;
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preBalance(ctx);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        bypass |= ctx.shouldBypass();
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preBalance(ctx);
       }
-    }
-    return bypass;
+    });
   }
 
   public void postBalance(final List<RegionPlan> plans) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postBalance(ctx, plans);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postBalance(ctx, plans);
       }
-    }
+    });
   }
 
   public boolean preBalanceSwitch(final boolean b) throws IOException {
-    boolean balance = b;
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          balance = ((MasterObserver)env.getInstance()).preBalanceSwitch(ctx, balance);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    return execOperationWithResult(b, coprocessors.isEmpty() ? null :
+        new CoprocessorOperationWithResult<Boolean>() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        setResult(oserver.preBalanceSwitch(ctx, getResult()));
       }
-    }
-    return balance;
+    });
   }
 
-  void postBalanceSwitch(final boolean oldValue, final boolean newValue)
+  public void postBalanceSwitch(final boolean oldValue, final boolean newValue)
       throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postBalanceSwitch(ctx, oldValue, newValue);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postBalanceSwitch(ctx, oldValue, newValue);
       }
-    }
+    });
   }
 
   public void preShutdown() throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preShutdown(ctx);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preShutdown(ctx);
       }
-      // invoke coprocessor stop method
-      shutdown(env);
-    }
+      @Override
+      public void postEnvCall(MasterEnvironment env) {
+        // invoke coprocessor stop method
+        shutdown(env);
+      }
+    });
   }
 
   public void preStopMaster() throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preStopMaster(ctx);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preStopMaster(ctx);
       }
-      // invoke coprocessor stop method
-      shutdown(env);
-    }
+      @Override
+      public void postEnvCall(MasterEnvironment env) {
+        // invoke coprocessor stop method
+        shutdown(env);
+      }
+    });
   }
 
   public void preMasterInitialization() throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).preMasterInitialization(ctx);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preMasterInitialization(ctx);
       }
-    }
+    });
   }
 
   public void postStartMaster() throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postStartMaster(ctx);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postStartMaster(ctx);
       }
-    }
+    });
   }
 
   public void preSnapshot(final SnapshotDescription snapshot,
       final HTableDescriptor hTableDescriptor) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preSnapshot(ctx, snapshot, hTableDescriptor);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preSnapshot(ctx, snapshot, hTableDescriptor);
       }
-    }
+    });
   }
 
   public void postSnapshot(final SnapshotDescription snapshot,
       final HTableDescriptor hTableDescriptor) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postSnapshot(ctx, snapshot, hTableDescriptor);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postSnapshot(ctx, snapshot, hTableDescriptor);
       }
-    }
+    });
   }
 
   public void preCloneSnapshot(final SnapshotDescription snapshot,
       final HTableDescriptor hTableDescriptor) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preCloneSnapshot(ctx, snapshot,
-            hTableDescriptor);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preCloneSnapshot(ctx, snapshot, hTableDescriptor);
       }
-    }
+    });
   }
 
   public void postCloneSnapshot(final SnapshotDescription snapshot,
       final HTableDescriptor hTableDescriptor) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postCloneSnapshot(ctx, snapshot,
-            hTableDescriptor);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postCloneSnapshot(ctx, snapshot, hTableDescriptor);
       }
-    }
+    });
   }
 
   public void preRestoreSnapshot(final SnapshotDescription snapshot,
       final HTableDescriptor hTableDescriptor) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preRestoreSnapshot(ctx, snapshot,
-            hTableDescriptor);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preRestoreSnapshot(ctx, snapshot, hTableDescriptor);
       }
-    }
+    });
   }
 
   public void postRestoreSnapshot(final SnapshotDescription snapshot,
       final HTableDescriptor hTableDescriptor) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postRestoreSnapshot(ctx, snapshot,
-            hTableDescriptor);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postRestoreSnapshot(ctx, snapshot, hTableDescriptor);
       }
-    }
+    });
   }
 
   public void preDeleteSnapshot(final SnapshotDescription snapshot) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).preDeleteSnapshot(ctx, snapshot);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preDeleteSnapshot(ctx, snapshot);
       }
-    }
+    });
   }
 
   public void postDeleteSnapshot(final SnapshotDescription snapshot) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postDeleteSnapshot(ctx, snapshot);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postDeleteSnapshot(ctx, snapshot);
       }
-    }
+    });
   }
 
   public boolean preGetTableDescriptors(final List<TableName> tableNamesList,
       final List<HTableDescriptor> descriptors) throws IOException {
+    return execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preGetTableDescriptors(ctx, tableNamesList, descriptors);
+      }
+    });
+  }
+
+  public void postGetTableDescriptors(final List<HTableDescriptor> descriptors)
+      throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postGetTableDescriptors(ctx, descriptors);
+      }
+    });
+  }
+
+  public void preTableFlush(final TableName tableName) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.preTableFlush(ctx, tableName);
+      }
+    });
+  }
+
+  public void postTableFlush(final TableName tableName) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver oserver, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        oserver.postTableFlush(ctx, tableName);
+      }
+    });
+  }
+
+  private static abstract class CoprocessorOperation
+      extends ObserverContext<MasterCoprocessorEnvironment> {
+    public CoprocessorOperation() {
+    }
+
+    public abstract void call(MasterObserver oserver,
+        ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException;
+
+    public void postEnvCall(MasterEnvironment env) {
+    }
+  }
+
+  private static abstract class CoprocessorOperationWithResult<T> extends CoprocessorOperation {
+    private T result = null;
+    public void setResult(final T result) { this.result = result; }
+    public T getResult() { return this.result; }
+  }
+
+  private <T> T execOperationWithResult(final T defaultValue,
+      final CoprocessorOperationWithResult<T> ctx) throws IOException {
+    if (ctx == null) return defaultValue;
+    ctx.setResult(defaultValue);
+    execOperation(ctx);
+    return ctx.getResult();
+  }
+
+  private boolean execOperation(final CoprocessorOperation ctx) throws IOException {
+    if (ctx == null) return false;
     boolean bypass = false;
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env : coprocessors) {
+    for (MasterEnvironment env: coprocessors) {
       if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
+        ctx.prepare(env);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
         try {
           currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver) env.getInstance()).preGetTableDescriptors(ctx,
-            tableNamesList, descriptors);
+          ctx.call((MasterObserver)env.getInstance(), ctx);
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         } finally {
@@ -1613,65 +869,8 @@ public class MasterCoprocessorHost
           break;
         }
       }
+      ctx.postEnvCall(env);
     }
     return bypass;
   }
-
-  public void postGetTableDescriptors(final List<HTableDescriptor> descriptors)
-      throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        Thread currentThread = Thread.currentThread();
-        ClassLoader cl = currentThread.getContextClassLoader();
-        try {
-          currentThread.setContextClassLoader(env.getClassLoader());
-          ((MasterObserver)env.getInstance()).postGetTableDescriptors(ctx, descriptors);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        } finally {
-          currentThread.setContextClassLoader(cl);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
-      }
-    }
-  }
-
-  public void preTableFlush(final TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        try {
-          ((MasterObserver)env.getInstance()).preTableFlush(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
-      }
-    }
-  }
-
-  public void postTableFlush(final TableName tableName) throws IOException {
-    ObserverContext<MasterCoprocessorEnvironment> ctx = null;
-    for (MasterEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof MasterObserver) {
-        ctx = ObserverContext.createAndPrepare(env, ctx);
-        try {
-          ((MasterObserver)env.getInstance()).postTableFlush(ctx, tableName);
-        } catch (Throwable e) {
-          handleCoprocessorThrowable(env, e);
-        }
-        if (ctx.shouldComplete()) {
-          break;
-        }
-      }
-    }
-  }
-
 }
