@@ -53,6 +53,7 @@ public class StoreScanner extends NonLazyKeyValueScanner
 
 
   private String metricNamePrefix;
+  private String metricNamePrefixNext;
   // Used to indicate that the scanner has closed (see HBASE-1107)
   // Doesnt need to be volatile because it's always accessed via synchronized methods
   private boolean closing = false;
@@ -455,8 +456,13 @@ public class StoreScanner extends NonLazyKeyValueScanner
       }
     } finally {
       if (cumulativeMetric > 0 && metric != null) {
-        RegionMetricsStorage.incrNumericMetric(this.metricNamePrefix + metric,
-            cumulativeMetric);
+        // OK to use identity here
+        if (metric == SchemaMetrics.METRIC_NEXTSIZE) {
+          if (metricNamePrefixNext == null) metricNamePrefixNext = metricNamePrefix + metric;
+          RegionMetricsStorage.incrNumericMetric(metricNamePrefixNext, cumulativeMetric);
+        } else {
+          RegionMetricsStorage.incrNumericMetric(metricNamePrefix + metric, cumulativeMetric);
+        }
       }
     }
 

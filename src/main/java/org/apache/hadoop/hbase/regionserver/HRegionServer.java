@@ -2679,7 +2679,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
         }
         if (bypass != null) {
           return s.isFilterDone() && results.isEmpty() ? null
-              : results.toArray(new Result[0]);
+              : results.toArray(new Result[results.size()]);
         }
       }
 
@@ -2722,7 +2722,7 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
       // and wants to tell the client to stop the scan. This is done by passing
       // a null result.
       return s.isFilterDone() && results.isEmpty() ? null
-          : results.toArray(new Result[0]);
+          : results.toArray(new Result[results.size()]);
     } catch (Throwable t) {
       if (t instanceof NotServingRegionException && scannerName != null) {
         this.scanners.remove(scannerName);
