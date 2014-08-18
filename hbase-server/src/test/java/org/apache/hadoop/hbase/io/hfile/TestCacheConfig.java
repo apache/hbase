@@ -57,14 +57,16 @@ public class TestCacheConfig {
 
   static class Deserializer implements CacheableDeserializer<Cacheable> {
     private final Cacheable cacheable;
- 
+    private int deserializedIdentifier = 0;
+
     Deserializer(final Cacheable c) {
+      deserializedIdentifier = CacheableDeserializerIdManager.registerDeserializer(this);
       this.cacheable = c;
     }
 
     @Override
     public int getDeserialiserIdentifier() {
-      return 0;
+      return deserializedIdentifier;
     }
 
     @Override
@@ -106,10 +108,11 @@ public class TestCacheConfig {
       this.deserializer = new Deserializer(c);
     }
 
+    @Override
     public String toString() {
       return "size=" + SIZE + ", type=" + getBlockType();
     };
- 
+
     @Override
     public long heapSize() {
       return SIZE;
