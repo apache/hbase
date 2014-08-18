@@ -48,13 +48,10 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.catalog.MetaReader;
@@ -67,7 +64,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
+import org.apache.hadoop.hbase.coprocessor.BaseMasterAndRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
@@ -86,10 +83,8 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
@@ -133,8 +128,8 @@ import com.google.protobuf.Service;
  * visibility labels
  */
 @InterfaceAudience.Private
-public class VisibilityController extends BaseRegionObserver implements MasterObserver,
-    RegionObserver, VisibilityLabelsService.Interface, CoprocessorService {
+public class VisibilityController extends BaseMasterAndRegionObserver implements
+    VisibilityLabelsService.Interface, CoprocessorService {
 
   private static final Log LOG = LogFactory.getLog(VisibilityController.class);
   private static final byte[] DUMMY_VALUE = new byte[0];
@@ -148,7 +143,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   // defined only for Endpoint implementation, so it can have way to access region services.
   private RegionCoprocessorEnvironment regionEnv;
   private List<ScanLabelGenerator> scanLabelGenerators;
-  
+
   private volatile int ordinalCounter = -1;
   // flags if we are running on a region of the 'labels' table
   private boolean labelsRegion = false;
@@ -250,66 +245,11 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   }
 
   @Override
-  public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
-  }
-
-  @Override
-  public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
-  }
-
-  @Override
-  public void preCreateTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
-  }
-
-  @Override
-  public void postCreateTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
-  }
-
-  @Override
-  public void preDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
-      throws IOException {
-  }
-
-  @Override
-  public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
-      throws IOException {
-  }
-
-  @Override
-  public void preDeleteTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName) throws IOException {
-  }
-
-  @Override
-  public void postDeleteTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName) throws IOException {
-  }
-
-  @Override
   public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
       TableName tableName, HTableDescriptor htd) throws IOException {
     if (LABELS_TABLE_NAME.equals(tableName)) {
       throw new ConstraintException("Cannot alter " + LABELS_TABLE_NAME);
     }
-  }
-
-  @Override
-  public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HTableDescriptor htd) throws IOException {
-  }
-
-  @Override
-  public void preModifyTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HTableDescriptor htd) throws IOException {
-  }
-
-  @Override
-  public void postModifyTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HTableDescriptor htd) throws IOException {
   }
 
   @Override
@@ -321,41 +261,11 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   }
 
   @Override
-  public void postAddColumn(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-      HColumnDescriptor column) throws IOException {
-  }
-
-  @Override
-  public void preAddColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor column) throws IOException {
-  }
-
-  @Override
-  public void postAddColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor column) throws IOException {
-  }
-
-  @Override
   public void preModifyColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
       TableName tableName, HColumnDescriptor descriptor) throws IOException {
     if (LABELS_TABLE_NAME.equals(tableName)) {
       throw new ConstraintException("Cannot alter " + LABELS_TABLE_NAME);
     }
-  }
-
-  @Override
-  public void postModifyColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor descriptor) throws IOException {
-  }
-
-  @Override
-  public void preModifyColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor descriptor) throws IOException {
-  }
-
-  @Override
-  public void postModifyColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor descriptor) throws IOException {
   }
 
   @Override
@@ -367,215 +277,11 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
   }
 
   @Override
-  public void postDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, byte[] c) throws IOException {
-  }
-
-  @Override
-  public void preDeleteColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, byte[] c) throws IOException {
-  }
-
-  @Override
-  public void postDeleteColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, byte[] c) throws IOException {
-  }
-
-  @Override
-  public void preEnableTable(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
-      throws IOException {
-  }
-
-  @Override
-  public void postEnableTable(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
-      throws IOException {
-  }
-
-  @Override
-  public void preEnableTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName) throws IOException {
-  }
-
-  @Override
-  public void postEnableTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName) throws IOException {
-  }
-
-  @Override
   public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
       throws IOException {
     if (LABELS_TABLE_NAME.equals(tableName)) {
       throw new ConstraintException("Cannot disable " + LABELS_TABLE_NAME);
     }
-  }
-
-  @Override
-  public void postDisableTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName) throws IOException {
-  }
-
-  @Override
-  public void preDisableTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName) throws IOException {
-  }
-
-  @Override
-  public void postDisableTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName) throws IOException {
-  }
-
-  @Override
-  public void preMove(ObserverContext<MasterCoprocessorEnvironment> ctx, HRegionInfo region,
-      ServerName srcServer, ServerName destServer) throws IOException {
-  }
-
-  @Override
-  public void postMove(ObserverContext<MasterCoprocessorEnvironment> ctx, HRegionInfo region,
-      ServerName srcServer, ServerName destServer) throws IOException {
-  }
-
-  @Override
-  public void preAssign(ObserverContext<MasterCoprocessorEnvironment> ctx, HRegionInfo regionInfo)
-      throws IOException {
-  }
-
-  @Override
-  public void postAssign(ObserverContext<MasterCoprocessorEnvironment> ctx, HRegionInfo regionInfo)
-      throws IOException {
-  }
-
-  @Override
-  public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HRegionInfo regionInfo, boolean force) throws IOException {
-  }
-
-  @Override
-  public void postUnassign(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HRegionInfo regionInfo, boolean force) throws IOException {
-  }
-
-  @Override
-  public void preRegionOffline(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HRegionInfo regionInfo) throws IOException {
-  }
-
-  @Override
-  public void postRegionOffline(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      HRegionInfo regionInfo) throws IOException {
-  }
-
-  @Override
-  public void preBalance(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
-  }
-
-  @Override
-  public void postBalance(ObserverContext<MasterCoprocessorEnvironment> ctx, List<RegionPlan> plans)
-      throws IOException {
-  }
-
-  @Override
-  public boolean preBalanceSwitch(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      boolean newValue) throws IOException {
-    return newValue;
-  }
-
-  @Override
-  public void postBalanceSwitch(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      boolean oldValue, boolean newValue) throws IOException {
-  }
-
-  @Override
-  public void preShutdown(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
-  }
-
-  @Override
-  public void preStopMaster(ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
-  }
-
-  @Override
-  public void preSnapshot(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      SnapshotDescription snapshot, HTableDescriptor hTableDescriptor) throws IOException {
-  }
-
-  @Override
-  public void postSnapshot(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      SnapshotDescription snapshot, HTableDescriptor hTableDescriptor) throws IOException {
-  }
-
-  @Override
-  public void preCloneSnapshot(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      SnapshotDescription snapshot, HTableDescriptor hTableDescriptor) throws IOException {
-  }
-
-  @Override
-  public void postCloneSnapshot(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      SnapshotDescription snapshot, HTableDescriptor hTableDescriptor) throws IOException {
-  }
-
-  @Override
-  public void preRestoreSnapshot(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      SnapshotDescription snapshot, HTableDescriptor hTableDescriptor) throws IOException {
-  }
-
-  @Override
-  public void postRestoreSnapshot(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      SnapshotDescription snapshot, HTableDescriptor hTableDescriptor) throws IOException {
-  }
-
-  @Override
-  public void preDeleteSnapshot(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      SnapshotDescription snapshot) throws IOException {
-  }
-
-  @Override
-  public void postDeleteSnapshot(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      SnapshotDescription snapshot) throws IOException {
-  }
-
-  @Override
-  public void preGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<TableName> tableNamesList, List<HTableDescriptor> descriptors) throws IOException {
-  }
-
-  @Override
-  public void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<HTableDescriptor> descriptors) throws IOException {
-  }
-
-  @Override
-  public void preCreateNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      NamespaceDescriptor ns) throws IOException {
-  }
-
-  @Override
-  public void postCreateNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      NamespaceDescriptor ns) throws IOException {
-  }
-
-  @Override
-  public void preDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx, 
-      String namespace) throws IOException {
-  }
-
-  @Override
-  public void postDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      String namespace) throws IOException {
-  }
-
-  @Override
-  public void preModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      NamespaceDescriptor ns) throws IOException {
-  }
-
-  @Override
-  public void postModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      NamespaceDescriptor ns) throws IOException {
-  }
-
-  @Override
-  public void preMasterInitialization(ObserverContext<MasterCoprocessorEnvironment> ctx)
-      throws IOException {
-
   }
 
   /****************************** Region related hooks ******************************/
@@ -605,7 +311,7 @@ public class VisibilityController extends BaseRegionObserver implements MasterOb
 
   private void initialize(ObserverContext<RegionCoprocessorEnvironment> e) {
     try {
-      Pair<Map<String, Integer>, Map<String, List<Integer>>> labelsAndUserAuths = 
+      Pair<Map<String, Integer>, Map<String, List<Integer>>> labelsAndUserAuths =
           extractLabelsAndAuths(getExistingLabelsWithAuths());
       Map<String, Integer> labels = labelsAndUserAuths.getFirst();
       Map<String, List<Integer>> userAuths = labelsAndUserAuths.getSecond();
