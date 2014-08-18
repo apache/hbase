@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Query;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
+import org.apache.hadoop.hbase.coprocessor.BaseMasterAndRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
@@ -78,7 +78,6 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.master.MasterServices;
-import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
@@ -146,8 +145,8 @@ import com.google.protobuf.Service;
  * </p>
  */
 @InterfaceAudience.Private
-public class AccessController extends BaseRegionObserver
-    implements MasterObserver, RegionServerObserver,
+public class AccessController extends BaseMasterAndRegionObserver
+    implements RegionServerObserver,
       AccessControlService.Interface, CoprocessorService, EndpointObserver {
 
   public static final Log LOG = LogFactory.getLog(AccessController.class);
@@ -632,7 +631,7 @@ public class AccessController extends BaseRegionObserver
           // In case of family delete, a Cell will be added into the list with Qualifier as null.
           for (Cell cell : list) {
             if (cell.getQualifierLength() == 0
-                && (cell.getTypeByte() == Type.DeleteFamily.getCode() 
+                && (cell.getTypeByte() == Type.DeleteFamily.getCode()
                 || cell.getTypeByte() == Type.DeleteFamilyVersion.getCode())) {
               get.addFamily(col);
             } else {
@@ -828,9 +827,9 @@ public class AccessController extends BaseRegionObserver
       // if running on HMaster
       MasterCoprocessorEnvironment mEnv = (MasterCoprocessorEnvironment) env;
       zk = mEnv.getMasterServices().getZooKeeper();
-    } else if (env instanceof RegionServerCoprocessorEnvironment) {      
+    } else if (env instanceof RegionServerCoprocessorEnvironment) {
       RegionServerCoprocessorEnvironment rsEnv = (RegionServerCoprocessorEnvironment) env;
-      zk = rsEnv.getRegionServerServices().getZooKeeper();      
+      zk = rsEnv.getRegionServerServices().getZooKeeper();
     } else if (env instanceof RegionCoprocessorEnvironment) {
       // if running at region
       regionEnv = (RegionCoprocessorEnvironment) env;
@@ -877,14 +876,6 @@ public class AccessController extends BaseRegionObserver
   }
 
   @Override
-  public void preCreateTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
-      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {}
-
-  @Override
-  public void postCreateTable(ObserverContext<MasterCoprocessorEnvironment> c,
-      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {}
-
-  @Override
   public void postCreateTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
       HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
     // When AC is used, it should be configured as the 1st CP.
@@ -928,44 +919,22 @@ public class AccessController extends BaseRegionObserver
   }
 
   @Override
-  public void preDeleteTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName) throws IOException {}
-
-  @Override
   public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> c,
       TableName tableName) throws IOException {
     AccessControlLists.removeTablePermissions(c.getEnvironment().getConfiguration(), tableName);
   }
 
   @Override
-  public void postDeleteTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName) throws IOException {}
-
-   @Override
   public void preTruncateTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName)
       throws IOException {
     requirePermission("truncateTable", tableName, null, null, Action.ADMIN, Action.CREATE);
   }
-  @Override
-  public void postTruncateTable(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName) throws IOException {
-  }
-  @Override
-  public void preTruncateTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName) throws IOException {}
-  @Override
-  public void postTruncateTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName) throws IOException {}
 
   @Override
   public void preModifyTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
       HTableDescriptor htd) throws IOException {
     requirePermission("modifyTable", tableName, null, null, Action.ADMIN, Action.CREATE);
   }
-
-  @Override
-  public void preModifyTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName, HTableDescriptor htd) throws IOException {}
 
   @Override
   public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> c,
@@ -979,27 +948,10 @@ public class AccessController extends BaseRegionObserver
   }
 
   @Override
-  public void postModifyTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName, HTableDescriptor htd) throws IOException {}
-
-
-  @Override
   public void preAddColumn(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
       HColumnDescriptor column) throws IOException {
     requirePermission("addColumn", tableName, null, null, Action.ADMIN, Action.CREATE);
   }
-
-  @Override
-  public void preAddColumnHandler(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName, HColumnDescriptor column) throws IOException {}
-
-  @Override
-  public void postAddColumn(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName, HColumnDescriptor column) throws IOException {}
-
-  @Override
-  public void postAddColumnHandler(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName, HColumnDescriptor column) throws IOException {}
 
   @Override
   public void preModifyColumn(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
@@ -1008,26 +960,10 @@ public class AccessController extends BaseRegionObserver
   }
 
   @Override
-  public void preModifyColumnHandler(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName, HColumnDescriptor descriptor) throws IOException {}
-
-  @Override
-  public void postModifyColumn(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName, HColumnDescriptor descriptor) throws IOException {}
-
-  @Override
-  public void postModifyColumnHandler(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName, HColumnDescriptor descriptor) throws IOException {}
-
-  @Override
   public void preDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
       byte[] col) throws IOException {
     requirePermission("deleteColumn", tableName, null, null, Action.ADMIN, Action.CREATE);
   }
-
-  @Override
-  public void preDeleteColumnHandler(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName, byte[] col) throws IOException {}
 
   @Override
   public void postDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> c,
@@ -1036,26 +972,10 @@ public class AccessController extends BaseRegionObserver
   }
 
   @Override
-  public void postDeleteColumnHandler(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName, byte[] col) throws IOException {}
-
-  @Override
   public void preEnableTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName)
       throws IOException {
     requirePermission("enableTable", tableName, null, null, Action.ADMIN, Action.CREATE);
   }
-
-  @Override
-  public void preEnableTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName) throws IOException {}
-
-  @Override
-  public void postEnableTable(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName) throws IOException {}
-
-  @Override
-  public void postEnableTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName) throws IOException {}
 
   @Override
   public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName)
@@ -1068,27 +988,10 @@ public class AccessController extends BaseRegionObserver
   }
 
   @Override
-  public void preDisableTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName) throws IOException {}
-
-  @Override
-  public void postDisableTable(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName) throws IOException {}
-
-  @Override
-  public void postDisableTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName) throws IOException {}
-
-  @Override
   public void preMove(ObserverContext<MasterCoprocessorEnvironment> c, HRegionInfo region,
       ServerName srcServer, ServerName destServer) throws IOException {
     requirePermission("move", region.getTable(), null, null, Action.ADMIN);
   }
-
-  @Override
-  public void postMove(ObserverContext<MasterCoprocessorEnvironment> c,
-      HRegionInfo region, ServerName srcServer, ServerName destServer)
-    throws IOException {}
 
   @Override
   public void preAssign(ObserverContext<MasterCoprocessorEnvironment> c, HRegionInfo regionInfo)
@@ -1097,28 +1000,15 @@ public class AccessController extends BaseRegionObserver
   }
 
   @Override
-  public void postAssign(ObserverContext<MasterCoprocessorEnvironment> c,
-      HRegionInfo regionInfo) throws IOException {}
-
-  @Override
   public void preUnassign(ObserverContext<MasterCoprocessorEnvironment> c, HRegionInfo regionInfo,
       boolean force) throws IOException {
     requirePermission("unassign", regionInfo.getTable(), null, null, Action.ADMIN);
   }
 
   @Override
-  public void postUnassign(ObserverContext<MasterCoprocessorEnvironment> c,
-      HRegionInfo regionInfo, boolean force) throws IOException {}
-
-  @Override
   public void preRegionOffline(ObserverContext<MasterCoprocessorEnvironment> c,
       HRegionInfo regionInfo) throws IOException {
     requirePermission("regionOffline", regionInfo.getTable(), null, null, Action.ADMIN);
-  }
-
-  @Override
-  public void postRegionOffline(ObserverContext<MasterCoprocessorEnvironment> c,
-      HRegionInfo regionInfo) throws IOException {
   }
 
   @Override
@@ -1128,19 +1018,11 @@ public class AccessController extends BaseRegionObserver
   }
 
   @Override
-  public void postBalance(ObserverContext<MasterCoprocessorEnvironment> c, List<RegionPlan> plans)
-      throws IOException {}
-
-  @Override
   public boolean preBalanceSwitch(ObserverContext<MasterCoprocessorEnvironment> c,
       boolean newValue) throws IOException {
     requirePermission("balanceSwitch", Action.ADMIN);
     return newValue;
   }
-
-  @Override
-  public void postBalanceSwitch(ObserverContext<MasterCoprocessorEnvironment> c,
-      boolean oldValue, boolean newValue) throws IOException {}
 
   @Override
   public void preShutdown(ObserverContext<MasterCoprocessorEnvironment> c)
@@ -1167,21 +1049,10 @@ public class AccessController extends BaseRegionObserver
   }
 
   @Override
-  public void preMasterInitialization(
-      ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
-  }
-
-  @Override
   public void preSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
       throws IOException {
     requirePermission("snapshot", Action.ADMIN);
-  }
-
-  @Override
-  public void postSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
-      throws IOException {
   }
 
   @Override
@@ -1192,22 +1063,10 @@ public class AccessController extends BaseRegionObserver
   }
 
   @Override
-  public void postCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
-      throws IOException {
-  }
-
-  @Override
   public void preRestoreSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
       throws IOException {
     requirePermission("restore", Action.ADMIN);
-  }
-
-  @Override
-  public void postRestoreSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
-      throws IOException {
   }
 
   @Override
@@ -1217,19 +1076,9 @@ public class AccessController extends BaseRegionObserver
   }
 
   @Override
-  public void postDeleteSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final SnapshotDescription snapshot) throws IOException {
-  }
-
-  @Override
   public void preCreateNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
       NamespaceDescriptor ns) throws IOException {
     requireGlobalPermission("createNamespace", Action.ADMIN, ns.getName());
-  }
-
-  @Override
-  public void postCreateNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      NamespaceDescriptor ns) throws IOException {
   }
 
   @Override
@@ -1253,19 +1102,9 @@ public class AccessController extends BaseRegionObserver
   }
 
   @Override
-  public void postModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                  NamespaceDescriptor ns) throws IOException {
-  }
-
-  @Override
   public void preTableFlush(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName) throws IOException {
     requirePermission("flushTable", tableName, null, null, Action.ADMIN, Action.CREATE);
-  }
-
-  @Override
-  public void postTableFlush(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final TableName tableName) throws IOException {
   }
 
   /* ---- RegionObserver implementation ---- */
@@ -1335,7 +1174,7 @@ public class AccessController extends BaseRegionObserver
   public void preSplit(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
     requirePermission("split", getTableName(e.getEnvironment()), null, null, Action.ADMIN);
   }
-  
+
   @Override
   public void preSplit(ObserverContext<RegionCoprocessorEnvironment> e,
       byte[] splitRow) throws IOException {
@@ -1409,7 +1248,7 @@ public class AccessController extends BaseRegionObserver
         // grants for qualifiers. Otherwise we will fall through below and log
         // the result and throw an ADE. We may end up checking qualifier
         // grants three times (permissionGranted above, here, and in the
-        // filter) but that's the price of backwards compatibility. 
+        // filter) but that's the price of backwards compatibility.
         if (hasFamilyQualifierPermission(user, Action.READ, env, families)) {
           Filter ourFilter = new AccessControlFilter(authManager, user, table,
             AccessControlFilter.Strategy.CHECK_TABLE_AND_CF_ONLY,
@@ -1437,7 +1276,7 @@ public class AccessController extends BaseRegionObserver
         // New behavior: Any access we might be granted is more fine-grained
         // than whole table or CF. Simply inject a filter and return what is
         // allowed. We will not throw an AccessDeniedException. This is a
-        // behavioral change since 0.96. 
+        // behavioral change since 0.96.
         Filter ourFilter = new AccessControlFilter(authManager, user, table,
           AccessControlFilter.Strategy.CHECK_CELL_DEFAULT, cfVsMaxVersions);
         // wrap any existing filter
@@ -2322,11 +2161,6 @@ public class AccessController extends BaseRegionObserver
           Action.ADMIN, Action.CREATE);
       }
     }
-  }
-
-  @Override
-  public void postGetTableDescriptors(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      List<HTableDescriptor> descriptors) throws IOException {
   }
 
   @Override
