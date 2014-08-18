@@ -715,6 +715,15 @@ possible configurations would overwhelm and obscure the important.
         Do more if wide, small rows.</description>
   </property>
   <property>
+    <name>hbase.hstore.time.to.purge.deletes</name>
+    <value>0</value>
+    <description>The amount of time to delay purging of delete markers with future timestamps. If 
+      unset, or set to 0, all delete markers, including those with future timestamps, are purged 
+      during the next major compaction. Otherwise, a delete marker is kept until the major compaction 
+      which occurs after the marker's timestamp plus the value of this setting, in milliseconds.
+    </description>
+  </property>
+  <property>
     <name>hbase.storescanner.parallel.seek.enable</name>
     <value>false</value>
     <description>
