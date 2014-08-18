@@ -134,7 +134,7 @@ return $status
             <para>Getting an exit code of 0 means that the command you scripted definitely
                 succeeded. However, getting a non-zero exit code does not necessarily mean the
                 command failed. The command could have succeeded, but the client lost connectivity,
-                or some other event obscured its succewss. This is because RPC commands are
+                or some other event obscured its success. This is because RPC commands are
                 stateless. The only way to be sure of the status of an operation is to check. For
                 instance, if your script creates a table, but returns a non-zero exit value, you
                 should check whether the table was actually created before trying again to create
