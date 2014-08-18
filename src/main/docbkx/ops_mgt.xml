@@ -793,48 +793,138 @@ false
     <section
       xml:id="rolling">
       <title>Rolling Restart</title>
-      <para> You can also ask this script to restart a RegionServer after the shutdown AND move its
-        old regions back into place. The latter you might do to retain data locality. A primitive
-        rolling restart might be effected by running something like the following:</para>
-      <screen language="bourne">$ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i; done &amp;> /tmp/log.txt &amp;</screen>
-      <para> Tail the output of <filename>/tmp/log.txt</filename> to follow the scripts progress.
-        The above does RegionServers only. The script will also disable the load balancer before
-        moving the regions. You'd need to do the master update separately. Do it before you run the
-        above script. Here is a pseudo-script for how you might craft a rolling restart script: </para>
-      <orderedlist>
-        <listitem>
-          <para>Untar your release, make sure of its configuration and then rsync it across the
-            cluster. If this is 0.90.2, patch it with HBASE-3744 and HBASE-3756. </para>
-        </listitem>
-        <listitem>
-          <para>Run hbck to ensure the cluster consistent
-            <programlisting language="bourne">$ ./bin/hbase hbck</programlisting> Effect repairs if inconsistent.
-          </para>
-        </listitem>
-        <listitem>
-          <para>Restart the Master:
-            <programlisting language="bourne">$ ./bin/hbase-daemon.sh stop master; ./bin/hbase-daemon.sh start master</programlisting>
-          </para>
-        </listitem>
-        <listitem>
-          <para>Run the <filename>graceful_stop.sh</filename> script per RegionServer. For
-            example:</para>
-          <programlisting language="bourne">$ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i; done &amp;> /tmp/log.txt &amp;
-            </programlisting>
-          <para> If you are running thrift or rest servers on the RegionServer, pass --thrift or
-            --rest options (See usage for <filename>graceful_stop.sh</filename> script). </para>
-        </listitem>
-        <listitem>
-          <para>Restart the Master again. This will clear out dead servers list and reenable the
-            balancer. </para>
-        </listitem>
-        <listitem>
-          <para>Run hbck to ensure the cluster is consistent. </para>
-        </listitem>
-      </orderedlist>
-      <para>It is important to drain HBase regions slowly when restarting regionservers. Otherwise,
-        multiple regions go offline simultaneously as they are re-assigned to other nodes. Depending
-        on your usage patterns, this might not be desirable. </para>
+
+      <para>Some cluster configuration changes require either the entire cluster, or the
+          RegionServers, to be restarted in order to pick up the changes. In addition, rolling
+          restarts are supported for upgrading to a minor or maintenance release, and to a major
+          release if at all possible. See the release notes for release you want to upgrade to, to
+          find out about limitations to the ability to perform a rolling upgrade.</para>
+      <para>There are multiple ways to restart your cluster nodes, depending on your situation.
+        These methods are detailed below.</para>
+      <section>
+        <title>Using the <command>rolling-restart.sh</command> Script</title>
+        
+        <para>HBase ships with a script, <filename>bin/rolling-restart.sh</filename>, that allows
+          you to perform rolling restarts on the entire cluster, the master only, or the
+          RegionServers only. The script is provided as a template for your own script, and is not
+          explicitly tested. It requires password-less SSH login to be configured and assumes that
+          you have deployed using a tarball. The script requires you to set some environment
+          variables before running it. Examine the script and modify it to suit your needs.</para>
+        <example>
+          <title><filename>rolling-restart.sh</filename> General Usage</title>
+          <screen language="bourne">
+$ <userinput>./bin/rolling-restart.sh --help</userinput><![CDATA[
+Usage: rolling-restart.sh [--config <hbase-confdir>] [--rs-only] [--master-only] [--graceful] [--maxthreads xx]          
+        ]]></screen>
+        </example>
+        <variablelist>
+          <varlistentry>
+            <term>Rolling Restart on RegionServers Only</term>
+            <listitem>
+              <para>To perform a rolling restart on the RegionServers only, use the
+                  <code>--rs-only</code> option. This might be necessary if you need to reboot the
+                individual RegionServer or if you make a configuration change that only affects
+                RegionServers and not the other HBase processes.</para>
+              <para>If you need to restart only a single RegionServer, or if you need to do extra
+                actions during the restart, use the <filename>bin/graceful_stop.sh</filename>
+                command instead. See <xref linkend="rolling.restart.manual" />.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>Rolling Restart on Masters Only</term>
+            <listitem>
+              <para>To perform a rolling restart on the active and backup Masters, use the
+                  <code>--master-only</code> option. You might use this if you know that your
+                configuration change only affects the Master and not the RegionServers, or if you
+                need to restart the server where the active Master is running.</para>
+              <para>If you are not running backup Masters, the Master is simply restarted. If you
+                are running backup Masters, they are all stopped before any are restarted, to avoid
+                a race condition in ZooKeeper to determine which is the new Master. First the main
+                Master is restarted, then the backup Masters are restarted. Directly after restart,
+                it checks for and cleans out any regions in transition before taking on its normal
+                workload.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>Graceful Restart</term>
+            <listitem>
+              <para>If you specify the <code>--graceful</code> option, RegionServers are restarted
+                using the <filename>bin/graceful_stop.sh</filename> script, which moves regions off
+                a RegionServer before restarting it. This is safer, but can delay the
+                restart.</para>
+            </listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>Limiting the Number of Threads</term>
+            <listitem>
+              <para>To limit the rolling restart to using only a specific number of threads, use the
+                  <code>--maxthreads</code> option.</para>
+            </listitem>
+          </varlistentry>
+        </variablelist>
+      </section>
+      <section xml:id="rolling.restart.manual">
+        <title>Manual Rolling Restart</title>
+        <para>To retain more control over the process, you may wish to manually do a rolling restart
+          across your cluster. This uses the <command>graceful-stop.sh</command> command <xref
+            linkend="decommission" />. In this method, you can restart each RegionServer
+          individually and then move its old regions back into place, retaining locality. If you
+          also need to restart the Master, you need to do it separately, and restart the Master
+          before restarting the RegionServers using this method. The following is an example of such
+          a command. You may need to tailor it to your environment. This script does a rolling
+          restart of RegionServers only. It disables the load balancer before moving the
+          regions.</para>
+        <screen><![CDATA[
+$ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i; done &> /tmp/log.txt &;     
+        ]]></screen>
+        <para>Monitor the output of the <filename>/tmp/log.txt</filename> file to follow the
+          progress of the script. </para>
+      </section>
+
+      <section>
+        <title>Logic for Crafting Your Own Rolling Restart Script</title>
+        <para>Use the following guidelines if you want to create your own rolling restart script.</para>
+        <orderedlist>
+          <listitem>
+            <para>Extract the new release, verify its configuration, and synchronize it to all nodes
+              of your cluster using <command>rsync</command>, <command>scp</command>, or another
+              secure synchronization mechanism.</para></listitem>
+          <listitem><para>Use the hbck utility to ensure that the cluster is consistent.</para>
+          <screen>
+$ ./bin/hbck            
+          </screen>
+            <para>Perform repairs if required. See <xref linkend="hbck" /> for details.</para>
+          </listitem>
+          <listitem><para>Restart the master first. You may need to modify these commands if your
+            new HBase directory is different from the old one, such as for an upgrade.</para>
+          <screen>
+$ ./bin/hbase-daemon.sh stop master; ./bin/hbase-daemon.sh start master            
+          </screen>
+          </listitem>
+          <listitem><para>Gracefully restart each RegionServer, using a script such as the
+            following, from the Master.</para>
+          <screen><![CDATA[
+$ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i; done &> /tmp/log.txt &            
+          ]]></screen>
+            <para>If you are running Thrift or REST servers, pass the --thrift or --rest options.
+              For other available options, run the <command>bin/graceful-stop.sh --help</command>
+              command.</para>
+            <para>It is important to drain HBase regions slowly when restarting multiple
+              RegionServers. Otherwise, multiple regions go offline simultaneously and must be
+              reassigned to other nodes, which may also go offline soon. This can negatively affect
+              performance. You can inject delays into the script above, for instance, by adding a
+              Shell command such as <command>sleep</command>. To wait for 5 minutes between each
+              RegionServer restart, modify the above script to the following:</para>
+            <screen><![CDATA[
+$ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --reload --debug $i & sleep 5m; done &> /tmp/log.txt &            
+          ]]></screen>
+          </listitem>
+          <listitem><para>Restart the Master again, to clear out the dead servers list and re-enable
+          the load balancer.</para></listitem>
+          <listitem><para>Run the <command>hbck</command> utility again, to be sure the cluster is
+            consistent.</para></listitem>
+        </orderedlist>
+      </section>
     </section>
     <section
       xml:id="adding.new.node">
