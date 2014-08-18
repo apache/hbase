@@ -54,6 +54,20 @@
         <programlisting>$ ./bin/hbase org.jruby.Main PATH_TO_SCRIPT</programlisting>
     </section>
 
+    <section>
+        <title>Passing VM Options to the Shell</title>
+        <para>You can pass VM options to the HBase Shell using the <code>HBASE_SHELL_OPTS</code>
+            environment variable. You can set this in your environment, for instance by editing
+                <filename>~/.bashrc</filename>, or set it as part of the command to launch HBase
+            Shell. The following example sets several garbage-collection-related variables, just for
+            the lifetime of the VM running the HBase Shell. The command should be run all on a
+            single line, but is broken by the <literal>\</literal> character, for
+            readability.</para>
+        <screen language="bourne">
+$ <userinput>HBASE_SHELL_OPTS="-verbose:gc -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCDateStamps \ 
+  -XX:+PrintGCDetails -Xloggc:$HBASE_HOME/logs/gc-hbase.log" ./bin/hbase shell</userinput>            
+        </screen>
+    </section>
     <section
         xml:id="shell_tricks">
         <title>Shell Tricks</title>
