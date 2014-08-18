@@ -1264,7 +1264,91 @@ sv4r6s38:       at org.apache.hadoop.security.UserGroupInformation.ensureInitial
           linkend="maven.build.hadoop" /> for more). </para>
 
     </section>
-
+    </section>
+  <section>
+    <title>IPC Configuration Conflicts with Hadoop</title>
+    <para>If the Hadoop configuration is loaded after the HBase configuration, and you have
+      configured custom IPC settings in both HBase and Hadoop, the Hadoop values may overwrite the
+      HBase values. There is normally no need to change these settings for HBase, so this problem is
+      an edge case. However, <link
+        xlink:href="https://issues.apache.org/jira/browse/HBASE-11492">HBASE-11492</link> renames
+      these settings for HBase to remove the chance of a conflict. Each of the setting names have
+      been prefixed with <literal>hbase.</literal>, as shown in the following table. No action is
+      required related to these changes unless you are already experiencing a conflict.</para>
+    <para>These changes were backported to HBase 0.98.x and apply to all newer versions.</para>
+    <informaltable>
+      <tgroup
+        cols="2">
+        <thead>
+          <row>
+            <entry>Pre-0.98.x</entry>
+            <entry>0.98-x And Newer</entry>
+          </row>
+        </thead>
+        <tbody>
+          <row>
+            <entry><para><code>ipc.server.listen.queue.size</code></para></entry>
+            <entry><para><code>hbase.ipc.server.listen.queue.size</code></para></entry>
+          </row>
+          <row>
+            <entry><para><code>ipc.server.max.callqueue.size</code></para></entry>
+            <entry><para><code>hbase.ipc.server.max.callqueue.size</code></para></entry>
+          </row>
+          <row>
+            <entry><para><code>ipc.server.callqueue.handler.factor</code></para></entry>
+            <entry><para><code>hbase.ipc.server.callqueue.handler.factor</code></para></entry>
+          </row>
+          <row>
+            <entry><para><code>ipc.server.callqueue.read.share</code></para></entry>
+            <entry><para><code>hbase.ipc.server.callqueue.read.share</code></para></entry>
+          </row>
+          <row>
+            <entry><para><code>ipc.server.callqueue.type</code></para></entry>
+            <entry><para><code>hbase.ipc.server.callqueue.type</code></para></entry>
+          </row>
+          <row>
+            <entry><para><code>ipc.server.queue.max.call.delay</code></para></entry>
+            <entry><para><code>hbase.ipc.server.queue.max.call.delay</code></para></entry>
+          </row>
+          <row>
+            <entry><para><code>ipc.server.max.callqueue.length</code></para></entry>
+            <entry><para><code>hbase.ipc.server.max.callqueue.length</code></para></entry>
+          </row>
+          <row>
+            <entry><para><code>ipc.server.read.threadpool.size</code></para></entry>
+            <entry><para><code>hbase.ipc.server.read.threadpool.size</code></para></entry>
+          </row>
+          <row>
+            <entry><para><code>ipc.server.tcpkeepalive</code></para></entry>
+            <entry><para><code>hbase.ipc.server.tcpkeepalive</code></para></entry>
+          </row>
+          <row>
+            <entry><para><code>ipc.server.tcpnodelay</code></para></entry>
+            <entry><para><code>hbase.ipc.server.tcpnodelay</code></para></entry>
+          </row>
+          <row>
+            <entry><para><code>ipc.client.call.purge.timeout</code></para></entry>
+            <entry><para><code>hbase.ipc.client.call.purge.timeout</code></para></entry>
+          </row>
+          <row>
+            <entry><para><code>ipc.client.connection.maxidletime</code></para></entry>
+            <entry><para><code>hbase.ipc.client.connection.maxidletime</code></para></entry>
+          </row>
+          <row>
+            <entry><para><code>ipc.client.idlethreshold</code></para></entry>
+            <entry><para><code>hbase.ipc.client.idlethreshold</code></para></entry>
+          </row>
+          <row>
+            <entry><para><code>ipc.client.kill.max</code></para></entry>
+            <entry><para><code>hbase.ipc.client.kill.max</code></para></entry>
+          </row>
+          <row>
+            <entry><para><code>ipc.server.scan.vtime.weight </code></para></entry>
+            <entry><para><code>hbase.ipc.server.scan.vtime.weight </code></para></entry>
+          </row>
+        </tbody>
+      </tgroup>
+    </informaltable>
   </section>
 
   <section>
