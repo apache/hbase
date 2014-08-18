@@ -400,6 +400,7 @@ module Hbase
               puts "Updating all regions with the new schema..."
               alter_status(table_name)
             end
+            htd.setValue(SPLITS_FILE, arg[SPLITS_FILE])
           end
           next
         end
