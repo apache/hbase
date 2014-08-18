@@ -811,13 +811,23 @@ htable.put(put);
             list.</para>
           <para>Also see <xref
               linkend="keyvalue" /> for more information on the internal KeyValue format. </para>
-          <para>Delete markers are purged during the major compaction of store, unless the
-            KEEP_DELETED_CELLS is set in the column family. In some scenarios, users want to keep
-            the deletes for a time and you can set the delete TTL:
-            hbase.hstore.time.to.purge.deletes in the configuration. If this delete TTL is not set,
-            or set to 0, all delete markers including those with future timestamp are purged during
-            the later major compaction. Otherwise, a delete marker is kept until the major
-            compaction after marker's timestamp + delete TTL. </para>
+          <para>Delete markers are purged during the next major compaction of the store, unless the
+              <option>KEEP_DELETED_CELLS</option> option is set in the column family. To keep the
+            deletes for a configurable amount of time, you can set the delete TTL via the
+              <option>hbase.hstore.time.to.purge.deletes</option> property in
+              <filename>hbase-site.xml</filename>. If
+              <option>hbase.hstore.time.to.purge.deletes</option> is not set, or set to 0, all
+            delete markers, including those with timestamps in the future, are purged during the
+            next major compaction. Otherwise, a delete marker with a timestamp in the future is kept
+            until the major compaction which occurs after the time represented by the marker's
+            timestamp plus the value of <option>hbase.hstore.time.to.purge.deletes</option>, in
+            milliseconds. </para>
+          <note>
+            <para>This behavior represents a fix for an unexpected change that was introduced in
+              HBase 0.94, and was fixed in <link
+                xlink:href="https://issues.apache.org/jira/browse/HBASE-10118">HBASE-10118</link>.
+              The change has been backported to HBase 0.94 and newer branches.</para>
+          </note>
         </section>
       </section>
 
