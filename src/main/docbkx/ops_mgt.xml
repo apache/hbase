@@ -1166,6 +1166,64 @@ false
           value length, fields of each put in the multiPut. </para>
       </section>
     </section>
+    <section>
+      <title>Block Cache Monitoring</title>
+      <para>Starting with HBase 0.98, the HBase Web UI includes the ability to monitor and report on
+        the performance of the block cache. To view the block cache reports, click <menuchoice>
+          <guimenu>Tasks</guimenu>
+          <guisubmenu>Show Non-RPC Tasks</guisubmenu>
+          <guimenuitem>Block Cache</guimenuitem>
+        </menuchoice>. Following are a few examples of the reporting capabilities.</para>
+      <figure>
+        <title>Basic Info</title>
+        <mediaobject>
+          <imageobject>
+            <imagedata fileref="bc_basic.png" width="100%"/>
+          </imageobject>
+          <textobject>
+            <para>Shows the cache implementation</para>
+          </textobject>
+        </mediaobject>
+      </figure>
+      <figure>
+        <title>Config</title>
+        <mediaobject>
+          <imageobject>
+            <imagedata fileref="bc_config.png" width="100%"/>
+          </imageobject>
+          <textobject>
+            <para>Shows all cache configuration options.</para>
+          </textobject>
+        </mediaobject>
+      </figure>
+      <figure>
+        <title>Stats</title>
+        <mediaobject>
+          <imageobject>
+            <imagedata fileref="bc_stats.png" width="100%"/>
+          </imageobject>
+          <textobject>
+            <para>Shows statistics about the performance of the cache.</para>
+          </textobject>
+        </mediaobject>
+      </figure>
+      <figure>
+        <title>L1 and L2</title>
+        <mediaobject>
+          <imageobject>
+            <imagedata fileref="bc_l1.png" width="100%"/>
+          </imageobject>
+          <imageobject>
+            <imagedata fileref="bc_l2_buckets.png" width="100%"/>
+          </imageobject>
+          <textobject>
+            <para>Shows information about the L1 and L2 caches.</para>
+          </textobject>
+        </mediaobject>
+      </figure>
+      <para>This is not an exhaustive list of all the screens and reports available. Have a look in
+        the Web UI.</para>
+    </section>
 
 
 
