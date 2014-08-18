@@ -45,6 +45,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
   protected ByteBuffer block;
   protected boolean includeMvccVersion;
   protected PrefixTreeArraySearcher ptSearcher;
+  protected boolean movedToPrevious = false;
 
   public PrefixTreeSeeker(boolean includeMvccVersion) {
     this.includeMvccVersion = includeMvccVersion;
@@ -119,7 +120,11 @@ public class PrefixTreeSeeker implements EncodedSeeker {
 
   @Override
   public boolean next() {
-    return ptSearcher.advance();
+    boolean advance = ptSearcher.advance();
+    if (ptSearcher.hasMovedToPreviousAsPartOfSeek()) {
+      ptSearcher.setMovedToPreviousAsPartOfSeek(false);
+    }
+    return advance;
   }
 
 //  @Override
@@ -207,6 +212,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
 
     if (CellScannerPosition.AT == position) {
       if (seekBefore) {
+        // We need not set movedToPrevious because the intention is to seekBefore
         ptSearcher.previous();
         return 1;
       }
@@ -217,6 +223,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
     if (CellScannerPosition.AFTER == position) {
       if (!ptSearcher.isBeforeFirst()) {
         ptSearcher.previous();
+        ptSearcher.setMovedToPreviousAsPartOfSeek(true);
       }
       return 1;
     }
