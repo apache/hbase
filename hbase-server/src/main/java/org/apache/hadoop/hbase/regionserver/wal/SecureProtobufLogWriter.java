@@ -24,6 +24,7 @@ import java.security.SecureRandom;
 
 import javax.crypto.spec.SecretKeySpec;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,7 +44,8 @@ public class SecureProtobufLogWriter extends ProtobufLogWriter {
   private Encryptor encryptor = null;
 
   @Override
-  protected WALHeader buildWALHeader(WALHeader.Builder builder) throws IOException {
+  protected WALHeader buildWALHeader(Configuration conf, WALHeader.Builder builder)
+      throws IOException {
     builder.setWriterClsName(SecureProtobufLogWriter.class.getSimpleName());
     if (conf.getBoolean(HConstants.ENABLE_WAL_ENCRYPTION, false)) {
       // Get an instance of our cipher
@@ -72,8 +74,8 @@ public class SecureProtobufLogWriter extends ProtobufLogWriter {
         LOG.trace("Initialized secure protobuf WAL: cipher=" + cipher.getName());
       }
     }
-
-    return super.buildWALHeader(builder);
+    builder.setCellCodecClsName(SecureWALCellCodec.class.getName());
+    return super.buildWALHeader(conf, builder);
   }
 
   @Override

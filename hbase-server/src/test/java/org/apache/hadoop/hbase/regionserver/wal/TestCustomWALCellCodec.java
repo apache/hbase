@@ -53,7 +53,7 @@ public class TestCustomWALCellCodec {
     Configuration conf = new Configuration(false);
     conf.setClass(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, CustomWALCellCodec.class,
       WALCellCodec.class);
-    CustomWALCellCodec codec = (CustomWALCellCodec) WALCellCodec.create(conf, null);
+    CustomWALCellCodec codec = (CustomWALCellCodec) WALCellCodec.create(conf, null, null);
     assertEquals("Custom codec didn't get initialized with the right configuration!", conf,
       codec.conf);
     assertEquals("Custom codec didn't get initialized with the right compression context!", null,

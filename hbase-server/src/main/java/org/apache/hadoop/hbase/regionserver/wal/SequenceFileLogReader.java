@@ -175,16 +175,17 @@ public class SequenceFileLogReader extends ReaderBase {
   }
 
   @Override
-  protected void initReader(FSDataInputStream stream) throws IOException {
+  protected String initReader(FSDataInputStream stream) throws IOException {
     // We don't use the stream because we have to have the magic stream above.
     if (stream != null) {
       stream.close();
     }
     reset();
+    return null;
   }
   
   @Override
-  protected void initAfterCompression() throws IOException {
+  protected void initAfterCompression(String cellCodecClsName) throws IOException {
     // Nothing to do here
   }
 
