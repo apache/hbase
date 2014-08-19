@@ -826,6 +826,33 @@ possible configurations would overwhelm and obscure the important.
           index block in a multi-level block index grows to this size, the
           block is written out and a new block is started.</description>
   </property>
+    <property>
+    <name>hbase.bucketcache.ioengine</name>
+    <value></value>
+    <description>Where to store the contents of the bucketcache. One of: onheap, 
+      offheap, or file. If a file, set it to file:PATH_TO_FILE. See https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html for more information.
+    </description>
+  </property>
+  <property>
+    <name>hbase.bucketcache.combinedcache.enabled</name>
+    <value>true</value>
+    <description>Whether or not the bucketcache is used in league with the LRU 
+      on-heap block cache. In this mode, indices and blooms are kept in the LRU 
+      blockcache and the data blocks are kept in the bucketcache.</description>
+  </property>
+  <property>
+    <name>hbase.bucketcache.size</name>
+    <value>65536</value>
+    <description>The size of the buckets for the bucketcache if you only use a single size. 
+      Defaults to the default blocksize, which is 64 * 1024.</description>
+  </property>
+  <property>
+    <name>hbase.bucketcache.sizes</name>
+    <value></value>
+    <description>A comma-separated list of sizes for buckets for the bucketcache 
+      if you use multiple sizes. Should be a list of block sizes in order from smallest 
+      to largest. The sizes you use will depend on your data access patterns.</description>
+  </property>
   <property>
       <name>hfile.format.version</name>
       <value>3</value>

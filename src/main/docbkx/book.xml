@@ -2384,6 +2384,20 @@ rs.close();
                 In other words, you configure the L1 LruBlockCache as you would normally,
                 as you would when there is no L2 BucketCache present.
             </para>
+            <para><link xlink:href="https://issues.apache.org/jira/browse/HBASE-10641"
+                >HBASE-10641</link> introduced the ability to configure multiple sizes for the
+              buckets of the bucketcache, in HBase 0.98 and newer. To configurable multiple bucket
+              sizes, configure the new property <option>hfile.block.cache.sizes</option> (instead of
+                <option>hfile.block.cache.size</option>) to a comma-separated list of block sizes,
+              ordered from smallest to largest, with no spaces. The goal is to optimize the bucket
+              sizes based on your data access patterns. The following example configures buckets of
+              size 4096 and 8192.</para>
+            <screen language="xml"><![CDATA[
+<property>
+  <name>hfile.block.cache.sizes</name>
+  <value>4096,8192</value>
+</property>
+              ]]></screen>
             <note xml:id="direct.memory">
                 <title>Direct Memory Usage In HBase</title>
                 <para>The default maximum direct memory varies by JVM.  Traditionally it is 64M
