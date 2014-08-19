@@ -356,11 +356,14 @@ public class TableAuthManager {
     try {
       List<Permission> perms = AccessControlLists.getCellPermissionsForUser(user, cell);
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Perms for user " + user.getShortName() + " in cell " + cell + ": " + perms);
+        LOG.trace("Perms for user " + user.getShortName() + " in cell " + cell + ": " +
+          (perms != null ? perms : ""));
       }
-      for (Permission p: perms) {
-        if (p.implies(action)) {
-          return true;
+      if (perms != null) {
+        for (Permission p: perms) {
+          if (p.implies(action)) {
+            return true;
+          }
         }
       }
     } catch (IOException e) {

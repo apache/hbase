@@ -686,6 +686,10 @@ public class AccessControlLists {
 
    public static List<Permission> getCellPermissionsForUser(User user, Cell cell)
        throws IOException {
+     // Save an object allocation where we can
+     if (cell.getTagsLength() == 0) {
+       return null;
+     }
      List<Permission> results = Lists.newArrayList();
      Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
         cell.getTagsLength());

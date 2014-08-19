@@ -80,39 +80,42 @@ class VisibilityLabelFilter extends FilterBase {
       return ReturnCode.SKIP;
     }
 
-    Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-        cell.getTagsLength());
     boolean visibilityTagPresent = false;
-    while (tagsItr.hasNext()) {
-      boolean includeKV = true;
-      Tag tag = tagsItr.next();
-      if (tag.getType() == VisibilityUtils.VISIBILITY_TAG_TYPE) {
-        visibilityTagPresent = true;
-        int offset = tag.getTagOffset();
-        int endOffset = offset + tag.getTagLength();
-        while (offset < endOffset) {
-          Pair<Integer, Integer> result = StreamUtils.readRawVarint32(tag.getBuffer(), offset);
-          int currLabelOrdinal = result.getFirst();
-          if (currLabelOrdinal < 0) {
-            // check for the absence of this label in the Scan Auth labels
-            // ie. to check BitSet corresponding bit is 0
-            int temp = -currLabelOrdinal;
-            if (this.authLabels.get(temp)) {
-              includeKV = false;
-              break;
+    // Save an object allocation where we can
+    if (cell.getTagsLength() > 0) {
+      Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
+        cell.getTagsLength());
+      while (tagsItr.hasNext()) {
+        boolean includeKV = true;
+        Tag tag = tagsItr.next();
+        if (tag.getType() == VisibilityUtils.VISIBILITY_TAG_TYPE) {
+          visibilityTagPresent = true;
+          int offset = tag.getTagOffset();
+          int endOffset = offset + tag.getTagLength();
+          while (offset < endOffset) {
+            Pair<Integer, Integer> result = StreamUtils.readRawVarint32(tag.getBuffer(), offset);
+            int currLabelOrdinal = result.getFirst();
+            if (currLabelOrdinal < 0) {
+              // check for the absence of this label in the Scan Auth labels
+              // ie. to check BitSet corresponding bit is 0
+              int temp = -currLabelOrdinal;
+              if (this.authLabels.get(temp)) {
+                includeKV = false;
+                break;
+              }
+            } else {
+              if (!this.authLabels.get(currLabelOrdinal)) {
+                includeKV = false;
+                break;
+              }
             }
-          } else {
-            if (!this.authLabels.get(currLabelOrdinal)) {
-              includeKV = false;
-              break;
-            }
+            offset += result.getSecond();
           }
-          offset += result.getSecond();
-        }
-        if (includeKV) {
-          // We got one visibility expression getting evaluated to true. Good to include this KV in
-          // the result then.
-          return ReturnCode.INCLUDE;
+          if (includeKV) {
+            // We got one visibility expression getting evaluated to true. Good to include this KV in
+            // the result then.
+            return ReturnCode.INCLUDE;
+          }
         }
       }
     }
