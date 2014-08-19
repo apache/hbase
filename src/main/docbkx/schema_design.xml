@@ -99,6 +99,102 @@ admin.enableTable(table);
   <section
     xml:id="rowkey.design">
     <title>Rowkey Design</title>
+    <section>
+      <title>Hotspotting</title>
+      <para>Rows in HBase are sorted lexicographically by row key. This design optimizes for scans,
+        allowing you to store related rows, or rows that will be read together, near each other.
+        However, poorly designed row keys are a common source of <firstterm>hotspotting</firstterm>.
+        Hotspotting occurs when a large amount of client traffic is directed at one node, or only a
+        few nodes, of a cluster. This traffic may represent reads, writes, or other operations. The
+        traffic overwhelms the single machine responsible for hosting that region, causing
+        performance degradation and potentially leading to region unavailability. This can also have
+        adverse effects on other regions hosted by the same region server as that host is unable to
+        service the requested load. It is important to design data access patterns such that the
+        cluster is fully and evenly utilized.</para>
+      <para>To prevent hotspotting on writes, design your row keys such that rows that truly do need
+        to be in the same region are, but in the bigger picture, data is being written to multiple
+        regions across the cluster, rather than one at a time. Some common techniques for avoiding
+        hotspotting are described below, along with some of their advantages and drawbacks.</para>
+      <formalpara>
+        <title>Salting</title>
+        <para>Salting in this sense has nothing to do with cryptography, but refers to adding random
+          data to the start of a row key. In this case, salting refers to adding a randomly-assigned
+          prefix to the row key to cause it to sort differently than it otherwise would. The number
+          of possible prefixes correspond to the number of regions you want to spread the data
+          across. Salting can be helpful if you have a few "hot" row key patterns which come up over
+          and over amongst other more evenly-distributed rows. Consider the following example, which
+          shows that salting can spread write load across multiple regionservers, and illustrates
+          some of the negative implications for reads.</para>
+      </formalpara>
+      <example>
+        <title>Salting Example</title>
+        <para>Suppose you have the following list of row keys, and your table is split such that
+          there is one region for each letter of the alphabet. Prefix 'a' is one region, prefix 'b'
+          is another. In this table, all rows starting with 'f' are in the same region. This example
+          focuses on rows with keys like the following:</para>
+        <screen>
+foo0001
+foo0002
+foo0003
+foo0004          
+        </screen>
+        <para>Now, imagine that you would like to spread these across four different regions. You
+          decide to use four different salts: <literal>a</literal>, <literal>b</literal>,
+            <literal>c</literal>, and <literal>d</literal>. In this scenario, each of these letter
+          prefixes will be on a different region. After applying the salts, you have the following
+          rowkeys instead. Since you can now write to four separate regions, you theoretically have
+          four times the throughput when writing that you would have if all the writes were going to
+          the same region.</para>
+        <screen>
+a-foo0003
+b-foo0001
+c-foo0004
+d-foo0002          
+        </screen>
+        <para>Then, if you add another row, it will randomly be assigned one of the four possible
+          salt values and end up near one of the existing rows.</para>
+        <screen>
+a-foo0003
+b-foo0001
+<emphasis>c-foo0003</emphasis>
+c-foo0004
+d-foo0002        
+        </screen>
+        <para>Since this assignment will be random, you will need to do more work if you want to
+          retrieve the rows in lexicographic order. In this way, salting attempts to increase
+          throughput on writes, but has a cost during reads.</para>
+      </example>
+      <para></para>
+      <formalpara>
+        <title>Hashing</title>
+        <para>Instead of a random assignment, you could use a one-way <firstterm>hash</firstterm>
+          that would cause a given row to always be "salted" with the same prefix, in a way that
+          would spread the load across the regionservers, but allow for predictability during reads.
+          Using a deterministic hash allows the client to reconstruct the complete rowkey and use a
+          Get operation to retrieve that row as normal.</para>
+      </formalpara>
+      <example>
+        <title>Hashing Example</title>
+        <para>Given the same situation in the salting example above, you could instead apply a
+          one-way hash that would cause the row with key <literal>foo0003</literal> to always, and
+          predictably, receive the <literal>a</literal> prefix. Then, to retrieve that row, you
+          would already know the key. You could also optimize things so that certain pairs of keys
+          were always in the same region, for instance.</para>
+      </example>
+      <formalpara>
+        <title>Reversing the Key</title>
+        <para>A third common trick for preventing hotspotting is to reverse a fixed-width or numeric
+        row key so that the part that changes the most often (the least significant digit) is first.
+        This effectively randomizes row keys, but sacrifices row ordering properties.</para>
+      </formalpara>
+      <para>See <link
+          xlink:href="https://communities.intel.com/community/itpeernetwork/datastack/blog/2013/11/10/discussion-on-designing-hbase-tables"
+          >https://communities.intel.com/community/itpeernetwork/datastack/blog/2013/11/10/discussion-on-designing-hbase-tables</link>,
+        and <link xlink:href="http://phoenix.apache.org/salted.html">article on Salted Tables</link>
+        from the Phoenix project, and the discussion in the comments of <link
+          xlink:href="https://issues.apache.org/jira/browse/HBASE-11682">HBASE-11682</link> for more
+        information about avoiding hotspotting.</para>
+    </section>
     <section
       xml:id="timeseries">
       <title> Monotonically Increasing Row Keys/Timeseries Data </title>
