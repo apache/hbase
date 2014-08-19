@@ -66,7 +66,7 @@ public abstract class ReaderBase implements HLog.Reader {
     this.fileLength = this.fs.getFileStatus(path).getLen();
     this.trailerWarnSize = conf.getInt(HLog.WAL_TRAILER_WARN_SIZE,
       HLog.DEFAULT_WAL_TRAILER_WARN_SIZE);
-    initReader(stream);
+    String cellCodecClsName = initReader(stream);
 
     boolean compression = hasCompression();
     if (compression) {
@@ -82,7 +82,7 @@ public abstract class ReaderBase implements HLog.Reader {
         throw new IOException("Failed to initialize CompressionContext", e);
       }
     }
-    initAfterCompression();
+    initAfterCompression(cellCodecClsName);
   }
 
   @Override
@@ -135,13 +135,15 @@ public abstract class ReaderBase implements HLog.Reader {
   /**
    * Initializes the log reader with a particular stream (may be null).
    * Reader assumes ownership of the stream if not null and may use it. Called once.
+   * @return the class name of cell Codec, null if such information is not available
    */
-  protected abstract void initReader(FSDataInputStream stream) throws IOException;
+  protected abstract String initReader(FSDataInputStream stream) throws IOException;
 
   /**
    * Initializes the compression after the shared stuff has been initialized. Called once.
+   * @param cellCodecClsName class name of cell Codec
    */
-  protected abstract void initAfterCompression() throws IOException;
+  protected abstract void initAfterCompression(String cellCodecClsName) throws IOException;
   /**
    * @return Whether compression is enabled for this log.
    */

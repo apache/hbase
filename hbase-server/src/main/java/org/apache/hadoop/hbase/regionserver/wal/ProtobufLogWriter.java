@@ -55,12 +55,16 @@ public class ProtobufLogWriter extends WriterBase {
 
   protected WALCellCodec getCodec(Configuration conf, CompressionContext compressionContext)
       throws IOException {
-    return WALCellCodec.create(conf, compressionContext);
+    return WALCellCodec.create(conf, null, compressionContext);
   }
 
-  protected WALHeader buildWALHeader(WALHeader.Builder builder) throws IOException {
+  protected WALHeader buildWALHeader(Configuration conf, WALHeader.Builder builder)
+      throws IOException {
     if (!builder.hasWriterClsName()) {
       builder.setWriterClsName(ProtobufLogWriter.class.getSimpleName());
+    }
+    if (!builder.hasCellCodecClsName()) {
+      builder.setCellCodecClsName(WALCellCodec.getWALCellCodecClass(conf));
     }
     return builder.build();
   }
@@ -82,7 +86,7 @@ public class ProtobufLogWriter extends WriterBase {
     output.write(ProtobufLogReader.PB_WAL_MAGIC);
     boolean doTagCompress = doCompress
         && conf.getBoolean(CompressionContext.ENABLE_WAL_TAGS_COMPRESSION, true);
-    buildWALHeader(
+    buildWALHeader(conf,
         WALHeader.newBuilder().setHasCompression(doCompress).setHasTagCompression(doTagCompress))
         .writeDelimitedTo(output);
 

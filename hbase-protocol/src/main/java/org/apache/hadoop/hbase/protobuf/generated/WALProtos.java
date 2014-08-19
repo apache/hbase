@@ -137,6 +137,21 @@ public final class WALProtos {
      */
     com.google.protobuf.ByteString
         getWriterClsNameBytes();
+
+    // optional string cell_codec_cls_name = 5;
+    /**
+     * <code>optional string cell_codec_cls_name = 5;</code>
+     */
+    boolean hasCellCodecClsName();
+    /**
+     * <code>optional string cell_codec_cls_name = 5;</code>
+     */
+    java.lang.String getCellCodecClsName();
+    /**
+     * <code>optional string cell_codec_cls_name = 5;</code>
+     */
+    com.google.protobuf.ByteString
+        getCellCodecClsNameBytes();
   }
   /**
    * Protobuf type {@code WALHeader}
@@ -207,6 +222,11 @@ public final class WALProtos {
             case 34: {
               bitField0_ |= 0x00000008;
               writerClsName_ = input.readBytes();
+              break;
+            }
+            case 42: {
+              bitField0_ |= 0x00000010;
+              cellCodecClsName_ = input.readBytes();
               break;
             }
           }
@@ -340,11 +360,55 @@ public final class WALProtos {
       }
     }
 
+    // optional string cell_codec_cls_name = 5;
+    public static final int CELL_CODEC_CLS_NAME_FIELD_NUMBER = 5;
+    private java.lang.Object cellCodecClsName_;
+    /**
+     * <code>optional string cell_codec_cls_name = 5;</code>
+     */
+    public boolean hasCellCodecClsName() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>optional string cell_codec_cls_name = 5;</code>
+     */
+    public java.lang.String getCellCodecClsName() {
+      java.lang.Object ref = cellCodecClsName_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          cellCodecClsName_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string cell_codec_cls_name = 5;</code>
+     */
+    public com.google.protobuf.ByteString
+        getCellCodecClsNameBytes() {
+      java.lang.Object ref = cellCodecClsName_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        cellCodecClsName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private void initFields() {
       hasCompression_ = false;
       encryptionKey_ = com.google.protobuf.ByteString.EMPTY;
       hasTagCompression_ = false;
       writerClsName_ = "";
+      cellCodecClsName_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -370,6 +434,9 @@ public final class WALProtos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         output.writeBytes(4, getWriterClsNameBytes());
       }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeBytes(5, getCellCodecClsNameBytes());
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -394,6 +461,10 @@ public final class WALProtos {
       if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(4, getWriterClsNameBytes());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(5, getCellCodecClsNameBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -438,6 +509,11 @@ public final class WALProtos {
         result = result && getWriterClsName()
             .equals(other.getWriterClsName());
       }
+      result = result && (hasCellCodecClsName() == other.hasCellCodecClsName());
+      if (hasCellCodecClsName()) {
+        result = result && getCellCodecClsName()
+            .equals(other.getCellCodecClsName());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -466,6 +542,10 @@ public final class WALProtos {
       if (hasWriterClsName()) {
         hash = (37 * hash) + WRITER_CLS_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getWriterClsName().hashCode();
+      }
+      if (hasCellCodecClsName()) {
+        hash = (37 * hash) + CELL_CODEC_CLS_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getCellCodecClsName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -584,6 +664,8 @@ public final class WALProtos {
         bitField0_ = (bitField0_ & ~0x00000004);
         writerClsName_ = "";
         bitField0_ = (bitField0_ & ~0x00000008);
+        cellCodecClsName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000010);
         return this;
       }
 
@@ -628,6 +710,10 @@ public final class WALProtos {
           to_bitField0_ |= 0x00000008;
         }
         result.writerClsName_ = writerClsName_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.cellCodecClsName_ = cellCodecClsName_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -656,6 +742,11 @@ public final class WALProtos {
         if (other.hasWriterClsName()) {
           bitField0_ |= 0x00000008;
           writerClsName_ = other.writerClsName_;
+          onChanged();
+        }
+        if (other.hasCellCodecClsName()) {
+          bitField0_ |= 0x00000010;
+          cellCodecClsName_ = other.cellCodecClsName_;
           onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
@@ -857,6 +948,80 @@ public final class WALProtos {
   }
   bitField0_ |= 0x00000008;
         writerClsName_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional string cell_codec_cls_name = 5;
+      private java.lang.Object cellCodecClsName_ = "";
+      /**
+       * <code>optional string cell_codec_cls_name = 5;</code>
+       */
+      public boolean hasCellCodecClsName() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>optional string cell_codec_cls_name = 5;</code>
+       */
+      public java.lang.String getCellCodecClsName() {
+        java.lang.Object ref = cellCodecClsName_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          cellCodecClsName_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string cell_codec_cls_name = 5;</code>
+       */
+      public com.google.protobuf.ByteString
+          getCellCodecClsNameBytes() {
+        java.lang.Object ref = cellCodecClsName_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          cellCodecClsName_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string cell_codec_cls_name = 5;</code>
+       */
+      public Builder setCellCodecClsName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+        cellCodecClsName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string cell_codec_cls_name = 5;</code>
+       */
+      public Builder clearCellCodecClsName() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        cellCodecClsName_ = getDefaultInstance().getCellCodecClsName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string cell_codec_cls_name = 5;</code>
+       */
+      public Builder setCellCodecClsNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+        cellCodecClsName_ = value;
         onChanged();
         return this;
       }
@@ -5464,27 +5629,27 @@ public final class WALProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\tWAL.proto\032\013HBase.proto\"r\n\tWALHeader\022\027\n" +
-      "\017has_compression\030\001 \001(\010\022\026\n\016encryption_key" +
-      "\030\002 \001(\014\022\033\n\023has_tag_compression\030\003 \001(\010\022\027\n\017w" +
-      "riter_cls_name\030\004 \001(\t\"\202\002\n\006WALKey\022\033\n\023encod" +
-      "ed_region_name\030\001 \002(\014\022\022\n\ntable_name\030\002 \002(\014" +
-      "\022\033\n\023log_sequence_number\030\003 \002(\004\022\022\n\nwrite_t" +
-      "ime\030\004 \002(\004\022\035\n\ncluster_id\030\005 \001(\0132\005.UUIDB\002\030\001" +
-      "\022\034\n\006scopes\030\006 \003(\0132\014.FamilyScope\022\032\n\022follow" +
-      "ing_kv_count\030\007 \001(\r\022\032\n\013cluster_ids\030\010 \003(\0132" +
-      "\005.UUID\022\022\n\nnonceGroup\030\t \001(\004\022\r\n\005nonce\030\n \001(",
-      "\004\"=\n\013FamilyScope\022\016\n\006family\030\001 \002(\014\022\036\n\nscop" +
-      "e_type\030\002 \002(\0162\n.ScopeType\"\276\001\n\024CompactionD" +
-      "escriptor\022\022\n\ntable_name\030\001 \002(\014\022\033\n\023encoded" +
-      "_region_name\030\002 \002(\014\022\023\n\013family_name\030\003 \002(\014\022" +
-      "\030\n\020compaction_input\030\004 \003(\t\022\031\n\021compaction_" +
-      "output\030\005 \003(\t\022\026\n\016store_home_dir\030\006 \002(\t\022\023\n\013" +
-      "region_name\030\007 \001(\014\"\014\n\nWALTrailer*F\n\tScope" +
-      "Type\022\033\n\027REPLICATION_SCOPE_LOCAL\020\000\022\034\n\030REP" +
-      "LICATION_SCOPE_GLOBAL\020\001B?\n*org.apache.ha" +
-      "doop.hbase.protobuf.generatedB\tWALProtos",
-      "H\001\210\001\000\240\001\001"
+      "\n\tWAL.proto\032\013HBase.proto\"\217\001\n\tWALHeader\022\027" +
+      "\n\017has_compression\030\001 \001(\010\022\026\n\016encryption_ke" +
+      "y\030\002 \001(\014\022\033\n\023has_tag_compression\030\003 \001(\010\022\027\n\017" +
+      "writer_cls_name\030\004 \001(\t\022\033\n\023cell_codec_cls_" +
+      "name\030\005 \001(\t\"\202\002\n\006WALKey\022\033\n\023encoded_region_" +
+      "name\030\001 \002(\014\022\022\n\ntable_name\030\002 \002(\014\022\033\n\023log_se" +
+      "quence_number\030\003 \002(\004\022\022\n\nwrite_time\030\004 \002(\004\022" +
+      "\035\n\ncluster_id\030\005 \001(\0132\005.UUIDB\002\030\001\022\034\n\006scopes" +
+      "\030\006 \003(\0132\014.FamilyScope\022\032\n\022following_kv_cou" +
+      "nt\030\007 \001(\r\022\032\n\013cluster_ids\030\010 \003(\0132\005.UUID\022\022\n\n",
+      "nonceGroup\030\t \001(\004\022\r\n\005nonce\030\n \001(\004\"=\n\013Famil" +
+      "yScope\022\016\n\006family\030\001 \002(\014\022\036\n\nscope_type\030\002 \002" +
+      "(\0162\n.ScopeType\"\276\001\n\024CompactionDescriptor\022" +
+      "\022\n\ntable_name\030\001 \002(\014\022\033\n\023encoded_region_na" +
+      "me\030\002 \002(\014\022\023\n\013family_name\030\003 \002(\014\022\030\n\020compact" +
+      "ion_input\030\004 \003(\t\022\031\n\021compaction_output\030\005 \003" +
+      "(\t\022\026\n\016store_home_dir\030\006 \002(\t\022\023\n\013region_nam" +
+      "e\030\007 \001(\014\"\014\n\nWALTrailer*F\n\tScopeType\022\033\n\027RE" +
+      "PLICATION_SCOPE_LOCAL\020\000\022\034\n\030REPLICATION_S" +
+      "COPE_GLOBAL\020\001B?\n*org.apache.hadoop.hbase",
+      ".protobuf.generatedB\tWALProtosH\001\210\001\000\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -5496,7 +5661,7 @@ public final class WALProtos {
           internal_static_WALHeader_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_WALHeader_descriptor,
-              new java.lang.String[] { "HasCompression", "EncryptionKey", "HasTagCompression", "WriterClsName", });
+              new java.lang.String[] { "HasCompression", "EncryptionKey", "HasTagCompression", "WriterClsName", "CellCodecClsName", });
           internal_static_WALKey_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_WALKey_fieldAccessorTable = new
