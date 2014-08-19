@@ -263,7 +263,7 @@ public class RegionState implements org.apache.hadoop.io.Writable {
   public ClusterStatusProtos.RegionState convert() {
     ClusterStatusProtos.RegionState.Builder regionState = ClusterStatusProtos.RegionState.newBuilder();
     ClusterStatusProtos.RegionState.State rs;
-    switch (regionState.getState()) {
+    switch (this.state) {
     case OFFLINE:
       rs = ClusterStatusProtos.RegionState.State.OFFLINE;
       break;
@@ -380,6 +380,21 @@ public class RegionState implements org.apache.hadoop.io.Writable {
 
   protected void setTimestamp(final long timestamp) {
     stamp.set(timestamp);
+  }
+
+  /**
+   * Check if two states are the same, except timestamp
+   */
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) return true;
+    if (obj == null || getClass() != obj.getClass()) {
+      return false;
+    }
+    RegionState tmp = (RegionState)obj;
+    return tmp.hri.equals(hri) && tmp.state == state
+      && ((serverName != null && serverName.equals(tmp.serverName))
+        || (tmp.serverName == null && serverName == null));
   }
 
   /**
