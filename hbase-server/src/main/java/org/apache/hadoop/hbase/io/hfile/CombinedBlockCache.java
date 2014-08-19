@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
  * 
  */
 @InterfaceAudience.Private
-public class CombinedBlockCache implements BlockCache, HeapSize {
+public class CombinedBlockCache implements ResizableBlockCache, HeapSize {
   private final LruBlockCache lruCache;
   private final BucketCache bucketCache;
   private final CombinedCacheStats combinedCacheStats;
@@ -206,5 +206,10 @@ public class CombinedBlockCache implements BlockCache, HeapSize {
   @Override
   public BlockCache[] getBlockCaches() {
     return new BlockCache [] {this.lruCache, this.bucketCache};
+  }
+
+  @Override
+  public void setMaxSize(long size) {
+    this.lruCache.setMaxSize(size);
   }
 }
