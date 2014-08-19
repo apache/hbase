@@ -5167,7 +5167,7 @@ public class TestFromClientSide {
 
   @Test
   /**
-   * Tests the non cached version of getRegionLocation by moving a region.
+   * Tests the non cached version of getRegionLocator by moving a region.
    */
   public void testNonCachedGetRegionLocation() throws Exception {
     // Test Initialization.

@@ -83,7 +83,7 @@ public class HConnectionTestingUtility {
    * @param sn ServerName to include in the region location returned by this
    * <code>connection</code>
    * @param hri HRegionInfo to include in the location returned when
-   * getRegionLocation is called on the mocked connection
+   * getRegionLocator is called on the mocked connection
    * @return Mock up a connection that returns a {@link Configuration} when
    * {@link HConnection#getConfiguration()} is called, a 'location' when
    * {@link HConnection#getRegionLocation(org.apache.hadoop.hbase.TableName, byte[], boolean)} is called,

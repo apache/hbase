@@ -123,7 +123,7 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class HTable implements HTableInterface {
+public class HTable implements HTableInterface, RegionLocator {
   private static final Log LOG = LogFactory.getLog(HTable.class);
   protected ClusterConnection connection;
   private final TableName tableName;
@@ -498,30 +498,27 @@ public class HTable implements HTableInterface {
    * @param row Row to find.
    * @return The location of the given row.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Use {@link RegionLocator#getRegionLocation(byte[])}
    */
+  @Deprecated
   public HRegionLocation getRegionLocation(final String row)
   throws IOException {
     return connection.getRegionLocation(tableName, Bytes.toBytes(row), false);
   }
 
   /**
-   * Finds the region on which the given row is being served. Does not reload the cache.
-   * @param row Row to find.
-   * @return Location of the row.
-   * @throws IOException if a remote or network exception occurs
+   * {@inheritDoc}
    */
+  @Override
   public HRegionLocation getRegionLocation(final byte [] row)
   throws IOException {
     return connection.getRegionLocation(tableName, row, false);
   }
 
   /**
-   * Finds the region on which the given row is being served.
-   * @param row Row to find.
-   * @param reload true to reload information or false to use cached information
-   * @return Location of the row.
-   * @throws IOException if a remote or network exception occurs
+   * {@inheritDoc}
    */
+  @Override
   public HRegionLocation getRegionLocation(final byte [] row, boolean reload)
   throws IOException {
     return connection.getRegionLocation(tableName, row, reload);
@@ -599,36 +596,25 @@ public class HTable implements HTableInterface {
   }
 
   /**
-   * Gets the starting row key for every region in the currently open table.
-   * <p>
-   * This is mainly useful for the MapReduce integration.
-   * @return Array of region starting row keys
-   * @throws IOException if a remote or network exception occurs
+   * {@inheritDoc}
    */
+  @Override
   public byte [][] getStartKeys() throws IOException {
     return getStartEndKeys().getFirst();
   }
 
   /**
-   * Gets the ending row key for every region in the currently open table.
-   * <p>
-   * This is mainly useful for the MapReduce integration.
-   * @return Array of region ending row keys
-   * @throws IOException if a remote or network exception occurs
+   * {@inheritDoc}
    */
+  @Override
   public byte[][] getEndKeys() throws IOException {
     return getStartEndKeys().getSecond();
   }
 
   /**
-   * Gets the starting and ending row keys for every region in the currently
-   * open table.
-   * <p>
-   * This is mainly useful for the MapReduce integration.
-   * @return Pair of arrays of region starting and ending row keys
-   * @throws IOException if a remote or network exception occurs
+   * {@inheritDoc}
    */
-  // TODO: these are not in HTableInterface. Should we add them there or move these to HBaseAdmin?
+  @Override
   public Pair<byte[][],byte[][]> getStartEndKeys() throws IOException {
 
     List<RegionLocations> regions = listRegionLocations();
@@ -661,7 +647,7 @@ public class HTable implements HTableInterface {
    */
   @Deprecated
   public NavigableMap<HRegionInfo, ServerName> getRegionLocations() throws IOException {
-    // TODO: Odd that this returns a Map of HRI to SN whereas getRegionLocation, singular, returns an HRegionLocation.
+    // TODO: Odd that this returns a Map of HRI to SN whereas getRegionLocator, singular, returns an HRegionLocation.
     return MetaScanner.allTableRegions(getConfiguration(), this.connection, getName(), false);
   }
 
