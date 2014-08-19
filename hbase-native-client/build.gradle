@@ -1,0 +1,263 @@
+/**
+ * Copyright The Apache Software Foundation
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements. See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership. The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+import org.gradle.internal.os.OperatingSystem
+
+apply plugin: 'c'
+apply plugin: 'cpp'
+
+defaultTasks "hbase", "perftest", "example_async", "unittests"
+
+ext {
+  currentJvm = org.gradle.internal.jvm.Jvm.current()
+  javaHome = currentJvm.getJavaHome().getAbsolutePath()
+  javaHomeInclude = javaHome + '/include'
+
+  String osName = System.properties['os.name'].toLowerCase()
+  if (osName.contains('linux')) {
+    javaHomeIncludeOs = javaHomeInclude + '/linux'
+    libjvmLibraryString = javaHome + "/jre/lib/amd64/server/libjvm.so"
+    libGTestName = "/libgtest.so"
+  }
+  else if (osName.contains('windows')) {
+    javaHomeIncludeOs = javaHomeInclude + '/win32'
+    libjvmLibraryString = javaHome + "/lib/jvm.lib"
+    libGTestName = "/cyggtest.dll"
+  }
+  else if (osName.contains('mac os x')) {
+    // TODO - deal with different versions of OSX,
+    // because Apple has done heavy modification to the JVM and JDK every version
+    javaHomeInclude = "/System/Library/Frameworks/JavaVM.framework/Versions/A/Headers"
+    javaHomeIncludeOs = "/System/Library/Frameworks/JavaVM.framework/Versions/A/Headers"
+    libjvmLibraryString = "/System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Libraries/libserver.dylib"
+    libGTestName = "/libgtest.dylib"
+  }
+
+  // this should be set to the directory of JNI generated headers
+  if (!project.hasProperty('jniIncludeDir')) {
+    jniIncludeDir = "src/main/native/generated"
+  }
+  if (!project.hasProperty('googleTestDir')) {
+    googleTestDir = "target/gtest-1.7.0"
+  }
+}
+
+def stdout = new ByteArrayOutputStream()
+try {
+  exec {
+    commandLine(
+        "ls", libjvmLibraryString
+        )
+    errorOutput = stdout
+    standardOutput = stdout
+    ignoreExitValue = false
+    logger.info("Using ${libjvmLibraryString} and include directories ${javaHomeInclude} and ${javaHomeIncludeOs}")
+  }
+} catch(e){
+    logger.error(stdout.toString())
+    throw new GradleException("The file ${libjvmLibraryString} was not found")
+}
+
+model {
+  toolChains {
+    // currently only GCC is supported
+    gcc(Gcc) {
+    }
+  }
+
+  buildTypes {
+    release
+  }
+  
+  repositories {
+    libs(PrebuiltLibraries) {
+      jvm {
+        binaries.withType(SharedLibraryBinary) {
+          sharedLibraryFile = file(libjvmLibraryString)
+        }
+      }
+
+      gtest {
+        binaries.withType(SharedLibraryBinary) {
+          sharedLibraryFile = file(googleTestDir + libGTestName)
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Verify that JAVA_HOME is set
+ */
+dependencies {
+  if (!javaHome) {
+    logger.error('JAVA_HOME is not set.')
+    throw new GradleException("JAVA_HOME is not set.")
+  }
+  println 'Found JAVA_HOME: ' + javaHome
+}
+
+/**
+ * Register the source files for goals
+ */
+sources {
+  /* libHBase sources */
+  hbase {
+    cpp {
+      source {
+        srcDirs "src/main/native/jni_impl", "src/main/native/common"
+        include "**/*.cc"
+      }
+      exportedHeaders {
+        srcDirs "src/main/native/include", "src/main/native/common", jniIncludeDir,
+                javaHomeInclude, javaHomeIncludeOs
+      }
+    }
+  }
+
+  /* perftest sources */
+  perftest {
+    cpp {
+      source {
+        srcDirs "src/test/native/perftest", "src/test/native/common"
+        include "**/*.cc"
+      }
+      exportedHeaders {
+        srcDirs "src/test/native/common"
+      }
+    }
+  }
+   /* unittests sources */
+  unittests {
+    cpp {
+      source {
+        srcDirs "src/test/native/unittests",  "src/test/native/common"
+        include "**/*.cc"
+      }
+      exportedHeaders {
+        srcDirs "src/test/native/common",  googleTestDir + "/include"
+      }
+    }
+  }
+
+  /* example_async sources */
+  example_async {
+    cpp {
+      source {
+        srcDirs "src/test/native/common"
+        include "byte_buffer.cc"
+      }
+      exportedHeaders {
+        srcDirs "src/test/native/common"
+      }
+    }
+    c {
+      source {
+        srcDirs "src/examples/async"
+        include "example_async.c"
+      }
+      exportedHeaders {
+        srcDirs "src/test/native/common"
+      }
+    }
+  }
+}
+
+/**
+ * Compiler flags for all targets
+ */
+binaries.all {
+  if (toolChain in Gcc) {
+    cCompiler.args "-Wall", "-Werror", "-fvisibility=hidden", "-std=gnu99"
+    cppCompiler.args "-Wall", "-Werror", "-fvisibility=hidden", "-fvisibility-inlines-hidden"
+
+    lib library: 'jvm', linkage: 'shared'
+    if (OperatingSystem.current().windows) {
+      // Without this, the linker decorate the JNIEXPORTs and then JNI can not find them
+      linker.args "-Wl,--kill-at"
+    }
+  }
+  // TODO: set flags for other compilers
+}
+
+/*
+ * libHBase Shared Library
+ */
+libraries {
+  hbase {
+    binaries.withType(SharedLibraryBinary) {
+      cppCompiler.define "__STDC_FORMAT_MACROS"       // for PRIu64 macro
+      cppCompiler.define "_LIBHBASE_IMPLEMENTATION_"
+      cppCompiler.define "THREADED"
+
+      cCompiler.define "_LIBHBASE_IMPLEMENTATION_"
+      cCompiler.define "THREADED"
+    }
+  }
+}
+
+/*
+ * example_async executable
+ */
+executables {
+  perftest {
+    binaries.all {
+      cppCompiler.define "__STDC_FORMAT_MACROS" // for PRIu64 macro
+
+      lib library: 'hbase', linkage: 'shared'
+    }
+  }
+
+  example_async {
+    binaries.all {
+      lib library: 'hbase', linkage: 'shared'
+    }
+  }
+
+   unittests {
+    binaries.all {
+      cppCompiler.args "-std=gnu++0x"
+      lib library: 'hbase', linkage: 'shared'
+      lib library: 'gtest', linkage: 'shared'
+    }
+  }
+}
+
+/*
+ * Build tasks
+ */
+task wrapper(type: Wrapper) {
+  description 'A wrapper which downloads and/or uses Gradle'
+  gradleVersion = '1.12'
+}
+
+task 'hbase' (dependsOn: 'hbaseSharedLibrary') {
+  description 'Builds HBase shared library.'
+}
+
+task 'perftest' (dependsOn: 'perftestExecutable') {
+  description 'Builds perftest executable.'
+}
+
+task 'example_async' (dependsOn: 'example_asyncExecutable') {
+  description 'Builds async example executable.'
+}
+
+task 'unittests' (dependsOn: 'unittestsExecutable') {
+  description 'Builds unittests executable.'
+}
