@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader;
+import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader.WALHdrResult;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 
@@ -52,9 +53,10 @@ public class SecureProtobufLogReader extends ProtobufLogReader {
   }
 
   @Override
-  protected WALHdrResult readHeader(WALHeader.Builder builder, FSDataInputStream stream)
+  protected WALHdrContext readHeader(WALHeader.Builder builder, FSDataInputStream stream)
       throws IOException {
-    WALHdrResult result = super.readHeader(builder, stream);
+    WALHdrContext hdrCtxt = super.readHeader(builder, stream);
+    WALHdrResult result = hdrCtxt.getResult();
     // We need to unconditionally handle the case where the WAL has a key in
     // the header, meaning it is encrypted, even if ENABLE_WAL_ENCRYPTION is
     // no longer set in the site configuration.
@@ -121,19 +123,19 @@ public class SecureProtobufLogReader extends ProtobufLogReader {
       }
     }
 
-    return result;
+    return hdrCtxt;
   }
 
   @Override
-  protected void initAfterCompression() throws IOException {
-    if (decryptor != null) {
+  protected void initAfterCompression(String cellCodecClsName) throws IOException {
+    if (decryptor != null && cellCodecClsName.equals(SecureWALCellCodec.class.getName())) {
       WALCellCodec codec = SecureWALCellCodec.getCodec(this.conf, decryptor);
       this.cellDecoder = codec.getDecoder(this.inputStream);
       // We do not support compression with WAL encryption
       this.compressionContext = null;
       this.hasCompression = false;
     } else {
-      super.initAfterCompression();
+      super.initAfterCompression(cellCodecClsName);
     }
   }
 

@@ -77,20 +77,29 @@ public class WALCellCodec implements Codec {
     this.compression = compression;
   }
 
+  static String getWALCellCodecClass(Configuration conf) {
+    return conf.get(WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
+  }
+  
   /**
-   * Create and setup a {@link WALCellCodec} from the {@link Configuration} and CompressionContext,
-   * if they have been specified. Fully prepares the codec for use.
+   * Create and setup a {@link WALCellCodec} from the {@link cellCodecClsName} and
+   * CompressionContext, if {@link cellCodecClsName} is specified.
+   * Otherwise Cell Codec classname is read from {@link Configuration}.
+   * Fully prepares the codec for use.
    * @param conf {@link Configuration} to read for the user-specified codec. If none is specified,
    *          uses a {@link WALCellCodec}.
    * @param compression compression the codec should use
    * @return a {@link WALCellCodec} ready for use.
    * @throws UnsupportedOperationException if the codec cannot be instantiated
    */
-  public static WALCellCodec create(Configuration conf, CompressionContext compression)
-      throws UnsupportedOperationException {
-    String className = conf.get(WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
-    return ReflectionUtils.instantiateWithCustomCtor(className, new Class[] { Configuration.class,
-        CompressionContext.class }, new Object[] { conf, compression });
+
+  public static WALCellCodec create(Configuration conf, String cellCodecClsName,
+      CompressionContext compression) throws UnsupportedOperationException {
+    if (cellCodecClsName == null) {
+      cellCodecClsName = getWALCellCodecClass(conf);
+    }
+    return ReflectionUtils.instantiateWithCustomCtor(cellCodecClsName, new Class[]
+        { Configuration.class, CompressionContext.class }, new Object[] { conf, compression });
   }
 
   public interface ByteStringCompressor {

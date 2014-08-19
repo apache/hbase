@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
+import org.apache.hadoop.hbase.regionserver.wal.TestCustomWALCellCodec.CustomWALCellCodec;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
@@ -74,6 +75,9 @@ public class TestHLogReaderOnSecureHLog {
 
   private Path writeWAL(String tblName) throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
+    String clsName = conf.get(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
+    conf.setClass(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, CustomWALCellCodec.class,
+      WALCellCodec.class);
     TableName tableName = TableName.valueOf(tblName);
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(tableName.getName()));
@@ -95,6 +99,8 @@ public class TestHLogReaderOnSecureHLog {
     }
     final Path walPath = ((FSHLog) wal).computeFilename();
     wal.close();
+    // restore the cell codec class
+    conf.set(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, clsName);
     
     return walPath;
   }

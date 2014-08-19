@@ -78,6 +78,24 @@ public class ProtobufLogReader extends ReaderBase {
     SUCCESS,
     UNKNOWN_WRITER_CLS     // name of writer class isn't recognized
   }
+  
+  // context for WALHdr carrying information such as Cell Codec classname
+  static class WALHdrContext {
+    WALHdrResult result;
+    String cellCodecClsName;
+    
+    WALHdrContext(WALHdrResult result, String cellCodecClsName) {
+      this.result = result;
+      this.cellCodecClsName = cellCodecClsName;
+    }
+    WALHdrResult getResult() {
+      return result;
+    }
+    String getCellCodecClsName() {
+      return cellCodecClsName;
+    }
+  }
+
   public ProtobufLogReader() {
     super();
   }
@@ -97,13 +115,13 @@ public class ProtobufLogReader extends ReaderBase {
 
   @Override
   public void reset() throws IOException {
-    initInternal(null, false);
-    initAfterCompression(); // We need a new decoder (at least).
+    String clsName = initInternal(null, false);
+    initAfterCompression(clsName); // We need a new decoder (at least).
   }
 
   @Override
-  protected void initReader(FSDataInputStream stream) throws IOException {
-    initInternal(stream, true);
+  protected String initReader(FSDataInputStream stream) throws IOException {
+    return initInternal(stream, true);
   }
 
   /*
@@ -113,18 +131,22 @@ public class ProtobufLogReader extends ReaderBase {
     return writerClsNames;
   }
 
-  protected WALHdrResult readHeader(Builder builder, FSDataInputStream stream)
+  protected WALHdrContext readHeader(Builder builder, FSDataInputStream stream)
       throws IOException {
      boolean res = builder.mergeDelimitedFrom(stream);
-     if (!res) return WALHdrResult.EOF;
+     if (!res) return new WALHdrContext(WALHdrResult.EOF, null);
      if (builder.hasWriterClsName() &&
          !getWriterClsNames().contains(builder.getWriterClsName())) {
-       return WALHdrResult.UNKNOWN_WRITER_CLS;
+       return new WALHdrContext(WALHdrResult.UNKNOWN_WRITER_CLS, null);
      }
-     return WALHdrResult.SUCCESS;
+     String clsName = null;
+     if (builder.hasCellCodecClsName()) {
+       clsName = builder.getCellCodecClsName();
+     }
+     return new WALHdrContext(WALHdrResult.SUCCESS, clsName);
   }
 
-  private void initInternal(FSDataInputStream stream, boolean isFirst)
+  private String initInternal(FSDataInputStream stream, boolean isFirst)
       throws IOException {
     close();
     long expectedPos = PB_WAL_MAGIC.length;
@@ -137,7 +159,8 @@ public class ProtobufLogReader extends ReaderBase {
     }
     // Initialize metadata or, when we reset, just skip the header.
     WALProtos.WALHeader.Builder builder = WALProtos.WALHeader.newBuilder();
-    WALHdrResult walHdrRes = readHeader(builder, stream);
+    WALHdrContext hdrCtxt = readHeader(builder, stream);
+    WALHdrResult walHdrRes = hdrCtxt.getResult();
     if (walHdrRes == WALHdrResult.EOF) {
       throw new EOFException("Couldn't read WAL PB header");
     }
@@ -158,6 +181,7 @@ public class ProtobufLogReader extends ReaderBase {
       LOG.trace("After reading the trailer: walEditsStopOffset: " + this.walEditsStopOffset
           + ", fileLength: " + this.fileLength + ", " + "trailerPresent: " + trailerPresent);
     }
+    return hdrCtxt.getCellCodecClsName();
   }
 
   /**
@@ -213,14 +237,14 @@ public class ProtobufLogReader extends ReaderBase {
     return false;
   }
 
-  protected WALCellCodec getCodec(Configuration conf, CompressionContext compressionContext)
-      throws IOException {
-    return WALCellCodec.create(conf, compressionContext);
+  protected WALCellCodec getCodec(Configuration conf, String cellCodecClsName,
+      CompressionContext compressionContext) throws IOException {
+    return WALCellCodec.create(conf, cellCodecClsName, compressionContext);
   }
 
   @Override
-  protected void initAfterCompression() throws IOException {
-    WALCellCodec codec = getCodec(this.conf, this.compressionContext);
+  protected void initAfterCompression(String cellCodecClsName) throws IOException {
+    WALCellCodec codec = getCodec(this.conf, cellCodecClsName, this.compressionContext);
     this.cellDecoder = codec.getDecoder(this.inputStream);
     if (this.hasCompression) {
       this.byteStringUncompressor = codec.getByteStringUncompressor();

@@ -28,6 +28,7 @@ message WALHeader {
   optional bytes encryption_key = 2;
   optional bool has_tag_compression = 3;
   optional string writer_cls_name = 4;
+  optional string cell_codec_cls_name = 5;
 }
 
 // Protocol buffer version of HLogKey; see HLogKey comment, not really a key but WALEdit header for some KVs
