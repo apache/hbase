@@ -176,6 +176,9 @@ public class VisibilityUtils {
    */
   public static boolean getVisibilityTags(Cell cell, List<Tag> tags) {
     boolean sortedOrder = false;
+    if (cell.getTagsLengthUnsigned() == 0) {
+      return sortedOrder;
+    }
     Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
         cell.getTagsLengthUnsigned());
     while (tagsIterator.hasNext()) {
@@ -200,6 +203,9 @@ public class VisibilityUtils {
    * @return true if found, false if not found
    */
   public static boolean isVisibilityTagsPresent(Cell cell) {
+    if (cell.getTagsLengthUnsigned() == 0) {
+      return false;
+    }
     Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
         cell.getTagsLengthUnsigned());
     while (tagsIterator.hasNext()) {
@@ -270,9 +276,12 @@ public class VisibilityUtils {
   }
 
   private static List<List<Integer>> sortTagsBasedOnOrdinal(Cell cell) throws IOException {
+    List<List<Integer>> fullTagsList = new ArrayList<List<Integer>>();
+    if (cell.getTagsLengthUnsigned() == 0) {
+      return fullTagsList;
+    }
     Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
         cell.getTagsLengthUnsigned());
-    List<List<Integer>> fullTagsList = new ArrayList<List<Integer>>();
     while (tagsItr.hasNext()) {
       Tag tag = tagsItr.next();
       if (tag.getType() == VisibilityUtils.VISIBILITY_TAG_TYPE) {

@@ -925,21 +925,25 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
     if (checkAuths && user != null && user.getShortName() != null) {
       auths = this.visibilityManager.getAuthsAsOrdinals(user.getShortName());
     }
-    // Adding all other tags
-    Iterator<Tag> tagsItr = CellUtil.tagsIterator(newCell.getTagsArray(), newCell.getTagsOffset(),
-        newCell.getTagsLengthUnsigned());
-    while (tagsItr.hasNext()) {
-      Tag tag = tagsItr.next();
-      if (tag.getType() != VisibilityUtils.VISIBILITY_TAG_TYPE
-          && tag.getType() != VisibilityUtils.VISIBILITY_EXP_SERIALIZATION_TAG_TYPE) {
-        tags.add(tag);
-      }
-    }
+    // Prepend new visibility tags to a new list of tags for the cell
     try {
       tags.addAll(createVisibilityTags(cellVisibility.getExpression(), true, auths,
-          user.getShortName()));
+        user.getShortName()));
     } catch (ParseException e) {
       throw new IOException(e);
+    }
+    // Save an object allocation where we can
+    if (newCell.getTagsLengthUnsigned() > 0) {
+      // Carry forward all other tags
+      Iterator<Tag> tagsItr = CellUtil.tagsIterator(newCell.getTagsArray(), newCell.getTagsOffset(),
+        newCell.getTagsLengthUnsigned());
+      while (tagsItr.hasNext()) {
+        Tag tag = tagsItr.next();
+        if (tag.getType() != VisibilityUtils.VISIBILITY_TAG_TYPE
+            && tag.getType() != VisibilityUtils.VISIBILITY_EXP_SERIALIZATION_TAG_TYPE) {
+          tags.add(tag);
+        }
+      }
     }
 
     // We need to create another KV, unfortunately, because the current new KV

@@ -758,11 +758,14 @@ public class AccessController extends BaseMasterAndRegionObserver
     for (Map.Entry<byte[], List<Cell>> e: familyMap.entrySet()) {
       List<Cell> newCells = Lists.newArrayList();
       for (Cell cell: e.getValue()) {
+        // Prepend the supplied perms in a new ACL tag to an update list of tags for the cell
         List<Tag> tags = Lists.newArrayList(new Tag(AccessControlLists.ACL_TAG_TYPE, perms));
-        Iterator<Tag> tagIterator = CellUtil.tagsIterator(cell.getTagsArray(),
+        if (cell.getTagsLengthUnsigned() > 0) {
+          Iterator<Tag> tagIterator = CellUtil.tagsIterator(cell.getTagsArray(),
             cell.getTagsOffset(), cell.getTagsLengthUnsigned());
-        while (tagIterator.hasNext()) {
-          tags.add(tagIterator.next());
+          while (tagIterator.hasNext()) {
+            tags.add(tagIterator.next());
+          }
         }
         // Ensure KeyValue so we can do a scatter gather copy. This is only a win if the
         // incoming cell type is actually KeyValue.
@@ -1683,21 +1686,26 @@ public class AccessController extends BaseMasterAndRegionObserver
     List<Tag> tags = Lists.newArrayList();
     ListMultimap<String,Permission> perms = ArrayListMultimap.create();
     if (oldCell != null) {
-      Iterator<Tag> tagIterator = CellUtil.tagsIterator(oldCell.getTagsArray(),
+      // Save an object allocation where we can
+      if (oldCell.getTagsLengthUnsigned() > 0) {
+        Iterator<Tag> tagIterator = CellUtil.tagsIterator(oldCell.getTagsArray(),
           oldCell.getTagsOffset(), oldCell.getTagsLengthUnsigned());
-      while (tagIterator.hasNext()) {
-        Tag tag = tagIterator.next();
-        if (tag.getType() != AccessControlLists.ACL_TAG_TYPE) {
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Carrying forward tag from " + oldCell + ": type " + tag.getType() +
-              " length " + tag.getTagLength());
+        while (tagIterator.hasNext()) {
+          Tag tag = tagIterator.next();
+          if (tag.getType() != AccessControlLists.ACL_TAG_TYPE) {
+            // Not an ACL tag, just carry it through
+            if (LOG.isTraceEnabled()) {
+              LOG.trace("Carrying forward tag from " + oldCell + ": type " + tag.getType() +
+                " length " + tag.getTagLength());
+            }
+            tags.add(tag);
+          } else {
+            // Merge the perms from the older ACL into the current permission set
+            ListMultimap<String,Permission> kvPerms = ProtobufUtil.toUsersAndPermissions(
+              AccessControlProtos.UsersAndPermissions.newBuilder().mergeFrom(
+                tag.getBuffer(), tag.getTagOffset(), tag.getTagLength()).build());
+            perms.putAll(kvPerms);
           }
-          tags.add(tag);
-        } else {
-          ListMultimap<String,Permission> kvPerms = ProtobufUtil.toUsersAndPermissions(
-            AccessControlProtos.UsersAndPermissions.newBuilder().mergeFrom(
-              tag.getBuffer(), tag.getTagOffset(), tag.getTagLength()).build());
-          perms.putAll(kvPerms);
         }
       }
     }
