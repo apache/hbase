@@ -251,7 +251,7 @@ public class RegionState {
   public ClusterStatusProtos.RegionState convert() {
     ClusterStatusProtos.RegionState.Builder regionState = ClusterStatusProtos.RegionState.newBuilder();
     ClusterStatusProtos.RegionState.State rs;
-    switch (regionState.getState()) {
+    switch (this.state) {
     case OFFLINE:
       rs = ClusterStatusProtos.RegionState.State.OFFLINE;
       break;
