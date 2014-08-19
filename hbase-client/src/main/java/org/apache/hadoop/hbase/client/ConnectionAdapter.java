@@ -112,6 +112,11 @@ class ConnectionAdapter implements ClusterConnection {
   }
 
   @Override
+  public RegionLocator getRegionLocator(TableName tableName) throws IOException {
+    return wrappedConnection.getRegionLocator(tableName);
+  }
+
+  @Override
   public Admin getAdmin() throws IOException {
     return wrappedConnection.getAdmin();
   }

@@ -141,6 +141,11 @@ class CoprocessorHConnection implements ClusterConnection {
   }
 
   @Override
+  public RegionLocator getRegionLocator(TableName tableName) throws IOException {
+    return delegate.getRegionLocator(tableName);
+  }
+
+  @Override
   public Admin getAdmin() throws IOException { return delegate.getAdmin(); }
 
   @Override
