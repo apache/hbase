@@ -161,6 +161,10 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected static final String OPT_REGION_REPLICATION_USAGE =
       "Desired number of replicas per region";
 
+  public static final String OPT_REGION_REPLICA_ID = "region_replica_id";
+  protected static final String OPT_REGION_REPLICA_ID_USAGE =
+      "Region replica id to do the reads from";
+
   protected static final long DEFAULT_START_KEY = 0;
 
   /** This will be removed as we factor out the dependency on command line */
@@ -202,7 +206,6 @@ public class LoadTestTool extends AbstractHBaseTool {
   private int verifyPercent;
 
   private int numTables = 1;
-  private int regionsPerServer = HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER;
 
   private String superUser;
 
@@ -212,6 +215,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   private int numRegionsPerServer = DEFAULT_NUM_REGIONS_PER_SERVER;
   private int regionReplication = -1; // not set
+  private int regionReplicaId = -1; // not set
 
   // TODO: refactor LoadTestToolImpl somewhere to make the usage from tests less bad,
   //       console tool itself should only be used from console.
@@ -334,6 +338,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     addOptNoArg(OPT_DEFERRED_LOG_FLUSH, OPT_DEFERRED_LOG_FLUSH_USAGE);
     addOptWithArg(OPT_NUM_REGIONS_PER_SERVER, OPT_NUM_REGIONS_PER_SERVER_USAGE);
     addOptWithArg(OPT_REGION_REPLICATION, OPT_REGION_REPLICATION_USAGE);
+    addOptWithArg(OPT_REGION_REPLICA_ID, OPT_REGION_REPLICA_ID_USAGE);
   }
 
   @Override
@@ -351,7 +356,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
     if (!isWrite && !isRead && !isUpdate && !isInitOnly) {
       throw new IllegalArgumentException("Either -" + OPT_WRITE + " or " +
-        "-" + OPT_UPDATE + "-" + OPT_READ + " has to be specified");
+        "-" + OPT_UPDATE + " or -" + OPT_READ + " has to be specified");
     }
 
     if (isInitOnly && (isRead || isWrite || isUpdate)) {
@@ -459,6 +464,11 @@ public class LoadTestTool extends AbstractHBaseTool {
     regionReplication = 1;
     if (cmd.hasOption(OPT_REGION_REPLICATION)) {
       regionReplication = Integer.parseInt(cmd.getOptionValue(OPT_REGION_REPLICATION));
+    }
+
+    regionReplicaId = -1;
+    if (cmd.hasOption(OPT_REGION_REPLICA_ID)) {
+      regionReplicaId = Integer.parseInt(cmd.getOptionValue(OPT_REGION_REPLICA_ID));
     }
   }
 
@@ -621,6 +631,7 @@ public class LoadTestTool extends AbstractHBaseTool {
       readerThreads.setMaxErrors(maxReadErrors);
       readerThreads.setKeyWindow(keyWindow);
       readerThreads.setMultiGetBatchSize(multiGetBatchSize);
+      readerThreads.setRegionReplicaId(regionReplicaId);
     }
 
     if (isUpdate && isWrite) {

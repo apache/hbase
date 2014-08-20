@@ -185,27 +185,34 @@ public class RpcRetryingCallerWithReadReplicas {
    */
   public synchronized Result call()
       throws DoNotRetryIOException, InterruptedIOException, RetriesExhaustedException {
-    RegionLocations rl = getRegionLocations(true, RegionReplicaUtil.DEFAULT_REPLICA_ID,
-        cConnection, tableName, get.getRow());
+    boolean isTargetReplicaSpecified = (get.getReplicaId() >= 0);
+
+    RegionLocations rl = getRegionLocations(true, (isTargetReplicaSpecified ? get.getReplicaId()
+        : RegionReplicaUtil.DEFAULT_REPLICA_ID), cConnection, tableName, get.getRow());
     ResultBoundedCompletionService cs = new ResultBoundedCompletionService(pool, rl.size());
 
-    addCallsForReplica(cs, rl, 0, 0);
-    try {
-      // wait for the timeout to see whether the primary responds back
-      Future<Result> f = cs.poll(timeBeforeReplicas, TimeUnit.MICROSECONDS); // Yes, microseconds
-      if (f != null) {
-        return f.get(); //great we got a response
+    if(isTargetReplicaSpecified) {
+      addCallsForReplica(cs, rl, get.getReplicaId(), get.getReplicaId());
+    } else {
+      addCallsForReplica(cs, rl, 0, 0);
+      try {
+        // wait for the timeout to see whether the primary responds back
+        Future<Result> f = cs.poll(timeBeforeReplicas, TimeUnit.MICROSECONDS); // Yes, microseconds
+        if (f != null) {
+          return f.get(); //great we got a response
+        }
+      } catch (ExecutionException e) {
+        throwEnrichedException(e, retries);
+      } catch (CancellationException e) {
+        throw new InterruptedIOException();
+      } catch (InterruptedException e) {
+        throw new InterruptedIOException();
       }
-    } catch (ExecutionException e) {
-      throwEnrichedException(e, retries);
-    } catch (CancellationException e) {
-      throw new InterruptedIOException();
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException();
+
+      // submit call for the all of the secondaries at once
+      addCallsForReplica(cs, rl, 1, rl.size() - 1);
     }
 
-    // submit call for the all of the secondaries at once
-    addCallsForReplica(cs, rl, 1, rl.size() - 1);
     try {
       try {
         Future<Result> f = cs.take();

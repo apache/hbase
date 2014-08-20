@@ -288,6 +288,7 @@ EOF
       attributes = args[ATTRIBUTES]
       authorizations = args[AUTHORIZATIONS]
       consistency = args.delete(CONSISTENCY) if args[CONSISTENCY]
+      replicaId = args.delete(REGION_REPLICA_ID) if args[REGION_REPLICA_ID]
       unless args.empty?
         columns = args[COLUMN] || args[COLUMNS]
         if args[VERSIONS]
@@ -346,6 +347,7 @@ EOF
       end
 
       get.setConsistency(org.apache.hadoop.hbase.client.Consistency.valueOf(consistency)) if consistency
+      get.setReplicaId(replicaId) if replicaId
 
       # Call hbase for the results
       result = @table.get(get)

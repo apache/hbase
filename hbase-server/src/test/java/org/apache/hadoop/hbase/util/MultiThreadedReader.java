@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 
+import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
@@ -78,6 +79,7 @@ public class MultiThreadedReader extends MultiThreadedAction
   private int maxErrors = DEFAULT_MAX_ERRORS;
   private int keyWindow = DEFAULT_KEY_WINDOW;
   private int batchSize = DEFAULT_BATCH_SIZE;
+  private int regionReplicaId = -1; // particular region replica id to do reads against if set
 
   public MultiThreadedReader(LoadTestDataGenerator dataGen, Configuration conf,
       TableName tableName, double verifyPercent) throws IOException {
@@ -100,6 +102,10 @@ public class MultiThreadedReader extends MultiThreadedAction
 
   public void setMultiGetBatchSize(int batchSize) {
     this.batchSize = batchSize;
+  }
+
+  public void setRegionReplicaId(int regionReplicaId) {
+    this.regionReplicaId = regionReplicaId;
   }
 
   @Override
@@ -317,6 +323,10 @@ public class MultiThreadedReader extends MultiThreadedAction
         }
       }
       get = dataGenerator.beforeGet(keyToRead, get);
+      if (regionReplicaId > 0) {
+        get.setReplicaId(regionReplicaId);
+        get.setConsistency(Consistency.TIMELINE);
+      }
       if (verbose) {
         LOG.info("[" + readerId + "] " + "Querying key " + keyToRead + ", cfs " + cfsString);
       }
@@ -334,7 +344,7 @@ public class MultiThreadedReader extends MultiThreadedAction
 
     public void queryKey(Get get, boolean verify, long keyToRead) throws IOException {
       // read the data
-      
+
       long start = System.nanoTime();
       // Uses simple get
       Result result = table.get(get);
