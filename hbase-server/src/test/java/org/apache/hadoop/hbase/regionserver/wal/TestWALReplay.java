@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -100,7 +101,7 @@ public class TestWALReplay {
   private FileSystem fs;
   private Configuration conf;
   private RecoveryMode mode;
-  
+
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -131,7 +132,7 @@ public class TestWALReplay {
     if (TEST_UTIL.getDFSCluster().getFileSystem().exists(this.hbaseRootDir)) {
       TEST_UTIL.getDFSCluster().getFileSystem().delete(this.hbaseRootDir, true);
     }
-    this.mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false) ? 
+    this.mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false) ?
         RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING);
   }
 
@@ -152,7 +153,7 @@ public class TestWALReplay {
   }
 
   /**
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -354,6 +355,7 @@ public class TestWALReplay {
     User user = HBaseTestingUtility.getDifferentUser(newConf,
         tableName.getNameAsString());
     user.runAs(new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         runWALSplit(newConf);
         HLog wal2 = createWAL(newConf);
@@ -425,6 +427,7 @@ public class TestWALReplay {
     User user = HBaseTestingUtility.getDifferentUser(newConf,
         tableName.getNameAsString());
     user.runAs(new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         runWALSplit(newConf);
         HLog wal2 = createWAL(newConf);
@@ -518,6 +521,7 @@ public class TestWALReplay {
     User user = HBaseTestingUtility.getDifferentUser(newConf,
       tableName.getNameAsString());
     user.runAs(new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         runWALSplit(newConf);
         FileSystem newFS = FileSystem.get(newConf);
@@ -669,6 +673,7 @@ public class TestWALReplay {
     HLog wal = createWAL(this.conf);
     RegionServerServices rsServices = Mockito.mock(RegionServerServices.class);
     Mockito.doReturn(false).when(rsServices).isAborted();
+    when(rsServices.getServerName()).thenReturn(ServerName.valueOf("foo", 10, 10));
     Configuration customConf = new Configuration(this.conf);
     customConf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY,
         CustomStoreFlusher.class.getName());
@@ -802,6 +807,7 @@ public class TestWALReplay {
     User user = HBaseTestingUtility.getDifferentUser(newConf,
       ".replay.wal.secondtime");
     user.runAs(new PrivilegedExceptionAction() {
+      @Override
       public Object run() throws Exception {
         runWALSplit(newConf);
         FileSystem newFS = FileSystem.get(newConf);
@@ -813,6 +819,7 @@ public class TestWALReplay {
         try {
           final HRegion region =
               new HRegion(basedir, newWal, newFS, newConf, hri, htd, null) {
+            @Override
             protected FlushResult internalFlushcache(
                 final HLog wal, final long myseqid, MonitoredTask status)
             throws IOException {
@@ -886,7 +893,7 @@ public class TestWALReplay {
     for (FileStatus fileStatus : listStatus1) {
       editCount = Integer.parseInt(fileStatus.getPath().getName());
     }
-    // The sequence number should be same 
+    // The sequence number should be same
     assertEquals(
         "The sequence number of the recoverd.edits and the current edit seq should be same",
         lastestSeqNumber, editCount);
@@ -914,7 +921,7 @@ public class TestWALReplay {
     htd.addFamily(a);
     return htd;
   }
-  
+
   private MockHLog createMockWAL(Configuration conf) throws IOException {
     MockHLog wal = new MockHLog(FileSystem.get(conf), hbaseRootDir, logName, conf);
     // Set down maximum recovery so we dfsclient doesn't linger retrying something
@@ -940,7 +947,7 @@ public class TestWALReplay {
     @Override
     public void requestDelayedFlush(HRegion region, long when) {
       // TODO Auto-generated method stub
-      
+
     }
 
     @Override
@@ -1021,7 +1028,7 @@ public class TestWALReplay {
    * @throws IOException
    */
   private HLog createWAL(final Configuration c) throws IOException {
-    HLog wal = HLogFactory.createHLog(FileSystem.get(c), 
+    HLog wal = HLogFactory.createHLog(FileSystem.get(c),
         hbaseRootDir, logName, c);
     // Set down maximum recovery so we dfsclient doesn't linger retrying something
     // long gone.

@@ -120,6 +120,8 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -2527,6 +2529,30 @@ public final class ProtobufUtil {
         }
       }
       desc.addStoreFlushes(builder);
+    }
+    return desc.build();
+  }
+
+  public static RegionEventDescriptor toRegionEventDescriptor(
+      EventType eventType, HRegionInfo hri, long seqId, ServerName server,
+      Map<byte[], List<Path>> storeFiles) {
+    RegionEventDescriptor.Builder desc = RegionEventDescriptor.newBuilder()
+        .setEventType(eventType)
+        .setTableName(ByteStringer.wrap(hri.getTable().getName()))
+        .setEncodedRegionName(ByteStringer.wrap(hri.getEncodedNameAsBytes()))
+        .setLogSequenceNumber(seqId)
+        .setServer(toServerName(server));
+
+    for (Map.Entry<byte[], List<Path>> entry : storeFiles.entrySet()) {
+      RegionEventDescriptor.StoreDescriptor.Builder builder
+        = RegionEventDescriptor.StoreDescriptor.newBuilder()
+          .setFamilyName(ByteStringer.wrap(entry.getKey()))
+          .setStoreHomeDir(Bytes.toString(entry.getKey()));
+      for (Path path : entry.getValue()) {
+        builder.addStoreFile(path.getName());
+      }
+
+      desc.addStores(builder);
     }
     return desc.build();
   }

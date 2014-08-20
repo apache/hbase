@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 import com.google.protobuf.TextFormat;
@@ -281,6 +282,22 @@ public class HLogUtil {
     if (sync) log.sync(trx);
     if (LOG.isTraceEnabled()) {
       LOG.trace("Appended flush marker " + TextFormat.shortDebugString(f));
+    }
+    return trx;
+  }
+
+  /**
+   * Write a region open marker indicating that the region is opened
+   */
+  public static long writeRegionEventMarker(HLog log, HTableDescriptor htd, HRegionInfo info,
+      final RegionEventDescriptor r, AtomicLong sequenceId) throws IOException {
+    TableName tn = TableName.valueOf(r.getTableName().toByteArray());
+    HLogKey key = new HLogKey(info.getEncodedNameAsBytes(), tn);
+    long trx = log.appendNoSync(htd, info, key, WALEdit.createRegionEventWALEdit(info, r),
+      sequenceId, false, null);
+    log.sync(trx);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Appended region event marker " + TextFormat.shortDebugString(r));
     }
     return trx;
   }

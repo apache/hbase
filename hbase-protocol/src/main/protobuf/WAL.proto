@@ -121,6 +121,29 @@ message FlushDescriptor {
 }
 
 /**
+ * Special WAL entry to hold all related to a region event (open/close).
+ */
+message RegionEventDescriptor {
+  enum EventType {
+    REGION_OPEN = 0;
+    REGION_CLOSE = 1;
+  }
+
+  message StoreDescriptor {
+    required bytes family_name = 1;
+    required string store_home_dir = 2; //relative to region dir
+    repeated string store_file = 3; // relative to store dir
+  }
+
+  required EventType event_type = 1;
+  required bytes table_name = 2;
+  required bytes encoded_region_name = 3;
+  optional uint64 log_sequence_number = 4;
+  repeated StoreDescriptor stores = 5;
+  optional ServerName server = 6;  // Server who opened the region
+}
+
+/**
  * A trailer that is appended to the end of a properly closed HLog WAL file.
  * If missing, this is either a legacy or a corrupted WAL file.
  */
