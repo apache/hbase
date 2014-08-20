@@ -48,7 +48,7 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.Private
 public class RpcRetryingCaller<T> {
-  static final Log LOG = LogFactory.getLog(RpcRetryingCaller.class);
+  public static final Log LOG = LogFactory.getLog(RpcRetryingCaller.class);
   /**
    * When we started making calls.
    */

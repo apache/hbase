@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -156,6 +157,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
@@ -1358,13 +1360,26 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // empty input
         return ReplicateWALEntryResponse.newBuilder().build();
       }
-      HRegion region = regionServer.getRegionByEncodedName(
-        entries.get(0).getKey().getEncodedRegionName().toStringUtf8());
-      RegionCoprocessorHost coprocessorHost = region.getCoprocessorHost();
+      ByteString regionName = entries.get(0).getKey().getEncodedRegionName();
+      HRegion region = regionServer.getRegionByEncodedName(regionName.toStringUtf8());
+      RegionCoprocessorHost coprocessorHost =
+          ServerRegionReplicaUtil.isDefaultReplica(region.getRegionInfo())
+            ? region.getCoprocessorHost()
+            : null; // do not invoke coprocessors if this is a secondary region replica
       List<Pair<HLogKey, WALEdit>> walEntries = new ArrayList<Pair<HLogKey, WALEdit>>();
       // when tag is enabled, we need tag replay edits with log sequence number
       boolean needAddReplayTag = (HFile.getFormatVersion(regionServer.conf) >= 3);
+
+      // Skip adding the edits to WAL if this is a secondary region replica
+      boolean isPrimary = RegionReplicaUtil.isDefaultReplica(region.getRegionInfo());
+      Durability durability = isPrimary ? Durability.USE_DEFAULT : Durability.SKIP_WAL;
+
       for (WALEntry entry : entries) {
+        if (!regionName.equals(entry.getKey().getEncodedRegionName())) {
+          throw new NotServingRegionException("Replay request contains entries from multiple " +
+              "regions. First region:" + regionName.toStringUtf8() + " , other region:"
+              + entry.getKey().getEncodedRegionName());
+        }
         if (regionServer.nonceManager != null) {
           long nonceGroup = entry.getKey().hasNonceGroup()
             ? entry.getKey().getNonceGroup() : HConstants.NO_NONCE;
@@ -1374,7 +1389,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         Pair<HLogKey, WALEdit> walEntry = (coprocessorHost == null) ? null :
           new Pair<HLogKey, WALEdit>();
         List<HLogSplitter.MutationReplay> edits = HLogSplitter.getMutationsFromWALEntry(entry,
-          cells, walEntry, needAddReplayTag);
+          cells, walEntry, needAddReplayTag, durability);
         if (coprocessorHost != null) {
           // Start coprocessor replay here. The coprocessor is for each WALEdit instead of a
           // KeyValue.

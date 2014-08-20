@@ -147,49 +147,55 @@ public class TestRegionServerNoMaster {
   }
 
 
-  /**
-   * Reopen the region. Reused in multiple tests as we always leave the region open after a test.
-   */
-  private void reopenRegion() throws Exception {
+  public static void openRegion(HBaseTestingUtility HTU, HRegionServer rs, HRegionInfo hri)
+      throws Exception {
     AdminProtos.OpenRegionRequest orr =
-      RequestConverter.buildOpenRegionRequest(getRS().getServerName(), hri, null, null);
-    AdminProtos.OpenRegionResponse responseOpen = getRS().rpcServices.openRegion(null, orr);
+      RequestConverter.buildOpenRegionRequest(rs.getServerName(), hri, null, null);
+    AdminProtos.OpenRegionResponse responseOpen = rs.rpcServices.openRegion(null, orr);
+
     Assert.assertTrue(responseOpen.getOpeningStateCount() == 1);
     Assert.assertTrue(responseOpen.getOpeningState(0).
         equals(AdminProtos.OpenRegionResponse.RegionOpeningState.OPENED));
 
 
-    checkRegionIsOpened();
+    checkRegionIsOpened(HTU, rs, hri);
   }
 
-  private void checkRegionIsOpened() throws Exception {
-
-    while (!getRS().getRegionsInTransitionInRS().isEmpty()) {
+  public static void checkRegionIsOpened(HBaseTestingUtility HTU, HRegionServer rs,
+      HRegionInfo hri) throws Exception {
+    while (!rs.getRegionsInTransitionInRS().isEmpty()) {
       Thread.sleep(1);
     }
 
-    Assert.assertTrue(getRS().getRegion(regionName).isAvailable());
+    Assert.assertTrue(rs.getRegion(hri.getRegionName()).isAvailable());
   }
 
+  public static void closeRegion(HBaseTestingUtility HTU, HRegionServer rs, HRegionInfo hri)
+      throws Exception {
+    AdminProtos.CloseRegionRequest crr = RequestConverter.buildCloseRegionRequest(
+      rs.getServerName(), hri.getEncodedName());
+    AdminProtos.CloseRegionResponse responseClose = rs.rpcServices.closeRegion(null, crr);
+    Assert.assertTrue(responseClose.getClosed());
+    checkRegionIsClosed(HTU, rs, hri);
+  }
 
-  private void checkRegionIsClosed() throws Exception {
-
-    while (!getRS().getRegionsInTransitionInRS().isEmpty()) {
+  public static void checkRegionIsClosed(HBaseTestingUtility HTU, HRegionServer rs,
+      HRegionInfo hri) throws Exception {
+    while (!rs.getRegionsInTransitionInRS().isEmpty()) {
       Thread.sleep(1);
     }
 
     try {
-      Assert.assertFalse(getRS().getRegion(regionName).isAvailable());
+      Assert.assertFalse(rs.getRegion(hri.getRegionName()).isAvailable());
     } catch (NotServingRegionException expected) {
       // That's how it work: if the region is closed we have an exception.
     }
   }
 
-
   /**
    * Close the region without using ZK
    */
-  private void closeNoZK() throws Exception {
+  private void closeRegionNoZK() throws Exception {
     // no transition in ZK
     AdminProtos.CloseRegionRequest crr =
         RequestConverter.buildCloseRegionRequest(getRS().getServerName(), regionName);
@@ -197,14 +203,14 @@ public class TestRegionServerNoMaster {
     Assert.assertTrue(responseClose.getClosed());
 
     // now waiting & checking. After a while, the transition should be done and the region closed
-    checkRegionIsClosed();
+    checkRegionIsClosed(HTU, getRS(), hri);
   }
 
 
   @Test(timeout = 60000)
   public void testCloseByRegionServer() throws Exception {
-    closeNoZK();
-    reopenRegion();
+    closeRegionNoZK();
+    openRegion(HTU, getRS(), hri);
   }
 
   /**
@@ -221,8 +227,8 @@ public class TestRegionServerNoMaster {
   public void testMultipleOpen() throws Exception {
 
     // We close
-    closeNoZK();
-    checkRegionIsClosed();
+    closeRegionNoZK();
+    checkRegionIsClosed(HTU, getRS(), hri);
 
     // We're sending multiple requests in a row. The region server must handle this nicely.
     for (int i = 0; i < 10; i++) {
@@ -238,7 +244,7 @@ public class TestRegionServerNoMaster {
       );
     }
 
-    checkRegionIsOpened();
+    checkRegionIsOpened(HTU, getRS(), hri);
   }
 
   @Test
@@ -279,9 +285,9 @@ public class TestRegionServerNoMaster {
       }
     }
 
-    checkRegionIsClosed();
+    checkRegionIsClosed(HTU, getRS(), hri);
 
-    reopenRegion();
+    openRegion(HTU, getRS(), hri);
   }
 
   /**
@@ -290,8 +296,8 @@ public class TestRegionServerNoMaster {
   @Test(timeout = 60000)
   public void testCancelOpeningWithoutZK() throws Exception {
     // We close
-    closeNoZK();
-    checkRegionIsClosed();
+    closeRegionNoZK();
+    checkRegionIsClosed(HTU, getRS(), hri);
 
     // Let do the initial steps, without having a handler
     getRS().getRegionsInTransitionInRS().put(hri.getEncodedNameAsBytes(), Boolean.TRUE);
@@ -315,9 +321,9 @@ public class TestRegionServerNoMaster {
     getRS().service.submit(new OpenRegionHandler(getRS(), getRS(), hri, htd));
 
     // The open handler should have removed the region from RIT but kept the region closed
-    checkRegionIsClosed();
+    checkRegionIsClosed(HTU, getRS(), hri);
 
-    reopenRegion();
+    openRegion(HTU, getRS(), hri);
   }
 
   /**
@@ -341,7 +347,7 @@ public class TestRegionServerNoMaster {
     }
 
     //actual close
-    closeNoZK();
+    closeRegionNoZK();
     try {
       AdminProtos.OpenRegionRequest orr = RequestConverter.buildOpenRegionRequest(
         earlierServerName, hri, null, null);
@@ -351,7 +357,7 @@ public class TestRegionServerNoMaster {
       Assert.assertTrue(se.getCause() instanceof IOException);
       Assert.assertTrue(se.getCause().getMessage().contains("This RPC was intended for a different server"));
     } finally {
-      reopenRegion();
+      openRegion(HTU, getRS(), hri);
     }
   }
 }
