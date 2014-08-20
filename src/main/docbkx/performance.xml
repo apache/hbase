@@ -219,6 +219,37 @@
         A memory setting for the RegionServer process.
         </para>
     </section>
+    <section xml:id="blockcache.prefetch">
+      <title>Prefetch Option for Blockcache</title>
+      <para><link xlink:href="https://issues.apache.org/jira/browse/HBASE-9857">HBASE-9857</link>
+        adds a new option to prefetch HFile contents when opening the blockcache, if a columnfamily
+        or regionserver property is set. This option is available for HBase 0.98.3 and later. The
+        purpose is to warm the blockcache as rapidly as possible after the cache is opened, using
+        in-memory table data, and not counting the prefetching as cache misses. This is great for
+        fast reads, but is not a good idea if the data to be preloaded will not fit into the
+        blockcache. It is useful for tuning the IO impact of prefetching versus the time before all
+        data blocks are in cache. </para>
+      <para>To enable prefetching on a given column family, you can use HBase Shell or use the
+        API.</para>
+      <example>
+        <title>Enable Prefetch Using HBase Shell</title>
+        <screen>hbase> create 'MyTable', { NAME => 'myCF', PREFETCH_BLOCKS_ON_OPEN => 'true' }</screen>
+      </example>
+      <example>
+        <title>Enable Prefetch Using the API</title>
+        <programlisting language="java">
+// ...
+HTableDescriptor tableDesc = new HTableDescriptor("myTable");
+HColumnDescriptor cfDesc = new HColumnDescriptor("myCF");
+cfDesc.setPrefetchBlocksOnOpen(true);
+tableDesc.addFamily(cfDesc);
+// ...        
+        </programlisting>
+      </example>
+      <para>See the API documentation for <link
+          xlink:href="https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html"
+          >CacheConfig</link>.</para>
+    </section>
     <section xml:id="perf.rs.memstore.size">
         <title><varname>hbase.regionserver.global.memstore.size</varname></title>
         <para>See <xref linkend="hbase.regionserver.global.memstore.size"/>.
