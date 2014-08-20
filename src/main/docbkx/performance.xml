@@ -252,7 +252,131 @@
         release note on <link xlink:href="https://issues.apache.org/jira/browse/HBASE-5074">HBASE-5074 support checksums in HBase block cache</link>.
         </para>
     </section>
-
+    <section>
+      <title>Tuning <code>callQueue</code> Options</title>
+      <para><link xlink:href="https://issues.apache.org/jira/browse/HBASE-11355">HBASE-11355</link>
+        introduces several callQueue tuning mechanisms which can increase performance. See the JIRA
+        for some benchmarking information.</para>
+      <itemizedlist>
+        <listitem>
+          <para>To increase the number of callqueues, set
+              <option>hbase.ipc.server.num.callqueue</option> to a value greater than
+              <literal>1</literal>.</para>
+        </listitem>
+        <listitem>
+          <para>To split the callqueue into separate read and write queues, set
+              <code>hbase.ipc.server.callqueue.read.ratio</code> to a value between
+              <literal>0</literal> and <literal>1</literal>. This factor weights the queues toward
+            writes (if below .5) or reads (if above .5). Another way to say this is that the factor
+            determines what percentage of the split queues are used for reads. The following
+            examples illustrate some of the possibilities. Note that you always have at least one
+            write queue, no matter what setting you use.</para>
+          <itemizedlist>
+            <listitem>
+              <para>The default value of <literal>0</literal> does not split the queue.</para>
+            </listitem>
+            <listitem>
+              <para>A value of <literal>.3</literal> uses 30% of the queues for reading and 60% for
+                writing. Given a value of <literal>10</literal> for
+                  <option>hbase.ipc.server.num.callqueue</option>, 3 queues would be used for reads
+                and 7 for writes.</para>
+            </listitem>
+            <listitem>
+              <para>A value of <literal>.5</literal> uses the same number of read queues and write
+                queues. Given a value of <literal>10</literal> for
+                <option>hbase.ipc.server.num.callqueue</option>, 5 queues would be used for reads
+                and 5 for writes.</para>
+            </listitem>
+            <listitem>
+              <para>A value of <literal>.6</literal> uses 60% of the queues for reading and 30% for
+                reading. Given a value of <literal>10</literal> for
+                <option>hbase.ipc.server.num.callqueue</option>, 7 queues would be used for reads
+                and 3 for writes.</para>
+            </listitem>
+            <listitem>
+              <para>A value of <literal>1.0</literal> uses one queue to process write requests, and
+                all other queues process read requests. A value higher than <literal>1.0</literal>
+                has the same effect as a value of <literal>1.0</literal>. Given a value of
+                  <literal>10</literal> for <option>hbase.ipc.server.num.callqueue</option>, 9
+                queues would be used for reads and 1 for writes.</para>
+            </listitem>
+          </itemizedlist>
+        </listitem>
+        <listitem>
+          <para>You can also split the read queues so that separate queues are used for short reads
+            (from Get operations) and long reads (from Scan operations), by setting the
+              <option>hbase.ipc.server.callqueue.scan.ratio</option> option. This option is a factor
+            between 0 and 1, which determine the ratio of read queues used for Gets and Scans. More
+            queues are used for Gets if the value is below <literal>.5</literal> and more are used
+            for scans if the value is above <literal>.5</literal>. No matter what setting you use,
+            at least one read queue is used for Get operations.</para>
+          <itemizedlist>
+            <listitem>
+              <para>A value of <literal>0</literal> does not split the read queue.</para>
+            </listitem>
+            <listitem>
+              <para>A value of <literal>.3</literal> uses 60% of the read queues for Gets and 30%
+                for Scans. Given a value of <literal>20</literal> for
+                  <option>hbase.ipc.server.num.callqueue</option> and a value of <literal>.5
+                </literal> for <option>hbase.ipc.server.callqueue.read.ratio</option>, 10 queues
+                would be used for reads, out of those 10, 7 would be used for Gets and 3 for
+                Scans.</para>
+            </listitem>
+            <listitem>
+              <para>A value of <literal>.5</literal> uses half the read queues for Gets and half for
+                Scans. Given a value of <literal>20</literal> for
+                  <option>hbase.ipc.server.num.callqueue</option> and a value of <literal>.5
+                </literal> for <option>hbase.ipc.server.callqueue.read.ratio</option>, 10 queues
+                would be used for reads, out of those 10, 5 would be used for Gets and 5 for
+                Scans.</para>
+            </listitem>
+            <listitem>
+              <para>A value of <literal>.6</literal> uses 30% of the read queues for Gets and 60%
+                for Scans. Given a value of <literal>20</literal> for
+                  <option>hbase.ipc.server.num.callqueue</option> and a value of <literal>.5
+                </literal> for <option>hbase.ipc.server.callqueue.read.ratio</option>, 10 queues
+                would be used for reads, out of those 10, 3 would be used for Gets and 7 for
+                Scans.</para>
+            </listitem>
+            <listitem>
+              <para>A value of <literal>1.0</literal> uses all but one of the read queues for Scans.
+                Given a value of <literal>20</literal> for
+                  <option>hbase.ipc.server.num.callqueue</option> and a value of <literal>.5
+                </literal> for <option>hbase.ipc.server.callqueue.read.ratio</option>, 10 queues
+                would be used for reads, out of those 10, 1 would be used for Gets and 9 for
+                Scans.</para>
+            </listitem>
+          </itemizedlist>
+        </listitem>
+        <listitem>
+          <para>You can use the new option
+              <option>hbase.ipc.server.callqueue.handler.factor</option> to programmatically tune
+            the number of queues:</para>
+          <itemizedlist>
+            <listitem>
+              <para>A value of <literal>0</literal> uses a single shared queue between all the
+                handlers.</para>
+            </listitem>
+            <listitem>
+              <para>A value of <literal>1</literal> uses a separate queue for each handler.</para>
+            </listitem>
+            <listitem>
+              <para>A value between <literal>0</literal> and <literal>1</literal> tunes the number
+                of queues against the number of handlers. For instance, a value of
+                  <literal>.5</literal> shares one queue between each two handlers.</para>
+            </listitem>
+          </itemizedlist>
+          <para>Having more queues, such as in a situation where you have one queue per handler,
+            reduces contention when adding a task to a queue or selecting it from a queue. The
+            trade-off is that if you have some queues with long-running tasks, a handler may end up
+            waiting to execute from that queue rather than processing another queue which has
+            waiting tasks.</para>
+        </listitem>
+      </itemizedlist>
+      <para>For these values to take effect on a given Region Server, the Region Server must be
+        restarted. These parameters are intended for testing purposes and should be used
+        carefully.</para>
+    </section>
   </section>
 
 
