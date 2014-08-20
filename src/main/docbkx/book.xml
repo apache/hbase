@@ -2134,12 +2134,14 @@ rs.close();
         </section>
         <section xml:id="cache.configurations">
             <title>General Cache Configurations</title>
-            <para>Apart from the cache implementaiton itself, you can set some general
-                configuration options to control how the cache performs.
-               See <link
-                xlink:href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html" />.
-              After setting any of these options, restart or rolling restart your cluster for the
-              configuration to take effect. Check logs for errors or unexpected behavior.</para>
+          <para>Apart from the cache implementation itself, you can set some general configuration
+            options to control how the cache performs. See <link
+              xlink:href="http://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/io/hfile/CacheConfig.html"
+            />. After setting any of these options, restart or rolling restart your cluster for the
+            configuration to take effect. Check logs for errors or unexpected behavior.</para>
+          <para>See also <xref linkend="blockcache.prefetch"/>, which discusses a new option
+            introduced in <link xlink:href="https://issues.apache.org/jira/browse/HBASE-9857"
+              >HBASE-9857</link>.</para>
       </section>
         <section
           xml:id="block.cache.design">
