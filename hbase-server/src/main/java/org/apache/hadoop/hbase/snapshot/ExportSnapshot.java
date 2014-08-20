@@ -159,10 +159,16 @@ public class ExportSnapshot extends Configured implements Tool {
       LOG.info("Using bufferSize=" + StringUtils.humanReadableInt(bufferSize));
     }
 
+    byte[] copyBytes(BytesWritable  bw) {
+      byte[] result = new byte[bw.getLength()];
+      System.arraycopy(bw.getBytes(), 0, result, 0, bw.getLength());
+      return result;
+    }
+
     @Override
     public void map(BytesWritable key, NullWritable value, Context context)
         throws InterruptedException, IOException {
-      SnapshotFileInfo inputInfo = SnapshotFileInfo.parseFrom(key.copyBytes());
+      SnapshotFileInfo inputInfo = SnapshotFileInfo.parseFrom(copyBytes(key));
       Path outputPath = getOutputPath(inputInfo);
 
       copyFile(context, inputInfo, outputPath);
