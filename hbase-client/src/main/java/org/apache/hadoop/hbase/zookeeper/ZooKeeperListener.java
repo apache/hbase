@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
-
 
 /**
  * Base class for internal listeners of ZooKeeper events.
@@ -77,5 +75,12 @@ public abstract class ZooKeeperListener {
    */
   public void nodeChildrenChanged(String path) {
     // no-op
+  }
+
+  /**
+   * @return The watcher associated with this listener
+   */
+  public ZooKeeperWatcher getWatcher() {
+    return this.watcher;
   }
 }

@@ -17,37 +17,63 @@
  */
 package org.apache.hadoop.hbase.security.visibility;
 
+import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_FAMILY;
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.NavigableMap;
 
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-/**
- * Test class that tests the visibility labels with distributed log replay feature ON.
- */
 @Category(MediumTests.class)
-public class TestVisibilityLabelsWithDistributedLogReplay extends
-    TestVisibilityLabelsWithDefaultVisLabelService {
+public class TestVisibilityLabelsWithCustomVisLabService extends TestVisibilityLabels {
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
-    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
     VisibilityTestUtil.enableVisiblityLabels(conf);
-
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
         ScanLabelGenerator.class);
+    conf.setClass(VisibilityLabelServiceManager.VISIBILITY_LABEL_SERVICE_CLASS,
+        ExpAsStringVisibilityLabelServiceImpl.class, VisibilityLabelService.class);
     conf.set("hbase.superuser", "admin");
     TEST_UTIL.startMiniCluster(2);
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
-    USER1 = User.createUserForTesting(conf, "user1", new String[] {});
 
     // Wait for the labels table to become available
     TEST_UTIL.waitTableEnabled(LABELS_TABLE_NAME.getName(), 50000);
     addLabels();
+  }
+
+  // Extending this test from super as we don't verify predefined labels in ExpAsStringVisibilityLabelServiceImpl
+  @Test
+  public void testVisibilityLabelsInPutsThatDoesNotMatchAnyDefinedLabels() throws Exception {
+    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    // This put with label "SAMPLE_LABEL" should not get failed.
+    createTableAndWriteDataWithLabels(tableName, "SAMPLE_LABEL", "TEST");
+  }
+
+  protected List<String> extractAuths(String user, List<Result> results) {
+    List<String> auths = new ArrayList<String>();
+    for (Result result : results) {
+      if (Bytes.equals(result.getRow(), Bytes.toBytes(user))) {
+        NavigableMap<byte[], byte[]> familyMap = result.getFamilyMap(LABELS_TABLE_FAMILY);
+        for (byte[] q : familyMap.keySet()) {
+          auths.add(Bytes.toString(q, 0, q.length));
+        }
+      }
+    }
+    return auths;
   }
 }

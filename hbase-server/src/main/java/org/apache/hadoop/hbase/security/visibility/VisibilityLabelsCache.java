@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.security.visibility;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -44,19 +45,24 @@ import org.apache.zookeeper.KeeperException;
  * znode for labels table
  */
 @InterfaceAudience.Private
-public class VisibilityLabelsManager {
+public class VisibilityLabelsCache {
 
-  private static final Log LOG = LogFactory.getLog(VisibilityLabelsManager.class);
-  private static final List<String> EMPTY_LIST = new ArrayList<String>(0);
-  private static VisibilityLabelsManager instance;
+  private static final Log LOG = LogFactory.getLog(VisibilityLabelsCache.class);
+  private static final int NON_EXIST_LABEL_ORDINAL = 0;
+  private static final List<String> EMPTY_LIST = Collections.emptyList();
+  private static final Set<Integer> EMPTY_SET = Collections.emptySet();
+  private static VisibilityLabelsCache instance;
 
   private ZKVisibilityLabelWatcher zkVisibilityWatcher;
   private Map<String, Integer> labels = new HashMap<String, Integer>();
   private Map<Integer, String> ordinalVsLabels = new HashMap<Integer, String>();
   private Map<String, Set<Integer>> userAuths = new HashMap<String, Set<Integer>>();
+  /**
+   * This covers the members labels, ordinalVsLabels and userAuths
+   */
   private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
-  private VisibilityLabelsManager(ZooKeeperWatcher watcher, Configuration conf) throws IOException {
+  private VisibilityLabelsCache(ZooKeeperWatcher watcher, Configuration conf) throws IOException {
     zkVisibilityWatcher = new ZKVisibilityLabelWatcher(watcher, this, conf);
     try {
       zkVisibilityWatcher.start();
@@ -66,15 +72,39 @@ public class VisibilityLabelsManager {
     }
   }
 
-  public synchronized static VisibilityLabelsManager get(ZooKeeperWatcher watcher,
+  /**
+   * Creates the singleton instance, if not yet present, and returns the same.
+   * @param watcher
+   * @param conf
+   * @return Singleton instance of VisibilityLabelsCache
+   * @throws IOException
+   */
+  public synchronized static VisibilityLabelsCache createAndGet(ZooKeeperWatcher watcher,
       Configuration conf) throws IOException {
-    if (instance == null) {
-      instance = new VisibilityLabelsManager(watcher, conf);
+    // VisibilityLabelService#init() for different regions (in same RS) passes same instance of
+    // watcher as all get the instance from RS.
+    // watcher != instance.zkVisibilityWatcher.getWatcher() - This check is needed only in UTs with
+    // RS restart. It will be same JVM in which RS restarts and instance will be not null. But the
+    // watcher associated with existing instance will be stale as the restarted RS will have new
+    // watcher with it.
+    if (instance == null || watcher != instance.zkVisibilityWatcher.getWatcher()) {
+      instance = new VisibilityLabelsCache(watcher, conf);
     }
     return instance;
   }
 
-  public static VisibilityLabelsManager get() {
+  /**
+   * @return Singleton instance of VisibilityLabelsCache
+   * @throws IllegalStateException
+   *           when this is called before calling
+   *           {@link #createAndGet(ZooKeeperWatcher, Configuration)}
+   */
+  public static VisibilityLabelsCache get() {
+    // By the time this method is called, the singleton instance of VisibilityLabelsCache should
+    // have been created.
+    if (instance == null) {
+      throw new IllegalStateException("VisibilityLabelsCache not yet instantiated");
+    }
     return instance;
   }
 
@@ -87,6 +117,8 @@ public class VisibilityLabelsManager {
     }
     this.lock.writeLock().lock();
     try {
+      labels.clear();
+      ordinalVsLabels.clear();
       for (VisibilityLabel visLabel : visibilityLabels) {
         String label = Bytes.toString(visLabel.getLabel().toByteArray());
         labels.put(label, visLabel.getOrdinal());
@@ -106,6 +138,7 @@ public class VisibilityLabelsManager {
     }
     this.lock.writeLock().lock();
     try {
+      this.userAuths.clear();
       for (UserAuthorizations userAuths : multiUserAuths.getUserAuthsList()) {
         String user = Bytes.toString(userAuths.getUser().toByteArray());
         this.userAuths.put(user, new HashSet<Integer>(userAuths.getAuthList()));
@@ -116,8 +149,8 @@ public class VisibilityLabelsManager {
   }
 
   /**
-   * @param label
-   * @return The ordinal for the label. The ordinal starts from 1. Returns 0 when the passed a non
+   * @param label Not null label string
+   * @return The ordinal for the label. The ordinal starts from 1. Returns 0 when passed a non
    *         existing label.
    */
   public int getLabelOrdinal(String label) {
@@ -132,9 +165,14 @@ public class VisibilityLabelsManager {
       return ordinal.intValue();
     }
     // 0 denotes not available
-    return 0;
+    return NON_EXIST_LABEL_ORDINAL;
   }
 
+  /**
+   * @param ordinal The ordinal of label which we are looking for.
+   * @return The label having the given ordinal. Returns <code>null</code> when no label exist in
+   *         the system with given ordinal
+   */
   public String getLabel(int ordinal) {
     this.lock.readLock().lock();
     try {
@@ -147,14 +185,15 @@ public class VisibilityLabelsManager {
   /**
    * @return The total number of visibility labels.
    */
-  public int getLabelsCount(){
-    return this.labels.size();
+  public int getLabelsCount() {
+    this.lock.readLock().lock();
+    try {
+      return this.labels.size();
+    } finally {
+      this.lock.readLock().unlock();
+    }
   }
 
-  /**
-   * @param user
-   * @return The labels that the given user is authorized for.
-   */
   public List<String> getAuths(String user) {
     List<String> auths = EMPTY_LIST;
     this.lock.readLock().lock();
@@ -175,23 +214,19 @@ public class VisibilityLabelsManager {
   /**
    * Returns the list of ordinals of authentications associated with the user
    *
-   * @param user
+   * @param user Not null value.
    * @return the list of ordinals
    */
   public Set<Integer> getAuthsAsOrdinals(String user) {
     this.lock.readLock().lock();
     try {
-      return userAuths.get(user);
+      Set<Integer> auths = userAuths.get(user);
+      return (auths == null) ? EMPTY_SET : auths;
     } finally {
       this.lock.readLock().unlock();
     }
   }
 
-  /**
-   * Writes the labels data to zookeeper node.
-   * @param data
-   * @param labelsOrUserAuths true for writing labels and false for user auths.
-   */
   public void writeToZookeeper(byte[] data, boolean labelsOrUserAuths) {
     this.zkVisibilityWatcher.writeToZookeeper(data, labelsOrUserAuths);
   }

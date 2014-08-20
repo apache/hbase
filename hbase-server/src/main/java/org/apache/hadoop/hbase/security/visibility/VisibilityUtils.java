@@ -19,29 +19,36 @@ package org.apache.hadoop.hbase.security.visibility;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.io.util.StreamUtils;
+import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.MultiUserAuthorizations;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequest;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -52,14 +59,14 @@ import com.google.protobuf.InvalidProtocolBufferException;
 @InterfaceAudience.Private
 public class VisibilityUtils {
 
+  private static final Log LOG = LogFactory.getLog(VisibilityUtils.class);
+
   public static final String VISIBILITY_LABEL_GENERATOR_CLASS =
       "hbase.regionserver.scan.visibility.label.generator.class";
-  public static final byte VISIBILITY_TAG_TYPE = TagType.VISIBILITY_TAG_TYPE;
-  public static final byte VISIBILITY_EXP_SERIALIZATION_TAG_TYPE =
-      TagType.VISIBILITY_EXP_SERIALIZATION_TAG_TYPE;
   public static final String SYSTEM_LABEL = "system";
-  public static final Tag VIS_SERIALIZATION_TAG = new Tag(VISIBILITY_EXP_SERIALIZATION_TAG_TYPE,
-      VisibilityConstants.SORTED_ORDINAL_SERIALIZATION_FORMAT);
+  public static final Tag SORTED_ORDINAL_SERIALIZATION_FORMAT_TAG = new Tag(
+      TagType.VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE,
+      VisibilityConstants.SORTED_ORDINAL_SERIALIZATION_FORMAT_TAG_VAL);
   private static final String COMMA = ",";
 
   /**
@@ -140,8 +147,15 @@ public class VisibilityUtils {
     return null;
   }
 
-  public static List<ScanLabelGenerator> getScanLabelGenerators(Configuration conf)
-      throws IOException {
+  /**
+   * @param conf The configuration to use
+   * @return Stack of ScanLabelGenerator instances. ScanLabelGenerator classes can be specified in
+   *         Configuration as comma separated list using key
+   *         "hbase.regionserver.scan.visibility.label.generator.class"
+   * @throws IllegalArgumentException
+   *           when any of the specified ScanLabelGenerator class can not be loaded.
+   */
+  public static List<ScanLabelGenerator> getScanLabelGenerators(Configuration conf) {
     // There can be n SLG specified as comma separated in conf
     String slgClassesCommaSeparated = conf.get(VISIBILITY_LABEL_GENERATOR_CLASS);
     // We have only System level SLGs now. The order of execution will be same as the order in the
@@ -155,7 +169,7 @@ public class VisibilityUtils {
           slgKlass = (Class<? extends ScanLabelGenerator>) conf.getClassByName(slgClass.trim());
           slgs.add(ReflectionUtils.newInstance(slgKlass, conf));
         } catch (ClassNotFoundException e) {
-          throw new IOException(e);
+          throw new IllegalArgumentException("Unable to find " + slgClass, e);
         }
       }
     }
@@ -168,40 +182,28 @@ public class VisibilityUtils {
   }
 
   /**
-   * Get the list of visibility tags in the given cell
+   * Extract the visibility tags of the given Cell into the given List
    * @param cell - the cell
-   * @param tags - the tags array that will be populated if
-   * visibility tags are present
-   * @return true if the tags are in sorted order.
+   * @param tags - the array that will be populated if visibility tags are present
+   * @return The visibility tags serialization format
    */
-  public static boolean getVisibilityTags(Cell cell, List<Tag> tags) {
-    boolean sortedOrder = false;
-    if (cell.getTagsLengthUnsigned() == 0) {
-      return sortedOrder;
-    }
-    Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-        cell.getTagsLengthUnsigned());
-    while (tagsIterator.hasNext()) {
-      Tag tag = tagsIterator.next();
-      if (tag.getType() == VisibilityUtils.VISIBILITY_EXP_SERIALIZATION_TAG_TYPE) {
-        int serializationVersion = tag.getBuffer()[tag.getTagOffset()];
-        if (serializationVersion == VisibilityConstants.VISIBILITY_SERIALIZATION_VERSION) {
-          sortedOrder = true;
-          continue;
+  public static Byte extractVisibilityTags(Cell cell, List<Tag> tags) {
+    Byte serializationFormat = null;
+    if (cell.getTagsLengthUnsigned() > 0) {
+      Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
+          cell.getTagsLengthUnsigned());
+      while (tagsIterator.hasNext()) {
+        Tag tag = tagsIterator.next();
+        if (tag.getType() == TagType.VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE) {
+          serializationFormat = tag.getBuffer()[tag.getTagOffset()];
+        } else if (tag.getType() == TagType.VISIBILITY_TAG_TYPE) {
+          tags.add(tag);
         }
       }
-      if (tag.getType() == VisibilityUtils.VISIBILITY_TAG_TYPE) {
-        tags.add(tag);
-      }
     }
-    return sortedOrder;
+    return serializationFormat;
   }
 
-  /**
-   * Checks if the cell has a visibility tag
-   * @param cell
-   * @return true if found, false if not found
-   */
   public static boolean isVisibilityTagsPresent(Cell cell) {
     if (cell.getTagsLengthUnsigned() == 0) {
       return false;
@@ -210,127 +212,38 @@ public class VisibilityUtils {
         cell.getTagsLengthUnsigned());
     while (tagsIterator.hasNext()) {
       Tag tag = tagsIterator.next();
-      if (tag.getType() == VisibilityUtils.VISIBILITY_TAG_TYPE) {
+      if (tag.getType() == TagType.VISIBILITY_TAG_TYPE) {
         return true;
       }
     }
     return false;
   }
 
-  /**
-   * Checks for the matching visibility labels in the delete mutation and
-   * the cell in consideration
-   * @param cell - the cell
-   * @param visibilityTagsInDeleteCell - that list of tags in the delete mutation
-   * (the specified Cell Visibility)
-   * @return true if matching tags are found
-   */
-  public static boolean checkForMatchingVisibilityTags(Cell cell,
-      List<Tag> visibilityTagsInDeleteCell) {
-    List<Tag> tags = new ArrayList<Tag>();
-    boolean sortedTags = getVisibilityTags(cell, tags);
-    if (tags.size() == 0) {
-      // Early out if there are no tags in the cell
-      return false;
-    }
-    if (sortedTags) {
-      return checkForMatchingVisibilityTagsWithSortedOrder(visibilityTagsInDeleteCell, tags);
-    } else {
-      try {
-        return checkForMatchingVisibilityTagsWithOutSortedOrder(cell, visibilityTagsInDeleteCell);
-      } catch (IOException e) {
-        // Should not happen
-        throw new RuntimeException("Exception while sorting the tags from the cell", e);
-      }
-    }
-  }
-
-  private static boolean checkForMatchingVisibilityTagsWithOutSortedOrder(Cell cell,
-      List<Tag> visibilityTagsInDeleteCell) throws IOException {
-    List<List<Integer>> sortedDeleteTags = sortTagsBasedOnOrdinal(
-        visibilityTagsInDeleteCell);
-    List<List<Integer>> sortedTags = sortTagsBasedOnOrdinal(cell);
-    return compareTagsOrdinals(sortedDeleteTags, sortedTags);
-  }
-
-  private static boolean checkForMatchingVisibilityTagsWithSortedOrder(
-      List<Tag> visibilityTagsInDeleteCell, List<Tag> tags) {
-    boolean matchFound = false;
-    if ((visibilityTagsInDeleteCell.size()) != tags.size()) {
-      // If the size does not match. Definitely we are not comparing the
-      // equal tags.
-      // Return false in that case.
-      return matchFound;
-    }
-    for (Tag tag : visibilityTagsInDeleteCell) {
-      matchFound = false;
-      for (Tag givenTag : tags) {
-        if (Bytes.equals(tag.getBuffer(), tag.getTagOffset(), tag.getTagLength(),
-            givenTag.getBuffer(), givenTag.getTagOffset(), givenTag.getTagLength())) {
-          matchFound = true;
-          break;
-        }
-      }
-    }
-    return matchFound;
-  }
-
-  private static List<List<Integer>> sortTagsBasedOnOrdinal(Cell cell) throws IOException {
-    List<List<Integer>> fullTagsList = new ArrayList<List<Integer>>();
-    if (cell.getTagsLengthUnsigned() == 0) {
-      return fullTagsList;
-    }
-    Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-        cell.getTagsLengthUnsigned());
-    while (tagsItr.hasNext()) {
-      Tag tag = tagsItr.next();
-      if (tag.getType() == VisibilityUtils.VISIBILITY_TAG_TYPE) {
-        getSortedTagOrdinals(fullTagsList, tag);
-      }
-    }
-    return fullTagsList;
-  }
-
-  private static List<List<Integer>> sortTagsBasedOnOrdinal(List<Tag> tags) throws IOException {
-    List<List<Integer>> fullTagsList = new ArrayList<List<Integer>>();
-    for (Tag tag : tags) {
-      if (tag.getType() == VisibilityUtils.VISIBILITY_TAG_TYPE) {
-        getSortedTagOrdinals(fullTagsList, tag);
-      }
-    }
-    return fullTagsList;
-  }
-
-  private static void getSortedTagOrdinals(List<List<Integer>> fullTagsList, Tag tag)
+  public static Filter createVisibilityLabelFilter(HRegion region, Authorizations authorizations)
       throws IOException {
-    List<Integer> tagsOrdinalInSortedOrder = new ArrayList<Integer>();
-    int offset = tag.getTagOffset();
-    int endOffset = offset + tag.getTagLength();
-    while (offset < endOffset) {
-      Pair<Integer, Integer> result = StreamUtils.readRawVarint32(tag.getBuffer(), offset);
-      tagsOrdinalInSortedOrder.add(result.getFirst());
-      offset += result.getSecond();
+    Map<ByteRange, Integer> cfVsMaxVersions = new HashMap<ByteRange, Integer>();
+    for (HColumnDescriptor hcd : region.getTableDesc().getFamilies()) {
+      cfVsMaxVersions.put(new SimpleByteRange(hcd.getName()), hcd.getMaxVersions());
     }
-    Collections.sort(tagsOrdinalInSortedOrder);
-    fullTagsList.add(tagsOrdinalInSortedOrder);
+    VisibilityLabelService vls = VisibilityLabelServiceManager.getInstance()
+        .getVisibilityLabelService();
+    Filter visibilityLabelFilter = new VisibilityLabelFilter(
+        vls.getVisibilityExpEvaluator(authorizations), cfVsMaxVersions);
+    return visibilityLabelFilter;
   }
 
-  private static boolean compareTagsOrdinals(List<List<Integer>> tagsInDeletes,
-      List<List<Integer>> tags) {
-    boolean matchFound = false;
-    if (tagsInDeletes.size() != tags.size()) {
-      return matchFound;
-    } else {
-      for (List<Integer> deleteTagOrdinals : tagsInDeletes) {
-        matchFound = false;
-        for (List<Integer> tagOrdinals : tags) {
-          if (deleteTagOrdinals.equals(tagOrdinals)) {
-            matchFound = true;
-            break;
-          }
-        }
-      }
-      return matchFound;
+  /**
+   * @return User who called RPC method. For non-RPC handling, falls back to system user
+   * @throws IOException When there is IOE in getting the system user (During non-RPC handling).
+   */
+  public static User getActiveUser() throws IOException {
+    User user = RequestContext.getRequestUser();
+    if (!RequestContext.isInRequestContext()) {
+      user = User.getCurrent();
     }
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Current active user name is " + user.getShortName());
+    }
+    return user;
   }
 }
