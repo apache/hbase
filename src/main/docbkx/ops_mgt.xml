@@ -1369,6 +1369,25 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
 $ ./bin/hbase shell
 hbase> snapshot 'myTable', 'myTableSnapshot-122112'
         </screen>
+      <formalpara>
+        <title>Take a Snapshot Without Flushing</title>
+        <para>The default behavior is to perform a flush of data in memory before the snapshot is
+          taken. This means that data in memory is included in the snapshot. In most cases, this is
+          the desired behavior. However, if your set-up can tolerate data in memory being excluded
+          from the snapshot, you can use the <option>SKIP_FLUSH</option> option of the
+            <command>snapshot</command> command to disable and flushing while taking the
+          snapshot.</para>
+      </formalpara>
+      <screen>hbase> snapshot 'mytable', 'snapshot123', {SKIP_FLUSH => true}</screen>
+      <warning>
+        <para>There is no way to determine or predict whether a very concurrent insert or update
+          will be included in a given snapshot, whether flushing is enabled or disabled. A snapshot
+          is only a representation of a table during a window of time. The amount of time the
+          snapshot operation will take to reach each Region Server may vary from a few seconds to a
+          minute, depending on the resource load and speed of the hardware or network, among other
+          factors. There is also no way to know whether a given insert or update is in memory or has
+          been flushed.</para>
+      </warning>
     </section>
     <section
       xml:id="ops.snapshots.list">
