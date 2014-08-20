@@ -42,14 +42,14 @@ public class ZKVisibilityLabelWatcher extends ZooKeeperListener {
       "zookeeper.znode.visibility.user.auths.parent";
   private static final String DEFAULT_VISIBILITY_USER_AUTHS_NODE = "visibility/user_auths";
 
-  private VisibilityLabelsManager labelsManager;
+  private VisibilityLabelsCache labelsCache;
   private String labelZnode;
   private String userAuthsZnode;
 
-  public ZKVisibilityLabelWatcher(ZooKeeperWatcher watcher, VisibilityLabelsManager labelsManager,
+  public ZKVisibilityLabelWatcher(ZooKeeperWatcher watcher, VisibilityLabelsCache labelsCache,
       Configuration conf) {
     super(watcher);
-    this.labelsManager = labelsManager;
+    this.labelsCache = labelsCache;
     String labelZnodeParent = conf.get(VISIBILITY_LABEL_ZK_PATH, DEFAULT_VISIBILITY_LABEL_NODE);
     String userAuthsZnodeParent = conf.get(VISIBILITY_USER_AUTHS_ZK_PATH,
         DEFAULT_VISIBILITY_USER_AUTHS_NODE);
@@ -75,7 +75,7 @@ public class ZKVisibilityLabelWatcher extends ZooKeeperListener {
 
   private void refreshVisibilityLabelsCache(byte[] data) {
     try {
-      this.labelsManager.refreshLabelsCache(data);
+      this.labelsCache.refreshLabelsCache(data);
     } catch (IOException ioe) {
       LOG.error("Failed parsing data from labels table " + " from zk", ioe);
     }
@@ -83,7 +83,7 @@ public class ZKVisibilityLabelWatcher extends ZooKeeperListener {
 
   private void refreshUserAuthsCache(byte[] data) {
     try {
-      this.labelsManager.refreshUserAuthsCache(data);
+      this.labelsCache.refreshUserAuthsCache(data);
     } catch (IOException ioe) {
       LOG.error("Failed parsing data from labels table " + " from zk", ioe);
     }

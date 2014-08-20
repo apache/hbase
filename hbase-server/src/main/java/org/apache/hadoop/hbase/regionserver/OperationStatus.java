@@ -56,7 +56,11 @@ public class OperationStatus {
     this.exceptionMsg = exceptionMsg;
   }
 
-  
+  public OperationStatus(OperationStatusCode code, Exception e) {
+    this.code = code;
+    this.exceptionMsg = (e == null) ? "" : e.getClass().getName() + ": " + e.getMessage();
+  }
+
   /**
    * @return OperationStatusCode
    */
@@ -70,5 +74,4 @@ public class OperationStatus {
   public String getExceptionMsg() {
     return exceptionMsg;
   }
-
 }

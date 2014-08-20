@@ -68,9 +68,7 @@ public class TestVisibilityWithCheckAuths {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
-    conf.setInt("hfile.format.version", 3);
-    conf.set("hbase.coprocessor.master.classes", VisibilityController.class.getName());
-    conf.set("hbase.coprocessor.region.classes", VisibilityController.class.getName());
+    VisibilityTestUtil.enableVisiblityLabels(conf);
     conf.setBoolean(VisibilityConstants.CHECK_AUTHS_FOR_MUTATION, true);
     conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
         ScanLabelGenerator.class);

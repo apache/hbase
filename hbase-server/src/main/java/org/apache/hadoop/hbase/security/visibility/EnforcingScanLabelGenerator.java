@@ -37,10 +37,10 @@ public class EnforcingScanLabelGenerator implements ScanLabelGenerator {
   private static final Log LOG = LogFactory.getLog(EnforcingScanLabelGenerator.class);
 
   private Configuration conf;
-  private VisibilityLabelsManager labelsManager;
+  private VisibilityLabelsCache labelsCache;
 
   public EnforcingScanLabelGenerator() {
-    this.labelsManager = VisibilityLabelsManager.get();
+    this.labelsCache = VisibilityLabelsCache.get();
   }
 
   @Override
@@ -59,7 +59,7 @@ public class EnforcingScanLabelGenerator implements ScanLabelGenerator {
     if (authorizations != null) {
       LOG.warn("Dropping authorizations requested by user " + userName + ": " + authorizations);
     }
-    return this.labelsManager.getAuths(userName);
+    return this.labelsCache.getAuths(userName);
   }
 
 }

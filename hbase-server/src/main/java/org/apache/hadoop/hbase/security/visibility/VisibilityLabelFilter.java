@@ -18,19 +18,13 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import java.io.IOException;
-import java.util.BitSet;
-import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.filter.FilterBase;
-import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 
 /**
@@ -40,15 +34,16 @@ import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 @InterfaceAudience.Private
 class VisibilityLabelFilter extends FilterBase {
 
-  private final BitSet authLabels;
+  private final VisibilityExpEvaluator expEvaluator;
   private final Map<ByteRange, Integer> cfVsMaxVersions;
   private final ByteRange curFamily;
   private final ByteRange curQualifier;
   private int curFamilyMaxVersions;
   private int curQualMetVersions;
 
-  public VisibilityLabelFilter(BitSet authLabels, Map<ByteRange, Integer> cfVsMaxVersions) {
-    this.authLabels = authLabels;
+  public VisibilityLabelFilter(VisibilityExpEvaluator expEvaluator,
+      Map<ByteRange, Integer> cfVsMaxVersions) {
+    this.expEvaluator = expEvaluator;
     this.cfVsMaxVersions = cfVsMaxVersions;
     this.curFamily = new SimpleMutableByteRange();
     this.curQualifier = new SimpleMutableByteRange();
@@ -80,46 +75,7 @@ class VisibilityLabelFilter extends FilterBase {
       return ReturnCode.SKIP;
     }
 
-    boolean visibilityTagPresent = false;
-    // Save an object allocation where we can
-    if (cell.getTagsLength() > 0) {
-      Iterator<Tag> tagsItr = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-        cell.getTagsLength());
-      while (tagsItr.hasNext()) {
-        boolean includeKV = true;
-        Tag tag = tagsItr.next();
-        if (tag.getType() == VisibilityUtils.VISIBILITY_TAG_TYPE) {
-          visibilityTagPresent = true;
-          int offset = tag.getTagOffset();
-          int endOffset = offset + tag.getTagLength();
-          while (offset < endOffset) {
-            Pair<Integer, Integer> result = StreamUtils.readRawVarint32(tag.getBuffer(), offset);
-            int currLabelOrdinal = result.getFirst();
-            if (currLabelOrdinal < 0) {
-              // check for the absence of this label in the Scan Auth labels
-              // ie. to check BitSet corresponding bit is 0
-              int temp = -currLabelOrdinal;
-              if (this.authLabels.get(temp)) {
-                includeKV = false;
-                break;
-              }
-            } else {
-              if (!this.authLabels.get(currLabelOrdinal)) {
-                includeKV = false;
-                break;
-              }
-            }
-            offset += result.getSecond();
-          }
-          if (includeKV) {
-            // We got one visibility expression getting evaluated to true. Good to include this KV in
-            // the result then.
-            return ReturnCode.INCLUDE;
-          }
-        }
-      }
-    }
-    return visibilityTagPresent ? ReturnCode.SKIP : ReturnCode.INCLUDE;
+    return this.expEvaluator.evaluate(cell) ? ReturnCode.INCLUDE : ReturnCode.SKIP;
   }
 
   @Override
