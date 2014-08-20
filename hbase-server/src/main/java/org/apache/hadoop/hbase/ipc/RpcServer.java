@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
-import io.netty.util.internal.ConcurrentSet;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -53,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -839,7 +839,8 @@ public class RpcServer implements RpcServerInterface {
   // Sends responses of RPC back to clients.
   protected class Responder extends Thread {
     private final Selector writeSelector;
-    private final ConcurrentSet<Connection> writingCons = new ConcurrentSet<Connection>();
+    private final Set<Connection> writingCons =
+        Collections.newSetFromMap(new ConcurrentHashMap<Connection, Boolean>());
 
     Responder() throws IOException {
       this.setName("RpcServer.responder");
