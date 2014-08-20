@@ -15,22 +15,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
- //This file includes protocol buffers used in MapReduce only.
-
 option java_package = "org.apache.hadoop.hbase.protobuf.generated";
-option java_outer_classname = "MapReduceProtos";
+option java_outer_classname = "SnapshotProtos";
+option java_generic_services = true;
 option java_generate_equals_and_hash = true;
 option optimize_for = SPEED;
 
+import "FS.proto";
 import "HBase.proto";
 
-message ScanMetrics {
-  repeated NameInt64Pair metrics = 1;
+message SnapshotFileInfo {
+  enum Type {
+    HFILE = 1;
+    WAL = 2;
+  }
+
+  required Type type = 1;
+
+  optional string hfile = 3;
+
+  optional string wal_server = 4;
+  optional string wal_name = 5;
 }
 
-message TableSnapshotRegionSplit {
-  repeated string locations = 2;
-  optional TableSchema table = 3;
-  optional RegionInfo region = 4;
+message SnapshotRegionManifest {
+  optional int32 version = 1;
+
+  required RegionInfo region_info = 2;
+  repeated FamilyFiles family_files = 3;
+
+  message StoreFile {
+    required string name = 1;
+    optional Reference reference = 2;
+
+    // TODO: Add checksums or other fields to verify the file
+    optional uint64 file_size = 3;
+  }
+
+  message FamilyFiles {
+    required bytes family_name = 1;
+    repeated StoreFile store_files = 2;
+  }
+}
+
+message SnapshotDataManifest {
+  required TableSchema table_schema = 1;
+  repeated SnapshotRegionManifest region_manifests = 2;
 }

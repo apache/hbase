@@ -48,14 +48,11 @@ import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.CopyRecoveredEditsTask;
-import org.apache.hadoop.hbase.snapshot.ReferenceRegionHFilesTask;
 import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.TableInfoCopyTask;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
 
@@ -88,6 +85,9 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
   protected final TableLock tableLock;
   protected final MonitoredTask status;
   protected final TableName snapshotTable;
+  protected final SnapshotManifest snapshotManifest;
+
+  protected HTableDescriptor htd;
 
   /**
    * @param snapshot descriptor of the snapshot to take
@@ -107,6 +107,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
     this.snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
     this.workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
     this.monitor = new ForeignExceptionDispatcher(snapshot.getName());
+    this.snapshotManifest = SnapshotManifest.create(conf, fs, workingDir, snapshot, monitor);
 
     this.tableLockManager = master.getTableLockManager();
     this.tableLock = this.tableLockManager.writeLock(
@@ -136,7 +137,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
                               // case of exceptions
     boolean success = false;
     try {
-      loadTableDescriptor(); // check that .tableinfo is present
+      this.htd = loadTableDescriptor(); // check that .tableinfo is present
       success = true;
     } finally {
       if (!success) {
@@ -162,8 +163,8 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       // an external exception that gets captured here.
 
       // write down the snapshot info in the working directory
-      SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, this.fs);
-      new TableInfoCopyTask(monitor, snapshot, fs, rootDir).call();
+      SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, fs);
+      snapshotManifest.addTableDescriptor(this.htd);
       monitor.rethrowException();
 
       List<Pair<HRegionInfo, ServerName>> regionsAndLocations =
@@ -184,16 +185,19 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
         }
       }
 
+      // flush the in-memory state, and write the single manifest
+      status.setStatus("Consolidate snapshot: " + snapshot.getName());
+      snapshotManifest.consolidate();
+
       // verify the snapshot is valid
       status.setStatus("Verifying snapshot: " + snapshot.getName());
       verifier.verifySnapshot(this.workingDir, serverNames);
 
       // complete the snapshot, atomically moving from tmp to .snapshot dir.
       completeSnapshot(this.snapshotDir, this.workingDir, this.fs);
-      status.markComplete("Snapshot " + snapshot.getName() + " of table " + snapshotTable
-          + " completed");
-      LOG.info("Snapshot " + snapshot.getName() + " of table " + snapshotTable
-          + " completed");
+      msg = "Snapshot " + snapshot.getName() + " of table " + snapshotTable + " completed";
+      status.markComplete(msg);
+      LOG.info(msg);
       metricsSnapshot.addSnapshot(status.getCompletionTimestamp() - status.getStartTime());
     } catch (Exception e) {
       status.abort("Failed to complete snapshot " + snapshot.getName() + " on table " +
@@ -204,8 +208,7 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
       ForeignException ee = new ForeignException(reason, e);
       monitor.receive(ee);
       // need to mark this completed to close off and allow cleanup to happen.
-      cancel("Failed to take snapshot '" + ClientSnapshotDescriptionUtils.toString(snapshot)
-          + "' due to exception");
+      cancel(reason);
     } finally {
       LOG.debug("Launching cleanup of working dir:" + workingDir);
       try {
@@ -262,26 +265,10 @@ public abstract class TakeSnapshotHandler extends EventHandler implements Snapsh
    */
   protected void snapshotDisabledRegion(final HRegionInfo regionInfo)
       throws IOException {
-    // 2 copy the regionInfo files to the snapshot
-    HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
-      workingDir, regionInfo);
-
-    // check for error for each region
+    snapshotManifest.addRegion(FSUtils.getTableDir(rootDir, snapshotTable), regionInfo);
     monitor.rethrowException();
-
-    // 2 for each region, copy over its recovered.edits directory
-    Path regionDir = HRegion.getRegionDir(rootDir, regionInfo);
-    Path snapshotRegionDir = regionFs.getRegionDir();
-    new CopyRecoveredEditsTask(snapshot, monitor, fs, regionDir, snapshotRegionDir).call();
-    monitor.rethrowException();
-    status.setStatus("Completed copying recovered edits for offline snapshot of table: "
-        + snapshotTable);
-
-    // 2 reference all the files in the region
-    new ReferenceRegionHFilesTask(snapshot, monitor, regionDir, fs, snapshotRegionDir).call();
-    monitor.rethrowException();
-    status.setStatus("Completed referencing HFiles for offline snapshot of table: " +
-        snapshotTable);
+    status.setStatus("Completed referencing HFiles for offline region " + regionInfo.toString() +
+        " of table: " + snapshotTable);
   }
 
   @Override

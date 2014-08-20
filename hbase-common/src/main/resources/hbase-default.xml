@@ -1007,6 +1007,16 @@ possible configurations would overwhelm and obscure the important.
     <description>Set to true to allow snapshots to be taken / restored / cloned.</description>
   </property>
   <property>
+      <name>hbase.snapshot.format.version</name>
+      <value>1</value>
+      <description>The Snapshot format version to use for new snapshots.
+        1 is the old format used by 0.94, 0.96 and 0.98 as default.
+        2 is the new format, which should be used if all the clients that are
+        accessing snapshots via MR job are updated with the latest hbase jars.
+        By switching to version 2, the previous snapshots will still be readable.
+      </description>
+  </property>
+  <property>
     <name>hbase.snapshot.restore.take.failsafe.snapshot</name>
     <value>true</value>
     <description>Set to true to take a snapshot before the restore operation.

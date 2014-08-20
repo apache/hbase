@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -35,11 +36,14 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
+import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.TableSnapshotRegionSplit;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -77,14 +81,16 @@ public class TableSnapshotInputFormatImpl {
    * Implementation class for InputSplit logic common between mapred and mapreduce.
    */
   public static class InputSplit implements Writable {
-    private String regionName;
+    private HTableDescriptor htd;
+    private HRegionInfo regionInfo;
     private String[] locations;
 
     // constructor for mapreduce framework / Writable
     public InputSplit() { }
 
-    public InputSplit(String regionName, List<String> locations) {
-      this.regionName = regionName;
+    public InputSplit(HTableDescriptor htd, HRegionInfo regionInfo, List<String> locations) {
+      this.htd = htd;
+      this.regionInfo = regionInfo;
       if (locations == null || locations.isEmpty()) {
         this.locations = new String[0];
       } else {
@@ -101,15 +107,21 @@ public class TableSnapshotInputFormatImpl {
       return locations;
     }
 
+    public HTableDescriptor getTableDescriptor() {
+      return htd;
+    }
+
+    public HRegionInfo getRegionInfo() {
+      return regionInfo;
+    }
+
     // TODO: We should have ProtobufSerialization in Hadoop, and directly use PB objects instead of
     // doing this wrapping with Writables.
     @Override
     public void write(DataOutput out) throws IOException {
-      MapReduceProtos.TableSnapshotRegionSplit.Builder builder =
-        MapReduceProtos.TableSnapshotRegionSplit.newBuilder()
-          .setRegion(HBaseProtos.RegionSpecifier.newBuilder()
-            .setType(HBaseProtos.RegionSpecifier.RegionSpecifierType.ENCODED_REGION_NAME)
-            .setValue(ByteStringer.wrap(Bytes.toBytes(regionName))).build());
+      MapReduceProtos.TableSnapshotRegionSplit.Builder builder = MapReduceProtos.TableSnapshotRegionSplit.newBuilder()
+	  .setTable(htd.convert())
+	  .setRegion(HRegionInfo.convert(regionInfo));
 
       for (String location : locations) {
         builder.addLocations(location);
@@ -130,8 +142,9 @@ public class TableSnapshotInputFormatImpl {
       int len = in.readInt();
       byte[] buf = new byte[len];
       in.readFully(buf);
-      MapReduceProtos.TableSnapshotRegionSplit split = MapReduceProtos.TableSnapshotRegionSplit.PARSER.parseFrom(buf);
-      this.regionName = Bytes.toString(split.getRegion().getValue().toByteArray());
+      TableSnapshotRegionSplit split = TableSnapshotRegionSplit.PARSER.parseFrom(buf);
+      this.htd = HTableDescriptor.convert(split.getTable());
+      this.regionInfo = HRegionInfo.convert(split.getRegion());
       List<String> locationsList = split.getLocationsList();
       this.locations = locationsList.toArray(new String[locationsList.size()]);
     }
@@ -153,22 +166,12 @@ public class TableSnapshotInputFormatImpl {
 
     public void initialize(InputSplit split, Configuration conf) throws IOException {
       this.split = split;
-      String regionName = this.split.regionName;
-      String snapshotName = getSnapshotName(conf);
-      Path rootDir = new Path(conf.get(HConstants.HBASE_DIR));
-      FileSystem fs = rootDir.getFileSystem(conf);
+      HTableDescriptor htd = split.htd;
+      HRegionInfo hri = this.split.getRegionInfo();
+      FileSystem fs = FSUtils.getCurrentFileSystem(conf);
 
       Path tmpRootDir = new Path(conf.get(RESTORE_DIR_KEY)); // This is the user specified root
       // directory where snapshot was restored
-
-      Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-
-      //load table descriptor
-      HTableDescriptor htd = FSTableDescriptors.getTableDescriptorFromFs(fs, snapshotDir);
-
-      //load region descriptor
-      Path regionDir = new Path(snapshotDir, regionName);
-      HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
 
       // create scan
       // TODO: mapred does not support scan as input API. Work around for now.
@@ -240,16 +243,16 @@ public class TableSnapshotInputFormatImpl {
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
     HBaseProtos.SnapshotDescription snapshotDesc =
       SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
 
-    Set<String> snapshotRegionNames =
-      SnapshotReferenceUtil.getSnapshotRegionNames(fs, snapshotDir);
-    if (snapshotRegionNames == null) {
-      throw new IllegalArgumentException("Snapshot seems empty");
+    List<SnapshotRegionManifest> regionManifests = manifest.getRegionManifests();
+
+    if (regionManifests == null) {
+	throw new IllegalArgumentException("Snapshot seems empty");
     }
 
     // load table descriptor
-    HTableDescriptor htd = FSTableDescriptors.getTableDescriptorFromFs(fs,
-      snapshotDir);
+    HTableDescriptor htd = manifest.getTableDescriptor();
 
     // TODO: mapred does not support scan as input API. Work around for now.
     Scan scan = null;
@@ -270,11 +273,9 @@ public class TableSnapshotInputFormatImpl {
     Path tableDir = FSUtils.getTableDir(restoreDir, htd.getTableName());
 
     List<InputSplit> splits = new ArrayList<InputSplit>();
-    for (String regionName : snapshotRegionNames) {
+    for (SnapshotRegionManifest regionManifest : regionManifests) {
       // load region descriptor
-      Path regionDir = new Path(snapshotDir, regionName);
-      HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs,
-        regionDir);
+      HRegionInfo hri = HRegionInfo.convert(regionManifest.getRegionInfo());
 
       if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(),
         hri.getStartKey(), hri.getEndKey())) {
@@ -285,7 +286,7 @@ public class TableSnapshotInputFormatImpl {
 
         int len = Math.min(3, hosts.size());
         hosts = hosts.subList(0, len);
-        splits.add(new InputSplit(regionName, hosts));
+	splits.add(new InputSplit(htd, hri, hosts));
       }
     }
 

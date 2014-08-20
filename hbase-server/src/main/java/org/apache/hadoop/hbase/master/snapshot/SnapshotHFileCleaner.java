@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.snapshot;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -56,22 +55,18 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
   private SnapshotFileCache cache;
 
   @Override
-  public synchronized Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
+  public synchronized boolean isFileDeletable(FileStatus fStat) {
     try {
-      return cache.getUnreferencedFiles(files);
+      return !cache.contains(fStat.getPath().getName());
     } catch (IOException e) {
-      LOG.error("Exception while checking if files were valid, keeping them just in case.", e);
-      return Collections.emptyList();
+      LOG.error("Exception while checking if:" + fStat.getPath()
+          + " was valid, keeping it just in case.", e);
+      return false;
     }
-    }
-
-  @Override
-  protected boolean isFileDeletable(FileStatus fStat) {
-    return false;
   }
 
   @Override
-  public void setConf(Configuration conf) {
+  public void setConf(final Configuration conf) {
     super.setConf(conf);
     try {
       long cacheRefreshPeriod = conf.getLong(HFILE_CACHE_REFRESH_PERIOD_CONF_KEY,
@@ -82,7 +77,7 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
           "snapshot-hfile-cleaner-cache-refresher", new SnapshotFileCache.SnapshotFileInspector() {
             public Collection<String> filesUnderSnapshot(final Path snapshotDir)
                 throws IOException {
-              return SnapshotReferenceUtil.getHFileNames(fs, snapshotDir);
+              return SnapshotReferenceUtil.getHFileNames(conf, fs, snapshotDir);
             }
           });
     } catch (IOException e) {

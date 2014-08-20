@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
@@ -53,6 +54,10 @@ public abstract class ModifyRegionUtils {
 
   public interface RegionFillTask {
     void fillRegion(final HRegion region) throws IOException;
+  }
+
+  public interface RegionEditTask {
+    void editRegion(final HRegionInfo region) throws IOException;
   }
 
   /**
@@ -106,10 +111,36 @@ public abstract class ModifyRegionUtils {
       final RegionFillTask task) throws IOException {
     if (newRegions == null) return null;
     int regionNumber = newRegions.length;
-    ThreadPoolExecutor regionOpenAndInitThreadPool = getRegionOpenAndInitThreadPool(conf,
+    ThreadPoolExecutor exec = getRegionOpenAndInitThreadPool(conf,
         "RegionOpenAndInitThread-" + hTableDescriptor.getTableName(), regionNumber);
-    CompletionService<HRegionInfo> completionService = new ExecutorCompletionService<HRegionInfo>(
-        regionOpenAndInitThreadPool);
+    try {
+      return createRegions(exec, conf, rootDir, tableDir, hTableDescriptor, newRegions, task);
+    } finally {
+      exec.shutdownNow();
+    }
+  }
+
+  /**
+   * Create new set of regions on the specified file-system.
+   * NOTE: that you should add the regions to hbase:meta after this operation.
+   *
+   * @param exec Thread Pool Executor
+   * @param conf {@link Configuration}
+   * @param rootDir Root directory for HBase instance
+   * @param tableDir table directory
+   * @param hTableDescriptor description of the table
+   * @param newRegions {@link HRegionInfo} that describes the regions to create
+   * @param task {@link RegionFillTask} custom code to populate region after creation
+   * @throws IOException
+   */
+  public static List<HRegionInfo> createRegions(final ThreadPoolExecutor exec,
+      final Configuration conf, final Path rootDir, final Path tableDir,
+      final HTableDescriptor hTableDescriptor, final HRegionInfo[] newRegions,
+      final RegionFillTask task) throws IOException {
+    if (newRegions == null) return null;
+    int regionNumber = newRegions.length;
+    CompletionService<HRegionInfo> completionService =
+      new ExecutorCompletionService<HRegionInfo>(exec);
     List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
     for (final HRegionInfo newRegion : newRegions) {
       completionService.submit(new Callable<HRegionInfo>() {
@@ -131,8 +162,6 @@ public abstract class ModifyRegionUtils {
       throw new InterruptedIOException(e.getMessage());
     } catch (ExecutionException e) {
       throw new IOException(e);
-    } finally {
-      regionOpenAndInitThreadPool.shutdownNow();
     }
     return regionInfos;
   }
@@ -164,6 +193,41 @@ public abstract class ModifyRegionUtils {
       region.close();
     }
     return region.getRegionInfo();
+  }
+
+  /**
+   * Execute the task on the specified set of regions.
+   *
+   * @param exec Thread Pool Executor
+   * @param regions {@link HRegionInfo} that describes the regions to edit
+   * @param task {@link RegionFillTask} custom code to edit the region
+   * @throws IOException
+   */
+  public static void editRegions(final ThreadPoolExecutor exec,
+      final Collection<HRegionInfo> regions, final RegionEditTask task) throws IOException {
+    final ExecutorCompletionService<Void> completionService =
+      new ExecutorCompletionService<Void>(exec);
+    for (final HRegionInfo hri: regions) {
+      completionService.submit(new Callable<Void>() {
+        @Override
+        public Void call() throws IOException {
+          task.editRegion(hri);
+          return null;
+        }
+      });
+    }
+
+    try {
+      for (HRegionInfo hri: regions) {
+        completionService.take().get();
+      }
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException(e.getMessage());
+    } catch (ExecutionException e) {
+      IOException ex = new IOException();
+      ex.initCause(e.getCause());
+      throw ex;
+    }
   }
 
   /*

@@ -30,12 +30,21 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableSnapshotScanner;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.snapshot.ExportSnapshot;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
+import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -57,7 +66,8 @@ import com.google.common.annotations.VisibleForTesting;
  * while there are jobs reading from snapshot files.
  * <p>
  * Usage is similar to TableInputFormat, and
- * {@link TableMapReduceUtil#initTableSnapshotMapperJob(String, Scan, Class, Class, Class, Job, boolean, Path)}
+ * {@link TableMapReduceUtil#initTableSnapshotMapperJob(String, Scan, Class, Class, Class, Job,
+ *   boolean, Path)}
  * can be used to configure the job.
  * <pre>{@code
  * Job job = new Job(conf);
@@ -100,8 +110,9 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
       this.delegate = delegate;
     }
 
-    public TableSnapshotRegionSplit(String regionName, List<String> locations) {
-      this.delegate = new TableSnapshotInputFormatImpl.InputSplit(regionName, locations);
+    public TableSnapshotRegionSplit(HTableDescriptor htd, HRegionInfo regionInfo,
+        List<String> locations) {
+      this.delegate = new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations);
     }
 
     @Override
@@ -135,7 +146,6 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
     @Override
     public void initialize(InputSplit split, TaskAttemptContext context) throws IOException,
       InterruptedException {
-
       this.context = context;
       getCounter = TableRecordReaderImpl.retrieveGetCounterWithStringsParams(context);
       delegate.initialize(

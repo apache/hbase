@@ -22,17 +22,20 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
@@ -47,11 +50,13 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -62,6 +67,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MD5Hash;
 import org.junit.Assert;
 
@@ -150,14 +156,12 @@ public class SnapshotTestingUtils {
    */
   public static void confirmSnapshotValid(
       SnapshotDescription snapshotDescriptor, TableName tableName,
-      byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs,
-      boolean requireLogs, Path logsDir, Set<String> snapshotServers)
+      byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs)
       throws IOException {
     ArrayList nonEmptyTestFamilies = new ArrayList(1);
     nonEmptyTestFamilies.add(testFamily);
     confirmSnapshotValid(snapshotDescriptor, tableName,
-      nonEmptyTestFamilies, null, rootDir, admin, fs, requireLogs,
-      logsDir, snapshotServers);
+      nonEmptyTestFamilies, null, rootDir, admin, fs);
   }
 
   /**
@@ -165,14 +169,12 @@ public class SnapshotTestingUtils {
    */
   public static void confirmEmptySnapshotValid(
       SnapshotDescription snapshotDescriptor, TableName tableName,
-      byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs,
-      boolean requireLogs, Path logsDir, Set<String> snapshotServers)
+      byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs)
       throws IOException {
     ArrayList emptyTestFamilies = new ArrayList(1);
     emptyTestFamilies.add(testFamily);
     confirmSnapshotValid(snapshotDescriptor, tableName,
-      null, emptyTestFamilies, rootDir, admin, fs, requireLogs,
-      logsDir, snapshotServers);
+      null, emptyTestFamilies, rootDir, admin, fs);
   }
 
   /**
@@ -184,45 +186,31 @@ public class SnapshotTestingUtils {
   public static void confirmSnapshotValid(
       SnapshotDescription snapshotDescriptor, TableName tableName,
       List<byte[]> nonEmptyTestFamilies, List<byte[]> emptyTestFamilies,
-      Path rootDir, HBaseAdmin admin, FileSystem fs, boolean requireLogs,
-      Path logsDir, Set<String> snapshotServers) throws IOException {
+      Path rootDir, HBaseAdmin admin, FileSystem fs) throws IOException {
+    final Configuration conf = admin.getConfiguration();
+
     // check snapshot dir
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(
         snapshotDescriptor, rootDir);
     assertTrue(fs.exists(snapshotDir));
 
-    // check snapshot info
-    Path snapshotinfo = new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
-    assertTrue(fs.exists(snapshotinfo));
-
-    // check the logs dir
-    if (requireLogs) {
-      TakeSnapshotUtils.verifyAllLogsGotReferenced(fs, logsDir,
-          snapshotServers, snapshotDescriptor, new Path(snapshotDir,
-              HConstants.HREGION_LOGDIR_NAME));
-    }
-
-    // check the table info
-    HTableDescriptor desc = FSTableDescriptors.getTableDescriptorFromFs(fs, rootDir, tableName);
-    HTableDescriptor snapshotDesc = FSTableDescriptors.getTableDescriptorFromFs(fs, snapshotDir);
-    assertEquals(desc, snapshotDesc);
+    SnapshotDescription desc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
 
     // Extract regions and families with store files
-    final Set<String> snapshotRegions = new HashSet<String>();
     final Set<byte[]> snapshotFamilies = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    FSVisitor.visitRegions(fs, snapshotDir, new FSVisitor.RegionVisitor() {
-      @Override
-      public void region(String region) throws IOException {
-        snapshotRegions.add(region);
-      }
-    });
-    FSVisitor.visitTableStoreFiles(fs, snapshotDir, new FSVisitor.StoreFileVisitor() {
-      @Override
-      public void storeFile(final String region, final String family, final String hfileName)
-          throws IOException {
-        snapshotFamilies.add(Bytes.toBytes(family));
-      }
-    });
+
+    SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, desc);
+    Map<String, SnapshotRegionManifest> regionManifests = manifest.getRegionManifestsMap();
+    for (SnapshotRegionManifest regionManifest: regionManifests.values()) {
+      SnapshotReferenceUtil.visitRegionStoreFiles(regionManifest,
+          new SnapshotReferenceUtil.StoreFileVisitor() {
+        @Override
+        public void storeFile(final HRegionInfo regionInfo, final String family,
+              final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+          snapshotFamilies.add(Bytes.toBytes(family));
+        }
+      });
+    }
 
     // Verify that there are store files in the specified families
     if (nonEmptyTestFamilies != null) {
@@ -240,16 +228,12 @@ public class SnapshotTestingUtils {
 
     // check the region snapshot for all the regions
     List<HRegionInfo> regions = admin.getTableRegions(tableName);
-    assertEquals(regions.size(), snapshotRegions.size());
+    assertEquals(regions.size(), regionManifests.size());
 
-    // Verify Regions
+    // Verify Regions (redundant check, see MasterSnapshotVerifier)
     for (HRegionInfo info : regions) {
       String regionName = info.getEncodedName();
-      assertTrue(snapshotRegions.contains(regionName));
-
-      Path regionDir = new Path(snapshotDir, regionName);
-      HRegionInfo snapshotRegionInfo = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
-      assertEquals(info, snapshotRegionInfo);
+      assertTrue(regionManifests.containsKey(regionName));
     }
   }
 
@@ -357,6 +341,17 @@ public class SnapshotTestingUtils {
     return hfiles.toArray(new Path[hfiles.size()]);
   }
 
+  public static String[] listHFileNames(final FileSystem fs, final Path tableDir)
+      throws IOException {
+    Path[] files = listHFiles(fs, tableDir);
+    String[] names = new String[files.length];
+    for (int i = 0; i < files.length; ++i) {
+      names[i] = files[i].getName();
+    }
+    Arrays.sort(names);
+    return names;
+  }
+
   /**
    * Take a snapshot of the specified table and verify that the given family is
    * not empty. Note that this will leave the table disabled
@@ -397,8 +392,7 @@ public class SnapshotTestingUtils {
     }
 
     SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), tableName, nonEmptyFamilyNames,
-      emptyFamilyNames, rootDir, admin, fs, false,
-      new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), null);
+      emptyFamilyNames, rootDir, admin, fs);
   }
 
   /**
@@ -420,11 +414,15 @@ public class SnapshotTestingUtils {
     final TableName table = TableName.valueOf(snapshotDesc.getTable());
 
     final ArrayList corruptedFiles = new ArrayList();
-    SnapshotReferenceUtil.visitTableStoreFiles(fs, snapshotDir, new FSVisitor.StoreFileVisitor() {
+    final Configuration conf = util.getConfiguration();
+    SnapshotReferenceUtil.visitTableStoreFiles(conf, fs, snapshotDir, snapshotDesc,
+        new SnapshotReferenceUtil.StoreFileVisitor() {
       @Override
-      public void storeFile (final String region, final String family, final String hfile)
-          throws IOException {
-        HFileLink link = HFileLink.create(util.getConfiguration(), table, region, family, hfile);
+      public void storeFile(final HRegionInfo regionInfo, final String family,
+            final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+        String region = regionInfo.getEncodedName();
+        String hfile = storeFile.getName();
+        HFileLink link = HFileLink.create(conf, table, region, family, hfile);
         if (corruptedFiles.size() % 2 == 0) {
           fs.delete(link.getAvailablePath(fs));
           corruptedFiles.add(hfile);
@@ -434,6 +432,191 @@ public class SnapshotTestingUtils {
 
     assertTrue(corruptedFiles.size() > 0);
     return corruptedFiles;
+  }
+
+  // ==========================================================================
+  //  Snapshot Mock
+  // ==========================================================================
+  public static class SnapshotMock {
+    private final static String TEST_FAMILY = "cf";
+    public final static int TEST_NUM_REGIONS = 4;
+
+    private final Configuration conf;
+    private final FileSystem fs;
+    private final Path rootDir;
+
+    static class RegionData {
+      public HRegionInfo hri;
+      public Path tableDir;
+      public Path[] files;
+
+      public RegionData(final Path tableDir, final HRegionInfo hri, final int nfiles) {
+        this.tableDir = tableDir;
+        this.hri = hri;
+        this.files = new Path[nfiles];
+      }
+    }
+
+    public static class SnapshotBuilder {
+      private final RegionData[] tableRegions;
+      private final SnapshotDescription desc;
+      private final HTableDescriptor htd;
+      private final Configuration conf;
+      private final FileSystem fs;
+      private final Path rootDir;
+      private Path snapshotDir;
+      private int snapshotted = 0;
+
+      public SnapshotBuilder(final Configuration conf, final FileSystem fs,
+          final Path rootDir, final HTableDescriptor htd,
+          final SnapshotDescription desc, final RegionData[] tableRegions)
+          throws IOException {
+        this.fs = fs;
+        this.conf = conf;
+        this.rootDir = rootDir;
+        this.htd = htd;
+        this.desc = desc;
+        this.tableRegions = tableRegions;
+        this.snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
+        new FSTableDescriptors(conf)
+          .createTableDescriptorForTableDirectory(snapshotDir, htd, false);
+      }
+
+      public HTableDescriptor getTableDescriptor() {
+        return this.htd;
+      }
+
+      public SnapshotDescription getSnapshotDescription() {
+        return this.desc;
+      }
+
+      public Path getSnapshotsDir() {
+        return this.snapshotDir;
+      }
+
+      public Path[] addRegion() throws IOException {
+        return addRegion(desc);
+      }
+
+      public Path[] addRegionV1() throws IOException {
+        return addRegion(desc.toBuilder()
+                          .setVersion(SnapshotManifestV1.DESCRIPTOR_VERSION)
+                          .build());
+      }
+
+      public Path[] addRegionV2() throws IOException {
+        return addRegion(desc.toBuilder()
+                          .setVersion(SnapshotManifestV2.DESCRIPTOR_VERSION)
+                          .build());
+      }
+
+      private Path[] addRegion(final SnapshotDescription desc) throws IOException {
+        if (this.snapshotted == tableRegions.length) {
+          throw new UnsupportedOperationException("No more regions in the table");
+        }
+
+        RegionData regionData = tableRegions[this.snapshotted++];
+        ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(desc.getName());
+        SnapshotManifest manifest = SnapshotManifest.create(conf, fs, snapshotDir, desc, monitor);
+        manifest.addRegion(regionData.tableDir, regionData.hri);
+        return regionData.files;
+      }
+
+      public Path commit() throws IOException {
+        ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher(desc.getName());
+        SnapshotManifest manifest = SnapshotManifest.create(conf, fs, snapshotDir, desc, monitor);
+        manifest.addTableDescriptor(htd);
+        manifest.consolidate();
+        SnapshotDescriptionUtils.completeSnapshot(desc, rootDir, snapshotDir, fs);
+        snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(desc, rootDir);
+        return snapshotDir;
+      }
+    }
+
+    public SnapshotMock(final Configuration conf, final FileSystem fs, final Path rootDir) {
+      this.fs = fs;
+      this.conf = conf;
+      this.rootDir = rootDir;
+    }
+
+    public SnapshotBuilder createSnapshotV1(final String snapshotName) throws IOException {
+      return createSnapshot(snapshotName, SnapshotManifestV1.DESCRIPTOR_VERSION);
+    }
+
+    public SnapshotBuilder createSnapshotV2(final String snapshotName) throws IOException {
+      return createSnapshot(snapshotName, SnapshotManifestV2.DESCRIPTOR_VERSION);
+    }
+
+    private SnapshotBuilder createSnapshot(final String snapshotName, final int version)
+        throws IOException {
+      HTableDescriptor htd = createHtd(snapshotName);
+      htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
+
+      RegionData[] regions = createTable(htd, TEST_NUM_REGIONS);
+
+      SnapshotDescription desc = SnapshotDescription.newBuilder()
+        .setTable(htd.getNameAsString())
+        .setName(snapshotName)
+        .setVersion(version)
+        .build();
+
+      Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
+      SnapshotDescriptionUtils.writeSnapshotInfo(desc, workingDir, fs);
+      return new SnapshotBuilder(conf, fs, rootDir, htd, desc, regions);
+    }
+
+    public HTableDescriptor createHtd(final String tableName) {
+      HTableDescriptor htd = new HTableDescriptor(tableName);
+      htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
+      return htd;
+    }
+
+    private RegionData[] createTable(final HTableDescriptor htd, final int nregions)
+        throws IOException {
+      Path tableDir = FSUtils.getTableDir(rootDir, htd.getTableName());
+      new FSTableDescriptors(conf).createTableDescriptorForTableDirectory(tableDir, htd, false);
+
+      assertTrue(nregions % 2 == 0);
+      RegionData[] regions = new RegionData[nregions];
+      for (int i = 0; i < regions.length; i += 2) {
+        byte[] startKey = Bytes.toBytes(0 + i * 2);
+        byte[] endKey = Bytes.toBytes(1 + i * 2);
+
+        // First region, simple with one plain hfile.
+        HRegionInfo hri = new HRegionInfo(htd.getTableName(), startKey, endKey);
+        HRegionFileSystem rfs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, hri);
+        regions[i] = new RegionData(tableDir, hri, 3);
+        for (int j = 0; j < regions[i].files.length; ++j) {
+          Path storeFile = createStoreFile(rfs.createTempName());
+          regions[i].files[j] = rfs.commitStoreFile(TEST_FAMILY, storeFile);
+        }
+
+        // Second region, used to test the split case.
+        // This region contains a reference to the hfile in the first region.
+        startKey = Bytes.toBytes(2 + i * 2);
+        endKey = Bytes.toBytes(3 + i * 2);
+        hri = new HRegionInfo(htd.getTableName());
+        rfs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, hri);
+        regions[i+1] = new RegionData(tableDir, hri, regions[i].files.length);
+        for (int j = 0; j < regions[i].files.length; ++j) {
+          String refName = regions[i].files[j].getName() + '.' + regions[i].hri.getEncodedName();
+          Path refFile = createStoreFile(new Path(rootDir, refName));
+          regions[i+1].files[j] = rfs.commitStoreFile(TEST_FAMILY, refFile);
+        }
+      }
+      return regions;
+    }
+
+    private Path createStoreFile(final Path storeFile)
+        throws IOException {
+      FSDataOutputStream out = fs.create(storeFile);
+      try {
+        out.write(Bytes.toBytes(storeFile.toString()));
+      } finally {
+        out.close();
+      }
+      return storeFile;
+    }
   }
 
   // ==========================================================================

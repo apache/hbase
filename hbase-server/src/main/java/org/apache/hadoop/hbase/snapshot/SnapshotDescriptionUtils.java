@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.snapshot;
 import java.io.IOException;
 import java.util.Collections;
 
-import com.google.protobuf.ByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -32,6 +31,8 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifestV1;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifestV2;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -87,11 +88,13 @@ public class SnapshotDescriptionUtils {
   }
 
   private static final Log LOG = LogFactory.getLog(SnapshotDescriptionUtils.class);
+
   /**
-   * Version of the fs layout for a snapshot. Future snapshots may have different file layouts,
-   * which we may need to read in differently.
+   * Version of the fs layout for new snapshot.
+   * Each version of hbase should be able to read older formats.
    */
-  public static final int SNAPSHOT_LAYOUT_VERSION = 0;
+  public static final String SNAPSHOT_LAYOUT_CONF_KEY = "hbase.snapshot.format.version";
+  public static final int SNAPSHOT_LAYOUT_LATEST_FORMAT = SnapshotManifestV2.DESCRIPTOR_VERSION;
 
   // snapshot directory constants
   /**
@@ -113,6 +116,15 @@ public class SnapshotDescriptionUtils {
   private SnapshotDescriptionUtils() {
     // private constructor for utility class
   }
+
+  public static int getDefaultSnapshotLayoutFormat(final Configuration conf) {
+    int layoutFormat = conf.getInt(SNAPSHOT_LAYOUT_CONF_KEY, SNAPSHOT_LAYOUT_LATEST_FORMAT);
+    if (layoutFormat >= SnapshotManifestV2.DESCRIPTOR_VERSION) {
+      return SnapshotManifestV2.DESCRIPTOR_VERSION;
+    }
+    return SnapshotManifestV1.DESCRIPTOR_VERSION;
+  }
+
 
   /**
    * @param conf {@link Configuration} from which to check for the timeout

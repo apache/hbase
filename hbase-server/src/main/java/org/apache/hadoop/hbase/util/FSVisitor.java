@@ -150,7 +150,7 @@ public final class FSVisitor {
       final FSVisitor.RecoveredEditsVisitor visitor) throws IOException {
     FileStatus[] regions = FSUtils.listStatus(fs, tableDir, new FSUtils.RegionDirFilter(fs));
     if (regions == null) {
-      LOG.info("No regions under directory:" + tableDir);
+      LOG.info("No recoveredEdits regions under directory:" + tableDir);
       return;
     }
 

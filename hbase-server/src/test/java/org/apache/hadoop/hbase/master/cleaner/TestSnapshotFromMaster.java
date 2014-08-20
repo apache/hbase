@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -53,6 +54,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRes
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -331,19 +333,20 @@ public class TestSnapshotFromMaster {
 
     // get the snapshot files for the table
     Path snapshotTable = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
-    Path[] snapshotHFiles = SnapshotTestingUtils.listHFiles(fs, snapshotTable);
+    Set<String> snapshotHFiles = SnapshotReferenceUtil.getHFileNames(
+        UTIL.getConfiguration(), fs, snapshotTable);
     // check that the files in the archive contain the ones that we need for the snapshot
     LOG.debug("Have snapshot hfiles:");
-    for (Path file : snapshotHFiles) {
-      LOG.debug(file);
+    for (String fileName : snapshotHFiles) {
+      LOG.debug(fileName);
     }
     // get the archived files for the table
     Collection<String> files = getArchivedHFiles(archiveDir, rootDir, fs, TABLE_NAME);
 
     // and make sure that there is a proper subset
-    for (Path file : snapshotHFiles) {
-      assertTrue("Archived hfiles " + files + " is missing snapshot file:" + file,
-        files.contains(file.getName()));
+    for (String fileName : snapshotHFiles) {
+      assertTrue("Archived hfiles " + files + " is missing snapshot file:" + fileName,
+        files.contains(fileName));
     }
 
     // delete the existing snapshot

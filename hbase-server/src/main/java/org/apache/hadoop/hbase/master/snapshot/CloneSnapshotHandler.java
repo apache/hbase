@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 
 import com.google.common.base.Preconditions;
 
@@ -107,8 +108,9 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
     try {
       // 1. Execute the on-disk Clone
       Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
+      SnapshotManifest manifest = SnapshotManifest.open(conf, fs, snapshotDir, snapshot);
       RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(conf, fs,
-          snapshot, snapshotDir, hTableDescriptor, tableRootDir, monitor, status);
+          manifest, hTableDescriptor, tableRootDir, monitor, status);
       metaChanges = restoreHelper.restoreHdfsRegions();
 
       // Clone operation should not have stuff to restore or remove

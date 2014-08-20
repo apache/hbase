@@ -189,7 +189,7 @@ public class Reference {
     }
   }
 
-  FSProtos.Reference convert() {
+  public FSProtos.Reference convert() {
     FSProtos.Reference.Builder builder = FSProtos.Reference.newBuilder();
     builder.setRange(isTopFileRegion(getFileRegion())?
       FSProtos.Reference.Range.TOP: FSProtos.Reference.Range.BOTTOM);
@@ -197,7 +197,7 @@ public class Reference {
     return builder.build();
   }
 
-  static Reference convert(final FSProtos.Reference r) {
+  public static Reference convert(final FSProtos.Reference r) {
     Reference result = new Reference();
     result.splitkey = r.getSplitkey().toByteArray();
     result.region = r.getRange() == FSProtos.Reference.Range.TOP? Range.top: Range.bottom;

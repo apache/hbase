@@ -70,11 +70,11 @@ import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
 import org.apache.hadoop.hbase.snapshot.SnapshotExistsException;
+import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.TablePartiallyOpenException;
 import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.zookeeper.KeeperException;
 
@@ -160,6 +160,11 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
   private Path rootDir;
   private ExecutorService executorService;
 
+  /**
+   * Snapshot layout version to use when writing a new snapshot.
+   */
+  private int snapshotLayoutVersion = SnapshotDescriptionUtils.SNAPSHOT_LAYOUT_LATEST_FORMAT;
+
   public SnapshotManager() {}
 
   /**
@@ -176,6 +181,9 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     this.rootDir = master.getMasterFileSystem().getRootDir();
     checkSnapshotSupport(master.getConfiguration(), master.getMasterFileSystem());
+
+    this.snapshotLayoutVersion = SnapshotDescriptionUtils.getDefaultSnapshotLayoutFormat(
+        master.getConfiguration());
 
     this.coordinator = coordinator;
     this.executorService = pool;
@@ -542,9 +550,12 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
           + "' doesn't exist, can't take snapshot.", snapshot);
     }
 
-    // set the snapshot version, now that we are ready to take it
-    snapshot = snapshot.toBuilder().setVersion(SnapshotDescriptionUtils.SNAPSHOT_LAYOUT_VERSION)
-        .build();
+    // if not specified, set the snapshot format
+    if (!snapshot.hasVersion()) {
+      snapshot = snapshot.toBuilder()
+          .setVersion(snapshotLayoutVersion)
+          .build();
+    }
 
     // call pre coproc hook
     MasterCoprocessorHost cpHost = master.getCoprocessorHost();
@@ -678,15 +689,16 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     // read snapshot information
     SnapshotDescription fsSnapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
-    HTableDescriptor snapshotTableDesc =
-        FSTableDescriptors.getTableDescriptorFromFs(fs, snapshotDir);
+    SnapshotManifest manifest = SnapshotManifest.open(master.getConfiguration(), fs,
+        snapshotDir, fsSnapshot);
+    HTableDescriptor snapshotTableDesc = manifest.getTableDescriptor();
     TableName tableName = TableName.valueOf(reqSnapshot.getTable());
 
     // stop tracking "abandoned" handlers
     cleanupSentinels();
 
     // Verify snapshot validity
-    SnapshotReferenceUtil.verifySnapshot(master.getConfiguration(), fs, snapshotDir, fsSnapshot);
+    SnapshotReferenceUtil.verifySnapshot(master.getConfiguration(), fs, manifest);
 
     // Execute the restore/clone operation
     if (MetaReader.tableExists(master.getCatalogTracker(), tableName)) {

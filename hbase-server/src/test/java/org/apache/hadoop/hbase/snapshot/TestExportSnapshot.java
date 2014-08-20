@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -48,9 +47,12 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -144,9 +146,13 @@ public class TestExportSnapshot {
   @Test
   public void testBalanceSplit() throws Exception {
     // Create a list of files
-    List<Pair<Path, Long>> files = new ArrayList<Pair<Path, Long>>();
+    List<Pair<SnapshotFileInfo, Long>> files = new ArrayList<Pair<SnapshotFileInfo, Long>>();
     for (long i = 0; i <= 20; i++) {
-      files.add(new Pair<Path, Long>(new Path("file-" + i), i));
+      SnapshotFileInfo fileInfo = SnapshotFileInfo.newBuilder()
+        .setType(SnapshotFileInfo.Type.HFILE)
+        .setHfile("file-" + i)
+        .build();
+      files.add(new Pair<SnapshotFileInfo, Long>(fileInfo, i));
     }
 
     // Create 5 groups (total size 210)
@@ -155,18 +161,26 @@ public class TestExportSnapshot {
     //    group 2: 18, 13,  8,  3 (total size: 42)
     //    group 3: 17, 12,  7,  4 (total size: 42)
     //    group 4: 16, 11,  6,  5 (total size: 42)
-    List<List<Path>> splits = ExportSnapshot.getBalancedSplits(files, 5);
+    List<List<SnapshotFileInfo>> splits = ExportSnapshot.getBalancedSplits(files, 5);
     assertEquals(5, splits.size());
-    assertEquals(Arrays.asList(new Path("file-20"), new Path("file-11"),
-      new Path("file-10"), new Path("file-1"), new Path("file-0")), splits.get(0));
-    assertEquals(Arrays.asList(new Path("file-19"), new Path("file-12"),
-      new Path("file-9"), new Path("file-2")), splits.get(1));
-    assertEquals(Arrays.asList(new Path("file-18"), new Path("file-13"),
-      new Path("file-8"), new Path("file-3")), splits.get(2));
-    assertEquals(Arrays.asList(new Path("file-17"), new Path("file-14"),
-      new Path("file-7"), new Path("file-4")), splits.get(3));
-    assertEquals(Arrays.asList(new Path("file-16"), new Path("file-15"),
-      new Path("file-6"), new Path("file-5")), splits.get(4));
+
+    String[] split0 = new String[] {"file-20", "file-11", "file-10", "file-1", "file-0"};
+    verifyBalanceSplit(splits.get(0), split0);
+    String[] split1 = new String[] {"file-19", "file-12", "file-9",  "file-2"};
+    verifyBalanceSplit(splits.get(1), split1);
+    String[] split2 = new String[] {"file-18", "file-13", "file-8",  "file-3"};
+    verifyBalanceSplit(splits.get(2), split2);
+    String[] split3 = new String[] {"file-17", "file-14", "file-7",  "file-4"};
+    verifyBalanceSplit(splits.get(3), split3);
+    String[] split4 = new String[] {"file-16", "file-15", "file-6",  "file-5"};
+    verifyBalanceSplit(splits.get(4), split4);
+  }
+
+  private void verifyBalanceSplit(final List<SnapshotFileInfo> split, final String[] expected) {
+    assertEquals(expected.length, split.size());
+    for (int i = 0; i < expected.length; ++i) {
+      assertEquals(expected[i], split.get(i).getHfile());
+    }
   }
 
   /**
@@ -246,6 +260,11 @@ public class TestExportSnapshot {
     r1fs.commitStoreFile(TEST_FAMILY, storeFile);
 
     Path tableDir = FSUtils.getTableDir(archiveDir, tableWithRefsName);
+    HTableDescriptor htd = new HTableDescriptor(tableWithRefsName);
+    htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
+    new FSTableDescriptors(fs, rootDir)
+        .createTableDescriptorForTableDirectory(tableDir, htd, false);
+
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
     FileUtil.copy(fs, tableDir, fs, snapshotDir, false, conf);
     SnapshotDescriptionUtils.writeSnapshotInfo(sd, snapshotDir, fs);
@@ -365,13 +384,14 @@ public class TestExportSnapshot {
       new Path(HConstants.SNAPSHOT_DIR_NAME, snapshotName));
     final Path exportedArchive = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
     LOG.debug(listFiles(fs, exportedArchive, exportedArchive));
-    SnapshotReferenceUtil.visitReferencedFiles(fs, exportedSnapshot,
-        new SnapshotReferenceUtil.FileVisitor() {
-        public void storeFile (final String region, final String family, final String hfile)
-            throws IOException {
+    SnapshotReferenceUtil.visitReferencedFiles(TEST_UTIL.getConfiguration(), fs, exportedSnapshot,
+          new SnapshotReferenceUtil.SnapshotVisitor() {
+        public void storeFile(final HRegionInfo regionInfo, final String family,
+            final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+          String hfile = storeFile.getName();
           verifyNonEmptyFile(new Path(exportedArchive,
             new Path(FSUtils.getTableDir(new Path("./"), tableName),
-                new Path(region, new Path(family, hfile)))));
+                new Path(regionInfo.getEncodedName(), new Path(family, hfile)))));
         }
 
         public void recoveredEdits (final String region, final String logfile)

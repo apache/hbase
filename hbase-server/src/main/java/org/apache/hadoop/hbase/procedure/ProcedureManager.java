@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.procedure;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hbase.regionserver.snapshot.RegionServerSnapshotManager;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving

@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.master.snapshot;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -55,13 +54,14 @@ public class SnapshotLogCleaner extends BaseLogCleanerDelegate {
   private SnapshotFileCache cache;
 
   @Override
-  public synchronized Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
-    if (null == cache) return Collections.emptyList();
+  public synchronized boolean isFileDeletable(FileStatus fStat) {
     try {
-      return cache.getUnreferencedFiles(files);
+      if (null == cache) return false;
+      return !cache.contains(fStat.getPath().getName());
     } catch (IOException e) {
-      LOG.error("Exception while checking if files were valid, keeping them just in case.", e);
-      return Collections.emptyList();
+      LOG.error("Exception while checking if:" + fStat.getPath()
+          + " was valid, keeping it just in case.", e);
+      return false;
     }
   }
 
