@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -86,6 +87,7 @@ public class WALEdit implements Writable, HeapSize {
   static final byte [] METAROW = Bytes.toBytes("METAROW");
   static final byte[] COMPACTION = Bytes.toBytes("HBASE::COMPACTION");
   static final byte [] FLUSH = Bytes.toBytes("HBASE::FLUSH");
+  static final byte [] REGION_EVENT = Bytes.toBytes("HBASE::REGION_EVENT");
 
   private final int VERSION_2 = -1;
   private final boolean isReplay;
@@ -273,6 +275,20 @@ public class WALEdit implements Writable, HeapSize {
   public static FlushDescriptor getFlushDescriptor(Cell cell) throws IOException {
     if (CellUtil.matchingColumn(cell, METAFAMILY, FLUSH)) {
       return FlushDescriptor.parseFrom(cell.getValue());
+    }
+    return null;
+  }
+
+  public static WALEdit createRegionEventWALEdit(HRegionInfo hri,
+      RegionEventDescriptor regionEventDesc) {
+    KeyValue kv = new KeyValue(getRowForRegion(hri), METAFAMILY, REGION_EVENT,
+      EnvironmentEdgeManager.currentTimeMillis(), regionEventDesc.toByteArray());
+    return new WALEdit().add(kv);
+  }
+
+  public static RegionEventDescriptor getRegionEventDescriptor(Cell cell) throws IOException {
+    if (CellUtil.matchingColumn(cell, METAFAMILY, REGION_EVENT)) {
+      return RegionEventDescriptor.parseFrom(cell.getValue());
     }
     return null;
   }
