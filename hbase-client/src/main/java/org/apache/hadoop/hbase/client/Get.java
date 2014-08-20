@@ -77,7 +77,6 @@ public class Get extends Query
   private boolean closestRowBefore = false;
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
-  private Consistency consistency = null;
 
   /**
    * Create a Get operation for the specified row.
@@ -340,22 +339,6 @@ public class Get extends Query
    */
   public Map<byte[],NavigableSet<byte[]>> getFamilyMap() {
     return this.familyMap;
-  }
-
-  /**
-   * Returns the consistency level for this operation
-   * @return the consistency level
-   */
-  public Consistency getConsistency() {
-    return consistency;
-  }
-
-  /**
-   * Sets the consistency level for this operation
-   * @param consistency the consistency level
-   */
-  public void setConsistency(Consistency consistency) {
-    this.consistency = consistency;
   }
 
   /**

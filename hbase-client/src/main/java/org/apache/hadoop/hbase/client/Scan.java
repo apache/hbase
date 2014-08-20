@@ -136,7 +136,6 @@ public class Scan extends Query {
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
   private Boolean loadColumnFamiliesOnDemand = null;
-  private Consistency consistency = Consistency.STRONG;
 
   /**
    * Set it true for small scan to get better performance
@@ -632,22 +631,6 @@ public class Scan extends Query {
   public boolean doLoadColumnFamiliesOnDemand() {
     return (this.loadColumnFamiliesOnDemand != null)
       && this.loadColumnFamiliesOnDemand.booleanValue();
-  }
-
-  /**
-   * Returns the consistency level for this operation
-   * @return the consistency level
-   */
-  public Consistency getConsistency() {
-    return consistency;
-  }
-
-  /**
-   * Sets the consistency level for this operation
-   * @param consistency the consistency level
-   */
-  public void setConsistency(Consistency consistency) {
-    this.consistency = consistency;
   }
 
   /**

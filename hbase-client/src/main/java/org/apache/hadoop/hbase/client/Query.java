@@ -28,8 +28,6 @@ import org.apache.hadoop.hbase.security.access.AccessControlConstants;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 
@@ -37,6 +35,8 @@ import com.google.common.collect.ListMultimap;
 @InterfaceStability.Evolving
 public abstract class Query extends OperationWithAttributes {
   protected Filter filter = null;
+  protected int targetReplicaId = -1;
+  protected Consistency consistency = Consistency.STRONG;
 
   /**
    * @return Filter
@@ -102,5 +102,40 @@ public abstract class Query extends OperationWithAttributes {
     }
     setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
       ProtobufUtil.toUsersAndPermissions(permMap).toByteArray());
+  }
+
+  /**
+   * Returns the consistency level for this operation
+   * @return the consistency level
+   */
+  public Consistency getConsistency() {
+    return consistency;
+  }
+
+  /**
+   * Sets the consistency level for this operation
+   * @param consistency the consistency level
+   */
+  public void setConsistency(Consistency consistency) {
+    this.consistency = consistency;
+  }
+
+  /**
+   * Specify region replica id where Query will fetch data from. Use this together with
+   * {@link #setConsistency(Consistency)} passing {@link Consistency#TIMELINE} to read data from
+   * a specific replicaId.
+   * <br><b> Expert: </b>This is an advanced API exposed. Only use it if you know what you are doing
+   * @param Id
+   */
+  public void setReplicaId(int Id) {
+    this.targetReplicaId = Id;
+  }
+
+  /**
+   * Returns region replica id where Query will fetch data from.
+   * @return region replica id or -1 if not set.
+   */
+  public int getReplicaId() {
+    return this.targetReplicaId;
   }
 }
