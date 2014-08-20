@@ -39,12 +39,10 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
@@ -63,64 +61,42 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 import com.google.protobuf.ByteString;
 
 /**
- * Test class that tests the visibility labels
+ * Base test class for visibility labels basic features
  */
-@Category(MediumTests.class)
-public class TestVisibilityLabels {
+public abstract class TestVisibilityLabels {
 
-  private static final String TOPSECRET = "topsecret";
-  private static final String PUBLIC = "public";
-  private static final String PRIVATE = "private";
-  private static final String CONFIDENTIAL = "confidential";
-  private static final String SECRET = "secret";
-  private static final String COPYRIGHT = "\u00A9ABC";
-  private static final String ACCENT = "\u0941";
-  private static final String UNICODE_VIS_TAG = COPYRIGHT + "\"" + ACCENT + "\\" + SECRET + "\""
+  public static final String TOPSECRET = "topsecret";
+  public static final String PUBLIC = "public";
+  public static final String PRIVATE = "private";
+  public static final String CONFIDENTIAL = "confidential";
+  public static final String SECRET = "secret";
+  public static final String COPYRIGHT = "\u00A9ABC";
+  public static final String ACCENT = "\u0941";
+  public static final String UNICODE_VIS_TAG = COPYRIGHT + "\"" + ACCENT + "\\" + SECRET + "\""
       + "\u0027&\\";
-  private static final String UC1 = "\u0027\"\u002b";
-  private static final String UC2 = "\u002d\u003f";
+  public static final String UC1 = "\u0027\"\u002b";
+  public static final String UC2 = "\u002d\u003f";
   public static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final byte[] row1 = Bytes.toBytes("row1");
-  private static final byte[] row2 = Bytes.toBytes("row2");
-  private static final byte[] row3 = Bytes.toBytes("row3");
-  private static final byte[] row4 = Bytes.toBytes("row4");
-  private final static byte[] fam = Bytes.toBytes("info");
-  private final static byte[] qual = Bytes.toBytes("qual");
-  private final static byte[] value = Bytes.toBytes("value");
+  public static final byte[] row1 = Bytes.toBytes("row1");
+  public static final byte[] row2 = Bytes.toBytes("row2");
+  public static final byte[] row3 = Bytes.toBytes("row3");
+  public static final byte[] row4 = Bytes.toBytes("row4");
+  public final static byte[] fam = Bytes.toBytes("info");
+  public final static byte[] qual = Bytes.toBytes("qual");
+  public final static byte[] value = Bytes.toBytes("value");
   public static Configuration conf;
 
   private volatile boolean killedRS = false;
   @Rule 
   public final TestName TEST_NAME = new TestName();
-  public static User SUPERUSER;
-
-  @BeforeClass
-  public static void setupBeforeClass() throws Exception {
-    // setup configuration
-    conf = TEST_UTIL.getConfiguration();
-    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false);
-    conf.setBoolean("hbase.online.schema.update.enable", true);
-    VisibilityTestUtil.enableVisiblityLabels(conf);
-    conf.setClass(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, SimpleScanLabelGenerator.class,
-        ScanLabelGenerator.class);
-    conf.set("hbase.superuser", "admin");
-    TEST_UTIL.startMiniCluster(2);
-    SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
-
-    // Wait for the labels table to become available
-    TEST_UTIL.waitTableEnabled(LABELS_TABLE_NAME.getName(), 50000);
-    addLabels();
-  }
+  public static User SUPERUSER, USER1;
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
@@ -440,53 +416,7 @@ public class TestVisibilityLabels {
     }
   }
 
-  @Test(timeout = 60 * 1000)
-  public void testAddVisibilityLabelsOnRSRestart() throws Exception {
-    List<RegionServerThread> regionServerThreads = TEST_UTIL.getHBaseCluster()
-        .getRegionServerThreads();
-    for (RegionServerThread rsThread : regionServerThreads) {
-      rsThread.getRegionServer().abort("Aborting ");
-    }
-    // Start one new RS
-    RegionServerThread rs = TEST_UTIL.getHBaseCluster().startRegionServer();
-    waitForLabelsRegionAvailability(rs.getRegionServer());
-    PrivilegedExceptionAction<VisibilityLabelsResponse> action =
-        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      public VisibilityLabelsResponse run() throws Exception {
-        String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, "ABC", "XYZ" };
-        try {
-          VisibilityClient.addLabels(conf, labels);
-        } catch (Throwable t) {
-          throw new IOException(t);
-        }
-        return null;
-      }
-    };
-    SUPERUSER.runAs(action);
-    // Scan the visibility label
-    Scan s = new Scan();
-    s.setAuthorizations(new Authorizations(VisibilityUtils.SYSTEM_LABEL));
-    HTable ht = new HTable(conf, LABELS_TABLE_NAME.getName());
-    int i = 0;
-    try {
-      ResultScanner scanner = ht.getScanner(s);
-      while (true) {
-        Result next = scanner.next();
-        if (next == null) {
-          break;
-        }
-        i++;
-      }
-    } finally {
-      if (ht != null) {
-        ht.close();
-      }
-    }
-    // One label is the "system" label.
-    Assert.assertEquals("The count should be 13", 13, i);
-  }
-
-  private void waitForLabelsRegionAvailability(HRegionServer regionServer) {
+  protected void waitForLabelsRegionAvailability(HRegionServer regionServer) {
     while (!regionServer.isOnline()) {
       try {
         Thread.sleep(10);
@@ -526,32 +456,6 @@ public class TestVisibilityLabels {
   }
 
   @Test
-  public void testAddLabels() throws Throwable {
-    PrivilegedExceptionAction<VisibilityLabelsResponse> action = 
-        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      public VisibilityLabelsResponse run() throws Exception {
-        String[] labels = { "L1", SECRET, "L2", "invalid~", "L3" };
-        VisibilityLabelsResponse response = null;
-        try {
-          response = VisibilityClient.addLabels(conf, labels);
-        } catch (Throwable e) {
-          fail("Should not have thrown exception");
-        }
-        List<RegionActionResult> resultList = response.getResultList();
-        assertEquals(5, resultList.size());
-        assertTrue(resultList.get(0).getException().getValue().isEmpty());
-        assertEquals("org.apache.hadoop.hbase.security.visibility.LabelAlreadyExistsException",
-            resultList.get(1).getException().getName());
-        assertTrue(resultList.get(2).getException().getValue().isEmpty());
-        assertTrue(resultList.get(3).getException().getValue().isEmpty());
-        assertTrue(resultList.get(4).getException().getValue().isEmpty());
-        return null;
-      }
-    };
-    SUPERUSER.runAs(action);
-  }
-
-  @Test
   public void testSetAndGetUserAuths() throws Throwable {
     final String user = "user1";
     PrivilegedExceptionAction<Void> action = new PrivilegedExceptionAction<Void>() {
@@ -572,18 +476,14 @@ public class TestVisibilityLabels {
       scan.setAuthorizations(new Authorizations(VisibilityUtils.SYSTEM_LABEL));
       ResultScanner scanner = ht.getScanner(scan);
       Result result = null;
+      List<Result> results = new ArrayList<Result>();
       while ((result = scanner.next()) != null) {
-        Cell label = result.getColumnLatestCell(LABELS_TABLE_FAMILY, LABEL_QUALIFIER);
-        Cell userAuth = result.getColumnLatestCell(LABELS_TABLE_FAMILY, user.getBytes());
-        if (Bytes.equals(SECRET.getBytes(), 0, SECRET.getBytes().length, label.getValueArray(),
-            label.getValueOffset(), label.getValueLength())
-            || Bytes.equals(CONFIDENTIAL.getBytes(), 0, CONFIDENTIAL.getBytes().length,
-                label.getValueArray(), label.getValueOffset(), label.getValueLength())) {
-          assertNotNull(userAuth);
-        } else {
-          assertNull(userAuth);
-        }
+        results.add(result);
       }
+      List<String> auths = extractAuths(user, results);
+      assertTrue(auths.contains(SECRET));
+      assertTrue(auths.contains(CONFIDENTIAL));
+      assertEquals(2, auths.size());
     } finally {
       if (ht != null) {
         ht.close();
@@ -637,6 +537,19 @@ public class TestVisibilityLabels {
     SUPERUSER.runAs(action);
   }
 
+  protected List<String> extractAuths(String user, List<Result> results) {
+    List<String> auths = new ArrayList<String>();
+    for (Result result : results) {
+      Cell labelCell = result.getColumnLatestCell(LABELS_TABLE_FAMILY, LABEL_QUALIFIER);
+      Cell userAuthCell = result.getColumnLatestCell(LABELS_TABLE_FAMILY, user.getBytes());
+      if (userAuthCell != null) {
+        auths.add(Bytes.toString(labelCell.getValueArray(), labelCell.getValueOffset(),
+            labelCell.getValueLength()));
+      }
+    }
+    return auths;
+  }
+
   @Test
   public void testClearUserAuths() throws Throwable {
     PrivilegedExceptionAction<Void> action = new PrivilegedExceptionAction<Void>() {
@@ -660,24 +573,25 @@ public class TestVisibilityLabels {
         List<RegionActionResult> resultList = response.getResultList();
         assertEquals(3, resultList.size());
         assertTrue(resultList.get(0).getException().getValue().isEmpty());
-        assertEquals("org.apache.hadoop.hbase.security.visibility.InvalidLabelException",
+        assertEquals("org.apache.hadoop.hbase.DoNotRetryIOException",
             resultList.get(1).getException().getName());
+        assertTrue(Bytes.toString(resultList.get(1).getException().getValue().toByteArray())
+            .contains(
+                "org.apache.hadoop.hbase.security.visibility.InvalidLabelException: "
+                    + "Label 'public' is not set for the user testUser"));
         assertTrue(resultList.get(2).getException().getValue().isEmpty());
         HTable ht = null;
         try {
           ht = new HTable(conf, LABELS_TABLE_NAME);
           ResultScanner scanner = ht.getScanner(new Scan());
           Result result = null;
+          List<Result> results = new ArrayList<Result>();
           while ((result = scanner.next()) != null) {
-            Cell label = result.getColumnLatestCell(LABELS_TABLE_FAMILY, LABEL_QUALIFIER);
-            Cell userAuth = result.getColumnLatestCell(LABELS_TABLE_FAMILY, user.getBytes());
-            if (Bytes.equals(PRIVATE.getBytes(), 0, PRIVATE.getBytes().length,
-                label.getValueArray(), label.getValueOffset(), label.getValueLength())) {
-              assertNotNull(userAuth);
-            } else {
-              assertNull(userAuth);
-            }
+            results.add(result);
           }
+          List<String> curAuths = extractAuths(user, results);
+          assertTrue(curAuths.contains(PRIVATE));
+          assertEquals(1, curAuths.size());
         } finally {
           if (ht != null) {
             ht.close();
@@ -978,7 +892,7 @@ public class TestVisibilityLabels {
     }
   }
 
-  private static HTable createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
+  static HTable createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
       throws Exception {
     HTable table = null;
     try {

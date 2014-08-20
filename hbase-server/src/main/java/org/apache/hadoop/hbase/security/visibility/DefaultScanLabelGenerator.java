@@ -38,10 +38,10 @@ public class DefaultScanLabelGenerator implements ScanLabelGenerator {
   
   private Configuration conf;
   
-  private VisibilityLabelsManager labelsManager;
+  private VisibilityLabelsCache labelsCache;
   
   public DefaultScanLabelGenerator() {
-    this.labelsManager = VisibilityLabelsManager.get();
+    this.labelsCache = VisibilityLabelsCache.get();
   }
 
   @Override
@@ -59,7 +59,7 @@ public class DefaultScanLabelGenerator implements ScanLabelGenerator {
     if (authorizations != null) {
       List<String> labels = authorizations.getLabels();
       String userName = user.getShortName();
-      List<String> auths = this.labelsManager.getAuths(userName);
+      List<String> auths = this.labelsCache.getAuths(userName);
       return dropLabelsNotInUserAuths(labels, auths, userName);
     }
     return null;

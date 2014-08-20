@@ -44,10 +44,10 @@ public final class VisibilityConstants {
    * Visibility serialization version format. It indicates the visibility labels
    * are sorted based on ordinal
    **/
-  public static final byte VISIBILITY_SERIALIZATION_VERSION = 1;
+  public static final byte SORTED_ORDINAL_SERIALIZATION_FORMAT = 1;
   /** Byte representation of the visibility_serialization_version **/
-  public static final byte[] SORTED_ORDINAL_SERIALIZATION_FORMAT =
-      new byte[] { VISIBILITY_SERIALIZATION_VERSION };
+  public static final byte[] SORTED_ORDINAL_SERIALIZATION_FORMAT_TAG_VAL =
+      new byte[] { SORTED_ORDINAL_SERIALIZATION_FORMAT };
 
   public static final String CHECK_AUTHS_FOR_MUTATION = 
       "hbase.security.visibility.mutations.checkauths";

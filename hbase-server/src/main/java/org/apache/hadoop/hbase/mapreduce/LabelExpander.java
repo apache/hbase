@@ -33,6 +33,7 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.HTable;
@@ -85,11 +86,11 @@ public class LabelExpander {
     // We will be adding this tag before the visibility tags and the presence of
     // this
     // tag indicates we are supporting deletes with cell visibility
-    tags.add(VisibilityUtils.VIS_SERIALIZATION_TAG);
+    tags.add(VisibilityUtils.SORTED_ORDINAL_SERIALIZATION_FORMAT_TAG);
     if (node.isSingleNode()) {
       getLabelOrdinals(node, labelOrdinals);
       writeLabelOrdinalsToStream(labelOrdinals, dos);
-      tags.add(new Tag(VisibilityUtils.VISIBILITY_TAG_TYPE, baos.toByteArray()));
+      tags.add(new Tag(TagType.VISIBILITY_TAG_TYPE, baos.toByteArray()));
       baos.reset();
     } else {
       NonLeafExpressionNode nlNode = (NonLeafExpressionNode) node;
@@ -97,14 +98,14 @@ public class LabelExpander {
         for (ExpressionNode child : nlNode.getChildExps()) {
           getLabelOrdinals(child, labelOrdinals);
           writeLabelOrdinalsToStream(labelOrdinals, dos);
-          tags.add(new Tag(VisibilityUtils.VISIBILITY_TAG_TYPE, baos.toByteArray()));
+          tags.add(new Tag(TagType.VISIBILITY_TAG_TYPE, baos.toByteArray()));
           baos.reset();
           labelOrdinals.clear();
         }
       } else {
         getLabelOrdinals(nlNode, labelOrdinals);
         writeLabelOrdinalsToStream(labelOrdinals, dos);
-        tags.add(new Tag(VisibilityUtils.VISIBILITY_TAG_TYPE, baos.toByteArray()));
+        tags.add(new Tag(TagType.VISIBILITY_TAG_TYPE, baos.toByteArray()));
         baos.reset();
       }
     }

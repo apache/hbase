@@ -1,4 +1,5 @@
 /**
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,17 +16,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.security.visibility;
+
+import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.Cell;
 
-@InterfaceAudience.Private
+/**
+ * During the read (ie. get/Scan) the VisibilityController calls this interface for each of the
+ * Cell. Depending on the evaluate() result, a cell can be either included or filtered out from the
+ * read results.
+ */
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
-public final class TagType {
-  // Please declare new Tag Types here to avoid step on pre-existing tag types.
-  public static final byte ACL_TAG_TYPE = (byte) 1;
-  public static final byte VISIBILITY_TAG_TYPE = (byte) 2;
-  public static final byte LOG_REPLAY_TAG_TYPE = (byte) 3;
-  public static final byte VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE = (byte)4;
+public interface VisibilityExpEvaluator {
+
+  /**
+   * Evaluates whether the passed cell passes Scan/Get Authorization.
+   * @param cell Cell under evaluation
+   * @return true if this cell can be included in the Result. Else false.
+   */
+  boolean evaluate(Cell cell) throws IOException;
 }
