@@ -518,13 +518,8 @@
           <configuration>
             <failIfNoTests>false</failIfNoTests>
             <skip>${surefire.skipFirstPart}</skip>
-            <forkMode>${surefire.firstPartForkMode}</forkMode>
-            <parallel>${surefire.firstPartParallel}</parallel>
-            <perCoreThreadCount>false</perCoreThreadCount>
-            <threadCount>${surefire.firstPartThreadCount}</threadCount>
-            <parallel>classes</parallel>
-            <!-- surefire hack, if not we're
-              using method parallelization class ! -->
+            <forkCount>${surefire.firstPartForkCount}</forkCount>
+            <reuseForks>false</reuseForks>
             <testFailureIgnore>${surefire.testFailureIgnore}</testFailureIgnore>
             <forkedProcessTimeoutInSeconds>${surefire.timeout}</forkedProcessTimeoutInSeconds>
             <!--Allocate some direct memory for direct memory tests-->
@@ -544,12 +539,8 @@
               <configuration>
                 <skip>${surefire.skipSecondPart}</skip>
                 <testFailureIgnore>${surefire.testFailureIgnore}</testFailureIgnore>
-                <forkMode>${surefire.secondPartForkMode}</forkMode>
-                <perCoreThreadCount>false</perCoreThreadCount>
-                <threadCount>${surefire.secondPartThreadCount}</threadCount>
-                <parallel>classes</parallel>
-                <!-- surefire hack, if not we're using method
-                  parallelisation class ! -->
+                <reuseForks>false</reuseForks>
+                <forkCount>${surefire.secondPartForkCount}</forkCount>
                 <groups>${surefire.secondPartGroups}</groups>
               </configuration>
             </execution>
@@ -715,7 +706,7 @@
             <attach>false</attach>
           </configuration>
         </plugin>
-       <plugin>
+        <plugin>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-maven-plugins</artifactId>
           <version>${hadoop-two.version}</version>
@@ -723,7 +714,7 @@
             <protocVersion>${protobuf.version}</protocVersion>
             <protocCommand>${protoc.path}</protocCommand>
           </configuration>
-       </plugin>
+        </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
@@ -990,16 +981,13 @@
     <server.test.jar>hbase-server-${project.version}-tests.jar</server.test.jar>
     <common.test.jar>hbase-common-${project.version}-tests.jar</common.test.jar>
     <it.test.jar>hbase-it-${project.version}-tests.jar</it.test.jar>
-    <surefire.version>2.12-TRUNK-HBASE-2</surefire.version>
+    <surefire.version>2.17</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
     <!-- default: run small & medium, medium with 2 threads -->
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
     <surefire.skipSecondPart>false</surefire.skipSecondPart>
-    <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
-    <surefire.firstPartParallel>classes</surefire.firstPartParallel>
-    <surefire.secondPartForkMode>perThread</surefire.secondPartForkMode>
-    <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
-    <surefire.secondPartThreadCount>2</surefire.secondPartThreadCount>
+    <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+    <surefire.secondPartForkCount>2</surefire.secondPartForkCount>
     <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
     <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
     <surefire.testFailureIgnore>false</surefire.testFailureIgnore>
@@ -1638,20 +1626,20 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-hdfs</artifactId>
-              <exclusions>
-                <exclusion>
-                  <groupId>javax.servlet.jsp</groupId>
-                  <artifactId>jsp-api</artifactId>
-                </exclusion>
-                <exclusion>
-                  <groupId>javax.servlet</groupId>
-                  <artifactId>servlet-api</artifactId>
-                </exclusion>
-                <exclusion>
-                  <groupId>stax</groupId>
-                  <artifactId>stax-api</artifactId>
-                </exclusion>
-              </exclusions>
+            <exclusions>
+              <exclusion>
+                <groupId>javax.servlet.jsp</groupId>
+                <artifactId>jsp-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>stax</groupId>
+                <artifactId>stax-api</artifactId>
+              </exclusion>
+            </exclusions>
             <version>${hadoop-two.version}</version>
           </dependency>
           <dependency>
@@ -1660,20 +1648,20 @@
             <version>${hadoop-two.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
-              <exclusions>
-                <exclusion>
-                  <groupId>javax.servlet.jsp</groupId>
-                  <artifactId>jsp-api</artifactId>
-                </exclusion>
-                <exclusion>
-                  <groupId>javax.servlet</groupId>
-                  <artifactId>servlet-api</artifactId>
-                </exclusion>
-                <exclusion>
-                  <groupId>stax</groupId>
-                  <artifactId>stax-api</artifactId>
-                </exclusion>
-              </exclusions>
+            <exclusions>
+              <exclusion>
+                <groupId>javax.servlet.jsp</groupId>
+                <artifactId>jsp-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>stax</groupId>
+                <artifactId>stax-api</artifactId>
+              </exclusion>
+            </exclusions>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -1912,9 +1900,7 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <surefire.firstPartForkMode>always</surefire.firstPartForkMode>
-        <surefire.firstPartParallel>none</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
       </properties>
     </profile>
     <profile>
@@ -1924,9 +1910,7 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
-        <surefire.firstPartParallel>classes</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
       </properties>
     </profile>
     <profile>
@@ -1936,9 +1920,7 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
-        <surefire.firstPartParallel>none</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups/>
@@ -1951,9 +1933,7 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
-        <surefire.firstPartParallel>none</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
@@ -1967,7 +1947,6 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <surefire.firstPartForkMode>always</surefire.firstPartForkMode>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.firstPartGroups>
@@ -1981,7 +1960,6 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <surefire.firstPartForkMode>always</surefire.firstPartForkMode>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.LargeTests</surefire.firstPartGroups>
@@ -1995,9 +1973,7 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
-        <surefire.firstPartParallel>none</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>false</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
@@ -2011,10 +1987,8 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
-        <surefire.firstPartParallel>none</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
-        <surefire.secondPartThreadCount>5</surefire.secondPartThreadCount>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>5</surefire.secondPartForkCount>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>false</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
@@ -2031,7 +2005,6 @@
       </activation>
       <properties>
         <surefire.provider>surefire-junit4</surefire.provider>
-        <surefire.firstPartForkMode>always</surefire.firstPartForkMode>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups/>
