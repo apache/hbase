@@ -29,7 +29,7 @@ module Shell
     @@command_groups
   end
 
-  def self.load_command(name, group)
+  def self.load_command(name, group, aliases=[])
     return if commands[name]
 
     # Register command in the group
@@ -41,6 +41,9 @@ module Shell
       require "shell/commands/#{name}"
       klass_name = name.to_s.gsub(/(?:^|_)(.)/) { $1.upcase } # camelize
       commands[name] = eval("Commands::#{klass_name}")
+      aliases.each do |an_alias|
+        commands[an_alias] = commands[name]
+      end
     rescue => e
       raise "Can't load hbase shell command: #{name}. Error: #{e}\n#{e.backtrace.join("\n")}"
     end
@@ -56,8 +59,11 @@ module Shell
       :comment => opts[:comment]
     }
 
+    all_aliases = opts[:aliases] || {}
+
     opts[:commands].each do |command|
-      load_command(command, group)
+      aliases = all_aliases[command] || []
+      load_command(command, group, aliases)
     end
   end
 
@@ -257,7 +263,10 @@ Shell.load_command_group(
     alter_status
     alter_async
     get_table
-  ]
+  ],
+  :aliases => {
+    'describe' => ['desc']
+  }
 )
 
 Shell.load_command_group(

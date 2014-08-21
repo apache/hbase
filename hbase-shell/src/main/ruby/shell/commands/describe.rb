@@ -25,6 +25,10 @@ module Shell
 Describe the named table. For example:
   hbase> describe 't1'
   hbase> describe 'ns1:t1'
+
+Alternatively, you can use the abbreviated 'desc' for the same thing.
+  hbase> desc 't1'
+  hbase> desc 'nds1:t1'
 EOF
       end
 
