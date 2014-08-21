@@ -516,13 +516,8 @@
           <configuration>
             <failIfNoTests>false</failIfNoTests>
             <skip>${surefire.skipFirstPart}</skip>
-            <forkMode>${surefire.firstPartForkMode}</forkMode>
-            <parallel>${surefire.firstPartParallel}</parallel>
-            <perCoreThreadCount>false</perCoreThreadCount>
-            <threadCount>${surefire.firstPartThreadCount}</threadCount>
-            <parallel>classes</parallel>
-            <!-- surefire hack, if not we're
-              using method parallelization class ! -->
+            <forkCount>${surefire.firstPartForkCount}</forkCount>
+            <reuseForks>false</reuseForks>
             <testFailureIgnore>${surefire.testFailureIgnore}</testFailureIgnore>
             <forkedProcessTimeoutInSeconds>${surefire.timeout}</forkedProcessTimeoutInSeconds>
             <!--Allocate some direct memory for direct memory tests-->
@@ -539,12 +534,8 @@
               <configuration>
                 <skip>${surefire.skipSecondPart}</skip>
                 <testFailureIgnore>${surefire.testFailureIgnore}</testFailureIgnore>
-                <forkMode>${surefire.secondPartForkMode}</forkMode>
-                <perCoreThreadCount>false</perCoreThreadCount>
-                <threadCount>${surefire.secondPartThreadCount}</threadCount>
-                <parallel>classes</parallel>
-                <!-- surefire hack, if not we're using method
-                  parallelisation class ! -->
+                <reuseForks>false</reuseForks>
+                <forkCount>${surefire.secondPartForkCount}</forkCount>
                 <groups>${surefire.secondPartGroups}</groups>
               </configuration>
             </execution>
@@ -709,7 +700,7 @@
             <attach>false</attach>
           </configuration>
         </plugin>
-       <plugin>
+        <plugin>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-maven-plugins</artifactId>
           <version>${hadoop-two.version}</version>
@@ -717,7 +708,7 @@
             <protocVersion>${protobuf.version}</protocVersion>
             <protocCommand>${protoc.path}</protocCommand>
           </configuration>
-       </plugin>
+        </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
@@ -782,11 +773,11 @@
             <scope>runtime</scope>
           </dependency>
           <dependency>
-              <groupId>net.sf.xslthl</groupId>
-              <artifactId>xslthl</artifactId>
-              <version>2.1.0</version>
-              <scope>runtime</scope>
-            </dependency>
+            <groupId>net.sf.xslthl</groupId>
+            <artifactId>xslthl</artifactId>
+            <version>2.1.0</version>
+            <scope>runtime</scope>
+          </dependency>
         </dependencies>
         <configuration>
           <highlightSource>1</highlightSource>
@@ -816,10 +807,10 @@
               <targetDirectory>${basedir}/target/docbkx/book</targetDirectory>
               <preProcess>
                 <copy todir="target/docbkx/book/images">
-                    <fileset dir="src/main/site/resources/images/" />
+                  <fileset dir="src/main/site/resources/images/"/>
                 </copy>
                 <copy todir="target/docbkx/book/css">
-                    <fileset dir="src/main/site/resources/css/" />
+                  <fileset dir="src/main/site/resources/css/"/>
                 </copy>
               </preProcess>
             </configuration>
@@ -834,10 +825,10 @@
               <targetDirectory>${basedir}/target/docbkx/</targetDirectory>
               <preProcess>
                 <copy todir="target/docbkx/images">
-                    <fileset dir="src/main/site/resources/images/" />
+                  <fileset dir="src/main/site/resources/images/"/>
                 </copy>
                 <copy todir="target/docbkx/css">
-                    <fileset dir="src/main/site/resources/css/" />
+                  <fileset dir="src/main/site/resources/css/"/>
                 </copy>
               </preProcess>
             </configuration>
@@ -977,16 +968,13 @@
     <server.test.jar>hbase-server-${project.version}-tests.jar</server.test.jar>
     <common.test.jar>hbase-common-${project.version}-tests.jar</common.test.jar>
     <it.test.jar>hbase-it-${project.version}-tests.jar</it.test.jar>
-    <surefire.version>2.12-TRUNK-HBASE-2</surefire.version>
+    <surefire.version>2.17</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
     <!-- default: run small & medium, medium with 2 threads -->
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
     <surefire.skipSecondPart>false</surefire.skipSecondPart>
-    <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
-    <surefire.firstPartParallel>classes</surefire.firstPartParallel>
-    <surefire.secondPartForkMode>perThread</surefire.secondPartForkMode>
-    <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
-    <surefire.secondPartThreadCount>2</surefire.secondPartThreadCount>
+    <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+    <surefire.secondPartForkCount>2</surefire.secondPartForkCount>
     <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
     <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
     <surefire.testFailureIgnore>false</surefire.testFailureIgnore>
@@ -1081,12 +1069,12 @@
         <type>test-jar</type>
         <scope>test</scope>
       </dependency>
-        <dependency>
-            <groupId>org.apache.hbase</groupId>
-            <artifactId>hbase-testing-util</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-testing-util</artifactId>
+        <version>${project.version}</version>
+        <scope>test</scope>
+      </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-prefix-tree</artifactId>
@@ -1586,20 +1574,20 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-hdfs</artifactId>
-              <exclusions>
-                <exclusion>
-                  <groupId>javax.servlet.jsp</groupId>
-                  <artifactId>jsp-api</artifactId>
-                </exclusion>
-                <exclusion>
-                  <groupId>javax.servlet</groupId>
-                  <artifactId>servlet-api</artifactId>
-                </exclusion>
-                <exclusion>
-                  <groupId>stax</groupId>
-                  <artifactId>stax-api</artifactId>
-                </exclusion>
-              </exclusions>
+            <exclusions>
+              <exclusion>
+                <groupId>javax.servlet.jsp</groupId>
+                <artifactId>jsp-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>stax</groupId>
+                <artifactId>stax-api</artifactId>
+              </exclusion>
+            </exclusions>
             <version>${hadoop-two.version}</version>
           </dependency>
           <dependency>
@@ -1608,20 +1596,20 @@
             <version>${hadoop-two.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
-              <exclusions>
-                <exclusion>
-                  <groupId>javax.servlet.jsp</groupId>
-                  <artifactId>jsp-api</artifactId>
-                </exclusion>
-                <exclusion>
-                  <groupId>javax.servlet</groupId>
-                  <artifactId>servlet-api</artifactId>
-                </exclusion>
-                <exclusion>
-                  <groupId>stax</groupId>
-                  <artifactId>stax-api</artifactId>
-                </exclusion>
-              </exclusions>
+            <exclusions>
+              <exclusion>
+                <groupId>javax.servlet.jsp</groupId>
+                <artifactId>jsp-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>javax.servlet</groupId>
+                <artifactId>servlet-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>stax</groupId>
+                <artifactId>stax-api</artifactId>
+              </exclusion>
+            </exclusions>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -1735,9 +1723,7 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <surefire.firstPartForkMode>always</surefire.firstPartForkMode>
-        <surefire.firstPartParallel>none</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
       </properties>
     </profile>
     <profile>
@@ -1747,9 +1733,7 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
-        <surefire.firstPartParallel>classes</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
       </properties>
     </profile>
     <profile>
@@ -1759,9 +1743,7 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
-        <surefire.firstPartParallel>none</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups/>
@@ -1774,9 +1756,7 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
-        <surefire.firstPartParallel>none</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
@@ -1790,7 +1770,6 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <surefire.firstPartForkMode>always</surefire.firstPartForkMode>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.firstPartGroups>
@@ -1804,7 +1783,6 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <surefire.firstPartForkMode>always</surefire.firstPartForkMode>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.LargeTests</surefire.firstPartGroups>
@@ -1818,9 +1796,7 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
-        <surefire.firstPartParallel>none</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>false</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
@@ -1834,10 +1810,8 @@
         <activeByDefault>false</activeByDefault>
       </activation>
       <properties>
-        <surefire.firstPartForkMode>once</surefire.firstPartForkMode>
-        <surefire.firstPartParallel>none</surefire.firstPartParallel>
-        <surefire.firstPartThreadCount>1</surefire.firstPartThreadCount>
-        <surefire.secondPartThreadCount>5</surefire.secondPartThreadCount>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>5</surefire.secondPartForkCount>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>false</surefire.skipSecondPart>
         <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
@@ -1854,7 +1828,6 @@
       </activation>
       <properties>
         <surefire.provider>surefire-junit4</surefire.provider>
-        <surefire.firstPartForkMode>always</surefire.firstPartForkMode>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
         <surefire.firstPartGroups/>
@@ -1955,41 +1928,51 @@
       </plugin>
 
       <plugin>
-	<groupId>org.apache.maven.plugins</groupId>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>2.9.1</version>
         <configuration>
           <maxmemory>2048m</maxmemory>
           <notimestamp>true</notimestamp>
         </configuration>
-	<reportSets>
-	  <reportSet>
-	    <id>devapi</id> <!-- full internal hbase api -->
-	    <reports> <report>aggregate</report></reports>
-	    <configuration>
-	      <destDir>devapidocs</destDir>
-	    </configuration>
-	  </reportSet>
+        <reportSets>
+          <reportSet>
+            <id>devapi</id>
+            <!-- full internal hbase api -->
+            <reports>
+              <report>aggregate</report>
+            </reports>
+            <configuration>
+              <destDir>devapidocs</destDir>
+            </configuration>
+          </reportSet>
 
-	  <reportSet>
-	    <id>userapi</id> <!-- public user hbase api; limited but has stronger compat/deprecation guarantees -->
-	    <reports> <report>aggregate</report></reports>
-	    <configuration>
-	      <doclet>org.apache.hadoop.classification.tools.IncludePublicAnnotationsStandardDoclet</doclet>
-	      <docletArtifact>
-		<groupId>org.apache.hadoop</groupId>
-		<!-- doclet lives in hadoop 2's hadoop-common module -->
-		<artifactId>hadoop-common</artifactId>
-		<version>${hadoop-two.version}</version>
-	      </docletArtifact>
-	      <destDir>apidocs</destDir>
-	      <name>User API</name>
-	      <description>The HBase Application Programmer's API</description>
-	      <!-- exclude all the packages that are empty after the public annotation only filter -->
-	      <excludePackageNames>org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:org.apache.hadoop.hbase.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.hbase.zookeeper.lock:org.apache.hadoop.metrics2*</excludePackageNames>
-	    </configuration>
-	  </reportSet>
-	</reportSets>
+          <reportSet>
+            <id>userapi</id>
+            <!-- public user hbase api; limited but has stronger compat/deprecation guarantees -->
+            <reports>
+              <report>aggregate</report>
+            </reports>
+            <configuration>
+              <doclet>
+                org.apache.hadoop.classification.tools.IncludePublicAnnotationsStandardDoclet
+              </doclet>
+              <docletArtifact>
+                <groupId>org.apache.hadoop</groupId>
+                <!-- doclet lives in hadoop 2's hadoop-common module -->
+                <artifactId>hadoop-common</artifactId>
+                <version>${hadoop-two.version}</version>
+              </docletArtifact>
+              <destDir>apidocs</destDir>
+              <name>User API</name>
+              <description>The HBase Application Programmer's API</description>
+              <!-- exclude all the packages that are empty after the public annotation only filter -->
+              <excludePackageNames>
+                org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:org.apache.hadoop.hbase.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.hbase.zookeeper.lock:org.apache.hadoop.metrics2*
+              </excludePackageNames>
+            </configuration>
+          </reportSet>
+        </reportSets>
       </plugin>
 
     </plugins>
