@@ -120,26 +120,17 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   private String bulkToken;
   private UserProvider userProvider;
 
-  private LoadIncrementalHFiles() {}
-
   public LoadIncrementalHFiles(Configuration conf) throws Exception {
     super(conf);
-    initialize();
-  }
-
-  private void initialize() throws Exception {
-    if (hbAdmin == null) {
-      // make a copy, just to be sure we're not overriding someone else's config
-      setConf(HBaseConfiguration.create(getConf()));
-      Configuration conf = getConf();
-      // disable blockcache for tool invocation, see HBASE-10500
-      conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
-      this.hbAdmin = new HBaseAdmin(conf);
-      this.userProvider = UserProvider.instantiate(conf);
-      this.fsDelegationToken = new FsDelegationToken(userProvider, "renewer");
-      assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
-      maxFilesPerRegionPerFamily = conf.getInt(MAX_FILES_PER_REGION_PER_FAMILY, 32);
-    }
+    // make a copy, just to be sure we're not overriding someone else's config
+    setConf(HBaseConfiguration.create(getConf()));
+    // disable blockcache for tool invocation, see HBASE-10500
+    getConf().setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
+    this.hbAdmin = new HBaseAdmin(conf);
+    this.userProvider = UserProvider.instantiate(conf);
+    this.fsDelegationToken = new FsDelegationToken(userProvider, "renewer");
+    assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
+    maxFilesPerRegionPerFamily = conf.getInt(MAX_FILES_PER_REGION_PER_FAMILY, 32);
   }
 
   private void usage() {
@@ -882,8 +873,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       return -1;
     }
 
-    initialize();
-
     String dirPath = args[0];
     TableName tableName = TableName.valueOf(args[1]);
 
@@ -899,7 +888,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    int ret = ToolRunner.run(conf, new LoadIncrementalHFiles(), args);
+    int ret = ToolRunner.run(new LoadIncrementalHFiles(conf), args);
     System.exit(ret);
   }
 
