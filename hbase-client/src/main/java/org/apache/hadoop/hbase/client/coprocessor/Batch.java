@@ -19,16 +19,17 @@
 
 package org.apache.hadoop.hbase.client.coprocessor;
 
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
+import java.io.IOException;
 
 /**
  * A collection of interfaces and utilities used for interacting with custom RPC
  * interfaces exposed by Coprocessors.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public abstract class Batch {
   /**
    * Defines a unit of work to be executed.
@@ -37,9 +38,7 @@ public abstract class Batch {
    * When used with
    * {@link org.apache.hadoop.hbase.client.HTable#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)}
    * the implementations {@link Batch.Call#call(Object)} method will be invoked
-   * with a proxy to the
-   * {@link org.apache.hadoop.hbase.coprocessor.CoprocessorService}
-   * sub-type instance.
+   * with a proxy to each region's coprocessor {@link com.google.protobuf.Service} implementation.
    * </p>
    * @see org.apache.hadoop.hbase.client.coprocessor
    * @see org.apache.hadoop.hbase.client.HTable#coprocessorService(byte[])
