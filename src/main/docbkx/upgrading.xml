@@ -145,6 +145,10 @@
         xml:id="upgrade0.96">
         <title>Upgrading from 0.94.x to 0.96.x</title>
         <subtitle>The Singularity</subtitle>
+        <note><title>HBase 0.96.x was EOL'd, September 1st, 2014</title><para>
+            Do not deploy 0.96.x  Deploy a 0.98.x at least.
+            See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-11642">EOL 0.96</link>.
+        </para></note>
         <para>You will have to stop your old 0.94.x cluster completely to upgrade. If you are
             replicating between clusters, both clusters will have to go down to upgrade. Make sure
             it is a clean shutdown. The less WAL files around, the faster the upgrade will run (the
