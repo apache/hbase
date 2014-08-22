@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
+
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
@@ -28,20 +32,22 @@ import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 
 import java.io.IOException;
 
 /**
  * Base class which provides clients with an RPC connection to
- * call coprocessor endpoint {@link Service}s
+ * call coprocessor endpoint {@link Service}s.  Note that clients should not use this class
+ * directly, except through
+ * {@link org.apache.hadoop.hbase.client.HTableInterface#coprocessorService(byte[])}.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public abstract class CoprocessorRpcChannel implements RpcChannel, BlockingRpcChannel {
   private static Log LOG = LogFactory.getLog(CoprocessorRpcChannel.class);
 
   @Override
+  @InterfaceAudience.Private
   public void callMethod(Descriptors.MethodDescriptor method,
                          RpcController controller,
                          Message request, Message responsePrototype,
@@ -59,6 +65,7 @@ public abstract class CoprocessorRpcChannel implements RpcChannel, BlockingRpcCh
   }
 
   @Override
+  @InterfaceAudience.Private
   public Message callBlockingMethod(Descriptors.MethodDescriptor method,
                                     RpcController controller,
                                     Message request, Message responsePrototype)
