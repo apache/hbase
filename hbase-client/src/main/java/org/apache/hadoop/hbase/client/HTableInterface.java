@@ -462,7 +462,6 @@ public interface HTableInterface extends Closeable {
    * @param row The row key used to identify the remote region location
    * @return A CoprocessorRpcChannel instance
    */
-  @InterfaceAudience.Private // TODO add coproc audience level  
   CoprocessorRpcChannel coprocessorService(byte[] row);
 
   /**
@@ -486,7 +485,6 @@ public interface HTableInterface extends Closeable {
    * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
    * @return a map of result values keyed by region name
    */
-  @InterfaceAudience.Private // TODO add coproc audience level
   <T extends Service, R> Map<byte[],R> coprocessorService(final Class<T> service,
       byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable)
       throws ServiceException, Throwable;
@@ -518,7 +516,6 @@ public interface HTableInterface extends Closeable {
    * @param <R> Return type for the {@code callable} parameter's
    * {@link org.apache.hadoop.hbase.client.coprocessor.Batch.Call#call} method
    */
-  @InterfaceAudience.Private // TODO add coproc audience level
   <T extends Service, R> void coprocessorService(final Class<T> service,
       byte[] startKey, byte[] endKey, final Batch.Call<T,R> callable,
       final Batch.Callback<R> callback) throws ServiceException, Throwable;
@@ -622,7 +619,6 @@ public interface HTableInterface extends Closeable {
    * @throws Throwable
    * @return a map of result values keyed by region name
    */
-  @InterfaceAudience.Private
   <R extends Message> Map<byte[], R> batchCoprocessorService(
       Descriptors.MethodDescriptor methodDescriptor, Message request,
       byte[] startKey, byte[] endKey, R responsePrototype) throws ServiceException, Throwable;
@@ -658,7 +654,6 @@ public interface HTableInterface extends Closeable {
    * @throws ServiceException
    * @throws Throwable
    */
-  @InterfaceAudience.Private
   <R extends Message> void batchCoprocessorService(Descriptors.MethodDescriptor methodDescriptor,
       Message request, byte[] startKey, byte[] endKey, R responsePrototype,
       Batch.Callback<R> callback) throws ServiceException, Throwable;
