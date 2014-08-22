@@ -33,9 +33,9 @@
   <section>
     <title>Introduction</title>
 
-    <para><xref
-        linkend="quickstart" /> will get you up and running on a single-node, standalone instance of
-      HBase. </para>
+    <para><xref linkend="quickstart"/> will get you up and running on a single-node, standalone
+      instance of HBase, followed by a pseudo-distributed single-machine instance, and finally a
+      fully-distributed cluster. </para>
   </section>
 
   <section
@@ -115,6 +115,26 @@
 $ tar xzvf hbase-<![CDATA[<?eval ${project.version}?>]]>-hadoop2-bin.tar.gz  
 $ cd hbase-<![CDATA[<?eval ${project.version}?>]]>-hadoop2/
           </screen>
+        </step>
+        <step>
+          <para>For HBase 0.98.5 and later, you are required to set the <envar>JAVA_HOME</envar>
+            environment variable before starting HBase. Prior to 0.98.5, HBase attempted to detect
+            the location of Java if the variables was not set. You can set the variable via your
+            operating system's usual mechanism, but HBase provides a central mechanism,
+              <filename>conf/hbase-env.sh</filename>. Edit this file, uncomment the line starting
+            with <literal>JAVA_HOME</literal>, and set it to the appropriate location for your
+            operating system. The <envar>JAVA_HOME</envar> variable should be set to a directory
+            which contains the executable file <filename>bin/java</filename>. Most modern Linux
+            operating systems provide a mechanism, such as /usr/bin/alternatives on RHEL or CentOS,
+            for transparently switching between versions of executables such as Java. In this case,
+            you can set <envar>JAVA_HOME</envar> to the directory containing the symbolic link to
+              <filename>bin/java</filename>, which is usually <filename>/usr</filename>.</para>
+          <screen>JAVA_HOME=/usr</screen>
+          <note>
+            <para>These instructions assume that each node of your cluster uses the same
+              configuration. If this is not the case, you may need to set <envar>JAVA_HOME</envar>
+              separately for each node.</para>
+          </note>
         </step>
         <step>
           <para>Edit <filename>conf/hbase-site.xml</filename>, which is the main HBase configuration
