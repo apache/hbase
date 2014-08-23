@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -54,7 +55,7 @@ public class StripeStoreFlusher extends StoreFlusher {
   @Override
   public List<Path> flushSnapshot(MemStoreSnapshot snapshot, long cacheFlushSeqNum,
       MonitoredTask status) throws IOException {
-    List<Path> result = null;
+    List<Path> result = new ArrayList<Path>();
     int cellsCount = snapshot.getCellsCount();
     if (cellsCount == 0) return result; // don't flush if there are no entries
 
@@ -83,9 +84,6 @@ public class StripeStoreFlusher extends StoreFlusher {
       }
     } finally {
       if (!success && (mw != null)) {
-        if (result != null) {
-          result.clear();
-        }
         for (Path leftoverFile : mw.abortWriters()) {
           try {
             store.getFileSystem().delete(leftoverFile, false);
