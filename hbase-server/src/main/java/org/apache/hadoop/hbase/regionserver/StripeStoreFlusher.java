@@ -60,7 +60,7 @@ public class StripeStoreFlusher extends StoreFlusher {
   public List<Path> flushSnapshot(SortedSet<KeyValue> snapshot, long cacheFlushSeqNum,
       final TimeRangeTracker tracker, AtomicLong flushedSize, MonitoredTask status)
           throws IOException {
-    List<Path> result = null;
+    List<Path> result = new ArrayList<Path>();
     int kvCount = snapshot.size();
     if (kvCount == 0) return result; // don't flush if there are no entries
 
@@ -89,9 +89,6 @@ public class StripeStoreFlusher extends StoreFlusher {
       }
     } finally {
       if (!success && (mw != null)) {
-        if (result != null) {
-          result.clear();
-        }
         for (Path leftoverFile : mw.abortWriters()) {
           try {
             store.getFileSystem().delete(leftoverFile, false);
