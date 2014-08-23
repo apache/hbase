@@ -47,8 +47,11 @@ public class MetricsSink {
    * @return the age that was set
    */
   public long setAgeOfLastAppliedOp(long timestamp) {
-    lastTimestampForAge = timestamp;
-    long age = System.currentTimeMillis() - lastTimestampForAge;
+    long age = 0;
+    if (lastTimestampForAge != timestamp) {
+      lastTimestampForAge = timestamp;
+      age = System.currentTimeMillis() - lastTimestampForAge;
+    } 
     rms.setGauge(SINK_AGE_OF_LAST_APPLIED_OP, age);
     return age;
   }
