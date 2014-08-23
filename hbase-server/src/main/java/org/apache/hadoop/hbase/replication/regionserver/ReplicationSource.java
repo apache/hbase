@@ -375,6 +375,9 @@ public class ReplicationSource extends Thread
         // Reset the sleep multiplier if nothing has actually gone wrong
         if (!gotIOE) {
           sleepMultiplier = 1;
+          // if there was nothing to ship and it's not an error
+          // set "ageOfLastShippedOp" to <now> to indicate that we're current
+          this.metrics.setAgeOfLastShippedOp(System.currentTimeMillis());
         }
         if (sleepForRetries("Nothing to replicate", sleepMultiplier)) {
           sleepMultiplier++;
