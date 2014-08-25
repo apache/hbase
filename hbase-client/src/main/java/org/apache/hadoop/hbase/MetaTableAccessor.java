@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ServiceException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
@@ -1407,11 +1409,14 @@ public class MetaTableAccessor {
   }
 
   public static Put addLocation(final Put p, final ServerName sn, long openSeqNum, int replicaId){
-    p.addImmutable(HConstants.CATALOG_FAMILY, getServerColumn(replicaId),
+    // using regionserver's local time as the timestamp of Put.
+    // See: HBASE-11536
+    long now = EnvironmentEdgeManager.currentTimeMillis();
+    p.addImmutable(HConstants.CATALOG_FAMILY, getServerColumn(replicaId), now,
       Bytes.toBytes(sn.getHostAndPort()));
-    p.addImmutable(HConstants.CATALOG_FAMILY, getStartCodeColumn(replicaId),
+    p.addImmutable(HConstants.CATALOG_FAMILY, getStartCodeColumn(replicaId), now,
       Bytes.toBytes(sn.getStartcode()));
-    p.addImmutable(HConstants.CATALOG_FAMILY, getSeqNumColumn(replicaId),
+    p.addImmutable(HConstants.CATALOG_FAMILY, getSeqNumColumn(replicaId), now,
       Bytes.toBytes(openSeqNum));
     return p;
   }
