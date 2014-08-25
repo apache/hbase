@@ -48,7 +48,7 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
       if (inited) return;
       inited = true;
       DefaultMetricsSystem.initialize(HBASE_METRICS_SYSTEM_NAME);
-      jvmMetricsSource = JvmMetrics.create(name, "", DefaultMetricsSystem.instance());
+      jvmMetricsSource = JvmMetrics.initSingleton(name, "");
 
     }
   }
