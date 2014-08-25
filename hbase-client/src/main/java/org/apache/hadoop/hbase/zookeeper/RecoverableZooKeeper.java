@@ -109,7 +109,6 @@ public class RecoverableZooKeeper {
       Watcher watcher, int maxRetries, int retryIntervalMillis, String identifier)
   throws IOException {
     // TODO: Add support for zk 'chroot'; we don't add it to the quorumServers String as we should.
-    this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher);
     this.retryCounterFactory =
       new RetryCounterFactory(maxRetries+1, retryIntervalMillis);
 
@@ -125,16 +124,36 @@ public class RecoverableZooKeeper {
     this.watcher = watcher;
     this.sessionTimeout = sessionTimeout;
     this.quorumServers = quorumServers;
+    try {checkZk();} catch (Exception x) {/* ignore */}
     salter = new SecureRandom();
   }
 
+  /**
+   * Try to create a Zookeeper connection. Turns any exception encountered into a
+   * {@link KeeperException.OperationTimeoutException} so it can retried.
+   * @return The created Zookeeper connection object
+   * @throws KeeperException
+   */
+  protected ZooKeeper checkZk() throws KeeperException {
+    if (this.zk == null) {
+      try {
+        this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher);
+      } catch (Exception uhe) {
+        LOG.warn("Unable to create ZooKeeper Connection", uhe);
+        throw new KeeperException.OperationTimeoutException();
+      }
+    }
+    return zk;
+  }
+
   public void reconnectAfterExpiration()
-        throws IOException, InterruptedException {
-    LOG.info("Closing dead ZooKeeper connection, session" +
-      " was: 0x"+Long.toHexString(zk.getSessionId()));
-    zk.close();
-    this.zk = new ZooKeeper(this.quorumServers,
-      this.sessionTimeout, this.watcher);
+        throws IOException, KeeperException, InterruptedException {
+    if (zk != null) {
+      LOG.info("Closing dead ZooKeeper connection, session" +
+        " was: 0x"+Long.toHexString(zk.getSessionId()));
+      zk.close();
+    }
+    checkZk();
     LOG.info("Recreated a ZooKeeper, session" +
       " is: 0x"+Long.toHexString(zk.getSessionId()));
   }
@@ -153,7 +172,7 @@ public class RecoverableZooKeeper {
       boolean isRetry = false; // False for first attempt, true for all retries.
       while (true) {
         try {
-          zk.delete(path, version);
+          checkZk().delete(path, version);
           return;
         } catch (KeeperException e) {
           switch (e.code()) {
@@ -196,7 +215,7 @@ public class RecoverableZooKeeper {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
-          return zk.exists(path, watcher);
+          return checkZk().exists(path, watcher);
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
@@ -228,7 +247,7 @@ public class RecoverableZooKeeper {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
-          return zk.exists(path, watch);
+          return checkZk().exists(path, watch);
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
@@ -270,7 +289,7 @@ public class RecoverableZooKeeper {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
-          return zk.getChildren(path, watcher);
+          return checkZk().getChildren(path, watcher);
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
@@ -302,7 +321,7 @@ public class RecoverableZooKeeper {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
-          return zk.getChildren(path, watch);
+          return checkZk().getChildren(path, watch);
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
@@ -334,7 +353,7 @@ public class RecoverableZooKeeper {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
-          byte[] revData = zk.getData(path, watcher, stat);
+          byte[] revData = checkZk().getData(path, watcher, stat);
           return this.removeMetaData(revData);
         } catch (KeeperException e) {
           switch (e.code()) {
@@ -367,7 +386,7 @@ public class RecoverableZooKeeper {
       RetryCounter retryCounter = retryCounterFactory.create();
       while (true) {
         try {
-          byte[] revData = zk.getData(path, watch, stat);
+          byte[] revData = checkZk().getData(path, watch, stat);
           return this.removeMetaData(revData);
         } catch (KeeperException e) {
           switch (e.code()) {
@@ -404,7 +423,7 @@ public class RecoverableZooKeeper {
       boolean isRetry = false;
       while (true) {
         try {
-          return zk.setData(path, newData, version);
+          return checkZk().setData(path, newData, version);
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
@@ -417,7 +436,7 @@ public class RecoverableZooKeeper {
                 // try to verify whether the previous setData success or not
                 try{
                   Stat stat = new Stat();
-                  byte[] revData = zk.getData(path, false, stat);
+                  byte[] revData = checkZk().getData(path, false, stat);
                   if(Bytes.compareTo(revData, newData) == 0) {
                     // the bad version is caused by previous successful setData
                     return stat;
@@ -486,7 +505,7 @@ public class RecoverableZooKeeper {
     boolean isRetry = false; // False for first attempt, true for all retries.
     while (true) {
       try {
-        return zk.create(path, data, acl, createMode);
+        return checkZk().create(path, data, acl, createMode);
       } catch (KeeperException e) {
         switch (e.code()) {
           case NODEEXISTS:
@@ -494,7 +513,7 @@ public class RecoverableZooKeeper {
               // If the connection was lost, there is still a possibility that
               // we have successfully created the node at our previous attempt,
               // so we read the node and compare.
-              byte[] currentData = zk.getData(path, false, null);
+              byte[] currentData = checkZk().getData(path, false, null);
               if (currentData != null &&
                   Bytes.compareTo(currentData, data) == 0) {
                 // We successfully created a non-sequential node
@@ -539,7 +558,7 @@ public class RecoverableZooKeeper {
           }
         }
         first = false;
-        return zk.create(newPath, data, acl, createMode);
+        return checkZk().create(newPath, data, acl, createMode);
       } catch (KeeperException e) {
         switch (e.code()) {
           case CONNECTIONLOSS:
@@ -595,7 +614,7 @@ public class RecoverableZooKeeper {
       Iterable<Op> multiOps = prepareZKMulti(ops);
       while (true) {
         try {
-          return zk.multi(multiOps);
+          return checkZk().multi(multiOps);
         } catch (KeeperException e) {
           switch (e.code()) {
             case CONNECTIONLOSS:
@@ -622,11 +641,11 @@ public class RecoverableZooKeeper {
     String parent = path.substring(0, lastSlashIdx);
     String nodePrefix = path.substring(lastSlashIdx+1);
 
-    List<String> nodes = zk.getChildren(parent, false);
+    List<String> nodes = checkZk().getChildren(parent, false);
     List<String> matching = filterByPrefix(nodes, nodePrefix);
     for (String node : matching) {
       String nodePath = parent + "/" + node;
-      Stat stat = zk.exists(nodePath, false);
+      Stat stat = checkZk().exists(nodePath, false);
       if (stat != null) {
         return nodePath;
       }
@@ -670,15 +689,15 @@ public class RecoverableZooKeeper {
   }
 
   public long getSessionId() {
-    return zk.getSessionId();
+    return zk == null ? null : zk.getSessionId();
   }
 
   public void close() throws InterruptedException {
-    zk.close();
+    if (zk != null) zk.close();
   }
 
   public States getState() {
-    return zk.getState();
+    return zk == null ? null : zk.getState();
   }
 
   public ZooKeeper getZooKeeper() {
@@ -686,11 +705,11 @@ public class RecoverableZooKeeper {
   }
 
   public byte[] getSessionPasswd() {
-    return zk.getSessionPasswd();
+    return zk == null ? null : zk.getSessionPasswd();
   }
 
-  public void sync(String path, AsyncCallback.VoidCallback cb, Object ctx) {
-    this.zk.sync(path, null, null);
+  public void sync(String path, AsyncCallback.VoidCallback cb, Object ctx) throws KeeperException {
+    checkZk().sync(path, null, null);
   }
 
   /**
