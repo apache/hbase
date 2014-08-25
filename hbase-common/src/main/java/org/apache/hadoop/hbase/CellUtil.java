@@ -201,13 +201,14 @@ public final class CellUtil {
 
       @Override
       public boolean advance() throws IOException {
-        if (this.cellScanner == null) {
-          if (!this.iterator.hasNext()) return false;
-          this.cellScanner = this.iterator.next().cellScanner();
+        while (true) {
+          if (this.cellScanner == null) {
+            if (!this.iterator.hasNext()) return false;
+            this.cellScanner = this.iterator.next().cellScanner();
+          }
+          if (this.cellScanner.advance()) return true;
+          this.cellScanner = null;
         }
-        if (this.cellScanner.advance()) return true;
-        this.cellScanner = null;
-        return advance();
       }
     };
   }
@@ -275,11 +276,9 @@ public final class CellUtil {
    * inside Put, etc., keeping Cells organized by family.
    * @return CellScanner interface over <code>cellIterable</code>
    */
-  public static CellScanner createCellScanner(final NavigableMap<byte [],
-      List<Cell>> map) {
+  public static CellScanner createCellScanner(final NavigableMap<byte [], List<Cell>> map) {
     return new CellScanner() {
-      private final Iterator<Entry<byte[], List<Cell>>> entries =
-          map.entrySet().iterator();
+      private final Iterator<Entry<byte[], List<Cell>>> entries = map.entrySet().iterator();
       private Iterator<Cell> currentIterator = null;
       private Cell currentCell;
 
@@ -290,17 +289,18 @@ public final class CellUtil {
 
       @Override
       public boolean advance() {
-        if (this.currentIterator == null) {
-          if (!this.entries.hasNext()) return false;
-          this.currentIterator = this.entries.next().getValue().iterator();
+        while(true) {
+          if (this.currentIterator == null) {
+            if (!this.entries.hasNext()) return false;
+            this.currentIterator = this.entries.next().getValue().iterator();
+          }
+          if (this.currentIterator.hasNext()) {
+            this.currentCell = this.currentIterator.next();
+            return true;
+          }
+          this.currentCell = null;
+          this.currentIterator = null;
         }
-        if (this.currentIterator.hasNext()) {
-          this.currentCell = this.currentIterator.next();
-          return true;
-        }
-        this.currentCell = null;
-        this.currentIterator = null;
-        return advance();
       }
     };
   }
