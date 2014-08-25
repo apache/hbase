@@ -293,6 +293,21 @@ Successfully completed Log splitting
 17:22:15    at Client_4_3_0.main(Client_4_3_0.java:63)</screen>
                 </section>
             </section>
+            <section>
+                <title>Upgrading <code>META</code> to use Protocol Buffers (Protobuf)</title>
+                <para>When you upgrade from versions prior to 0.96, <code>META</code> needs to be
+                    converted to use protocol buffers. This is controlled by the configuration
+                    option <option>hbase.MetaMigrationConvertingToPB</option>, which is set to
+                        <literal>true</literal> by default. Therefore, by default, no action is
+                    required on your part.</para>
+                <para>The migration is a one-time event. However, every time your cluster starts,
+                        <code>META</code> is scanned to ensure that it does not need to be
+                    converted. If you have a very large number of regions, this scan can take a long
+                    time. Starting in 0.98.5, you can set
+                        <option>hbase.MetaMigrationConvertingToPB</option> to
+                        <literal>false</literal> in <filename>hbase-site.xml</filename>, to disable
+                    this start-up scan. This should be considered an expert-level setting.</para>
+            </section>
         </section>
 
 
