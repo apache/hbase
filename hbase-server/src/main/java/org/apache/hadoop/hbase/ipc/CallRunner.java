@@ -139,7 +139,7 @@ public class CallRunner {
       RpcServer.LOG.warn(Thread.currentThread().getName()
           + ": caught: " + StringUtils.stringifyException(e));
     } finally {
-      // regardless if succesful or not we need to reset the callQueueSize
+      // regardless if successful or not we need to reset the callQueueSize
       this.rpcServer.addCallSize(call.getSize() * -1);
     }
   }

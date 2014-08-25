@@ -126,21 +126,21 @@ public class SimpleRpcScheduler extends RpcScheduler {
       // multiple read/write queues
       if (callQueueType.equals(CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE)) {
         CallPriorityComparator callPriority = new CallPriorityComparator(conf, this.priority);
-        callExecutor = new RWQueueRpcExecutor("default", handlerCount, numCallQueues,
+        callExecutor = new RWQueueRpcExecutor("RW.default", handlerCount, numCallQueues,
             callqReadShare, callqScanShare, maxQueueLength,
             BoundedPriorityBlockingQueue.class, callPriority);
       } else {
-        callExecutor = new RWQueueRpcExecutor("default", handlerCount, numCallQueues,
+        callExecutor = new RWQueueRpcExecutor("RW.default", handlerCount, numCallQueues,
             callqReadShare, callqScanShare, maxQueueLength);
       }
     } else {
       // multiple queues
       if (callQueueType.equals(CALL_QUEUE_TYPE_DEADLINE_CONF_VALUE)) {
         CallPriorityComparator callPriority = new CallPriorityComparator(conf, this.priority);
-        callExecutor = new BalancedQueueRpcExecutor("default", handlerCount, numCallQueues,
+        callExecutor = new BalancedQueueRpcExecutor("B.default", handlerCount, numCallQueues,
             BoundedPriorityBlockingQueue.class, maxQueueLength, callPriority);
       } else {
-        callExecutor = new BalancedQueueRpcExecutor("default", handlerCount,
+        callExecutor = new BalancedQueueRpcExecutor("B.default", handlerCount,
             numCallQueues, maxQueueLength);
       }
     }
