@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.Writables;
@@ -406,9 +407,12 @@ public class MetaEditor {
   }
 
   private static Put addLocation(final Put p, final ServerName sn) {
-    p.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
+    // using regionserver's local time as the timestamp of Put.
+    // See: HBASE-11536
+    long now = EnvironmentEdgeManager.currentTimeMillis();
+    p.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER, now,
       Bytes.toBytes(sn.getHostAndPort()));
-    p.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
+    p.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER, now,
       Bytes.toBytes(sn.getStartcode()));
     return p;
   }
