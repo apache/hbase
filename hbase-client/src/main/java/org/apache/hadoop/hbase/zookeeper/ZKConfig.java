@@ -214,13 +214,7 @@ public class ZKConfig {
       else if (key.startsWith("server.")) {
         String host = value.substring(0, value.indexOf(':'));
         servers.add(host);
-        try {
-          //noinspection ResultOfMethodCallIgnored
-          InetAddress.getByName(host);
-          anyValid = true;
-        } catch (UnknownHostException e) {
-          LOG.warn(StringUtils.stringifyException(e));
-        }
+        anyValid = true;
       }
     }
 

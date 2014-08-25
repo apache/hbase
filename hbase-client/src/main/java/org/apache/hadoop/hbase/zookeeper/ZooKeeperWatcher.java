@@ -280,7 +280,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     return recoverableZooKeeper;
   }
 
-  public void reconnectAfterExpiration() throws IOException, InterruptedException {
+  public void reconnectAfterExpiration() throws IOException, KeeperException, InterruptedException {
     recoverableZooKeeper.reconnectAfterExpiration();
   }
 
@@ -424,7 +424,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
    * previously read version and data.  We want to ensure that the version read
    * is up-to-date from when we begin the operation.
    */
-  public void sync(String path) {
+  public void sync(String path) throws KeeperException {
     this.recoverableZooKeeper.sync(path, null, null);
   }
 
