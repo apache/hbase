@@ -82,11 +82,11 @@ public class SimpleRpcScheduler extends RpcScheduler {
 
     if (numCallQueues > 1 && callqReadShare > 0) {
       // multiple read/write queues
-      callExecutor = new RWQueueRpcExecutor("default", handlerCount, numCallQueues,
+      callExecutor = new RWQueueRpcExecutor("RW.Default", handlerCount, numCallQueues,
           callqReadShare, maxQueueLength);
     } else {
       // multiple queues
-      callExecutor = new BalancedQueueRpcExecutor("default", handlerCount,
+      callExecutor = new BalancedQueueRpcExecutor("B.Default", handlerCount,
           numCallQueues, maxQueueLength);
     }
 
