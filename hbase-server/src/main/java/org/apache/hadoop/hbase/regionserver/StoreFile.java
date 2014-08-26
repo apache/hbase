@@ -381,6 +381,7 @@ public class StoreFile {
           this.sequenceid += 1;
         }
       }
+      this.reader.setBulkLoaded(true);
     }
     this.reader.setSequenceID(this.sequenceid);
 
@@ -1009,6 +1010,7 @@ public class StoreFile {
     protected long sequenceID = -1;
     private byte[] lastBloomKey;
     private long deleteFamilyCnt = -1;
+    private boolean bulkLoadResult = false;
 
     public Reader(FileSystem fs, Path path, CacheConfig cacheConf, Configuration conf)
         throws IOException {
@@ -1473,6 +1475,14 @@ public class StoreFile {
 
     public void setSequenceID(long sequenceID) {
       this.sequenceID = sequenceID;
+    }
+
+    public void setBulkLoaded(boolean bulkLoadResult) {
+      this.bulkLoadResult = bulkLoadResult;
+    }
+
+    public boolean isBulkLoaded() {
+      return this.bulkLoadResult;
     }
 
     BloomFilter getGeneralBloomFilter() {

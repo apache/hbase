@@ -137,9 +137,10 @@ public class StoreFileScanner implements KeyValueScanner {
       // only seek if we aren't at the end. cur == null implies 'end'.
       if (cur != null) {
         hfs.next();
-        cur = hfs.getKeyValue();
-        if (hasMVCCInfo)
+        setCurrentCell(hfs.getKeyValue());
+        if (hasMVCCInfo || this.reader.isBulkLoaded()) {
           skipKVsNewerThanReadpoint();
+        }
       }
     } catch(IOException e) {
       throw new IOException("Could not iterate " + this, e);
@@ -157,9 +158,13 @@ public class StoreFileScanner implements KeyValueScanner {
           return false;
         }
 
-        cur = hfs.getKeyValue();
+        setCurrentCell(hfs.getKeyValue());
 
-        return !hasMVCCInfo ? true : skipKVsNewerThanReadpoint();
+        if (!hasMVCCInfo && this.reader.isBulkLoaded()) {
+          return skipKVsNewerThanReadpoint();
+        } else {
+          return !hasMVCCInfo ? true : skipKVsNewerThanReadpoint();
+        }
       } finally {
         realSeekDone = true;
       }
@@ -177,15 +182,28 @@ public class StoreFileScanner implements KeyValueScanner {
           close();
           return false;
         }
-        cur = hfs.getKeyValue();
+        setCurrentCell(hfs.getKeyValue());
 
-        return !hasMVCCInfo ? true : skipKVsNewerThanReadpoint();
+        if (!hasMVCCInfo && this.reader.isBulkLoaded()) {
+          return skipKVsNewerThanReadpoint();
+        } else {
+          return !hasMVCCInfo ? true : skipKVsNewerThanReadpoint();
+        }
       } finally {
         realSeekDone = true;
       }
     } catch (IOException ioe) {
       throw new IOException("Could not reseek " + this + " to key " + key,
           ioe);
+    }
+  }
+
+  protected void setCurrentCell(Cell newVal) {
+    this.cur = newVal;
+    if(this.cur != null && this.reader.isBulkLoaded() && cur.getSequenceId() <= 0) {
+      KeyValue curKV = KeyValueUtil.ensureKeyValue(cur);
+      curKV.setSequenceId(this.reader.getSequenceID());
+      cur = curKV;
     }
   }
 
@@ -197,7 +215,7 @@ public class StoreFileScanner implements KeyValueScanner {
         && cur != null
         && (cur.getMvccVersion() > readPt)) {
       hfs.next();
-      cur = hfs.getKeyValue();
+      setCurrentCell(hfs.getKeyValue());
       if (this.stopSkippingKVsIfNextRow
           && getComparator().compareRows(cur.getRowArray(), cur.getRowOffset(),
               cur.getRowLength(), startKV.getRowArray(), startKV.getRowOffset(),
@@ -325,7 +343,7 @@ public class StoreFileScanner implements KeyValueScanner {
         // a higher timestamp than the max timestamp in this file. We know that
         // the next point when we have to consider this file again is when we
         // pass the max timestamp of this file (with the same row/column).
-        cur = KeyValueUtil.createFirstOnRowColTS(kv, maxTimestampInFile);
+        setCurrentCell(KeyValueUtil.createFirstOnRowColTS(kv, maxTimestampInFile));
       } else {
         // This will be the case e.g. when we need to seek to the next
         // row/column, and we don't know exactly what they are, so we set the
@@ -343,13 +361,13 @@ public class StoreFileScanner implements KeyValueScanner {
     // key/value and the store scanner will progress to the next column. This
     // is obviously not a "real real" seek, but unlike the fake KV earlier in
     // this method, we want this to be propagated to ScanQueryMatcher.
-    cur = KeyValueUtil.createLastOnRowCol(kv);
+    setCurrentCell(KeyValueUtil.createLastOnRowCol(kv));
 
     realSeekDone = true;
     return true;
   }
 
-  Reader getReaderForTesting() {
+  Reader getReader() {
     return reader;
   }
 
@@ -420,7 +438,7 @@ public class StoreFileScanner implements KeyValueScanner {
           return false;
         }
 
-        cur = hfs.getKeyValue();
+        setCurrentCell(hfs.getKeyValue());
         this.stopSkippingKVsIfNextRow = true;
         boolean resultOfSkipKVs;
         try {

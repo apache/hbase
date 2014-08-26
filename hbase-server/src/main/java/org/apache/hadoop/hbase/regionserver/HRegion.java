@@ -66,6 +66,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -74,7 +75,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -120,8 +120,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServic
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConsistencyControl.WriteEntry;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -1741,6 +1741,7 @@ public class HRegion implements HeapSize { // , Writable{
     if (this.memstoreSize.get() <= 0) {
       // Take an update lock because am about to change the sequence id and we want the sequence id
       // to be at the border of the empty memstore.
+      MultiVersionConsistencyControl.WriteEntry w = null;
       this.updatesLock.writeLock().lock();
       try {
         if (this.memstoreSize.get() <= 0) {
@@ -1750,13 +1751,29 @@ public class HRegion implements HeapSize { // , Writable{
           // sure just beyond the last appended region edit (useful as a marker when bulk loading,
           // etc.)
           // wal can be null replaying edits.
-          return wal != null?
-            new FlushResult(FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY,
-              getNextSequenceId(wal), "Nothing to flush"):
-            new FlushResult(FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY, "Nothing to flush");
+          try {
+            if (wal != null) {
+              w = mvcc.beginMemstoreInsert();
+              long flushSeqId = getNextSequenceId(wal);
+              FlushResult flushResult = new FlushResult(
+                  FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY, flushSeqId, "Nothing to flush");
+              w.setWriteNumber(flushSeqId);
+              mvcc.waitForPreviousTransactionsComplete(w);
+              w = null;
+              return flushResult;
+            } else {
+              return new FlushResult(FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY,
+                  "Nothing to flush");
+            }
+
+          } finally {
+            this.updatesLock.writeLock().unlock();
+          }
         }
       } finally {
-        this.updatesLock.writeLock().unlock();
+        if (w != null) {
+          mvcc.advanceMemstore(w);
+        }
       }
     }
 
@@ -1864,6 +1881,7 @@ public class HRegion implements HeapSize { // , Writable{
       // uncommitted transactions from being written into HFiles.
       // We have to block before we start the flush, otherwise keys that
       // were removed via a rollbackMemstore could be written to Hfiles.
+      w.setWriteNumber(flushSeqId);
       mvcc.waitForPreviousTransactionsComplete(w);
       // set w to null to prevent mvcc.advanceMemstore from being called again inside finally block
       w = null;
