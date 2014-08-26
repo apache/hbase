@@ -4071,6 +4071,11 @@ public class AssignmentManager extends ZooKeeperListener {
     String errorMsg = null;
     switch (code) {
     case OPENED:
+      if (current != null && current.isOpened() && current.isOnServer(serverName)) {
+        LOG.info("Region " + hri.getShortNameToLog() + " is already " + current.getState() + " on "
+            + serverName);
+        break;
+      }
     case FAILED_OPEN:
       if (current == null
           || !current.isPendingOpenOrOpeningOnServer(serverName)) {

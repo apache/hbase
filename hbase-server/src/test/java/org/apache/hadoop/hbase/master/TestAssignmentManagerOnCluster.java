@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConfigUtil;
@@ -88,7 +90,7 @@ public class TestAssignmentManagerOnCluster {
     // Reduce the maximum attempts to speed up the test
     conf.setInt("hbase.assignment.maximum.attempts", 3);
 
-    TEST_UTIL.startMiniCluster(1, 4, null, MyMaster.class, null);
+    TEST_UTIL.startMiniCluster(1, 4, null, MyMaster.class, MyRegionServer.class);
     admin = TEST_UTIL.getHBaseAdmin();
   }
 
@@ -141,7 +143,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }
-
+  
   /**
    * This tests region assignment on a simulated restarted server
    */
@@ -826,6 +828,40 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }
+  
+  /**
+   * Test that region state transition call is idempotent
+   */
+  @Test(timeout = 60000)
+  public void testReportRegionStateTransition() throws Exception {
+    String table = "testReportRegionStateTransition";
+    try {
+      MyRegionServer.simulateRetry = true;
+      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
+      desc.addFamily(new HColumnDescriptor(FAMILY));
+      admin.createTable(desc);
+      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      HRegionInfo hri =
+          new HRegionInfo(desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+      MetaEditor.addRegionToMeta(meta, hri);
+      HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+      master.assignRegion(hri);
+      AssignmentManager am = master.getAssignmentManager();
+      am.waitForAssignment(hri);
+      RegionStates regionStates = am.getRegionStates();
+      ServerName serverName = regionStates.getRegionServerOfRegion(hri);
+      // Assert the the region is actually open on the server
+      TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
+      // Closing region should just work fine
+      admin.disableTable(TableName.valueOf(table));
+      assertTrue(regionStates.isRegionOffline(hri));
+      List<HRegionInfo> regions = TEST_UTIL.getHBaseAdmin().getOnlineRegions(serverName);
+      assertTrue(!regions.contains(hri));
+    } finally {
+      MyRegionServer.simulateRetry = false;
+      TEST_UTIL.deleteTable(Bytes.toBytes(table));
+    }
+  }
 
   static class MyLoadBalancer extends StochasticLoadBalancer {
     // For this region, if specified, always assign to nowhere
@@ -861,6 +897,34 @@ public class TestAssignmentManagerOnCluster {
       }
     }
   }
+  
+  public static class MyRegionServer extends MiniHBaseClusterRegionServer {
+    static volatile ServerName abortedServer = null;
+    static volatile boolean simulateRetry;
+
+    public MyRegionServer(Configuration conf)
+      throws IOException, KeeperException,
+        InterruptedException {
+      super(conf);
+    }
+
+    @Override
+    public boolean
+        reportRegionTransition(TransitionCode code, long openSeqNum, HRegionInfo... hris) {
+      if (simulateRetry == true) {
+        // Simulate retry by calling the method twice
+        super.reportRegionTransition(code, openSeqNum, hris);
+        return super.reportRegionTransition(code, openSeqNum, hris);
+      }
+      return super.reportRegionTransition(code, openSeqNum, hris);
+    }
+
+    @Override
+    public boolean isAborted() {
+      return getServerName().equals(abortedServer) || super.isAborted();
+    }
+  }
+
 
   public static class MyRegionObserver extends BaseRegionObserver {
     // If enabled, fail all preClose calls
