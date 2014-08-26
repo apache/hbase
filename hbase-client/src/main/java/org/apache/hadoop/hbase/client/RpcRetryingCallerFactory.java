@@ -47,9 +47,12 @@ public class RpcRetryingCallerFactory {
   }
 
   public static RpcRetryingCallerFactory instantiate(Configuration configuration) {
+    String clazzName = RpcRetryingCallerFactory.class.getName();
     String rpcCallerFactoryClazz =
-        configuration.get(RpcRetryingCallerFactory.CUSTOM_CALLER_CONF_KEY,
-          RpcRetryingCallerFactory.class.getName());
+        configuration.get(RpcRetryingCallerFactory.CUSTOM_CALLER_CONF_KEY, clazzName);
+    if (rpcCallerFactoryClazz.equals(clazzName)) {
+      return new RpcRetryingCallerFactory(configuration);
+    }
     return ReflectionUtils.instantiateWithCustomCtor(rpcCallerFactoryClazz,
       new Class[] { Configuration.class }, new Object[] { configuration });
   }
