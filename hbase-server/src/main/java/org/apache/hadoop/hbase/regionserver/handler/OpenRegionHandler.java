@@ -318,7 +318,7 @@ public class OpenRegionHandler extends EventHandler {
    * .
    */
   static class PostOpenDeployTasksThread extends Thread {
-    private Exception exception = null;
+    private Throwable exception = null;
     private final Server server;
     private final RegionServerServices services;
     private final HRegion region;
@@ -338,13 +338,16 @@ public class OpenRegionHandler extends EventHandler {
       try {
         this.services.postOpenDeployTasks(this.region,
           this.server.getCatalogTracker());
-      } catch (KeeperException e) {
-        server.abort("Exception running postOpenDeployTasks; region=" +
-            this.region.getRegionInfo().getEncodedName(), e);
-      } catch (Exception e) {
-        LOG.warn("Exception running postOpenDeployTasks; region=" +
-          this.region.getRegionInfo().getEncodedName(), e);
+      } catch (Throwable e) {
+        String msg =
+            "Exception running postOpenDeployTasks; region="
+                + this.region.getRegionInfo().getEncodedName();
         this.exception = e;
+        if (e instanceof IOException && isRegionStillOpening(region.getRegionInfo(), services)) {
+          server.abort(msg, e);
+        } else {
+          LOG.warn(msg, e);
+        }
       }
       // We're done.  Set flag then wake up anyone waiting on thread to complete.
       this.signaller.set(true);
@@ -356,7 +359,7 @@ public class OpenRegionHandler extends EventHandler {
     /**
      * @return Null or the run exception; call this method after thread is done.
      */
-    Exception getException() {
+    Throwable getException() {
       return this.exception;
     }
   }
@@ -522,10 +525,15 @@ public class OpenRegionHandler extends EventHandler {
     }
   }
 
-  private boolean isRegionStillOpening() {
+  private static boolean isRegionStillOpening(HRegionInfo regionInfo,
+      RegionServerServices rsServices) {
     byte[] encodedName = regionInfo.getEncodedNameAsBytes();
     Boolean action = rsServices.getRegionsInTransitionInRS().get(encodedName);
     return Boolean.TRUE.equals(action); // true means opening for RIT
+  }
+
+  private boolean isRegionStillOpening() {
+    return isRegionStillOpening(regionInfo, rsServices);
   }
 
   /**
