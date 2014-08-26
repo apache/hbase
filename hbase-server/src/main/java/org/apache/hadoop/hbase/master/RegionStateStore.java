@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,6 +31,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.RegionState.State;
@@ -39,7 +40,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConfigUtil;
-import org.apache.hadoop.hbase.util.MultiHConnection;
 
 import com.google.common.base.Preconditions;
 
@@ -52,12 +52,12 @@ public class RegionStateStore {
   private static final Log LOG = LogFactory.getLog(RegionStateStore.class);
 
   private volatile HRegion metaRegion;
+  private volatile HTableInterface metaTable;
   private volatile boolean initialized;
 
   private final boolean noPersistence;
   private final CatalogTracker catalogTracker;
   private final Server server;
-  private MultiHConnection multiHConnection;
 
   /**
    * Returns the {@link ServerName} from catalog table {@link Result}
@@ -113,22 +113,16 @@ public class RegionStateStore {
     initialized = false;
   }
 
+  @SuppressWarnings("deprecation")
   void start() throws IOException {
     if (!noPersistence) {
       if (server instanceof RegionServerServices) {
         metaRegion = ((RegionServerServices)server).getFromOnlineRegions(
           HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
       }
-      // When meta is not colocated on master
       if (metaRegion == null) {
-        Configuration conf = server.getConfiguration();
-        // Config to determine the no of HConnections to META.
-        // A single HConnection should be sufficient in most cases. Only if
-        // you are doing lot of writes (>1M) to META,
-        // increasing this value might improve the write throughput.
-        multiHConnection =
-            new MultiHConnection(conf, conf.getInt("hbase.regionstatestore.meta.connection", 1));
-
+        metaTable = new HTable(TableName.META_TABLE_NAME,
+          catalogTracker.getConnection());
       }
     }
     initialized = true;
@@ -136,11 +130,18 @@ public class RegionStateStore {
 
   void stop() {
     initialized = false;
-    if (multiHConnection != null) {
-      multiHConnection.close();
+    if (metaTable != null) {
+      try {
+        metaTable.close();
+      } catch (IOException e) {
+        LOG.info("Got exception in closing meta table", e);
+      } finally {
+        metaTable = null;
+      }
     }
   }
 
+  @SuppressWarnings("deprecation")
   void updateRegionState(long openSeqNum,
       RegionState newState, RegionState oldState) {
     if (noPersistence || !initialized) {
@@ -181,7 +182,6 @@ public class RegionStateStore {
         Bytes.toBytes(state.name()));
       LOG.info(info);
 
-
       // Persist the state change to meta
       if (metaRegion != null) {
         try {
@@ -197,17 +197,16 @@ public class RegionStateStore {
           synchronized (this) {
             if (metaRegion != null) {
               LOG.info("Meta region shortcut failed", t);
-              if (multiHConnection == null) {
-                multiHConnection = new MultiHConnection(server.getConfiguration(), 1);
-              }
+              metaTable = new HTable(TableName.META_TABLE_NAME,
+                catalogTracker.getConnection());
               metaRegion = null;
             }
           }
         }
       }
-      // Called when meta is not on master
-      multiHConnection.processBatchCallback(Arrays.asList(put), TableName.META_TABLE_NAME, null,
-        null);
+      synchronized(metaTable) {
+        metaTable.put(put);
+      }
     } catch (IOException ioe) {
       LOG.error("Failed to persist region state " + newState, ioe);
       server.abort("Failed to update region location", ioe);

@@ -47,10 +47,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
-import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -869,66 +867,6 @@ public class TestAssignmentManagerOnCluster {
       MyRegionServer.simulateRetry = false;
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
-  }
-
-  /**
-   * Test concurrent updates to meta when meta is not on master. Only for zk-less assignment
-   * @throws Exception
-   */
-  @Test(timeout = 30000)
-  public void testUpdatesRemoteMeta() throws Exception {
-    // Not for zk less assignment
-    if (conf.getBoolean("hbase.assignment.usezk", true)) {
-      return;
-    }
-    conf.setInt("hbase.regionstatestore.meta.connection", 3);
-    final RegionStateStore rss = new RegionStateStore(new MyRegionServer(conf));
-    rss.start();
-    // Create 10 threads and make each do 10 puts related to region state update
-    Thread[] th = new Thread[10];
-    List<String> nameList = new ArrayList<String>();
-    List<TableName> tableNameList = new ArrayList<TableName>();
-    for (int i = 0; i < th.length; i++) {
-      th[i] = new Thread() {
-        @Override
-        public void run() {
-          HRegionInfo[] hri = new HRegionInfo[10];
-          ServerName serverName = ServerName.valueOf("dummyhost", 1000, 1234);
-          for (int i = 0; i < 10; i++) {
-            hri[i] = new HRegionInfo(TableName.valueOf(Thread.currentThread().getName() + "_" + i));
-            RegionState newState = new RegionState(hri[i], RegionState.State.OPEN, serverName);
-            RegionState oldState =
-                new RegionState(hri[i], RegionState.State.PENDING_OPEN, serverName);
-            rss.updateRegionState(1, newState, oldState);
-          }
-        }
-      };
-      th[i].start();
-      nameList.add(th[i].getName());
-    }
-    for (int i = 0; i < th.length; i++) {
-      th[i].join();
-    }
-    // Add all the expected table names in meta to tableNameList
-    for (String name : nameList) {
-      for (int i = 0; i < 10; i++) {
-        tableNameList.add(TableName.valueOf(name + "_" + i));
-      }
-    }
-    List<Result> metaRows =
-        MetaReader.fullScan(TEST_UTIL.getMiniHBaseCluster().getMaster().getCatalogTracker());
-    int count = 0;
-    // Check all 100 rows are in meta
-    for (Result result : metaRows) {
-      if (tableNameList.contains(HRegionInfo.getTable(result.getRow()))) {
-        count++;
-        if (count == 100) {
-          break;
-        }
-      }
-    }
-    assertTrue(count == 100);
-    rss.stop();
   }
 
   static class MyLoadBalancer extends StochasticLoadBalancer {
