@@ -65,6 +65,7 @@ public class TestOpenedRegionHandler {
   @Before
   public void setUp() throws Exception {
     conf = HBaseConfiguration.create();
+    conf.setBoolean("hbase.assignment.usezk", true);
     TEST_UTIL = HBaseTestingUtility.createLocalHTU(conf);
   }
 
@@ -80,6 +81,7 @@ public class TestOpenedRegionHandler {
     // Start the cluster
     log("Starting cluster");
     conf = HBaseConfiguration.create();
+    conf.setBoolean("hbase.assignment.usezk", true);
     resetConf = conf;
     conf.setInt("hbase.master.assignment.timeoutmonitor.period", 2000);
     conf.setInt("hbase.master.assignment.timeoutmonitor.timeout", 5000);

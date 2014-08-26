@@ -1048,6 +1048,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param r Result to pull from
    * @return A ServerName instance or null if necessary fields not found or empty.
    */
+  // TODO: ServerName should be a better place for this method?
   public static ServerName getServerName(final Result r) {
     Cell cell = r.getColumnLatestCell(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER);
     if (cell == null || cell.getValueLength() == 0) return null;

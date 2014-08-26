@@ -171,7 +171,8 @@ public class ServerManager {
    * is currently in startup mode. In this case, the dead server will be parked in this set
    * temporarily.
    */
-  private Map<ServerName, Boolean> requeuedDeadServers = new HashMap<ServerName, Boolean>();
+  private Map<ServerName, Boolean> requeuedDeadServers
+    = new ConcurrentHashMap<ServerName, Boolean>();
 
   /** Listeners that are called on server events. */
   private List<ServerListener> listeners = new CopyOnWriteArrayList<ServerListener>();
@@ -909,6 +910,15 @@ public class ServerManager {
    */
   Set<ServerName> getDeadNotExpiredServers() {
     return new HashSet<ServerName>(this.queuedDeadServers);
+  }
+
+  /**
+   * During startup, if we figure it is not a failover, i.e. there is
+   * no more HLog files to split, we won't try to recover these dead servers.
+   * So we just remove them from the queue. Use caution in calling this.
+   */
+  void removeRequeuedDeadServers() {
+    requeuedDeadServers.clear();
   }
 
   /**

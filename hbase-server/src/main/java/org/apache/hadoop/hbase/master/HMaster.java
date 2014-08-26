@@ -203,8 +203,11 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionTransitionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionTransitionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -3205,6 +3208,32 @@ MasterServices, Server {
       tableNames.add(descriptor.getTableName());
     }
     return tableNames;
+  }
+
+  @Override
+  public ReportRegionTransitionResponse reportRegionTransition(RpcController controller,
+      ReportRegionTransitionRequest req) throws ServiceException {
+    try {
+      RegionTransition rt = req.getTransition(0);
+      TableName tableName = ProtobufUtil.toTableName(
+        rt.getRegionInfo(0).getTableName());
+      if (!TableName.META_TABLE_NAME.equals(tableName)
+          && !assignmentManager.isFailoverCleanupDone()) {
+        // Meta region is assigned before master finishes the
+        // failover cleanup. So no need this check for it
+        throw new PleaseHoldException("Master is rebuilding user regions");
+      }
+      ServerName sn = ProtobufUtil.toServerName(req.getServer());
+      String error = assignmentManager.onRegionTransition(sn, rt);
+      ReportRegionTransitionResponse.Builder rrtr =
+        ReportRegionTransitionResponse.newBuilder();
+      if (error != null) {
+        rrtr.setErrorMessage(error);
+      }
+      return rrtr.build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
   }
 
 }

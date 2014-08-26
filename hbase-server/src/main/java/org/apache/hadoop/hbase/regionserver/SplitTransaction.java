@@ -49,8 +49,10 @@ import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.PairOfSameType;
@@ -98,6 +100,7 @@ public class SplitTransaction {
   private HRegionInfo hri_b;
   private long fileSplitTimeout = 30000;
   private int znodeVersion = -1;
+  boolean useZKForAssignment;
 
   /*
    * Row to split around
@@ -281,15 +284,22 @@ public class SplitTransaction {
     // will determine whether the region is split or not in case of failures.
     // If it is successful, master will roll-forward, if not, master will rollback
     // and assign the parent region.
-    if (!testing) {
+    if (!testing && useZKForAssignment) {
       if (metaEntries == null || metaEntries.isEmpty()) {
-        MetaEditor.splitRegion(server.getCatalogTracker(),
-            parent.getRegionInfo(), daughterRegions.getFirst().getRegionInfo(),
-            daughterRegions.getSecond().getRegionInfo(), server.getServerName());
+        MetaEditor.splitRegion(server.getCatalogTracker(), parent.getRegionInfo(), daughterRegions
+            .getFirst().getRegionInfo(), daughterRegions.getSecond().getRegionInfo(), server
+            .getServerName());
       } else {
-        offlineParentInMetaAndputMetaEntries(server.getCatalogTracker(),
-          parent.getRegionInfo(), daughterRegions.getFirst().getRegionInfo(), daughterRegions
-              .getSecond().getRegionInfo(), server.getServerName(), metaEntries);
+        offlineParentInMetaAndputMetaEntries(server.getCatalogTracker(), parent.getRegionInfo(),
+          daughterRegions.getFirst().getRegionInfo(), daughterRegions.getSecond().getRegionInfo(),
+          server.getServerName(), metaEntries);
+      }
+    } else if (services != null && !useZKForAssignment) {
+      if (!services.reportRegionTransition(TransitionCode.SPLIT_PONR, parent.getRegionInfo(),
+        hri_a, hri_b)) {
+        // Passed PONR, let SSH clean it up
+        throw new IOException("Failed to notify master that split passed PONR: "
+            + parent.getRegionInfo().getRegionNameAsString());
       }
     }
     return daughterRegions;
@@ -299,7 +309,7 @@ public class SplitTransaction {
       final RegionServerServices services, boolean testing) throws IOException {
     // Set ephemeral SPLITTING znode up in zk.  Mocked servers sometimes don't
     // have zookeeper so don't do zk stuff if server or zookeeper is null
-    if (server != null && server.getZooKeeper() != null) {
+    if (server != null && server.getZooKeeper() != null && useZKForAssignment) {
       try {
         createNodeSplitting(server.getZooKeeper(),
           parent.getRegionInfo(), server.getServerName(), hri_a, hri_b);
@@ -307,9 +317,15 @@ public class SplitTransaction {
         throw new IOException("Failed creating PENDING_SPLIT znode on " +
           this.parent.getRegionNameAsString(), e);
       }
+    } else if (services != null && !useZKForAssignment) {
+      if (!services.reportRegionTransition(TransitionCode.READY_TO_SPLIT,
+        parent.getRegionInfo(), hri_a, hri_b)) {
+        throw new IOException("Failed to get ok from master to split "
+            + parent.getRegionNameAsString());
+      }
     }
     this.journal.add(JournalEntry.SET_SPLITTING_IN_ZK);
-    if (server != null && server.getZooKeeper() != null) {
+    if (server != null && server.getZooKeeper() != null && useZKForAssignment) {
       // After creating the split node, wait for master to transition it
       // from PENDING_SPLIT to SPLITTING so that we can move on. We want master
       // knows about it and won't transition any region which is splitting.
@@ -411,11 +427,19 @@ public class SplitTransaction {
       }
       if (services != null) {
         try {
-          // add 2nd daughter first (see HBASE-4335)
-          services.postOpenDeployTasks(b, server.getCatalogTracker());
+          if (useZKForAssignment) {
+            // add 2nd daughter first (see HBASE-4335)
+            services.postOpenDeployTasks(b, server.getCatalogTracker());
+          } else if (!services.reportRegionTransition(TransitionCode.SPLIT,
+              parent.getRegionInfo(), hri_a, hri_b)) {
+            throw new IOException("Failed to report split region to master: "
+              + parent.getRegionInfo().getShortNameToLog());
+          }
           // Should add it to OnlineRegions
           services.addToOnlineRegions(b);
-          services.postOpenDeployTasks(a, server.getCatalogTracker());
+          if (useZKForAssignment) {
+            services.postOpenDeployTasks(a, server.getCatalogTracker());
+          }
           services.addToOnlineRegions(a);
         } catch (KeeperException ke) {
           throw new IOException(ke);
@@ -471,10 +495,7 @@ public class SplitTransaction {
       }
     }
 
-    // Coprocessor callback
-    if (this.parent.getCoprocessorHost() != null) {
-      this.parent.getCoprocessorHost().postSplit(a,b);
-    }
+    
 
     // Leaving here, the splitdir with its dross will be in place but since the
     // split was successful, just leave it; it'll be cleaned when parent is
@@ -565,6 +586,8 @@ public class SplitTransaction {
   public PairOfSameType<HRegion> execute(final Server server,
       final RegionServerServices services)
   throws IOException {
+    useZKForAssignment =
+        server == null ? true : ConfigUtil.useZKForAssignment(server.getConfiguration());
     PairOfSameType<HRegion> regions = createDaughters(server, services);
     if (this.parent.getCoprocessorHost() != null) {
       this.parent.getCoprocessorHost().preSplitAfterPONR();
@@ -576,7 +599,13 @@ public class SplitTransaction {
       final RegionServerServices services, PairOfSameType<HRegion> regions)
       throws IOException {
     openDaughters(server, services, regions.getFirst(), regions.getSecond());
-    transitionZKNode(server, services, regions.getFirst(), regions.getSecond());
+    if (server != null && server.getZooKeeper() != null && useZKForAssignment) {
+      transitionZKNode(server, services, regions.getFirst(), regions.getSecond());
+    }
+    // Coprocessor callback
+    if (this.parent.getCoprocessorHost() != null) {
+      this.parent.getCoprocessorHost().postSplit(regions.getFirst(), regions.getSecond());
+    }
     return regions;
   }
 
@@ -801,8 +830,13 @@ public class SplitTransaction {
       switch(je) {
 
       case SET_SPLITTING_IN_ZK:
-        if (server != null && server.getZooKeeper() != null) {
+        if (server != null && server.getZooKeeper() != null && useZKForAssignment) {
           cleanZK(server, this.parent.getRegionInfo());
+        } else if (services != null
+            && !useZKForAssignment
+            && !services.reportRegionTransition(TransitionCode.SPLIT_REVERTED,
+              parent.getRegionInfo(), hri_a, hri_b)) {
+          return false;
         }
         break;
 

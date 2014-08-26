@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -559,5 +560,16 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   @Override
   public ServerNonceManager getNonceManager() {
     return null;
+  }
+
+  @Override
+  public boolean reportRegionTransition(TransitionCode code, HRegionInfo... hris) {
+    return false;
+  }
+
+  @Override
+  public boolean reportRegionTransition(TransitionCode code, long openSeqNum,
+      HRegionInfo... hris) {
+    return false;
   }
 }

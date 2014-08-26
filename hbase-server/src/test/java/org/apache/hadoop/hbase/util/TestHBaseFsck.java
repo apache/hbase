@@ -1602,6 +1602,12 @@ public class TestHBaseFsck {
       assertFalse(fsck.shouldRerun());
       assertErrors(fsck, new ERROR_CODE[] {
         ERROR_CODE.NOT_IN_META, ERROR_CODE.HOLE_IN_REGION_CHAIN});
+
+      // fix the cluster so other tests won't be impacted
+      fsck = doFsck(conf, true);
+      assertTrue(fsck.shouldRerun());
+      fsck = doFsck(conf, true);
+      assertNoErrors(fsck);
     } finally {
       deleteTable(table);
     }

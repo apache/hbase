@@ -191,7 +191,11 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionTransitionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionTransitionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
@@ -211,6 +215,7 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
+import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -378,7 +383,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   protected final int numRegionsToReport;
 
   // Stub to do region server status calls against the master.
-  private RegionServerStatusService.BlockingInterface rssStub;
+  private volatile RegionServerStatusService.BlockingInterface rssStub;
   // RPC client. Used to make the stub above that does region server status checking.
   RpcClient rpcClient;
 
@@ -500,6 +505,11 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   // Table level lock manager for locking for region operations
   private TableLockManager tableLockManager;
 
+  private final boolean useZKForAssignment;
+
+  // Used for 11059
+  private ServerName serverName;
+
   /**
    * Nonce manager. Nonces are used to make operations like increment and append idempotent
    * in the case where client doesn't receive the response from a successful operation and
@@ -597,6 +607,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     } catch (IllegalAccessException e) {
       throw new IllegalArgumentException(e);
     }
+    
     this.rpcServer = new RpcServer(this, name, getServices(),
       /*HBaseRPCErrorHandler.class, OnlineRegions.class},*/
       initialIsa, // BindAddress is IP we got for this server.
@@ -605,9 +616,11 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
     // Set our address.
     this.isa = this.rpcServer.getListenerAddress();
-
+    
     this.rpcServer.setErrorHandler(this);
     this.startcode = System.currentTimeMillis();
+    serverName = ServerName.valueOf(isa.getHostName(), isa.getPort(), startcode);
+    useZKForAssignment = ConfigUtil.useZKForAssignment(conf);
 
     // login the zookeeper client principal (if using security)
     ZKUtil.loginClient(this.conf, "hbase.zookeeper.client.keytab.file",
@@ -1055,8 +1068,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   @VisibleForTesting
   protected void tryRegionServerReport(long reportStartTime, long reportEndTime)
   throws IOException {
-    if (this.rssStub == null) {
-      // the current server is stopping.
+    RegionServerStatusService.BlockingInterface rss = rssStub;
+    if (rss == null) {
+      // the current server could be stopping.
       return;
     }
     ClusterStatusProtos.ServerLoad sl = buildServerLoad(reportStartTime, reportEndTime);
@@ -1066,18 +1080,19 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         this.serverNameFromMasterPOV.getVersionedBytes());
       request.setServer(ProtobufUtil.toServerName(sn));
       request.setLoad(sl);
-      this.rssStub.regionServerReport(null, request.build());
+      rss.regionServerReport(null, request.build());
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof YouAreDeadException) {
         // This will be caught and handled as a fatal error in run()
         throw ioe;
       }
+      if (rssStub == rss) {
+        rssStub = null;
+      }
       // Couldn't connect to the master, get location from zk and reconnect
       // Method blocks until new master is found or we are stopped
-      Pair<ServerName, RegionServerStatusService.BlockingInterface> p =
-        createRegionServerStatusStub();
-      this.rssStub = p.getSecond();
+      createRegionServerStatusStub();
     }
   }
 
@@ -1799,10 +1814,16 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     if (r.getRegionInfo().isMetaRegion()) {
       MetaRegionTracker.setMetaLocation(getZooKeeper(),
           this.serverNameFromMasterPOV);
-    } else {
+    } else if (useZKForAssignment) {
       MetaEditor.updateRegionLocation(ct, r.getRegionInfo(),
         this.serverNameFromMasterPOV, openSeqNum);
     }
+    if (!useZKForAssignment
+        && !reportRegionTransition(TransitionCode.OPENED, openSeqNum, r.getRegionInfo())) {
+      throw new IOException("Failed to report opened region to master: "
+          + r.getRegionNameAsString());
+    }
+
     LOG.info("Finished post open deploy task for " + r.getRegionNameAsString());
 
   }
@@ -1941,6 +1962,49 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     return replicationSinkHandler;
   }
 
+  @Override
+  public boolean reportRegionTransition(TransitionCode code, HRegionInfo... hris) {
+    return reportRegionTransition(code, HConstants.NO_SEQNUM, hris);
+  }
+
+  @Override
+  public boolean reportRegionTransition(TransitionCode code, long openSeqNum, HRegionInfo... hris) {
+    ReportRegionTransitionRequest.Builder builder = ReportRegionTransitionRequest.newBuilder();
+    builder.setServer(ProtobufUtil.toServerName(serverName));
+    RegionTransition.Builder transition = builder.addTransitionBuilder();
+    transition.setTransitionCode(code);
+    if (code == TransitionCode.OPENED && openSeqNum >= 0) {
+      transition.setOpenSeqNum(openSeqNum);
+    }
+    for (HRegionInfo hri : hris) {
+      transition.addRegionInfo(HRegionInfo.convert(hri));
+    }
+    ReportRegionTransitionRequest request = builder.build();
+    while (keepLooping()) {
+      RegionServerStatusService.BlockingInterface rss = rssStub;
+      try {
+        if (rss == null) {
+          createRegionServerStatusStub();
+          continue;
+        }
+        ReportRegionTransitionResponse response = rss.reportRegionTransition(null, request);
+        if (response.hasErrorMessage()) {
+          LOG.info("Failed to transition " + hris[0] + " to " + code + ": "
+              + response.getErrorMessage());
+          return false;
+        }
+        return true;
+      } catch (ServiceException se) {
+        IOException ioe = ProtobufUtil.getRemoteException(se);
+        LOG.info("Failed to report region transition, will retry", ioe);
+        if (rssStub == rss) {
+          rssStub = null;
+        }
+      }
+    }
+    return false;
+  }
+
   /**
    * Get the current master from ZooKeeper and open the RPC connection to it.
    *
@@ -1949,8 +2013,11 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    *
    * @return master + port, or null if server has been stopped
    */
-  private Pair<ServerName, RegionServerStatusService.BlockingInterface>
+  private synchronized ServerName
   createRegionServerStatusStub() {
+    if (rssStub != null) {
+      return masterAddressTracker.getMasterAddress();
+    }
     ServerName sn = null;
     long previousLogTime = 0;
     RegionServerStatusService.BlockingInterface master = null;
@@ -1997,7 +2064,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         }
       }
     }
-    return new Pair<ServerName, RegionServerStatusService.BlockingInterface>(sn, intf);
+    rssStub = intf;
+    return sn;
   }
 
   /**
@@ -2016,12 +2084,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    * @throws IOException
    */
   private RegionServerStartupResponse reportForDuty() throws IOException {
+    ServerName masterServerName = createRegionServerStatusStub();
+    if (masterServerName == null) return null;
     RegionServerStartupResponse result = null;
-    Pair<ServerName, RegionServerStatusService.BlockingInterface> p =
-      createRegionServerStatusStub();
-    this.rssStub = p.getSecond();
-    ServerName masterServerName = p.getFirst();
-    if (masterServerName == null) return result;
     try {
       this.requestCount.set(0);
       LOG.info("reportForDuty to master=" + masterServerName + " with port=" + this.isa.getPort() +
