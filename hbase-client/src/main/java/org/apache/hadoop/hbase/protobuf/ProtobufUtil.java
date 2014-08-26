@@ -18,24 +18,17 @@
 package org.apache.hadoop.hbase.protobuf;
 
 
-import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.NavigableSet;
-
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
+import com.google.protobuf.Parser;
+import com.google.protobuf.RpcChannel;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
+import com.google.protobuf.TextFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -138,17 +131,23 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.Message;
-import com.google.protobuf.Parser;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
-import com.google.protobuf.TextFormat;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.NavigableSet;
+
+import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME;
 
 /**
  * Protobufs utility.
@@ -579,9 +578,21 @@ public final class ProtobufUtil {
             for(int i = 0; i< array.length; i++) {
               tagArray[i] = (Tag)array[i];
             }
-            put.addImmutable(family, qualifier, ts, value, tagArray);
+            if(qv.hasDeleteType()) {
+              byte[] qual = qv.hasQualifier() ? qv.getQualifier().toByteArray() : null;
+              put.add(new KeyValue(proto.getRow().toByteArray(), family, qual, ts,
+                  fromDeleteType(qv.getDeleteType()), null, tags));
+            } else {
+              put.addImmutable(family, qualifier, ts, value, tagArray);
+            }
           } else {
-            put.addImmutable(family, qualifier, ts, value);
+            if(qv.hasDeleteType()) {
+              byte[] qual = qv.hasQualifier() ? qv.getQualifier().toByteArray() : null;
+              put.add(new KeyValue(proto.getRow().toByteArray(), family, qual, ts,
+                  fromDeleteType(qv.getDeleteType())));
+            } else{
+              put.addImmutable(family, qualifier, ts, value);
+            }
           }
         }
       }
@@ -1168,7 +1179,7 @@ public final class ProtobufUtil {
           valueBuilder.setTags(ByteStringer.wrap(kv.getTagsArray(), kv.getTagsOffset(),
               kv.getTagsLength()));
         }
-        if (type == MutationType.DELETE) {
+        if (type == MutationType.DELETE || (type == MutationType.PUT && CellUtil.isDelete(kv))) {
           KeyValue.Type keyValueType = KeyValue.Type.codeToType(kv.getType());
           valueBuilder.setDeleteType(toDeleteType(keyValueType));
         }
@@ -1467,6 +1478,29 @@ public final class ProtobufUtil {
       return DeleteType.DELETE_FAMILY_VERSION;
     default:
         throw new IOException("Unknown delete type: " + type);
+    }
+  }
+
+  /**
+   * Convert a protocol buffer DeleteType to delete KeyValue type.
+   *
+   * @param protocol buffer DeleteType
+   * @return type
+   * @throws IOException
+   */
+  public static KeyValue.Type fromDeleteType(
+      DeleteType type) throws IOException {
+    switch (type) {
+    case DELETE_ONE_VERSION:
+      return KeyValue.Type.Delete;
+    case DELETE_MULTIPLE_VERSIONS:
+      return KeyValue.Type.DeleteColumn;
+    case DELETE_FAMILY:
+      return KeyValue.Type.DeleteFamily;
+    case DELETE_FAMILY_VERSION:
+      return KeyValue.Type.DeleteFamilyVersion;
+    default:
+      throw new IOException("Unknown delete type: " + type);
     }
   }
 
