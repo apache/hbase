@@ -1,4 +1,27 @@
 HBase Change Log
+Release 0.94.23 - 08/26/2014
+Bug
+
+    [HBASE-9746] - RegionServer can't start when replication tries to replicate to an unknown host
+    [HBASE-10834] - Better error messaging on issuing grant commands in non-authz mode
+    [HBASE-11232] - Add MultiRowMutation tests.
+    [HBASE-11536] - Puts of region location to Meta may be out of order which causes inconsistent of region location
+    [HBASE-11641] - TestDistributedLogSplitting.testMasterStartsUpWithLogSplittingWork fails frequently
+    [HBASE-11652] - Port HBASE-3270 and HBASE-11650 to 0.94 - create cluster id and version file in a tmp location and move it into place
+    [HBASE-11767] - [0.94] Unnecessary garbage produced by schema metrics during scanning
+
+Improvement
+
+    [HBASE-11667] - Comment ClientScanner logic for NSREs.
+    [HBASE-11754] - [Shell] Record table property SPLITS_FILE in descriptor
+
+Task
+
+    [HBASE-11690] - Backport HBASE-5934 (Add the ability for Performance Evaluation to set the table compression) to 0.94
+    [HBASE-11691] - Backport HBASE-7156 (Add Data Block Encoding and -D opts to Performance Evaluation) to 0.94
+    [HBASE-11693] - Backport HBASE-11026 (Provide option to filter out all rows in PerformanceEvaluation tool) to 0.94
+
+
 Release 0.94.22 - 07/31/2014
 Bug
 
