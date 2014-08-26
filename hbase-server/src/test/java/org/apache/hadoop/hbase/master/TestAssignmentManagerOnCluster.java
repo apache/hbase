@@ -470,6 +470,8 @@ public class TestAssignmentManagerOnCluster {
       master.assignRegion(hri);
       AssignmentManager am = master.getAssignmentManager();
       assertTrue(am.waitForAssignment(hri));
+      ServerName sn = am.getRegionStates().getRegionServerOfRegion(hri);
+      TEST_UTIL.assertRegionOnServer(hri, sn, 6000);
 
       MyRegionObserver.preCloseEnabled.set(true);
       am.unassign(hri);
@@ -641,10 +643,8 @@ public class TestAssignmentManagerOnCluster {
       master.assignRegion(hri);
       AssignmentManager am = master.getAssignmentManager();
       assertTrue(am.waitForAssignment(hri));
-      while (!HBaseTestingUtility.getAllOnlineRegions(
-          TEST_UTIL.getHBaseCluster()).contains(hri.getRegionNameAsString())) {
-        Threads.sleep(100); // This won't take long
-      }
+      ServerName sn = am.getRegionStates().getRegionServerOfRegion(hri);
+      TEST_UTIL.assertRegionOnServer(hri, sn, 6000);
 
       MyRegionObserver.postCloseEnabled.set(true);
       am.unassign(hri);
@@ -740,7 +740,7 @@ public class TestAssignmentManagerOnCluster {
 
       ServerName serverName = master.getAssignmentManager().
         getRegionStates().getRegionServerOfRegion(hri);
-      TEST_UTIL.assertRegionOnlyOnServer(hri, serverName, 200);
+      TEST_UTIL.assertRegionOnlyOnServer(hri, serverName, 6000);
     } finally {
       MyRegionObserver.postOpenEnabled.set(false);
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
@@ -812,7 +812,7 @@ public class TestAssignmentManagerOnCluster {
 
       ServerName serverName = master.getAssignmentManager().
         getRegionStates().getRegionServerOfRegion(hri);
-      TEST_UTIL.assertRegionOnlyOnServer(hri, serverName, 200);
+      TEST_UTIL.assertRegionOnlyOnServer(hri, serverName, 6000);
     } finally {
       if (master != null) {
         master.enableSSH(true);
