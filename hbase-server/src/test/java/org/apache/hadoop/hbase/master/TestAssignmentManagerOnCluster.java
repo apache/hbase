@@ -380,7 +380,7 @@ public class TestAssignmentManagerOnCluster {
       master.assignRegion(hri);
       AssignmentManager am = master.getAssignmentManager();
       assertTrue(am.waitForAssignment(hri));
-
+      
       MyRegionObserver.preCloseEnabled.set(true);
       am.unassign(hri);
       RegionState state = am.getRegionStates().getRegionState(hri);
@@ -400,7 +400,7 @@ public class TestAssignmentManagerOnCluster {
 
       ServerName serverName = master.getAssignmentManager().
         getRegionStates().getRegionServerOfRegion(hri);
-      TEST_UTIL.assertRegionOnlyOnServer(hri, serverName, 200);
+      TEST_UTIL.assertRegionOnlyOnServer(hri, serverName, 6000);
     } finally {
       MyRegionObserver.preCloseEnabled.set(false);
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
@@ -427,6 +427,8 @@ public class TestAssignmentManagerOnCluster {
       master.assignRegion(hri);
       AssignmentManager am = master.getAssignmentManager();
       assertTrue(am.waitForAssignment(hri));
+      ServerName sn = am.getRegionStates().getRegionServerOfRegion(hri);
+      TEST_UTIL.assertRegionOnServer(hri, sn, 6000);
 
       MyRegionObserver.preCloseEnabled.set(true);
       am.unassign(hri);
@@ -611,6 +613,8 @@ public class TestAssignmentManagerOnCluster {
       master.assignRegion(hri);
       AssignmentManager am = master.getAssignmentManager();
       assertTrue(am.waitForAssignment(hri));
+      ServerName sn = am.getRegionStates().getRegionServerOfRegion(hri);
+      TEST_UTIL.assertRegionOnServer(hri, sn, 6000);
 
       MyRegionObserver.postCloseEnabled.set(true);
       am.unassign(hri);
@@ -707,7 +711,7 @@ public class TestAssignmentManagerOnCluster {
 
       ServerName serverName = master.getAssignmentManager().
         getRegionStates().getRegionServerOfRegion(hri);
-      TEST_UTIL.assertRegionOnlyOnServer(hri, serverName, 200);
+      TEST_UTIL.assertRegionOnlyOnServer(hri, serverName, 6000);
     } finally {
       MyRegionObserver.postOpenEnabled.set(false);
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
