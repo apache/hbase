@@ -5217,6 +5217,65 @@ This option should not normally be used, and it is not in <code>-fixAll</code>.
         </listitem>
       </itemizedlist>
     </section>
+    <section xml:id="hadoop.native.lib">
+      <title>Making use of Hadoop Native Libraries in HBase</title>
+      <para>The Hadoop shared library has a bunch of facility including
+        compression libraries and fast crc'ing. To make this facility available
+        to HBase, do the following. HBase/Hadoop will fall back to use
+        alternatives if it cannot find the native library versions -- or
+        fail outright if you asking for an explicit compressor and there is
+      no alternative available.</para>
+    <para>Lets presume your Hadoop shipped with a native library that
+      suits the platform you are running HBase on.  To check if the Hadoop
+      native library is available to HBase, run the following tool (available in 
+      Hadoop 2.1 and greater):
+      <programlisting>$ ./bin/hbase --config ~/conf_hbase org.apache.hadoop.util.NativeLibraryChecker
+2014-08-26 13:15:38,717 WARN  [main] util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+Native library checking:
+hadoop: false
+zlib:   false
+snappy: false
+lz4:    false
+bzip2:  false
+2014-08-26 13:15:38,863 INFO  [main] util.ExitUtil: Exiting with status 1</programlisting>
+Above shows that the native hadoop library is not available in HBase context.
+    </para>
+    <para>To fix the above, either copy the Hadoop native libraries local or symlink to
+      them if the Hadoop and HBase stalls are adjacent in the filesystem. 
+      You could also point at their location by setting the <varname>LD_LIBRARY_PATH</varname> environment
+      variable.</para>
+    <para>Where the JVM looks to find native librarys is "system dependent"
+      (See <classname>java.lang.System#loadLibrary(name)</classname>). On linux, by default,
+      is going to look in <filename>lib/native/PLATFORM</filename> where <varname>PLATFORM</varname>
+      is the label for the platform your HBase is installed on.
+      On a local linux machine, it seems to be the concatenation of the java properties
+      <varname>os.name</varname> and <varname>os.arch</varname> followed by whether 32 or 64 bit.
+      HBase on startup prints out all of the java system properties so find the os.name and os.arch
+      in the log. For example:
+      <programlisting>....
+      2014-08-06 15:27:22,853 INFO  [main] zookeeper.ZooKeeper: Client environment:os.name=Linux
+      2014-08-06 15:27:22,853 INFO  [main] zookeeper.ZooKeeper: Client environment:os.arch=amd64
+      ...
+    </programlisting>
+     So in this case, the PLATFORM string is <varname>Linux-amd64-64</varname>.
+     Copying the Hadoop native libraries or symlinking at <filename>lib/native/Linux-amd64-64</filename>
+     will ensure they are found.  Check with the Hadoop <filename>NativeLibraryChecker</filename>. 
+    </para>
+
+    <para>Here is example of how to point at the Hadoop libs with <varname>LD_LIBRARY_PATH</varname>
+      environment variable:
+      <programlisting>$ LD_LIBRARY_PATH=~/hadoop-2.5.0-SNAPSHOT/lib/native ./bin/hbase --config ~/conf_hbase org.apache.hadoop.util.NativeLibraryChecker
+2014-08-26 13:42:49,332 INFO  [main] bzip2.Bzip2Factory: Successfully loaded &amp; initialized native-bzip2 library system-native
+2014-08-26 13:42:49,337 INFO  [main] zlib.ZlibFactory: Successfully loaded &amp; initialized native-zlib library
+Native library checking:
+hadoop: true /home/stack/hadoop-2.5.0-SNAPSHOT/lib/native/libhadoop.so.1.0.0
+zlib:   true /lib64/libz.so.1
+snappy: true /usr/lib64/libsnappy.so.1
+lz4:    true revision:99
+bzip2:  true /lib64/libbz2.so.1</programlisting>
+Set in <filename>hbase-env.sh</filename> the LD_LIBRARY_PATH environment variable when starting your HBase.
+    </para>
+    </section>
 
     <section>
       <title>Compressor Configuration, Installation, and Use</title>
@@ -5225,7 +5284,9 @@ This option should not normally be used, and it is not in <code>-fixAll</code>.
         <title>Configure HBase For Compressors</title>
         <para>Before HBase can use a given compressor, its libraries need to be available. Due to
           licensing issues, only GZ compression is available to HBase (via native Java libraries) in
-          a default installation.</para>
+          a default installation. Other compression libraries are available via the shared library
+          bundled with your hadoop.  The hadoop native library needs to be findable when HBase
+          starts.  See </para>
         <section>
           <title>Compressor Support On the Master</title>
           <para>A new configuration setting was introduced in HBase 0.95, to check the Master to
