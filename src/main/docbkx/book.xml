@@ -5225,6 +5225,11 @@ This option should not normally be used, and it is not in <code>-fixAll</code>.
         alternatives if it cannot find the native library versions -- or
         fail outright if you asking for an explicit compressor and there is
       no alternative available.</para>
+    <para>If you see the following in your HBase logs, you know that HBase was unable
+      to locate the Hadoop native libraries:
+      <programlisting>2014-08-07 09:26:20,139 WARN  [main] util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable</programlisting>
+      If the libraries loaded successfully, the WARN message does not show.
+    </para>
     <para>Lets presume your Hadoop shipped with a native library that
       suits the platform you are running HBase on.  To check if the Hadoop
       native library is available to HBase, run the following tool (available in 
