@@ -82,8 +82,8 @@ public class WALCellCodec implements Codec {
   }
   
   /**
-   * Create and setup a {@link WALCellCodec} from the {@link cellCodecClsName} and
-   * CompressionContext, if {@link cellCodecClsName} is specified.
+   * Create and setup a {@link WALCellCodec} from the {@code cellCodecClsName} and
+   * CompressionContext, if {@code cellCodecClsName} is specified.
    * Otherwise Cell Codec classname is read from {@link Configuration}.
    * Fully prepares the codec for use.
    * @param conf {@link Configuration} to read for the user-specified codec. If none is specified,
