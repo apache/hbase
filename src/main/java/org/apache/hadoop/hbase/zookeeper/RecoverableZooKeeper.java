@@ -110,7 +110,7 @@ public class RecoverableZooKeeper {
 
   /**
    * Try to create a Zookeeper connection. Turns any exception encountered into a
-   * {@link KeeperException.OperationTimeoutException} so it can retried.
+   * KeeperException.OperationTimeoutException so it can retried.
    * @return The created Zookeeper connection object
    * @throws KeeperException
    */
@@ -118,8 +118,8 @@ public class RecoverableZooKeeper {
     if (this.zk == null) {
       try {
         this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher);
-      } catch (Exception uhe) {
-        LOG.warn("Unable to create ZooKeeper Connection", uhe);
+      } catch (IOException ex) {
+        LOG.warn("Unable to create ZooKeeper Connection", ex);
         throw new KeeperException.OperationTimeoutException();
       }
     }
@@ -132,6 +132,8 @@ public class RecoverableZooKeeper {
       LOG.info("Closing dead ZooKeeper connection, session" +
         " was: 0x"+Long.toHexString(zk.getSessionId()));
       zk.close();
+      // reset the Zookeeper connection
+      zk = null;
     }
     checkZk();
     LOG.info("Recreated a ZooKeeper, session" +
