@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,8 +33,6 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.RegionState.State;
@@ -41,6 +40,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConfigUtil;
+import org.apache.hadoop.hbase.util.MultiHConnection;
 
 import com.google.common.base.Preconditions;
 
@@ -56,7 +56,7 @@ public class RegionStateStore {
   protected static final char META_REPLICA_ID_DELIMITER = '_';
 
   private volatile HRegion metaRegion;
-  private volatile HTableInterface metaTable;
+  private MultiHConnection multiHConnection;
   private volatile boolean initialized;
 
   private final boolean noPersistence;
@@ -139,7 +139,6 @@ public class RegionStateStore {
     initialized = false;
   }
 
-  @SuppressWarnings("deprecation")
   void start() throws IOException {
     if (!noPersistence) {
       if (server instanceof RegionServerServices) {
@@ -147,8 +146,13 @@ public class RegionStateStore {
           HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
       }
       if (metaRegion == null) {
-        metaTable = new HTable(TableName.META_TABLE_NAME,
-          server.getShortCircuitConnection());
+        Configuration conf = server.getConfiguration();
+        // Config to determine the no of HConnections to META.
+        // A single HConnection should be sufficient in most cases. Only if
+        // you are doing lot of writes (>1M) to META,
+        // increasing this value might improve the write throughput.
+        multiHConnection =
+            new MultiHConnection(conf, conf.getInt("hbase.regionstatestore.meta.connection", 1));
       }
     }
     initialized = true;
@@ -156,18 +160,11 @@ public class RegionStateStore {
 
   void stop() {
     initialized = false;
-    if (metaTable != null) {
-      try {
-        metaTable.close();
-      } catch (IOException e) {
-        LOG.info("Got exception in closing meta table", e);
-      } finally {
-        metaTable = null;
-      }
+    if (multiHConnection != null) {
+      multiHConnection.close();
     }
   }
 
-  @SuppressWarnings("deprecation")
   void updateRegionState(long openSeqNum,
       RegionState newState, RegionState oldState) {
     if (noPersistence || !initialized) {
@@ -219,22 +216,23 @@ public class RegionStateStore {
           synchronized (this) {
             if (metaRegion != null) {
               LOG.info("Meta region shortcut failed", t);
-              metaTable = new HTable(TableName.META_TABLE_NAME,
-                server.getShortCircuitConnection());
+              if (multiHConnection == null) {
+                multiHConnection = new MultiHConnection(server.getConfiguration(), 1);
+              }
               metaRegion = null;
             }
           }
         }
       }
-      synchronized(metaTable) {
-        metaTable.put(put);
-      }
+      // Called when meta is not on master
+      multiHConnection.processBatchCallback(Arrays.asList(put), TableName.META_TABLE_NAME, null, null);
+        
     } catch (IOException ioe) {
       LOG.error("Failed to persist region state " + newState, ioe);
       server.abort("Failed to update region location", ioe);
     }
   }
-
+  
   void splitRegion(HRegionInfo p,
       HRegionInfo a, HRegionInfo b, ServerName sn) throws IOException {
     MetaTableAccessor.splitRegion(server.getShortCircuitConnection(), p, a, b, sn);
