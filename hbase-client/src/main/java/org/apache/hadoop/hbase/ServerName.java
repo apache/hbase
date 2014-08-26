@@ -147,14 +147,29 @@ public class ServerName implements Comparable<ServerName>, Serializable {
     return Long.parseLong(serverName.substring(index + 1));
   }
 
+  /**
+   * Retrieve an instance of ServerName.
+   * Callers should use the equals method to compare returned instances, though we may return
+   * a shared immutable object as an internal optimization.
+   */
   public static ServerName valueOf(final String hostname, final int port, final long startcode) {
     return new ServerName(hostname, port, startcode);
   }
 
+  /**
+   * Retrieve an instance of ServerName.
+   * Callers should use the equals method to compare returned instances, though we may return
+   * a shared immutable object as an internal optimization.
+   */
   public static ServerName valueOf(final String serverName) {
     return new ServerName(serverName);
   }
 
+  /**
+   * Retrieve an instance of ServerName.
+   * Callers should use the equals method to compare returned instances, though we may return
+   * a shared immutable object as an internal optimization.
+   */
   public static ServerName valueOf(final String hostAndPort, final long startCode) {
     return new ServerName(hostAndPort, startCode);
   }
