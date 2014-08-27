@@ -303,7 +303,6 @@ MasterServices, Server {
 
   /** Namespace stuff */
   private TableNamespaceManager tableNamespaceManager;
-  private NamespaceJanitor namespaceJanitorChore;
 
   /**
    * This servers address.
@@ -946,22 +945,6 @@ MasterServices, Server {
   }
 
   /**
-   * Useful for testing purpose also where we have
-   * master restart scenarios.
-   */
-  protected void startCatalogJanitorChore() {
-    Threads.setDaemonThreadRunning(catalogJanitorChore.getThread());
-  }
-
-  /**
-   * Useful for testing purpose also where we have
-   * master restart scenarios.
-   */
-  protected void startNamespaceJanitorChore() {
-    Threads.setDaemonThreadRunning(namespaceJanitorChore.getThread());
-  }
-
-  /**
    * Create a {@link ServerManager} instance.
    * @param master
    * @param services
@@ -1274,9 +1257,6 @@ MasterServices, Server {
     }
     if (this.clusterStatusPublisherChore != null){
       clusterStatusPublisherChore.interrupt();
-    }
-    if (this.namespaceJanitorChore != null){
-      namespaceJanitorChore.interrupt();
     }
   }
 
