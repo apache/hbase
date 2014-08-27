@@ -1,5 +1,75 @@
 HBase Change Log
 
+Release 0.98.6 - 9/02/2014
+
+** Sub-task
+    * [HBASE-11059] - ZK-less region assignment
+    * [HBASE-11546] - Backport ZK-less region assignment to 0.98
+    * [HBASE-11610] - Enhance remote meta updates
+    * [HBASE-11740] - RegionStates.getRegionAssignments() gets stuck on clone
+
+** Bug
+    * [HBASE-9746] - RegionServer can't start when replication tries to replicate to an unknown host
+    * [HBASE-10205] - ConcurrentModificationException in BucketAllocator
+    * [HBASE-11531] - RegionStates for regions under region-in-transition znode are not updated on startup
+    * [HBASE-11535] - ReplicationPeer map is not thread safe
+    * [HBASE-11536] - Puts of region location to Meta may be out of order which causes inconsistent of region location
+    * [HBASE-11550] - Custom value for BUCKET_CACHE_BUCKETS_KEY should be sorted
+    * [HBASE-11589] - AccessControlException should be a not retriable exception
+    * [HBASE-11617] - incorrect AgeOfLastAppliedOp and AgeOfLastShippedOp in replication Metrics when no new replication OP 
+    * [HBASE-11627] - RegionSplitter's rollingSplit terminated with "/ by zero", and the _balancedSplit file was not deleted properly
+    * [HBASE-11659] - Region state RPC call is not idempotent
+    * [HBASE-11678] - BucketCache ramCache fills heap after running a few hours
+    * [HBASE-11687] - No need to abort on postOpenDeployTasks exception if region opening is cancelled
+    * [HBASE-11705] - callQueueSize should be decremented in a fail-fast scenario
+    * [HBASE-11708] - RegionSplitter incorrectly calculates splitcount
+    * [HBASE-11716] - LoadTestDataGeneratorWithVisibilityLabels should handle Delete mutations
+    * [HBASE-11725] - Backport failover checking change to 1.0
+    * [HBASE-11727] - Assignment wait time error in case of ServerNotRunningYetException
+    * [HBASE-11728] - Data loss while scanning using PREFIX_TREE DATA-BLOCK-ENCODING
+    * [HBASE-11733] - Avoid copy-paste in Master/Region CoprocessorHost
+    * [HBASE-11745] - FilterAllFilter should return ReturnCode.SKIP
+    * [HBASE-11755] - VisibilityController returns the wrong value for preBalanceSwitch()
+    * [HBASE-11766] - Backdoor CoprocessorHConnection is no longer being used for local writes
+    * [HBASE-11773] - Wrong field used for protobuf construction in RegionStates.
+    * [HBASE-11789] - LoadIncrementalHFiles is not picking up the -D option 
+    * [HBASE-11794] - StripeStoreFlusher causes NullPointerException
+    * [HBASE-11802] - Scan copy constructor doesn't copy reversed member variable
+    * [HBASE-11813] - CellScanner#advance may overflow stack
+    * [HBASE-11814] - TestAssignmentManager.testCloseFailed() and testOpenCloseRacing() is flaky
+    * [HBASE-11816] - Initializing custom Metrics implementation failed in Mapper or Reducer
+    * [HBASE-11823] - Cleanup javadoc warnings.
+
+** Improvement
+    * [HBASE-8298] - In shell, provide alias of 'desc' for 'describe'
+    * [HBASE-11326] - Use an InputFormat for ExportSnapshot
+    * [HBASE-11438] - [Visibility Controller] Support UTF8 character as Visibility Labels
+    * [HBASE-11553] - Abstract visibility label related services into an interface
+    * [HBASE-11667] - Comment ClientScanner logic for NSREs.
+    * [HBASE-11674] - LoadIncrementalHFiles should be more verbose after unrecoverable error
+    * [HBASE-11697] - Improve the 'Too many blocks' message on UI blockcache status page
+    * [HBASE-11701] - Start and end of memstore flush log should be on the same level
+    * [HBASE-11702] - Better introspection of long running compactions
+    * [HBASE-11706] - Set versions for VerifyReplication
+    * [HBASE-11731] - Add option to only run a subset of the shell tests
+    * [HBASE-11742] - Backport HBASE-7987 and HBASE-11185 to 0.98
+    * [HBASE-11748] - Cleanup and add pool usage tracing to Compression
+    * [HBASE-11749] - Better error logging when coprocessors loading has failed.
+    * [HBASE-11754] - [Shell] Record table property SPLITS_FILE in descriptor
+    * [HBASE-11757] - Provide a common base abstract class for both RegionObserver and MasterObserver
+    * [HBASE-11774] - Avoid allocating unnecessary tag iterators
+    * [HBASE-11828] - callers of SeverName.valueOf should use equals and not ==
+
+** Task
+    * [HBASE-11735] - Document Configurable Bucket Sizes in bucketCache
+    * [HBASE-11762] - Record the class name of Codec in WAL header
+    * [HBASE-11800] - Coprocessor service methods in HTableInterface should be annotated public
+
+** Test
+    * [HBASE-11615] - TestZKLessAMOnCluster.testForceAssignWhileClosing failed on Jenkins
+    * [HBASE-11713] - Adding hbase shell unit test coverage for visibility labels.
+
+
 Release 0.98.5 - 8/11/2014
 
 ** Sub-task
