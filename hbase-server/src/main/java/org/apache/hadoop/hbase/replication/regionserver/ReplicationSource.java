@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Stoppable;
@@ -154,7 +155,7 @@ public class ReplicationSource extends Thread
       final MetricsSource metrics)
           throws IOException {
     this.stopper = stopper;
-    this.conf = conf;
+    this.conf = HBaseConfiguration.create(conf);
     decorateConf();
     this.replicationQueueSizeCapacity =
         this.conf.getLong("replication.source.size.capacity", 1024*1024*64);
