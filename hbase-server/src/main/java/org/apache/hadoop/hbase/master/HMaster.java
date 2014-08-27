@@ -641,6 +641,14 @@ MasterServices, Server {
   }
 
   /**
+   * Useful for testing purpose also where we have
+   * master restart scenarios.
+   */
+  protected void startCatalogJanitorChore() {
+    Threads.setDaemonThreadRunning(catalogJanitorChore.getThread());
+  }
+
+  /**
    * Try becoming active master.
    * @param startupStatus
    * @return True if we could successfully become the active master.
