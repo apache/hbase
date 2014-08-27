@@ -169,7 +169,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   /** Namespace stuff */
   private TableNamespaceManager tableNamespaceManager;
-  private NamespaceJanitor namespaceJanitorChore;
 
   // Metrics for the HMaster
   final MetricsMaster metricsMaster;
@@ -618,22 +617,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   /**
-   * Useful for testing purpose also where we have
-   * master restart scenarios.
-   */
-  protected void startCatalogJanitorChore() {
-    Threads.setDaemonThreadRunning(catalogJanitorChore.getThread());
-  }
-
-  /**
-   * Useful for testing purpose also where we have
-   * master restart scenarios.
-   */
-  protected void startNamespaceJanitorChore() {
-    Threads.setDaemonThreadRunning(namespaceJanitorChore.getThread());
-  }
-
-  /**
    * Create a {@link ServerManager} instance.
    * @param master
    * @param services
@@ -891,9 +874,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
     if (this.clusterStatusPublisherChore != null){
       clusterStatusPublisherChore.interrupt();
-    }
-    if (this.namespaceJanitorChore != null){
-      namespaceJanitorChore.interrupt();
     }
   }
 

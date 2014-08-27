@@ -1111,11 +1111,6 @@ public class TestSplitTransactionOnCluster {
         InterruptedException {
       super(conf, cp);
     }
-
-    @Override
-    protected void startCatalogJanitorChore() {
-      LOG.debug("Customised master executed.");
-    }
   }
 
   private static class SplittingNodeCreationFailedException  extends IOException {
