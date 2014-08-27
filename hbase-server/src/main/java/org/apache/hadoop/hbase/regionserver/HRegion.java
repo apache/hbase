@@ -501,12 +501,10 @@ public class HRegion implements HeapSize { // , Writable{
   private long blockingMemStoreSize;
   final long threadWakeFrequency;
   // Used to guard closes
-  final ReentrantReadWriteLock lock =
-    new ReentrantReadWriteLock();
+  final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
   // Stop updates lock
-  private final ReentrantReadWriteLock updatesLock =
-    new ReentrantReadWriteLock();
+  private final ReentrantReadWriteLock updatesLock = new ReentrantReadWriteLock();
   private boolean splitRequest;
   private byte[] explicitSplitPoint = null;
 
@@ -1751,26 +1749,22 @@ public class HRegion implements HeapSize { // , Writable{
           // sure just beyond the last appended region edit (useful as a marker when bulk loading,
           // etc.)
           // wal can be null replaying edits.
-          try {
-            if (wal != null) {
-              w = mvcc.beginMemstoreInsert();
-              long flushSeqId = getNextSequenceId(wal);
-              FlushResult flushResult = new FlushResult(
-                  FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY, flushSeqId, "Nothing to flush");
-              w.setWriteNumber(flushSeqId);
-              mvcc.waitForPreviousTransactionsComplete(w);
-              w = null;
-              return flushResult;
-            } else {
-              return new FlushResult(FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY,
-                  "Nothing to flush");
-            }
-
-          } finally {
-            this.updatesLock.writeLock().unlock();
+          if (wal != null) {
+            w = mvcc.beginMemstoreInsert();
+            long flushSeqId = getNextSequenceId(wal);
+            FlushResult flushResult = new FlushResult(
+              FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY, flushSeqId, "Nothing to flush");
+            w.setWriteNumber(flushSeqId);
+            mvcc.waitForPreviousTransactionsComplete(w);
+            w = null;
+            return flushResult;
+          } else {
+            return new FlushResult(FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY,
+              "Nothing to flush");
           }
         }
       } finally {
+        this.updatesLock.writeLock().unlock();
         if (w != null) {
           mvcc.advanceMemstore(w);
         }
@@ -3659,11 +3653,11 @@ public class HRegion implements HeapSize { // , Writable{
           rowLockContext = existingContext;
           break;
         } else {
-          // Row is already locked by some other thread, give up or wait for it
           if (!waitForLock) {
             return null;
           }
           try {
+            // Row is already locked by some other thread, give up or wait for it
             if (!existingContext.latch.await(this.rowLockWaitDuration, TimeUnit.MILLISECONDS)) {
               throw new IOException("Timed out waiting for lock for row: " + rowKey);
             }
@@ -5285,7 +5279,6 @@ public class HRegion implements HeapSize { // , Writable{
               get.addColumn(family.getKey(), CellUtil.cloneQualifier(cell));
             }
             List<Cell> results = get(get, false);
-
             // Iterate the input columns and update existing values if they were
             // found, otherwise add new column initialized to the append value
 
@@ -6323,6 +6316,13 @@ public class HRegion implements HeapSize { // , Writable{
     RowLock newLock() {
       lockCount++;
       return new RowLock(this);
+    }
+
+    @Override
+    public String toString() {
+      Thread t = this.thread;
+      return "Thread=" + (t == null? "null": t.getName()) + ", row=" + this.row +
+        ", lockCount=" + this.lockCount;
     }
 
     void releaseLock() {

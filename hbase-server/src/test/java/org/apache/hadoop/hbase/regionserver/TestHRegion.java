@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -4210,7 +4211,7 @@ public class TestHRegion {
         try {
           region.increment(inc);
         } catch (IOException e) {
-          e.printStackTrace();
+          LOG.info("Count=" + count + ", " + e);
           break;
         }
       }
@@ -4297,7 +4298,7 @@ public class TestHRegion {
         try {
           region.append(app);
         } catch (IOException e) {
-          e.printStackTrace();
+          LOG.info("Count=" + count + ", max=" + appendCounter + ", " + e);
           break;
         }
       }
@@ -4327,7 +4328,7 @@ public class TestHRegion {
       }
     };
 
-    // after all append finished, the value will append to threadNum *
+    // After all append finished, the value will append to threadNum *
     // appendCounter Appender.CHAR
     int threadNum = 20;
     int appendCounter = 100;
