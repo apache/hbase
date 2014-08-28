@@ -28,7 +28,11 @@
     <src>images/hbase_logo.png</src>
     <href>http://hbase.apache.org/</href>
   </bannerLeft>
-  <bannerRight />
+  <bannerRight>
+    <name>Apache HBase Orca</name>
+    <src>images/jumping-orca_rotated_25percent.png</src>
+    <href>http://hbase.apache.org/</href>
+  </bannerRight>
   <version position="right" />
   <publishDate position="right" />
   <body>
