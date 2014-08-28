@@ -515,6 +515,17 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.client.localityCheck.threadPoolSize</name>
     <value>2</value>
   </property>
+  <property>
+    <name>hbase.client.prefetch</name>
+    <value>true</value>
+    <description>Toggles region location prefetching on or off.</description>
+  </property>
+  <property>
+    <name>hbase.client.prefetch.limit</name>
+    <value>10</value>
+    <description>The maximum number of region locations that will be
+    prefetched at one time.</description>
+  </property>
 
   <!--Miscellaneous configuration-->
   <property>

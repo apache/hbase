@@ -508,24 +508,6 @@ public class HConnectionManager {
   }
 
   /**
-   * It's provided for unit test cases which verify the behavior of region
-   * location cache prefetch.
-   * @return true if the region where the table and row reside is cached.
-   * @throws ZooKeeperConnectionException
-   */
-  static boolean isRegionCached(Configuration conf,
-                                final TableName tableName,
-                                final byte[] row)
-  throws IOException {
-    return execute(new HConnectable<Boolean>(conf) {
-      @Override
-      public Boolean connect(HConnection connection) {
-        return ((HConnectionImplementation) connection).isRegionCached(tableName, row);
-      }
-    });
-  }
-
-  /**
    * This convenience method invokes the given {@link HConnectable#connect}
    * implementation using a {@link HConnection} instance that lasts just for the
    * duration of the invocation.
@@ -570,6 +552,7 @@ public class HConnectionManager {
     private final int numTries;
     final int rpcTimeout;
     private NonceGenerator nonceGenerator = null;
+    private final boolean usePrefetch;
     private final int prefetchRegionLimit;
 
     private volatile boolean closed;
@@ -720,6 +703,8 @@ public class HConnectionManager {
         this.nonceGenerator = new NoNonceGenerator();
       }
 
+      this.usePrefetch = conf.getBoolean(HConstants.HBASE_CLIENT_PREFETCH,
+          HConstants.DEFAULT_HBASE_CLIENT_PREFETCH);
       this.prefetchRegionLimit = conf.getInt(
           HConstants.HBASE_CLIENT_PREFETCH_LIMIT,
           HConstants.DEFAULT_HBASE_CLIENT_PREFETCH_LIMIT);
@@ -1203,7 +1188,7 @@ public class HConnectionManager {
           // region at the same time. The first will load the meta region and
           // the second will use the value that the first one found.
           if (useCache) {
-            if (TableName.META_TABLE_NAME.equals(parentTable) &&
+            if (TableName.META_TABLE_NAME.equals(parentTable) && usePrefetch &&
                 getRegionCachePrefetch(tableName)) {
               synchronized (regionLockObject) {
                 // Check the cache again for a hit in case some other thread made the
@@ -2456,7 +2441,8 @@ public class HConnectionManager {
 
     @Override
     public boolean getRegionCachePrefetch(TableName tableName) {
-      return !regionCachePrefetchDisabledTables.contains(Bytes.mapKey(tableName.getName()));
+      return usePrefetch &&
+          !regionCachePrefetchDisabledTables.contains(Bytes.mapKey(tableName.getName()));
     }
 
     @Override

@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
@@ -449,6 +450,17 @@ public class TestFromClientSide {
     LOG.info("Finishing testRegionCachePreWarm");
   }
 
+  @Test
+  public void testPrefetchDisableToggle() throws Exception {
+    final TableName TABLENAME = TableName.valueOf("testPrefetchDisableToggle");
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.setBoolean(HConstants.HBASE_CLIENT_PREFETCH, false);
+    // We have to create a connection for the test because we are changing a
+    // setting normally picked up from the site configuration
+    HConnection connection = HConnectionManager.createConnection(conf);
+    assertFalse("The table is not disabled for region cache prefetch",
+      ((HConnectionImplementation)connection).getRegionCachePrefetch(TABLENAME));
+  }
 
   /**
    * Verifies that getConfiguration returns the same Configuration object used
