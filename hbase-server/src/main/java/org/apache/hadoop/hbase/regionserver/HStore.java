@@ -642,6 +642,8 @@ public class HStore implements Store {
       }
 
       if (verifyBulkLoads) {
+        long verificationStartTime = EnvironmentEdgeManager.currentTimeMillis();
+        LOG.info("Full verification started for bulk load hfile: " + srcPath.toString());
         KeyValue prevKV = null;
         HFileScanner scanner = reader.getScanner(false, false, false);
         scanner.seekTo();
@@ -667,6 +669,9 @@ public class HStore implements Store {
           }
           prevKV = kv;
         } while (scanner.next());
+      LOG.info("Full verification complete for bulk load hfile: " + srcPath.toString()
+         + " took " + (EnvironmentEdgeManager.currentTimeMillis() - verificationStartTime)
+         + " ms");
       }
     } finally {
       if (reader != null) reader.close();
