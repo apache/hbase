@@ -971,7 +971,7 @@ htable.put(put);
         Be sure to use the correct version of the HBase JAR for your system. The backticks
           (<literal>`</literal> symbols) cause ths shell to execute the sub-commands, setting the
         CLASSPATH as part of the command. This example assumes you use a BASH-compatible shell. </para>
-      <screen language="bourne">$ <userinput>HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-0.90.0.jar rowcounter usertable</userinput></screen>
+      <screen language="bourne">$ <userinput>HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-server-VERSION.jar rowcounter usertable</userinput></screen>
       <para>When the command runs, internally, the HBase JAR finds the dependencies it needs for
         zookeeper, guava, and its other dependencies on the passed <envar>HADOOP_CLASSPATH</envar>
         and adds the JARs to the MapReduce job configuration. See the source at
@@ -982,7 +982,7 @@ htable.put(put);
         <screen>java.lang.RuntimeException: java.lang.ClassNotFoundException: org.apache.hadoop.hbase.mapreduce.RowCounter$RowCounterMapper</screen>
         <para>If this occurs, try modifying the command as follows, so that it uses the HBase JARs
           from the <filename>target/</filename> directory within the build environment.</para>
-        <screen language="bourne">$ <userinput>HADOOP_CLASSPATH=${HBASE_HOME}/target/hbase-0.90.0-SNAPSHOT.jar:`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/target/hbase-0.90.0-SNAPSHOT.jar rowcounter usertable</userinput></screen>
+        <screen language="bourne">$ <userinput>HADOOP_CLASSPATH=${HBASE_HOME}/hbase-server/target/hbase-server-VERSION-SNAPSHOT.jar:`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-server/target/hbase-server-VERSION-SNAPSHOT.jar rowcounter usertable</userinput></screen>
       </note>
       <caution>
         <title>Notice to Mapreduce users of HBase 0.96.1 and above</title>
@@ -1054,7 +1054,7 @@ $ <userinput>HADOOP_CLASSPATH=$(hbase mapredcp):/etc/hbase/conf hadoop jar MyApp
       <para>The HBase JAR also serves as a Driver for some bundled mapreduce jobs. To learn about
         the bundled MapReduce jobs, run the following command.</para>
 
-      <screen language="bourne">$ <userinput>${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-0.90.0-SNAPSHOT.jar</userinput>
+      <screen language="bourne">$ <userinput>${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-server-VERSION.jar</userinput>
 <computeroutput>An example program must be given as the first argument.
 Valid program names are:
   copytable: Export a table from local cluster to peer cluster
@@ -1066,7 +1066,7 @@ Valid program names are:
     </screen>
       <para>Each of the valid program names are bundled MapReduce jobs. To run one of the jobs,
         model your command after the following example.</para>
-      <screen language="bourne">$ <userinput>${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-0.90.0-SNAPSHOT.jar rowcounter myTable</userinput></screen>
+      <screen language="bourne">$ <userinput>${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-server-VERSION.jar rowcounter myTable</userinput></screen>
     </section>
 
     <section>
@@ -4252,7 +4252,7 @@ alter 'orders_table', CONFIGURATION => {'key' => 'value', ..., 'key' => 'value'}
         where <code>importtsv</code> or your MapReduce job put its results, and
         the table name to import into. For example:
       </para>
-      <screen language="bourne">$ hadoop jar hbase-VERSION.jar completebulkload [-c /path/to/hbase/config/hbase-site.xml] /user/todd/myoutput mytable</screen>
+      <screen language="bourne">$ hadoop jar hbase-server-VERSION.jar completebulkload [-c /path/to/hbase/config/hbase-site.xml] /user/todd/myoutput mytable</screen>
       <para>
         The <code>-c config-file</code> option can be used to specify a file
         containing the appropriate hbase parameters (e.g., hbase-site.xml) if

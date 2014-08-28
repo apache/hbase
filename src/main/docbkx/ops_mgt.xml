@@ -480,7 +480,7 @@ row10	c1	c2
         </para>
         <para>For ImportTsv to use this imput file, the command line needs to look like this:</para>
         <screen language="bourne">
- HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-VERSION.jar importtsv -Dimporttsv.columns=HBASE_ROW_KEY,d:c1,d:c2 -Dimporttsv.bulk.output=hdfs://storefileoutput datatsv hdfs://inputfile
+ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-server-VERSION.jar importtsv -Dimporttsv.columns=HBASE_ROW_KEY,d:c1,d:c2 -Dimporttsv.bulk.output=hdfs://storefileoutput datatsv hdfs://inputfile
  </screen>
         <para> ... and in this example the first column is the rowkey, which is why the
           HBASE_ROW_KEY is used. The second and third columns in the file will be imported as "d:c1"
@@ -511,7 +511,7 @@ row10	c1	c2
       <screen language="bourne">$ bin/hbase org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles &lt;hdfs://storefileoutput&gt; &lt;tablename&gt;
 </screen>
       <para> .. and via the Driver..</para>
-      <screen language="bourne">HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-VERSION.jar completebulkload &lt;hdfs://storefileoutput&gt; &lt;tablename&gt;
+      <screen language="bourne">HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-server-VERSION.jar completebulkload &lt;hdfs://storefileoutput&gt; &lt;tablename&gt;
 </screen>
       <section
         xml:id="completebulkload.warning">

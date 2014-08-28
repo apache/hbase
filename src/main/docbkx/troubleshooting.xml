@@ -792,7 +792,7 @@ at org.apache.hadoop.mapred.LocalJobRunner$Job.run(LocalJobRunner.java:210)
         utility can be used to do this easily. For example (substitute VERSION with your HBase
         version):</para>
       <programlisting language="bourne">
-          HADOOP_CLASSPATH=`hbase classpath` hadoop jar $HBASE_HOME/hbase-VERSION.jar rowcounter usertable
+          HADOOP_CLASSPATH=`hbase classpath` hadoop jar $HBASE_HOME/hbase-server-VERSION.jar rowcounter usertable
       </programlisting>
       <para>See <link
           xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/package-summary.html#classpath">
