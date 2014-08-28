@@ -26,6 +26,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -46,6 +47,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.CoordinatedStateException;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -53,6 +55,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.PleaseHoldException;
@@ -64,12 +67,10 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
@@ -77,7 +78,6 @@ import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterRpcServices.BalanceSwitchMode;
-import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.BalancerChore;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
@@ -100,8 +100,8 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
@@ -647,37 +647,29 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     long timeout = this.conf.getLong("hbase.catalog.verification.timeout", 1000);
     status.setStatus("Assigning hbase:meta region");
 
+    // Get current meta state from zk.
+    RegionState metaState = MetaTableLocator.getMetaRegionState(getZooKeeper());
+
     RegionStates regionStates = assignmentManager.getRegionStates();
-    regionStates.createRegionState(HRegionInfo.FIRST_META_REGIONINFO);
-    boolean metaRegionLocation = metaTableLocator.verifyMetaRegionLocation(
-      this.getShortCircuitConnection(), this.getZooKeeper(), timeout);
-    ServerName currentMetaServer = metaTableLocator.getMetaRegionLocation(this.getZooKeeper());
-    if (!metaRegionLocation) {
-      // Meta location is not verified. It should be in transition, or offline.
-      // We will wait for it to be assigned in enableSSHandWaitForMeta below.
-      if (currentMetaServer != null) {
-        // If the meta server is not known to be dead or online,
-        // just split the meta log, and don't expire it since this
-        // could be a full cluster restart. Otherwise, we will think
-        // this is a failover and lose previous region locations.
-        // If it is really a failover case, AM will find out in rebuilding
-        // user regions. Otherwise, we are good since all logs are split
-        // or known to be replayed before user regions are assigned.
-        if (serverManager.isServerOnline(currentMetaServer)) {
-          LOG.info("Forcing expire of " + currentMetaServer);
-          serverManager.expireServer(currentMetaServer);
+    regionStates.createRegionState(HRegionInfo.FIRST_META_REGIONINFO,
+      metaState.getState(), metaState.getServerName(), null);
+
+    if (!metaState.isOpened() || !metaTableLocator.verifyMetaRegionLocation(
+        this.getShortCircuitConnection(), this.getZooKeeper(), timeout)) {
+      ServerName currentMetaServer = metaState.getServerName();
+      if (serverManager.isServerOnline(currentMetaServer)) {
+        LOG.info("Meta was in transition on " + currentMetaServer);
+        assignmentManager.processRegionsInTransition(Arrays.asList(metaState));
+      } else {
+        if (currentMetaServer != null) {
+          splitMetaLogBeforeAssignment(currentMetaServer);
+          regionStates.logSplit(HRegionInfo.FIRST_META_REGIONINFO);
+          previouslyFailedMetaRSs.add(currentMetaServer);
         }
-        splitMetaLogBeforeAssignment(currentMetaServer);
-        previouslyFailedMetaRSs.add(currentMetaServer);
+        LOG.info("Re-assigning hbase:meta, it was on " + currentMetaServer);
+        assignmentManager.assignMeta();
       }
-      assignmentManager.assignMeta();
       assigned++;
-    } else {
-      // Region already assigned. We didn't assign it. Add to in-memory state.
-      regionStates.updateRegionState(
-        HRegionInfo.FIRST_META_REGIONINFO, State.OPEN, currentMetaServer);
-      this.assignmentManager.regionOnline(
-        HRegionInfo.FIRST_META_REGIONINFO, currentMetaServer);
     }
 
     enableMeta(TableName.META_TABLE_NAME);
@@ -737,9 +729,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     if (waitForMeta) {
       metaTableLocator.waitMetaRegionLocation(this.getZooKeeper());
-      // Above check waits for general meta availability but this does not
-      // guarantee that the transition has completed
-      this.assignmentManager.waitForAssignment(HRegionInfo.FIRST_META_REGIONINFO);
     }
   }
 

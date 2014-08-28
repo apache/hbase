@@ -40,6 +40,9 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MultiHConnection;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
+import org.apache.zookeeper.KeeperException;
+
 import com.google.common.base.Preconditions;
 
 /**
@@ -158,20 +161,31 @@ public class RegionStateStore {
 
   void updateRegionState(long openSeqNum,
       RegionState newState, RegionState oldState) {
-    if (!initialized) {
-      return;
-    }
-
-    HRegionInfo hri = newState.getRegion();
-    if (!shouldPersistStateChange(hri, newState, oldState)) {
-      return;
-    }
-
-    ServerName oldServer = oldState != null ? oldState.getServerName() : null;
-    ServerName serverName = newState.getServerName();
-    State state = newState.getState();
-
     try {
+      HRegionInfo hri = newState.getRegion();
+
+      // update meta before checking for initialization.
+      // meta state stored in zk.
+      if (hri.isMetaRegion()) {
+        // persist meta state in MetaTableLocator (which in turn is zk storage currently)
+        try {
+          MetaTableLocator.setMetaLocation(server.getZooKeeper(),
+            newState.getServerName(), newState.getState());
+          return; // Done
+        } catch (KeeperException e) {
+          throw new IOException("Failed to update meta ZNode", e);
+        }
+      }
+
+      if (!initialized
+          || !shouldPersistStateChange(hri, newState, oldState)) {
+        return;
+      }
+
+      ServerName oldServer = oldState != null ? oldState.getServerName() : null;
+      ServerName serverName = newState.getServerName();
+      State state = newState.getState();
+
       int replicaId = hri.getReplicaId();
       Put put = new Put(MetaTableAccessor.getMetaKeyForRegion(hri));
       StringBuilder info = new StringBuilder("Updating row ");
@@ -217,13 +231,13 @@ public class RegionStateStore {
       }
       // Called when meta is not on master
       multiHConnection.processBatchCallback(Arrays.asList(put), TableName.META_TABLE_NAME, null, null);
-        
+
     } catch (IOException ioe) {
       LOG.error("Failed to persist region state " + newState, ioe);
       server.abort("Failed to update region location", ioe);
     }
   }
-  
+
   void splitRegion(HRegionInfo p,
       HRegionInfo a, HRegionInfo b, ServerName sn) throws IOException {
     MetaTableAccessor.splitRegion(server.getShortCircuitConnection(), p, a, b, sn);

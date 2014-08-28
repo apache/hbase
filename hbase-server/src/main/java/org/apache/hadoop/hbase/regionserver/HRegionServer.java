@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
@@ -1719,10 +1720,6 @@ public class HRegionServer extends HasThread implements
     // Update flushed sequence id of a recovering region in ZK
     updateRecoveringRegionLastFlushedSequenceId(r);
 
-    if (r.getRegionInfo().isMetaRegion()) {
-      MetaTableLocator.setMetaLocation(getZooKeeper(), serverName);
-    }
-
     // Notify master
     if (!reportRegionStateTransition(
         TransitionCode.OPENED, openSeqNum, r.getRegionInfo())) {
@@ -1746,7 +1743,14 @@ public class HRegionServer extends HasThread implements
       // to handle the region transition report at all.
       if (code == TransitionCode.OPENED) {
         Preconditions.checkArgument(hris != null && hris.length == 1);
-        if (!hris[0].isMetaRegion()) {
+        if (hris[0].isMetaRegion()) {
+          try {
+            MetaTableLocator.setMetaLocation(getZooKeeper(), serverName, State.OPEN);
+          } catch (KeeperException e) {
+            LOG.info("Failed to update meta location", e);
+            return false;
+          }
+        } else {
           try {
             MetaTableAccessor.updateRegionLocation(shortCircuitConnection,
               hris[0], serverName, openSeqNum);

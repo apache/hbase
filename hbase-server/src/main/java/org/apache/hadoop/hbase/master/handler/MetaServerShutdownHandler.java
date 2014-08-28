@@ -89,12 +89,6 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
       // timeout
       if (am.isCarryingMeta(serverName)) {
         LOG.info("Server " + serverName + " was carrying META. Trying to assign.");
-        am.regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
-        verifyAndAssignMetaWithRetries();
-      } else if (!server.getMetaTableLocator().isLocationAvailable(this.server.getZooKeeper())) {
-        // the meta location as per master is null. This could happen in case when meta assignment
-        // in previous run failed, while meta znode has been updated to null. We should try to
-        // assign the meta again.
         verifyAndAssignMetaWithRetries();
       } else {
         LOG.info("META has been assigned to otherwhere, skip assigning.");

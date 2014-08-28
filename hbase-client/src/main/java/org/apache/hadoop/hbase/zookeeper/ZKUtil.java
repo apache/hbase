@@ -1831,36 +1831,6 @@ public class ZKUtil {
     }
   }
 
-
-  public static byte[] blockUntilAvailable(
-    final ZooKeeperWatcher zkw, final String znode, final long timeout)
-    throws InterruptedException {
-    if (timeout < 0) throw new IllegalArgumentException();
-    if (zkw == null) throw new IllegalArgumentException();
-    if (znode == null) throw new IllegalArgumentException();
-
-    byte[] data = null;
-    boolean finished = false;
-    final long endTime = System.currentTimeMillis() + timeout;
-    while (!finished) {
-      try {
-        data = ZKUtil.getData(zkw, znode);
-      } catch(KeeperException e) {
-        LOG.warn("Unexpected exception handling blockUntilAvailable", e);
-      }
-
-      if (data == null && (System.currentTimeMillis() +
-        HConstants.SOCKET_RETRY_WAIT_MS < endTime)) {
-        Thread.sleep(HConstants.SOCKET_RETRY_WAIT_MS);
-      } else {
-        finished = true;
-      }
-    }
-
-    return data;
-  }
-
-
   /**
    * Convert a {@link DeserializationException} to a more palatable {@link KeeperException}.
    * Used when can't let a {@link DeserializationException} out w/o changing public API.

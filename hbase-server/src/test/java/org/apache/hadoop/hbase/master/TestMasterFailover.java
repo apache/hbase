@@ -44,11 +44,14 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -235,7 +238,8 @@ public class TestMasterFailover {
     // at this point we only expect 3 regions to be assigned out
     // (catalogs and namespace, + 1 online region)
     assertEquals(3, cluster.countServedRegions());
-    HRegionInfo hriOnline = onlineTable.getRegionLocation("").getRegionInfo();
+    HRegionInfo hriOnline = onlineTable.getRegionLocation(
+      HConstants.EMPTY_START_ROW).getRegionInfo();
 
     RegionStates regionStates = master.getAssignmentManager().getRegionStates();
     RegionStateStore stateStore = master.getAssignmentManager().getRegionStateStore();
@@ -277,6 +281,122 @@ public class TestMasterFailover {
     assertTrue(regionStates.isRegionOnline(hriOnline));
 
     log("Done with verification, shutting down cluster");
+
+    // Done, shutdown the cluster
+    TEST_UTIL.shutdownMiniCluster();
+  }
+
+  /**
+   * Test meta in transition when master failover
+   */
+  @Test(timeout = 180000)
+  public void testMetaInTransitionWhenMasterFailover() throws Exception {
+    final int NUM_MASTERS = 1;
+    final int NUM_RS = 1;
+
+    // Start the cluster
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    log("Cluster started");
+
+    log("Moving meta off the master");
+    HMaster activeMaster = cluster.getMaster();
+    HRegionServer rs = cluster.getRegionServer(0);
+    ServerName metaServerName = cluster.getLiveRegionServerThreads()
+      .get(0).getRegionServer().getServerName();
+    activeMaster.move(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
+      Bytes.toBytes(metaServerName.getServerName()));
+    TEST_UTIL.waitUntilNoRegionsInTransition(60000);
+    assertEquals("Meta should be assigned on expected regionserver",
+      metaServerName, activeMaster.getMetaTableLocator()
+        .getMetaRegionLocation(activeMaster.getZooKeeper()));
+
+    // Now kill master, meta should remain on rs, where we placed it before.
+    log("Aborting master");
+    activeMaster.abort("test-kill");
+    cluster.waitForMasterToStop(activeMaster.getServerName(), 30000);
+    log("Master has aborted");
+
+    // meta should remain where it was
+    RegionState metaState =
+      MetaTableLocator.getMetaRegionState(rs.getZooKeeper());
+    assertEquals("hbase:meta should be onlined on RS",
+      metaState.getServerName(), rs.getServerName());
+    assertEquals("hbase:meta should be onlined on RS",
+      metaState.getState(), State.OPEN);
+
+    // Start up a new master
+    log("Starting up a new master");
+    activeMaster = cluster.startMaster().getMaster();
+    log("Waiting for master to be ready");
+    cluster.waitForActiveAndReadyMaster();
+    log("Master is ready");
+
+    // ensure meta is still deployed on RS
+    metaState =
+      MetaTableLocator.getMetaRegionState(activeMaster.getZooKeeper());
+    assertEquals("hbase:meta should be onlined on RS",
+      metaState.getServerName(), rs.getServerName());
+    assertEquals("hbase:meta should be onlined on RS",
+      metaState.getState(), State.OPEN);
+
+    // Update meta state as PENDING_OPEN, then kill master
+    // that simulates, that RS successfully deployed, but
+    // RPC was lost right before failure.
+    // region server should expire (how it can be verified?)
+    MetaTableLocator.setMetaLocation(activeMaster.getZooKeeper(),
+      rs.getServerName(), State.PENDING_OPEN);
+    HRegion meta = rs.getFromOnlineRegions(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
+    rs.removeFromOnlineRegions(meta, null);
+    meta.close();
+
+    log("Aborting master");
+    activeMaster.abort("test-kill");
+    cluster.waitForMasterToStop(activeMaster.getServerName(), 30000);
+    log("Master has aborted");
+
+    // Start up a new master
+    log("Starting up a new master");
+    activeMaster = cluster.startMaster().getMaster();
+    log("Waiting for master to be ready");
+    cluster.waitForActiveAndReadyMaster();
+    log("Master is ready");
+
+    TEST_UTIL.waitUntilNoRegionsInTransition(60000);
+    log("Meta was assigned");
+
+    metaState =
+      MetaTableLocator.getMetaRegionState(activeMaster.getZooKeeper());
+    assertEquals("hbase:meta should be onlined on RS",
+      metaState.getServerName(), rs.getServerName());
+    assertEquals("hbase:meta should be onlined on RS",
+      metaState.getState(), State.OPEN);
+
+    // Update meta state as PENDING_CLOSE, then kill master
+    // that simulates, that RS successfully deployed, but
+    // RPC was lost right before failure.
+    // region server should expire (how it can be verified?)
+    MetaTableLocator.setMetaLocation(activeMaster.getZooKeeper(),
+      rs.getServerName(), State.PENDING_CLOSE);
+
+    log("Aborting master");
+    activeMaster.abort("test-kill");
+    cluster.waitForMasterToStop(activeMaster.getServerName(), 30000);
+    log("Master has aborted");
+
+    rs.getRSRpcServices().closeRegion(null, RequestConverter.buildCloseRegionRequest(
+      rs.getServerName(), HRegionInfo.FIRST_META_REGIONINFO.getEncodedName()));
+
+    // Start up a new master
+    log("Starting up a new master");
+    activeMaster = cluster.startMaster().getMaster();
+    log("Waiting for master to be ready");
+    cluster.waitForActiveAndReadyMaster();
+    log("Master is ready");
+
+    TEST_UTIL.waitUntilNoRegionsInTransition(60000);
+    log("Meta was assigned");
 
     // Done, shutdown the cluster
     TEST_UTIL.shutdownMiniCluster();

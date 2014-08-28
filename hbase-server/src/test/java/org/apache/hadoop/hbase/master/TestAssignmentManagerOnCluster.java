@@ -67,7 +67,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -120,27 +120,42 @@ public class TestAssignmentManagerOnCluster {
         metaServerName = cluster.getLiveRegionServerThreads()
           .get(0).getRegionServer().getServerName();
         master.move(HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
-          Bytes.toBytes(metaServerName.getServerName()));
+                Bytes.toBytes(metaServerName.getServerName()));
         TEST_UTIL.waitUntilNoRegionsInTransition(60000);
       }
+      RegionState metaState =
+        MetaTableLocator.getMetaRegionState(master.getZooKeeper());
+      assertEquals("Meta should be not in transition", metaState.getState(), State.OPEN);
       assertNotEquals("Meta should be moved off master",
-        metaServerName, master.getServerName());
+        metaState.getServerName(), master.getServerName());
+      assertEquals("Meta should be on the meta server",
+        metaState.getServerName(), metaServerName);
       cluster.killRegionServer(metaServerName);
       stoppedARegionServer = true;
       cluster.waitForRegionServerToStop(metaServerName, 60000);
 
       // Wait for SSH to finish
+      final ServerName oldServerName = metaServerName;
       final ServerManager serverManager = master.getServerManager();
       TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
-          return !serverManager.areDeadServersInProgress();
+          return serverManager.isServerDead(oldServerName)
+            && !serverManager.areDeadServersInProgress();
         }
       });
 
+      TEST_UTIL.waitUntilNoRegionsInTransition(60000);
       // Now, make sure meta is assigned
       assertTrue("Meta should be assigned",
         regionStates.isRegionOnline(HRegionInfo.FIRST_META_REGIONINFO));
+      // Now, make sure meta is registered in zk
+      metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper());
+      assertEquals("Meta should be not in transition", metaState.getState(), State.OPEN);
+      assertEquals("Meta should be assigned", metaState.getServerName(),
+        regionStates.getRegionServerOfRegion(HRegionInfo.FIRST_META_REGIONINFO));
+      assertNotEquals("Meta should be assigned on a different server",
+        metaState.getServerName(), metaServerName);
     } finally {
       if (stoppedARegionServer) {
         cluster.startRegionServer();

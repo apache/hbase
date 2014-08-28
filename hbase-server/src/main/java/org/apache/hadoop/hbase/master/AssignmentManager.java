@@ -524,7 +524,14 @@ public class AssignmentManager {
     regionStateStore.start();
 
     if (failover) {
-      processDeadServers(deadServers);
+      if (deadServers != null && !deadServers.isEmpty()) {
+        for (ServerName serverName: deadServers) {
+          if (!serverManager.isServerDead(serverName)) {
+            serverManager.expireServer(serverName); // Let SSH do region re-assign
+          }
+        }
+      }
+      processRegionsInTransition(regionStates.getRegionsInTransition().values());
     }
 
     // Now we can safely claim failover cleanup completed and enable
@@ -1399,13 +1406,9 @@ public class AssignmentManager {
    * <p>
    * Assumes that hbase:meta is currently closed and is not being actively served by
    * any RegionServer.
-   * <p>
-   * Forcibly unsets the current meta region location in ZooKeeper and assigns
-   * hbase:meta to a random RegionServer.
-   * @throws KeeperException
    */
   public void assignMeta() throws KeeperException {
-    this.server.getMetaTableLocator().deleteMetaLocation(this.server.getZooKeeper());
+    regionStates.updateRegionState(HRegionInfo.FIRST_META_REGIONINFO, State.OFFLINE);
     assign(HRegionInfo.FIRST_META_REGIONINFO);
   }
 
@@ -1709,28 +1712,15 @@ public class AssignmentManager {
   }
 
   /**
-   * Processes list of dead servers from result of hbase:meta scan and regions in RIT
-   *
-   * @param deadServers
-   *          The list of dead servers which failed while there was no active
-   *          master. Can be null.
+   * Processes list of regions in transition at startup
    */
-  private void processDeadServers(Set<ServerName> deadServers) {
-    if (deadServers != null && !deadServers.isEmpty()) {
-      for (ServerName serverName: deadServers) {
-        if (!serverManager.isServerDead(serverName)) {
-          serverManager.expireServer(serverName); // Let SSH do region re-assign
-        }
-      }
-    }
-
+  void processRegionsInTransition(Collection<RegionState> regionStates) {
     // We need to send RPC call again for PENDING_OPEN/PENDING_CLOSE regions
     // in case the RPC call is not sent out yet before the master was shut down
     // since we update the state before we send the RPC call. We can't update
     // the state after the RPC call. Otherwise, we don't know what's happened
     // to the region if the master dies right after the RPC call is out.
-    Map<String, RegionState> rits = regionStates.getRegionsInTransition();
-    for (RegionState regionState: rits.values()) {
+    for (RegionState regionState: regionStates) {
       if (!serverManager.isServerOnline(regionState.getServerName())) {
         continue; // SSH will handle it
       }
