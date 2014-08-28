@@ -191,8 +191,10 @@ public class RESTServer implements Constants {
     if(conf.getBoolean(REST_SSL_ENABLED, false)) {
       SslSelectChannelConnector sslConnector = new SslSelectChannelConnector();
       String keystore = conf.get(REST_SSL_KEYSTORE_STORE);
-      String password = conf.get(REST_SSL_KEYSTORE_PASSWORD);
-      String keyPassword = conf.get(REST_SSL_KEYSTORE_KEYPASSWORD, password);
+      String password = HBaseConfiguration.getPassword(conf,
+        REST_SSL_KEYSTORE_PASSWORD, null);
+      String keyPassword = HBaseConfiguration.getPassword(conf,
+        REST_SSL_KEYSTORE_KEYPASSWORD, password);
       sslConnector.setKeystore(keystore);
       sslConnector.setPassword(password);
       sslConnector.setKeyPassword(keyPassword);
