@@ -39,8 +39,16 @@
           <imageobject>
             <imagedata
               align="center"
-              valign="middle"
+              valign="left"
               fileref="hbase_logo.png" />
+          </imageobject>
+        </inlinemediaobject>
+        <inlinemediaobject>
+          <imageobject>
+            <imagedata
+              align="center"
+              valign="right"
+              fileref="jumping-orca_rotated_25percent.png" />
           </imageobject>
         </inlinemediaobject>
       </link>
