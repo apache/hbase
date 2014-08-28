@@ -421,6 +421,7 @@ def loadRegions(options, hostname)
     if currentServer and currentServer == servername
       $LOG.info("Region " + r.getRegionNameAsString() + " (" + count.to_s +
         " of " + regions.length.to_s + ") already on target server=" + servername)
+      counter = counter + 1
       next
     end
     pool.launch(r,currentServer,count) do |_r,_currentServer,_count|
