@@ -504,9 +504,6 @@ public abstract class FSUtils {
         } finally {
           dis.close();
         }
-        // Update the format
-        LOG.info("Updating the hbase.version file format with version=" + version);
-        setVersion(fs, rootdir, version, 0, HConstants.DEFAULT_VERSION_FILE_WRITE_ATTEMPTS);
       }
     } catch (EOFException eof) {
       LOG.warn("Version file was empty, odd, will try to set it.");
@@ -592,9 +589,10 @@ public abstract class FSUtils {
     // version is deprecated require migration
     // Output on stdout so user sees it in terminal.
     String msg = "HBase file layout needs to be upgraded."
-      + "  You have version " + version
+      + " You have version " + version
       + " and I want version " + HConstants.FILE_SYSTEM_VERSION
-      + ".  Is your hbase.rootdir valid?  If so, you may need to run "
+      + ". Consult http://hbase.apache.org/book.html for further information about upgrading HBase."
+      + " Is your hbase.rootdir valid? If so, you may need to run "
       + "'hbase hbck -fixVersionFile'.";
     if (message) {
       System.out.println("WARNING! " + msg);
