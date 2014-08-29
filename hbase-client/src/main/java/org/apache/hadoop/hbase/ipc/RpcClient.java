@@ -732,39 +732,35 @@ public class RpcClient {
       // beware of the concurrent access to the calls list: we can add calls, but as well
       //  remove them.
       long waitUntil = EnvironmentEdgeManager.currentTimeMillis() + minIdleTimeBeforeClose;
-      while (!shouldCloseConnection.get() && running.get() &&
-          EnvironmentEdgeManager.currentTimeMillis() < waitUntil && calls.isEmpty()) {
+
+      while (true) {
+        if (shouldCloseConnection.get()) {
+          return false;
+        }
+
+        if (!running.get()) {
+          markClosed(new IOException("stopped with " + calls.size() + " pending request(s)"));
+          return false;
+        }
+
+        if (!calls.isEmpty()) {
+          // shouldCloseConnection can be set to true by a parallel thread here. The caller
+          //  will need to check anyway.
+          return true;
+        }
+
+        if (EnvironmentEdgeManager.currentTimeMillis() >= waitUntil) {
+          // Connection is idle.
+          // We expect the number of calls to be zero here, but actually someone can
+          //  adds a call at the any moment, as there is no synchronization between this task
+          //  and adding new calls. It's not a big issue, but it will get an exception.
+          markClosed(new IOException(
+              "idle connection closed with " + calls.size() + " pending request(s)"));
+          return false;
+        }
+
         wait(Math.min(minIdleTimeBeforeClose, 1000));
       }
-
-      if (shouldCloseConnection.get()) {
-        return false;
-      }
-
-      if (!running.get()) {
-        markClosed(new IOException("stopped with " + calls.size() + " pending request(s)"));
-        return false;
-      }
-
-      if (!calls.isEmpty()) {
-        // shouldCloseConnection can be set to true by a parallel thread here. The caller
-        //  will need to check anyway.
-        return true;
-      }
-
-      if (EnvironmentEdgeManager.currentTimeMillis() >= waitUntil) {
-        // Connection is idle.
-        // We expect the number of calls to be zero here, but actually someone can
-        //  adds a call at the any moment, as there is no synchronization between this task
-        //  and adding new calls. It's not a big issue, but it will get an exception.
-        markClosed(new IOException(
-            "idle connection closed with " + calls.size() + " pending request(s)"));
-        return false;
-      }
-
-      // We can get here if we received a notification that there is some work to do but
-      //  the work was cancelled. As we're not idle we continue to wait.
-      return false;
     }
 
     public InetSocketAddress getRemoteAddress() {
