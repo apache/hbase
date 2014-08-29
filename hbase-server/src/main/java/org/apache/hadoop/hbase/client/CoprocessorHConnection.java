@@ -22,10 +22,12 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -34,6 +36,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.BlockingService;
@@ -132,8 +135,13 @@ public class CoprocessorHConnection extends HConnectionImplementation {
       public Message callBlockingMethod(MethodDescriptor method, RpcController controller,
           Message request, Message responsePrototype) throws ServiceException {
         try {
-          // we never need a cell-scanner - everything is already fully formed
-          return rpc.call(blocking, method, request, null, timestamp, status).getFirst();
+          Pair<Message, CellScanner> ret = rpc.call(blocking, method, request, null, timestamp,
+            status);
+          if (ret.getSecond() != null) {
+            PayloadCarryingRpcController rpcc = (PayloadCarryingRpcController) controller;
+            rpcc.setCellScanner(ret.getSecond());
+          }
+          return ret.getFirst();
         } catch (IOException e) {
           throw new ServiceException(e);
         }
