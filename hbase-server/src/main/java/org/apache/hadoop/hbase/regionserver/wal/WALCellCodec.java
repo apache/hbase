@@ -25,6 +25,7 @@ import java.io.OutputStream;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.BaseDecoder;
 import org.apache.hadoop.hbase.codec.BaseEncoder;
@@ -46,7 +47,7 @@ import com.google.protobuf.ByteString;
  * This codec is used at server side for writing cells to WAL as well as for sending edits
  * as part of the distributed splitting process.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 public class WALCellCodec implements Codec {
   /** Configuration key for the class to use when encoding cells in the WAL */
   public static final String WAL_CELL_CODEC_CLASS_KEY = "hbase.regionserver.wal.codec";
@@ -102,6 +103,24 @@ public class WALCellCodec implements Codec {
         { Configuration.class, CompressionContext.class }, new Object[] { conf, compression });
   }
 
+  /**
+   * Create and setup a {@link WALCellCodec} from the 
+   * CompressionContext.
+   * Cell Codec classname is read from {@link Configuration}.
+   * Fully prepares the codec for use.
+   * @param conf {@link Configuration} to read for the user-specified codec. If none is specified,
+   *          uses a {@link WALCellCodec}.
+   * @param compression compression the codec should use
+   * @return a {@link WALCellCodec} ready for use.
+   * @throws UnsupportedOperationException if the codec cannot be instantiated
+   */
+  public static WALCellCodec create(Configuration conf,
+      CompressionContext compression) throws UnsupportedOperationException {
+    String cellCodecClsName = getWALCellCodecClass(conf);
+    return ReflectionUtils.instantiateWithCustomCtor(cellCodecClsName, new Class[]
+        { Configuration.class, CompressionContext.class }, new Object[] { conf, compression });
+  }
+  
   public interface ByteStringCompressor {
     ByteString compress(byte[] data, Dictionary dict) throws IOException;
   }
