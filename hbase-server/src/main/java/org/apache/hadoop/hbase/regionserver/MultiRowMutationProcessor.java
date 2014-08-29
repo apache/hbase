@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.KeyValue;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * A <code>MultiRowProcessor</code> that performs multiple puts and deletes.
  */
+@InterfaceAudience.Private
 class MultiRowMutationProcessor extends BaseRowProcessor<MultiRowMutationProcessorRequest,
 MultiRowMutationProcessorResponse> {
   Collection<byte[]> rowsToLock;

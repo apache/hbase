@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * A {@link RegionSplitPolicy} that disables region splits.
  * This should be used with care, since it will disable automatic sharding.
  * Most of the time, using {@link ConstantSizeRegionSplitPolicy} with a
  * large region size (10GB, etc) is safer.
  */
+@InterfaceAudience.Private
 public class DisabledRegionSplitPolicy extends RegionSplitPolicy {
   @Override
   protected boolean shouldSplit() {

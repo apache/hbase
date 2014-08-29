@@ -25,6 +25,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
@@ -40,6 +41,7 @@ import org.apache.hadoop.util.StringUtils;
  * will stop serving read requests because the referenced files might have been deleted (by the
  * primary region).
  */
+@InterfaceAudience.Private
 public class StorefileRefresherChore extends Chore {
 
   private static final Log LOG = LogFactory.getLog(StorefileRefresherChore.class);
