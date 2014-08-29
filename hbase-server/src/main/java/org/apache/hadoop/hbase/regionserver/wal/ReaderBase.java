@@ -28,12 +28,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.hbase.util.FSUtils;
 
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 public abstract class ReaderBase implements HLog.Reader {
   private static final Log LOG = LogFactory.getLog(ReaderBase.class);
   protected Configuration conf;
@@ -139,6 +140,11 @@ public abstract class ReaderBase implements HLog.Reader {
    */
   protected abstract String initReader(FSDataInputStream stream) throws IOException;
 
+  /**
+   * Initializes the compression after the shared stuff has been initialized. Called once.
+   */
+  protected abstract void initAfterCompression() throws IOException;
+  
   /**
    * Initializes the compression after the shared stuff has been initialized. Called once.
    * @param cellCodecClsName class name of cell Codec

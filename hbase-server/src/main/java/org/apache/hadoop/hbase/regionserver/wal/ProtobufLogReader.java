@@ -33,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.io.LimitInputStream;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader.Builder;
@@ -54,7 +55,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * which is appended at the end of the WAL. This is empty for now; it can contain some meta
  * information such as Region level stats, etc in future.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 public class ProtobufLogReader extends ReaderBase {
   private static final Log LOG = LogFactory.getLog(ProtobufLogReader.class);
   static final byte[] PB_WAL_MAGIC = Bytes.toBytes("PWAL");
@@ -242,6 +243,11 @@ public class ProtobufLogReader extends ReaderBase {
     return WALCellCodec.create(conf, cellCodecClsName, compressionContext);
   }
 
+  @Override
+  protected void initAfterCompression() throws IOException {
+    initAfterCompression(null);
+  }
+  
   @Override
   protected void initAfterCompression(String cellCodecClsName) throws IOException {
     WALCellCodec codec = getCodec(this.conf, cellCodecClsName, this.compressionContext);

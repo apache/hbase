@@ -32,12 +32,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.Metadata;
 import org.apache.hadoop.io.Text;
 
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 public class SequenceFileLogReader extends ReaderBase {
   private static final Log LOG = LogFactory.getLog(SequenceFileLogReader.class);
 
@@ -186,6 +187,11 @@ public class SequenceFileLogReader extends ReaderBase {
   
   @Override
   protected void initAfterCompression(String cellCodecClsName) throws IOException {
+    // Nothing to do here
+  }
+
+  @Override
+  protected void initAfterCompression() throws IOException {
     // Nothing to do here
   }
 

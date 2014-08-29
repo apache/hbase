@@ -22,6 +22,7 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.io.CellOutputStream;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 
@@ -32,7 +33,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
  * and without presuming an hfile context.  Intent is an Interface that will work for hfile and
  * rpc.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 public interface Codec {
   // TODO: interfacing with {@link DataBlockEncoder}
   /**
