@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.RegionException;
 
 /**
@@ -25,6 +26,7 @@ import org.apache.hadoop.hbase.RegionException;
  * set and row size appears to exceed max configured size (configurable via
  * hbase.table.max.rowsize).
  */
+@InterfaceAudience.Public
 public class RowTooBigException extends RegionException {
 
   public RowTooBigException(String message) {
