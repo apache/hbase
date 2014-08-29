@@ -809,7 +809,7 @@ public class TestHLogSplit {
       logfiles != null && logfiles.length > 0);
     // Set up a splitter that will throw an IOE on the output side
     HLogSplitter logSplitter = new HLogSplitter(
-        conf, HBASEDIR, fs, null, null, null, this.mode) {
+        conf, HBASEDIR, fs, null, null, this.mode) {
       protected HLog.Writer createWriter(FileSystem fs,
           Path logfile, Configuration conf) throws IOException {
         HLog.Writer mockWriter = Mockito.mock(HLog.Writer.class);
@@ -942,7 +942,7 @@ public class TestHLogSplit {
     try {
       conf.setInt("hbase.splitlog.report.period", 1000);
       boolean ret = HLogSplitter.splitLogFile(
-        HBASEDIR, logfile, spiedFs, conf, localReporter, null, null, null, this.mode);
+        HBASEDIR, logfile, spiedFs, conf, localReporter, null, null, this.mode);
       assertFalse("Log splitting should failed", ret);
       assertTrue(count.get() > 0);
     } catch (IOException e) {
@@ -1001,7 +1001,7 @@ public class TestHLogSplit {
 
     // Create a splitter that reads and writes the data without touching disk
     HLogSplitter logSplitter = new HLogSplitter(
-        localConf, HBASEDIR, fs, null, null, null, this.mode) {
+        localConf, HBASEDIR, fs, null, null, this.mode) {
 
       /* Produce a mock writer that doesn't write anywhere */
       protected HLog.Writer createWriter(FileSystem fs, Path logfile, Configuration conf)
@@ -1222,7 +1222,7 @@ public class TestHLogSplit {
       logfiles != null && logfiles.length > 0);
 
     HLogSplitter logSplitter = new HLogSplitter(
-        conf, HBASEDIR, fs, null, null, null, this.mode) {
+        conf, HBASEDIR, fs, null, null, this.mode) {
       protected HLog.Writer createWriter(FileSystem fs, Path logfile, Configuration conf)
       throws IOException {
         HLog.Writer writer = HLogFactory.createRecoveredEditsWriter(fs, logfile, conf);

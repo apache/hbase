@@ -77,6 +77,9 @@ import org.apache.hadoop.hbase.client.PerClientRandomNonceGenerator;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
+import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination;
+import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
@@ -651,8 +654,8 @@ public class TestDistributedLogSplitting {
       break;
     }
 
-    slm.markRegionsRecoveringInZK(firstFailedServer, regionSet);
-    slm.markRegionsRecoveringInZK(secondFailedServer, regionSet);
+    slm.markRegionsRecovering(firstFailedServer, regionSet);
+    slm.markRegionsRecovering(secondFailedServer, regionSet);
 
     List<String> recoveringRegions = ZKUtil.listChildrenNoWatch(zkw,
       ZKUtil.joinZNode(zkw.recoveringRegionsZNode, region.getEncodedName()));
@@ -880,7 +883,7 @@ public class TestDistributedLogSplitting {
       break;
     }
 
-    slm.markRegionsRecoveringInZK(hrs.getServerName(), regionSet);
+    slm.markRegionsRecovering(hrs.getServerName(), regionSet);
     // move region in order for the region opened in recovering state
     final HRegionInfo hri = region;
     final HRegionServer tmpRS = dstRS;
@@ -1064,7 +1067,10 @@ public class TestDistributedLogSplitting {
       out.write(0);
       out.write(Bytes.toBytes("corrupted bytes"));
       out.close();
-      slm.ignoreZKDeleteForTesting = true;
+      ZKSplitLogManagerCoordination coordination =
+          (ZKSplitLogManagerCoordination) ((BaseCoordinatedStateManager) master
+              .getCoordinatedStateManager()).getSplitLogManagerCoordination();
+      coordination.setIgnoreDeleteForTesting(true);
       executor = Executors.newSingleThreadExecutor();
       Runnable runnable = new Runnable() {
        @Override

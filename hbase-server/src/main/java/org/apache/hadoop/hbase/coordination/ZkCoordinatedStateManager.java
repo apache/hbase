@@ -21,6 +21,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableStateManager;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.zookeeper.ZKTableStateManager;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -32,11 +33,16 @@ import org.apache.zookeeper.KeeperException;
 public class ZkCoordinatedStateManager extends BaseCoordinatedStateManager {
   protected Server server;
   protected ZooKeeperWatcher watcher;
+  protected SplitLogWorkerCoordination splitLogWorkerCoordination;
+  protected SplitLogManagerCoordination splitLogManagerCoordination;
 
   @Override
   public void initialize(Server server) {
     this.server = server;
     this.watcher = server.getZooKeeper();
+    splitLogWorkerCoordination = new ZkSplitLogWorkerCoordination(this, watcher);
+    splitLogManagerCoordination = new ZKSplitLogManagerCoordination(this, watcher);
+
   }
 
   @Override
@@ -52,5 +58,14 @@ public class ZkCoordinatedStateManager extends BaseCoordinatedStateManager {
     } catch (KeeperException e) {
       throw new CoordinatedStateException(e);
     }
+  }
+
+  @Override
+  public SplitLogWorkerCoordination getSplitLogWorkerCoordination() {
+    return splitLogWorkerCoordination;
+    }
+  @Override
+  public SplitLogManagerCoordination getSplitLogManagerCoordination() {
+    return splitLogManagerCoordination;
   }
 }

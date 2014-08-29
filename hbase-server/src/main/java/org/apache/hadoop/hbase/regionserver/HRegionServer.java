@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
+import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
@@ -89,7 +90,6 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -136,6 +136,7 @@ import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.RecoveringRegionWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
+import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -1523,8 +1524,8 @@ public class HRegionServer extends HasThread implements
       this.service.startExecutorService(ExecutorType.RS_PARALLEL_SEEK,
         conf.getInt("hbase.storescanner.parallel.seek.threads", 10));
     }
-    this.service.startExecutorService(ExecutorType.RS_LOG_REPLAY_OPS,
-      conf.getInt("hbase.regionserver.wal.max.splitters", SplitLogWorker.DEFAULT_MAX_SPLITTERS));
+    this.service.startExecutorService(ExecutorType.RS_LOG_REPLAY_OPS, conf.getInt(
+       "hbase.regionserver.wal.max.splitters", SplitLogWorkerCoordination.DEFAULT_MAX_SPLITTERS));
 
     Threads.setDaemonThreadRunning(this.hlogRoller.getThread(), getName() + ".logRoller",
         uncaughtExceptionHandler);
@@ -1577,7 +1578,7 @@ public class HRegionServer extends HasThread implements
     sinkConf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY,
       conf.getInt("hbase.log.replay.rpc.timeout", 30000)); // default 30 seconds
     sinkConf.setInt("hbase.client.serverside.retries.multiplier", 1);
-    this.splitLogWorker = new SplitLogWorker(this.zooKeeper, sinkConf, this, this);
+    this.splitLogWorker = new SplitLogWorker(this, sinkConf, this, this);
     splitLogWorker.start();
   }
 
@@ -2867,7 +2868,7 @@ public class HRegionServer extends HasThread implements
         minSeqIdForLogReplay = storeSeqIdForReplay;
       }
     }
-    
+
     try {
       long lastRecordedFlushedSequenceId = -1;
       String nodePath = ZKUtil.joinZNode(this.zooKeeper.recoveringRegionsZNode,
@@ -2880,7 +2881,7 @@ public class HRegionServer extends HasThread implements
         throw new InterruptedIOException();
       }
       if (data != null) {
-        lastRecordedFlushedSequenceId = SplitLogManager.parseLastFlushedSequenceIdFrom(data);
+      lastRecordedFlushedSequenceId = ZKSplitLog.parseLastFlushedSequenceIdFrom(data);
       }
       if (data == null || lastRecordedFlushedSequenceId < minSeqIdForLogReplay) {
         ZKUtil.setData(zkw, nodePath, ZKUtil.positionToByteArray(minSeqIdForLogReplay));
@@ -2893,11 +2894,11 @@ public class HRegionServer extends HasThread implements
         LOG.debug("Update last flushed sequence id of region " + region.getEncodedName() + " for "
             + previousRSName);
       } else {
-        LOG.warn("Can't find failed region server for recovering region " + 
+        LOG.warn("Can't find failed region server for recovering region " +
           region.getEncodedName());
       }
     } catch (NoNodeException ignore) {
-      LOG.debug("Region " + region.getEncodedName() + 
+      LOG.debug("Region " + region.getEncodedName() +
         " must have completed recovery because its recovery znode has been removed", ignore);
     }
   }
