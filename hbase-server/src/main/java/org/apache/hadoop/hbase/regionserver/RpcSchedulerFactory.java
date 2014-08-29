@@ -18,12 +18,17 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcScheduler;
 
 /**
  * A factory class that constructs an {@link org.apache.hadoop.hbase.ipc.RpcScheduler} for
  * a region server.
  */
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceStability.Evolving
 public interface RpcSchedulerFactory {
 
   /**

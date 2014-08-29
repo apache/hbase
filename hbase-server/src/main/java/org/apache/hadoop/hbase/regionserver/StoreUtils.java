@@ -22,9 +22,12 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Utility functions for region server storage layer.
  */
+@InterfaceAudience.Private
 public class StoreUtils {
   /**
    * Creates a deterministic hash code for store file collection.

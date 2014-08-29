@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.security.SecureRandom;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * A WALCellCodec that encrypts the WALedits.
  */
+@InterfaceAudience.Private
 public class SecureWALCellCodec extends WALCellCodec {
 
   private Encryptor encryptor;
