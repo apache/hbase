@@ -963,7 +963,7 @@ htable.put(put);
         Be sure to use the correct version of the HBase JAR for your system. The backticks
           (<literal>`</literal> symbols) cause ths shell to execute the sub-commands, setting the
         CLASSPATH as part of the command. This example assumes you use a BASH-compatible shell. </para>
-      <screen>$ <userinput>HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-0.90.0.jar rowcounter usertable</userinput></screen>
+      <screen>$ <userinput>HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-server-VERSION.jar rowcounter usertable</userinput></screen>
       <para>When the command runs, internally, the HBase JAR finds the dependencies it needs for
         zookeeper, guava, and its other dependencies on the passed <envar>HADOOP_CLASSPATH</envar>
         and adds the JARs to the MapReduce job configuration. See the source at
@@ -974,7 +974,7 @@ htable.put(put);
         <screen>java.lang.RuntimeException: java.lang.ClassNotFoundException: org.apache.hadoop.hbase.mapreduce.RowCounter$RowCounterMapper</screen>
         <para>If this occurs, try modifying the command as follows, so that it uses the HBase JARs
           from the <filename>target/</filename> directory within the build environment.</para>
-        <screen>$ <userinput>HADOOP_CLASSPATH=${HBASE_HOME}/target/hbase-0.90.0-SNAPSHOT.jar:`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/target/hbase-0.90.0-SNAPSHOT.jar rowcounter usertable</userinput></screen>
+        <screen>$ <userinput>HADOOP_CLASSPATH=${HBASE_HOME}/target/hbase-server-VERSION.jar:`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/target/hbase-server-VERSIION.jar rowcounter usertable</userinput></screen>
       </note>
       <caution>
         <title>Notice to Mapreduce users of HBase 0.96.1 and above</title>
@@ -1046,7 +1046,7 @@ $ <userinput>HADOOP_CLASSPATH=$(hbase mapredcp):/etc/hbase/conf hadoop jar MyApp
       <para>The HBase JAR also serves as a Driver for some bundled mapreduce jobs. To learn about
         the bundled MapReduce jobs, run the following command.</para>
 
-      <screen>$ <userinput>${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-0.90.0-SNAPSHOT.jar</userinput>
+      <screen>$ <userinput>${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-server-VERSION.jar</userinput>
 <computeroutput>An example program must be given as the first argument.
 Valid program names are:
   copytable: Export a table from local cluster to peer cluster
@@ -1058,7 +1058,7 @@ Valid program names are:
     </screen>
       <para>Each of the valid program names are bundled MapReduce jobs. To run one of the jobs,
         model your command after the following example.</para>
-      <screen>$ <userinput>${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-0.90.0-SNAPSHOT.jar rowcounter myTable</userinput></screen>
+      <screen>$ <userinput>${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-server-VERSION.jar rowcounter myTable</userinput></screen>
     </section>
 
     <section>
