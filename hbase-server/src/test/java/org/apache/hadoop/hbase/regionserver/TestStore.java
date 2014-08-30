@@ -297,7 +297,7 @@ public class TestStore {
     // store files will be (this.store.ttl / storeFileNum)
     for (int i = 1; i <= storeFileNum; i++) {
       LOG.info("Adding some data for the store file #" + i);
-      timeStamp = EnvironmentEdgeManager.currentTimeMillis();
+      timeStamp = EnvironmentEdgeManager.currentTime();
       this.store.add(new KeyValue(row, family, qf1, timeStamp, (byte[]) null));
       this.store.add(new KeyValue(row, family, qf2, timeStamp, (byte[]) null));
       this.store.add(new KeyValue(row, family, qf3, timeStamp, (byte[]) null));
@@ -318,7 +318,7 @@ public class TestStore {
       assertEquals(storeFileNum - i, sfs.size());
       // Ensure only non-expired files remain.
       for (StoreFile sf : sfs) {
-        assertTrue(sf.getReader().getMaxTimestamp() >= (edge.currentTimeMillis() - storeTtl));
+        assertTrue(sf.getReader().getMaxTimestamp() >= (edge.currentTime() - storeTtl));
       }
       // Let the next store file expired.
       edge.incrementTime(sleepTime);
@@ -328,7 +328,7 @@ public class TestStore {
     // Assert the last expired file is not removed.
     assertEquals(1, sfs.size());
     long ts = sfs.iterator().next().getReader().getMaxTimestamp();
-    assertTrue(ts < (edge.currentTimeMillis() - storeTtl));
+    assertTrue(ts < (edge.currentTime() - storeTtl));
   }
 
   @Test
@@ -661,7 +661,7 @@ public class TestStore {
     long oldValue = 1L;
     long newValue = 3L;
     this.store.add(new KeyValue(row, family, qf1,
-        EnvironmentEdgeManager.currentTimeMillis(),
+        EnvironmentEdgeManager.currentTime(),
         Bytes.toBytes(oldValue)));
 
     // snapshot the store.

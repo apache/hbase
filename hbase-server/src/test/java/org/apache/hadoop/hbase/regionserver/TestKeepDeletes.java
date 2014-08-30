@@ -74,7 +74,7 @@ public class TestKeepDeletes {
      * compact timestamps are tracked. Otherwise, forced major compaction will not purge
      * Delete's having the same timestamp. see ScanQueryMatcher.match():
      * if (retainDeletesInOutput
-     *     || (!isUserScan && (EnvironmentEdgeManager.currentTimeMillis() - timestamp)
+     *     || (!isUserScan && (EnvironmentEdgeManager.currentTime() - timestamp)
      *     <= timeToPurgeDeletes) ... )
      *
      */
@@ -99,7 +99,7 @@ public class TestKeepDeletes {
         HConstants.FOREVER, true);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
-    long ts = EnvironmentEdgeManager.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     region.put(p);
@@ -196,7 +196,7 @@ public class TestKeepDeletes {
         HConstants.FOREVER, false);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
-    long ts = EnvironmentEdgeManager.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     region.put(p);
@@ -241,7 +241,7 @@ public class TestKeepDeletes {
         HConstants.FOREVER, false);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
-    long ts = EnvironmentEdgeManager.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     region.put(p);
@@ -309,7 +309,7 @@ public class TestKeepDeletes {
         HConstants.FOREVER, true);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
-    long ts = EnvironmentEdgeManager.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     region.put(p);
@@ -399,7 +399,7 @@ public class TestKeepDeletes {
         HConstants.FOREVER, true);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
-    long ts = EnvironmentEdgeManager.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
 
     Delete d = new Delete(T1, ts);
     d.deleteColumns(c0, c0, ts);
@@ -442,7 +442,7 @@ public class TestKeepDeletes {
         HConstants.FOREVER, true);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
-    long ts = EnvironmentEdgeManager.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
 
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
@@ -505,7 +505,7 @@ public class TestKeepDeletes {
         HConstants.FOREVER, true);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
-    long ts = EnvironmentEdgeManager.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     p.add(c0, c1, T1);
@@ -587,7 +587,7 @@ public class TestKeepDeletes {
         HConstants.FOREVER, true);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
-    long ts = EnvironmentEdgeManager.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     region.put(p);
@@ -679,7 +679,7 @@ public class TestKeepDeletes {
         HConstants.FOREVER, true);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
-    long ts = EnvironmentEdgeManager.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
 
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
@@ -730,7 +730,7 @@ public class TestKeepDeletes {
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, true);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
-    long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000; // 2s in the past
+    long ts = EnvironmentEdgeManager.currentTime() - 2000; // 2s in the past
 
     Put p = new Put(T1, ts);
     p.add(c0, c0, T3);

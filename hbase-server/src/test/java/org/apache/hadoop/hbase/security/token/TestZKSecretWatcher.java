@@ -155,7 +155,7 @@ public class TestZKSecretWatcher {
     LOG.debug("Master new current key: "+key3.getKeyId());
 
     // force expire the original key
-    key1.setExpiration(EnvironmentEdgeManager.currentTimeMillis() - 1000);
+    key1.setExpiration(EnvironmentEdgeManager.currentTime() - 1000);
     KEY_MASTER.removeExpiredKeys();
     // verify removed from master
     assertNull(KEY_MASTER.getKey(key1.getKeyId()));

@@ -485,7 +485,7 @@ public class HTableMultiplexer {
       int failedCount = 0;
       while (true) {
         try {
-          start = elapsed = EnvironmentEdgeManager.currentTimeMillis();
+          start = elapsed = EnvironmentEdgeManager.currentTime();
 
           // Clear the processingList, putToStatusMap and failedCount
           processingList.clear();
@@ -545,7 +545,7 @@ public class HTableMultiplexer {
             // Update the totalFailedCount
             this.totalFailedPutCount.addAndGet(failedCount);
             
-            elapsed = EnvironmentEdgeManager.currentTimeMillis() - start;
+            elapsed = EnvironmentEdgeManager.currentTime() - start;
             // Update latency counters
             averageLatency.add(elapsed);
             if (elapsed > maxLatency.get()) {
@@ -566,7 +566,7 @@ public class HTableMultiplexer {
 
           // Sleep for a while
           if (elapsed == start) {
-            elapsed = EnvironmentEdgeManager.currentTimeMillis() - start;
+            elapsed = EnvironmentEdgeManager.currentTime() - start;
           }
           if (elapsed < frequency) {
             try {

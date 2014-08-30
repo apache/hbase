@@ -774,7 +774,7 @@ public class HStore implements Store {
         + " into store " + this + " (new location: " + dstPath + ")");
     if (LOG.isTraceEnabled()) {
       String traceMessage = "BULK LOAD time,size,store size,store files ["
-          + EnvironmentEdgeManager.currentTimeMillis() + "," + r.length() + "," + storeSize
+          + EnvironmentEdgeManager.currentTime() + "," + r.length() + "," + storeSize
           + "," + storeEngine.getStoreFileManager().getStorefileCount() + "]";
       LOG.trace(traceMessage);
     }
@@ -1018,7 +1018,7 @@ public class HStore implements Store {
         totalSize += sf.getReader().length();
       }
       String traceMessage = "FLUSH time,count,size,store size,store files ["
-          + EnvironmentEdgeManager.currentTimeMillis() + "," + sfs.size() + "," + totalSize
+          + EnvironmentEdgeManager.currentTime() + "," + sfs.size() + "," + totalSize
           + "," + storeSize + "," + storeEngine.getStoreFileManager().getStorefileCount() + "]";
       LOG.trace(traceMessage);
     }
@@ -1147,7 +1147,7 @@ public class HStore implements Store {
         + " into tmpdir=" + fs.getTempDir() + ", totalSize="
         + StringUtils.humanReadableInt(cr.getSize()));
 
-    long compactionStartTime = EnvironmentEdgeManager.currentTimeMillis();
+    long compactionStartTime = EnvironmentEdgeManager.currentTime();
     List<StoreFile> sfs = null;
     try {
       // Commence the compaction.
@@ -1251,7 +1251,7 @@ public class HStore implements Store {
    */
   private void logCompactionEndMessage(
       CompactionRequest cr, List<StoreFile> sfs, long compactionStartTime) {
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     StringBuilder message = new StringBuilder(
       "Completed" + (cr.isMajor() ? " major" : "") + " compaction of "
       + cr.getFiles().size() + (cr.isAllFiles() ? " (all)" : "") + " file(s) in "
@@ -1523,7 +1523,7 @@ public class HStore implements Store {
         long cfTtl = getStoreFileTtl();
         if (cfTtl != Long.MAX_VALUE) {
           delSfs = storeEngine.getStoreFileManager().getUnneededFiles(
-              EnvironmentEdgeManager.currentTimeMillis() - cfTtl, filesCompacting);
+              EnvironmentEdgeManager.currentTime() - cfTtl, filesCompacting);
           addToCompactingFiles(delSfs);
         }
       }
@@ -2021,7 +2021,7 @@ public class HStore implements Store {
 
     this.lock.readLock().lock();
     try {
-      long now = EnvironmentEdgeManager.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
 
       return this.memstore.updateColumnValue(row,
           f,

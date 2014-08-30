@@ -383,9 +383,9 @@ public class MasterFileSystem {
     List<Path> logDirs = getLogDirs(serverNames);
 
     splitLogManager.handleDeadWorkers(serverNames);
-    splitTime = EnvironmentEdgeManager.currentTimeMillis();
+    splitTime = EnvironmentEdgeManager.currentTime();
     splitLogSize = splitLogManager.splitLogDistributed(serverNames, logDirs, filter);
-    splitTime = EnvironmentEdgeManager.currentTimeMillis() - splitTime;
+    splitTime = EnvironmentEdgeManager.currentTime() - splitTime;
 
     if (this.metricsMasterFilesystem != null) {
       if (filter == META_FILTER) {

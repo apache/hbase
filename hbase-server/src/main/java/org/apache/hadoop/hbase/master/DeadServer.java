@@ -110,7 +110,7 @@ public class DeadServer {
   public synchronized void add(ServerName sn) {
     this.numProcessing++;
     if (!deadServers.containsKey(sn)){
-      deadServers.put(sn, EnvironmentEdgeManager.currentTimeMillis());
+      deadServers.put(sn, EnvironmentEdgeManager.currentTime());
     }
   }
 

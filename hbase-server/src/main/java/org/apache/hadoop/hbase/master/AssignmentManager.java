@@ -1551,7 +1551,7 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   boolean assign(final ServerName destination, final List<HRegionInfo> regions)
     throws InterruptedException {
-    long startTime = EnvironmentEdgeManager.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     try {
       int regionCount = regions.size();
       if (regionCount == 0) {
@@ -1739,7 +1739,7 @@ public class AssignmentManager extends ZooKeeperListener {
       LOG.debug("Bulk assigning done for " + destination);
       return true;
     } finally {
-      metricsAssignmentManager.updateBulkAssignTime(EnvironmentEdgeManager.currentTimeMillis() - startTime);
+      metricsAssignmentManager.updateBulkAssignTime(EnvironmentEdgeManager.currentTime() - startTime);
     }
   }
 
@@ -1828,11 +1828,11 @@ public class AssignmentManager extends ZooKeeperListener {
             state.updateTimestampToNow();
             if (maxWaitTime < 0) {
               maxWaitTime =
-                  EnvironmentEdgeManager.currentTimeMillis()
+                  EnvironmentEdgeManager.currentTime()
                       + conf.getLong(ALREADY_IN_TRANSITION_WAITTIME,
                         DEFAULT_ALREADY_IN_TRANSITION_WAITTIME);
             }
-            long now = EnvironmentEdgeManager.currentTimeMillis();
+            long now = EnvironmentEdgeManager.currentTime();
             if (now < maxWaitTime) {
               LOG.debug("Region is already in transition; "
                 + "waiting up to " + (maxWaitTime - now) + "ms", t);
@@ -1972,7 +1972,7 @@ public class AssignmentManager extends ZooKeeperListener {
    */
   private void assign(RegionState state,
       final boolean setOfflineInZK, final boolean forceNewPlan) {
-    long startTime = EnvironmentEdgeManager.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     try {
       Configuration conf = server.getConfiguration();
       RegionState currentState = state;
@@ -2100,18 +2100,18 @@ public class AssignmentManager extends ZooKeeperListener {
 
             if (maxWaitTime < 0) {
               if (t instanceof RegionAlreadyInTransitionException) {
-                maxWaitTime = EnvironmentEdgeManager.currentTimeMillis()
+                maxWaitTime = EnvironmentEdgeManager.currentTime()
                   + this.server.getConfiguration().getLong(ALREADY_IN_TRANSITION_WAITTIME,
                     DEFAULT_ALREADY_IN_TRANSITION_WAITTIME);
               } else {
-                maxWaitTime = EnvironmentEdgeManager.currentTimeMillis()
+                maxWaitTime = EnvironmentEdgeManager.currentTime()
                   + this.server.getConfiguration().getLong(
                     "hbase.regionserver.rpc.startup.waittime", 60000);
               }
             }
             try {
               needNewPlan = false;
-              long now = EnvironmentEdgeManager.currentTimeMillis();
+              long now = EnvironmentEdgeManager.currentTime();
               if (now < maxWaitTime) {
                 LOG.debug("Server is not yet up or region is already in transition; "
                   + "waiting up to " + (maxWaitTime - now) + "ms", t);
@@ -2193,7 +2193,7 @@ public class AssignmentManager extends ZooKeeperListener {
       // Run out of attempts
       regionStates.updateRegionState(region, State.FAILED_OPEN);
     } finally {
-      metricsAssignmentManager.updateAssignmentTime(EnvironmentEdgeManager.currentTimeMillis() - startTime);
+      metricsAssignmentManager.updateAssignmentTime(EnvironmentEdgeManager.currentTime() - startTime);
     }
   }
 
@@ -3104,7 +3104,7 @@ public class AssignmentManager extends ZooKeeperListener {
   public boolean waitOnRegionToClearRegionsInTransition(final HRegionInfo hri, long timeOut)
       throws InterruptedException {
     if (!regionStates.isRegionInTransition(hri)) return true;
-    long end = (timeOut <= 0) ? Long.MAX_VALUE : EnvironmentEdgeManager.currentTimeMillis()
+    long end = (timeOut <= 0) ? Long.MAX_VALUE : EnvironmentEdgeManager.currentTime()
         + timeOut;
     // There is already a timeout monitor on regions in transition so I
     // should not have to have one here too?
@@ -3112,7 +3112,7 @@ public class AssignmentManager extends ZooKeeperListener {
         " to leave regions-in-transition, timeOut=" + timeOut + " ms.");
     while (!this.server.isStopped() && regionStates.isRegionInTransition(hri)) {
       regionStates.waitForUpdate(100);
-      if (EnvironmentEdgeManager.currentTimeMillis() > end) {
+      if (EnvironmentEdgeManager.currentTime() > end) {
         LOG.info("Timed out on waiting for " + hri.getEncodedName() + " to be assigned.");
         return false;
       }

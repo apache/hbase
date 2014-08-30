@@ -53,7 +53,7 @@ public class TestFSHDFSUtils {
 
   @Before
   public void setup() {
-    this.startTime = EnvironmentEdgeManager.currentTimeMillis();
+    this.startTime = EnvironmentEdgeManager.currentTime();
   }
 
   /**
@@ -73,7 +73,7 @@ public class TestFSHDFSUtils {
     Mockito.verify(dfs, Mockito.times(5)).recoverLease(FILE);
     // Make sure we waited at least hbase.lease.recovery.dfs.timeout * 3 (the first two
     // invocations will happen pretty fast... the we fall into the longer wait loop).
-    assertTrue((EnvironmentEdgeManager.currentTimeMillis() - this.startTime) >
+    assertTrue((EnvironmentEdgeManager.currentTime() - this.startTime) >
       (3 * HTU.getConfiguration().getInt("hbase.lease.recovery.dfs.timeout", 61000)));
   }
 

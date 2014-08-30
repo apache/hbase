@@ -822,7 +822,7 @@ public class HBaseAdmin implements Admin {
    */
   private void waitUntilTableIsEnabled(final TableName tableName) throws IOException {
     boolean enabled = false;
-    long start = EnvironmentEdgeManager.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
       try {
         enabled = isTableEnabled(tableName);
@@ -848,7 +848,7 @@ public class HBaseAdmin implements Admin {
       }
     }
     if (!enabled) {
-      long msec = EnvironmentEdgeManager.currentTimeMillis() - start;
+      long msec = EnvironmentEdgeManager.currentTime() - start;
       throw new IOException("Table '" + tableName +
         "' not yet enabled, after " + msec + "ms.");
     }
@@ -2802,7 +2802,7 @@ public synchronized  byte[][] rollHLogWriter(String serverName)
     final IsSnapshotDoneRequest request = IsSnapshotDoneRequest.newBuilder().setSnapshot(snapshot)
         .build();
     IsSnapshotDoneResponse done = null;
-    long start = EnvironmentEdgeManager.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     long max = response.getExpectedTimeout();
     long maxPauseTime = max / this.numRetries;
     int tries = 0;
@@ -2810,7 +2810,7 @@ public synchronized  byte[][] rollHLogWriter(String serverName)
         ClientSnapshotDescriptionUtils.toString(snapshot) + "'' to complete. (max " +
         maxPauseTime + " ms per retry)");
     while (tries == 0
-        || ((EnvironmentEdgeManager.currentTimeMillis() - start) < max && !done.getDone())) {
+        || ((EnvironmentEdgeManager.currentTime() - start) < max && !done.getDone())) {
       try {
         // sleep a backoff <= pauseTime amount
         long sleep = getPauseTime(tries++);
@@ -3011,7 +3011,7 @@ public synchronized  byte[][] rollHLogWriter(String serverName)
       failSafeSnapshotSnapshotName = failSafeSnapshotSnapshotName
         .replace("{snapshot.name}", snapshotName)
         .replace("{table.name}", tableName.toString().replace(TableName.NAMESPACE_DELIM, '.'))
-        .replace("{restore.timestamp}", String.valueOf(EnvironmentEdgeManager.currentTimeMillis()));
+        .replace("{restore.timestamp}", String.valueOf(EnvironmentEdgeManager.currentTime()));
       LOG.info("Taking restore-failsafe snapshot: " + failSafeSnapshotSnapshotName);
       snapshot(failSafeSnapshotSnapshotName, tableName);
     }
@@ -3185,7 +3185,7 @@ public synchronized  byte[][] rollHLogWriter(String serverName)
       }
     });
 
-    long start = EnvironmentEdgeManager.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     long max = response.getExpectedTimeout();
     long maxPauseTime = max / this.numRetries;
     int tries = 0;
@@ -3193,7 +3193,7 @@ public synchronized  byte[][] rollHLogWriter(String serverName)
         signature + " : " + instance + "'' to complete. (max " + maxPauseTime + " ms per retry)");
     boolean done = false;
     while (tries == 0
-        || ((EnvironmentEdgeManager.currentTimeMillis() - start) < max && !done)) {
+        || ((EnvironmentEdgeManager.currentTime() - start) < max && !done)) {
       try {
         // sleep a backoff <= pauseTime amount
         long sleep = getPauseTime(tries++);

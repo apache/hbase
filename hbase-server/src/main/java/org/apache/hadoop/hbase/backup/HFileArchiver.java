@@ -255,7 +255,7 @@ public class HFileArchiver {
     }
 
     // do the actual archive
-    long start = EnvironmentEdgeManager.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     File file = new FileablePath(fs, storeFile);
     if (!resolveAndArchiveFile(storeArchiveDir, file, Long.toString(start))) {
       throw new IOException("Failed to archive/delete the file for region:"
@@ -280,7 +280,7 @@ public class HFileArchiver {
   private static boolean resolveAndArchive(FileSystem fs, Path baseArchiveDir,
       Collection<File> toArchive) throws IOException {
     if (LOG.isTraceEnabled()) LOG.trace("Starting to archive " + toArchive);
-    long start = EnvironmentEdgeManager.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     List<File> failures = resolveAndArchive(fs, baseArchiveDir, toArchive, start);
 
     // notify that some files were not archived.

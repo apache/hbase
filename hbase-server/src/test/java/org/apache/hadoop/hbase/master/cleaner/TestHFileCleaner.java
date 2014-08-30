@@ -140,7 +140,7 @@ public class TestHFileCleaner {
     // set a custom edge manager to handle time checking
     EnvironmentEdge setTime = new EnvironmentEdge() {
       @Override
-      public long currentTimeMillis() {
+      public long currentTime() {
         return createTime;
       }
     };

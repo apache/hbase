@@ -1643,14 +1643,14 @@ public class HLogSplitter {
     private HRegionLocation waitUntilRegionOnline(HRegionLocation loc, byte[] row,
         final long timeout, AtomicBoolean isRecovering)
         throws IOException {
-      final long endTime = EnvironmentEdgeManager.currentTimeMillis() + timeout;
+      final long endTime = EnvironmentEdgeManager.currentTime() + timeout;
       final long pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
       boolean reloadLocation = false;
       TableName tableName = loc.getRegionInfo().getTable();
       int tries = 0;
       Throwable cause = null;
-      while (endTime > EnvironmentEdgeManager.currentTimeMillis()) {
+      while (endTime > EnvironmentEdgeManager.currentTime()) {
         try {
           // Try and get regioninfo from the hosting server.
           HConnection hconn = getConnectionByTableName(tableName);

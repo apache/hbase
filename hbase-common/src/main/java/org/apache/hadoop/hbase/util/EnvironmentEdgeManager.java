@@ -67,11 +67,11 @@ public class EnvironmentEdgeManager {
 
   /**
    * Defers to the delegate and calls the
-   * {@link EnvironmentEdge#currentTimeMillis()} method.
+   * {@link EnvironmentEdge#currentTime()} method.
    *
    * @return current time in millis according to the delegate.
    */
-  public static long currentTimeMillis() {
-    return getDelegate().currentTimeMillis();
+  public static long currentTime() {
+    return getDelegate().currentTime();
   }
 }

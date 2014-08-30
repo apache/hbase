@@ -42,7 +42,7 @@ public class ReplicationThrottler {
     this.enabled = this.bandwidth > 0;
     if (this.enabled) {
       this.cyclePushSize = 0;
-      this.cycleStartTick = EnvironmentEdgeManager.currentTimeMillis();
+      this.cycleStartTick = EnvironmentEdgeManager.currentTime();
     }
   }
 
@@ -67,7 +67,7 @@ public class ReplicationThrottler {
     }
 
     long sleepTicks = 0;
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     // 1. if cyclePushSize exceeds bandwidth, we need to sleep some
     //    following cycles to amortize, this case can occur when a single push
     //    exceeds the bandwidth
@@ -115,7 +115,7 @@ public class ReplicationThrottler {
    */
   public void resetStartTick() {
     if (this.enabled) {
-      this.cycleStartTick = EnvironmentEdgeManager.currentTimeMillis();
+      this.cycleStartTick = EnvironmentEdgeManager.currentTime();
     }
   }
 }

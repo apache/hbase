@@ -460,7 +460,7 @@ class MetricsRegionServerWrapperImpl
 
 
       //Compute the number of requests per second
-      long currentTime = EnvironmentEdgeManager.currentTimeMillis();
+      long currentTime = EnvironmentEdgeManager.currentTime();
 
       // assume that it took PERIOD seconds to start the executor.
       // this is a guess but it's a pretty good one.

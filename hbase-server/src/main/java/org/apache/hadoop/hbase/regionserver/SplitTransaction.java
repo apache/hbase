@@ -183,7 +183,7 @@ public class SplitTransaction {
    * @return Daughter region id (timestamp) to use.
    */
   private static long getDaughterRegionIdTimestamp(final HRegionInfo hri) {
-    long rid = EnvironmentEdgeManager.currentTimeMillis();
+    long rid = EnvironmentEdgeManager.currentTime();
     // Regionid is timestamp.  Can't be less than that of parent else will insert
     // at wrong location in hbase:meta (See HBASE-710).
     if (rid < hri.getRegionId()) {

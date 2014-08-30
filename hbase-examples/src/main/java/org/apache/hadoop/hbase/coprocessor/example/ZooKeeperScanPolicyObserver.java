@@ -98,7 +98,7 @@ public class ZooKeeperScanPolicyObserver extends BaseRegionObserver {
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="REC_CATCH_EXCEPTION")
     public byte[] getData() {
       // try at most twice/minute
-      if (needSetup && EnvironmentEdgeManager.currentTimeMillis() > lastSetupTry + 30000) {
+      if (needSetup && EnvironmentEdgeManager.currentTime() > lastSetupTry + 30000) {
         synchronized (this) {
           // make sure only one thread tries to reconnect
           if (needSetup) {
@@ -112,7 +112,7 @@ public class ZooKeeperScanPolicyObserver extends BaseRegionObserver {
         try {
           LOG.debug("Connecting to ZK");
           // record this attempt
-          lastSetupTry = EnvironmentEdgeManager.currentTimeMillis();
+          lastSetupTry = EnvironmentEdgeManager.currentTime();
           if (zk.exists(node, false) != null) {
             data = zk.getData(node, this, null);
             LOG.debug("Read synchronously: "+(data == null ? "null" : Bytes.toLong(data)));
@@ -186,7 +186,7 @@ public class ZooKeeperScanPolicyObserver extends BaseRegionObserver {
     if (oldSI.getTtl() == Long.MAX_VALUE) {
       return null;
     }
-    long ttl = Math.max(EnvironmentEdgeManager.currentTimeMillis() -
+    long ttl = Math.max(EnvironmentEdgeManager.currentTime() -
         Bytes.toLong(data), oldSI.getTtl());
     return new ScanInfo(store.getFamily(), ttl,
         oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());

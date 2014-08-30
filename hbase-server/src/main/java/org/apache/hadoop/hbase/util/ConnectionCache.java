@@ -179,7 +179,7 @@ public class ConnectionCache {
     private boolean closed;
 
     ConnectionInfo(HConnection conn, String user) {
-      lastAccessTime = EnvironmentEdgeManager.currentTimeMillis();
+      lastAccessTime = EnvironmentEdgeManager.currentTime();
       connection = conn;
       closed = false;
       userName = user;
@@ -194,13 +194,13 @@ public class ConnectionCache {
         connections.remove(userName);
         return false;
       }
-      lastAccessTime = EnvironmentEdgeManager.currentTimeMillis();
+      lastAccessTime = EnvironmentEdgeManager.currentTime();
       return true;
     }
 
     synchronized boolean timedOut(int maxIdleTime) {
       long timeoutTime = lastAccessTime + maxIdleTime;
-      if (EnvironmentEdgeManager.currentTimeMillis() > timeoutTime) {
+      if (EnvironmentEdgeManager.currentTime() > timeoutTime) {
         connections.remove(userName);
         closed = true;
       }

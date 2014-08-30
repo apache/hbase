@@ -1001,10 +1001,10 @@ public class TestSplitTransactionOnCluster {
       hri = region.getRegionInfo(); // split parent
       AssignmentManager am = cluster.getMaster().getAssignmentManager();
       RegionStates regionStates = am.getRegionStates();
-      long start = EnvironmentEdgeManager.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTime();
       while (!regionStates.isRegionInState(hri, State.SPLIT)) {
         assertFalse("Timed out in waiting split parent to be in state SPLIT",
-          EnvironmentEdgeManager.currentTimeMillis() - start > 60000);
+          EnvironmentEdgeManager.currentTime() - start > 60000);
         Thread.sleep(500);
       }
 

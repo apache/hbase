@@ -220,7 +220,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       return null;
     }
 
-    long startTime = EnvironmentEdgeManager.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
 
     initCosts(cluster);
 
@@ -259,13 +259,13 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         updateCostsWithAction(cluster, undoAction);
       }
 
-      if (EnvironmentEdgeManager.currentTimeMillis() - startTime >
+      if (EnvironmentEdgeManager.currentTime() - startTime >
           maxRunningTime) {
         break;
       }
     }
 
-    long endTime = EnvironmentEdgeManager.currentTimeMillis();
+    long endTime = EnvironmentEdgeManager.currentTime();
 
     metricsBalancer.balanceCluster(endTime - startTime);
 

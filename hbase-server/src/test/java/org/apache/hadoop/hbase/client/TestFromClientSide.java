@@ -4659,7 +4659,7 @@ public class TestFromClientSide {
     HTable table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY },
         conf, Integer.MAX_VALUE);
 
-    final long ts = EnvironmentEdgeManager.currentTimeMillis();
+    final long ts = EnvironmentEdgeManager.currentTime();
     Get get = new Get(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions();
@@ -4696,7 +4696,7 @@ public class TestFromClientSide {
     final HTable table = TEST_UTIL.createTable(tableName,
         new byte[][] { FAMILY }, conf, 3);
 
-    final long ts = EnvironmentEdgeManager.currentTimeMillis();
+    final long ts = EnvironmentEdgeManager.currentTime();
     final Get get = new Get(ROW);
     get.addColumn(FAMILY, QUALIFIER);
     get.setMaxVersions();

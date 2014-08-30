@@ -164,11 +164,11 @@ public class SplitLogManager extends ZooKeeperListener {
    * @param stopper the stoppable in case anything is wrong
    * @param master the master services
    * @param serverName the master server name
-   * @throws KeeperException 
-   * @throws InterruptedIOException 
+   * @throws KeeperException
+   * @throws InterruptedIOException
    */
   public SplitLogManager(ZooKeeperWatcher zkw, final Configuration conf,
-      Stoppable stopper, MasterServices master, ServerName serverName) 
+      Stoppable stopper, MasterServices master, ServerName serverName)
       throws InterruptedIOException, KeeperException {
     this(zkw, conf, stopper, master, serverName, new TaskFinisher() {
       @Override
@@ -210,7 +210,7 @@ public class SplitLogManager extends ZooKeeperListener {
     this.unassignedTimeout =
       conf.getInt("hbase.splitlog.manager.unassigned.timeout", DEFAULT_UNASSIGNED_TIMEOUT);
 
-    // Determine recovery mode  
+    // Determine recovery mode
     setRecoveryMode(true);
 
     LOG.info("Timeout=" + timeout + ", unassigned timeout=" + unassignedTimeout +
@@ -314,7 +314,7 @@ public class SplitLogManager extends ZooKeeperListener {
     LOG.debug("Scheduling batch of logs to split");
     SplitLogCounters.tot_mgr_log_split_batch_start.incrementAndGet();
     LOG.info("started splitting " + logfiles.length + " logs in " + logDirs);
-    long t = EnvironmentEdgeManager.currentTimeMillis();
+    long t = EnvironmentEdgeManager.currentTime();
     long totalSize = 0;
     TaskBatch batch = new TaskBatch();
     Boolean isMetaRecovery = (filter == null) ? null : false;
@@ -368,7 +368,7 @@ public class SplitLogManager extends ZooKeeperListener {
     }
     String msg = "finished splitting (more than or equal to) " + totalSize +
         " bytes in " + batch.installed + " log files in " + logDirs + " in " +
-        (EnvironmentEdgeManager.currentTimeMillis() - t) + "ms";
+        (EnvironmentEdgeManager.currentTime() - t) + "ms";
     status.markComplete(msg);
     LOG.info(msg);
     return totalSize;
@@ -386,7 +386,7 @@ public class SplitLogManager extends ZooKeeperListener {
     // This is a znode path under the splitlog dir with the rest of the path made up of an
     // url encoding of the passed in log to split.
     String path = ZKSplitLog.getEncodedNodeName(watcher, taskname);
-    lastTaskCreateTime = EnvironmentEdgeManager.currentTimeMillis();
+    lastTaskCreateTime = EnvironmentEdgeManager.currentTime();
     Task oldtask = createTaskIfAbsent(path, batch);
     if (oldtask == null) {
       // publish the task in zk
@@ -808,7 +808,7 @@ public class SplitLogManager extends ZooKeeperListener {
       if (task.isUnassigned()) {
         LOG.info("task " + path + " acquired by " + workerName);
       }
-      task.heartbeat(EnvironmentEdgeManager.currentTimeMillis(), new_version, workerName);
+      task.heartbeat(EnvironmentEdgeManager.currentTime(), new_version, workerName);
       SplitLogCounters.tot_mgr_heartbeat.incrementAndGet();
     } else {
       // duplicate heartbeats - heartbeats w/o zk node version
@@ -831,7 +831,7 @@ public class SplitLogManager extends ZooKeeperListener {
       //  2) after a configurable timeout if the server is not marked as dead but has still not
       //       finished the task. This allows to continue if the worker cannot actually handle it,
       //       for any reason.
-      final long time = EnvironmentEdgeManager.currentTimeMillis() - task.last_update;
+      final long time = EnvironmentEdgeManager.currentTime() - task.last_update;
       final boolean alive = master.getServerManager() != null ?
           master.getServerManager().isServerOnline(task.cur_worker_name) : true;
       if (alive && time < timeout) {
@@ -863,7 +863,7 @@ public class SplitLogManager extends ZooKeeperListener {
       if (ZKUtil.setData(this.watcher, path, slt.toByteArray(), version) == false) {
         LOG.debug("failed to resubmit task " + path +
             " version changed");
-        task.heartbeatNoDetails(EnvironmentEdgeManager.currentTimeMillis());
+        task.heartbeatNoDetails(EnvironmentEdgeManager.currentTime());
         return false;
       }
     } catch (NoNodeException e) {
@@ -873,13 +873,13 @@ public class SplitLogManager extends ZooKeeperListener {
         getDataSetWatchSuccess(path, null, Integer.MIN_VALUE);
       } catch (DeserializationException e1) {
         LOG.debug("Failed to re-resubmit task " + path + " because of deserialization issue", e1);
-        task.heartbeatNoDetails(EnvironmentEdgeManager.currentTimeMillis());
+        task.heartbeatNoDetails(EnvironmentEdgeManager.currentTime());
         return false;
       }
       return false;
     } catch (KeeperException.BadVersionException e) {
       LOG.debug("failed to resubmit task " + path + " version changed");
-      task.heartbeatNoDetails(EnvironmentEdgeManager.currentTimeMillis());
+      task.heartbeatNoDetails(EnvironmentEdgeManager.currentTime());
       return false;
     } catch (KeeperException e) {
       SplitLogCounters.tot_mgr_resubmit_failed.incrementAndGet();
@@ -951,7 +951,7 @@ public class SplitLogManager extends ZooKeeperListener {
     // might miss the watch-trigger that creation of RESCAN node provides.
     // Since the TimeoutMonitor will keep resubmitting UNASSIGNED tasks
     // therefore this behavior is safe.
-    lastTaskCreateTime = EnvironmentEdgeManager.currentTimeMillis();
+    lastTaskCreateTime = EnvironmentEdgeManager.currentTime();
     SplitLogTask slt = new SplitLogTask.Done(this.serverName, this.recoveryMode);
     this.watcher.getRecoverableZooKeeper().getZooKeeper().
       create(ZKSplitLog.getRescanNode(watcher), slt.toByteArray(),
@@ -1051,7 +1051,7 @@ public class SplitLogManager extends ZooKeeperListener {
     task = tasks.get(path);
     if (task != null || ZKSplitLog.isRescanNode(watcher, path)) {
       if (task != null) {
-        task.heartbeatNoDetails(EnvironmentEdgeManager.currentTimeMillis());
+        task.heartbeatNoDetails(EnvironmentEdgeManager.currentTime());
       }
       getDataSetWatch(path, zkretries);
     }
@@ -1107,7 +1107,7 @@ public class SplitLogManager extends ZooKeeperListener {
     try {
       this.recoveringRegionLock.lock();
       // mark that we're creating recovering znodes
-      this.lastRecoveringNodeCreationTime = EnvironmentEdgeManager.currentTimeMillis();
+      this.lastRecoveringNodeCreationTime = EnvironmentEdgeManager.currentTime();
 
       for (HRegionInfo region : userRegions) {
         String regionEncodeName = region.getEncodedName();
@@ -1243,7 +1243,7 @@ public class SplitLogManager extends ZooKeeperListener {
     }
     return result;
   }
-  
+
   /**
    * This function is to set recovery mode from outstanding split log tasks from before or
    * current configuration setting
@@ -1267,7 +1267,7 @@ public class SplitLogManager extends ZooKeeperListener {
     boolean hasSplitLogTask = false;
     boolean hasRecoveringRegions = false;
     RecoveryMode previousRecoveryMode = RecoveryMode.UNKNOWN;
-    RecoveryMode recoveryModeInConfig = (isDistributedLogReplay(conf)) ? 
+    RecoveryMode recoveryModeInConfig = (isDistributedLogReplay(conf)) ?
       RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING;
 
     // Firstly check if there are outstanding recovering regions
@@ -1292,7 +1292,7 @@ public class SplitLogManager extends ZooKeeperListener {
               previousRecoveryMode = slt.getMode();
               if (previousRecoveryMode == RecoveryMode.UNKNOWN) {
                 // created by old code base where we don't set recovery mode in splitlogtask
-                // we can safely set to LOG_SPLITTING because we're in master initialization code 
+                // we can safely set to LOG_SPLITTING because we're in master initialization code
                 // before SSH is enabled & there is no outstanding recovering regions
                 previousRecoveryMode = RecoveryMode.LOG_SPLITTING;
               }
@@ -1319,7 +1319,7 @@ public class SplitLogManager extends ZooKeeperListener {
         // splitlogtask hasn't drained yet, keep existing recovery mode
         return;
       }
-  
+
       if (previousRecoveryMode != RecoveryMode.UNKNOWN) {
         this.isDrainingDone = (previousRecoveryMode == recoveryModeInConfig);
         this.recoveryMode = previousRecoveryMode;
@@ -1332,7 +1332,7 @@ public class SplitLogManager extends ZooKeeperListener {
   public RecoveryMode getRecoveryMode() {
     return this.recoveryMode;
   }
-  
+
   /**
    * Returns if distributed log replay is turned on or not
    * @param conf
@@ -1497,7 +1497,7 @@ public class SplitLogManager extends ZooKeeperListener {
         }
       }
       if (tot > 0) {
-        long now = EnvironmentEdgeManager.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
         if (now > lastLog + 5000) {
           lastLog = now;
           LOG.info("total tasks = " + tot + " unassigned = " + unassigned + " tasks=" + tasks);
@@ -1516,7 +1516,7 @@ public class SplitLogManager extends ZooKeeperListener {
       // master should spawn both a manager and a worker thread to guarantee
       // that there is always one worker in the system
       if (tot > 0 && !found_assigned_task &&
-          ((EnvironmentEdgeManager.currentTimeMillis() - lastTaskCreateTime) >
+          ((EnvironmentEdgeManager.currentTime() - lastTaskCreateTime) >
           unassignedTimeout)) {
         for (Map.Entry<String, Task> e : tasks.entrySet()) {
           String path = e.getKey();
@@ -1546,7 +1546,7 @@ public class SplitLogManager extends ZooKeeperListener {
       }
 
       // Garbage collect left-over /hbase/recovering-regions/... znode
-      long timeInterval = EnvironmentEdgeManager.currentTimeMillis()
+      long timeInterval = EnvironmentEdgeManager.currentTime()
           - lastRecoveringNodeCreationTime;
       if (!failedRecoveringRegionDeletions.isEmpty()
           || (tot == 0 && tasks.size() == 0 && (timeInterval > checkRecoveringTimeThreshold))) {

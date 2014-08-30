@@ -46,7 +46,7 @@ public class TimeToLiveHFileCleaner extends BaseHFileCleanerDelegate {
 
   @Override
   public boolean isFileDeletable(FileStatus fStat) {
-    long currentTime = EnvironmentEdgeManager.currentTimeMillis();
+    long currentTime = EnvironmentEdgeManager.currentTime();
     long time = fStat.getModificationTime();
     long life = currentTime - time;
     if (LOG.isTraceEnabled()) {

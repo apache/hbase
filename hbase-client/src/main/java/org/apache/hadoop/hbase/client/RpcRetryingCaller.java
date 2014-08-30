@@ -73,7 +73,7 @@ public class RpcRetryingCaller<T> {
     } else {
       if (callTimeout == Integer.MAX_VALUE) return Integer.MAX_VALUE;
       int remainingTime = (int) (callTimeout -
-          (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime));
+          (EnvironmentEdgeManager.currentTime() - this.globalStartTime));
       if (remainingTime < MIN_RPC_TIMEOUT) {
         // If there is no time left, we're trying anyway. It's too late.
         // 0 means no timeout, and it's not the intent here. So we secure both cases by
@@ -103,7 +103,7 @@ public class RpcRetryingCaller<T> {
   throws IOException, RuntimeException {
     List<RetriesExhaustedException.ThrowableWithExtraContext> exceptions =
       new ArrayList<RetriesExhaustedException.ThrowableWithExtraContext>();
-    this.globalStartTime = EnvironmentEdgeManager.currentTimeMillis();
+    this.globalStartTime = EnvironmentEdgeManager.currentTime();
     for (int tries = 0;; tries++) {
       long expectedSleep;
       try {
@@ -113,7 +113,7 @@ public class RpcRetryingCaller<T> {
         ExceptionUtil.rethrowIfInterrupt(t);
         if (LOG.isTraceEnabled()) {
           LOG.trace("Call exception, tries=" + tries + ", retries=" + retries + ", started=" +
-              (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime) + " ms ago, "
+              (EnvironmentEdgeManager.currentTime() - this.globalStartTime) + " ms ago, "
               + "cancelled=" + cancelled.get(), t);
         }
 
@@ -122,7 +122,7 @@ public class RpcRetryingCaller<T> {
         callable.throwable(t, retries != 1);
         RetriesExhaustedException.ThrowableWithExtraContext qt =
             new RetriesExhaustedException.ThrowableWithExtraContext(t,
-                EnvironmentEdgeManager.currentTimeMillis(), toString());
+                EnvironmentEdgeManager.currentTime(), toString());
         exceptions.add(qt);
         if (tries >= retries - 1) {
           throw new RetriesExhaustedException(tries, exceptions);
@@ -158,7 +158,7 @@ public class RpcRetryingCaller<T> {
    * @return Calculate how long a single call took
    */
   private long singleCallDuration(final long expectedSleep) {
-    return (EnvironmentEdgeManager.currentTimeMillis() - this.globalStartTime) + expectedSleep;
+    return (EnvironmentEdgeManager.currentTime() - this.globalStartTime) + expectedSleep;
   }
 
   /**
@@ -173,7 +173,7 @@ public class RpcRetryingCaller<T> {
   public T callWithoutRetries(RetryingCallable<T> callable, int callTimeout)
   throws IOException, RuntimeException {
     // The code of this method should be shared with withRetries.
-    this.globalStartTime = EnvironmentEdgeManager.currentTimeMillis();
+    this.globalStartTime = EnvironmentEdgeManager.currentTime();
     try {
       callable.prepare(false);
       return callable.call(callTimeout);

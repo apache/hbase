@@ -27,25 +27,18 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.apache.hadoop.hbase.util.Threads;
 import org.junit.experimental.categories.Category;
 
 // Can't be small as it plays with EnvironmentEdgeManager
@@ -512,7 +505,7 @@ public class TestStoreScanner extends TestCase {
     try {
       final long now = System.currentTimeMillis();
       EnvironmentEdgeManagerTestHelper.injectEdge(new EnvironmentEdge() {
-        public long currentTimeMillis() {
+        public long currentTime() {
           return now;
         }
       });

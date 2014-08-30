@@ -522,7 +522,7 @@ public class RegionMergeTransaction {
    */
   public static HRegionInfo getMergedRegionInfo(final HRegionInfo a,
       final HRegionInfo b) {
-    long rid = EnvironmentEdgeManager.currentTimeMillis();
+    long rid = EnvironmentEdgeManager.currentTime();
     // Regionid is timestamp. Merged region's id can't be less than that of
     // merging regions else will insert at wrong location in hbase:meta
     if (rid < a.getRegionId() || rid < b.getRegionId()) {

@@ -144,7 +144,7 @@ public class FavoredNodeAssignmentHelper {
       put = MetaTableAccessor.makePutFromRegionInfo(regionInfo);
       byte[] favoredNodes = getFavoredNodes(favoredNodeList);
       put.addImmutable(HConstants.CATALOG_FAMILY, FAVOREDNODES_QUALIFIER,
-          EnvironmentEdgeManager.currentTimeMillis(), favoredNodes);
+          EnvironmentEdgeManager.currentTime(), favoredNodes);
       LOG.info("Create the region " + regionInfo.getRegionNameAsString() +
           " with favored nodes " + Bytes.toString(favoredNodes));
     }

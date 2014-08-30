@@ -139,7 +139,7 @@ public class ClusterStatusPublisher extends Chore {
       return;
     }
 
-    final long curTime = EnvironmentEdgeManager.currentTimeMillis();
+    final long curTime = EnvironmentEdgeManager.currentTime();
     if (lastMessageTime > curTime - messagePeriod) {
       // We already sent something less than 10 second ago. Done.
       return;
@@ -177,7 +177,7 @@ public class ClusterStatusPublisher extends Chore {
    */
   protected List<ServerName> generateDeadServersListToSend() {
     // We're getting the message sent since last time, and add them to the list
-    long since = EnvironmentEdgeManager.currentTimeMillis() - messagePeriod * 2;
+    long since = EnvironmentEdgeManager.currentTime() - messagePeriod * 2;
     for (Pair<ServerName, Long> dead : getDeadServers(since)) {
       lastSent.putIfAbsent(dead.getFirst(), 0);
     }

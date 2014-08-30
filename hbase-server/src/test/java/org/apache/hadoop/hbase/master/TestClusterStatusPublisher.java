@@ -61,7 +61,7 @@ public class TestClusterStatusPublisher {
       @Override
       protected List<Pair<ServerName, Long>> getDeadServers(long since) {
         List<Pair<ServerName, Long>> res = new ArrayList<Pair<ServerName, Long>>();
-        switch ((int) EnvironmentEdgeManager.currentTimeMillis()) {
+        switch ((int) EnvironmentEdgeManager.currentTime()) {
           case 2:
             res.add(new Pair<ServerName, Long>(ServerName.valueOf("hn", 10, 10), 1L));
             break;

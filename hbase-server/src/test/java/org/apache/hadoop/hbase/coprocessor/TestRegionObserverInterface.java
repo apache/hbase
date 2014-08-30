@@ -473,12 +473,12 @@ public class TestRegionObserverInterface {
     @Override
     public void postCompact(ObserverContext<RegionCoprocessorEnvironment> e,
         Store store, StoreFile resultFile) {
-      lastCompaction = EnvironmentEdgeManager.currentTimeMillis();
+      lastCompaction = EnvironmentEdgeManager.currentTime();
     }
 
     @Override
     public void postFlush(ObserverContext<RegionCoprocessorEnvironment> e) {
-      lastFlush = EnvironmentEdgeManager.currentTimeMillis();
+      lastFlush = EnvironmentEdgeManager.currentTime();
     }
   }
   /**

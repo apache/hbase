@@ -18,12 +18,11 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.MediumTests;
+import static junit.framework.Assert.assertEquals;
+
 import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static junit.framework.Assert.assertEquals;
 
 /**
  * Tests that the incrementing environment edge increments time instead of using
@@ -35,11 +34,9 @@ public class TestIncrementingEnvironmentEdge {
   @Test
   public void testGetCurrentTimeUsesSystemClock() {
     IncrementingEnvironmentEdge edge = new IncrementingEnvironmentEdge(1);
-    assertEquals(1, edge.currentTimeMillis());
-    assertEquals(2, edge.currentTimeMillis());
-    assertEquals(3, edge.currentTimeMillis());
-    assertEquals(4, edge.currentTimeMillis());
+    assertEquals(1, edge.currentTime());
+    assertEquals(2, edge.currentTime());
+    assertEquals(3, edge.currentTime());
+    assertEquals(4, edge.currentTime());
   }
-
 }
-

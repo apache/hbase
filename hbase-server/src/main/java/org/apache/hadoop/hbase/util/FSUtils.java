@@ -1728,7 +1728,7 @@ public abstract class FSUtils {
   public static boolean renameAndSetModifyTime(final FileSystem fs, final Path src, final Path dest)
       throws IOException {
     // set the modify time for TimeToLive Cleaner
-    fs.setTimes(src, EnvironmentEdgeManager.currentTimeMillis(), -1);
+    fs.setTimes(src, EnvironmentEdgeManager.currentTime(), -1);
     return fs.rename(src, dest);
   }
 
@@ -1807,7 +1807,7 @@ public abstract class FSUtils {
       throws IOException {
     FileSystem fs =  FileSystem.get(conf);
     Path rootPath = FSUtils.getRootDir(conf);
-    long startTime = EnvironmentEdgeManager.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     Path queryPath;
     // The table files are in ${hbase.rootdir}/data/<namespace>/<table>/*
     if (null == desiredTable) {
@@ -1898,7 +1898,7 @@ public abstract class FSUtils {
       }
     }
 
-    long overhead = EnvironmentEdgeManager.currentTimeMillis() - startTime;
+    long overhead = EnvironmentEdgeManager.currentTime() - startTime;
     String overheadMsg = "Scan DFS for locality info takes " + overhead + " ms";
 
     LOG.info(overheadMsg);

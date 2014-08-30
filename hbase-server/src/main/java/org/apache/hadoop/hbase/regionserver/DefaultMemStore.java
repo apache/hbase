@@ -150,7 +150,7 @@ public class DefaultMemStore implements MemStore {
       LOG.warn("Snapshot called again without clearing previous. " +
           "Doing nothing. Another ongoing flush or did we fail last attempt?");
     } else {
-      this.snapshotId = EnvironmentEdgeManager.currentTimeMillis();
+      this.snapshotId = EnvironmentEdgeManager.currentTime();
       this.snapshotSize = keySize();
       if (!this.kvset.isEmpty()) {
         this.snapshot = this.kvset;
@@ -239,7 +239,7 @@ public class DefaultMemStore implements MemStore {
 
   void setOldestEditTimeToNow() {
     if (timeOfOldestEdit == Long.MAX_VALUE) {
-      timeOfOldestEdit = EnvironmentEdgeManager.currentTimeMillis();
+      timeOfOldestEdit = EnvironmentEdgeManager.currentTime();
     }
   }
 

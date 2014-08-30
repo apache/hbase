@@ -95,7 +95,7 @@ public class ServerNonceManager {
     }
 
     public void reportActivity() {
-      long now = EnvironmentEdgeManager.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       this.data = (this.data & ALL_FLAG_BITS) | (now << 3);
     }
 
@@ -237,7 +237,7 @@ public class ServerNonceManager {
   public void reportOperationFromWal(long group, long nonce, long writeTime) {
     if (nonce == HConstants.NO_NONCE) return;
     // Give the write time some slack in case the clocks are not synchronized.
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     if (now > writeTime + (deleteNonceGracePeriod * 1.5)) return;
     OperationContext newResult = new OperationContext();
     newResult.setState(OperationContext.DONT_PROCEED);
@@ -267,7 +267,7 @@ public class ServerNonceManager {
   }
 
   private void cleanUpOldNonces() {
-    long cutoff = EnvironmentEdgeManager.currentTimeMillis() - deleteNonceGracePeriod;
+    long cutoff = EnvironmentEdgeManager.currentTime() - deleteNonceGracePeriod;
     for (Map.Entry<NonceKey, OperationContext> entry : nonces.entrySet()) {
       OperationContext oc = entry.getValue();
       if (!oc.isExpired(cutoff)) continue;

@@ -231,9 +231,9 @@ public class SnapshotDescriptionUtils {
     // set the creation time, if one hasn't been set
     long time = snapshot.getCreationTime();
     if (time == SnapshotDescriptionUtils.NO_SNAPSHOT_START_TIME_SPECIFIED) {
-      time = EnvironmentEdgeManager.currentTimeMillis();
+      time = EnvironmentEdgeManager.currentTime();
       LOG.debug("Creation time not specified, setting to:" + time + " (current time:"
-          + EnvironmentEdgeManager.currentTimeMillis() + ").");
+          + EnvironmentEdgeManager.currentTime() + ").");
       SnapshotDescription.Builder builder = snapshot.toBuilder();
       builder.setCreationTime(time);
       snapshot = builder.build();

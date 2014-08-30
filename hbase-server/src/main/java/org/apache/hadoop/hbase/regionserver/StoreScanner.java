@@ -122,7 +122,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     explicitColumnQuery = numCol > 0;
     this.scan = scan;
     this.columns = columns;
-    oldestUnexpiredTS = EnvironmentEdgeManager.currentTimeMillis() - ttl;
+    oldestUnexpiredTS = EnvironmentEdgeManager.currentTime() - ttl;
     this.minVersions = minVersions;
 
     if (store != null && ((HStore)store).getHRegion() != null

@@ -36,7 +36,7 @@ public class TestDefaultEnvironmentEdge {
   public void testGetCurrentTimeUsesSystemClock() {
     DefaultEnvironmentEdge edge = new DefaultEnvironmentEdge();
     long systemTime = System.currentTimeMillis();
-    long edgeTime = edge.currentTimeMillis();
+    long edgeTime = edge.currentTime();
     assertTrue("System time must be either the same or less than the edge time",
             systemTime < edgeTime || systemTime == edgeTime);
     try {
@@ -44,11 +44,8 @@ public class TestDefaultEnvironmentEdge {
     } catch (InterruptedException e) {
       fail(e.getMessage());
     }
-    long secondEdgeTime = edge.currentTimeMillis();
+    long secondEdgeTime = edge.currentTime();
     assertTrue("Second time must be greater than the first",
             secondEdgeTime > edgeTime);
   }
-
-
 }
-

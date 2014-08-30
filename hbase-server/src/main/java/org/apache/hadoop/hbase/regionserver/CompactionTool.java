@@ -360,7 +360,7 @@ public class CompactionTool extends Configured implements Tool {
     Path stagingDir = JobUtil.getStagingDir(conf);
     try {
       // Create input file with the store dirs
-      Path inputPath = new Path(stagingDir, "compact-"+ EnvironmentEdgeManager.currentTimeMillis());
+      Path inputPath = new Path(stagingDir, "compact-"+ EnvironmentEdgeManager.currentTime());
       CompactionInputFormat.createInputFile(fs, inputPath, toCompactDirs);
       CompactionInputFormat.addInputPath(job, inputPath);
 

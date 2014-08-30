@@ -268,7 +268,7 @@ public class WALEdit implements Writable, HeapSize {
 
   public static WALEdit createFlushWALEdit(HRegionInfo hri, FlushDescriptor f) {
     KeyValue kv = new KeyValue(getRowForRegion(hri), METAFAMILY, FLUSH,
-      EnvironmentEdgeManager.currentTimeMillis(), f.toByteArray());
+      EnvironmentEdgeManager.currentTime(), f.toByteArray());
     return new WALEdit().add(kv);
   }
 
@@ -282,7 +282,7 @@ public class WALEdit implements Writable, HeapSize {
   public static WALEdit createRegionEventWALEdit(HRegionInfo hri,
       RegionEventDescriptor regionEventDesc) {
     KeyValue kv = new KeyValue(getRowForRegion(hri), METAFAMILY, REGION_EVENT,
-      EnvironmentEdgeManager.currentTimeMillis(), regionEventDesc.toByteArray());
+      EnvironmentEdgeManager.currentTime(), regionEventDesc.toByteArray());
     return new WALEdit().add(kv);
   }
 
@@ -301,7 +301,7 @@ public class WALEdit implements Writable, HeapSize {
   public static WALEdit createCompaction(final HRegionInfo hri, final CompactionDescriptor c) {
     byte [] pbbytes = c.toByteArray();
     KeyValue kv = new KeyValue(getRowForRegion(hri), METAFAMILY, COMPACTION,
-      EnvironmentEdgeManager.currentTimeMillis(), pbbytes);
+      EnvironmentEdgeManager.currentTime(), pbbytes);
     return new WALEdit().add(kv); //replication scope null so that this won't be replicated
   }
 

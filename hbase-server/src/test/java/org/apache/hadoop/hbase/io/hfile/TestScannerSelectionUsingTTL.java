@@ -111,7 +111,7 @@ public class TestScannerSelectionUsingTTL {
         HRegion.createHRegion(info, TEST_UTIL.getDataTestDir(info.getEncodedName()),
             conf, htd);
 
-    long ts = EnvironmentEdgeManager.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     long version = 0; //make sure each new set of Put's have a new ts
     for (int iFile = 0; iFile < totalNumFiles; ++iFile) {
       if (iFile == NUM_EXPIRED_FILES) {

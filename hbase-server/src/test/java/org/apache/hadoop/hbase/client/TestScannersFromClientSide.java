@@ -475,14 +475,14 @@ public class TestScannersFromClientSide {
     HRegionServer rs = cluster.getRegionServer(i);
     ProtobufUtil.closeRegion(
       rs.getRSRpcServices(), rs.getServerName(), regionName, false);
-    long startTime = EnvironmentEdgeManager.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     long timeOut = 300000;
     while (true) {
       if (rs.getOnlineRegion(regionName) == null) {
         break;
       }
       assertTrue("Timed out in closing the testing region",
-        EnvironmentEdgeManager.currentTimeMillis() < startTime + timeOut);
+        EnvironmentEdgeManager.currentTime() < startTime + timeOut);
       Thread.sleep(500);
     }
 
@@ -497,13 +497,13 @@ public class TestScannersFromClientSide {
         ZKAssign.createNodeOffline(zkw, hri, loc.getServerName());
       }
       ProtobufUtil.openRegion(rs.getRSRpcServices(), rs.getServerName(), hri);
-      startTime = EnvironmentEdgeManager.currentTimeMillis();
+      startTime = EnvironmentEdgeManager.currentTime();
       while (true) {
         if (rs.getOnlineRegion(regionName) != null) {
           break;
         }
         assertTrue("Timed out in open the testing region",
-          EnvironmentEdgeManager.currentTimeMillis() < startTime + timeOut);
+          EnvironmentEdgeManager.currentTime() < startTime + timeOut);
         Thread.sleep(500);
       }
     } finally {

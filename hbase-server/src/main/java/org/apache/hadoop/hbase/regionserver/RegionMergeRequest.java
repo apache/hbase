@@ -64,7 +64,7 @@ class RegionMergeRequest implements Runnable {
       return;
     }
     try {
-      final long startTime = EnvironmentEdgeManager.currentTimeMillis();
+      final long startTime = EnvironmentEdgeManager.currentTime();
       RegionMergeTransaction mt = new RegionMergeTransaction(region_a,
           region_b, forcible);
 
@@ -116,7 +116,7 @@ class RegionMergeRequest implements Runnable {
           + region_a + ", region_b=" + region_b + ",merged region="
           + mt.getMergedRegionInfo().getRegionNameAsString()
           + ". Region merge took "
-          + StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTimeMillis(), startTime));
+          + StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTime(), startTime));
     } catch (IOException ex) {
       LOG.error("Merge failed " + this,
           RemoteExceptionHandler.checkIOException(ex));

@@ -116,7 +116,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     final byte[] v3 = Bytes.toBytes("v3");
     htable1 = new HTable(conf1, tableName);
 
-    long t = EnvironmentEdgeManager.currentTimeMillis();
+    long t = EnvironmentEdgeManager.currentTime();
     // create three versions for "row"
     Put put = new Put(row);
     put.add(famName, row, t, v1);

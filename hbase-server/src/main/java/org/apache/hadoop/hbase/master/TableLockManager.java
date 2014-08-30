@@ -326,7 +326,7 @@ public abstract class TableLockManager {
           .setThreadId(Thread.currentThread().getId())
           .setPurpose(purpose)
           .setIsShared(isShared)
-          .setCreateTime(EnvironmentEdgeManager.currentTimeMillis()).build();
+          .setCreateTime(EnvironmentEdgeManager.currentTime()).build();
         byte[] lockMetadata = toBytes(data);
 
         InterProcessReadWriteLock lock = new ZKInterProcessReadWriteLock(zkWatcher, tableLockZNode,

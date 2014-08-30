@@ -367,7 +367,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try {
           // Store read only ACL at a future time
           Put p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1,
-            EnvironmentEdgeManager.currentTimeMillis() + 1000000,
+            EnvironmentEdgeManager.currentTime() + 1000000,
             ZERO);
           p.setACL(USER_OTHER.getShortName(), new Permission(Permission.Action.READ));
           t.put(p);

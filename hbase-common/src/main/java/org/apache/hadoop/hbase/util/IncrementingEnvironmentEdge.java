@@ -50,7 +50,7 @@ public class IncrementingEnvironmentEdge implements EnvironmentEdge {
    * method is called. The first value is 1.
    */
   @Override
-  public synchronized long currentTimeMillis() {
+  public synchronized long currentTime() {
     return timeIncrement++;
   }
 

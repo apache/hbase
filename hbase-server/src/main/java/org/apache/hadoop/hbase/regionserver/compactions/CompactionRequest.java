@@ -63,7 +63,7 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
    * This ctor should be used by coprocessors that want to subclass CompactionRequest.
    */
   public CompactionRequest() {
-    this.selectionTime = EnvironmentEdgeManager.currentTimeMillis();
+    this.selectionTime = EnvironmentEdgeManager.currentTime();
     this.timeInNanos = System.nanoTime();
   }
 

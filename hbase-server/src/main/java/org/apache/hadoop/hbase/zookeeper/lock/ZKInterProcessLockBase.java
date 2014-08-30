@@ -167,7 +167,7 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
   throws IOException, InterruptedException {
     boolean hasTimeout = timeoutMs != -1;
     long waitUntilMs =
-        hasTimeout ?EnvironmentEdgeManager.currentTimeMillis() + timeoutMs : -1;
+        hasTimeout ?EnvironmentEdgeManager.currentTime() + timeoutMs : -1;
     String createdZNode;
     try {
       createdZNode = createLockZNode();
@@ -196,7 +196,7 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
         if (ZKUtil.setWatchIfNodeExists(zkWatcher, zkPathToWatch)) {
           // Wait for the watcher to fire
           if (hasTimeout) {
-            long remainingMs = waitUntilMs - EnvironmentEdgeManager.currentTimeMillis();
+            long remainingMs = waitUntilMs - EnvironmentEdgeManager.currentTime();
             if (remainingMs < 0 ||
                 !deletedLatch.await(remainingMs, TimeUnit.MILLISECONDS)) {
               LOG.warn("Unable to acquire the lock in " + timeoutMs +

@@ -2020,7 +2020,7 @@ public class HRegionServer extends HasThread implements
       rpcServices.requestCount.set(0);
       LOG.info("reportForDuty to master=" + masterServerName + " with port="
         + rpcServices.isa.getPort() + ", startcode=" + this.startcode);
-      long now = EnvironmentEdgeManager.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       int port = rpcServices.isa.getPort();
       RegionServerStartupRequest.Builder request = RegionServerStartupRequest.newBuilder();
       request.setPort(port);
@@ -2702,7 +2702,7 @@ public class HRegionServer extends HasThread implements
     public MovedRegionInfo(ServerName serverName, long closeSeqNum) {
       this.serverName = serverName;
       this.seqNum = closeSeqNum;
-      ts = EnvironmentEdgeManager.currentTimeMillis();
+      ts = EnvironmentEdgeManager.currentTime();
      }
 
     public ServerName getServerName() {
@@ -2744,7 +2744,7 @@ public class HRegionServer extends HasThread implements
   private MovedRegionInfo getMovedRegion(final String encodedRegionName) {
     MovedRegionInfo dest = movedRegions.get(encodedRegionName);
 
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     if (dest != null) {
       if (dest.getMoveTime() > (now - TIMEOUT_REGION_MOVED)) {
         return dest;

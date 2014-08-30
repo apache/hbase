@@ -103,7 +103,7 @@ public class HLogFactory {
         // A hlog file could be under recovery, so it may take several
         // tries to get it open. Instead of claiming it is corrupted, retry
         // to open it up to 5 minutes by default.
-        long startWaiting = EnvironmentEdgeManager.currentTimeMillis();
+        long startWaiting = EnvironmentEdgeManager.currentTime();
         long openTimeout = conf.getInt("hbase.hlog.open.timeout", 300000) + startWaiting;
         int nbAttempt = 0;
         while (true) {
@@ -138,9 +138,9 @@ public class HLogFactory {
               if (reporter != null && !reporter.progress()) {
                 throw new InterruptedIOException("Operation is cancelled");
               }
-              if (nbAttempt > 2 && openTimeout < EnvironmentEdgeManager.currentTimeMillis()) {
+              if (nbAttempt > 2 && openTimeout < EnvironmentEdgeManager.currentTime()) {
                 LOG.error("Can't open after " + nbAttempt + " attempts and "
-                  + (EnvironmentEdgeManager.currentTimeMillis() - startWaiting)
+                  + (EnvironmentEdgeManager.currentTime() - startWaiting)
                   + "ms " + " for " + path);
               } else {
                 try {

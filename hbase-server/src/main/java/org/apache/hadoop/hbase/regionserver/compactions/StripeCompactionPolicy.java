@@ -303,7 +303,7 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     if (cfTtl == Long.MAX_VALUE) {
       return null; // minversion might be set, cannot delete old files
     }
-    long timestampCutoff = EnvironmentEdgeManager.currentTimeMillis() - cfTtl;
+    long timestampCutoff = EnvironmentEdgeManager.currentTime() - cfTtl;
     // Merge the longest sequence of stripes where all files have expired, if any.
     int start = -1, bestStart = -1, length = 0, bestLength = 0;
     ArrayList<ImmutableList<StoreFile>> stripes = si.getStripes();
