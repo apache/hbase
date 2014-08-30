@@ -203,7 +203,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
       // 2) after a configurable timeout if the server is not marked as dead but has still not
       // finished the task. This allows to continue if the worker cannot actually handle it,
       // for any reason.
-      final long time = EnvironmentEdgeManager.currentTimeMillis() - task.last_update;
+      final long time = EnvironmentEdgeManager.currentTime() - task.last_update;
       final boolean alive =
           details.getMaster().getServerManager() != null ? details.getMaster().getServerManager()
               .isServerOnline(task.cur_worker_name) : true;
@@ -233,7 +233,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     task.incarnation++;
     boolean result = resubmit(this.details.getServerName(), path, version);
     if (!result) {
-      task.heartbeatNoDetails(EnvironmentEdgeManager.currentTimeMillis());
+      task.heartbeatNoDetails(EnvironmentEdgeManager.currentTime());
       return false;
     }
     // don't count forced resubmits
@@ -551,7 +551,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
       if (task.isUnassigned()) {
         LOG.info("task " + path + " acquired by " + workerName);
       }
-      task.heartbeat(EnvironmentEdgeManager.currentTimeMillis(), new_version, workerName);
+      task.heartbeat(EnvironmentEdgeManager.currentTime(), new_version, workerName);
       SplitLogCounters.tot_mgr_heartbeat.incrementAndGet();
     } else {
       // duplicate heartbeats - heartbeats w/o zk node version
@@ -599,7 +599,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
   @Override
   public void markRegionsRecovering(final ServerName serverName, Set<HRegionInfo> userRegions)
       throws IOException, InterruptedIOException {
-    this.lastRecoveringNodeCreationTime = EnvironmentEdgeManager.currentTimeMillis();
+    this.lastRecoveringNodeCreationTime = EnvironmentEdgeManager.currentTime();
     for (HRegionInfo region : userRegions) {
       String regionEncodeName = region.getEncodedName();
       long retries = this.zkretries;
@@ -665,7 +665,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     task = details.getTasks().get(path);
     if (task != null || ZKSplitLog.isRescanNode(watcher, path)) {
       if (task != null) {
-        task.heartbeatNoDetails(EnvironmentEdgeManager.currentTimeMillis());
+        task.heartbeatNoDetails(EnvironmentEdgeManager.currentTime());
       }
       getDataSetWatch(path, zkretries);
     }

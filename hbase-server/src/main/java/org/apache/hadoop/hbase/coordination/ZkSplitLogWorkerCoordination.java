@@ -298,7 +298,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
 
       @Override
       public boolean progress() {
-        long t = EnvironmentEdgeManager.currentTimeMillis();
+        long t = EnvironmentEdgeManager.currentTime();
         if ((t - last_report_at) > reportPeriod) {
           last_report_at = t;
           int latestZKVersion =
