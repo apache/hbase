@@ -1410,10 +1410,10 @@ public class TestAssignmentManager {
       ZKAssign.createNodeOffline(this.watcher, hri, SERVERNAME_A);
       // Trigger a transition event
       ZKAssign.transitionNodeOpening(this.watcher, hri, SERVERNAME_A);
-      long startTime = EnvironmentEdgeManager.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       while (!zkEventProcessed.get()) {
         assertTrue("Timed out in waiting for ZK event to be processed",
-          EnvironmentEdgeManager.currentTimeMillis() - startTime < 30000);
+          EnvironmentEdgeManager.currentTime() - startTime < 30000);
         Threads.sleepWithoutInterrupt(100);
       }
       assertFalse(am.getRegionStates().isRegionInTransition(hri));

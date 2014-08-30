@@ -225,7 +225,7 @@ public class ZkRegionMergeCoordination implements RegionMergeCoordination {
       transitionMergingNode(mergedRegionInfo, region_a.getRegionInfo(), region_b.getRegionInfo(),
         manager.getServer().getServerName(), rmd, RS_ZK_REGION_MERGING, RS_ZK_REGION_MERGED);
 
-      long startTime = EnvironmentEdgeManager.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       int spins = 0;
       // Now wait for the master to process the merge. We know it's done
       // when the znode is deleted. The reason we keep tickling the znode is
@@ -234,7 +234,7 @@ public class ZkRegionMergeCoordination implements RegionMergeCoordination {
         if (spins % 10 == 0) {
           LOG.debug("Still waiting on the master to process the merge for "
               + mergedRegionInfo.getEncodedName() + ", waited "
-              + (EnvironmentEdgeManager.currentTimeMillis() - startTime) + "ms");
+              + (EnvironmentEdgeManager.currentTime() - startTime) + "ms");
         }
         Thread.sleep(100);
         // When this returns -1 it means the znode doesn't exist

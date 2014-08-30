@@ -151,8 +151,8 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
           return Status.RESIGNED;
         } catch (IOException e) {
           Throwable cause = e.getCause();
-          if (e instanceof RetriesExhaustedException && (cause instanceof NotServingRegionException 
-                  || cause instanceof ConnectException 
+          if (e instanceof RetriesExhaustedException && (cause instanceof NotServingRegionException
+                  || cause instanceof ConnectException
                   || cause instanceof SocketTimeoutException)) {
             LOG.warn("log replaying of " + filename + " can't connect to the target regionserver, "
             		+ "resigning", e);
@@ -454,7 +454,7 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
 
       @Override
       public boolean progress() {
-        long t = EnvironmentEdgeManager.currentTimeMillis();
+        long t = EnvironmentEdgeManager.currentTime();
         if ((t - last_report_at) > reportPeriod) {
           last_report_at = t;
           int latestZKVersion = attemptToOwnTask(false, watcher, serverName, curTask, mode,
@@ -468,8 +468,8 @@ public class SplitLogWorker extends ZooKeeperListener implements Runnable {
         return true;
       }
     };
-    
-    HLogSplitterHandler hsh = new HLogSplitterHandler(this.server, curTask, zkVersion, reporter, 
+
+    HLogSplitterHandler hsh = new HLogSplitterHandler(this.server, curTask, zkVersion, reporter,
       this.tasksInProgress, this.splitTaskExecutor, mode);
     this.executorService.submit(hsh);
   }
