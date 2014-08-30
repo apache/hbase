@@ -79,7 +79,7 @@ public class StorefileRefresherChore extends Chore {
         continue;
       }
       String encodedName = r.getRegionInfo().getEncodedName();
-      long time = EnvironmentEdgeManager.currentTimeMillis();
+      long time = EnvironmentEdgeManager.currentTime();
       if (!lastRefreshTimes.containsKey(encodedName)) {
         lastRefreshTimes.put(encodedName, time);
       }

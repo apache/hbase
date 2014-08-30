@@ -90,10 +90,10 @@ public class TableNamespaceManager {
       // Wait for the namespace table to be assigned.
       // If timed out, we will move ahead without initializing it.
       // So that it should be initialized later on lazily.
-      long startTime = EnvironmentEdgeManager.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       int timeout = conf.getInt(NS_INIT_TIMEOUT, DEFAULT_NS_INIT_TIMEOUT);
       while (!isTableAssigned()) {
-        if (EnvironmentEdgeManager.currentTimeMillis() - startTime + 100 > timeout) {
+        if (EnvironmentEdgeManager.currentTime() - startTime + 100 > timeout) {
           LOG.warn("Timedout waiting for namespace table to be assigned.");
           return;
         }

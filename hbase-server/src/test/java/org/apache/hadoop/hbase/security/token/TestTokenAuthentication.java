@@ -117,7 +117,7 @@ public class TestTokenAuthentication {
 
     public TokenServer(Configuration conf) throws IOException {
       this.conf = conf;
-      this.startcode = EnvironmentEdgeManager.currentTimeMillis();
+      this.startcode = EnvironmentEdgeManager.currentTime();
       // Server to handle client requests.
       String hostname =
         Strings.domainNamePointerToHostName(DNS.getDefaultHost("default", "default"));

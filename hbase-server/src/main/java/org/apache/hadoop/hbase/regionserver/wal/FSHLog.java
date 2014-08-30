@@ -1919,7 +1919,7 @@ class FSHLog implements HLog, Syncable {
       // TODO: WORK ON MAKING THIS APPEND FASTER. DOING WAY TOO MUCH WORK WITH CPs, PBing, etc.
       atHeadOfRingBufferEventHandlerAppend();
 
-      long start = EnvironmentEdgeManager.currentTimeMillis();
+      long start = EnvironmentEdgeManager.currentTime();
       byte [] encodedRegionName = entry.getKey().getEncodedRegionName();
       long regionSequenceId = HLog.NO_SEQUENCE_ID;
       try {
@@ -1962,7 +1962,7 @@ class FSHLog implements HLog, Syncable {
         
         coprocessorHost.postWALWrite(entry.getHRegionInfo(), entry.getKey(), entry.getEdit());
         // Update metrics.
-        postAppend(entry, EnvironmentEdgeManager.currentTimeMillis() - start);
+        postAppend(entry, EnvironmentEdgeManager.currentTime() - start);
       } catch (Exception e) {
         LOG.fatal("Could not append. Requesting close of hlog", e);
         requestLogRoll();

@@ -394,7 +394,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    */
   private Result append(final HRegion region, final MutationProto m,
       final CellScanner cellScanner, long nonceGroup) throws IOException {
-    long before = EnvironmentEdgeManager.currentTimeMillis();
+    long before = EnvironmentEdgeManager.currentTime();
     Append append = ProtobufUtil.toAppend(m, cellScanner);
     Result r = null;
     if (region.getCoprocessorHost() != null) {
@@ -415,7 +415,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     if (regionServer.metricsRegionServer != null) {
       regionServer.metricsRegionServer.updateAppend(
-        EnvironmentEdgeManager.currentTimeMillis() - before);
+        EnvironmentEdgeManager.currentTime() - before);
     }
     return r;
   }
@@ -430,7 +430,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    */
   private Result increment(final HRegion region, final MutationProto mutation,
       final CellScanner cells, long nonceGroup) throws IOException {
-    long before = EnvironmentEdgeManager.currentTimeMillis();
+    long before = EnvironmentEdgeManager.currentTime();
     Increment increment = ProtobufUtil.toIncrement(mutation, cells);
     Result r = null;
     if (region.getCoprocessorHost() != null) {
@@ -451,7 +451,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     }
     if (regionServer.metricsRegionServer != null) {
       regionServer.metricsRegionServer.updateIncrement(
-        EnvironmentEdgeManager.currentTimeMillis() - before);
+        EnvironmentEdgeManager.currentTime() - before);
     }
     return r;
   }
@@ -569,7 +569,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   private void doBatchOp(final RegionActionResult.Builder builder, final HRegion region,
       final List<ClientProtos.Action> mutations, final CellScanner cells) {
     Mutation[] mArray = new Mutation[mutations.size()];
-    long before = EnvironmentEdgeManager.currentTimeMillis();
+    long before = EnvironmentEdgeManager.currentTime();
     boolean batchContainsPuts = false, batchContainsDelete = false;
     try {
       int i = 0;
@@ -622,7 +622,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
     }
     if (regionServer.metricsRegionServer != null) {
-      long after = EnvironmentEdgeManager.currentTimeMillis();
+      long after = EnvironmentEdgeManager.currentTime();
       if (batchContainsPuts) {
         regionServer.metricsRegionServer.updatePut(after - before);
       }
@@ -645,7 +645,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   private OperationStatus [] doReplayBatchOp(final HRegion region,
       final List<HLogSplitter.MutationReplay> mutations, long replaySeqId) throws IOException {
 
-    long before = EnvironmentEdgeManager.currentTimeMillis();
+    long before = EnvironmentEdgeManager.currentTime();
     boolean batchContainsPuts = false, batchContainsDelete = false;
     try {
       for (Iterator<HLogSplitter.MutationReplay> it = mutations.iterator(); it.hasNext();) {
@@ -677,7 +677,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         new HLogSplitter.MutationReplay[mutations.size()]), replaySeqId);
     } finally {
       if (regionServer.metricsRegionServer != null) {
-        long after = EnvironmentEdgeManager.currentTimeMillis();
+        long after = EnvironmentEdgeManager.currentTime();
           if (batchContainsPuts) {
           regionServer.metricsRegionServer.updatePut(after - before);
         }
@@ -1352,7 +1352,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @QosPriority(priority = HConstants.REPLAY_QOS)
   public ReplicateWALEntryResponse replay(final RpcController controller,
       final ReplicateWALEntryRequest request) throws ServiceException {
-    long before = EnvironmentEdgeManager.currentTimeMillis();
+    long before = EnvironmentEdgeManager.currentTime();
     CellScanner cells = ((PayloadCarryingRpcController) controller).cellScanner();
     try {
       checkOpen();
@@ -1429,7 +1429,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } finally {
       if (regionServer.metricsRegionServer != null) {
         regionServer.metricsRegionServer.updateReplay(
-          EnvironmentEdgeManager.currentTimeMillis() - before);
+          EnvironmentEdgeManager.currentTime() - before);
       }
     }
   }
@@ -1622,7 +1622,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   @Override
   public GetResponse get(final RpcController controller,
       final GetRequest request) throws ServiceException {
-    long before = EnvironmentEdgeManager.currentTimeMillis();
+    long before = EnvironmentEdgeManager.currentTime();
     try {
       checkOpen();
       requestCount.increment();
@@ -1672,7 +1672,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } finally {
       if (regionServer.metricsRegionServer != null) {
         regionServer.metricsRegionServer.updateGet(
-          EnvironmentEdgeManager.currentTimeMillis() - before);
+          EnvironmentEdgeManager.currentTime() - before);
       }
     }
   }

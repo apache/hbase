@@ -1016,18 +1016,18 @@ public class TestDistributedLogSplitting {
     rsts.get(1).getRegionServer().abort("testing");
     rsts.get(2).getRegionServer().abort("testing");
 
-    long start = EnvironmentEdgeManager.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     while (cluster.getLiveRegionServerThreads().size() > (NUM_RS - 3)) {
-      if (EnvironmentEdgeManager.currentTimeMillis() - start > 60000) {
+      if (EnvironmentEdgeManager.currentTime() - start > 60000) {
         assertTrue(false);
       }
       Thread.sleep(200);
     }
 
-    start = EnvironmentEdgeManager.currentTimeMillis();
+    start = EnvironmentEdgeManager.currentTime();
     while (HBaseTestingUtility.getAllOnlineRegions(cluster).size()
         < (NUM_REGIONS_TO_CREATE + 1)) {
-      if (EnvironmentEdgeManager.currentTimeMillis() - start > 60000) {
+      if (EnvironmentEdgeManager.currentTime() - start > 60000) {
         assertTrue("Timedout", false);
       }
       Thread.sleep(200);

@@ -375,7 +375,7 @@ public class TestCacheOnWrite {
             .setDataBlockEncoding(encoder.getDataBlockEncoding())
     );
     int rowIdx = 0;
-    long ts = EnvironmentEdgeManager.currentTimeMillis();
+    long ts = EnvironmentEdgeManager.currentTime();
     for (int iFile = 0; iFile < 5; ++iFile) {
       for (int iRow = 0; iRow < 500; ++iRow) {
         String rowStr = "" + (rowIdx * rowIdx * rowIdx) + "row" + iFile + "_" + 

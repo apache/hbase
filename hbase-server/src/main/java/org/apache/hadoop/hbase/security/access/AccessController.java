@@ -657,7 +657,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     // any cells found there inclusively.
     long latestTs = Math.max(opTs, latestCellTs);
     if (latestTs == 0 || latestTs == HConstants.LATEST_TIMESTAMP) {
-      latestTs = EnvironmentEdgeManager.currentTimeMillis();
+      latestTs = EnvironmentEdgeManager.currentTime();
     }
     get.setTimeRange(0, latestTs + 1);
     // In case of Put operation we set to read all versions. This was done to consider the case

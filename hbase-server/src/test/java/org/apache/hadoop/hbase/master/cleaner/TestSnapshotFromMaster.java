@@ -182,7 +182,7 @@ public class TestSnapshotFromMaster {
     Mockito.when(mockHandler.getSnapshot()).thenReturn(desc);
     Mockito.when(mockHandler.isFinished()).thenReturn(new Boolean(true));
     Mockito.when(mockHandler.getCompletionTimestamp())
-      .thenReturn(EnvironmentEdgeManager.currentTimeMillis());
+      .thenReturn(EnvironmentEdgeManager.currentTime());
 
     master.getSnapshotManagerForTesting()
         .setSnapshotHandlerForTesting(TABLE_NAME, mockHandler);

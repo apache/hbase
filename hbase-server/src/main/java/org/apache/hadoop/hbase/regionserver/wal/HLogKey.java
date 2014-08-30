@@ -209,7 +209,7 @@ public class HLogKey implements WritableComparable<HLogKey>, SequenceNumber {
    */
   public HLogKey(final byte [] encodedRegionName, final TableName tablename, long logSeqNum,
       long nonceGroup, long nonce) {
-    init(encodedRegionName, tablename, logSeqNum, EnvironmentEdgeManager.currentTimeMillis(),
+    init(encodedRegionName, tablename, logSeqNum, EnvironmentEdgeManager.currentTime(),
       EMPTY_UUIDS, nonceGroup, nonce);
   }
 

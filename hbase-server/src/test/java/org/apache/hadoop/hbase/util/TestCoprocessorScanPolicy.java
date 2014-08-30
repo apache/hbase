@@ -115,7 +115,7 @@ public class TestCoprocessorScanPolicy {
     p.add(F, tableName.getName(), Bytes.toBytes(2));
     t.put(p);
 
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
 
     // insert 2 versions
     p = new Put(R);
@@ -165,7 +165,7 @@ public class TestCoprocessorScanPolicy {
     desc.addFamily(hcd);
     TEST_UTIL.getHBaseAdmin().createTable(desc);
     HTable t = new HTable(new Configuration(TEST_UTIL.getConfiguration()), tableName);
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     ManualEnvironmentEdge me = new ManualEnvironmentEdge();
     me.setValue(now);
     EnvironmentEdgeManagerTestHelper.injectEdge(me);

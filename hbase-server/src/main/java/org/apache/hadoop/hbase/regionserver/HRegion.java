@@ -752,7 +752,7 @@ public class HRegion implements HeapSize { // , Writable{
     // Initialize split policy
     this.splitPolicy = RegionSplitPolicy.create(this, conf);
 
-    this.lastFlushTime = EnvironmentEdgeManager.currentTimeMillis();
+    this.lastFlushTime = EnvironmentEdgeManager.currentTime();
     // Use maximum of log sequenceid or that which was found in stores
     // (particularly if no recovered edits, seqid will be -1).
     long nextSeqid = maxSeqId + 1;
@@ -1683,7 +1683,7 @@ public class HRegion implements HeapSize { // , Writable{
     if (flushCheckInterval <= 0) { //disabled
       return false;
     }
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     //if we flushed in the recent past, we don't need to do again now
     if ((now - getLastFlushTime() < flushCheckInterval)) {
       return false;
@@ -1734,7 +1734,7 @@ public class HRegion implements HeapSize { // , Writable{
       // Don't flush when server aborting, it's unsafe
       throw new IOException("Aborting flush because server is aborted...");
     }
-    final long startTime = EnvironmentEdgeManager.currentTimeMillis();
+    final long startTime = EnvironmentEdgeManager.currentTime();
     // If nothing to flush, return, but we need to safely update the region sequence id
     if (this.memstoreSize.get() <= 0) {
       // Take an update lock because am about to change the sequence id and we want the sequence id
@@ -1960,7 +1960,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     // Record latest flush time
-    this.lastFlushTime = EnvironmentEdgeManager.currentTimeMillis();
+    this.lastFlushTime = EnvironmentEdgeManager.currentTime();
 
     // Update the last flushed sequence id for region. TODO: This is dup'd inside the WAL/FSHlog.
     this.lastFlushSeqId = flushSeqId;
@@ -1971,7 +1971,7 @@ public class HRegion implements HeapSize { // , Writable{
       notifyAll(); // FindBugs NN_NAKED_NOTIFY
     }
 
-    long time = EnvironmentEdgeManager.currentTimeMillis() - startTime;
+    long time = EnvironmentEdgeManager.currentTime() - startTime;
     long memstoresize = this.memstoreSize.get();
     String msg = "Finished memstore flush of ~" +
       StringUtils.byteDesc(totalFlushableSize) + "/" + totalFlushableSize +
@@ -2515,7 +2515,7 @@ public class HRegion implements HeapSize { // , Writable{
       // we acquire at least one.
       // ----------------------------------
       int numReadyToWrite = 0;
-      long now = EnvironmentEdgeManager.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       while (lastIndexExclusive < batchOp.operations.length) {
         Mutation mutation = batchOp.getMutation(lastIndexExclusive);
         boolean isPutMutation = mutation instanceof Put;
@@ -2600,7 +2600,7 @@ public class HRegion implements HeapSize { // , Writable{
 
       // we should record the timestamp only after we have acquired the rowLock,
       // otherwise, newer puts/deletes are not guaranteed to have a newer timestamp
-      now = EnvironmentEdgeManager.currentTimeMillis();
+      now = EnvironmentEdgeManager.currentTime();
       byte[] byteNow = Bytes.toBytes(now);
 
       // Nothing to put/delete -- an exception in the above such as NoSuchColumnFamily?
@@ -3370,7 +3370,7 @@ public class HRegion implements HeapSize { // , Writable{
             2000);
         // How often to send a progress report (default 1/2 master timeout)
         int period = this.conf.getInt("hbase.hstore.report.period", 300000);
-        long lastReport = EnvironmentEdgeManager.currentTimeMillis();
+        long lastReport = EnvironmentEdgeManager.currentTime();
 
         while ((entry = reader.next()) != null) {
           HLogKey key = entry.getKey();
@@ -3385,7 +3385,7 @@ public class HRegion implements HeapSize { // , Writable{
             if (intervalEdits >= interval) {
               // Number of edits interval reached
               intervalEdits = 0;
-              long cur = EnvironmentEdgeManager.currentTimeMillis();
+              long cur = EnvironmentEdgeManager.currentTime();
               if (lastReport + period <= cur) {
                 status.setStatus("Replaying edits..." +
                     " skipped=" + skippedEdits +
@@ -4726,7 +4726,7 @@ public class HRegion implements HeapSize { // , Writable{
     meta.checkResources();
     // The row key is the region name
     byte[] row = r.getRegionName();
-    final long now = EnvironmentEdgeManager.currentTimeMillis();
+    final long now = EnvironmentEdgeManager.currentTime();
     final List<Cell> cells = new ArrayList<Cell>(2);
     cells.add(new KeyValue(row, HConstants.CATALOG_FAMILY,
       HConstants.REGIONINFO_QUALIFIER, now,
@@ -5025,7 +5025,7 @@ public class HRegion implements HeapSize { // , Writable{
     // Short circuit the read only case
     if (processor.readOnly()) {
       try {
-        long now = EnvironmentEdgeManager.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
         doProcessRowWithTimeout(
             processor, now, this, null, null, timeout);
         processor.postProcess(this, walEdit, true);
@@ -5060,7 +5060,7 @@ public class HRegion implements HeapSize { // , Writable{
       // Get a mvcc write number
       mvccNum = MultiVersionConsistencyControl.getPreAssignedWriteNumber(this.sequenceId);
 
-      long now = EnvironmentEdgeManager.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       try {
         // 4. Let the processor scan the rows, generate mutations and add
         //    waledits
@@ -5261,7 +5261,7 @@ public class HRegion implements HeapSize { // , Writable{
           // now start my own transaction
           mvccNum = MultiVersionConsistencyControl.getPreAssignedWriteNumber(this.sequenceId);
           w = mvcc.beginMemstoreInsertWithSeqNum(mvccNum);
-          long now = EnvironmentEdgeManager.currentTimeMillis();
+          long now = EnvironmentEdgeManager.currentTime();
           // Process each family
           for (Map.Entry<byte[], List<Cell>> family : append.getFamilyCellMap().entrySet()) {
 
@@ -5478,7 +5478,7 @@ public class HRegion implements HeapSize { // , Writable{
           // now start my own transaction
           mvccNum = MultiVersionConsistencyControl.getPreAssignedWriteNumber(this.sequenceId);
           w = mvcc.beginMemstoreInsertWithSeqNum(mvccNum);
-          long now = EnvironmentEdgeManager.currentTimeMillis();
+          long now = EnvironmentEdgeManager.currentTime();
           // Process each family
           for (Map.Entry<byte [], List<Cell>> family:
               increment.getFamilyCellMap().entrySet()) {

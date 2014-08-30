@@ -50,7 +50,7 @@ public class TableLockChecker {
   public void checkTableLocks() throws IOException {
     TableLockManager tableLockManager
       = TableLockManager.createTableLockManager(zkWatcher.getConfiguration(), zkWatcher, null);
-    final long expireDate = EnvironmentEdgeManager.currentTimeMillis() - expireTimeout;
+    final long expireDate = EnvironmentEdgeManager.currentTime() - expireTimeout;
 
     MetadataHandler handler = new MetadataHandler() {
       @Override

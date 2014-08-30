@@ -713,11 +713,11 @@ public class TestAssignmentManagerOnCluster {
       HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
       // Region will be opened, but it won't complete
       master.assignRegion(hri);
-      long end = EnvironmentEdgeManager.currentTimeMillis() + 20000;
+      long end = EnvironmentEdgeManager.currentTime() + 20000;
       // Wait till postOpen is called
       while (!MyRegionObserver.postOpenCalled ) {
         assertFalse("Timed out waiting for postOpen to be called",
-          EnvironmentEdgeManager.currentTimeMillis() > end);
+          EnvironmentEdgeManager.currentTime() > end);
         Thread.sleep(300);
       }
 

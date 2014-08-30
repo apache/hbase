@@ -234,7 +234,7 @@ public class SplitLogManager {
     LOG.debug("Scheduling batch of logs to split");
     SplitLogCounters.tot_mgr_log_split_batch_start.incrementAndGet();
     LOG.info("started splitting " + logfiles.length + " logs in " + logDirs);
-    long t = EnvironmentEdgeManager.currentTimeMillis();
+    long t = EnvironmentEdgeManager.currentTime();
     long totalSize = 0;
     TaskBatch batch = new TaskBatch();
     Boolean isMetaRecovery = (filter == null) ? null : false;
@@ -288,7 +288,7 @@ public class SplitLogManager {
     String msg =
         "finished splitting (more than or equal to) " + totalSize + " bytes in " + batch.installed
             + " log files in " + logDirs + " in "
-            + (EnvironmentEdgeManager.currentTimeMillis() - t) + "ms";
+            + (EnvironmentEdgeManager.currentTime() - t) + "ms";
     status.markComplete(msg);
     LOG.info(msg);
     return totalSize;
@@ -301,7 +301,7 @@ public class SplitLogManager {
    * @return true if a new entry is created, false if it is already there.
    */
   boolean enqueueSplitTask(String taskname, TaskBatch batch) {
-    lastTaskCreateTime = EnvironmentEdgeManager.currentTimeMillis();
+    lastTaskCreateTime = EnvironmentEdgeManager.currentTime();
     String task =
         ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
             .getSplitLogManagerCoordination().prepareTask(taskname);
@@ -709,7 +709,7 @@ public class SplitLogManager {
         }
       }
       if (tot > 0) {
-        long now = EnvironmentEdgeManager.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
         if (now > lastLog + 5000) {
           lastLog = now;
           LOG.info("total tasks = " + tot + " unassigned = " + unassigned + " tasks=" + tasks);
@@ -729,7 +729,7 @@ public class SplitLogManager {
       // that there is always one worker in the system
       if (tot > 0
           && !found_assigned_task
-          && ((EnvironmentEdgeManager.currentTimeMillis() - lastTaskCreateTime) > unassignedTimeout)) {
+          && ((EnvironmentEdgeManager.currentTime() - lastTaskCreateTime) > unassignedTimeout)) {
         for (Map.Entry<String, Task> e : tasks.entrySet()) {
           String key = e.getKey();
           Task task = e.getValue();
@@ -764,7 +764,7 @@ public class SplitLogManager {
 
       // Garbage collect left-over
       long timeInterval =
-          EnvironmentEdgeManager.currentTimeMillis()
+          EnvironmentEdgeManager.currentTime()
               - ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
                   .getSplitLogManagerCoordination().getLastRecoveryTime();
       if (!failedRecoveringRegionDeletions.isEmpty()

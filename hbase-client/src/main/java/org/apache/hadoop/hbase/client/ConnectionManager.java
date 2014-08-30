@@ -2513,7 +2513,7 @@ class ConnectionManager {
 
     public ServerErrorTracker(long timeout, int maxRetries) {
       this.maxRetries = maxRetries;
-      this.canRetryUntil = EnvironmentEdgeManager.currentTimeMillis() + timeout;
+      this.canRetryUntil = EnvironmentEdgeManager.currentTime() + timeout;
       this.startTrackingTime = new Date().getTime();
     }
 
@@ -2523,7 +2523,7 @@ class ConnectionManager {
     boolean canRetryMore(int numRetry) {
       // If there is a single try we must not take into account the time.
       return numRetry < maxRetries || (maxRetries > 1 &&
-          EnvironmentEdgeManager.currentTimeMillis() < this.canRetryUntil);
+          EnvironmentEdgeManager.currentTime() < this.canRetryUntil);
     }
 
     /**

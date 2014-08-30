@@ -63,7 +63,7 @@ public class TimeoutExceptionInjector {
           // mark the task is run, to avoid repeats
           TimeoutExceptionInjector.this.complete = true;
         }
-        long end = EnvironmentEdgeManager.currentTimeMillis();
+        long end = EnvironmentEdgeManager.currentTime();
         TimeoutException tee =  new TimeoutException(
             "Timeout caused Foreign Exception", start, end, maxTime);
         String source = "timer-" + timer;
@@ -107,7 +107,7 @@ public class TimeoutExceptionInjector {
     }
     LOG.debug("Scheduling process timer to run in: " + maxTime + " ms");
     timer.schedule(timerTask, maxTime);
-    this.start = EnvironmentEdgeManager.currentTimeMillis();
+    this.start = EnvironmentEdgeManager.currentTime();
   }
 
   /**

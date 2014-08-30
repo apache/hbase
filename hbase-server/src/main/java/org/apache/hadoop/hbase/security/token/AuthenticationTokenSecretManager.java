@@ -126,7 +126,7 @@ public class AuthenticationTokenSecretManager
 
   @Override
   protected byte[] createPassword(AuthenticationTokenIdentifier identifier) {
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     AuthenticationKey secretKey = currentKey;
     identifier.setKeyId(secretKey.getKeyId());
     identifier.setIssueDate(now);
@@ -139,7 +139,7 @@ public class AuthenticationTokenSecretManager
   @Override
   public byte[] retrievePassword(AuthenticationTokenIdentifier identifier)
       throws InvalidToken {
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     if (identifier.getExpirationDate() < now) {
       throw new InvalidToken("Token has expired");
     }
@@ -223,7 +223,7 @@ public class AuthenticationTokenSecretManager
       return;
     }
 
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     Iterator<AuthenticationKey> iter = allKeys.values().iterator();
     while (iter.hasNext()) {
       AuthenticationKey key = iter.next();
@@ -247,7 +247,7 @@ public class AuthenticationTokenSecretManager
       return;
     }
 
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     AuthenticationKey prev = currentKey;
     AuthenticationKey newKey = new AuthenticationKey(++idSeq,
         Long.MAX_VALUE, // don't allow to expire until it's replaced by a new key
@@ -314,7 +314,7 @@ public class AuthenticationTokenSecretManager
       isMaster = true;
 
       while (!stopped) {
-        long now = EnvironmentEdgeManager.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
 
         // clear any expired
         removeExpiredKeys();

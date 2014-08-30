@@ -25,15 +25,13 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class DefaultEnvironmentEdge implements EnvironmentEdge {
-
-
   /**
    * {@inheritDoc}
    * <p/>
    * This implementation returns {@link System#currentTimeMillis()}
    */
   @Override
-  public long currentTimeMillis() {
+  public long currentTime() {
     return System.currentTimeMillis();
   }
 }

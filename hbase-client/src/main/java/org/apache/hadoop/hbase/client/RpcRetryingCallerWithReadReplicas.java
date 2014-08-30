@@ -252,7 +252,7 @@ public class RpcRetryingCallerWithReadReplicas {
 
     RetriesExhaustedException.ThrowableWithExtraContext qt =
         new RetriesExhaustedException.ThrowableWithExtraContext(t,
-            EnvironmentEdgeManager.currentTimeMillis(), null);
+            EnvironmentEdgeManager.currentTime(), null);
 
     List<RetriesExhaustedException.ThrowableWithExtraContext> exceptions =
         Collections.singletonList(qt);

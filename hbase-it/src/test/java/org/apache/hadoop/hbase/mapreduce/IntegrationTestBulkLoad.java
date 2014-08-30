@@ -246,7 +246,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
   private void runLinkedListMRJob(int iteration) throws Exception {
     String jobName =  IntegrationTestBulkLoad.class.getSimpleName() + " - " +
-        EnvironmentEdgeManager.currentTimeMillis();
+        EnvironmentEdgeManager.currentTime();
     Configuration conf = new Configuration(util.getConfiguration());
     Path p = util.getDataTestDirOnTestFS(getTablename() +  "-" + iteration);
     HTable table = new HTable(conf, getTablename());
@@ -639,7 +639,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
   private void runCheck() throws IOException, ClassNotFoundException, InterruptedException {
     LOG.info("Running check");
     Configuration conf = getConf();
-    String jobName = getTablename() + "_check" + EnvironmentEdgeManager.currentTimeMillis();
+    String jobName = getTablename() + "_check" + EnvironmentEdgeManager.currentTime();
     Path p = util.getDataTestDirOnTestFS(jobName);
 
     Job job = new Job(conf);

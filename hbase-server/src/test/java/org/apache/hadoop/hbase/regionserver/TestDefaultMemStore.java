@@ -928,7 +928,7 @@ public class TestDefaultMemStore extends TestCase {
   private class EnvironmentEdgeForMemstoreTest implements EnvironmentEdge {
     long t = 1234;
     @Override
-    public long currentTimeMillis() {
+    public long currentTime() {
       return t; 
     }
     public void setCurrentTimeMillis(long t) {

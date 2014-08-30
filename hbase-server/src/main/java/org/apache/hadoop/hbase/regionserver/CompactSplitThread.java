@@ -474,9 +474,9 @@ public class CompactSplitThread implements CompactionRequestor {
       try {
         // Note: please don't put single-compaction logic here;
         //       put it into region/store/etc. This is CST logic.
-        long start = EnvironmentEdgeManager.currentTimeMillis();
+        long start = EnvironmentEdgeManager.currentTime();
         boolean completed = region.compact(compaction, store);
-        long now = EnvironmentEdgeManager.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
         LOG.info(((completed) ? "Completed" : "Aborted") + " compaction: " +
               this + "; duration=" + StringUtils.formatTimeDiff(now, start));
         if (completed) {

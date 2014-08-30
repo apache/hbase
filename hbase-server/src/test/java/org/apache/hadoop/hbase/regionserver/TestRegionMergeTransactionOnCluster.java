@@ -133,10 +133,10 @@ public class TestRegionMergeTransactionOnCluster {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     AssignmentManager am = cluster.getMaster().getAssignmentManager();
     RegionStates regionStates = am.getRegionStates();
-    long start = EnvironmentEdgeManager.currentTimeMillis();
+    long start = EnvironmentEdgeManager.currentTime();
     while (!regionStates.isRegionInState(hri, State.MERGED)) {
       assertFalse("Timed out in waiting one merged region to be in state MERGED",
-        EnvironmentEdgeManager.currentTimeMillis() - start > 60000);
+        EnvironmentEdgeManager.currentTime() - start > 60000);
       Thread.sleep(500);
     }
 

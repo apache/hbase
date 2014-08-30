@@ -337,7 +337,7 @@ public class ScanQueryMatcher {
      
       if ((!isUserScan)
           && timeToPurgeDeletes > 0
-          && (EnvironmentEdgeManager.currentTimeMillis() - timestamp) 
+          && (EnvironmentEdgeManager.currentTime() - timestamp) 
             <= timeToPurgeDeletes) {
         return MatchCode.INCLUDE;
       } else if (retainDeletesInOutput || mvccVersion > maxReadPointToTrackVersions) {

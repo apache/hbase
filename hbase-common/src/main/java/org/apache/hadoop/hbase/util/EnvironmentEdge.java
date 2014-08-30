@@ -28,11 +28,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public interface EnvironmentEdge {
-
   /**
-   * Returns the currentTimeMillis.
+   * Returns the currentTime.
    *
-   * @return currentTimeMillis.
+   * @return Current time.
    */
-  long currentTimeMillis();
+  long currentTime();
 }

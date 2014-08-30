@@ -171,7 +171,7 @@ public class FSHDFSUtils extends FSUtils {
       final Configuration conf, final CancelableProgressable reporter)
   throws IOException {
     LOG.info("Recovering lease on dfs file " + p);
-    long startWaiting = EnvironmentEdgeManager.currentTimeMillis();
+    long startWaiting = EnvironmentEdgeManager.currentTime();
     // Default is 15 minutes. It's huge, but the idea is that if we have a major issue, HDFS
     // usually needs 10 minutes before marking the nodes as dead. So we're putting ourselves
     // beyond that limit 'to be safe'.
@@ -200,8 +200,8 @@ public class FSHDFSUtils extends FSUtils {
         } else {
           // Cycle here until subsequentPause elapses.  While spinning, check isFileClosed if
           // available (should be in hadoop 2.0.5... not in hadoop 1 though.
-          long localStartWaiting = EnvironmentEdgeManager.currentTimeMillis();
-          while ((EnvironmentEdgeManager.currentTimeMillis() - localStartWaiting) <
+          long localStartWaiting = EnvironmentEdgeManager.currentTime();
+          while ((EnvironmentEdgeManager.currentTime() - localStartWaiting) <
               subsequentPause) {
             Thread.sleep(conf.getInt("hbase.lease.recovery.pause", 1000));
             if (findIsFileClosedMeth) {
@@ -232,7 +232,7 @@ public class FSHDFSUtils extends FSUtils {
 
   boolean checkIfTimedout(final Configuration conf, final long recoveryTimeout,
       final int nbAttempt, final Path p, final long startWaiting) {
-    if (recoveryTimeout < EnvironmentEdgeManager.currentTimeMillis()) {
+    if (recoveryTimeout < EnvironmentEdgeManager.currentTime()) {
       LOG.warn("Cannot recoverLease after trying for " +
         conf.getInt("hbase.lease.recovery.timeout", 900000) +
         "ms (hbase.lease.recovery.timeout); continuing, but may be DATALOSS!!!; " +
@@ -279,7 +279,7 @@ public class FSHDFSUtils extends FSUtils {
    */
   private String getLogMessageDetail(final int nbAttempt, final Path p, final long startWaiting) {
     return "attempt=" + nbAttempt + " on file=" + p + " after " +
-      (EnvironmentEdgeManager.currentTimeMillis() - startWaiting) + "ms";
+      (EnvironmentEdgeManager.currentTime() - startWaiting) + "ms";
   }
 
   /**

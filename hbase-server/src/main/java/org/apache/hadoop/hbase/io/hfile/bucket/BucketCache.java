@@ -918,7 +918,7 @@ public class BucketCache implements BlockCache, HeapSize {
    * cache
    */
   private void checkIOErrorIsTolerated() {
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     if (this.ioErrorStartTime > 0) {
       if (cacheEnabled && (now - ioErrorStartTime) > this.ioErrorsTolerationDuration) {
         LOG.error("IO errors duration time has exceeded " + ioErrorsTolerationDuration +

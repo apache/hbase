@@ -1128,7 +1128,7 @@ public class TestHCM {
     ManualEnvironmentEdge timeMachine = new ManualEnvironmentEdge();
     EnvironmentEdgeManager.injectEdge(timeMachine);
     try {
-      long timeBase = timeMachine.currentTimeMillis();
+      long timeBase = timeMachine.currentTime();
       long largeAmountOfTime = ANY_PAUSE * 1000;
       ConnectionManager.ServerErrorTracker tracker =
           new ConnectionManager.ServerErrorTracker(largeAmountOfTime, 100);

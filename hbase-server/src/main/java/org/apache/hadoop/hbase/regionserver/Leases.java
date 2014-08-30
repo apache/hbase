@@ -290,7 +290,7 @@ public class Leases extends HasThread {
     }
 
     public long getDelay(TimeUnit unit) {
-      return unit.convert(this.expirationTime - EnvironmentEdgeManager.currentTimeMillis(),
+      return unit.convert(this.expirationTime - EnvironmentEdgeManager.currentTime(),
           TimeUnit.MILLISECONDS);
     }
 
@@ -305,7 +305,7 @@ public class Leases extends HasThread {
      * Resets the expiration time of the lease.
      */
     public void resetExpirationTime() {
-      this.expirationTime = EnvironmentEdgeManager.currentTimeMillis() + this.leaseTimeoutPeriod;
+      this.expirationTime = EnvironmentEdgeManager.currentTime() + this.leaseTimeoutPeriod;
     }
   }
 }

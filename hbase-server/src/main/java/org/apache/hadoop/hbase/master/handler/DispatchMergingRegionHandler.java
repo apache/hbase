@@ -92,7 +92,7 @@ public class DispatchMergingRegionHandler extends EventHandler {
               .getEncodedName()) + " is not online now");
       return;
     }
-    long startTime = EnvironmentEdgeManager.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
     boolean onSameRS = region_a_location.equals(region_b_location);
 
     // Make sure regions are on the same regionserver before send merge
@@ -134,7 +134,7 @@ public class DispatchMergingRegionHandler extends EventHandler {
             // RegionInTransition any more
             break;
           }
-          if ((EnvironmentEdgeManager.currentTimeMillis() - startTime) > timeout) break;
+          if ((EnvironmentEdgeManager.currentTime() - startTime) > timeout) break;
         } catch (InterruptedException e) {
           InterruptedIOException iioe = new InterruptedIOException();
           iioe.initCause(e);
@@ -144,7 +144,7 @@ public class DispatchMergingRegionHandler extends EventHandler {
     }
 
     if (onSameRS) {
-      startTime = EnvironmentEdgeManager.currentTimeMillis();
+      startTime = EnvironmentEdgeManager.currentTime();
       while (!masterServices.isStopped()) {
         try {
           masterServices.getServerManager().sendRegionsMerge(region_a_location,
@@ -153,7 +153,7 @@ public class DispatchMergingRegionHandler extends EventHandler {
             region_a.getEncodedName() + "," + region_b.getEncodedName() + ", focible=" + forcible);
           break;
         } catch (RegionOpeningException roe) {
-          if ((EnvironmentEdgeManager.currentTimeMillis() - startTime) > timeout) {
+          if ((EnvironmentEdgeManager.currentTime() - startTime) > timeout) {
             LOG.warn("Failed sending merge to " + region_a_location + " after " + timeout + "ms",
               roe);
             break;
@@ -170,7 +170,7 @@ public class DispatchMergingRegionHandler extends EventHandler {
       LOG.info("Cancel merging regions " + region_a.getRegionNameAsString()
           + ", " + region_b.getRegionNameAsString()
           + ", because can't move them together after "
-          + (EnvironmentEdgeManager.currentTimeMillis() - startTime) + "ms");
+          + (EnvironmentEdgeManager.currentTime() - startTime) + "ms");
     }
   }
 

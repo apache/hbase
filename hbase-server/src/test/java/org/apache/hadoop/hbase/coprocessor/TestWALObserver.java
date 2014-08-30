@@ -187,7 +187,7 @@ public class TestWALObserver {
     assertFalse(modifiedFamily1);
 
     // it's where WAL write cp should occur.
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     log.append(hri, hri.getTable(), edit, now, htd, sequenceId);
 
     // the edit shall have been change now by the coprocessor.
@@ -242,7 +242,7 @@ public class TestWALObserver {
     HLog wal = createWAL(this.conf);
     // Put p = creatPutWith2Families(TEST_ROW);
     WALEdit edit = new WALEdit();
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     // addFamilyMapToWALEdit(p.getFamilyMap(), edit);
     final int countPerFamily = 1000;
     // for (HColumnDescriptor hcd: hri.getTableDesc().getFamilies()) {
@@ -379,9 +379,8 @@ public class TestWALObserver {
       byte[] qualifierBytes = Bytes.toBytes(Integer.toString(j));
       byte[] columnBytes = Bytes.toBytes(familyStr + ":" + Integer.toString(j));
       WALEdit edit = new WALEdit();
-      edit.add(new KeyValue(rowName, family, qualifierBytes, ee
-          .currentTimeMillis(), columnBytes));
-      wal.append(hri, tableName, edit, ee.currentTimeMillis(), htd, sequenceId);
+      edit.add(new KeyValue(rowName, family, qualifierBytes, ee.currentTime(), columnBytes));
+      wal.append(hri, tableName, edit, ee.currentTime(), htd, sequenceId);
     }
   }
 
@@ -406,5 +405,4 @@ public class TestWALObserver {
     htd.addFamily(c);
     return htd;
   }
-
 }

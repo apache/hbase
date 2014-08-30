@@ -69,7 +69,7 @@ public class TestMinVersions {
     try {
 
       // 2s in the past
-      long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000;
+      long ts = EnvironmentEdgeManager.currentTime() - 2000;
 
       Put p = new Put(T1, ts);
       p.add(c0, c0, T1);
@@ -116,7 +116,7 @@ public class TestMinVersions {
     HTableDescriptor htd = hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, false);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
     // 2s in the past
-    long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000;
+    long ts = EnvironmentEdgeManager.currentTime() - 2000;
 
     try {
       Put p = new Put(T1, ts-1);
@@ -171,7 +171,7 @@ public class TestMinVersions {
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     // 2s in the past
-    long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000;
+    long ts = EnvironmentEdgeManager.currentTime() - 2000;
 
     try {
       Put p = new Put(T1, ts-2);
@@ -229,7 +229,7 @@ public class TestMinVersions {
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     // 2s in the past
-    long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000;
+    long ts = EnvironmentEdgeManager.currentTime() - 2000;
 
     try {
       // 2nd version
@@ -305,7 +305,7 @@ public class TestMinVersions {
     try {
 
       // 2s in the past
-      long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000;
+      long ts = EnvironmentEdgeManager.currentTime() - 2000;
 
        // 1st version
       Put p = new Put(T1, ts-3);
@@ -396,7 +396,7 @@ public class TestMinVersions {
     final byte [] c1 = COLUMNS[1];
 
     // 2s in the past
-    long ts = EnvironmentEdgeManager.currentTimeMillis() - 2000;
+    long ts = EnvironmentEdgeManager.currentTime() - 2000;
     try {
 
       Put p = new Put(T1, ts-3);

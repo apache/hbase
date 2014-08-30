@@ -83,7 +83,7 @@ public class MetricsSource {
    * @param timestamp write time of the edit
    */
   public void setAgeOfLastShippedOp(long timestamp) {
-    long age = EnvironmentEdgeManager.currentTimeMillis() - timestamp;
+    long age = EnvironmentEdgeManager.currentTime() - timestamp;
     rms.setGauge(ageOfLastShippedOpKey, age);
     rms.setGauge(SOURCE_AGE_OF_LAST_SHIPPED_OP, age);
     this.lastTimestamp = timestamp;

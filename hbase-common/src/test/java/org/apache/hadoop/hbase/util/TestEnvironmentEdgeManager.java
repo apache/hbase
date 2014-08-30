@@ -58,11 +58,9 @@ public class TestEnvironmentEdgeManager {
     EnvironmentEdge mock = mock(EnvironmentEdge.class);
     EnvironmentEdgeManager.injectEdge(mock);
     long expectation = 3456;
-    when(mock.currentTimeMillis()).thenReturn(expectation);
-    long result = EnvironmentEdgeManager.currentTimeMillis();
-    verify(mock).currentTimeMillis();
+    when(mock.currentTime()).thenReturn(expectation);
+    long result = EnvironmentEdgeManager.currentTime();
+    verify(mock).currentTime();
     assertEquals(expectation, result);
   }
-
 }
-

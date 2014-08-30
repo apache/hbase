@@ -39,7 +39,7 @@ public class ManualEnvironmentEdge implements EnvironmentEdge {
   }
 
   @Override
-  public long currentTimeMillis() {
+  public long currentTime() {
     return this.value;
   }
 }

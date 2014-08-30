@@ -94,7 +94,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     // 2,4,5    
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, new ScanInfo(fam2,
         0, 1, ttl, false, 0, rowComparator), get.getFamilyMap().get(fam2),
-        EnvironmentEdgeManager.currentTimeMillis() - ttl);
+        EnvironmentEdgeManager.currentTime() - ttl);
 
     List<KeyValue> memstore = new ArrayList<KeyValue>();
     memstore.add(new KeyValue(row1, fam2, col1, 1, data));
@@ -176,7 +176,7 @@ public class TestQueryMatcher extends HBaseTestCase {
 
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, new ScanInfo(fam2,
         0, 1, ttl, false, 0, rowComparator), null,
-        EnvironmentEdgeManager.currentTimeMillis() - ttl);
+        EnvironmentEdgeManager.currentTime() - ttl);
 
     List<KeyValue> memstore = new ArrayList<KeyValue>();
     memstore.add(new KeyValue(row1, fam2, col1, 1, data));
@@ -227,7 +227,7 @@ public class TestQueryMatcher extends HBaseTestCase {
         ScanQueryMatcher.MatchCode.DONE
     };
 
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, new ScanInfo(fam2,
         0, 1, testTTL, false, 0, rowComparator), get.getFamilyMap().get(fam2),
         now - testTTL);
@@ -281,7 +281,7 @@ public class TestQueryMatcher extends HBaseTestCase {
         ScanQueryMatcher.MatchCode.DONE
     };
 
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     ScanQueryMatcher qm = new ScanQueryMatcher(scan, new ScanInfo(fam2,
         0, 1, testTTL, false, 0, rowComparator), null,
         now - testTTL);
@@ -336,7 +336,7 @@ public class TestQueryMatcher extends HBaseTestCase {
 
   private void testDropDeletes(
       byte[] from, byte[] to, byte[][] rows, MatchCode... expected) throws IOException {
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     // Set time to purge deletes to negative value to avoid it ever happening.
     ScanInfo scanInfo = new ScanInfo(fam2, 0, 1, ttl, false, -1L, rowComparator);
     NavigableSet<byte[]> cols = get.getFamilyMap().get(fam2);

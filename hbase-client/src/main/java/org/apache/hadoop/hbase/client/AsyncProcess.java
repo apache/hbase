@@ -943,7 +943,7 @@ class AsyncProcess {
      * Starts waiting to issue replica calls on a different thread; or issues them immediately.
      */
     private void startWaitingForReplicaCalls(List<Action<Row>> actionsForReplicaThread) {
-      long startTime = EnvironmentEdgeManager.currentTimeMillis();
+      long startTime = EnvironmentEdgeManager.currentTime();
       ReplicaCallIssuingRunnable replicaRunnable = new ReplicaCallIssuingRunnable(
           actionsForReplicaThread, startTime);
       if (primaryCallTimeoutMicroseconds == 0) {
@@ -1421,10 +1421,10 @@ class AsyncProcess {
 
     private boolean waitUntilDone(long cutoff) throws InterruptedException {
       boolean hasWait = cutoff != Long.MAX_VALUE;
-      long lastLog = EnvironmentEdgeManager.currentTimeMillis();
+      long lastLog = EnvironmentEdgeManager.currentTime();
       long currentInProgress;
       while (0 != (currentInProgress = actionsInProgress.get())) {
-        long now = EnvironmentEdgeManager.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
         if (hasWait && (now * 1000L) > cutoff) {
           return false;
         }
@@ -1504,11 +1504,11 @@ class AsyncProcess {
 
   /** Wait until the async does not have more than max tasks in progress. */
   private void waitForMaximumCurrentTasks(int max) throws InterruptedIOException {
-    long lastLog = EnvironmentEdgeManager.currentTimeMillis();
+    long lastLog = EnvironmentEdgeManager.currentTime();
     long currentInProgress, oldInProgress = Long.MAX_VALUE;
     while ((currentInProgress = this.tasksInProgress.get()) > max) {
       if (oldInProgress != currentInProgress) { // Wait for in progress to change.
-        long now = EnvironmentEdgeManager.currentTimeMillis();
+        long now = EnvironmentEdgeManager.currentTime();
         if (now > lastLog + 10000) {
           lastLog = now;
           LOG.info("#" + id + ", waiting for some tasks to finish. Expected max="

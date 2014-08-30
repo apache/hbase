@@ -1411,7 +1411,7 @@ public class MetaTableAccessor {
   public static Put addLocation(final Put p, final ServerName sn, long openSeqNum, int replicaId){
     // using regionserver's local time as the timestamp of Put.
     // See: HBASE-11536
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     p.addImmutable(HConstants.CATALOG_FAMILY, getServerColumn(replicaId), now,
       Bytes.toBytes(sn.getHostAndPort()));
     p.addImmutable(HConstants.CATALOG_FAMILY, getStartCodeColumn(replicaId), now,

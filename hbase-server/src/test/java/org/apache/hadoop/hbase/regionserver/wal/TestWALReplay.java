@@ -784,14 +784,14 @@ public class TestWALReplay {
 
     // Add an edit to another family, should be skipped.
     WALEdit edit = new WALEdit();
-    long now = ee.currentTimeMillis();
+    long now = ee.currentTime();
     edit.add(new KeyValue(rowName, Bytes.toBytes("another family"), rowName,
       now, rowName));
     wal.append(hri, tableName, edit, now, htd, sequenceId);
 
     // Delete the c family to verify deletes make it over.
     edit = new WALEdit();
-    now = ee.currentTimeMillis();
+    now = ee.currentTime();
     edit.add(new KeyValue(rowName, Bytes.toBytes("c"), null, now,
       KeyValue.Type.DeleteFamily));
     wal.append(hri, tableName, edit, now, htd, sequenceId);
@@ -976,8 +976,8 @@ public class TestWALReplay {
       byte[] columnBytes = Bytes.toBytes(familyStr + ":" + Integer.toString(j));
       WALEdit edit = new WALEdit();
       edit.add(new KeyValue(rowName, family, qualifierBytes,
-        ee.currentTimeMillis(), columnBytes));
-      wal.append(hri, tableName, edit, ee.currentTimeMillis(), htd, sequenceId);
+        ee.currentTime(), columnBytes));
+      wal.append(hri, tableName, edit, ee.currentTime(), htd, sequenceId);
     }
   }
 
@@ -989,7 +989,7 @@ public class TestWALReplay {
     for (int j = 0; j < count; j++) {
       byte[] qualifier = Bytes.toBytes(qualifierPrefix + Integer.toString(j));
       Put p = new Put(rowName);
-      p.add(family, qualifier, ee.currentTimeMillis(), rowName);
+      p.add(family, qualifier, ee.currentTime(), rowName);
       r.put(p);
       puts.add(p);
     }

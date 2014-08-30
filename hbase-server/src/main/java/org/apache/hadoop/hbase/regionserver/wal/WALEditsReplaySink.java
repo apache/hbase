@@ -120,7 +120,7 @@ public class WALEditsReplaySink {
       regionEntries.add(entry);
     }
 
-    long startTime = EnvironmentEdgeManager.currentTimeMillis();
+    long startTime = EnvironmentEdgeManager.currentTime();
 
     // replaying edits by region
     for (Map.Entry<HRegionInfo, List<HLog.Entry>> _entry : entriesByRegion.entrySet()) {
@@ -139,7 +139,7 @@ public class WALEditsReplaySink {
       }
     }
 
-    long endTime = EnvironmentEdgeManager.currentTimeMillis() - startTime;
+    long endTime = EnvironmentEdgeManager.currentTime() - startTime;
     LOG.debug("number of rows:" + entries.size() + " are sent by batch! spent " + endTime
         + "(ms)!");
 

@@ -32,7 +32,7 @@ public class BucketCacheStats extends CacheStats {
   private final AtomicLong ioHitCount = new AtomicLong(0);
   private final AtomicLong ioHitTime = new AtomicLong(0);
   private final static int nanoTime = 1000000;
-  private long lastLogTime = EnvironmentEdgeManager.currentTimeMillis();
+  private long lastLogTime = EnvironmentEdgeManager.currentTime();
 
   BucketCacheStats() {
     super("BucketCache");
@@ -50,7 +50,7 @@ public class BucketCacheStats extends CacheStats {
   }
 
   public long getIOHitsPerSecond() {
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     long took = (now - lastLogTime) / 1000;
     lastLogTime = now;
     return took == 0? 0: ioHitCount.get() / took;

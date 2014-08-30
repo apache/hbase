@@ -866,7 +866,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
    * @param sentinels map of sentinels to clean
    */
   private synchronized void cleanupSentinels(final Map<TableName, SnapshotSentinel> sentinels) {
-    long currentTime = EnvironmentEdgeManager.currentTimeMillis();
+    long currentTime = EnvironmentEdgeManager.currentTime();
     Iterator<Map.Entry<TableName, SnapshotSentinel>> it =
         sentinels.entrySet().iterator();
     while (it.hasNext()) {

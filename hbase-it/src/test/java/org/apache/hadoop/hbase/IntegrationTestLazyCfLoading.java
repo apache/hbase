@@ -235,7 +235,7 @@ public class IntegrationTestLazyCfLoading {
     writer.start(1, keysToWrite, WRITER_THREADS);
 
     // Now, do scans.
-    long now = EnvironmentEdgeManager.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
     long timeLimit = now + (maxRuntime * 60000);
     boolean isWriterDone = false;
     while (now < timeLimit && !isWriterDone) {
@@ -255,7 +255,7 @@ public class IntegrationTestLazyCfLoading {
       // Not a strict lower bound - writer knows nothing about filters, so we report
       // this from generator. Writer might have generated the value but not put it yet.
       long onesGennedBeforeScan = dataGen.getExpectedNumberOfKeys();
-      long startTs = EnvironmentEdgeManager.currentTimeMillis();
+      long startTs = EnvironmentEdgeManager.currentTime();
       ResultScanner results = table.getScanner(scan);
       long resultCount = 0;
       Result result = null;
@@ -265,7 +265,7 @@ public class IntegrationTestLazyCfLoading {
         Assert.assertTrue("Failed to verify [" + Bytes.toString(result.getRow())+ "]", isOk);
         ++resultCount;
       }
-      long timeTaken = EnvironmentEdgeManager.currentTimeMillis() - startTs;
+      long timeTaken = EnvironmentEdgeManager.currentTime() - startTs;
       // Verify the result count.
       long onesGennedAfterScan = dataGen.getExpectedNumberOfKeys();
       Assert.assertTrue("Read " + resultCount + " keys when at most " + onesGennedAfterScan
@@ -280,7 +280,7 @@ public class IntegrationTestLazyCfLoading {
       LOG.info("Scan took " + timeTaken + "ms");
       if (!isWriterDone) {
         Thread.sleep(WAIT_BETWEEN_SCANS_MS);
-        now = EnvironmentEdgeManager.currentTimeMillis();
+        now = EnvironmentEdgeManager.currentTime();
       }
     }
     Assert.assertEquals("There are write failures", 0, writer.getNumWriteFailures());
