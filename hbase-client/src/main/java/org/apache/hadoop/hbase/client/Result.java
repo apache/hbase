@@ -58,20 +58,23 @@ import org.apache.hadoop.hbase.util.Bytes;
  *
  * To get the latest value for a specific family and qualifier use {@link #getValue(byte[], byte[])}.
  *
- * A Result is backed by an array of {@link KeyValue} objects, each representing
+ * A Result is backed by an array of {@link Cell} objects, each representing
  * an HBase cell defined by the row, family, qualifier, timestamp, and value.<p>
  *
- * The underlying {@link KeyValue} objects can be accessed through the method {@link #listCells()}.
- * Each KeyValue can then be accessed through
- * {@link KeyValue#getRow()}, {@link KeyValue#getFamily()}, {@link KeyValue#getQualifier()},
- * {@link KeyValue#getTimestamp()}, and {@link KeyValue#getValue()}.<p>
+ * The underlying {@link Cell} objects can be accessed through the method {@link #listCells()}.
+ * This will create a List from the internal Cell []. Better is to exploit the fact that
+ * a new Result instance is a primed {@link CellScanner}; just call {@link #advance()} and
+ * {@link #current()} to iterate over Cells as you would any {@link CellScanner}.
+ * Call {@link #cellScanner()} to reset should you need to iterate the same Result over again
+ * ({@link CellScanner}s are one-shot).
  *
- * If you need to overwrite a Result with another Result instance -- as in the old 'mapred' RecordReader next
- * invocations -- then create an empty Result with the null constructor and in then use {@link #copyFrom(Result)}
+ * If you need to overwrite a Result with another Result instance -- as in the old 'mapred'
+ * RecordReader next invocations -- then create an empty Result with the null constructor and
+ * in then use {@link #copyFrom(Result)}
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Result implements CellScannable {
+public class Result implements CellScannable, CellScanner {
   private Cell[] cells;
   private Boolean exists; // if the query was just to check existence.
   // We're not using java serialization.  Transient here is just a marker to say
@@ -84,6 +87,13 @@ public class Result implements CellScannable {
   private static byte [] buffer = null;
   private static final int PAD_WIDTH = 128;
   public static final Result EMPTY_RESULT = new Result();
+
+  private final static int INITIAL_CELLSCANNER_INDEX = -1;
+
+  /**
+   * Index for where we are when Result is acting as a {@link CellScanner}.
+   */
+  private int cellScannerIndex = INITIAL_CELLSCANNER_INDEX;
 
   /**
    * Creates an empty Result w/ no KeyValue payload; returns null if you call {@link #rawCells()}.
@@ -180,13 +190,13 @@ public class Result implements CellScannable {
   }
 
   /**
-   * Return an cells of a Result as an array of KeyValues 
-   * 
+   * Return an cells of a Result as an array of KeyValues
+   *
    * WARNING do not use, expensive.  This does an arraycopy of the cell[]'s value.
    *
    * Added to ease transition from  0.94 -> 0.96.
-   * 
-   * @deprecated as of 0.96, use {@link #rawCells()}  
+   *
+   * @deprecated as of 0.96, use {@link #rawCells()}
    * @return array of KeyValues, empty array if nothing in result.
    */
   @Deprecated
@@ -208,15 +218,15 @@ public class Result implements CellScannable {
   public List<Cell> listCells() {
     return isEmpty()? null: Arrays.asList(rawCells());
   }
-  
+
   /**
-   * Return an cells of a Result as an array of KeyValues 
-   * 
+   * Return an cells of a Result as an array of KeyValues
+   *
    * WARNING do not use, expensive.  This does  an arraycopy of the cell[]'s value.
    *
    * Added to ease transition from  0.94 -> 0.96.
-   * 
-   * @deprecated as of 0.96, use {@link #listCells()}  
+   *
+   * @deprecated as of 0.96, use {@link #listCells()}
    * @return all sorted List of KeyValues; can be null if no cells in the result
    */
   @Deprecated
@@ -803,7 +813,21 @@ public class Result implements CellScannable {
 
   @Override
   public CellScanner cellScanner() {
-    return CellUtil.createCellScanner(this.cells);
+    // Reset
+    this.cellScannerIndex = INITIAL_CELLSCANNER_INDEX;
+    return this;
+  }
+
+  @Override
+  public Cell current() {
+    if (cells == null) return null;
+    return (cellScannerIndex < 0)? null: this.cells[cellScannerIndex];
+  }
+
+  @Override
+  public boolean advance() {
+    if (cells == null) return false;
+    return ++cellScannerIndex < this.cells.length;
   }
 
   public Boolean getExists() {
