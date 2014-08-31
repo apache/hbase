@@ -78,7 +78,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
-import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
@@ -170,7 +169,7 @@ public class TestDistributedLogSplitting {
     cluster.waitForActiveAndReadyMaster();
     master = cluster.getMaster();
     while (cluster.getLiveRegionServerThreads().size() < num_rs) {
-      Threads.sleep(1);
+      Threads.sleep(10);
     }
   }
 
@@ -1597,14 +1596,19 @@ public class TestDistributedLogSplitting {
    */
   private HRegionServer findRSToKill(boolean hasMetaRegion, String tableName) throws Exception {
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
-    int numOfRSs = rsts.size();
     List<HRegionInfo> regions = null;
     HRegionServer hrs = null;
 
-    for (int i = 0; i < numOfRSs; i++) {
+    for (RegionServerThread rst: rsts) {
+      hrs = rst.getRegionServer();
+      while (rst.isAlive() && !hrs.isOnline()) {
+        Thread.sleep(100);
+      }
+      if (!rst.isAlive()) {
+        continue;
+      }
       boolean isCarryingMeta = false;
       boolean foundTableRegion = false;
-      hrs = rsts.get(i).getRegionServer();
       regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
       for (HRegionInfo region : regions) {
         if (region.isMetaRegion()) {
