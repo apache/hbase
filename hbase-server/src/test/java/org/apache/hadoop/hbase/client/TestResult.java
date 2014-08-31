@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HBaseTestCase.assertByteEquals;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
@@ -30,6 +31,7 @@ import junit.framework.TestCase;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
@@ -59,6 +61,31 @@ public class TestResult extends TestCase {
   static final byte [] row = Bytes.toBytes("row");
   static final byte [] family = Bytes.toBytes("family");
   static final byte [] value = Bytes.toBytes("value");
+
+  /**
+   * Run some tests to ensure Result acts like a proper CellScanner.
+   * @throws IOException
+   */
+  public void testResultAsCellScanner() throws IOException {
+    Cell [] cells = genKVs(row, family, value, 1, 10);
+    Arrays.sort(cells, KeyValue.COMPARATOR);
+    Result r = Result.create(cells);
+    assertSame(r, cells);
+    // Assert I run over same result multiple times.
+    assertSame(r.cellScanner(), cells);
+    assertSame(r.cellScanner(), cells);
+    // Assert we are not creating new object when doing cellscanner
+    assertTrue(r == r.cellScanner());
+  }
+
+  private void assertSame(final CellScanner cellScanner, final Cell [] cells) throws IOException {
+    int count = 0;
+    while (cellScanner.advance()) {
+      assertTrue(cells[count].equals(cellScanner.current()));
+      count++;
+    }
+    assertEquals(cells.length, count);
+  }
 
   public void testBasicGetColumn() throws Exception {
     KeyValue [] kvs = genKVs(row, family, value, 1, 100);
