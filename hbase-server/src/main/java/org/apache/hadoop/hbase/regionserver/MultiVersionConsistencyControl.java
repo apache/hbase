@@ -114,11 +114,11 @@ public class MultiVersionConsistencyControl {
    * visible to MVCC readers.
    * @throws IOException
    */
-  public void completeMemstoreInsertWithSeqNum(WriteEntry e, SequenceNumber seqNum)
+  public void completeMemstoreInsertWithSeqNum(WriteEntry e, SequenceId seqId)
       throws IOException {
     if(e == null) return;
-    if (seqNum != null) {
-      e.setWriteNumber(seqNum.getSequenceNumber());
+    if (seqId != null) {
+      e.setWriteNumber(seqId.getSequenceId());
     } else {
       // set the value to NO_WRITE_NUMBER in order NOT to advance memstore readpoint inside
       // function beginMemstoreInsertWithSeqNum in case of failures

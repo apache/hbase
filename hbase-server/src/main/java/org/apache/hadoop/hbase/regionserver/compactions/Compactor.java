@@ -28,6 +28,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -241,7 +242,7 @@ public abstract class Compactor {
       for (Cell c : kvs) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(c);
         if (cleanSeqId && kv.getSequenceId() <= smallestReadPoint) {
-          kv.setSequenceId(0);
+          CellUtil.setSequenceId(kv, 0);
         }
         writer.append(kv);
         ++progress.currentCompactedKVs;

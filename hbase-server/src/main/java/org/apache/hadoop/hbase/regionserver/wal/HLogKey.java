@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FamilyScope;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.ScopeType;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALKey;
-import org.apache.hadoop.hbase.regionserver.SequenceNumber;
+import org.apache.hadoop.hbase.regionserver.SequenceId;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.WritableComparable;
@@ -69,7 +69,7 @@ import com.google.protobuf.ByteString;
 // TODO: Key and WALEdit are never used separately, or in one-to-many relation, for practical
 //       purposes. They need to be merged into HLogEntry.
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
-public class HLogKey implements WritableComparable<HLogKey>, SequenceNumber {
+public class HLogKey implements WritableComparable<HLogKey>, SequenceId {
   public static final Log LOG = LogFactory.getLog(HLogKey.class);
 
   // should be < 0 (@see #readFields(DataInput))
@@ -278,7 +278,7 @@ public class HLogKey implements WritableComparable<HLogKey>, SequenceNumber {
    * @throws InterruptedException
    */
   @Override
-  public long getSequenceNumber() throws IOException {
+  public long getSequenceId() throws IOException {
     try {
       this.seqNumAssignedLatch.await();
     } catch (InterruptedException ie) {

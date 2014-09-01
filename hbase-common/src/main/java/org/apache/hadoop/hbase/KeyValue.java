@@ -78,7 +78,7 @@ import com.google.common.annotations.VisibleForTesting;
  * and actual tag bytes length.
  */
 @InterfaceAudience.Private
-public class KeyValue implements Cell, HeapSize, Cloneable {
+public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId {
   private static final ArrayList<Tag> EMPTY_ARRAY_LIST = new ArrayList<Tag>();
 
   static final Log LOG = LogFactory.getLog(KeyValue.class);
@@ -1385,15 +1385,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
    */
   private int getQualifierLength(int rlength, int flength) {
     return getKeyLength() - (int) getKeyDataStructureSize(rlength, flength, 0);
-  }
-
-  /**
-   * @return Column (family + qualifier) length
-   */
-  private int getTotalColumnLength(int rlength, int foffset) {
-    int flength = getFamilyLength(foffset);
-    int qlength = getQualifierLength(rlength,flength);
-    return flength + qlength;
   }
 
   /**

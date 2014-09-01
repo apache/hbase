@@ -122,10 +122,10 @@ public interface Store extends HeapSize, StoreConfigInformation {
 
   /**
    * Adds a value to the memstore
-   * @param kv
+   * @param cell
    * @return memstore size delta & newly added KV which maybe different than the passed in KV
    */
-  Pair<Long, Cell> add(KeyValue kv);
+  Pair<Long, Cell> add(Cell cell);
 
   /**
    * When was the last edit done in the memstore
@@ -133,11 +133,11 @@ public interface Store extends HeapSize, StoreConfigInformation {
   long timeOfOldestEdit();
 
   /**
-   * Removes a kv from the memstore. The KeyValue is removed only if its key & memstoreTS match the
-   * key & memstoreTS value of the kv parameter.
-   * @param kv
+   * Removes a Cell from the memstore. The Cell is removed only if its key & memstoreTS match the
+   * key & memstoreTS value of the cell parameter.
+   * @param cell
    */
-  void rollback(final KeyValue kv);
+  void rollback(final Cell cell);
 
   /**
    * Find the key that matches <i>row</i> exactly, or the one that immediately precedes it. WARNING:

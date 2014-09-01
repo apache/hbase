@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.SettableSequenceId;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.SamePrefixComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
@@ -320,7 +321,11 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
    * Note that the value byte[] part is still pointing to the currentBuffer and the 
    * represented by the valueOffset and valueLength
    */
-  protected static class ClonedSeekerState implements Cell {
+  // We return this as a Cell to the upper layers of read flow and might try setting a new SeqId
+  // there. So this has to be an instance of SettableSequenceId. SeekerState need not be
+  // SettableSequenceId as we never return that to top layers. When we have to, we make
+  // ClonedSeekerState from it.
+  protected static class ClonedSeekerState implements Cell, SettableSequenceId {
     private byte[] keyOnlyBuffer;
     private ByteBuffer currentBuffer;
     private short rowLength;
@@ -335,12 +340,12 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     private int tagsLength;
     private int tagsOffset;
     private byte[] cloneTagsBuffer;
-    private long memstoreTS;
+    private long seqId;
     private TagCompressionContext tagCompressionContext;
     
     protected ClonedSeekerState(ByteBuffer currentBuffer, byte[] keyBuffer, short rowLength,
         int familyOffset, byte familyLength, int keyLength, int qualOffset, int qualLength,
-        long timeStamp, byte typeByte, int valueLen, int valueOffset, long memStoreTS,
+        long timeStamp, byte typeByte, int valueLen, int valueOffset, long seqId,
         int tagsOffset, int tagsLength, TagCompressionContext tagCompressionContext,
         byte[] tagsBuffer) {
       this.currentBuffer = currentBuffer;
@@ -355,7 +360,6 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       this.typeByte = typeByte;
       this.valueLength = valueLen;
       this.valueOffset = valueOffset;
-      this.memstoreTS = memStoreTS;
       this.tagsOffset = tagsOffset;
       this.tagsLength = tagsLength;
       System.arraycopy(keyBuffer, 0, keyOnlyBuffer, 0, keyLength);
@@ -363,6 +367,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         this.cloneTagsBuffer = new byte[tagsLength];
         System.arraycopy(tagsBuffer, 0, this.cloneTagsBuffer, 0, tagsLength);
       }
+      setSequenceId(seqId);
     }
 
     @Override
@@ -421,13 +426,14 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
+    @Deprecated
     public long getMvccVersion() {
-      return memstoreTS;
+      return getSequenceId();
     }
 
     @Override
     public long getSequenceId() {
-      return memstoreTS;
+      return seqId;
     }
 
     @Override
@@ -497,6 +503,11 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         return "null";
       }
       return kv.toString();
+    }
+
+    @Override
+    public void setSequenceId(long seqId) {
+      this.seqId = seqId;
     }
   }
 

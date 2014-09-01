@@ -515,4 +515,19 @@ public final class CellUtil {
         && (end1.length == 0 || start2.length == 0 || Bytes.compareTo(start2,
             end1) < 0);
   }
+
+  /**
+   * Sets the given seqId to the cell.
+   * @param cell
+   * @param seqId
+   * @throws IOException when the passed cell is not of type {@link SettableSequenceId}
+   */
+  public static void setSequenceId(Cell cell, long seqId) throws IOException {
+    if (cell instanceof SettableSequenceId) {
+      ((SettableSequenceId) cell).setSequenceId(seqId);
+    } else {
+      throw new IOException(new UnsupportedOperationException("Cell is not of type "
+          + SettableSequenceId.class.getName()));
+    }
+  }
 }

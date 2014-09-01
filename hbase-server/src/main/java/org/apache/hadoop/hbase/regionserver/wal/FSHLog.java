@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Syncable;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -1115,9 +1116,9 @@ class FSHLog implements HLog, Syncable {
   @Override
   public long appendNoSync(final HTableDescriptor htd, final HRegionInfo info, final HLogKey key,
       final WALEdit edits, final AtomicLong sequenceId, final boolean inMemstore, 
-      final List<KeyValue> memstoreKVs)
+      final List<Cell> memstoreCells)
   throws IOException {
-    return append(htd, info, key, edits, sequenceId, false, inMemstore, memstoreKVs);
+    return append(htd, info, key, edits, sequenceId, false, inMemstore, memstoreCells);
   }
 
   /**
@@ -1132,7 +1133,7 @@ class FSHLog implements HLog, Syncable {
    * @param sync shall we sync after we call the append?
    * @param inMemstore
    * @param sequenceId The region sequence id reference.
-   * @param memstoreKVs
+   * @param memstoreCells
    * @return txid of this transaction or if nothing to do, the last txid
    * @throws IOException
    */
@@ -1140,7 +1141,7 @@ class FSHLog implements HLog, Syncable {
       justification="Will never be null")
   private long append(HTableDescriptor htd, final HRegionInfo hri, final HLogKey key,
       WALEdit edits, AtomicLong sequenceId, boolean sync, boolean inMemstore, 
-      List<KeyValue> memstoreKVs)
+      List<Cell> memstoreCells)
   throws IOException {
     if (!this.enabled) return this.highestUnsyncedSequence;
     if (this.closed) throw new IOException("Cannot append; log is closed");
@@ -1158,7 +1159,7 @@ class FSHLog implements HLog, Syncable {
       // Construction of FSWALEntry sets a latch.  The latch is thrown just after we stamp the
       // edit with its edit/sequence id.  The below entry.getRegionSequenceId will wait on the
       // latch to be thrown.  TODO: reuse FSWALEntry as we do SyncFuture rather create per append.
-      entry = new FSWALEntry(sequence, key, edits, sequenceId, inMemstore, htd, hri, memstoreKVs);
+      entry = new FSWALEntry(sequence, key, edits, sequenceId, inMemstore, htd, hri, memstoreCells);
       truck.loadPayload(entry, scope.detach());
     } finally {
       this.disruptor.getRingBuffer().publish(sequence);

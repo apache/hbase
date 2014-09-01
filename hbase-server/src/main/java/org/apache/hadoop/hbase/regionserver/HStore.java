@@ -631,10 +631,10 @@ public class HStore implements Store {
   }
 
   @Override
-  public Pair<Long, Cell> add(final KeyValue kv) {
+  public Pair<Long, Cell> add(final Cell cell) {
     lock.readLock().lock();
     try {
-       return this.memstore.add(kv);
+       return this.memstore.add(cell);
     } finally {
       lock.readLock().unlock();
     }
@@ -661,10 +661,10 @@ public class HStore implements Store {
   }
 
   @Override
-  public void rollback(final KeyValue kv) {
+  public void rollback(final Cell cell) {
     lock.readLock().lock();
     try {
-      this.memstore.rollback(kv);
+      this.memstore.rollback(cell);
     } finally {
       lock.readLock().unlock();
     }
