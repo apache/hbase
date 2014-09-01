@@ -1745,32 +1745,32 @@ public class HRegion implements HeapSize { // , Writable{
       this.updatesLock.writeLock().lock();
       try {
         if (this.memstoreSize.get() <= 0) {
-          // Presume that if there are still no edits in the memstore, then there are no edits for
-          // this region out in the WAL/HLog subsystem so no need to do any trickery clearing out
-          // edits in the WAL system. Up the sequence number so the resulting flush id is for
-          // sure just beyond the last appended region edit (useful as a marker when bulk loading,
+          // Presume that if there are still no edits in the memstore, then
+          // there are no edits for
+          // this region out in the WAL/HLog subsystem so no need to do any
+          // trickery clearing out
+          // edits in the WAL system. Up the sequence number so the resulting
+          // flush id is for
+          // sure just beyond the last appended region edit (useful as a marker
+          // when bulk loading,
           // etc.)
           // wal can be null replaying edits.
-          try {
-            if (wal != null) {
-              w = mvcc.beginMemstoreInsert();
-              long flushSeqId = getNextSequenceId(wal);
-              FlushResult flushResult = new FlushResult(
-                  FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY, flushSeqId, "Nothing to flush");
-              w.setWriteNumber(flushSeqId);
-              mvcc.waitForPreviousTransactionsComplete(w);
-              w = null;
-              return flushResult;
-            } else {
-              return new FlushResult(FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY,
-                  "Nothing to flush");
-            }
-
-          } finally {
-            this.updatesLock.writeLock().unlock();
+          if (wal != null) {
+            w = mvcc.beginMemstoreInsert();
+            long flushSeqId = getNextSequenceId(wal);
+            FlushResult flushResult = new FlushResult(
+                FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY, flushSeqId, "Nothing to flush");
+            w.setWriteNumber(flushSeqId);
+            mvcc.waitForPreviousTransactionsComplete(w);
+            w = null;
+            return flushResult;
+          } else {
+            return new FlushResult(FlushResult.Result.CANNOT_FLUSH_MEMSTORE_EMPTY,
+                "Nothing to flush");
           }
         }
       } finally {
+        this.updatesLock.writeLock().unlock();
         if (w != null) {
           mvcc.advanceMemstore(w);
         }
