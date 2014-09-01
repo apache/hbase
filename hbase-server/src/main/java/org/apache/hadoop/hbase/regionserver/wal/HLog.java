@@ -34,10 +34,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.io.Writable;
@@ -366,14 +366,13 @@ public interface HLog {
    * @param inMemstore Always true except for case where we are writing a compaction completion
    * record into the WAL; in this case the entry is just so we can finish an unfinished compaction
    * -- it is not an edit for memstore.
-   * @param memstoreKVs list of KVs added into memstore
+   * @param memstoreCells list of Cells added into memstore
    * @return Returns a 'transaction id' and <code>key</code> will have the region edit/sequence id
    * in it.
    * @throws IOException
    */
   long appendNoSync(HTableDescriptor htd, HRegionInfo info, HLogKey key, WALEdit edits,
-      AtomicLong sequenceId, boolean inMemstore, List<KeyValue> memstoreKVs)
-  throws IOException;
+      AtomicLong sequenceId, boolean inMemstore, List<Cell> memstoreCells) throws IOException;
 
   // TODO: Do we need all these versions of sync?
   void hsync() throws IOException;

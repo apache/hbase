@@ -18,13 +18,14 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 
 /**
  * A WAL Entry for {@link FSHLog} implementation.  Immutable.
@@ -43,18 +44,18 @@ class FSWALEntry extends HLog.Entry {
   private final transient boolean inMemstore;
   private final transient HTableDescriptor htd;
   private final transient HRegionInfo hri;
-  private final transient List<KeyValue> memstoreKVs;
+  private final transient List<Cell> memstoreCells;
 
   FSWALEntry(final long sequence, final HLogKey key, final WALEdit edit,
       final AtomicLong referenceToRegionSequenceId, final boolean inMemstore,
-      final HTableDescriptor htd, final HRegionInfo hri, List<KeyValue> memstoreKVs) {
+      final HTableDescriptor htd, final HRegionInfo hri, List<Cell> memstoreCells) {
     super(key, edit);
     this.regionSequenceIdReference = referenceToRegionSequenceId;
     this.inMemstore = inMemstore;
     this.htd = htd;
     this.hri = hri;
     this.sequence = sequence;
-    this.memstoreKVs = memstoreKVs;
+    this.memstoreCells = memstoreCells;
   }
 
   public String toString() {
@@ -87,13 +88,14 @@ class FSWALEntry extends HLog.Entry {
    * WAL.  This method works with {@link #getRegionSequenceId()}.  It will block waiting on this
    * method to be called.
    * @return The region edit/sequence id we set for this edit.
+   * @throws IOException
    * @see #getRegionSequenceId()
    */
-  long stampRegionSequenceId() {
+  long stampRegionSequenceId() throws IOException {
     long regionSequenceId = this.regionSequenceIdReference.incrementAndGet();
-    if (!this.getEdit().isReplay() && memstoreKVs != null && !memstoreKVs.isEmpty()) {
-      for(KeyValue kv : this.memstoreKVs){
-        kv.setSequenceId(regionSequenceId);
+    if (!this.getEdit().isReplay() && memstoreCells != null && !memstoreCells.isEmpty()) {
+      for (Cell cell : this.memstoreCells) {
+        CellUtil.setSequenceId(cell, regionSequenceId);
       }
     }
     HLogKey key = getKey();

@@ -969,7 +969,7 @@ public class TestHRegion {
       // throw exceptions if the WalEdit is a start flush action
       when(hlog.appendNoSync((HTableDescriptor)any(), (HRegionInfo)any(), (HLogKey)any(),
         (WALEdit)argThat(isFlushWALMarker), (AtomicLong)any(), Mockito.anyBoolean(),
-        (List<KeyValue>)any()))
+        (List<Cell>)any()))
           .thenThrow(new IOException("Fail to append flush marker"));
 
       // start cache flush will throw exception
@@ -4498,7 +4498,7 @@ public class TestHRegion {
     //verify append called or not
     verify(log, expectAppend ? times(1) : never())
       .appendNoSync((HTableDescriptor)any(), (HRegionInfo)any(), (HLogKey)any(),
-          (WALEdit)any(), (AtomicLong)any(), Mockito.anyBoolean(), (List<KeyValue>)any());
+          (WALEdit)any(), (AtomicLong)any(), Mockito.anyBoolean(), (List<Cell>)any());
 
     // verify sync called or not
     if (expectSync || expectSyncFromLogSyncer) {
@@ -5523,7 +5523,7 @@ public class TestHRegion {
         TEST_UTIL.getConfiguration(), rss, null);
 
       verify(log, times(1)).appendNoSync((HTableDescriptor)any(), (HRegionInfo)any(), (HLogKey)any()
-        , editCaptor.capture(), (AtomicLong)any(), anyBoolean(), (List<KeyValue>)any());
+        , editCaptor.capture(), (AtomicLong)any(), anyBoolean(), (List<Cell>)any());
 
       WALEdit edit = editCaptor.getValue();
       assertNotNull(edit);
@@ -5587,7 +5587,7 @@ public class TestHRegion {
 
     // 2 times, one for region open, the other close region
     verify(log, times(2)).appendNoSync((HTableDescriptor)any(), (HRegionInfo)any(), (HLogKey)any(),
-      editCaptor.capture(), (AtomicLong)any(), anyBoolean(), (List<KeyValue>)any());
+      editCaptor.capture(), (AtomicLong)any(), anyBoolean(), (List<Cell>)any());
 
     WALEdit edit = editCaptor.getAllValues().get(1);
     assertNotNull(edit);

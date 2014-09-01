@@ -2000,7 +2000,7 @@ public class HRegion implements HeapSize { // , Writable{
    */
   private long getNextSequenceId(final HLog wal) throws IOException {
     HLogKey key = this.appendNoSyncNoAppend(wal, null);
-    return key.getSequenceNumber();
+    return key.getSequenceId();
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -2507,7 +2507,7 @@ public class HRegion implements HeapSize { // , Writable{
     List<RowLock> acquiredRowLocks = Lists.newArrayListWithCapacity(batchOp.operations.length);
     // reference family maps directly so coprocessors can mutate them if desired
     Map<byte[], List<Cell>>[] familyMaps = new Map[batchOp.operations.length];
-    List<KeyValue> memstoreCells = new ArrayList<KeyValue>();
+    List<Cell> memstoreCells = new ArrayList<Cell>();
     // We try to set up a batch in the range [firstIndex,lastIndexExclusive)
     int firstIndex = batchOp.nextIndexToProcess;
     int lastIndexExclusive = firstIndex;
@@ -3087,9 +3087,10 @@ public class HRegion implements HeapSize { // , Writable{
    * @param output newly added KVs into memstore
    * @return the additional memory usage of the memstore caused by the
    * new entries.
+   * @throws IOException
    */
   private long applyFamilyMapToMemstore(Map<byte[], List<Cell>> familyMap,
-    long mvccNum, List<KeyValue> memstoreCells) {
+    long mvccNum, List<Cell> memstoreCells) throws IOException {
     long size = 0;
 
     for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
@@ -3098,9 +3099,8 @@ public class HRegion implements HeapSize { // , Writable{
 
       Store store = getStore(family);
       for (Cell cell: cells) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        kv.setSequenceId(mvccNum);
-        Pair<Long, Cell> ret = store.add(kv);
+        CellUtil.setSequenceId(cell, mvccNum);
+        Pair<Long, Cell> ret = store.add(cell);
         size += ret.getFirst();
         memstoreCells.add(KeyValueUtil.ensureKeyValue(ret.getSecond()));
       }
@@ -3114,13 +3114,13 @@ public class HRegion implements HeapSize { // , Writable{
    * called when a Put/Delete has updated memstore but subsequently fails to update
    * the wal. This method is then invoked to rollback the memstore.
    */
-  private void rollbackMemstore(List<KeyValue> memstoreCells) {
+  private void rollbackMemstore(List<Cell> memstoreCells) {
     int kvsRolledback = 0;
 
-    for (KeyValue kv : memstoreCells) {
-      byte[] family = kv.getFamily();
+    for (Cell cell : memstoreCells) {
+      byte[] family = cell.getFamily();
       Store store = getStore(family);
-      store.rollback(kv);
+      store.rollback(cell);
       kvsRolledback++;
     }
     LOG.debug("rollbackMemstore rolled back " + kvsRolledback);
@@ -5049,7 +5049,7 @@ public class HRegion implements HeapSize { // , Writable{
     List<RowLock> acquiredRowLocks;
     long addedSize = 0;
     List<Mutation> mutations = new ArrayList<Mutation>();
-    List<KeyValue> memstoreCells = new ArrayList<KeyValue>();
+    List<Cell> memstoreCells = new ArrayList<Cell>();
     Collection<byte[]> rowsToLock = processor.getRowsToLock();
     long mvccNum = 0;
     HLogKey walKey = null;
@@ -5081,16 +5081,16 @@ public class HRegion implements HeapSize { // , Writable{
           // 7. Apply to memstore
           for (Mutation m : mutations) {
             for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
-              KeyValue kv = KeyValueUtil.ensureKeyValue(cellScanner.current());
-              kv.setSequenceId(mvccNum);
-              Store store = getStore(kv);
+              Cell cell = cellScanner.current();
+              CellUtil.setSequenceId(cell, mvccNum);
+              Store store = getStore(cell);
               if (store == null) {
-                checkFamily(CellUtil.cloneFamily(kv));
+                checkFamily(CellUtil.cloneFamily(cell));
                 // unreachable
               }
-              Pair<Long, Cell> ret = store.add(kv);
+              Pair<Long, Cell> ret = store.add(cell);
               addedSize += ret.getFirst();
-              memstoreCells.add(KeyValueUtil.ensureKeyValue(ret.getSecond()));
+              memstoreCells.add(ret.getSecond());
             }
           }
 
@@ -5248,7 +5248,7 @@ public class HRegion implements HeapSize { // , Writable{
     WriteEntry w = null;
     HLogKey walKey = null;
     RowLock rowLock = null;
-    List<KeyValue> memstoreCells = new ArrayList<KeyValue>();
+    List<Cell> memstoreCells = new ArrayList<Cell>();
     boolean doRollBackMemstore = false;
     try {
       rowLock = getRowLock(row);
@@ -5361,14 +5361,14 @@ public class HRegion implements HeapSize { // , Writable{
             if (store.getFamily().getMaxVersions() == 1) {
               // upsert if VERSIONS for this CF == 1
               size += store.upsert(entry.getValue(), getSmallestReadPoint());
-              memstoreCells.addAll(KeyValueUtil.ensureKeyValues(entry.getValue()));
+              memstoreCells.addAll(entry.getValue());
             } else {
               // otherwise keep older versions around
               for (Cell cell: entry.getValue()) {
                 KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
                 Pair<Long, Cell> ret = store.add(kv);
                 size += ret.getFirst();
-                memstoreCells.add(KeyValueUtil.ensureKeyValue(ret.getSecond()));
+                memstoreCells.add(ret.getSecond());
                 doRollBackMemstore = true;
               }
             }
@@ -5387,7 +5387,7 @@ public class HRegion implements HeapSize { // , Writable{
           } else {
             recordMutationWithoutWal(append.getFamilyCellMap());
           }
-          if(walKey == null){
+          if (walKey == null) {
             // Append a faked WALEdit in order for SKIP_WAL updates to get mvcc assigned
             walKey = this.appendNoSyncNoAppend(this.log, memstoreCells);
           }
@@ -5466,7 +5466,7 @@ public class HRegion implements HeapSize { // , Writable{
     WriteEntry w = null;
     HLogKey walKey = null;
     long mvccNum = 0;
-    List<KeyValue> memstoreCells = new ArrayList<KeyValue>();
+    List<Cell> memstoreCells = new ArrayList<Cell>();
     boolean doRollBackMemstore = false;
     try {
       rowLock = getRowLock(row);
@@ -5582,14 +5582,14 @@ public class HRegion implements HeapSize { // , Writable{
               if (store.getFamily().getMaxVersions() == 1) {
                 // upsert if VERSIONS for this CF == 1
                 size += store.upsert(entry.getValue(), getSmallestReadPoint());
-                memstoreCells.addAll(KeyValueUtil.ensureKeyValues(entry.getValue()));
+                memstoreCells.addAll(entry.getValue());
               } else {
                 // otherwise keep older versions around
                 for (Cell cell : entry.getValue()) {
                   KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
                   Pair<Long, Cell> ret = store.add(kv);
                   size += ret.getFirst();
-                  memstoreCells.add(KeyValueUtil.ensureKeyValue(ret.getSecond()));
+                  memstoreCells.add(ret.getSecond());
                   doRollBackMemstore = true;
                 }
               }
@@ -6373,12 +6373,12 @@ public class HRegion implements HeapSize { // , Writable{
    * Append a faked WALEdit in order to get a long sequence number and log syncer will just ignore
    * the WALEdit append later.
    * @param wal
-   * @param cells list of KeyValues inserted into memstore. Those KeyValues are passed in order to
-   *        be updated with right mvcc values(their log sequence nu
+   * @param cells list of Cells inserted into memstore. Those Cells are passed in order to
+   *        be updated with right mvcc values(their log sequence number)
    * @return Return the key used appending with no sync and no append.
    * @throws IOException
    */
-  private HLogKey appendNoSyncNoAppend(final HLog wal, List<KeyValue> cells) throws IOException {
+  private HLogKey appendNoSyncNoAppend(final HLog wal, List<Cell> cells) throws IOException {
     HLogKey key = new HLogKey(getRegionInfo().getEncodedNameAsBytes(), getRegionInfo().getTable(),
       HLog.NO_SEQUENCE_ID, 0, null, HConstants.NO_NONCE, HConstants.NO_NONCE);
     // Call append but with an empty WALEdit.  The returned seqeunce id will not be associated

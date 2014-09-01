@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,16 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hbase;
 
-package org.apache.hadoop.hbase.regionserver;
-
-import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
- * Interface which abstracts implementations on log sequence number assignment
+ * Using this Interface one can mark a Cell as Sequence stampable. <br>
+ * Note : Make sure to make Cell implementation of this type in server side.
  */
-@InterfaceAudience.Private
-public interface SequenceNumber {
-  public long getSequenceNumber() throws IOException;
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+public interface SettableSequenceId {
+
+  /**
+   * Sets with the given seqId.
+   * @param seqId
+   */
+  void setSequenceId(long seqId);
 }
