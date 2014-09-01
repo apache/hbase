@@ -206,7 +206,7 @@ public class TestSplitLogManager {
     conf.setInt("hbase.splitlog.manager.unassigned.timeout", 2 * to);
 
     conf.setInt("hbase.splitlog.manager.timeoutmonitor.period", 100);
-    to = to + 4 * 100;
+    to = to + 16 * 100;
 
     this.mode =
         (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false) ? RecoveryMode.LOG_REPLAY
@@ -455,7 +455,7 @@ public class TestSplitLogManager {
     SplitLogTask slt = new SplitLogTask.Resigned(worker1, this.mode);
     assertEquals(tot_mgr_resubmit.get(), 0);
     ZKUtil.setData(zkw, tasknode, slt.toByteArray());
-    int version = ZKUtil.checkExists(zkw, tasknode);
+    ZKUtil.checkExists(zkw, tasknode);
     // Could be small race here.
     if (tot_mgr_resubmit.get() == 0) {
       waitForCounter(tot_mgr_resubmit, 0, 1, to/2);
