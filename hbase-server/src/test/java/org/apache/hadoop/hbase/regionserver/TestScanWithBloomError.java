@@ -18,6 +18,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,8 +55,6 @@ import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-
-import static org.junit.Assert.*;
 
 /**
  * Test a multi-column scanner when there is a Bloom filter false-positive.
@@ -132,8 +133,8 @@ public class TestScanWithBloomError {
     Collections.sort(scanners, new Comparator<StoreFileScanner>() {
       @Override
       public int compare(StoreFileScanner s1, StoreFileScanner s2) {
-        Path p1 = s1.getReaderForTesting().getHFileReader().getPath();
-        Path p2 = s2.getReaderForTesting().getHFileReader().getPath();
+        Path p1 = s1.getReader().getHFileReader().getPath();
+        Path p2 = s2.getReader().getHFileReader().getPath();
         long t1, t2;
         try {
           t1 = fs.getFileStatus(p1).getModificationTime();
@@ -147,7 +148,7 @@ public class TestScanWithBloomError {
 
     StoreFile.Reader lastStoreFileReader = null;
     for (StoreFileScanner sfScanner : scanners)
-      lastStoreFileReader = sfScanner.getReaderForTesting();
+      lastStoreFileReader = sfScanner.getReader();
 
     new HFilePrettyPrinter().run(new String[]{ "-m", "-p", "-f",
         lastStoreFileReader.getHFileReader().getPath().toString()});
