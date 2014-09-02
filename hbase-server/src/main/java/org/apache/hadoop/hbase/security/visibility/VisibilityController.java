@@ -249,6 +249,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
   public void postLogReplay(ObserverContext<RegionCoprocessorEnvironment> e) {
     if (this.labelsRegion) {
       initVisibilityLabelService(e.getEnvironment());
+      LOG.debug("post labels region log replay");
     }
   }
 
@@ -411,7 +412,9 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
   @Override
   public RegionScanner preScannerOpen(ObserverContext<RegionCoprocessorEnvironment> e, Scan scan,
       RegionScanner s) throws IOException {
-    if (!initialized) throw new IOException("VisibilityController not yet initialized!!");
+    if (!initialized) {
+      throw new VisibilityControllerNotReadyException("VisibilityController not yet initialized!");
+    }
     HRegion region = e.getEnvironment().getRegion();
     Authorizations authorizations = null;
     try {
@@ -507,7 +510,9 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
   @Override
   public void preGetOp(ObserverContext<RegionCoprocessorEnvironment> e, Get get, List<Cell> results)
       throws IOException {
-    if (!initialized) throw new IOException("VisibilityController not yet initialized!!");
+    if (!initialized) {
+      throw new VisibilityControllerNotReadyException("VisibilityController not yet initialized!");
+    }
     HRegion region = e.getEnvironment().getRegion();
     Authorizations authorizations = null;
     try {
@@ -635,8 +640,9 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
     VisibilityLabelsResponse.Builder response = VisibilityLabelsResponse.newBuilder();
     List<VisibilityLabel> visLabels = request.getVisLabelList();
     if (!initialized) {
-      setExceptionResults(visLabels.size(), new CoprocessorException(
-          "VisibilityController not yet initialized"), response);
+      setExceptionResults(visLabels.size(),
+        new VisibilityControllerNotReadyException("VisibilityController not yet initialized!"),
+        response);
     } else {
       try {
         checkCallingUserAuth();
@@ -688,8 +694,9 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
     VisibilityLabelsResponse.Builder response = VisibilityLabelsResponse.newBuilder();
     List<ByteString> auths = request.getAuthList();
     if (!initialized) {
-      setExceptionResults(auths.size(), new CoprocessorException(
-          "VisibilityController not yet initialized"), response);
+      setExceptionResults(auths.size(),
+        new VisibilityControllerNotReadyException("VisibilityController not yet initialized!"),
+        response);
     } else {
       try {
         checkCallingUserAuth();
