@@ -25,7 +25,9 @@ import java.util.TreeSet;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.io.Text;
@@ -34,8 +36,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.util.StringUtils;
 
 /**
- * Emits Sorted KeyValues. Reads the text passed, parses it and creates the Key Values then Sorts
- * them and emits Keyalues in sorted order. 
+ * Emits Sorted KeyValues. Parse the passed text and creates KeyValues. Sorts them before emit.
  * @see HFileOutputFormat
  * @see KeyValueSortReducer
  * @see PutSortReducer
@@ -61,7 +62,7 @@ public class TextSortReducer extends
   /** Cell visibility expr **/
   private String cellVisibilityExpr;
 
-  private LabelExpander labelExpander;
+  private CellCreator kvCreator;
 
   public long getTs() {
     return ts;
@@ -97,7 +98,7 @@ public class TextSortReducer extends
     if (parser.getRowKeyColumnIndex() == -1) {
       throw new RuntimeException("No row key column specified");
     }
-    labelExpander = new LabelExpander(conf);
+    this.kvCreator = new CellCreator(conf);
   }
 
   /**
@@ -153,20 +154,13 @@ public class TextSortReducer extends
                 || i == parser.getAttributesKeyColumnIndex() || i == parser.getCellVisibilityColumnIndex()) {
               continue;
             }
-            KeyValue kv = null;
-            if (cellVisibilityExpr == null) {
-              kv = new KeyValue(lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength(),
-                  parser.getFamily(i), 0, parser.getFamily(i).length, parser.getQualifier(i), 0,
-                  parser.getQualifier(i).length, ts, KeyValue.Type.Put, lineBytes,
-                  parsed.getColumnOffset(i), parsed.getColumnLength(i));
-            } else {
-              // Should ensure that VisibilityController is present
-              kv = labelExpander.createKVFromCellVisibilityExpr(
-                  parsed.getRowKeyOffset(), parsed.getRowKeyLength(), parser.getFamily(i), 0,
-                  parser.getFamily(i).length, parser.getQualifier(i), 0,
-                  parser.getQualifier(i).length, ts, KeyValue.Type.Put, lineBytes,
-                  parsed.getColumnOffset(i), parsed.getColumnLength(i), cellVisibilityExpr);
-            }
+            // Creating the KV which needs to be directly written to HFiles. Using the Facade
+            // KVCreator for creation of kvs.
+            Cell cell = this.kvCreator.create(lineBytes, parsed.getRowKeyOffset(),
+                parsed.getRowKeyLength(), parser.getFamily(i), 0, parser.getFamily(i).length,
+                parser.getQualifier(i), 0, parser.getQualifier(i).length, ts, lineBytes,
+                parsed.getColumnOffset(i), parsed.getColumnLength(i), cellVisibilityExpr);
+            KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
             kvs.add(kv);
             curSize += kv.heapSize();
           }
