@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 public class TsvImporterCustomTestMapperForOprAttr extends TsvImporterMapper {
   @Override
-  protected KeyValue createPuts(byte[] lineBytes, ParsedLine parsed, Put put, int i)
+  protected void populatePut(byte[] lineBytes, ParsedLine parsed, Put put, int i)
       throws BadTsvLineException, IOException {
     KeyValue kv;
     kv = new KeyValue(lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength(),
@@ -54,6 +54,5 @@ public class TsvImporterCustomTestMapperForOprAttr extends TsvImporterMapper {
       }
     }
     put.add(kv);
-    return kv;
   }
 }

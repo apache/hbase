@@ -22,6 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -58,9 +59,9 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
 
   protected String cellVisibilityExpr;
 
-  private String hfileOutPath;
+  protected CellCreator kvCreator;
 
-  private LabelExpander labelExpander;
+  private String hfileOutPath;
 
   public long getTs() {
     return ts;
@@ -96,7 +97,7 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
     if (parser.getRowKeyColumnIndex() == -1) {
       throw new RuntimeException("No row key column specified");
     }
-    labelExpander = new LabelExpander(conf);
+    this.kvCreator = new CellCreator(conf);
   }
 
   /**
@@ -150,7 +151,7 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
             || i == parser.getAttributesKeyColumnIndex() || i == parser.getCellVisibilityColumnIndex()) {
           continue;
         }
-        KeyValue kv = createPuts(lineBytes, parsed, put, i);
+        populatePut(lineBytes, parsed, put, i);
       }
       context.write(rowKey, put);
     } catch (ImportTsv.TsvParser.BadTsvLineException badLine) {
@@ -178,11 +179,11 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
     }
   }
 
-  protected KeyValue createPuts(byte[] lineBytes, ImportTsv.TsvParser.ParsedLine parsed, Put put,
+  protected void populatePut(byte[] lineBytes, ImportTsv.TsvParser.ParsedLine parsed, Put put,
       int i) throws BadTsvLineException, IOException {
-    KeyValue kv = null;
+    Cell cell = null;
     if (hfileOutPath == null) {
-      kv = new KeyValue(lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength(),
+      cell = new KeyValue(lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength(),
           parser.getFamily(i), 0, parser.getFamily(i).length, parser.getQualifier(i), 0,
           parser.getQualifier(i).length, ts, KeyValue.Type.Put, lineBytes,
           parsed.getColumnOffset(i), parsed.getColumnLength(i));
@@ -192,13 +193,13 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
         put.setCellVisibility(new CellVisibility(cellVisibilityExpr));
       }
     } else {
-      kv = labelExpander.createKVFromCellVisibilityExpr(
-          parsed.getRowKeyOffset(), parsed.getRowKeyLength(), parser.getFamily(i), 0,
-          parser.getFamily(i).length, parser.getQualifier(i), 0,
-          parser.getQualifier(i).length, ts, KeyValue.Type.Put, lineBytes,
-          parsed.getColumnOffset(i), parsed.getColumnLength(i), cellVisibilityExpr);
+      // Creating the KV which needs to be directly written to HFiles. Using the Facade
+      // KVCreator for creation of kvs.
+      cell = this.kvCreator.create(lineBytes, parsed.getRowKeyOffset(), parsed.getRowKeyLength(),
+          parser.getFamily(i), 0, parser.getFamily(i).length, parser.getQualifier(i), 0,
+          parser.getQualifier(i).length, ts, lineBytes, parsed.getColumnOffset(i),
+          parsed.getColumnLength(i), cellVisibilityExpr);
     }
-    put.add(kv);
-    return kv;
+    put.add(cell);
   }
 }

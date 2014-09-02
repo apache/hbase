@@ -54,13 +54,8 @@ import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
-import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
-import org.apache.hadoop.hbase.security.visibility.expression.ExpressionNode;
-import org.apache.hadoop.hbase.security.visibility.expression.LeafExpressionNode;
-import org.apache.hadoop.hbase.security.visibility.expression.NonLeafExpressionNode;
-import org.apache.hadoop.hbase.security.visibility.expression.Operator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -78,8 +73,6 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   private static final byte[] DUMMY_VALUE = new byte[0];
 
   private volatile int ordinalCounter = -1;
-  private final ExpressionParser expressionParser = new ExpressionParser();
-  private final ExpressionExpander expressionExpander = new ExpressionExpander();
   private Configuration conf;
   private HRegion labelsRegion;
   private VisibilityLabelsCache labelsCache;
@@ -375,107 +368,12 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   @Override
   public List<Tag> createVisibilityExpTags(String visExpression, boolean withSerializationFormat,
       boolean checkAuths) throws IOException {
-    ExpressionNode node = null;
-    try {
-      node = this.expressionParser.parse(visExpression);
-    } catch (ParseException e) {
-      throw new IOException(e);
-    }
-    node = this.expressionExpander.expand(node);
-    List<Tag> tags = new ArrayList<Tag>();
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    DataOutputStream dos = new DataOutputStream(baos);
-    List<Integer> labelOrdinals = new ArrayList<Integer>();
-    // We will be adding this tag before the visibility tags and the presence of this
-    // tag indicates we are supporting deletes with cell visibility
-    if (withSerializationFormat) {
-      tags.add(VisibilityUtils.SORTED_ORDINAL_SERIALIZATION_FORMAT_TAG);
-    }
     Set<Integer> auths = null;
     if (checkAuths) {
       auths = this.labelsCache.getAuthsAsOrdinals(VisibilityUtils.getActiveUser().getShortName());
     }
-    if (node.isSingleNode()) {
-      getLabelOrdinals(node, labelOrdinals, auths, checkAuths);
-      writeLabelOrdinalsToStream(labelOrdinals, dos);
-      tags.add(new Tag(VISIBILITY_TAG_TYPE, baos.toByteArray()));
-      baos.reset();
-    } else {
-      NonLeafExpressionNode nlNode = (NonLeafExpressionNode) node;
-      if (nlNode.getOperator() == Operator.OR) {
-        for (ExpressionNode child : nlNode.getChildExps()) {
-          getLabelOrdinals(child, labelOrdinals, auths, checkAuths);
-          writeLabelOrdinalsToStream(labelOrdinals, dos);
-          tags.add(new Tag(VISIBILITY_TAG_TYPE, baos.toByteArray()));
-          baos.reset();
-          labelOrdinals.clear();
-        }
-      } else {
-        getLabelOrdinals(nlNode, labelOrdinals, auths, checkAuths);
-        writeLabelOrdinalsToStream(labelOrdinals, dos);
-        tags.add(new Tag(VISIBILITY_TAG_TYPE, baos.toByteArray()));
-        baos.reset();
-      }
-    }
-    return tags;
-  }
-
-  protected void getLabelOrdinals(ExpressionNode node, List<Integer> labelOrdinals,
-      Set<Integer> auths, boolean checkAuths) throws IOException, InvalidLabelException {
-    if (node.isSingleNode()) {
-      String identifier = null;
-      int labelOrdinal = 0;
-      if (node instanceof LeafExpressionNode) {
-        identifier = ((LeafExpressionNode) node).getIdentifier();
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("The identifier is " + identifier);
-        }
-        labelOrdinal = this.labelsCache.getLabelOrdinal(identifier);
-        checkAuths(auths, labelOrdinal, identifier, checkAuths);
-      } else {
-        // This is a NOT node.
-        LeafExpressionNode lNode = (LeafExpressionNode) ((NonLeafExpressionNode) node)
-            .getChildExps().get(0);
-        identifier = lNode.getIdentifier();
-        labelOrdinal = this.labelsCache.getLabelOrdinal(identifier);
-        checkAuths(auths, labelOrdinal, identifier, checkAuths);
-        labelOrdinal = -1 * labelOrdinal; // Store NOT node as -ve ordinal.
-      }
-      if (labelOrdinal == 0) {
-        throw new InvalidLabelException("Invalid visibility label " + identifier);
-      }
-      labelOrdinals.add(labelOrdinal);
-    } else {
-      List<ExpressionNode> childExps = ((NonLeafExpressionNode) node).getChildExps();
-      for (ExpressionNode child : childExps) {
-        getLabelOrdinals(child, labelOrdinals, auths, checkAuths);
-      }
-    }
-  }
-
-  private void checkAuths(Set<Integer> auths, int labelOrdinal, String identifier,
-      boolean checkAuths) throws IOException {
-    if (checkAuths) {
-      if (auths == null || (!auths.contains(labelOrdinal))) {
-        throw new AccessDeniedException("Visibility label " + identifier
-            + " not authorized for the user " + VisibilityUtils.getActiveUser().getShortName());
-      }
-    }
-  }
-
-  /**
-   * This will sort the passed labels in ascending oder and then will write one after the other
-   * to the passed stream.
-   * @param labelOrdinals Unsorted label ordinals
-   * @param dos Stream where to write the labels.
-   * @throws IOException When IOE during writes to Stream.
-   */
-  protected void writeLabelOrdinalsToStream(List<Integer> labelOrdinals, DataOutputStream dos)
-      throws IOException {
-    Collections.sort(labelOrdinals);
-    for (Integer labelOrdinal : labelOrdinals) {
-      StreamUtils.writeRawVInt32(dos, labelOrdinal);
-    }
+    return VisibilityUtils.createVisibilityExpTags(visExpression, withSerializationFormat,
+        checkAuths, auths, labelsCache);
   }
 
   protected void updateZk(boolean labelAddition) throws IOException {
