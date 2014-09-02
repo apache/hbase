@@ -637,8 +637,12 @@ public class HRegionServer extends HasThread implements
       this.abort("Failed to retrieve Cluster ID",e);
     }
 
-    shortCircuitConnection = createShortCircuitConnection();
-    metaTableLocator = new MetaTableLocator();
+    synchronized (this) {
+      if (shortCircuitConnection == null) {
+        shortCircuitConnection = createShortCircuitConnection();
+        metaTableLocator = new MetaTableLocator();
+      }
+    }
 
     // watch for snapshots and other procedures
     try {
