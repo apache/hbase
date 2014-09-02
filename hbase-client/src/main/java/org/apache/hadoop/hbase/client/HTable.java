@@ -22,6 +22,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -1379,9 +1380,9 @@ public class HTable implements HTableInterface, RegionLocator {
    * {@inheritDoc}
    */
   @Override
-  public Boolean[] exists(final List<Get> gets) throws IOException {
-    if (gets.isEmpty()) return new Boolean[]{};
-    if (gets.size() == 1) return new Boolean[]{exists(gets.get(0))};
+  public boolean[] existsAll(final List<Get> gets) throws IOException {
+    if (gets.isEmpty()) return new boolean[]{};
+    if (gets.size() == 1) return new boolean[]{exists(gets.get(0))};
 
     for (Get g: gets){
       g.setCheckExistenceOnly(true);
@@ -1395,7 +1396,7 @@ public class HTable implements HTableInterface, RegionLocator {
     }
 
     // translate.
-    Boolean[] results = new Boolean[r1.length];
+    boolean[] results = new boolean[r1.length];
     int i = 0;
     for (Object o : r1) {
       // batch ensures if there is a failure we get an exception instead
@@ -1403,6 +1404,20 @@ public class HTable implements HTableInterface, RegionLocator {
     }
 
     return results;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  @Deprecated
+  public Boolean[] exists(final List<Get> gets) throws IOException {
+    boolean[] results = existsAll(gets);
+    Boolean[] objectResults = new Boolean[results.length];
+    for (int i = 0; i < results.length; ++i) {
+      objectResults[i] = results[i];
+    }
+    return objectResults;
   }
 
   /**

@@ -140,6 +140,11 @@ public class HTableWrapper implements HTableInterface {
     return table.exists(get);
   }
 
+  public boolean[] existsAll(List<Get> gets) throws IOException{
+    return table.existsAll(gets);
+  }
+
+  @Deprecated
   public Boolean[] exists(List<Get> gets) throws IOException{
     return table.exists(gets);
   }
