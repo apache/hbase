@@ -371,13 +371,23 @@ public class RemoteHTable implements HTableInterface {
    * exists(List) is really a list of get() calls. Just use get().
    * @param gets list of Get to test for the existence
    */
-  public Boolean[] exists(List<Get> gets) throws IOException {
+  public boolean[] existsAll(List<Get> gets) throws IOException {
     LOG.warn("exists(List<Get>) is really list of get() calls, just use get()");
-    Boolean[] results = new Boolean[gets.size()];
+    boolean[] results = new boolean[gets.size()];
     for (int i = 0; i < results.length; i++) {
       results[i] = exists(gets.get(i));
     }
     return results;
+  }
+
+  @Deprecated
+  public Boolean[] exists(List<Get> gets) throws IOException {
+    boolean[] results = existsAll(gets);
+    Boolean[] objectResults = new Boolean[results.length];
+    for (int i = 0; i < results.length; ++i) {
+      objectResults[i] = results[i];
+    }
+    return objectResults;
   }
 
   public void put(Put put) throws IOException {

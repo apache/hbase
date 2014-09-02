@@ -373,6 +373,12 @@ public class HTablePool implements Closeable {
     }
 
     @Override
+    public boolean[] existsAll(List<Get> gets) throws IOException {
+      checkState();
+      return table.existsAll(gets);
+    }
+
+    @Override
     public Boolean[] exists(List<Get> gets) throws IOException {
       checkState();
       return table.exists(gets);
