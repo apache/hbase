@@ -45,7 +45,7 @@ import org.apache.zookeeper.KeeperException;
  * znode for labels table
  */
 @InterfaceAudience.Private
-public class VisibilityLabelsCache {
+public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
 
   private static final Log LOG = LogFactory.getLog(VisibilityLabelsCache.class);
   private static final int NON_EXIST_LABEL_ORDINAL = 0;
@@ -153,6 +153,7 @@ public class VisibilityLabelsCache {
    * @return The ordinal for the label. The ordinal starts from 1. Returns 0 when passed a non
    *         existing label.
    */
+  @Override
   public int getLabelOrdinal(String label) {
     Integer ordinal = null;
     this.lock.readLock().lock();
