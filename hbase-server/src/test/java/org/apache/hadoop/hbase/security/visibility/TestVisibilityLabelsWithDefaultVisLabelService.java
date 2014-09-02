@@ -25,18 +25,25 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -44,6 +51,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
 public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibilityLabels {
+  final Log LOG = LogFactory.getLog(getClass());
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -104,19 +112,33 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
     // Start one new RS
     RegionServerThread rs = TEST_UTIL.getHBaseCluster().startRegionServer();
     waitForLabelsRegionAvailability(rs.getRegionServer());
-    PrivilegedExceptionAction<VisibilityLabelsResponse> action =
-        new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
-      public VisibilityLabelsResponse run() throws Exception {
-        String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, "ABC", "XYZ" };
-        try {
-          VisibilityClient.addLabels(conf, labels);
-        } catch (Throwable t) {
-          throw new IOException(t);
+    final AtomicBoolean vcInitialized = new AtomicBoolean(true);
+    do {
+      PrivilegedExceptionAction<VisibilityLabelsResponse> action =
+          new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+        public VisibilityLabelsResponse run() throws Exception {
+          String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, "ABC", "XYZ" };
+          try {
+            VisibilityLabelsResponse resp = VisibilityClient.addLabels(conf, labels);
+            List<RegionActionResult> results = resp.getResultList();
+            if (results.get(0).hasException()) {
+              NameBytesPair pair = results.get(0).getException();
+              Throwable t = ProtobufUtil.toException(pair);
+              LOG.debug("Got exception writing labels", t);
+              if (t instanceof VisibilityControllerNotReadyException) {
+                vcInitialized.set(false);
+                LOG.warn("VisibilityController was not yet initialized");
+                Threads.sleep(10);
+              }
+            } else LOG.debug("new labels added: " + resp);
+          } catch (Throwable t) {
+            throw new IOException(t);
+          }
+          return null;
         }
-        return null;
-      }
-    };
-    SUPERUSER.runAs(action);
+      };
+      SUPERUSER.runAs(action);
+    } while (!vcInitialized.get());
     // Scan the visibility label
     Scan s = new Scan();
     s.setAuthorizations(new Authorizations(VisibilityUtils.SYSTEM_LABEL));
