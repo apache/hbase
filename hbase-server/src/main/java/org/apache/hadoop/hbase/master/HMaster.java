@@ -483,8 +483,12 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
     this.serverManager = createServerManager(this, this);
 
-    metaTableLocator = new MetaTableLocator();
-    shortCircuitConnection = createShortCircuitConnection();
+    synchronized (this) {
+      if (shortCircuitConnection == null) {
+        shortCircuitConnection = createShortCircuitConnection();
+        metaTableLocator = new MetaTableLocator();
+      }
+    }
 
     // Invalidate all write locks held previously
     this.tableLockManager.reapWriteLocks();

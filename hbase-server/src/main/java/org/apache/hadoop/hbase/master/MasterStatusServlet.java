@@ -27,8 +27,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
@@ -43,7 +41,6 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
  */
 @InterfaceAudience.Private
 public class MasterStatusServlet extends HttpServlet {
-  private static final Log LOG = LogFactory.getLog(MasterStatusServlet.class);
   private static final long serialVersionUID = 1L;
 
   @Override
@@ -88,7 +85,9 @@ public class MasterStatusServlet extends HttpServlet {
   }
 
   private ServerName getMetaLocationOrNull(HMaster master) {
-    return master.getMetaTableLocator().getMetaRegionLocation(master.getZooKeeper());
+    MetaTableLocator metaTableLocator = master.getMetaTableLocator();
+    return metaTableLocator == null ? null :
+      metaTableLocator.getMetaRegionLocation(master.getZooKeeper());
   }
 
   private Map<String, Integer> getFragmentationInfo(
