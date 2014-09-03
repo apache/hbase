@@ -3741,6 +3741,7 @@ public class TestHRegion {
   public void testgetHDFSBlocksDistribution() throws Exception {
     HBaseTestingUtility htu = new HBaseTestingUtility();
     final int DEFAULT_BLOCK_SIZE = 1024;
+    htu.getConfiguration().setLong("dfs.namenode.fs-limits.min-block-size", 0);
     htu.getConfiguration().setLong("dfs.block.size", DEFAULT_BLOCK_SIZE);
     htu.getConfiguration().setInt("dfs.replication", 2);
 

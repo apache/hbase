@@ -127,7 +127,7 @@ class FSHLog implements HLog, Syncable {
 
   // all writes pending on AsyncWriter/AsyncSyncer thread with
   // txid <= failedTxid will fail by throwing asyncIOE
-  private final AtomicLong failedTxid = new AtomicLong(0);
+  private final AtomicLong failedTxid = new AtomicLong(-1);
   private volatile IOException asyncIOE = null;
 
   private WALCoprocessorHost coprocessorHost;
@@ -1350,16 +1350,15 @@ class FSHLog implements HLog, Syncable {
       while (this.syncedTillHere.get() < txid) {
         try {
           this.syncedTillHere.wait();
-
-          if (txid <= this.failedTxid.get()) {
-            assert asyncIOE != null :
-              "current txid is among(under) failed txids, but asyncIOE is null!";
-            throw asyncIOE;
-          }
         } catch (InterruptedException e) {
           LOG.debug("interrupted while waiting for notification from AsyncNotifier");
         }
       }
+    }
+    if (txid <= this.failedTxid.get()) {
+        assert asyncIOE != null :
+          "current txid is among(under) failed txids, but asyncIOE is null!";
+        throw asyncIOE;
     }
   }
 
