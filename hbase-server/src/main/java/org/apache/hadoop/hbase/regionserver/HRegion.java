@@ -3817,7 +3817,16 @@ public class HRegion implements HeapSize { // , Writable{
       startRegionOperation(Operation.SCAN);
       readRequestsCount.increment();
       try {
-        return nextRaw(outResults, limit);
+        boolean returnResult = nextRaw(outResults, limit);
+        if (region != null && region.metricsRegion != null) {
+          long totalSize = 0;
+          for (Cell cell: outResults) {
+            KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+            totalSize += kv.getLength();
+          }
+          region.metricsRegion.updateScanNext(totalSize);
+        }
+        return returnResult;
       } finally {
         closeRegionOperation(Operation.SCAN);
       }
@@ -3845,18 +3854,8 @@ public class HRegion implements HeapSize { // , Writable{
       if (isFilterDoneInternal()) {
         returnResult = false;
       }
-      if (region != null && region.metricsRegion != null) {
-        long totalSize = 0;
-        for(Cell c:outResults) {
-          // TODO clean up
-          KeyValue kv = KeyValueUtil.ensureKeyValue(c);
-          totalSize += kv.getLength();
-        }
-        region.metricsRegion.updateScanNext(totalSize);
-      }
       return returnResult;
     }
-
 
     private void populateFromJoinedHeap(List<Cell> results, int limit)
         throws IOException {
