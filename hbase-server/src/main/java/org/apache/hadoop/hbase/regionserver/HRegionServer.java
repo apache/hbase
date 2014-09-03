@@ -53,6 +53,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.management.ObjectName;
 
 import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -73,6 +74,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HealthCheckChore;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -3186,6 +3188,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           lease = leases.removeLease(scannerName);
           List<Result> results = new ArrayList<Result>(rows);
           long currentScanResultSize = 0;
+          long totalKvSize = 0;
 
           boolean done = false;
           // Call coprocessor. Get region info from scanner.
@@ -3195,9 +3198,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             if (!results.isEmpty()) {
               for (Result r : results) {
                 if (maxScannerResultSize < Long.MAX_VALUE){
-                  for (Cell kv : r.rawCells()) {
-                    // TODO
-                    currentScanResultSize += KeyValueUtil.ensureKeyValue(kv).heapSize();
+                  for (Cell cell : r.rawCells()) {
+                    KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+                    currentScanResultSize += kv.heapSize();
+                    totalKvSize += kv.getLength();
                   }
                 }
               }
@@ -3217,15 +3221,19 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             try {
               int i = 0;
               synchronized(scanner) {
-                for (; i < rows
-                    && currentScanResultSize < maxResultSize; ) {
+                while (i < rows) {
+                  // Stop collecting results if maxScannerResultSize is set and we have exceeded it
+                  if ((maxScannerResultSize < Long.MAX_VALUE) &&
+                      (currentScanResultSize >= maxResultSize)) {
+                    break;
+                  }
                   // Collect values to be returned here
                   boolean moreRows = scanner.nextRaw(values);
                   if (!values.isEmpty()) {
-                    if (maxScannerResultSize < Long.MAX_VALUE){
-                      for (Cell kv : values) {
-                        currentScanResultSize += KeyValueUtil.ensureKeyValue(kv).heapSize();
-                      }
+                    for (Cell cell : values) {
+                      KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+                      currentScanResultSize += kv.heapSize();
+                      totalKvSize += kv.getLength();
                     }
                     results.add(Result.create(values));
                     i++;
@@ -3237,6 +3245,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
                 }
               }
               region.readRequestsCount.add(i);
+              region.getMetrics().updateScanNext(totalKvSize);
             } finally {
               region.closeRegionOperation();
             }
