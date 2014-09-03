@@ -64,6 +64,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Distributes the task of log splitting to the available region servers.
  * Coordination happens via coordination engine. For every log file that has to be split a
@@ -353,6 +355,11 @@ public class SplitLogManager {
         }
       }
     }
+  }
+
+  @VisibleForTesting
+  ConcurrentMap<String, Task> getTasks() {
+    return tasks;
   }
 
   private int activeTasks(final TaskBatch batch) {

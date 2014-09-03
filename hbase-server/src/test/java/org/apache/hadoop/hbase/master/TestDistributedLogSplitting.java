@@ -260,6 +260,10 @@ public class TestDistributedLogSplitting {
       }
       LOG.info(count + " edits in " + files.length + " recovered edits files.");
     }
+
+    // check that the log file is moved
+    assertFalse(fs.exists(logDir));
+
     assertEquals(NUM_LOG_LINES, count);
   }
 
