@@ -69,7 +69,6 @@ public interface RegionScanner extends InternalScanner {
    * to return.
    * This is a special internal method to be called from coprocessor hooks to avoid expensive setup.
    * Caller must set the thread's readpoint, start and close a region operation, an synchronize on the scanner object.
-   * Caller should maintain and update metrics.
    * See {@link #nextRaw(List, int)}
    * @param result return output array
    * @return true if more rows exist after this one, false if scanner is done
