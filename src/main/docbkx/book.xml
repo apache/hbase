@@ -1040,6 +1040,42 @@ $ <userinput>HADOOP_CLASSPATH=$(hbase mapredcp):/etc/hbase/conf hadoop jar MyApp
       </caution>
     </section>
 
+    <section>
+      <title>MapReduce Scan Caching</title>
+      <para>TableMapReduceUtil now restores the option to set scanner caching (the number of rows
+        which are cached before returning the result to the client) on the Scan object that is
+        passed in. This functionality was lost due to a bug in HBase 0.95 (<link
+          xlink:href="https://issues.apache.org/jira/browse/HBASE-11558">HBASE-11558</link>), which
+        is fixed for HBase 0.98.5 and 0.96.3. The priority order for choosing the scanner caching is
+        as follows:</para>
+      <orderedlist>
+        <listitem>
+          <para>Caching settings which are set on the scan object.</para>
+        </listitem>
+        <listitem>
+          <para>Caching settings which are specified via the configuration option
+              <option>hbase.client.scanner.caching</option>, which can either be set manually in
+              <filename>hbase-site.xml</filename> or via the helper method
+              <code>TableMapReduceUtil.setScannerCaching()</code>.</para>
+        </listitem>
+        <listitem>
+          <para>The default value <code>HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING</code>, which is set to
+            <literal>100</literal>.</para>
+        </listitem>
+      </orderedlist>
+      <para>Optimizing the caching settings is a balance between the time the client waits for a
+        result and the number of sets of results the client needs to receive. If the caching setting
+        is too large, the client could end up waiting for a long time or the request could even time
+        out. If the setting is too small, the scan needs to return results in several pieces.
+        If you think of the scan as a shovel, a bigger cache setting is analogous to a bigger
+        shovel, and a smaller cache setting is equivalent to more shoveling in order to fill the
+        bucket.</para>
+      <para>The list of priorities mentioned above allows you to set a reasonable default, and
+        override it for specific operations.</para>
+      <para>See the API documentation for <link
+          xlink:href="https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html"
+          >Scan</link> for more details.</para>
+    </section>
 
     <section>
       <title>Bundled HBase MapReduce Jobs</title>
