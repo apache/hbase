@@ -190,7 +190,7 @@ public class IntegrationTestMTTR {
 
     // Set up the action that will move the regions of our table.
     moveRegionAction = new MoveRegionsOfTableAction(sleepTime,
-        MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME, tableName.getNameAsString());
+        MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME, tableName);
 
     // Kill the master
     restartMasterAction = new RestartActiveMasterAction(1000);
@@ -346,6 +346,7 @@ public class IntegrationTestMTTR {
       }
     }
 
+    @Override
     public String toString() {
       Objects.ToStringHelper helper = Objects.toStringHelper(this)
           .add("numResults", stats.getN())

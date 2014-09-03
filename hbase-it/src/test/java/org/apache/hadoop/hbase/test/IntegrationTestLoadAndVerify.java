@@ -120,6 +120,7 @@ public class IntegrationTestLoadAndVerify  extends IntegrationTestBase  {
     REFERENCES_CHECKED
   }
 
+  @Override
   public void setUpCluster() throws Exception {
     util = getTestingUtil(getConf());
     util.initializeCluster(3);
@@ -421,6 +422,7 @@ public void cleanUpCluster() throws Exception {
     toRun = args[0];
   }
 
+  @Override
   public int runTestFromCommandLine() throws Exception {
     IntegrationTestingUtility.setUseDistributedCluster(getConf());
     boolean doLoad = false;
@@ -442,8 +444,8 @@ public void cleanUpCluster() throws Exception {
     }
 
     // create HTableDescriptor for specified table
-    String table = getTablename();
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
+    TableName table = getTablename();
+    HTableDescriptor htd = new HTableDescriptor(table);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
 
     HBaseAdmin admin = new HBaseAdmin(getConf());
@@ -461,8 +463,8 @@ public void cleanUpCluster() throws Exception {
   }
 
   @Override
-  public String getTablename() {
-    return getConf().get(TABLE_NAME_KEY, TEST_NAME);
+  public TableName getTablename() {
+    return TableName.valueOf(getConf().get(TABLE_NAME_KEY, TEST_NAME));
   }
 
   @Override

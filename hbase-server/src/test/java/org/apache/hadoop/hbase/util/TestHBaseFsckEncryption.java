@@ -116,7 +116,7 @@ public class TestHBaseFsckEncryption {
       table.close();
     }
     // Flush it
-    TEST_UTIL.getHBaseAdmin().flush(htd.getName());
+    TEST_UTIL.getHBaseAdmin().flush(htd.getTableName());
 
     // Verify we have encrypted store files on disk
     final List<Path> paths = findStorefilePaths(htd.getName());

@@ -105,7 +105,7 @@ public class TestTableSnapshotScanner {
     util.loadTable(table, FAMILIES, value);
 
     // cause flush to create new files in the region
-    admin.flush(tableName.toString());
+    admin.flush(tableName);
     table.close();
   }
 

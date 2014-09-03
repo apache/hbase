@@ -25,23 +25,19 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Action that changes the compression algorithm on a column family from a list of tables.
  */
 public class ChangeCompressionAction extends Action {
   private final TableName tableName;
-  private final String tableNameString;
 
   private Admin admin;
   private Random random;
 
-  public ChangeCompressionAction(String tableName) {
-    tableNameString = tableName;
-    this.tableName = TableName.valueOf(tableName);
+  public ChangeCompressionAction(TableName tableName) {
+    this.tableName = tableName;
     this.random = new Random();
   }
 
@@ -69,7 +65,7 @@ public class ChangeCompressionAction extends Action {
     Algorithm algo = possibleAlgos[random.nextInt(possibleAlgos.length)];
 
     LOG.debug("Performing action: Changing compression algorithms on "
-      + tableNameString + " to " + algo);
+      + tableName.getNameAsString() + " to " + algo);
     for (HColumnDescriptor descriptor : columnDescriptors) {
       if (random.nextBoolean()) {
         descriptor.setCompactionCompressionType(algo);

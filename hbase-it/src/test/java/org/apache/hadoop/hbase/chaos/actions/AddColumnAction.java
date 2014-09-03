@@ -25,8 +25,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Action the adds a column family to a table.
@@ -35,8 +33,8 @@ public class AddColumnAction extends Action {
   private final TableName tableName;
   private Admin admin;
 
-  public AddColumnAction(String tableName) {
-    this.tableName = TableName.valueOf(tableName);
+  public AddColumnAction(TableName tableName) {
+    this.tableName = tableName;
   }
 
   @Override

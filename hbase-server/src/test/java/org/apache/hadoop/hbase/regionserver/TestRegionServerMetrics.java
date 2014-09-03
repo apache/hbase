@@ -208,7 +208,7 @@ public class TestRegionServerMetrics {
 
   @Test
   public void testStoreCount() throws Exception {
-    byte[] tableName = Bytes.toBytes("testStoreCount");
+    TableName tableName = TableName.valueOf("testStoreCount");
     byte[] cf = Bytes.toBytes("d");
     byte[] row = Bytes.toBytes("rk");
     byte[] qualifier = Bytes.toBytes("qual");

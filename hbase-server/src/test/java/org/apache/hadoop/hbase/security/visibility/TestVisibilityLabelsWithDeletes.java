@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -115,6 +114,7 @@ public class TestVisibilityLabelsWithDeletes {
         SECRET);
     try {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           HTable table = null;
           try {
@@ -133,7 +133,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL));
       ResultScanner scanner = table.getScanner(s);
@@ -160,6 +160,7 @@ public class TestVisibilityLabelsWithDeletes {
         + TOPSECRET);
     try {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -175,7 +176,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL));
       ResultScanner scanner = table.getScanner(s);
@@ -202,6 +203,7 @@ public class TestVisibilityLabelsWithDeletes {
         + TOPSECRET, SECRET);
     try {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           HTable table = null;
           try {
@@ -220,7 +222,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL));
       ResultScanner scanner = table.getScanner(s);
@@ -247,6 +249,7 @@ public class TestVisibilityLabelsWithDeletes {
         + TOPSECRET, SECRET);
     try {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           HTable table = null;
           try {
@@ -265,7 +268,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL));
       ResultScanner scanner = table.getScanner(s);
@@ -290,8 +293,9 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = null;
     try {
       table = doPuts(tableName);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -308,7 +312,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -351,8 +355,9 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = null;
     try {
       table = doPuts(tableName);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -407,8 +412,9 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = null;
     try {
       table = doPuts(tableName);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -467,8 +473,9 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = null;
     try {
       table = doPuts(tableName);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -534,8 +541,9 @@ public class TestVisibilityLabelsWithDeletes {
       put.add(fam, qual, value);
       put.setCellVisibility(new CellVisibility(SECRET));
       table.put(put);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -562,6 +570,7 @@ public class TestVisibilityLabelsWithDeletes {
       put.setCellVisibility(new CellVisibility(CONFIDENTIAL));
       table.put(put);
       actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -616,8 +625,9 @@ public class TestVisibilityLabelsWithDeletes {
       put.add(fam, qual, value);
       put.setCellVisibility(new CellVisibility(SECRET));
       table.put(put);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -644,6 +654,7 @@ public class TestVisibilityLabelsWithDeletes {
       put.setCellVisibility(new CellVisibility(CONFIDENTIAL));
       table.put(put);
       actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -700,6 +711,7 @@ public class TestVisibilityLabelsWithDeletes {
       table.put(put);
       table.flushCommits();
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -755,7 +767,7 @@ public class TestVisibilityLabelsWithDeletes {
       put.setCellVisibility(new CellVisibility(SECRET));
       table.put(put);
       table.flushCommits();
-      //TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      //TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(CONFIDENTIAL, SECRET));
@@ -763,6 +775,7 @@ public class TestVisibilityLabelsWithDeletes {
       Result[] next = scanner.next(3);
       assertEquals(next.length, 1);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -806,8 +819,9 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = null;
     try {
       table = doPuts(tableName);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -865,8 +879,9 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = null;
     try {
       table = doPuts(tableName);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -958,7 +973,7 @@ public class TestVisibilityLabelsWithDeletes {
     put.setCellVisibility(new CellVisibility("(" + CONFIDENTIAL + "&" + PRIVATE + ")|("
         + TOPSECRET + "&" + SECRET+")"));
     table.put(put);
-    TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+    TEST_UTIL.getHBaseAdmin().flush(tableName);
     put = new Put(Bytes.toBytes("row2"));
     put.add(fam, qual, 127l, value);
     put.setCellVisibility(new CellVisibility("(" + CONFIDENTIAL + "&" + PRIVATE + ")|(" + TOPSECRET
@@ -1027,7 +1042,7 @@ public class TestVisibilityLabelsWithDeletes {
     put = new Put(Bytes.toBytes("row1"));
     put.add(fam, qual, 127l, value);
     table.put(put);
-    TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+    TEST_UTIL.getHBaseAdmin().flush(tableName);
     put = new Put(Bytes.toBytes("row2"));
     put.add(fam, qual, 127l, value);
     table.put(put);
@@ -1043,8 +1058,9 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = null;
     try {
       table = doPuts(tableName);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -1061,7 +1077,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -1113,8 +1129,9 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = null;
     try {
       table = doPuts(tableName);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -1130,7 +1147,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -1177,12 +1194,13 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = null;
     try {
       table = doPuts(tableName);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Put put = new Put(Bytes.toBytes("row1"));
       put.add(fam, qual, 128l, value);
       put.setCellVisibility(new CellVisibility(TOPSECRET));
       table.put(put);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -1198,7 +1216,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -1242,7 +1260,7 @@ public class TestVisibilityLabelsWithDeletes {
       put.setCellVisibility(new CellVisibility(SECRET));
       table.put(put);
       table.flushCommits();
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -1269,8 +1287,9 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = null;
     try {
       table = doPuts(tableName);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -1285,13 +1304,13 @@ public class TestVisibilityLabelsWithDeletes {
         }
       };
       SUPERUSER.runAs(actiona);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Put put = new Put(Bytes.toBytes("row3"));
       put.add(fam, qual, 127l, value);
       put.setCellVisibility(new CellVisibility(CONFIDENTIAL + "&" + PRIVATE));
       table.put(put);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
-      TEST_UTIL.getHBaseAdmin().majorCompact(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
+      TEST_UTIL.getHBaseAdmin().majorCompact(tableName);
       // Sleep to ensure compaction happens. Need to do it in a better way
       Thread.sleep(5000);
       Scan s = new Scan();
@@ -1340,8 +1359,9 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = null;
     try {
       table = doPuts(tableName);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -1357,7 +1377,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -1394,8 +1414,9 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = null;
     try {
       table = doPutsWithDiffCols(tableName);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -1411,7 +1432,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -1470,8 +1491,9 @@ public class TestVisibilityLabelsWithDeletes {
       put.add(fam, qual1, 126l, value);
       put.setCellVisibility(new CellVisibility(SECRET));
       table.put(put);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -1523,8 +1545,9 @@ public class TestVisibilityLabelsWithDeletes {
       put.add(fam, qual1, 126l, value);
       put.setCellVisibility(new CellVisibility(SECRET));
       table.put(put);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -1563,8 +1586,9 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = null;
     try {
       table = doPutsWithoutVisibility(tableName);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -1579,7 +1603,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -1608,6 +1632,7 @@ public class TestVisibilityLabelsWithDeletes {
     try {
       table = doPutsWithoutVisibility(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -1622,7 +1647,7 @@ public class TestVisibilityLabelsWithDeletes {
         }
       };
       SUPERUSER.runAs(actiona);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -1674,8 +1699,9 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = null;
     try {
       table = doPuts(tableName);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -1692,7 +1718,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -1734,8 +1760,9 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = null;
     try {
       table = doPuts(tableName);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -1752,13 +1779,13 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Put put = new Put(Bytes.toBytes("row3"));
       put.add(fam, qual, 127l, value);
       put.setCellVisibility(new CellVisibility(CONFIDENTIAL + "&" + PRIVATE));
       table.put(put);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
-      TEST_UTIL.getHBaseAdmin().compact(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
+      TEST_UTIL.getHBaseAdmin().compact(tableName);
       Thread.sleep(5000);
       // Sleep to ensure compaction happens. Need to do it in a better way
       Scan s = new Scan();
@@ -1794,6 +1821,7 @@ public class TestVisibilityLabelsWithDeletes {
       // Do not flush here.
       table = doPuts(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -1845,6 +1873,7 @@ public class TestVisibilityLabelsWithDeletes {
 
       // Issue 2nd delete
       actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -1894,6 +1923,7 @@ public class TestVisibilityLabelsWithDeletes {
   public void testMultipleDeleteFamilyVersionWithDiffLabels() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         try {
           return VisibilityClient.setAuths(conf, new String[] { CONFIDENTIAL, PRIVATE, SECRET },
@@ -1908,6 +1938,7 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = doPuts(tableName);
     try {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -1927,7 +1958,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -1964,6 +1995,7 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = doPuts(tableName);
     try {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -1984,7 +2016,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -2009,6 +2041,7 @@ public class TestVisibilityLabelsWithDeletes {
       assertEquals(current.getTimestamp(), 123l);
       // Issue 2nd delete
       actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2051,6 +2084,7 @@ public class TestVisibilityLabelsWithDeletes {
   public void testSpecificDeletesFollowedByDeleteFamily1() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         try {
           return VisibilityClient.setAuths(conf, new String[] { CONFIDENTIAL, PRIVATE, SECRET },
@@ -2065,6 +2099,7 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = doPuts(tableName);
     try {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2086,7 +2121,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -2111,6 +2146,7 @@ public class TestVisibilityLabelsWithDeletes {
       assertEquals(current.getTimestamp(), 123l);
       // Issue 2nd delete
       actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2159,6 +2195,7 @@ public class TestVisibilityLabelsWithDeletes {
       // Do not flush here.
       table = doPuts(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2209,6 +2246,7 @@ public class TestVisibilityLabelsWithDeletes {
 
       // Issue 2nd delete
       actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2268,6 +2306,7 @@ public class TestVisibilityLabelsWithDeletes {
       // Do not flush here.
       table = doPuts(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2319,6 +2358,7 @@ public class TestVisibilityLabelsWithDeletes {
 
       // Issue 2nd delete
       actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2381,6 +2421,7 @@ public class TestVisibilityLabelsWithDeletes {
       // Do not flush here.
       table = doPuts(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2437,6 +2478,7 @@ public class TestVisibilityLabelsWithDeletes {
 
       // Issue 2nd delete
       actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2501,6 +2543,7 @@ public class TestVisibilityLabelsWithDeletes {
       // Do not flush here.
       table = doPuts(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2551,6 +2594,7 @@ public class TestVisibilityLabelsWithDeletes {
 
       // Issue 2nd delete
       actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2599,6 +2643,7 @@ public class TestVisibilityLabelsWithDeletes {
   private void setAuths() throws IOException, InterruptedException {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         try {
           return VisibilityClient.setAuths(conf, new String[] { CONFIDENTIAL, PRIVATE, SECRET,
@@ -2620,6 +2665,7 @@ public class TestVisibilityLabelsWithDeletes {
       // Do not flush here.
       table = doPuts(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2671,6 +2717,7 @@ public class TestVisibilityLabelsWithDeletes {
 
       // Issue 2nd delete
       actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2727,8 +2774,9 @@ public class TestVisibilityLabelsWithDeletes {
     HTable table = null;
     try {
       table = doPuts(tableName);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2743,7 +2791,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -2752,6 +2800,7 @@ public class TestVisibilityLabelsWithDeletes {
       assertTrue(next.length == 2);
       scanAll(next);
       actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2766,7 +2815,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -2776,6 +2825,7 @@ public class TestVisibilityLabelsWithDeletes {
       scanAll(next);
 
       actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2790,7 +2840,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -2800,6 +2850,7 @@ public class TestVisibilityLabelsWithDeletes {
       scanAll(next);
 
       actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2814,7 +2865,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -2824,6 +2875,7 @@ public class TestVisibilityLabelsWithDeletes {
       scanAll(next);
 
       actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2838,7 +2890,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -2848,6 +2900,7 @@ public class TestVisibilityLabelsWithDeletes {
       scanAll(next);
 
       actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2862,7 +2915,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -2932,8 +2985,9 @@ public class TestVisibilityLabelsWithDeletes {
       put.add(fam, qual, 124l, value);
       put.setCellVisibility(new CellVisibility(CONFIDENTIAL + "|" + PRIVATE));
       table.put(put);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           try {
             HTable table = new HTable(conf, TEST_NAME.getMethodName());
@@ -2949,7 +3003,7 @@ public class TestVisibilityLabelsWithDeletes {
       };
       SUPERUSER.runAs(actiona);
 
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       Scan s = new Scan();
       s.setMaxVersions(5);
       s.setAuthorizations(new Authorizations(SECRET, PRIVATE, CONFIDENTIAL, TOPSECRET));
@@ -3004,7 +3058,7 @@ public class TestVisibilityLabelsWithDeletes {
       put.setCellVisibility(new CellVisibility(labelExp));
       puts.add(put);
       table.put(put);
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       i++;
     }
     return table;
@@ -3013,6 +3067,7 @@ public class TestVisibilityLabelsWithDeletes {
   public static void addLabels() throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE };
         try {

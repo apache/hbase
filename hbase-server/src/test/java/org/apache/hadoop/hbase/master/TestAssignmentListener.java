@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -44,7 +43,6 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.common.base.Joiner;
 import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
@@ -70,12 +68,14 @@ public class TestAssignmentListener {
     public DummyAssignmentListener() {
     }
 
+    @Override
     public void regionOpened(final HRegionInfo regionInfo, final ServerName serverName) {
       LOG.info("Assignment open region=" + regionInfo + " server=" + serverName);
       openCount.incrementAndGet();
       modified.incrementAndGet();
     }
 
+    @Override
     public void regionClosed(final HRegionInfo regionInfo) {
       LOG.info("Assignment close region=" + regionInfo);
       closeCount.incrementAndGet();
@@ -103,12 +103,14 @@ public class TestAssignmentListener {
     public DummyServerListener() {
     }
 
+    @Override
     public void serverAdded(final ServerName serverName) {
       LOG.info("Server added " + serverName);
       addedCount.incrementAndGet();
       modified.incrementAndGet();
     }
 
+    @Override
     public void serverRemoved(final ServerName serverName) {
       LOG.info("Server removed " + serverName);
       removedCount.incrementAndGet();
@@ -216,7 +218,7 @@ public class TestAssignmentListener {
       // Split the table in two
       LOG.info("Split Table");
       listener.reset();
-      admin.split(TABLE_NAME_STR, "row-3");
+      admin.split(TABLE_NAME, Bytes.toBytes("row-3"));
       listener.awaitModifications(3);
       assertEquals(2, listener.getLoadCount());     // daughters added
       assertEquals(1, listener.getCloseCount());    // parent removed
@@ -226,7 +228,7 @@ public class TestAssignmentListener {
       int mergeable = 0;
       while (mergeable < 2) {
         Thread.sleep(100);
-        admin.majorCompact(TABLE_NAME_STR);
+        admin.majorCompact(TABLE_NAME);
         mergeable = 0;
         for (JVMClusterUtil.RegionServerThread regionThread: miniCluster.getRegionServerThreads()) {
           for (HRegion region: regionThread.getRegionServer().getOnlineRegions(TABLE_NAME)) {

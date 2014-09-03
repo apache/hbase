@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -255,7 +254,7 @@ public class TestNamespace {
     p.add(Bytes.toBytes("my_cf"),Bytes.toBytes("my_col"),Bytes.toBytes("value1"));
     table.put(p);
     //flush and read from disk to make sure directory changes are working
-    admin.flush(desc.getTableName().getName());
+    admin.flush(desc.getTableName());
     Get g = new Get(Bytes.toBytes("row1"));
     assertTrue(table.exists(g));
 

@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -167,7 +166,7 @@ public abstract class TableSnapshotInputFormatTestBase {
     util.loadTable(table, FAMILIES, value);
 
     // cause flush to create new files in the region
-    admin.flush(tableName.toString());
+    admin.flush(tableName);
     table.close();
   }
 

@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -65,19 +64,19 @@ import org.junit.experimental.categories.Category;
  * that) added with visibility expressions. In load step, 200 map tasks are launched, which in turn
  * write loadmapper.num_to_write (default 100K) rows to an hbase table. Rows are written in blocks,
  * for a total of 100 blocks.
- * 
+ *
  * Verify step scans the table as both users with Authorizations. This step asserts that user can
  * see only those rows (and so cells) with visibility for which they have label auth.
- * 
+ *
  * This class can be run as a unit test, as an integration test, or from the command line.
- * 
+ *
  * Originally taken from Apache Bigtop.
  * Issue user names as comma seperated list.
  *./hbase IntegrationTestWithCellVisibilityLoadAndVerify -u usera,userb
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationTestLoadAndVerify {
-  private static final String ERROR_STR = 
+  private static final String ERROR_STR =
       "Two user names are to be specified seperated by a ',' like 'usera,userb'";
   private static final char NOT = '!';
   private static final char OR = '|';
@@ -257,10 +256,12 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     return job;
   }
 
+  @Override
   protected void setMapperClass(Job job) {
     job.setMapperClass(LoadWithCellVisibilityMapper.class);
   }
 
+  @Override
   protected void doVerify(final Configuration conf, final HTableDescriptor htd) throws Exception {
     System.out.println(String.format("Verifying for auths %s, %s, %s, %s", CONFIDENTIAL, TOPSECRET,
         SECRET, PRIVATE));
@@ -343,6 +344,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     job.getConfiguration().setInt(TableRecordReaderImpl.LOG_PER_ROW_COUNT, (int) lpr);
   }
 
+  @Override
   public void usage() {
     System.err.println(this.getClass().getSimpleName() + " -u usera,userb [-Doptions]");
     System.err.println("  Loads a table with cell visibilities and verifies with Authorizations");
@@ -359,12 +361,12 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
         + "Number hbase scanner caching rows to read (default 50)");
   }
 
+  @Override
   public int runTestFromCommandLine() throws Exception {
     IntegrationTestingUtility.setUseDistributedCluster(getConf());
     int numPresplits = getConf().getInt("loadmapper.numPresplits", 5);
     // create HTableDescriptor for specified table
-    String table = getTablename();
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
+    HTableDescriptor htd = new HTableDescriptor(getTablename());
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
 
     HBaseAdmin admin = new HBaseAdmin(getConf());

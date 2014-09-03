@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -303,7 +302,7 @@ public class TestSnapshotCloneIndependence {
       originalRegionCount, cloneTableRegionCount);
 
     // Split a region on the parent table
-    admin.split(originalTableHRegions.get(0).getRegionName());
+    admin.splitRegion(originalTableHRegions.get(0).getRegionName());
     waitOnSplit(original, originalRegionCount);
 
     // Verify that the cloned table region is not split

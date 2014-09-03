@@ -236,13 +236,13 @@ public class TestNamespaceUpgrade {
       FSUtils.logFileSystemState(TEST_UTIL.getTestFileSystem(), TEST_UTIL.getDefaultRootDirPath()
           , LOG);
       Assert.assertEquals(newTableName + "", currentKeys.length, count);
-      TEST_UTIL.getHBaseAdmin().flush(newTableName.toBytes());
-      TEST_UTIL.getHBaseAdmin().majorCompact(newTableName.toBytes());
+      TEST_UTIL.getHBaseAdmin().flush(newTableName);
+      TEST_UTIL.getHBaseAdmin().majorCompact(newTableName);
       TEST_UTIL.waitFor(30000, new Waiter.Predicate<IOException>() {
         @Override
         public boolean evaluate() throws IOException {
           try {
-            return TEST_UTIL.getHBaseAdmin().getCompactionState(newTableName.toBytes()) ==
+            return TEST_UTIL.getHBaseAdmin().getCompactionState(newTableName) ==
                 AdminProtos.GetRegionInfoResponse.CompactionState.NONE;
           } catch (InterruptedException e) {
             throw new IOException(e);

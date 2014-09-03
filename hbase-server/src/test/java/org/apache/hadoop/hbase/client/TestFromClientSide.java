@@ -238,7 +238,7 @@ public class TestFromClientSide {
     */
    @Test
    public void testPurgeFutureDeletes() throws Exception {
-     final byte[] TABLENAME = Bytes.toBytes("testPurgeFutureDeletes");
+     final TableName TABLENAME = TableName.valueOf("testPurgeFutureDeletes");
      final byte[] ROW = Bytes.toBytes("row");
      final byte[] FAMILY = Bytes.toBytes("family");
      final byte[] COLUMN = Bytes.toBytes("column");

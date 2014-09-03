@@ -25,8 +25,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Action to merge regions of a table.
@@ -35,12 +33,12 @@ public class MergeRandomAdjacentRegionsOfTableAction extends Action {
   private final TableName tableName;
   private final long sleepTime;
 
-  public MergeRandomAdjacentRegionsOfTableAction(String tableName) {
+  public MergeRandomAdjacentRegionsOfTableAction(TableName tableName) {
     this(-1, tableName);
   }
 
-  public MergeRandomAdjacentRegionsOfTableAction(int sleepTime, String tableName) {
-    this.tableName = TableName.valueOf(tableName);
+  public MergeRandomAdjacentRegionsOfTableAction(int sleepTime, TableName tableName) {
+    this.tableName = tableName;
     this.sleepTime = sleepTime;
   }
 

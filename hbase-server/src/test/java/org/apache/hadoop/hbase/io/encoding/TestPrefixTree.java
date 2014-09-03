@@ -109,7 +109,7 @@ public class TestPrefixTree {
       put.add(fam, qual2, Bytes.toBytes("c2-value-3"));
       table.put(put);
       table.flushCommits();
-      hBaseAdmin.flush(tableName.getNameAsString());
+      hBaseAdmin.flush(tableName);
       String[] rows = new String[3];
       rows[0] = row1;
       rows[1] = row2;

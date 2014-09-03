@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -39,13 +38,13 @@ public class MoveRegionsOfTableAction extends Action {
   private final TableName tableName;
   private final long maxTime;
 
-  public MoveRegionsOfTableAction(String tableName) {
+  public MoveRegionsOfTableAction(TableName tableName) {
     this(-1, MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME, tableName);
   }
 
-  public MoveRegionsOfTableAction(long sleepTime, long maxSleepTime, String tableName) {
+  public MoveRegionsOfTableAction(long sleepTime, long maxSleepTime, TableName tableName) {
     this.sleepTime = sleepTime;
-    this.tableName = TableName.valueOf(tableName);
+    this.tableName = tableName;
     this.maxTime = maxSleepTime;
   }
 

@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -251,7 +250,7 @@ public class TestTableLockManager {
     //ensure that znode for the table node has been deleted
     final ZooKeeperWatcher zkWatcher = TEST_UTIL.getZooKeeperWatcher();
     final String znode = ZKUtil.joinZNode(zkWatcher.tableLockZNode, TABLE_NAME.getNameAsString());
-    
+
     TEST_UTIL.waitFor(5000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -373,9 +372,9 @@ public class TestTableLockManager {
           HRegion region = TEST_UTIL.getSplittableRegion(tableName, -1);
           if (region != null) {
             byte[] regionName = region.getRegionName();
-            admin.flush(regionName);
-            admin.compact(regionName);
-            admin.split(regionName);
+            admin.flushRegion(regionName);
+            admin.compactRegion(regionName);
+            admin.splitRegion(regionName);
           } else {
             LOG.warn("Could not find suitable region for the table.  Possibly the " +
               "region got closed and the attempts got over before " +

@@ -119,7 +119,7 @@ public class TestAdmin {
 
   @Test (timeout=300000)
   public void testSplitFlushCompactUnknownTable() throws InterruptedException {
-    final String unknowntable = "fubar";
+    final TableName unknowntable = TableName.valueOf("fubar");
     Exception exception = null;
     try {
       this.admin.compact(unknowntable);
@@ -1023,10 +1023,11 @@ public class TestAdmin {
     scanner.next();
 
     // Split the table
-    this.admin.split(tableName.getName(), splitPoint);
+    this.admin.split(tableName, splitPoint);
 
     final AtomicInteger count = new AtomicInteger(0);
     Thread t = new Thread("CheckForSplit") {
+      @Override
       public void run() {
         for (int i = 0; i < 45; i++) {
           try {
@@ -1636,7 +1637,7 @@ public class TestAdmin {
     // make sure log.hflush() calls syncFs() to open a pipeline
     TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     // lower the namenode & datanode heartbeat so the namenode
-    // quickly detects datanode failures  
+    // quickly detects datanode failures
     TEST_UTIL.getConfiguration().setInt("dfs.namenode.heartbeat.recheck-interval", 5000);
     TEST_UTIL.getConfiguration().setInt("dfs.heartbeat.interval", 1);
     // the namenode might still try to choose the recently-dead datanode

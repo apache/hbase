@@ -1222,17 +1222,17 @@ public class TestDistributedLogSplitting {
     // use last 5 bytes because HBaseTestingUtility.createMultiRegions use 5 bytes key
     row = Arrays.copyOfRange(row, 3, 8);
     long value = 0;
-    byte[] tableName = Bytes.toBytes("table");
+    TableName tableName = TableName.valueOf("table");
     byte[] family = Bytes.toBytes("family");
     byte[] qualifier = Bytes.toBytes("c1");
     long timeStamp = System.currentTimeMillis();
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor htd = new HTableDescriptor();
     htd.addFamily(new HColumnDescriptor(family));
     for (int i = 0; i < NUM_LOG_LINES; i += 1) {
       WALEdit e = new WALEdit();
       value++;
       e.add(new KeyValue(row, family, qualifier, timeStamp, Bytes.toBytes(value)));
-      hrs.getWAL().append(curRegionInfo, TableName.valueOf(tableName), e,
+      hrs.getWAL().append(curRegionInfo, tableName, e,
         System.currentTimeMillis(), htd, sequenceId);
     }
     hrs.getWAL().sync();
@@ -1314,17 +1314,17 @@ public class TestDistributedLogSplitting {
     // use last 5 bytes because HBaseTestingUtility.createMultiRegions use 5 bytes key
     row = Arrays.copyOfRange(row, 3, 8);
     long value = 0;
-    final byte[] tableName = Bytes.toBytes("table");
+    final TableName tableName = TableName.valueOf("table");
     byte[] family = Bytes.toBytes("family");
     byte[] qualifier = Bytes.toBytes("c1");
     long timeStamp = System.currentTimeMillis();
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(family));
     for (int i = 0; i < NUM_LOG_LINES; i += 1) {
       WALEdit e = new WALEdit();
       value++;
       e.add(new KeyValue(row, family, qualifier, timeStamp, Bytes.toBytes(value)));
-      hrs.getWAL().append(curRegionInfo, TableName.valueOf(tableName), e,
+      hrs.getWAL().append(curRegionInfo, tableName, e,
         System.currentTimeMillis(), htd, sequenceId);
     }
     hrs.getWAL().sync();

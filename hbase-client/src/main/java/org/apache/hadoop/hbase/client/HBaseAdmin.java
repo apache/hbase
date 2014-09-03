@@ -269,6 +269,7 @@ public class HBaseAdmin implements Admin {
    * @return True if table exists already.
    * @throws IOException
    */
+  @Override
   public boolean tableExists(final TableName tableName) throws IOException {
     return MetaTableAccessor.tableExists(connection, tableName);
   }
@@ -1466,47 +1467,56 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
-   * Flush a table or an individual region.
-   * Synchronous operation.
-   *
-   * @param tableNameOrRegionName table or region to flush
-   * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
+   * {@inheritDoc}
    */
   @Override
+  public void flush(final TableName tableName) throws IOException, InterruptedException {
+    checkTableExists(tableName);
+    if (isTableDisabled(tableName)) {
+      LOG.info("Table is disabled: " + tableName.getNameAsString());
+      return;
+    }
+    execProcedure("flush-table-proc", tableName.getNameAsString(),
+      new HashMap<String, String>());
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void flushRegion(final byte[] regionName) throws IOException, InterruptedException {
+    Pair<HRegionInfo, ServerName> regionServerPair = getRegion(regionName);
+    if (regionServerPair == null) {
+      throw new IllegalArgumentException("Unknown regionname: " + Bytes.toStringBinary(regionName));
+    }
+    if (regionServerPair.getSecond() == null) {
+      throw new NoServerForRegionException(Bytes.toStringBinary(regionName));
+    }
+    flush(regionServerPair.getSecond(), regionServerPair.getFirst());
+  }
+
+  /**
+   * @deprecated Use {@link #flush(org.apache.hadoop.hbase.TableName)} or {@link #flushRegion
+   * (byte[])} instead.
+   */
+  @Deprecated
   public void flush(final String tableNameOrRegionName)
   throws IOException, InterruptedException {
     flush(Bytes.toBytes(tableNameOrRegionName));
   }
 
   /**
-   * Flush a table or an individual region.
-   * Synchronous operation.
-   *
-   * @param tableNameOrRegionName table or region to flush
-   * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
+   * @deprecated Use {@link #flush(org.apache.hadoop.hbase.TableName)} or {@link #flushRegion
+   * (byte[])} instead.
    */
-  @Override
+  @Deprecated
   public void flush(final byte[] tableNameOrRegionName)
   throws IOException, InterruptedException {
-    Pair<HRegionInfo, ServerName> regionServerPair
-      = getRegion(tableNameOrRegionName);
-    if (regionServerPair != null) {
-      if (regionServerPair.getSecond() == null) {
-        throw new NoServerForRegionException(Bytes.toStringBinary(tableNameOrRegionName));
-      } else {
-        flush(regionServerPair.getSecond(), regionServerPair.getFirst());
-      }
-    } else {
-      final TableName tableName = checkTableExists(
-          TableName.valueOf(tableNameOrRegionName));
-      if (isTableDisabled(tableName)) {
-        LOG.info("Table is disabled: " + tableName.getNameAsString());
-        return;
-      }
-      execProcedure("flush-table-proc", tableName.getNameAsString(),
-        new HashMap<String, String>());
+    try {
+      flushRegion(tableNameOrRegionName);
+    } catch (IllegalArgumentException e) {
+      // Unknown region.  Try table.
+      flush(TableName.valueOf(tableNameOrRegionName));
     }
   }
 
@@ -1523,164 +1533,205 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
-   * Compact a table or an individual region.
-   * Asynchronous operation.
-   *
-   * @param tableNameOrRegionName table or region to compact
-   * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
+   * {@inheritDoc}
    */
   @Override
+  public void compact(final TableName tableName)
+    throws IOException, InterruptedException {
+    compact(tableName, null, false);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void compactRegion(final byte[] regionName)
+    throws IOException, InterruptedException {
+    compactRegion(regionName, null, false);
+  }
+
+  /**
+   * @deprecated Use {@link #compact(org.apache.hadoop.hbase.TableName)} or {@link #compactRegion
+   * (byte[])} instead.
+   */
+  @Deprecated
   public void compact(final String tableNameOrRegionName)
   throws IOException, InterruptedException {
     compact(Bytes.toBytes(tableNameOrRegionName));
   }
 
   /**
-   * Compact a table or an individual region.
-   * Asynchronous operation.
-   *
-   * @param tableNameOrRegionName table or region to compact
-   * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
+   * @deprecated Use {@link #compact(org.apache.hadoop.hbase.TableName)} or {@link #compactRegion
+   * (byte[])} instead.
    */
-  @Override
+  @Deprecated
   public void compact(final byte[] tableNameOrRegionName)
   throws IOException, InterruptedException {
-    compact(tableNameOrRegionName, null, false);
+    try {
+      compactRegion(tableNameOrRegionName, null, false);
+    } catch (IllegalArgumentException e) {
+      compact(TableName.valueOf(tableNameOrRegionName), null, false);
+    }
   }
 
   /**
-   * Compact a column family within a table or region.
-   * Asynchronous operation.
-   *
-   * @param tableOrRegionName table or region to compact
-   * @param columnFamily column family within a table or region
-   * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
+   * {@inheritDoc}
    */
   @Override
+  public void compact(final TableName tableName, final byte[] columnFamily)
+    throws IOException, InterruptedException {
+    compact(tableName, columnFamily, false);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void compactRegion(final byte[] regionName, final byte[] columnFamily)
+    throws IOException, InterruptedException {
+    compactRegion(regionName, columnFamily, false);
+  }
+
+  /**
+   * @deprecated Use {@link #compact(org.apache.hadoop.hbase.TableName)} or {@link #compactRegion
+   * (byte[], byte[])} instead.
+   */
+  @Deprecated
   public void compact(String tableOrRegionName, String columnFamily)
     throws IOException,  InterruptedException {
     compact(Bytes.toBytes(tableOrRegionName), Bytes.toBytes(columnFamily));
   }
 
   /**
-   * Compact a column family within a table or region.
-   * Asynchronous operation.
-   *
-   * @param tableNameOrRegionName table or region to compact
-   * @param columnFamily column family within a table or region
-   * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
+   * @deprecated Use {@link #compact(org.apache.hadoop.hbase.TableName)} or {@link #compactRegion
+   * (byte[], byte[])} instead.
    */
-  @Override
+  @Deprecated
   public void compact(final byte[] tableNameOrRegionName, final byte[] columnFamily)
   throws IOException, InterruptedException {
-    compact(tableNameOrRegionName, columnFamily, false);
+    try {
+      compactRegion(tableNameOrRegionName, columnFamily, false);
+    } catch (IllegalArgumentException e) {
+      // Bad region, try table
+      compact(TableName.valueOf(tableNameOrRegionName), columnFamily, false);
+    }
   }
 
   /**
-   * Major compact a table or an individual region.
-   * Asynchronous operation.
-   *
-   * @param tableNameOrRegionName table or region to major compact
-   * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
+   * {@inheritDoc}
    */
   @Override
+  public void majorCompact(final TableName tableName)
+  throws IOException, InterruptedException {
+    compact(tableName, null, true);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void majorCompactRegion(final byte[] regionName)
+  throws IOException, InterruptedException {
+    compactRegion(regionName, null, true);
+  }
+
+  /**
+   * @deprecated Use {@link #majorCompact(org.apache.hadoop.hbase.TableName)} or {@link
+   * #majorCompactRegion(byte[])} instead.
+   */
+  @Deprecated
   public void majorCompact(final String tableNameOrRegionName)
   throws IOException, InterruptedException {
     majorCompact(Bytes.toBytes(tableNameOrRegionName));
   }
 
   /**
-   * Major compact a table or an individual region.
-   * Asynchronous operation.
-   *
-   * @param tableNameOrRegionName table or region to major compact
-   * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
+   * @deprecated Use {@link #majorCompact(org.apache.hadoop.hbase.TableName)} or {@link
+   * #majorCompactRegion(byte[])} instead.
    */
-  @Override
+  @Deprecated
   public void majorCompact(final byte[] tableNameOrRegionName)
   throws IOException, InterruptedException {
-    compact(tableNameOrRegionName, null, true);
+    try {
+      compactRegion(tableNameOrRegionName, null, true);
+    } catch (IllegalArgumentException e) {
+      // Invalid region, try table
+      compact(TableName.valueOf(tableNameOrRegionName), null, true);
+    }
   }
 
   /**
-   * Major compact a column family within a table or region.
-   * Asynchronous operation.
-   *
-   * @param tableNameOrRegionName table or region to major compact
-   * @param columnFamily column family within a table or region
-   * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
+   * {@inheritDoc}
    */
   @Override
-  public void majorCompact(final String tableNameOrRegionName,
-    final String columnFamily) throws IOException, InterruptedException {
-    majorCompact(Bytes.toBytes(tableNameOrRegionName),
-      Bytes.toBytes(columnFamily));
+  public void majorCompact(final TableName tableName, final byte[] columnFamily)
+  throws IOException, InterruptedException {
+    compact(tableName, columnFamily, true);
   }
 
   /**
-   * Major compact a column family within a table or region.
-   * Asynchronous operation.
-   *
-   * @param tableNameOrRegionName table or region to major compact
-   * @param columnFamily column family within a table or region
-   * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
+   * {@inheritDoc}
    */
   @Override
-  public void majorCompact(final byte[] tableNameOrRegionName,
-    final byte[] columnFamily) throws IOException, InterruptedException {
-    compact(tableNameOrRegionName, columnFamily, true);
+  public void majorCompactRegion(final byte[] regionName, final byte[] columnFamily)
+  throws IOException, InterruptedException {
+    compactRegion(regionName, columnFamily, true);
   }
 
   /**
-   * Compact a table or an individual region.
+   * @deprecated Use {@link #majorCompact(org.apache.hadoop.hbase.TableName,
+   * byte[])} or {@link #majorCompactRegion(byte[], byte[])} instead.
+   */
+  @Deprecated
+  public void majorCompact(final String tableNameOrRegionName, final String columnFamily)
+  throws IOException, InterruptedException {
+    majorCompact(Bytes.toBytes(tableNameOrRegionName), Bytes.toBytes(columnFamily));
+  }
+
+  /**
+   * @deprecated Use {@link #majorCompact(org.apache.hadoop.hbase.TableName,
+   * byte[])} or {@link #majorCompactRegion(byte[], byte[])} instead.
+   */
+  @Deprecated
+  public void majorCompact(final byte[] tableNameOrRegionName, final byte[] columnFamily)
+  throws IOException, InterruptedException {
+    try {
+      compactRegion(tableNameOrRegionName, columnFamily, true);
+    } catch (IllegalArgumentException e) {
+      // Invalid region, try table
+      compact(TableName.valueOf(tableNameOrRegionName), columnFamily, true);
+    }
+  }
+
+  /**
+   * Compact a table.
    * Asynchronous operation.
    *
-   * @param tableNameOrRegionName table or region to compact
+   * @param tableName table or region to compact
    * @param columnFamily column family within a table or region
    * @param major True if we are to do a major compaction.
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
-  private void compact(final byte[] tableNameOrRegionName,
-    final byte[] columnFamily,final boolean major)
+  private void compact(final TableName tableName, final byte[] columnFamily,final boolean major)
   throws IOException, InterruptedException {
     ZooKeeperWatcher zookeeper = null;
     try {
-      Pair<HRegionInfo, ServerName> regionServerPair
-        = getRegion(tableNameOrRegionName);
-      if (regionServerPair != null) {
-        if (regionServerPair.getSecond() == null) {
-          throw new NoServerForRegionException(Bytes.toStringBinary(tableNameOrRegionName));
-        } else {
-          compact(regionServerPair.getSecond(), regionServerPair.getFirst(), major, columnFamily);
-        }
-      } else {
-        final TableName tableName =
-            checkTableExists(TableName.valueOf(tableNameOrRegionName));
-        zookeeper = new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
-            new ThrowableAbortable());
-        List<Pair<HRegionInfo, ServerName>> pairs =
-          MetaTableAccessor.getTableRegionsAndLocations(zookeeper, connection,
-            tableName);
-        for (Pair<HRegionInfo, ServerName> pair: pairs) {
-          if (pair.getFirst().isOffline()) continue;
-          if (pair.getSecond() == null) continue;
-          try {
-            compact(pair.getSecond(), pair.getFirst(), major, columnFamily);
-          } catch (NotServingRegionException e) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("Trying to" + (major ? " major" : "") + " compact " +
-                pair.getFirst() + ": " +
-                StringUtils.stringifyException(e));
-            }
+      checkTableExists(tableName);
+      zookeeper = new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
+          new ThrowableAbortable());
+      List<Pair<HRegionInfo, ServerName>> pairs =
+        MetaTableAccessor.getTableRegionsAndLocations(zookeeper, connection, tableName);
+      for (Pair<HRegionInfo, ServerName> pair: pairs) {
+        if (pair.getFirst().isOffline()) continue;
+        if (pair.getSecond() == null) continue;
+        try {
+          compact(pair.getSecond(), pair.getFirst(), major, columnFamily);
+        } catch (NotServingRegionException e) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Trying to" + (major ? " major" : "") + " compact " +
+              pair.getFirst() + ": " +
+              StringUtils.stringifyException(e));
           }
         }
       }
@@ -1689,6 +1740,28 @@ public class HBaseAdmin implements Admin {
         zookeeper.close();
       }
     }
+  }
+
+  /**
+   * Compact an individual region.
+   * Asynchronous operation.
+   *
+   * @param regionName region to compact
+   * @param columnFamily column family within a table or region
+   * @param major True if we are to do a major compaction.
+   * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException
+   */
+  private void compactRegion(final byte[] regionName, final byte[] columnFamily,final boolean major)
+  throws IOException, InterruptedException {
+    Pair<HRegionInfo, ServerName> regionServerPair = getRegion(regionName);
+    if (regionServerPair == null) {
+      throw new IllegalArgumentException("Invalid region: " + Bytes.toStringBinary(regionName));
+    }
+    if (regionServerPair.getSecond() == null) {
+      throw new NoServerForRegionException(Bytes.toStringBinary(regionName));
+    }
+    compact(regionServerPair.getSecond(), regionServerPair.getFirst(), major, columnFamily);
   }
 
   private void compact(final ServerName sn, final HRegionInfo hri,
@@ -1726,7 +1799,7 @@ public class HBaseAdmin implements Admin {
     try {
       MoveRegionRequest request =
         RequestConverter.buildMoveRegionRequest(encodedRegionName, destServerName);
-      stub.moveRegion(null,request);
+      stub.moveRegion(null, request);
     } catch (ServiceException se) {
       IOException ioe = ProtobufUtil.getRemoteException(se);
       if (ioe instanceof HBaseIOException) {
@@ -1785,7 +1858,7 @@ public class HBaseAdmin implements Admin {
       public Void call(int callTimeout) throws ServiceException {
         UnassignRegionRequest request =
           RequestConverter.buildUnassignRegionRequest(toBeUnassigned, force);
-        master.unassignRegion(null,request);
+        master.unassignRegion(null, request);
         return null;
       }
     });
@@ -1858,7 +1931,7 @@ public class HBaseAdmin implements Admin {
   throws MasterNotRunningException, ZooKeeperConnectionException, ServiceException {
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
-      return stub.balance(null,RequestConverter.buildBalanceRequest()).getBalancerRan();
+      return stub.balance(null, RequestConverter.buildBalanceRequest()).getBalancerRan();
     } finally {
       stub.close();
     }
@@ -1877,7 +1950,7 @@ public class HBaseAdmin implements Admin {
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       return stub.enableCatalogJanitor(null,
-          RequestConverter.buildEnableCatalogJanitorRequest(enable)).getPrevValue();
+        RequestConverter.buildEnableCatalogJanitorRequest(enable)).getPrevValue();
     } finally {
       stub.close();
     }
@@ -1894,7 +1967,7 @@ public class HBaseAdmin implements Admin {
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       return stub.runCatalogScan(null,
-          RequestConverter.buildCatalogScanRequest()).getScanResult();
+        RequestConverter.buildCatalogScanRequest()).getScanResult();
     } finally {
       stub.close();
     }
@@ -1910,7 +1983,7 @@ public class HBaseAdmin implements Admin {
     MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
     try {
       return stub.isCatalogJanitorEnabled(null,
-          RequestConverter.buildIsCatalogJanitorEnabledRequest()).getValue();
+        RequestConverter.buildIsCatalogJanitorEnabledRequest()).getValue();
     } finally {
       stub.close();
     }
@@ -1953,85 +2026,112 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
-   * Split a table or an individual region.
-   * Asynchronous operation.
-   *
-   * @param tableNameOrRegionName table or region to split
-   * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
+   * {@inheritDoc}
    */
   @Override
+  public void split(final TableName tableName)
+    throws IOException, InterruptedException {
+    split(tableName, null);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void splitRegion(final byte[] regionName)
+    throws IOException, InterruptedException {
+    splitRegion(regionName, null);
+  }
+
+  /**
+   * @deprecated Use {@link #split(org.apache.hadoop.hbase.TableName)} or {@link #splitRegion
+   * (byte[])} instead.
+   */
+  @Deprecated
   public void split(final String tableNameOrRegionName)
   throws IOException, InterruptedException {
     split(Bytes.toBytes(tableNameOrRegionName));
   }
 
   /**
-   * Split a table or an individual region.  Implicitly finds an optimal split
-   * point.  Asynchronous operation.
-   *
-   * @param tableNameOrRegionName table to region to split
-   * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
+   * @deprecated Use {@link #split(org.apache.hadoop.hbase.TableName)} or {@link #splitRegion
+   * (byte[])} instead.
    */
-  @Override
+  @Deprecated
   public void split(final byte[] tableNameOrRegionName)
   throws IOException, InterruptedException {
     split(tableNameOrRegionName, null);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
+  public void split(final TableName tableName, final byte [] splitPoint)
+  throws IOException, InterruptedException {
+    ZooKeeperWatcher zookeeper = null;
+    try {
+      checkTableExists(tableName);
+      zookeeper = new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
+        new ThrowableAbortable());
+      List<Pair<HRegionInfo, ServerName>> pairs =
+        MetaTableAccessor.getTableRegionsAndLocations(zookeeper, connection, tableName);
+      for (Pair<HRegionInfo, ServerName> pair: pairs) {
+        // May not be a server for a particular row
+        if (pair.getSecond() == null) continue;
+        HRegionInfo r = pair.getFirst();
+        // check for parents
+        if (r.isSplitParent()) continue;
+        // if a split point given, only split that particular region
+        if (splitPoint != null && !r.containsRow(splitPoint)) continue;
+        // call out to region server to do split now
+        split(pair.getSecond(), pair.getFirst(), splitPoint);
+      }
+    } finally {
+      if (zookeeper != null) {
+        zookeeper.close();
+      }
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void splitRegion(final byte[] regionName, final byte [] splitPoint)
+  throws IOException, InterruptedException {
+    Pair<HRegionInfo, ServerName> regionServerPair = getRegion(regionName);
+    if (regionServerPair == null) {
+      throw new IllegalArgumentException("Invalid region: " + Bytes.toStringBinary(regionName));
+    }
+    if (regionServerPair.getSecond() == null) {
+      throw new NoServerForRegionException(Bytes.toStringBinary(regionName));
+    }
+    split(regionServerPair.getSecond(), regionServerPair.getFirst(), splitPoint);
+  }
+
+  /**
+   * @deprecated Use {@link #split(org.apache.hadoop.hbase.TableName,
+   * byte[])} or {@link #splitRegion(byte[], byte[])} instead.
+   */
+  @Deprecated
   public void split(final String tableNameOrRegionName,
     final String splitPoint) throws IOException, InterruptedException {
     split(Bytes.toBytes(tableNameOrRegionName), Bytes.toBytes(splitPoint));
   }
 
   /**
-   * Split a table or an individual region.
-   * Asynchronous operation.
-   *
-   * @param tableNameOrRegionName table to region to split
-   * @param splitPoint the explicit position to split on
-   * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException interrupt exception occurred
+   * @deprecated Use {@link #split(org.apache.hadoop.hbase.TableName,
+   * byte[])} or {@link #splitRegion(byte[], byte[])} instead.
    */
-  @Override
+  @Deprecated
   public void split(final byte[] tableNameOrRegionName,
       final byte [] splitPoint) throws IOException, InterruptedException {
-    ZooKeeperWatcher zookeeper = null;
     try {
-      Pair<HRegionInfo, ServerName> regionServerPair
-        = getRegion(tableNameOrRegionName);
-      if (regionServerPair != null) {
-        if (regionServerPair.getSecond() == null) {
-            throw new NoServerForRegionException(Bytes.toStringBinary(tableNameOrRegionName));
-        } else {
-          split(regionServerPair.getSecond(), regionServerPair.getFirst(), splitPoint);
-        }
-      } else {
-        final TableName tableName =
-            checkTableExists(TableName.valueOf(tableNameOrRegionName));
-        zookeeper = new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
-            new ThrowableAbortable());
-        List<Pair<HRegionInfo, ServerName>> pairs =
-          MetaTableAccessor.getTableRegionsAndLocations(zookeeper, connection,
-            tableName);
-        for (Pair<HRegionInfo, ServerName> pair: pairs) {
-          // May not be a server for a particular row
-          if (pair.getSecond() == null) continue;
-          HRegionInfo r = pair.getFirst();
-          // check for parents
-          if (r.isSplitParent()) continue;
-          // if a split point given, only split that particular region
-          if (splitPoint != null && !r.containsRow(splitPoint)) continue;
-          // call out to region server to do split now
-          split(pair.getSecond(), pair.getFirst(), splitPoint);
-        }
-      }
-    } finally {
-      if (zookeeper != null) {
-        zookeeper.close();
-      }
+      splitRegion(tableNameOrRegionName, splitPoint);
+    } catch (IllegalArgumentException e) {
+      // Bad region, try table
+      split(TableName.valueOf(tableNameOrRegionName), splitPoint);
     }
   }
 
@@ -2083,24 +2183,24 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
-   * @param tableNameOrRegionName Name of a table or name of a region.
-   * @return a pair of HRegionInfo and ServerName if <code>tableNameOrRegionName</code> is
+   * @param regionName Name of a region.
+   * @return a pair of HRegionInfo and ServerName if <code>regionName</code> is
    *  a verified region name (we call {@link
    *  MetaTableAccessor#getRegion(HConnection, byte[])}
    *  else null.
-   * Throw an exception if <code>tableNameOrRegionName</code> is null.
+   * Throw IllegalArgumentException if <code>regionName</code> is null.
    * @throws IOException
    */
-  Pair<HRegionInfo, ServerName> getRegion(final byte[] tableNameOrRegionName) throws IOException {
-    if (tableNameOrRegionName == null) {
+  Pair<HRegionInfo, ServerName> getRegion(final byte[] regionName) throws IOException {
+    if (regionName == null) {
       throw new IllegalArgumentException("Pass a table name or region name");
     }
     Pair<HRegionInfo, ServerName> pair =
-      MetaTableAccessor.getRegion(connection, tableNameOrRegionName);
+      MetaTableAccessor.getRegion(connection, regionName);
     if (pair == null) {
       final AtomicReference<Pair<HRegionInfo, ServerName>> result =
         new AtomicReference<Pair<HRegionInfo, ServerName>>(null);
-      final String encodedName = Bytes.toString(tableNameOrRegionName);
+      final String encodedName = Bytes.toString(regionName);
       MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
         @Override
         public boolean processRow(Result data) throws IOException {
@@ -2187,7 +2287,7 @@ public class HBaseAdmin implements Admin {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call(int callTimeout) throws ServiceException {
-        master.stopMaster(null,StopMasterRequest.newBuilder().build());
+        master.stopMaster(null, StopMasterRequest.newBuilder().build());
         return null;
       }
     });
@@ -2226,7 +2326,7 @@ public class HBaseAdmin implements Admin {
       @Override
       public ClusterStatus call(int callTimeout) throws ServiceException {
         GetClusterStatusRequest req = RequestConverter.buildGetClusterStatusRequest();
-        return ClusterStatus.convert(master.getClusterStatus(null,req).getClusterStatus());
+        return ClusterStatus.convert(master.getClusterStatus(null, req).getClusterStatus());
       }
     });
   }
@@ -2257,8 +2357,9 @@ public class HBaseAdmin implements Admin {
       public Void call(int callTimeout) throws Exception {
         master.createNamespace(null,
           CreateNamespaceRequest.newBuilder()
-                .setNamespaceDescriptor(ProtobufUtil
-                    .toProtoNamespaceDescriptor(descriptor)).build());
+            .setNamespaceDescriptor(ProtobufUtil
+              .toProtoNamespaceDescriptor(descriptor)).build()
+        );
         return null;
       }
     });
@@ -2517,8 +2618,8 @@ public class HBaseAdmin implements Admin {
    * @throws IOException if a remote or network exception occurs
    * @throws FailedLogCloseException
    */
- @Override
-public synchronized  byte[][] rollHLogWriter(String serverName)
+  @Override
+  public synchronized  byte[][] rollHLogWriter(String serverName)
       throws IOException, FailedLogCloseException {
     ServerName sn = ServerName.valueOf(serverName);
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
@@ -2548,96 +2649,60 @@ public synchronized  byte[][] rollHLogWriter(String serverName)
   }
 
   /**
-   * Get the current compaction state of a table or region.
-   * It could be in a major compaction, a minor compaction, both, or none.
-   *
-   * @param tableNameOrRegionName table or region to major compact
-   * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
-   * @return the current compaction state
+   * {@inheritDoc}
    */
   @Override
-  public CompactionState getCompactionState(final String tableNameOrRegionName)
-      throws IOException, InterruptedException {
-    return getCompactionState(Bytes.toBytes(tableNameOrRegionName));
-  }
-
-  /**
-   * Get the current compaction state of a table or region.
-   * It could be in a major compaction, a minor compaction, both, or none.
-   *
-   * @param tableNameOrRegionName table or region to major compact
-   * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
-   * @return the current compaction state
-   */
-  @Override
-  public CompactionState getCompactionState(final byte[] tableNameOrRegionName)
-      throws IOException, InterruptedException {
+  public CompactionState getCompactionState(final TableName tableName)
+  throws IOException, InterruptedException {
     CompactionState state = CompactionState.NONE;
     ZooKeeperWatcher zookeeper =
       new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
         new ThrowableAbortable());
     try {
-      Pair<HRegionInfo, ServerName> regionServerPair = getRegion(tableNameOrRegionName);
-      if (regionServerPair != null) {
-        if (regionServerPair.getSecond() == null) {
-          throw new NoServerForRegionException(Bytes.toStringBinary(tableNameOrRegionName));
-        } else {
-          ServerName sn = regionServerPair.getSecond();
+      checkTableExists(tableName);
+      List<Pair<HRegionInfo, ServerName>> pairs =
+        MetaTableAccessor.getTableRegionsAndLocations(zookeeper, connection, tableName);
+      for (Pair<HRegionInfo, ServerName> pair: pairs) {
+        if (pair.getFirst().isOffline()) continue;
+        if (pair.getSecond() == null) continue;
+        try {
+          ServerName sn = pair.getSecond();
           AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
           GetRegionInfoRequest request = RequestConverter.buildGetRegionInfoRequest(
-            regionServerPair.getFirst().getRegionName(), true);
+            pair.getFirst().getRegionName(), true);
           GetRegionInfoResponse response = admin.getRegionInfo(null, request);
-          return response.getCompactionState();
-        }
-      } else {
-        final TableName tableName =
-            checkTableExists(TableName.valueOf(tableNameOrRegionName));
-        List<Pair<HRegionInfo, ServerName>> pairs =
-          MetaTableAccessor.getTableRegionsAndLocations(zookeeper, connection, tableName);
-        for (Pair<HRegionInfo, ServerName> pair: pairs) {
-          if (pair.getFirst().isOffline()) continue;
-          if (pair.getSecond() == null) continue;
-          try {
-            ServerName sn = pair.getSecond();
-            AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
-            GetRegionInfoRequest request = RequestConverter.buildGetRegionInfoRequest(
-              pair.getFirst().getRegionName(), true);
-            GetRegionInfoResponse response = admin.getRegionInfo(null, request);
-            switch (response.getCompactionState()) {
-            case MAJOR_AND_MINOR:
+          switch (response.getCompactionState()) {
+          case MAJOR_AND_MINOR:
+            return CompactionState.MAJOR_AND_MINOR;
+          case MAJOR:
+            if (state == CompactionState.MINOR) {
               return CompactionState.MAJOR_AND_MINOR;
-            case MAJOR:
-              if (state == CompactionState.MINOR) {
-                return CompactionState.MAJOR_AND_MINOR;
-              }
-              state = CompactionState.MAJOR;
-              break;
-            case MINOR:
-              if (state == CompactionState.MAJOR) {
-                return CompactionState.MAJOR_AND_MINOR;
-              }
-              state = CompactionState.MINOR;
-              break;
-            case NONE:
-              default: // nothing, continue
             }
-          } catch (NotServingRegionException e) {
+            state = CompactionState.MAJOR;
+            break;
+          case MINOR:
+            if (state == CompactionState.MAJOR) {
+              return CompactionState.MAJOR_AND_MINOR;
+            }
+            state = CompactionState.MINOR;
+            break;
+          case NONE:
+          default: // nothing, continue
+          }
+        } catch (NotServingRegionException e) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Trying to get compaction state of " +
+              pair.getFirst() + ": " +
+              StringUtils.stringifyException(e));
+          }
+        } catch (RemoteException e) {
+          if (e.getMessage().indexOf(NotServingRegionException.class.getName()) >= 0) {
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Trying to get compaction state of " +
-                pair.getFirst() + ": " +
-                StringUtils.stringifyException(e));
+              LOG.debug("Trying to get compaction state of " + pair.getFirst() + ": "
+                + StringUtils.stringifyException(e));
             }
-          } catch (RemoteException e) {
-            if (e.getMessage().indexOf(NotServingRegionException.class.getName()) >= 0) {
-              if (LOG.isDebugEnabled()) {
-                LOG.debug("Trying to get compaction state of " + pair.getFirst() + ": "
-                    + StringUtils.stringifyException(e));
-              }
-            } else {
-              throw e;
-            }
+          } else {
+            throw e;
           }
         }
       }
@@ -2647,6 +2712,56 @@ public synchronized  byte[][] rollHLogWriter(String serverName)
       zookeeper.close();
     }
     return state;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public CompactionState getCompactionStateForRegion(final byte[] regionName)
+  throws IOException, InterruptedException {
+    try {
+      Pair<HRegionInfo, ServerName> regionServerPair = getRegion(regionName);
+      if (regionServerPair == null) {
+        throw new IllegalArgumentException("Invalid region: " + Bytes.toStringBinary(regionName));
+      }
+      if (regionServerPair.getSecond() == null) {
+        throw new NoServerForRegionException(Bytes.toStringBinary(regionName));
+      }
+      ServerName sn = regionServerPair.getSecond();
+      AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
+      GetRegionInfoRequest request = RequestConverter.buildGetRegionInfoRequest(
+        regionServerPair.getFirst().getRegionName(), true);
+      GetRegionInfoResponse response = admin.getRegionInfo(null, request);
+      return response.getCompactionState();
+    } catch (ServiceException se) {
+      throw ProtobufUtil.getRemoteException(se);
+    }
+  }
+
+  /**
+   * @deprecated Use {@link #getCompactionState(org.apache.hadoop.hbase.TableName)} or {@link
+   * #getCompactionStateForRegion(byte[])} instead.
+   */
+  @Deprecated
+  public CompactionState getCompactionState(final String tableNameOrRegionName)
+  throws IOException, InterruptedException {
+    return getCompactionState(Bytes.toBytes(tableNameOrRegionName));
+  }
+
+  /**
+   * @deprecated Use {@link #getCompactionState(org.apache.hadoop.hbase.TableName)} or {@link
+   * #getCompactionStateForRegion(byte[])} instead.
+   */
+  @Deprecated
+  public CompactionState getCompactionState(final byte[] tableNameOrRegionName)
+  throws IOException, InterruptedException {
+    try {
+      return getCompactionStateForRegion(tableNameOrRegionName);
+    } catch (IllegalArgumentException e) {
+      // Invalid region, try table
+      return getCompactionState(TableName.valueOf(tableNameOrRegionName));
+    }
   }
 
   /**
@@ -2726,7 +2841,7 @@ public synchronized  byte[][] rollHLogWriter(String serverName)
                        final byte[] tableName) throws IOException,
       SnapshotCreationException, IllegalArgumentException {
     snapshot(Bytes.toString(snapshotName), TableName.valueOf(tableName),
-        SnapshotDescription.Type.FLUSH);
+      SnapshotDescription.Type.FLUSH);
   }
 
   /**
@@ -3398,7 +3513,8 @@ public synchronized  byte[][] rollHLogWriter(String serverName)
       public Void call(int callTimeout) throws ServiceException {
         master.deleteSnapshot(null,
           DeleteSnapshotRequest.newBuilder().
-            setSnapshot(SnapshotDescription.newBuilder().setName(snapshotName).build()).build());
+            setSnapshot(SnapshotDescription.newBuilder().setName(snapshotName).build()).build()
+        );
         return null;
       }
     });

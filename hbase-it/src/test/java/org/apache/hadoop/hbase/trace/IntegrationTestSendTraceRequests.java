@@ -19,8 +19,6 @@
 package org.apache.hadoop.hbase.trace;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -28,7 +26,6 @@ import org.apache.hadoop.hbase.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -38,10 +35,8 @@ import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
 import org.htrace.Sampler;
-import org.htrace.Span;
 import org.htrace.Trace;
 import org.htrace.TraceScope;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -255,13 +250,13 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
           ht.put(p);
         }
         if ((x % 1000) == 0) {
-          admin.flush(tableName.toBytes());
+          admin.flush(tableName);
         }
       } finally {
         traceScope.close();
       }
     }
-    admin.flush(tableName.toBytes());
+    admin.flush(tableName);
     return rowKeys;
   }
 

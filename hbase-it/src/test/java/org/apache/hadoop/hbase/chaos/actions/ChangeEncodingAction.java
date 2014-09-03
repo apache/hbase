@@ -25,9 +25,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Action that changes the encoding on a column family from a list of tables.
@@ -38,8 +36,8 @@ public class ChangeEncodingAction extends Action {
   private Admin admin;
   private Random random;
 
-  public ChangeEncodingAction(String tableName) {
-    this.tableName = TableName.valueOf(tableName);
+  public ChangeEncodingAction(TableName tableName) {
+    this.tableName = tableName;
     this.random = new Random();
   }
 

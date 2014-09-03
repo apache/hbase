@@ -25,8 +25,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
 * Action that tries to split a random region of a table.
@@ -35,13 +33,13 @@ public class SplitRandomRegionOfTableAction extends Action {
   private final long sleepTime;
   private final TableName tableName;
 
-  public SplitRandomRegionOfTableAction(String tableName) {
+  public SplitRandomRegionOfTableAction(TableName tableName) {
     this(-1, tableName);
   }
 
-  public SplitRandomRegionOfTableAction(int sleepTime, String tableName) {
+  public SplitRandomRegionOfTableAction(int sleepTime, TableName tableName) {
     this.sleepTime = sleepTime;
-    this.tableName = TableName.valueOf(tableName);
+    this.tableName = tableName;
   }
 
   @Override
@@ -60,7 +58,7 @@ public class SplitRandomRegionOfTableAction extends Action {
         regions.toArray(new HRegionInfo[regions.size()]));
     LOG.debug("Splitting region " + region.getRegionNameAsString());
     try {
-      admin.split(region.getRegionName());
+      admin.splitRegion(region.getRegionName());
     } catch (Exception ex) {
       LOG.warn("Split failed, might be caused by other chaos: " + ex.getMessage());
     }

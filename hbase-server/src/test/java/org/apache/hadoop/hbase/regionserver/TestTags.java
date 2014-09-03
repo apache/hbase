@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -123,8 +122,8 @@ public class TestTags {
       put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
       put.setAttribute("visibility", Bytes.toBytes("myTag"));
       table.put(put);
-      admin.flush(tableName.getName());
-      List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
+      admin.flush(tableName);
+      List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
       for (HRegion region : regions) {
         Store store = region.getStore(fam);
         while (!(store.getStorefilesCount() > 0)) {
@@ -137,8 +136,8 @@ public class TestTags {
       put1.add(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
       // put1.setAttribute("visibility", Bytes.toBytes("myTag3"));
       table.put(put1);
-      admin.flush(tableName.getName());
-      regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
+      admin.flush(tableName);
+      regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
       for (HRegion region : regions) {
         Store store = region.getStore(fam);
         while (!(store.getStorefilesCount() > 1)) {
@@ -152,7 +151,7 @@ public class TestTags {
       put2.setAttribute("visibility", Bytes.toBytes("myTag3"));
       table.put(put2);
 
-      admin.flush(tableName.getName());
+      admin.flush(tableName);
       regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
       for (HRegion region : regions) {
         Store store = region.getStore(fam);
@@ -161,8 +160,8 @@ public class TestTags {
         }
       }
       result(fam, row, qual, row2, table, value, value2, row1, value1);
-      admin.compact(tableName.getName());
-      while (admin.getCompactionState(tableName.getName()) != CompactionState.NONE) {
+      admin.compact(tableName);
+      while (admin.getCompactionState(tableName) != CompactionState.NONE) {
         Thread.sleep(10);
       }
       result(fam, row, qual, row2, table, value, value2, row1, value1);
@@ -201,7 +200,7 @@ public class TestTags {
       byte[] value = Bytes.toBytes("value");
       put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
       table.put(put);
-      admin.flush(tableName.getName());
+      admin.flush(tableName);
       List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
       for (HRegion region : regions) {
         Store store = region.getStore(fam);
@@ -214,7 +213,7 @@ public class TestTags {
       byte[] value1 = Bytes.toBytes("1000dfsdf");
       put1.add(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
       table.put(put1);
-      admin.flush(tableName.getName());
+      admin.flush(tableName);
       regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
       for (HRegion region : regions) {
         Store store = region.getStore(fam);
@@ -228,8 +227,8 @@ public class TestTags {
       put2.add(fam, qual, HConstants.LATEST_TIMESTAMP, value2);
       table.put(put2);
 
-      admin.flush(tableName.getName());
-      regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
+      admin.flush(tableName);
+      regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
       for (HRegion region : regions) {
         Store store = region.getStore(fam);
         while (!(store.getStorefilesCount() > 2)) {
@@ -250,8 +249,8 @@ public class TestTags {
         if (scanner != null)
           scanner.close();
       }
-      admin.compact(tableName.getName());
-      while (admin.getCompactionState(tableName.getName()) != CompactionState.NONE) {
+      admin.compact(tableName);
+      while (admin.getCompactionState(tableName) != CompactionState.NONE) {
         Thread.sleep(10);
       }
       s = new Scan(row);
@@ -310,7 +309,7 @@ public class TestTags {
         byte[] value1 = Bytes.toBytes("1000dfsdf");
         put1.add(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
         table.put(put1);
-        admin.flush(tableName.getName());
+        admin.flush(tableName);
         List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
         for (HRegion region : regions) {
           Store store = region.getStore(fam);
@@ -323,8 +322,8 @@ public class TestTags {
         value1 = Bytes.toBytes("1000dfsdf");
         put1.add(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
         table.put(put1);
-        admin.flush(tableName.getName());
-        regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
+        admin.flush(tableName);
+        regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
         for (HRegion region : regions) {
           Store store = region.getStore(fam);
           while (!(store.getStorefilesCount() > 1)) {
@@ -340,8 +339,8 @@ public class TestTags {
         put2.add(fam, qual, HConstants.LATEST_TIMESTAMP, value2);
         put.setAttribute("visibility", Bytes.toBytes("ram"));
         table.put(put2);
-        admin.flush(tableName.getName());
-        regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
+        admin.flush(tableName);
+        regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
         for (HRegion region : regions) {
           Store store = region.getStore(fam);
           while (!(store.getStorefilesCount() > 2)) {
@@ -372,7 +371,7 @@ public class TestTags {
           }
           TestCoprocessorForTags.checkTagPresence = false;
         }
-        while (admin.getCompactionState(tableName.getName()) != CompactionState.NONE) {
+        while (admin.getCompactionState(tableName) != CompactionState.NONE) {
           Thread.sleep(10);
         }
         TestCoprocessorForTags.checkTagPresence = true;
