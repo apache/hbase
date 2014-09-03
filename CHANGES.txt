@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.98.6 - 9/02/2014
+Release 0.98.6 - 9/09/2014
 
 ** Sub-task
     * [HBASE-11059] - ZK-less region assignment
@@ -25,6 +25,7 @@ Release 0.98.6 - 9/02/2014
     * [HBASE-11708] - RegionSplitter incorrectly calculates splitcount
     * [HBASE-11716] - LoadTestDataGeneratorWithVisibilityLabels should handle Delete mutations
     * [HBASE-11725] - Backport failover checking change to 1.0
+    * [HBASE-11726] - Master should fail-safe if starting with a pre 0.96 layout
     * [HBASE-11727] - Assignment wait time error in case of ServerNotRunningYetException
     * [HBASE-11728] - Data loss while scanning using PREFIX_TREE DATA-BLOCK-ENCODING
     * [HBASE-11733] - Avoid copy-paste in Master/Region CoprocessorHost
@@ -32,6 +33,7 @@ Release 0.98.6 - 9/02/2014
     * [HBASE-11755] - VisibilityController returns the wrong value for preBalanceSwitch()
     * [HBASE-11766] - Backdoor CoprocessorHConnection is no longer being used for local writes
     * [HBASE-11773] - Wrong field used for protobuf construction in RegionStates.
+    * [HBASE-11788] - hbase is not deleting the cell when a Put with a KeyValue, KeyValue.Type.Delete is submitted
     * [HBASE-11789] - LoadIncrementalHFiles is not picking up the -D option 
     * [HBASE-11794] - StripeStoreFlusher causes NullPointerException
     * [HBASE-11802] - Scan copy constructor doesn't copy reversed member variable
@@ -39,6 +41,13 @@ Release 0.98.6 - 9/02/2014
     * [HBASE-11814] - TestAssignmentManager.testCloseFailed() and testOpenCloseRacing() is flaky
     * [HBASE-11816] - Initializing custom Metrics implementation failed in Mapper or Reducer
     * [HBASE-11823] - Cleanup javadoc warnings.
+    * [HBASE-11837] - Scanner from RegionCoprocessorEnvironment.getTable(TableName) returns no local data
+    * [HBASE-11844] - region_mover.rb load enters an infinite loop if region already present on target server
+    * [HBASE-11856] - hbase-common needs a log4j.properties resource for handling unit test logging output
+    * [HBASE-11857] - Restore ReaderBase.initAfterCompression() and WALCellCodec.create(Configuration, CompressionContext)
+    * [HBASE-11863] - WAL files are not archived and stays in the WAL directory after splitting 
+    * [HBASE-11876] - RegionScanner.nextRaw(...) should not update metrics
+    * [HBASE-11878] - TestVisibilityLabelsWithDistributedLogReplay#testAddVisibilityLabelsOnRSRestart sometimes fails due to VisibilityController not yet initialized
 
 ** Improvement
     * [HBASE-8298] - In shell, provide alias of 'desc' for 'describe'
@@ -58,9 +67,16 @@ Release 0.98.6 - 9/02/2014
     * [HBASE-11754] - [Shell] Record table property SPLITS_FILE in descriptor
     * [HBASE-11757] - Provide a common base abstract class for both RegionObserver and MasterObserver
     * [HBASE-11774] - Avoid allocating unnecessary tag iterators
+    * [HBASE-11790] - Bulk load should use HFileOutputFormat2 in all cases
+    * [HBASE-11810] - Access SSL Passwords through Credential Provider API
+    * [HBASE-11821] - [ImportTSV] Abstract labels tags creation into pluggable Interface
     * [HBASE-11828] - callers of SeverName.valueOf should use equals and not ==
+    * [HBASE-11841] - [0.98] Option for disabling location prefetch
+    * [HBASE-11846] - HStore#assertBulkLoadHFileOk should log if a full HFile verification will be performed during a bulkload
+    * [HBASE-11865] - Result implements CellScannable; rather it should BE a CellScanner
 
 ** Task
+    * [HBASE-9875] - NamespaceJanitor chore is not used
     * [HBASE-11735] - Document Configurable Bucket Sizes in bucketCache
     * [HBASE-11762] - Record the class name of Codec in WAL header
     * [HBASE-11800] - Coprocessor service methods in HTableInterface should be annotated public
