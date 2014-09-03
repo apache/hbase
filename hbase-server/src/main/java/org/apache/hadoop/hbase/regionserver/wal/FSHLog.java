@@ -1350,15 +1350,16 @@ class FSHLog implements HLog, Syncable {
       while (this.syncedTillHere.get() < txid) {
         try {
           this.syncedTillHere.wait();
+
+          if (txid <= this.failedTxid.get()) {
+            assert asyncIOE != null :
+              "current txid is among(under) failed txids, but asyncIOE is null!";
+            throw asyncIOE;
+          }
         } catch (InterruptedException e) {
           LOG.debug("interrupted while waiting for notification from AsyncNotifier");
         }
       }
-    }
-    if (txid <= this.failedTxid.get()) {
-        assert asyncIOE != null :
-          "current txid is among(under) failed txids, but asyncIOE is null!";
-        throw asyncIOE;
     }
   }
 
