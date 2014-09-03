@@ -40,6 +40,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -148,7 +149,7 @@ public class TestSplitLogManager {
   @After
   public void teardown() throws IOException, KeeperException {
     stopper.stop("");
-    slm.stop();
+    if (slm != null) slm.stop();
     TEST_UTIL.shutdownMiniZKCluster();
   }
 
@@ -159,6 +160,7 @@ public class TestSplitLogManager {
   private void waitForCounter(final AtomicLong ctr, long oldval, long newval, long timems)
       throws Exception {
     Expr e = new Expr() {
+      @Override
       public long eval() {
         return ctr.get();
       }
@@ -498,6 +500,44 @@ public class TestSplitLogManager {
     fs.mkdirs(emptyLogDirPath);
     slm.splitLogDistributed(emptyLogDirPath);
     assertFalse(fs.exists(emptyLogDirPath));
+  }
+
+  @Test (timeout = 60000)
+  public void testLogFilesAreArchived() throws Exception {
+    LOG.info("testLogFilesAreArchived");
+    final SplitLogManager slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER);
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    Path dir = TEST_UTIL.getDataTestDirOnTestFS("testLogFilesAreArchived");
+    conf.set(HConstants.HBASE_DIR, dir.toString());
+    Path logDirPath = new Path(dir, UUID.randomUUID().toString());
+    fs.mkdirs(logDirPath);
+    // create an empty log file
+    String logFile = ServerName.valueOf("foo", 1, 1).toString();
+    fs.create(new Path(logDirPath, logFile)).close();
+
+    // spin up a thread mocking split done.
+    new Thread() {
+      @Override
+      public void run() {
+        boolean done = false;
+        while (!done) {
+          for (Map.Entry<String, Task> entry : slm.getTasks().entrySet()) {
+            final ServerName worker1 = ServerName.valueOf("worker1,1,1");
+            SplitLogTask slt = new SplitLogTask.Done(worker1, RecoveryMode.LOG_SPLITTING);
+            try {
+              ZKUtil.setData(zkw, entry.getKey(), slt.toByteArray());
+            } catch (KeeperException e) {
+              LOG.warn(e);
+            }
+            done = true;
+          }
+        }
+      };
+    }.start();
+
+    slm.splitLogDistributed(logDirPath);
+
+    assertFalse(fs.exists(logDirPath));
   }
 
   /**

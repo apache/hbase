@@ -78,6 +78,8 @@ import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Distributes the task of log splitting to the available region servers.
  * Coordination happens via zookeeper. For every log file that has to be split a
@@ -435,6 +437,11 @@ public class SplitLogManager extends ZooKeeperListener {
         }
       }
     }
+  }
+
+  @VisibleForTesting
+  ConcurrentMap<String, Task> getTasks() {
+    return tasks;
   }
 
   private int activeTasks(final TaskBatch batch) {
