@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -95,12 +94,14 @@ public class MasterFileSystem {
   private final MasterServices services;
 
   final static PathFilter META_FILTER = new PathFilter() {
+    @Override
     public boolean accept(Path p) {
       return HLogUtil.isMetaFile(p);
     }
   };
 
   final static PathFilter NON_META_FILTER = new PathFilter() {
+    @Override
     public boolean accept(Path p) {
       return !HLogUtil.isMetaFile(p);
     }
@@ -487,7 +488,7 @@ public class MasterFileSystem {
       org.apache.hadoop.hbase.util.FSTableDescriptorMigrationToSubdir
         .migrateFSTableDescriptorsIfNecessary(fs, rd);
     }
-      
+
     // Create tableinfo-s for hbase:meta if not already there.
     new FSTableDescriptors(fs, rd).createTableDescriptor(HTableDescriptor.META_TABLEDESC);
 

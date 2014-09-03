@@ -26,11 +26,6 @@ import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_done;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_err;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_wkr_task_resigned;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -261,6 +256,10 @@ public class TestDistributedLogSplitting {
       }
       LOG.info(count + " edits in " + files.length + " recovered edits files.");
     }
+
+    // check that the log file is moved
+    assertFalse(fs.exists(logDir));
+
     assertEquals(NUM_LOG_LINES, count);
   }
 
@@ -466,9 +465,9 @@ public class TestDistributedLogSplitting {
 
     Thread.sleep(2000);
     LOG.info("Current Open Regions:" + getAllOnlineRegions(cluster).size());
-    
+
     startMasterAndWaitUntilLogSplit(cluster);
-    
+
     // wait for abort completes
     TEST_UTIL.waitFor(120000, 200, new Waiter.Predicate<Exception>() {
       @Override
@@ -781,10 +780,10 @@ public class TestDistributedLogSplitting {
     }
     makeHLog(hrs.getWAL(), regions, "disableTable", "family", NUM_LOG_LINES, 100, false);
     makeHLog(hrs.getWAL(), regions, "table", "family", NUM_LOG_LINES, 100);
-    
+
     LOG.info("Disabling table\n");
     TEST_UTIL.getHBaseAdmin().disableTable(Bytes.toBytes("disableTable"));
-    
+
     // abort RS
     LOG.info("Aborting region server: " + hrs.getServerName());
     hrs.abort("testing");
@@ -1229,7 +1228,7 @@ public class TestDistributedLogSplitting {
       WALEdit e = new WALEdit();
       value++;
       e.add(new KeyValue(row, family, qualifier, timeStamp, Bytes.toBytes(value)));
-      hrs.getWAL().append(curRegionInfo, TableName.valueOf(tableName), e, 
+      hrs.getWAL().append(curRegionInfo, TableName.valueOf(tableName), e,
         System.currentTimeMillis(), htd, sequenceId);
     }
     hrs.getWAL().sync();

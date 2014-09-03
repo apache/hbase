@@ -78,6 +78,8 @@ import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Distributes the task of log splitting to the available region servers.
  * Coordination happens via zookeeper. For every log file that has to be split a
@@ -156,26 +158,6 @@ public class SplitLogManager extends ZooKeeperListener {
    * Wrapper around {@link #SplitLogManager(ZooKeeperWatcher zkw, Configuration conf,
    *   Stoppable stopper, MasterServices master, ServerName serverName,
    *   boolean masterRecovery, TaskFinisher tf)}
-   * with masterRecovery = false, and tf = null.  Used in unit tests.
-   *
-   * @param zkw the ZK watcher
-   * @param conf the HBase configuration
-   * @param stopper the stoppable in case anything is wrong
-   * @param master the master services
-   * @param serverName the master server name
-   * @throws KeeperException
-   * @throws InterruptedIOException
-   */
-    public SplitLogManager(ZooKeeperWatcher zkw, final Configuration conf,
-       Stoppable stopper, MasterServices master, ServerName serverName)
-       throws InterruptedIOException, KeeperException {
-    this(zkw, conf, stopper, master, serverName, false, null);
-  }
-
-  /**
-   * Wrapper around {@link #SplitLogManager(ZooKeeperWatcher zkw, Configuration conf,
-   *   Stoppable stopper, MasterServices master, ServerName serverName,
-   *   boolean masterRecovery, TaskFinisher tf)}
    * that provides a task finisher for copying recovered edits to their final destination.
    * The task finisher has to be robust because it can be arbitrarily restarted or called
    * multiple times.
@@ -190,7 +172,7 @@ public class SplitLogManager extends ZooKeeperListener {
    * @throws InterruptedIOException
    */
   public SplitLogManager(ZooKeeperWatcher zkw, final Configuration conf,
-      Stoppable stopper, MasterServices master, ServerName serverName, boolean masterRecovery) 
+      Stoppable stopper, MasterServices master, ServerName serverName, boolean masterRecovery)
       throws InterruptedIOException, KeeperException {
     this(zkw, conf, stopper, master, serverName, masterRecovery, new TaskFinisher() {
       @Override
@@ -223,7 +205,7 @@ public class SplitLogManager extends ZooKeeperListener {
    */
   public SplitLogManager(ZooKeeperWatcher zkw, Configuration conf,
         Stoppable stopper, MasterServices master,
-        ServerName serverName, boolean masterRecovery, TaskFinisher tf) 
+        ServerName serverName, boolean masterRecovery, TaskFinisher tf)
       throws InterruptedIOException, KeeperException {
     super(zkw);
     this.taskFinisher = tf;
@@ -236,7 +218,7 @@ public class SplitLogManager extends ZooKeeperListener {
     this.unassignedTimeout =
       conf.getInt("hbase.splitlog.manager.unassigned.timeout", DEFAULT_UNASSIGNED_TIMEOUT);
 
-    // Determine recovery mode  
+    // Determine recovery mode
     setRecoveryMode(true);
 
     LOG.info("Timeout=" + timeout + ", unassigned timeout=" + unassignedTimeout +
@@ -463,6 +445,11 @@ public class SplitLogManager extends ZooKeeperListener {
         }
       }
     }
+  }
+
+  @VisibleForTesting
+  ConcurrentMap<String, Task> getTasks() {
+    return tasks;
   }
 
   private int activeTasks(final TaskBatch batch) {
@@ -1259,7 +1246,7 @@ public class SplitLogManager extends ZooKeeperListener {
     }
     return result;
   }
-  
+
   /**
    * This function is to set recovery mode from outstanding split log tasks from before or
    * current configuration setting
@@ -1282,7 +1269,7 @@ public class SplitLogManager extends ZooKeeperListener {
     boolean hasSplitLogTask = false;
     boolean hasRecoveringRegions = false;
     RecoveryMode previousRecoveryMode = RecoveryMode.UNKNOWN;
-    RecoveryMode recoveryModeInConfig = (isDistributedLogReplay(conf)) ? 
+    RecoveryMode recoveryModeInConfig = (isDistributedLogReplay(conf)) ?
       RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING;
 
     // Firstly check if there are outstanding recovering regions
@@ -1307,7 +1294,7 @@ public class SplitLogManager extends ZooKeeperListener {
               previousRecoveryMode = slt.getMode();
               if (previousRecoveryMode == RecoveryMode.UNKNOWN) {
                 // created by old code base where we don't set recovery mode in splitlogtask
-                // we can safely set to LOG_SPLITTING because we're in master initialization code 
+                // we can safely set to LOG_SPLITTING because we're in master initialization code
                 // before SSH is enabled & there is no outstanding recovering regions
                 previousRecoveryMode = RecoveryMode.LOG_SPLITTING;
               }
@@ -1332,7 +1319,7 @@ public class SplitLogManager extends ZooKeeperListener {
         // splitlogtask hasn't drained yet, keep existing recovery mode
         return;
       }
-  
+
       if (previousRecoveryMode != RecoveryMode.UNKNOWN) {
         this.isDrainingDone = (previousRecoveryMode == recoveryModeInConfig);
         this.recoveryMode = previousRecoveryMode;
@@ -1345,7 +1332,7 @@ public class SplitLogManager extends ZooKeeperListener {
   public RecoveryMode getRecoveryMode() {
     return this.recoveryMode;
   }
-  
+
   /**
    * Returns if distributed log replay is turned on or not
    * @param conf
