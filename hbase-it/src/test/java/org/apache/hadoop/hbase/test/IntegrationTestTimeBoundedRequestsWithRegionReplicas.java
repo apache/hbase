@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
@@ -167,8 +166,8 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
       Threads.sleep(refreshTime);
     } else {
       LOG.info("Reopening the table");
-      admin.disableTable(TableName.valueOf(getTablename()));
-      admin.enableTable(TableName.valueOf(getTablename()));
+      admin.disableTable(getTablename());
+      admin.enableTable(getTablename());
     }
 
     // We should only start the ChaosMonkey after the readers are started and have cached

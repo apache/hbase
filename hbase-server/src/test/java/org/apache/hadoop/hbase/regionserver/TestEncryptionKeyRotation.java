@@ -117,7 +117,7 @@ public class TestEncryptionKeyRotation {
     Thread.sleep(5000); // Need a predicate for online schema change
 
     // And major compact
-    TEST_UTIL.getHBaseAdmin().majorCompact(htd.getName());
+    TEST_UTIL.getHBaseAdmin().majorCompact(htd.getTableName());
     TEST_UTIL.waitFor(30000, 1000, true, new Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -213,7 +213,7 @@ public class TestEncryptionKeyRotation {
     } finally {
       table.close();
     }
-    TEST_UTIL.getHBaseAdmin().flush(htd.getName());
+    TEST_UTIL.getHBaseAdmin().flush(htd.getTableName());
   }
 
   private static byte[] extractHFileKey(Path path) throws Exception {

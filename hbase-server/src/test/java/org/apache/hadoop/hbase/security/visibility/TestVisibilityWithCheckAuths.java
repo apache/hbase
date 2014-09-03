@@ -87,8 +87,9 @@ public class TestVisibilityWithCheckAuths {
   }
 
   public static void addLabels() throws Exception {
-    PrivilegedExceptionAction<VisibilityLabelsResponse> action = 
+    PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { TOPSECRET };
         try {
@@ -104,8 +105,9 @@ public class TestVisibilityWithCheckAuths {
 
   @Test
   public void testVerifyAccessDeniedForInvalidUserAuths() throws Exception {
-    PrivilegedExceptionAction<VisibilityLabelsResponse> action = 
+    PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         try {
           return VisibilityClient.setAuths(conf, new String[] { TOPSECRET },
@@ -125,8 +127,9 @@ public class TestVisibilityWithCheckAuths {
     hBaseAdmin.createTable(desc);
     HTable table = null;
     try {
-      TEST_UTIL.getHBaseAdmin().flush(tableName.getNameAsString());
+      TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           HTable table = null;
           try {
@@ -152,8 +155,9 @@ public class TestVisibilityWithCheckAuths {
 
   @Test
   public void testLabelsWithAppend() throws Throwable {
-    PrivilegedExceptionAction<VisibilityLabelsResponse> action = 
+    PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
+      @Override
       public VisibilityLabelsResponse run() throws Exception {
         try {
           return VisibilityClient.setAuths(conf, new String[] { TOPSECRET },
@@ -171,6 +175,7 @@ public class TestVisibilityWithCheckAuths {
       final byte[] row1 = Bytes.toBytes("row1");
       final byte[] val = Bytes.toBytes("a");
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           HTable table = null;
           try {
@@ -187,6 +192,7 @@ public class TestVisibilityWithCheckAuths {
       };
       USER.runAs(actiona);
       actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           HTable table = null;
           try {
@@ -202,6 +208,7 @@ public class TestVisibilityWithCheckAuths {
       };
       USER.runAs(actiona);
       actiona = new PrivilegedExceptionAction<Void>() {
+        @Override
         public Void run() throws Exception {
           HTable table = null;
           try {

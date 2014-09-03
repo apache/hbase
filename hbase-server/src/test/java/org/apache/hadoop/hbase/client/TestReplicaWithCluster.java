@@ -256,7 +256,7 @@ public class TestReplicaWithCluster {
     final HTable table = new HTable(HTU.getConfiguration(), hdt.getTableName());
     table.put(p);
 
-    HTU.getHBaseAdmin().flush(table.getTableName());
+    HTU.getHBaseAdmin().flush(table.getName());
     LOG.info("Put & flush done on the first cluster. Now doing a get on the same cluster.");
 
     Waiter.waitFor(HTU.getConfiguration(), 1000, new Waiter.Predicate<Exception>() {

@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.security.User;
@@ -133,7 +132,7 @@ public class TestTablePermissions {
   }
 
   /**
-   * Writes a set of permissions as {@link org.apache.hadoop.io.Writable} instances                                                                                                                     
+   * Writes a set of permissions as {@link org.apache.hadoop.io.Writable} instances
    * and returns the resulting byte array.  Used to verify we can read stuff written
    * with Writable.
    */
@@ -157,7 +156,7 @@ public class TestTablePermissions {
    * @param conf
    * @throws IOException
   */
-  public static void writePermissions(DataOutput out,                                                                                                                                                   
+  public static void writePermissions(DataOutput out,
       ListMultimap<String,? extends Permission> perms, Configuration conf)
   throws IOException {
     Set<String> keys = perms.keySet();
@@ -294,7 +293,7 @@ public class TestTablePermissions {
     table.put(new Put(Bytes.toBytes("row2"))
         .add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes("v2")));
     Admin admin = UTIL.getHBaseAdmin();
-    admin.split(TEST_TABLE.getName());
+    admin.split(TEST_TABLE);
 
     // wait for split
     Thread.sleep(10000);

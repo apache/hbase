@@ -229,6 +229,7 @@ public class TestEndToEndSplitTransaction {
       rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
     }
 
+    @Override
     public void run() {
       try {
         Random random = new Random();
@@ -263,7 +264,7 @@ public class TestEndToEndSplitTransaction {
 
           log("Initiating region split for:" + region.getRegionNameAsString());
           try {
-            admin.split(region.getRegionName(), splitPoint);
+            admin.splitRegion(region.getRegionName(), splitPoint);
             //wait until the split is complete
             blockUntilRegionSplit(conf, 50000, region.getRegionName(), true);
 
@@ -396,7 +397,7 @@ public class TestEndToEndSplitTransaction {
   public static void flushAndBlockUntilDone(Admin admin, HRegionServer rs, byte[] regionName)
       throws IOException, InterruptedException {
     log("flushing region: " + Bytes.toStringBinary(regionName));
-    admin.flush(regionName);
+    admin.flushRegion(regionName);
     log("blocking until flush is complete: " + Bytes.toStringBinary(regionName));
     Threads.sleepWithoutInterrupt(500);
     while (rs.cacheFlusher.getFlushQueueSize() > 0) {
@@ -407,7 +408,7 @@ public class TestEndToEndSplitTransaction {
   public static void compactAndBlockUntilDone(Admin admin, HRegionServer rs, byte[] regionName)
       throws IOException, InterruptedException {
     log("Compacting region: " + Bytes.toStringBinary(regionName));
-    admin.majorCompact(regionName);
+    admin.majorCompactRegion(regionName);
     log("blocking until compaction is complete: " + Bytes.toStringBinary(regionName));
     Threads.sleepWithoutInterrupt(500);
     while (rs.compactSplitThread.getCompactionQueueSize() > 0) {

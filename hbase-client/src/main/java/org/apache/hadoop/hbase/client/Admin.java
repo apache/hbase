@@ -482,102 +482,102 @@ public interface Admin extends Abortable, Closeable {
   List<HRegionInfo> getOnlineRegions(final ServerName sn) throws IOException;
 
   /**
-   * Flush a table or an individual region. Synchronous operation.
+   * Flush a table. Synchronous operation.
    *
-   * @param tableNameOrRegionName table or region to flush
+   * @param tableName table to flush
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
-  void flush(final String tableNameOrRegionName) throws IOException, InterruptedException;
+  void flush(final TableName tableName) throws IOException, InterruptedException;
 
   /**
-   * Flush a table or an individual region. Synchronous operation.
+   * Flush an individual region. Synchronous operation.
    *
-   * @param tableNameOrRegionName table or region to flush
+   * @param regionName region to flush
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
-  void flush(final byte[] tableNameOrRegionName) throws IOException, InterruptedException;
+  void flushRegion(final byte[] regionName) throws IOException, InterruptedException;
 
   /**
-   * Compact a table or an individual region. Asynchronous operation.
+   * Compact a table. Asynchronous operation.
    *
-   * @param tableNameOrRegionName table or region to compact
+   * @param tableName table to compact
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
-  void compact(final String tableNameOrRegionName) throws IOException, InterruptedException;
+  void compact(final TableName tableName) throws IOException, InterruptedException;
 
   /**
-   * Compact a table or an individual region. Asynchronous operation.
+   * Compact an individual region. Asynchronous operation.
    *
-   * @param tableNameOrRegionName table or region to compact
+   * @param regionName region to compact
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
-  void compact(final byte[] tableNameOrRegionName) throws IOException, InterruptedException;
+  void compactRegion(final byte[] regionName) throws IOException, InterruptedException;
 
   /**
-   * Compact a column family within a table or region. Asynchronous operation.
+   * Compact a column family within a table. Asynchronous operation.
    *
-   * @param tableOrRegionName table or region to compact
-   * @param columnFamily column family within a table or region
+   * @param tableName table to compact
+   * @param columnFamily column family within a table
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
-  void compact(String tableOrRegionName, String columnFamily)
-      throws IOException, InterruptedException;
+  void compact(final TableName tableName, final byte[] columnFamily)
+    throws IOException, InterruptedException;
 
   /**
-   * Compact a column family within a table or region. Asynchronous operation.
+   * Compact a column family within a region. Asynchronous operation.
    *
-   * @param tableNameOrRegionName table or region to compact
-   * @param columnFamily column family within a table or region
+   * @param regionName region to compact
+   * @param columnFamily column family within a region
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
-  void compact(final byte[] tableNameOrRegionName, final byte[] columnFamily)
-      throws IOException, InterruptedException;
+  void compactRegion(final byte[] regionName, final byte[] columnFamily)
+    throws IOException, InterruptedException;
+
+  /**
+   * Major compact a table. Asynchronous operation.
+   *
+   * @param tableName table to major compact
+   * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException
+   */
+  void majorCompact(TableName tableName) throws IOException, InterruptedException;
 
   /**
    * Major compact a table or an individual region. Asynchronous operation.
    *
-   * @param tableNameOrRegionName table or region to major compact
+   * @param regionName region to major compact
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
-  void majorCompact(final String tableNameOrRegionName) throws IOException, InterruptedException;
+  void majorCompactRegion(final byte[] regionName) throws IOException, InterruptedException;
 
   /**
-   * Major compact a table or an individual region. Asynchronous operation.
+   * Major compact a column family within a table. Asynchronous operation.
    *
-   * @param tableNameOrRegionName table or region to major compact
+   * @param tableName table to major compact
+   * @param columnFamily column family within a table
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
-  void majorCompact(final byte[] tableNameOrRegionName) throws IOException, InterruptedException;
+  void majorCompact(TableName tableName, final byte[] columnFamily)
+    throws IOException, InterruptedException;
 
   /**
-   * Major compact a column family within a table or region. Asynchronous operation.
+   * Major compact a column family within region. Asynchronous operation.
    *
-   * @param tableNameOrRegionName table or region to major compact
-   * @param columnFamily column family within a table or region
+   * @param regionName egion to major compact
+   * @param columnFamily column family within a region
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
-  void majorCompact(final String tableNameOrRegionName, final String columnFamily)
-      throws IOException, InterruptedException;
-
-  /**
-   * Major compact a column family within a table or region. Asynchronous operation.
-   *
-   * @param tableNameOrRegionName table or region to major compact
-   * @param columnFamily column family within a table or region
-   * @throws IOException if a remote or network exception occurs
-   * @throws InterruptedException
-   */
-  void majorCompact(final byte[] tableNameOrRegionName, final byte[] columnFamily)
-      throws IOException, InterruptedException;
+  void majorCompactRegion(final byte[] regionName, final byte[] columnFamily)
+    throws IOException, InterruptedException;
 
   /**
    * Move the region <code>r</code> to <code>dest</code>.
@@ -692,37 +692,44 @@ public interface Admin extends Abortable, Closeable {
       final boolean forcible) throws IOException;
 
   /**
-   * Split a table or an individual region. Asynchronous operation.
+   * Split a table. Asynchronous operation.
    *
-   * @param tableNameOrRegionName table or region to split
+   * @param tableName table to split
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
-  void split(final String tableNameOrRegionName) throws IOException, InterruptedException;
+  void split(final TableName tableName) throws IOException, InterruptedException;
 
   /**
-   * Split a table or an individual region.  Implicitly finds an optimal split point.  Asynchronous
-   * operation.
+   * Split an individual region. Asynchronous operation.
    *
-   * @param tableNameOrRegionName table to region to split
+   * @param regionName region to split
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
-  void split(final byte[] tableNameOrRegionName) throws IOException, InterruptedException;
-
-  void split(final String tableNameOrRegionName, final String splitPoint)
-      throws IOException, InterruptedException;
+  void splitRegion(final byte[] regionName) throws IOException, InterruptedException;
 
   /**
-   * Split a table or an individual region. Asynchronous operation.
+   * Split a table. Asynchronous operation.
    *
-   * @param tableNameOrRegionName table to region to split
+   * @param tableName table to split
    * @param splitPoint the explicit position to split on
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException interrupt exception occurred
    */
-  void split(final byte[] tableNameOrRegionName, final byte[] splitPoint)
-      throws IOException, InterruptedException;
+  void split(final TableName tableName, final byte[] splitPoint)
+    throws IOException, InterruptedException;
+
+  /**
+   * Split an individual region. Asynchronous operation.
+   *
+   * @param regionName region to split
+   * @param splitPoint the explicit position to split on
+   * @throws IOException if a remote or network exception occurs
+   * @throws InterruptedException interrupt exception occurred
+   */
+  void splitRegion(final byte[] regionName, final byte[] splitPoint)
+    throws IOException, InterruptedException;
 
   /**
    * Modify an existing table, more IRB friendly version. Asynchronous operation.  This means that
@@ -880,28 +887,28 @@ public interface Admin extends Abortable, Closeable {
   String[] getMasterCoprocessors();
 
   /**
-   * Get the current compaction state of a table or region. It could be in a major compaction, a
-   * minor compaction, both, or none.
+   * Get the current compaction state of a table. It could be in a major compaction, a minor
+   * compaction, both, or none.
    *
-   * @param tableNameOrRegionName table or region to major compact
+   * @param tableName table to examine
    * @return the current compaction state
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
-  AdminProtos.GetRegionInfoResponse.CompactionState getCompactionState(
-      final String tableNameOrRegionName) throws IOException, InterruptedException;
+  AdminProtos.GetRegionInfoResponse.CompactionState getCompactionState(final TableName tableName)
+    throws IOException, InterruptedException;
 
   /**
-   * Get the current compaction state of a table or region. It could be in a major compaction, a
-   * minor compaction, both, or none.
+   * Get the current compaction state of region. It could be in a major compaction, a minor
+   * compaction, both, or none.
    *
-   * @param tableNameOrRegionName table or region to major compact
+   * @param regionName region to examine
    * @return the current compaction state
    * @throws IOException if a remote or network exception occurs
    * @throws InterruptedException
    */
-  AdminProtos.GetRegionInfoResponse.CompactionState getCompactionState(
-      final byte[] tableNameOrRegionName) throws IOException, InterruptedException;
+  AdminProtos.GetRegionInfoResponse.CompactionState getCompactionStateForRegion(
+    final byte[] regionName) throws IOException, InterruptedException;
 
   /**
    * Take a snapshot for the given table. If the table is enabled, a FLUSH-type snapshot will be

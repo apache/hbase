@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
 import org.apache.hadoop.hbase.chaos.policies.Policy;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.mapreduce.Counters;
@@ -166,7 +165,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
   public void setUpMonkey() throws Exception {
     Policy p = new PeriodicRandomActionPolicy(sleepTime,
       new RestartRsHoldingTableAction(sleepTime, tableName.getNameAsString()),
-      new MoveRandomRegionOfTableAction(tableName.getNameAsString()));
+      new MoveRandomRegionOfTableAction(tableName));
     this.monkey = new PolicyBasedChaosMonkey(util, p);
     // don't start monkey right away
   }
@@ -213,8 +212,8 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
   }
 
   @Override
-  public String getTablename() {
-    return tableName.getNameAsString();
+  public TableName getTablename() {
+    return tableName;
   }
 
   @Override

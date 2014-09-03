@@ -22,7 +22,6 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileReaderV3;
@@ -30,7 +29,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileWriterV3;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
 import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -81,18 +79,18 @@ public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
     // encryption features enabled.
     final Admin admin = util.getHBaseAdmin();
     HTableDescriptor tableDescriptor =
-        new HTableDescriptor(admin.getTableDescriptor(TableName.valueOf(getTablename())));
+        new HTableDescriptor(admin.getTableDescriptor(getTablename()));
     for (HColumnDescriptor columnDescriptor: tableDescriptor.getColumnFamilies()) {
       columnDescriptor.setEncryptionType("AES");
       LOG.info("Updating CF schema for " + getTablename() + "." +
         columnDescriptor.getNameAsString());
-      admin.disableTable(TableName.valueOf(getTablename()));
-      admin.modifyColumn(TableName.valueOf(getTablename()), columnDescriptor);
-      admin.enableTable(TableName.valueOf(getTablename()));
+      admin.disableTable(getTablename());
+      admin.modifyColumn(getTablename(), columnDescriptor);
+      admin.enableTable(getTablename());
       util.waitFor(30000, 1000, true, new Predicate<IOException>() {
         @Override
         public boolean evaluate() throws IOException {
-          return admin.isTableAvailable(TableName.valueOf(getTablename()));
+          return admin.isTableAvailable(getTablename());
         }
       });
     }

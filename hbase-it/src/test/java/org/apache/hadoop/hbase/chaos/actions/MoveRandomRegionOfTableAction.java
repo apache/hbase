@@ -25,8 +25,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
 * Action that tries to move a random region of a table.
@@ -35,13 +33,13 @@ public class MoveRandomRegionOfTableAction extends Action {
   private final long sleepTime;
   private final TableName tableName;
 
-  public MoveRandomRegionOfTableAction(String tableName) {
+  public MoveRandomRegionOfTableAction(TableName tableName) {
     this(-1, tableName);
   }
 
-  public MoveRandomRegionOfTableAction(long sleepTime, String tableName) {
+  public MoveRandomRegionOfTableAction(long sleepTime, TableName tableName) {
     this.sleepTime = sleepTime;
-    this.tableName = TableName.valueOf(tableName);
+    this.tableName = tableName;
   }
 
   @Override

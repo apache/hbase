@@ -108,7 +108,7 @@ public class TestEncryptionRandomKeying {
     } finally {
       table.close();
     }
-    TEST_UTIL.getHBaseAdmin().flush(htd.getName());
+    TEST_UTIL.getHBaseAdmin().flush(htd.getTableName());
   }
 
   @AfterClass

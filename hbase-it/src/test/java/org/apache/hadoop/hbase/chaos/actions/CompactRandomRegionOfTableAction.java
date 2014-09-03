@@ -26,8 +26,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Region that queues a compaction of a random region from the table.
@@ -38,15 +36,15 @@ public class CompactRandomRegionOfTableAction extends Action {
   private final TableName tableName;
 
   public CompactRandomRegionOfTableAction(
-      String tableName, float majorRatio) {
+      TableName tableName, float majorRatio) {
     this(-1, tableName, majorRatio);
   }
 
   public CompactRandomRegionOfTableAction(
-      int sleepTime, String tableName, float majorRatio) {
+      int sleepTime, TableName tableName, float majorRatio) {
     this.majorRatio = (int) (100 * majorRatio);
     this.sleepTime = sleepTime;
-    this.tableName = TableName.valueOf(tableName);
+    this.tableName = tableName;
   }
 
   @Override
@@ -69,10 +67,10 @@ public class CompactRandomRegionOfTableAction extends Action {
     try {
       if (major) {
         LOG.debug("Major compacting region " + region.getRegionNameAsString());
-        admin.majorCompact(region.getRegionName());
+        admin.majorCompactRegion(region.getRegionName());
       } else {
         LOG.debug("Compacting region " + region.getRegionNameAsString());
-        admin.compact(region.getRegionName());
+        admin.compactRegion(region.getRegionName());
       }
     } catch (Exception ex) {
       LOG.warn("Compaction failed, might be caused by other chaos: " + ex.getMessage());

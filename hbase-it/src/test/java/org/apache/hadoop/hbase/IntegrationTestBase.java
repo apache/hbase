@@ -189,7 +189,7 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
 
   public abstract int runTestFromCommandLine() throws Exception;
 
-  public abstract String getTablename();
+  public abstract TableName getTablename();
 
   protected abstract Set<String> getColumnFamilies();
 }

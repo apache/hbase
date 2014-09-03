@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Put;
@@ -214,14 +213,14 @@ public class TestRegionObserverScannerOpenHook {
    */
   public static class CompactionCompletionNotifyingRegion extends HRegion {
     private static volatile CountDownLatch compactionStateChangeLatch = null;
-    
+
     @SuppressWarnings("deprecation")
     public CompactionCompletionNotifyingRegion(Path tableDir, HLog log,
         FileSystem fs, Configuration confParam, HRegionInfo info,
         HTableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, log, fs, confParam, info, htd, rsServices);
     }
-    
+
     public CountDownLatch getCompactionStateChangeLatch() {
       if (compactionStateChangeLatch == null) compactionStateChangeLatch = new CountDownLatch(1);
       return compactionStateChangeLatch;
@@ -231,9 +230,9 @@ public class TestRegionObserverScannerOpenHook {
       boolean ret = super.compact(compaction, store);
       if (ret) compactionStateChangeLatch.countDown();
       return ret;
-    }    
+    }
   }
-  
+
   /**
    * Unfortunately, the easiest way to test this is to spin up a mini-cluster since we want to do
    * the usual compaction mechanism on the region, rather than going through the backdoor to the
@@ -270,16 +269,16 @@ public class TestRegionObserverScannerOpenHook {
     List<HRegion> regions = rs.getOnlineRegions(desc.getTableName());
     assertEquals("More than 1 region serving test table with 1 row", 1, regions.size());
     HRegion region = regions.get(0);
-    admin.flush(region.getRegionName());
+    admin.flushRegion(region.getRegionName());
     CountDownLatch latch = ((CompactionCompletionNotifyingRegion)region)
         .getCompactionStateChangeLatch();
-    
+
     // put another row and flush that too
     put = new Put(Bytes.toBytes("anotherrow"));
     put.add(A, A, A);
     table.put(put);
     table.flushCommits();
-    admin.flush(region.getRegionName());
+    admin.flushRegion(region.getRegionName());
 
     // run a compaction, which normally would should get rid of the data
     // wait for the compaction checker to complete

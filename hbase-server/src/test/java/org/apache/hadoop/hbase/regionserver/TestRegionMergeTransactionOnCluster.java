@@ -200,7 +200,7 @@ public class TestRegionMergeTransactionOnCluster {
       assertTrue(fs.exists(regionAdir));
       assertTrue(fs.exists(regionBdir));
 
-      admin.compact(mergedRegionInfo.getRegionName());
+      admin.compactRegion(mergedRegionInfo.getRegionName());
       // wait until merged region doesn't have reference file
       long timeout = System.currentTimeMillis() + waitTime;
       HRegionFileSystem hrfs = new HRegionFileSystem(

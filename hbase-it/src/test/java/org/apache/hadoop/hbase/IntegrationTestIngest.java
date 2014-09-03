@@ -115,9 +115,10 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   }
 
   @Override
-  public String getTablename() {
+  public TableName getTablename() {
     String clazz = this.getClass().getSimpleName();
-    return conf.get(String.format("%s.%s", clazz, LoadTestTool.OPT_TABLE_NAME), clazz);
+    return TableName.valueOf(
+      conf.get(String.format("%s.%s", clazz, LoadTestTool.OPT_TABLE_NAME), clazz));
   }
 
   @Override
@@ -126,8 +127,8 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   }
 
   private void deleteTableIfNecessary() throws IOException {
-    if (util.getHBaseAdmin().tableExists(TableName.valueOf(getTablename()))) {
-      util.deleteTable(Bytes.toBytes(getTablename()));
+    if (util.getHBaseAdmin().tableExists(getTablename())) {
+      util.deleteTable(getTablename());
     }
   }
 
@@ -178,7 +179,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   protected String[] getArgsForLoadTestToolInitTable() {
     List<String> args = new ArrayList<String>();
     args.add("-tn");
-    args.add(getTablename());
+    args.add(getTablename().getNameAsString());
     // pass all remaining args from conf with keys <test class name>.<load test tool arg>
     String clazz = this.getClass().getSimpleName();
     for (String arg : LOAD_TEST_TOOL_INIT_ARGS) {
@@ -196,7 +197,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
       long numKeys) {
     List<String> args = new ArrayList<String>();
     args.add("-tn");
-    args.add(getTablename());
+    args.add(getTablename().getNameAsString());
     args.add(mode);
     args.add(modeSpecificArg);
     args.add("-start_key");

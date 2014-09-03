@@ -25,9 +25,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Action that tries to adjust the bloom filter setting on all the columns of a
@@ -37,13 +35,13 @@ public class ChangeBloomFilterAction extends Action {
   private final long sleepTime;
   private final TableName tableName;
 
-  public ChangeBloomFilterAction(String tableName) {
+  public ChangeBloomFilterAction(TableName tableName) {
     this(-1, tableName);
   }
 
-  public ChangeBloomFilterAction(int sleepTime, String tableName) {
+  public ChangeBloomFilterAction(int sleepTime, TableName tableName) {
     this.sleepTime = sleepTime;
-    this.tableName = TableName.valueOf(tableName);
+    this.tableName = tableName;
   }
 
   @Override

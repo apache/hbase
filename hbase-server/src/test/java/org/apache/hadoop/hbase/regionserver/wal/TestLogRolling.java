@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -324,7 +323,7 @@ public class TestLogRolling  {
     TEST_UTIL.ensureSomeRegionServersAvailable(2);
     assertTrue("This test requires HLog file replication set to 2.",
       fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) == 2);
-    LOG.info("Replication=" + 
+    LOG.info("Replication=" +
       fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
 
     this.server = cluster.getRegionServer(0);
@@ -363,9 +362,9 @@ public class TestLogRolling  {
     }
 
     assertTrue("DataNodes " + dfsCluster.getDataNodes().size() +
-        " default replication " + 
+        " default replication " +
         fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()),
-    dfsCluster.getDataNodes().size() >= 
+    dfsCluster.getDataNodes().size() >=
       fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) + 1);
 
     writeData(table, 2);
@@ -378,7 +377,7 @@ public class TestLogRolling  {
     assertTrue("The log shouldn't have rolled yet",
       oldFilenum == ((FSHLog) log).getFilenum());
     final DatanodeInfo[] pipeline = getPipeline(log);
-    assertTrue(pipeline.length == 
+    assertTrue(pipeline.length ==
         fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
 
     // kill a datanode in the pipeline to force a log roll on the next sync()
@@ -414,7 +413,7 @@ public class TestLogRolling  {
     batchWriteAndWait(table, 13, true, 10000);
     assertTrue("New log file should have the default replication instead of " +
       ((FSHLog) log).getLogReplication(),
-      ((FSHLog) log).getLogReplication() == 
+      ((FSHLog) log).getLogReplication() ==
         fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
     assertTrue("LowReplication Roller should've been enabled",
         log.isLowReplicationRollEnabled());
@@ -430,7 +429,7 @@ public class TestLogRolling  {
     LOG.info("Starting testLogRollOnPipelineRestart");
     assertTrue("This test requires HLog file replication.",
       fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()) > 1);
-    LOG.info("Replication=" + 
+    LOG.info("Replication=" +
       fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
     // When the hbase:meta table can be opened, the region servers are running
     HTable t = new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
@@ -610,12 +609,12 @@ public class TestLogRolling  {
       Store s = region.getStore(HConstants.CATALOG_FAMILY);
 
       //have to flush namespace to ensure it doesn't affect wall tests
-      admin.flush(TableName.NAMESPACE_TABLE_NAME.getName());
+      admin.flush(TableName.NAMESPACE_TABLE_NAME);
 
       // Put some stuff into table2, to make sure we have some files to compact.
       for (int i = 1; i <= 2; ++i) {
         doPut(table2, i);
-        admin.flush(table2.getTableName());
+        admin.flush(table2.getName());
       }
       doPut(table2, 3); // don't flush yet, or compaction might trigger before we roll WAL
       assertEquals("Should have no WAL after initial writes", 0, fshLog.getNumRolledLogFiles());
@@ -624,7 +623,7 @@ public class TestLogRolling  {
       // Roll the log and compact table2, to have compaction record in the 2nd WAL.
       fshLog.rollWriter();
       assertEquals("Should have WAL; one table is not flushed", 1, fshLog.getNumRolledLogFiles());
-      admin.flush(table2.getTableName());
+      admin.flush(table2.getName());
       region.compactStores();
       // Wait for compaction in case if flush triggered it before us.
       Assert.assertNotNull(s);
@@ -639,7 +638,7 @@ public class TestLogRolling  {
       assertEquals("Should have WAL; one table is not flushed", 1, fshLog.getNumRolledLogFiles());
 
       // Flush table to make latest WAL obsolete; write another record, and roll again.
-      admin.flush(table.getTableName());
+      admin.flush(table.getName());
       doPut(table, 1);
       fshLog.rollWriter(); // Now 2nd WAL is deleted and 3rd is added.
       assertEquals("Should have 1 WALs at the end", 1, fshLog.getNumRolledLogFiles());

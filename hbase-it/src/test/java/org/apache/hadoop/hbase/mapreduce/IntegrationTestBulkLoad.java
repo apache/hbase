@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Consistency;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -56,7 +55,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
-import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.RegionSplitter;
@@ -81,7 +79,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Test Bulk Load and MR on a distributed cluster.
@@ -151,8 +148,8 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
   public static class SlowMeCoproScanOperations extends BaseRegionObserver {
     static final AtomicLong sleepTime = new AtomicLong(2000);
     Random r = new Random();
-    AtomicLong countOfNext = new AtomicLong(0); 
-    AtomicLong countOfOpen = new AtomicLong(0); 
+    AtomicLong countOfNext = new AtomicLong(0);
+    AtomicLong countOfOpen = new AtomicLong(0);
     public SlowMeCoproScanOperations() {}
     @Override
     public RegionScanner preScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> e,
@@ -185,7 +182,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
         } catch (InterruptedException e1) {
           LOG.error(e1);
         }
-      } 
+      }
     }
   }
 
@@ -196,7 +193,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     int replicaCount = conf.getInt(NUM_REPLICA_COUNT_KEY, NUM_REPLICA_COUNT_DEFAULT);
     if (replicaCount == NUM_REPLICA_COUNT_DEFAULT) return;
 
-    TableName t = TableName.valueOf(getTablename());
+    TableName t = getTablename();
     Admin admin = util.getHBaseAdmin();
     HTableDescriptor desc = admin.getTableDescriptor(t);
     desc.addCoprocessor(SlowMeCoproScanOperations.class.getName());
@@ -227,12 +224,12 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
   }
 
   private void setupTable() throws IOException, InterruptedException {
-    if (util.getHBaseAdmin().tableExists(TableName.valueOf(getTablename()))) {
+    if (util.getHBaseAdmin().tableExists(getTablename())) {
       util.deleteTable(getTablename());
     }
 
     util.createTable(
-        Bytes.toBytes(getTablename()),
+        getTablename().getName(),
         new byte[][]{CHAIN_FAM, SORT_FAM, DATA_FAM},
         getSplits(16)
     );
@@ -240,7 +237,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     int replicaCount = conf.getInt(NUM_REPLICA_COUNT_KEY, NUM_REPLICA_COUNT_DEFAULT);
     if (replicaCount == NUM_REPLICA_COUNT_DEFAULT) return;
 
-    TableName t = TableName.valueOf(getTablename());
+    TableName t = getTablename();
     HBaseTestingUtility.setReplicas(util.getHBaseAdmin(), t, replicaCount);
   }
 
@@ -663,7 +660,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     }
 
     TableMapReduceUtil.initTableMapperJob(
-        Bytes.toBytes(getTablename()),
+        getTablename().getName(),
         scan,
         LinkedListCheckingMapper.class,
         LinkKey.class,
@@ -731,8 +728,8 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
   }
 
   @Override
-  public String getTablename() {
-    return getConf().get(TABLE_NAME_KEY, TABLE_NAME);
+  public TableName getTablename() {
+    return TableName.valueOf(getConf().get(TABLE_NAME_KEY, TABLE_NAME));
   }
 
   @Override

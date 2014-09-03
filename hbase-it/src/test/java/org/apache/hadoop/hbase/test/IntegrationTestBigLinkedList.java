@@ -1153,9 +1153,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
   }
 
   @Override
-  public String getTablename() {
+  public TableName getTablename() {
     Configuration c = getConf();
-    return c.get(TABLE_NAME_KEY, DEFAULT_TABLE_NAME);
+    return TableName.valueOf(c.get(TABLE_NAME_KEY, DEFAULT_TABLE_NAME));
   }
 
   @Override

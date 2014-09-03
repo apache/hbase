@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
@@ -240,7 +239,7 @@ public class TestRegionObserverInterface {
 
   @Test
   public void testCheckAndPutHooks() throws IOException {
-    TableName tableName = 
+    TableName tableName =
         TableName.valueOf(TEST_TABLE.getNameAsString() + ".testCheckAndPutHooks");
     HTable table = util.createTable(tableName, new byte[][] {A, B, C});
     try {
@@ -251,14 +250,14 @@ public class TestRegionObserverInterface {
       p = new Put(Bytes.toBytes(0));
       p.add(A, A, A);
       verifyMethodResult(SimpleRegionObserver.class,
-          new String[] {"hadPreCheckAndPut", 
+          new String[] {"hadPreCheckAndPut",
               "hadPreCheckAndPutAfterRowLock", "hadPostCheckAndPut"},
           tableName,
           new Boolean[] {false, false, false}
           );
       table.checkAndPut(Bytes.toBytes(0), A, A, A, p);
       verifyMethodResult(SimpleRegionObserver.class,
-          new String[] {"hadPreCheckAndPut", 
+          new String[] {"hadPreCheckAndPut",
               "hadPreCheckAndPutAfterRowLock", "hadPostCheckAndPut"},
           tableName,
           new Boolean[] {true, true, true}
@@ -271,7 +270,7 @@ public class TestRegionObserverInterface {
 
   @Test
   public void testCheckAndDeleteHooks() throws IOException {
-    TableName tableName = 
+    TableName tableName =
         TableName.valueOf(TEST_TABLE.getNameAsString() + ".testCheckAndDeleteHooks");
     HTable table = util.createTable(tableName, new byte[][] {A, B, C});
     try {
@@ -282,14 +281,14 @@ public class TestRegionObserverInterface {
       Delete d = new Delete(Bytes.toBytes(0));
       table.delete(d);
       verifyMethodResult(SimpleRegionObserver.class,
-          new String[] {"hadPreCheckAndDelete", 
+          new String[] {"hadPreCheckAndDelete",
               "hadPreCheckAndDeleteAfterRowLock", "hadPostCheckAndDelete"},
           tableName,
           new Boolean[] {false, false, false}
           );
       table.checkAndDelete(Bytes.toBytes(0), A, A, A, d);
       verifyMethodResult(SimpleRegionObserver.class,
-          new String[] {"hadPreCheckAndDelete", 
+          new String[] {"hadPreCheckAndDelete",
               "hadPreCheckAndDeleteAfterRowLock", "hadPostCheckAndDelete"},
           tableName,
           new Boolean[] {true, true, true}
@@ -516,7 +515,7 @@ public class TestRegionObserverInterface {
 
     // force a compaction
     long ts = System.currentTimeMillis();
-    admin.flush(compactTable.toBytes());
+    admin.flush(compactTable);
     // wait for flush
     for (int i=0; i<10; i++) {
       if (compactor.lastFlush >= ts) {
@@ -528,7 +527,7 @@ public class TestRegionObserverInterface {
     LOG.debug("Flush complete");
 
     ts = compactor.lastFlush;
-    admin.majorCompact(compactTable.toBytes());
+    admin.majorCompact(compactTable);
     // wait for compaction
     for (int i=0; i<30; i++) {
       if (compactor.lastCompaction >= ts) {

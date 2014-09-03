@@ -32,7 +32,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Durability;
@@ -63,7 +62,7 @@ public class TestTableResource {
   private static Map<HRegionInfo, ServerName> regionMap;
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
     new HBaseRESTTestingUtility();
   private static Client client;
   private static JAXBContext context;
@@ -72,7 +71,7 @@ public class TestTableResource {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
-    client = new Client(new Cluster().add("localhost", 
+    client = new Client(new Cluster().add("localhost",
       REST_TEST_UTIL.getServletPort()));
     context = JAXBContext.newInstance(
         TableModel.class,
@@ -107,7 +106,7 @@ public class TestTableResource {
     Map<HRegionInfo, ServerName> m = table.getRegionLocations();
     assertEquals(m.size(), 1);
     // tell the master to split the table
-    admin.split(TABLE.toBytes());
+    admin.split(TABLE);
     // give some time for the split to happen
 
     long timeout = System.currentTimeMillis() + (15 * 1000);

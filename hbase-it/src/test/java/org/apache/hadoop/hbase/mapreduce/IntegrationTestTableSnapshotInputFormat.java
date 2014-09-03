@@ -52,14 +52,14 @@ import org.junit.experimental.categories.Category;
  *
  * Then the test creates a snapshot from this table, and overrides the values in the original
  * table with values 'after_snapshot_value'. The test, then runs a mapreduce job over the snapshot
- * with a scan start row 'bbb' and stop row 'yyy'. The data is saved in a single reduce output 
+ * with a scan start row 'bbb' and stop row 'yyy'. The data is saved in a single reduce output
  * file, and
  * inspected later to verify that the MR job has seen all the values from the snapshot.
  *
  * <p> These parameters can be used to configure the job:
  * <br>"IntegrationTestTableSnapshotInputFormat.table" =&gt; the name of the table
  * <br>"IntegrationTestTableSnapshotInputFormat.snapshot" =&gt; the name of the snapshot
- * <br>"IntegrationTestTableSnapshotInputFormat.numRegions" =&gt; number of regions in the table 
+ * <br>"IntegrationTestTableSnapshotInputFormat.numRegions" =&gt; number of regions in the table
  * to be created (default, 32).
  * <br>"IntegrationTestTableSnapshotInputFormat.tableDir" =&gt; temporary directory to restore the
  * snapshot files
@@ -74,9 +74,9 @@ public class IntegrationTestTableSnapshotInputFormat extends IntegrationTestBase
   private static final String TABLE_NAME_KEY = "IntegrationTestTableSnapshotInputFormat.table";
   private static final String DEFAULT_TABLE_NAME = "IntegrationTestTableSnapshotInputFormat";
 
-  private static final String SNAPSHOT_NAME_KEY = 
+  private static final String SNAPSHOT_NAME_KEY =
       "IntegrationTestTableSnapshotInputFormat.snapshot";
-  private static final String NUM_REGIONS_KEY = 
+  private static final String NUM_REGIONS_KEY =
       "IntegrationTestTableSnapshotInputFormat.numRegions";
 
   private static final String MR_IMPLEMENTATION_KEY =
@@ -175,7 +175,7 @@ public class IntegrationTestTableSnapshotInputFormat extends IntegrationTestBase
   }
 
   @Override // CM is not intended to be run with this test
-  public String getTablename() {
+  public TableName getTablename() {
     return null;
   }
 

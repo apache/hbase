@@ -23,6 +23,7 @@ import java.util.Properties;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 
 import com.google.common.collect.ImmutableMap;
@@ -32,12 +33,12 @@ import com.google.common.collect.ImmutableMap;
  */
 public abstract class MonkeyFactory {
 
-  protected String tableName;
+  protected TableName tableName;
   protected Set<String> columnFamilies;
   protected IntegrationTestingUtility util;
   protected Properties properties = new Properties();
 
-  public MonkeyFactory setTableName(String tableName) {
+  public MonkeyFactory setTableName(TableName tableName) {
     this.tableName = tableName;
     return this;
   }

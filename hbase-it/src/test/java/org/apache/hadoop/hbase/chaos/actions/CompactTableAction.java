@@ -20,29 +20,26 @@ package org.apache.hadoop.hbase.chaos.actions;
 
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Action that queues a table compaction.
  */
 public class CompactTableAction extends Action {
-  private final byte[] tableNameBytes;
+  private final TableName tableName;
   private final int majorRatio;
   private final long sleepTime;
-  private final String tableName;
 
-  public CompactTableAction(String tableName, float majorRatio) {
+  public CompactTableAction(TableName tableName, float majorRatio) {
     this(-1, tableName, majorRatio);
   }
 
   public CompactTableAction(
-      int sleepTime, String tableName, float majorRatio) {
-    this.tableNameBytes = Bytes.toBytes(tableName);
+      int sleepTime, TableName tableName, float majorRatio) {
+    this.tableName = tableName;
     this.majorRatio = (int) (100 * majorRatio);
     this.sleepTime = sleepTime;
-    this.tableName = tableName;
   }
 
   @Override
@@ -54,9 +51,9 @@ public class CompactTableAction extends Action {
     LOG.info("Performing action: Compact table " + tableName + ", major=" + major);
     try {
       if (major) {
-        admin.majorCompact(tableNameBytes);
+        admin.majorCompact(tableName);
       } else {
-        admin.compact(tableNameBytes);
+        admin.compact(tableName);
       }
     } catch (Exception ex) {
       LOG.warn("Compaction failed, might be caused by other chaos: " + ex.getMessage());
