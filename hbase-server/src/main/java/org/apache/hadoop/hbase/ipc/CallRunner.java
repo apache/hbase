@@ -39,9 +39,9 @@ import com.google.protobuf.Message;
  */
 @InterfaceAudience.Private
 public class CallRunner {
-  private final Call call;
-  private final RpcServerInterface rpcServer;
-  private final MonitoredRPCHandler status;
+  private Call call;
+  private RpcServerInterface rpcServer;
+  private MonitoredRPCHandler status;
   private UserProvider userProvider;
 
   /**
@@ -63,6 +63,16 @@ public class CallRunner {
 
   public Call getCall() {
     return call;
+  }
+
+  /**
+   * Cleanup after ourselves... let go of references.
+   */
+  private void cleanup() {
+    this.call = null;
+    this.rpcServer = null;
+    this.status = null;
+    this.userProvider = null;
   }
 
   public void run() {
@@ -141,6 +151,7 @@ public class CallRunner {
     } finally {
       // regardless if successful or not we need to reset the callQueueSize
       this.rpcServer.addCallSize(call.getSize() * -1);
+      cleanup();
     }
   }
 
