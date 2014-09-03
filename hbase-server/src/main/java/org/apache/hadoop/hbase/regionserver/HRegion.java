@@ -4018,18 +4018,8 @@ public class HRegion implements HeapSize { // , Writable{
       if (isFilterDoneInternal()) {
         returnResult = false;
       }
-      if (region != null && region.metricsRegion != null) {
-        long totalSize = 0;
-        for(Cell c:outResults) {
-          // TODO clean up.  Find way to remove this ensureKeyValue
-          KeyValue kv = KeyValueUtil.ensureKeyValue(c);
-          totalSize += kv.getLength();
-        }
-        region.metricsRegion.updateScanNext(totalSize);
-      }
       return returnResult;
     }
-
 
     private void populateFromJoinedHeap(List<Cell> results, int limit)
         throws IOException {

@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -1965,6 +1966,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           lease = regionServer.leases.removeLease(scannerName);
           List<Result> results = new ArrayList<Result>(rows);
           long currentScanResultSize = 0;
+          long totalKvSize = 0;
 
           boolean done = false;
           // Call coprocessor. Get region info from scanner.
@@ -1973,10 +1975,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               scanner, results, rows);
             if (!results.isEmpty()) {
               for (Result r : results) {
-                if (maxScannerResultSize < Long.MAX_VALUE){
-                  for (Cell kv : r.rawCells()) {
-                    currentScanResultSize += KeyValueUtil.ensureKeyValue(kv).heapSize();
-                  }
+                for (Cell cell : r.rawCells()) {
+                  KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+                  currentScanResultSize += kv.heapSize();
+                  totalKvSize += kv.getLength();
                 }
               }
             }
@@ -1996,15 +1998,19 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               int i = 0;
               synchronized(scanner) {
                 boolean stale = (region.getRegionInfo().getReplicaId() != 0);
-                for (; i < rows
-                    && currentScanResultSize < maxResultSize; ) {
+                while (i < rows) {
+                  // Stop collecting results if maxScannerResultSize is set and we have exceeded it
+                  if ((maxScannerResultSize < Long.MAX_VALUE) &&
+                      (currentScanResultSize >= maxResultSize)) {
+                    break;
+                  }
                   // Collect values to be returned here
                   boolean moreRows = scanner.nextRaw(values);
                   if (!values.isEmpty()) {
-                    if (maxScannerResultSize < Long.MAX_VALUE){
-                      for (Cell kv : values) {
-                        currentScanResultSize += KeyValueUtil.ensureKeyValue(kv).heapSize();
-                      }
+                    for (Cell cell : values) {
+                      KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+                      currentScanResultSize += kv.heapSize();
+                      totalKvSize += kv.getLength();
                     }
                     results.add(Result.create(values, null, stale));
                     i++;
@@ -2016,6 +2022,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                 }
               }
               region.readRequestsCount.add(i);
+              region.getMetrics().updateScanNext(totalKvSize);
             } finally {
               region.closeRegionOperation();
             }
@@ -2035,7 +2042,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           } else {
             addResults(builder, results, controller, RegionReplicaUtil.isDefaultReplica(region.getRegionInfo()));
           }
-        } finally {
+        } finally { 
           // We're done. On way out re-add the above removed lease.
           // Adding resets expiration time on lease.
           if (scanners.containsKey(scannerName)) {
