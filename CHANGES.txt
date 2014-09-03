@@ -46,6 +46,7 @@ Release 0.98.6 - 9/09/2014
     * [HBASE-11856] - hbase-common needs a log4j.properties resource for handling unit test logging output
     * [HBASE-11857] - Restore ReaderBase.initAfterCompression() and WALCellCodec.create(Configuration, CompressionContext)
     * [HBASE-11863] - WAL files are not archived and stays in the WAL directory after splitting 
+    * [HBASE-11868] - Data loss in hlog when the hdfs is unavailable
     * [HBASE-11876] - RegionScanner.nextRaw(...) should not update metrics
     * [HBASE-11878] - TestVisibilityLabelsWithDistributedLogReplay#testAddVisibilityLabelsOnRSRestart sometimes fails due to VisibilityController not yet initialized
 
