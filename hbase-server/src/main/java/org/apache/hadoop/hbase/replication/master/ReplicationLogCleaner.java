@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.master.cleaner.BaseLogCleanerDelegate;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -43,7 +44,7 @@ import com.google.common.collect.Sets;
  * Implementation of a log cleaner that checks if a log is still scheduled for
  * replication before deleting it when its TTL is over.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abortable {
   private static final Log LOG = LogFactory.getLog(ReplicationLogCleaner.class);
   private ZooKeeperWatcher zkw;

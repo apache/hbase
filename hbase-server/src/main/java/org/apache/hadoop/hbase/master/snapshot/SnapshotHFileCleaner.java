@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -36,7 +37,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  * Implementation of a file cleaner that checks if a hfile is still used by snapshots of HBase
  * tables.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 @InterfaceStability.Evolving
 public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate {
   private static final Log LOG = LogFactory.getLog(SnapshotHFileCleaner.class);

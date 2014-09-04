@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -37,7 +38,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  *      /hbase/archive/table/region/cf/.links-hfile/ref-region.ref-table
  * To check if the hfile can be deleted the back references folder must be empty.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
   private static final Log LOG = LogFactory.getLog(HFileLinkCleaner.class);
 

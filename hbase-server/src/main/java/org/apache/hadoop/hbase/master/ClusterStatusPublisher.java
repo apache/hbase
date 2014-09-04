@@ -35,6 +35,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
@@ -233,6 +234,7 @@ public class ClusterStatusPublisher extends Chore {
     void close();
   }
 
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
   public static class MulticastPublisher implements Publisher {
     private DatagramChannel channel;
     private final EventLoopGroup group = new NioEventLoopGroup(

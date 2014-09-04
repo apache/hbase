@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader;
@@ -37,7 +38,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 /**
  * Writer for protobuf-based WAL.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ProtobufLogWriter extends WriterBase {
   private final Log LOG = LogFactory.getLog(this.getClass());
   protected FSDataOutputStream output;
