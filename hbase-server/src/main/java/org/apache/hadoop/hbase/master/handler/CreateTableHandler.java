@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master.handler;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -48,6 +50,8 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -66,6 +70,7 @@ public class CreateTableHandler extends EventHandler {
   private final TableLockManager tableLockManager;
   private final HRegionInfo [] newRegions;
   private final TableLock tableLock;
+  private User activeUser;
 
   public CreateTableHandler(Server server, MasterFileSystem fileSystemManager,
       HTableDescriptor hTableDescriptor, Configuration conf, HRegionInfo [] newRegions,
@@ -92,6 +97,14 @@ public class CreateTableHandler extends EventHandler {
       if (server.getMetaTableLocator().waitMetaRegionLocation(
           server.getZooKeeper(), timeout) == null) {
         throw new NotAllMetaRegionsOnlineException();
+      }
+      // If we are creating the table in service to an RPC request, record the
+      // active user for later, so proper permissions will be applied to the
+      // new table by the AccessController if it is active
+      if (RequestContext.isInRequestContext()) {
+        this.activeUser = RequestContext.getRequestUser();
+      } else {
+        this.activeUser = UserProvider.instantiate(conf).getCurrent();
       }
     } catch (InterruptedException e) {
       LOG.warn("Interrupted waiting for meta availability", e);
@@ -176,14 +189,20 @@ public class CreateTableHandler extends EventHandler {
     LOG.info("Create table " + tableName);
 
     try {
-      MasterCoprocessorHost cpHost = ((HMaster) this.server).getMasterCoprocessorHost();
+      final MasterCoprocessorHost cpHost = ((HMaster) this.server).getMasterCoprocessorHost();
       if (cpHost != null) {
         cpHost.preCreateTableHandler(this.hTableDescriptor, this.newRegions);
       }
       handleCreateTable(tableName);
       completed(null);
       if (cpHost != null) {
-        cpHost.postCreateTableHandler(this.hTableDescriptor, this.newRegions);
+        this.activeUser.runAs(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            cpHost.postCreateTableHandler(hTableDescriptor, newRegions);
+            return null;
+          }
+        });
       }
     } catch (Throwable e) {
       LOG.error("Error trying to create the table " + tableName, e);
