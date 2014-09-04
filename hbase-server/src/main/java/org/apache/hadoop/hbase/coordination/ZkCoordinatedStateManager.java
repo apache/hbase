@@ -21,6 +21,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CoordinatedStateException;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.zookeeper.ZKTableStateManager;
@@ -30,7 +31,7 @@ import org.apache.zookeeper.KeeperException;
 /**
  * ZooKeeper-based implementation of {@link org.apache.hadoop.hbase.CoordinatedStateManager}.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ZkCoordinatedStateManager extends BaseCoordinatedStateManager {
   private static final Log LOG = LogFactory.getLog(ZkCoordinatedStateManager.class);
   protected Server server;

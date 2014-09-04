@@ -23,6 +23,7 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 
@@ -49,7 +50,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
  * Note: The only difference of this with KeyValueCodec is the latter ignores tags in KeyValues.
  * <b>Use this Codec only at server side.</b>
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class KeyValueCodecWithTags implements Codec {
   public static class KeyValueEncoder extends BaseEncoder {
     public KeyValueEncoder(final OutputStream out) {

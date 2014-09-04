@@ -34,6 +34,7 @@ import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerLoad;
@@ -91,7 +92,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  * <p>This balancer is best used with hbase.master.loadbalance.bytable set to false
  * so that the balancer gets the full picture of all loads on the cluster.</p>
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class StochasticLoadBalancer extends BaseLoadBalancer {
 
   protected static final String STEPS_PER_REGION_KEY =

@@ -26,7 +26,9 @@ import java.util.Set;
 import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -47,6 +49,7 @@ import org.apache.zookeeper.KeeperException;
 
 import com.google.common.collect.Lists;
 
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class MasterFlushTableProcedureManager extends MasterProcedureManager {
 
   public static final String FLUSH_TABLE_PROCEDURE_SIGNATURE = "flush-table-proc";

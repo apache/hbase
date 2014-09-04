@@ -25,6 +25,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -32,7 +33,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * delimiting all lengths. Profligate. Needs tune up.
  * Note: This will not write tags of a Cell.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class CellCodec implements Codec {
   static class CellEncoder extends BaseEncoder {
     CellEncoder(final OutputStream out) {

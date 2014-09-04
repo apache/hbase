@@ -52,6 +52,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.http.conf.ConfServlet;
 import org.apache.hadoop.hbase.http.jmx.JMXJsonServlet;
 import org.apache.hadoop.hbase.http.log.LogLevel;
@@ -1222,6 +1223,7 @@ public class HttpServer implements FilterContainer {
    * parameter names and values. The goal is to quote the characters to make
    * all of the servlets resistant to cross-site scripting attacks.
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
   public static class QuotingInputFilter implements Filter {
     private FilterConfig config;
 

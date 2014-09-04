@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import java.io.IOException;
 import java.util.List;
 
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.CONFIG})
 @InterfaceStability.Evolving
 public class BaseMasterObserver implements MasterObserver {
   @Override
