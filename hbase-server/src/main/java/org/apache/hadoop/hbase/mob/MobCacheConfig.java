@@ -1,4 +1,5 @@
 /**
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,21 +16,41 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.mob;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 
+/**
+ * The cache configuration for the mob.
+ */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
-public final class TagType {
-  // Please declare new Tag Types here to avoid step on pre-existing tag types.
-  public static final byte ACL_TAG_TYPE = (byte) 1;
-  public static final byte VISIBILITY_TAG_TYPE = (byte) 2;
-  public static final byte LOG_REPLAY_TAG_TYPE = (byte) 3;
-  public static final byte VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE = (byte)4;
+public class MobCacheConfig extends CacheConfig {
 
-  // mob tags
-  public static final byte MOB_REFERENCE_TAG_TYPE = (byte) 5;
-  public static final byte MOB_TABLE_NAME_TAG_TYPE = (byte) 6;
+  private static MobFileCache mobFileCache;
+
+  public MobCacheConfig(Configuration conf, HColumnDescriptor family) {
+    super(conf, family);
+    instantiateMobFileCache(conf);
+  }
+
+  /**
+   * Instantiates the MobFileCache.
+   * @param conf The current configuration.
+   */
+  public static synchronized void instantiateMobFileCache(Configuration conf) {
+    if (mobFileCache == null) {
+      mobFileCache = new MobFileCache(conf);
+    }
+  }
+
+  /**
+   * Gets the MobFileCache.
+   * @return The MobFileCache.
+   */
+  public MobFileCache getMobFileCache() {
+    return mobFileCache;
+  }
 }

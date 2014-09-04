@@ -15,21 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.mob;
+
+import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
+import org.apache.hadoop.hbase.regionserver.Store;
 
+/**
+ * MobStoreEngine creates the mob specific compactor, and store flusher.
+ */
 @InterfaceAudience.Private
-@InterfaceStability.Evolving
-public final class TagType {
-  // Please declare new Tag Types here to avoid step on pre-existing tag types.
-  public static final byte ACL_TAG_TYPE = (byte) 1;
-  public static final byte VISIBILITY_TAG_TYPE = (byte) 2;
-  public static final byte LOG_REPLAY_TAG_TYPE = (byte) 3;
-  public static final byte VISIBILITY_EXP_SERIALIZATION_FORMAT_TAG_TYPE = (byte)4;
+public class MobStoreEngine extends DefaultStoreEngine {
 
-  // mob tags
-  public static final byte MOB_REFERENCE_TAG_TYPE = (byte) 5;
-  public static final byte MOB_TABLE_NAME_TAG_TYPE = (byte) 6;
+  @Override
+  protected void createStoreFlusher(Configuration conf, Store store) throws IOException {
+    // When using MOB, we use DefaultMobStoreFlusher always
+    // Just use the compactor and compaction policy as that in DefaultStoreEngine. We can have MOB
+    // specific compactor and policy when that is implemented.
+    storeFlusher = new DefaultMobStoreFlusher(conf, store);
+  }
 }

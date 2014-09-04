@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CoordinatedStateException;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -36,6 +37,7 @@ import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -43,6 +45,8 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.RegionState.State;
+import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.mob.MobUtils;
 
 @InterfaceAudience.Private
 public class DeleteTableHandler extends TableEventHandler {
@@ -152,9 +156,35 @@ public class DeleteTableHandler extends TableEventHandler {
           tempTableDir, HRegion.getRegionDir(tempTableDir, hri.getEncodedName()));
     }
 
+    // Archive the mob data if there is a mob-enabled column
+    HColumnDescriptor[] hcds = hTableDescriptor.getColumnFamilies();
+    boolean hasMob = false;
+    for (HColumnDescriptor hcd : hcds) {
+      if (MobUtils.isMobFamily(hcd)) {
+        hasMob = true;
+        break;
+      }
+    }
+    Path mobTableDir = null;
+    if (hasMob) {
+      // Archive mob data
+      mobTableDir = FSUtils.getTableDir(new Path(mfs.getRootDir(), MobConstants.MOB_DIR_NAME),
+          tableName);
+      Path regionDir =
+          new Path(mobTableDir, MobUtils.getMobRegionInfo(tableName).getEncodedName());
+      if (fs.exists(regionDir)) {
+        HFileArchiver.archiveRegion(fs, mfs.getRootDir(), mobTableDir, regionDir);
+      }
+    }
     // 4. Delete table directory from FS (temp directory)
     if (!fs.delete(tempTableDir, true)) {
       LOG.error("Couldn't delete " + tempTableDir);
+    }
+    // Delete the table directory where the mob files are saved
+    if (hasMob && mobTableDir != null && fs.exists(mobTableDir)) {
+      if (!fs.delete(mobTableDir, true)) {
+        LOG.error("Couldn't delete " + mobTableDir);
+      }
     }
 
     LOG.debug("Table '" + tableName + "' archived!");
