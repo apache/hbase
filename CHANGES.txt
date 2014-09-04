@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.98.6 - 9/09/2014
+Release 0.98.6 - 9/10/2014
 
 ** Sub-task
     * [HBASE-11059] - ZK-less region assignment
@@ -49,6 +49,8 @@ Release 0.98.6 - 9/09/2014
     * [HBASE-11868] - Data loss in hlog when the hdfs is unavailable
     * [HBASE-11876] - RegionScanner.nextRaw(...) should not update metrics
     * [HBASE-11878] - TestVisibilityLabelsWithDistributedLogReplay#testAddVisibilityLabelsOnRSRestart sometimes fails due to VisibilityController not yet initialized
+    * [HBASE-11886] - The creator of the table should have all permissions on the table
+    * [HBASE-11887] - Memory retention in branch-1; millions of instances of LiteralByteString for column qualifier and value
 
 ** Improvement
     * [HBASE-8298] - In shell, provide alias of 'desc' for 'describe'
