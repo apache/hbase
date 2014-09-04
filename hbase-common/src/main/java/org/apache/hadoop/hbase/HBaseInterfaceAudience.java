@@ -28,4 +28,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class HBaseInterfaceAudience {
   public static final String COPROC = "Coprocesssor";
   public static final String PHOENIX = "Phoenix";
+  /**
+   * Denotes class names that appear in user facing configuration files.
+   */
+  public static final String CONFIG = "Configuration";
 }

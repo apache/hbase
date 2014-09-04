@@ -36,6 +36,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -176,6 +177,7 @@ class ClusterStatusListener implements Closeable {
   /**
    * An implementation using a multicast message between the master & the client.
    */
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
   class MulticastListener implements Listener {
     private DatagramChannel channel;
     private final ExecutorService service = Executors.newSingleThreadExecutor(

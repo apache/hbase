@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -39,7 +40,7 @@ import org.apache.zookeeper.KeeperException;
  * be), since it may take a little time for the ZK notification to propagate, in which case we may
  * accidentally delete some files.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class LongTermArchivingHFileCleaner extends BaseHFileCleanerDelegate {
 
   private static final Log LOG = LogFactory.getLog(LongTermArchivingHFileCleaner.class);

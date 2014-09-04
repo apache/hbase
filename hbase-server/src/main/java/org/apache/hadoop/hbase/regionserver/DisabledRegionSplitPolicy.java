@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 
 /**
  * A {@link RegionSplitPolicy} that disables region splits.
@@ -26,7 +27,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * Most of the time, using {@link ConstantSizeRegionSplitPolicy} with a
  * large region size (10GB, etc) is safer.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class DisabledRegionSplitPolicy extends RegionSplitPolicy {
   @Override
   protected boolean shouldSplit() {

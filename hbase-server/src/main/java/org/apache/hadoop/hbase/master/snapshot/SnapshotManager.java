@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Stoppable;
@@ -87,7 +88,7 @@ import org.apache.zookeeper.KeeperException;
  * Note: Currently there can only be one snapshot being taken at a time over the cluster. This is a
  * simplification in the current implementation.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 @InterfaceStability.Unstable
 public class SnapshotManager extends MasterProcedureManager implements Stoppable {
   private static final Log LOG = LogFactory.getLog(SnapshotManager.class);
