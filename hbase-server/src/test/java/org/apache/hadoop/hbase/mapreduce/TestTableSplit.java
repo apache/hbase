@@ -85,5 +85,21 @@ public class TestTableSplit {
     Assert.assertEquals(666, deserialized.getLength());
   }
 
+  @Test
+  public void testToString() {
+    TableSplit split =
+        new TableSplit(TableName.valueOf("table"), "row-start".getBytes(), "row-end".getBytes(),
+            "location");
+    String str =
+        "HBase table split(table name: table, scan: , start row: row-start, "
+            + "end row: row-end, region location: location)";
+    Assert.assertEquals(str, split.toString());
+
+    split = new TableSplit((TableName) null, null, null, null);
+    str =
+        "HBase table split(table name: null, scan: , start row: null, "
+            + "end row: null, region location: null)";
+    Assert.assertEquals(str, split.toString());
+  }
 }
 
