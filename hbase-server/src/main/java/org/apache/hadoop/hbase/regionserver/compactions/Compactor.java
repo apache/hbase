@@ -136,9 +136,17 @@ public abstract class Compactor {
       fd.maxKeyCount += keyCount;
       // calculate the latest MVCC readpoint in any of the involved store files
       Map<byte[], byte[]> fileInfo = r.loadFileInfo();
-      byte tmp[] = fileInfo.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY);
-      if (tmp != null) {
-        fd.maxMVCCReadpoint = Math.max(fd.maxMVCCReadpoint, Bytes.toLong(tmp));
+      byte tmp[] = null;
+      // Get and set the real MVCCReadpoint for bulk loaded files, which is the
+      // SeqId number.
+      if (r.isBulkLoaded()) {
+        fd.maxMVCCReadpoint = Math.max(fd.maxMVCCReadpoint, r.getSequenceID());
+      }
+      else {
+        tmp = fileInfo.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY);
+        if (tmp != null) {
+          fd.maxMVCCReadpoint = Math.max(fd.maxMVCCReadpoint, Bytes.toLong(tmp));
+        }
       }
       tmp = fileInfo.get(FileInfo.MAX_TAGS_LEN);
       if (tmp != null) {
