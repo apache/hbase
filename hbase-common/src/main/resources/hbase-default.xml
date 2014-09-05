@@ -762,7 +762,8 @@ possible configurations would overwhelm and obscure the important.
       <value>3</value>
       <description>The HFile format version to use for new files.
       Version 3 adds support for tags in hfiles (See http://hbase.apache.org/book.html#hbase.tags).
-      Distributed Log Replay requires that tags are enabled.
+      Distributed Log Replay requires that tags are enabled. Also see the configuration
+      'hbase.replication.rpc.codec'. 
       </description>
   </property>
   <property>
@@ -1314,6 +1315,17 @@ possible configurations would overwhelm and obscure the important.
       The maximum number of threads that the HTTP Server will create in its 
       ThreadPool.
     </description>
+  </property>
+  <property>
+  	<name>hbase.replication.rpc.codec</name>
+  	<value>org.apache.hadoop.hbase.codec.KeyValueCodecWithTags</value>
+  	<description>
+  		The codec that is to be used when replication is enabled so that
+  		the tags are also replicated. This is used along with HFileV3 which 
+  		supports tags in them.  If tags are not used or if the hfile version used
+  		is HFileV2 then KeyValueCodec can be used as the replication codec. Note that
+  		using KeyValueCodecWithTags for replication when there are no tags causes no harm.
+  	</description>
   </property>
   <!-- Static Web User Filter properties. -->
   <property>
