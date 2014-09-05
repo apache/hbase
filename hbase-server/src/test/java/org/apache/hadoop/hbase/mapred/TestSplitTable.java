@@ -23,7 +23,9 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -87,5 +89,23 @@ public class TestSplitTable {
     TableSplit same = new TableSplit(tableA, aaa, ddd, locationA);
     assertEquals(tablesplit.hashCode(), same.hashCode());
     assertEquals(tablesplit, same);
+  }
+
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testToString() {
+    TableSplit split =
+        new TableSplit(TableName.valueOf("table"), "row-start".getBytes(), "row-end".getBytes(),
+            "location");
+    String str =
+        "HBase table split(table name: table, start row: row-start, "
+            + "end row: row-end, region location: location)";
+    Assert.assertEquals(str, split.toString());
+
+    split = new TableSplit((TableName) null, null, null, null);
+    str =
+        "HBase table split(table name: null, start row: null, "
+            + "end row: null, region location: null)";
+    Assert.assertEquals(str, split.toString());
   }
 }
