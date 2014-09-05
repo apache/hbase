@@ -58,6 +58,7 @@
               </button>
               <a class="navbar-brand" href="/master-status"><img src="/static/hbase_logo_small.png" alt="HBase Logo"/></a>
           </div>
+         <a class="navbar-brand pull-right" href="/master-status"><img src="/static/jumping-orca_rotated_12percent.png" alt="HBase Orca"/></a>
           <div class="collapse navbar-collapse">
               <ul class="nav navbar-nav">
                   <li class="active"><a href="/master-status">Home</a></li>
