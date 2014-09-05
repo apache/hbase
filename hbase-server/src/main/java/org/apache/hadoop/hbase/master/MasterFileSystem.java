@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * This class abstracts a bunch of operations the HMaster needs to interact with
@@ -91,12 +90,14 @@ public class MasterFileSystem {
   private final MasterServices services;
 
   final static PathFilter META_FILTER = new PathFilter() {
+    @Override
     public boolean accept(Path p) {
       return HLogUtil.isMetaFile(p);
     }
   };
 
   final static PathFilter NON_META_FILTER = new PathFilter() {
+    @Override
     public boolean accept(Path p) {
       return !HLogUtil.isMetaFile(p);
     }
@@ -123,14 +124,10 @@ public class MasterFileSystem {
     // set up the archived logs path
     this.oldLogDir = createInitialFileSystemLayout();
     HFileSystem.addLocationsOrderInterceptor(conf);
-    try {
-      this.splitLogManager = new SplitLogManager(master.getZooKeeper(),
-        master.getConfiguration(), master, services,
-        master.getServerName());
-    } catch (KeeperException e) {
-      throw new IOException(e);
-    }
-    this.distributedLogReplay = (this.splitLogManager.getRecoveryMode() == RecoveryMode.LOG_REPLAY);
+    this.splitLogManager =
+        new SplitLogManager(master, master.getConfiguration(), master, services,
+            master.getServerName());
+    this.distributedLogReplay = this.splitLogManager.isLogReplaying();
   }
 
   /**
@@ -350,11 +347,7 @@ public class MasterFileSystem {
     if (regions == null || regions.isEmpty()) {
       return;
     }
-    try {
-      this.splitLogManager.markRegionsRecoveringInZK(serverName, regions);
-    } catch (KeeperException e) {
-      throw new IOException(e);
-    }
+    this.splitLogManager.markRegionsRecovering(serverName, regions);
   }
 
   public void splitLog(final Set<ServerName> serverNames) throws IOException {
@@ -362,13 +355,13 @@ public class MasterFileSystem {
   }
 
   /**
-   * Wrapper function on {@link SplitLogManager#removeStaleRecoveringRegionsFromZK(Set)}
+   * Wrapper function on {@link SplitLogManager#removeStaleRecoveringRegions(Set)}
    * @param failedServers
-   * @throws KeeperException
+   * @throws IOException
    */
   void removeStaleRecoveringRegionsFromZK(final Set<ServerName> failedServers)
-      throws KeeperException, InterruptedIOException {
-    this.splitLogManager.removeStaleRecoveringRegionsFromZK(failedServers);
+      throws IOException, InterruptedIOException {
+    this.splitLogManager.removeStaleRecoveringRegions(failedServers);
   }
 
   /**
@@ -459,7 +452,7 @@ public class MasterFileSystem {
       org.apache.hadoop.hbase.util.FSTableDescriptorMigrationToSubdir
         .migrateFSTableDescriptorsIfNecessary(fs, rd);
     }
-      
+
     // Create tableinfo-s for hbase:meta if not already there.
     new FSTableDescriptors(fs, rd).createTableDescriptor(HTableDescriptor.META_TABLEDESC);
 
@@ -650,15 +643,10 @@ public class MasterFileSystem {
   /**
    * The function is used in SSH to set recovery mode based on configuration after all outstanding
    * log split tasks drained.
-   * @throws KeeperException
-   * @throws InterruptedIOException
+   * @throws IOException
    */
   public void setLogRecoveryMode() throws IOException {
-    try {
       this.splitLogManager.setRecoveryMode(false);
-    } catch (KeeperException e) {
-      throw new IOException(e);
-    }
   }
 
   public RecoveryMode getLogRecoveryMode() {

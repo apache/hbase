@@ -37,6 +37,8 @@ public class ZkCoordinatedStateManager extends BaseCoordinatedStateManager {
   protected ZooKeeperWatcher watcher;
   protected SplitTransactionCoordination splitTransactionCoordination;
   protected CloseRegionCoordination closeRegionCoordination;
+  protected SplitLogWorkerCoordination splitLogWorkerCoordination;
+  protected SplitLogManagerCoordination splitLogManagerCoordination;
   protected OpenRegionCoordination openRegionCoordination;
   protected RegionMergeCoordination regionMergeCoordination;
 
@@ -44,7 +46,8 @@ public class ZkCoordinatedStateManager extends BaseCoordinatedStateManager {
   public void initialize(Server server) {
     this.server = server;
     this.watcher = server.getZooKeeper();
-
+    splitLogWorkerCoordination = new ZkSplitLogWorkerCoordination(this, watcher);
+    splitLogManagerCoordination = new ZKSplitLogManagerCoordination(this, watcher);
     splitTransactionCoordination = new ZKSplitTransactionCoordination(this, watcher);
     closeRegionCoordination = new ZkCloseRegionCoordination(this, watcher);
     openRegionCoordination = new ZkOpenRegionCoordination(this, watcher);
@@ -64,6 +67,15 @@ public class ZkCoordinatedStateManager extends BaseCoordinatedStateManager {
     } catch (KeeperException e) {
       throw new CoordinatedStateException(e);
     }
+  }
+
+  @Override
+  public SplitLogWorkerCoordination getSplitLogWorkerCoordination() {
+    return splitLogWorkerCoordination;
+    }
+  @Override
+  public SplitLogManagerCoordination getSplitLogManagerCoordination() {
+    return splitLogManagerCoordination;
   }
 
   @Override

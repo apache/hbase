@@ -138,7 +138,7 @@ public class TestHLogReaderOnSecureHLog {
         RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING);
     Path rootdir = FSUtils.getRootDir(conf);
     try {
-      HLogSplitter s = new HLogSplitter(conf, rootdir, fs, null, null, null, mode);
+      HLogSplitter s = new HLogSplitter(conf, rootdir, fs, null, null, mode);
       s.splitLogFile(listStatus[0], null);
       Path file = new Path(ZKSplitLog.getSplitLogDir(rootdir, listStatus[0].getPath().getName()),
         "corrupt");
@@ -181,7 +181,7 @@ public class TestHLogReaderOnSecureHLog {
         RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING);
     Path rootdir = FSUtils.getRootDir(conf);
     try {
-      HLogSplitter s = new HLogSplitter(conf, rootdir, fs, null, null, null, mode);
+      HLogSplitter s = new HLogSplitter(conf, rootdir, fs, null, null, mode);
       s.splitLogFile(listStatus[0], null);
       Path file = new Path(ZKSplitLog.getSplitLogDir(rootdir, listStatus[0].getPath().getName()),
         "corrupt");

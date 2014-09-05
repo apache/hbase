@@ -20,9 +20,7 @@ package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -30,17 +28,13 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
+import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor.Status;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
-import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.zookeeper.KeeperException;
 
 /**
  * Handles log splitting a wal
@@ -49,28 +43,24 @@ import org.apache.zookeeper.KeeperException;
 public class HLogSplitterHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(HLogSplitterHandler.class);
   private final ServerName serverName;
-  private final String curTask;
-  private final String wal;
-  private final ZooKeeperWatcher zkw;
   private final CancelableProgressable reporter;
   private final AtomicInteger inProgressTasks;
-  private final MutableInt curTaskZKVersion;
   private final TaskExecutor splitTaskExecutor;
   private final RecoveryMode mode;
+  private final SplitLogWorkerCoordination.SplitTaskDetails splitTaskDetails;
+  private final SplitLogWorkerCoordination coordination;
 
-  public HLogSplitterHandler(final Server server, String curTask,
-      final MutableInt curTaskZKVersion,
-      CancelableProgressable reporter,
+
+  public HLogSplitterHandler(final Server server, SplitLogWorkerCoordination coordination,
+      SplitLogWorkerCoordination.SplitTaskDetails splitDetails, CancelableProgressable reporter,
       AtomicInteger inProgressTasks, TaskExecutor splitTaskExecutor, RecoveryMode mode) {
 	  super(server, EventType.RS_LOG_REPLAY);
-    this.curTask = curTask;
-    this.wal = ZKSplitLog.getFileName(curTask);
+    this.splitTaskDetails = splitDetails;
+    this.coordination = coordination;
     this.reporter = reporter;
     this.inProgressTasks = inProgressTasks;
     this.inProgressTasks.incrementAndGet();
     this.serverName = server.getServerName();
-    this.zkw = server.getZooKeeper();
-    this.curTaskZKVersion = curTaskZKVersion;
     this.splitTaskExecutor = splitTaskExecutor;
     this.mode = mode;
   }
@@ -79,20 +69,20 @@ public class HLogSplitterHandler extends EventHandler {
   public void process() throws IOException {
     long startTime = System.currentTimeMillis();
     try {
-      Status status = this.splitTaskExecutor.exec(wal, mode, reporter);
+      Status status = this.splitTaskExecutor.exec(splitTaskDetails.getWALFile(), mode, reporter);
       switch (status) {
       case DONE:
-        endTask(zkw, new SplitLogTask.Done(this.serverName, this.mode),
-          SplitLogCounters.tot_wkr_task_done, curTask, curTaskZKVersion.intValue());
+        coordination.endTask(new SplitLogTask.Done(this.serverName,this.mode),
+          SplitLogCounters.tot_wkr_task_done, splitTaskDetails);
         break;
       case PREEMPTED:
         SplitLogCounters.tot_wkr_preempt_task.incrementAndGet();
-        LOG.warn("task execution prempted " + wal);
+        LOG.warn("task execution prempted " + splitTaskDetails.getWALFile());
         break;
       case ERR:
         if (server != null && !server.isStopped()) {
-          endTask(zkw, new SplitLogTask.Err(this.serverName, this.mode),
-            SplitLogCounters.tot_wkr_task_err, curTask, curTaskZKVersion.intValue());
+          coordination.endTask(new SplitLogTask.Err(this.serverName, this.mode),
+            SplitLogCounters.tot_wkr_task_err, splitTaskDetails);
           break;
         }
         // if the RS is exiting then there is probably a tons of stuff
@@ -100,45 +90,17 @@ public class HLogSplitterHandler extends EventHandler {
         //$FALL-THROUGH$
       case RESIGNED:
         if (server != null && server.isStopped()) {
-          LOG.info("task execution interrupted because worker is exiting " + curTask);
+          LOG.info("task execution interrupted because worker is exiting "
+              + splitTaskDetails.toString());
         }
-        endTask(zkw, new SplitLogTask.Resigned(this.serverName, this.mode),
-          SplitLogCounters.tot_wkr_task_resigned, curTask, curTaskZKVersion.intValue());
+        coordination.endTask(new SplitLogTask.Resigned(this.serverName, this.mode),
+          SplitLogCounters.tot_wkr_task_resigned, splitTaskDetails);
         break;
       }
     } finally {
-      LOG.info("worker " + serverName + " done with task " + curTask + " in "
+      LOG.info("worker " + serverName + " done with task " + splitTaskDetails.toString() + " in "
           + (System.currentTimeMillis() - startTime) + "ms");
       this.inProgressTasks.decrementAndGet();
     }
-  }
-  
-  /**
-   * endTask() can fail and the only way to recover out of it is for the
-   * {@link SplitLogManager} to timeout the task node.
-   * @param slt
-   * @param ctr
-   */
-  public static void endTask(ZooKeeperWatcher zkw, SplitLogTask slt, AtomicLong ctr, String task,
-      int taskZKVersion) {
-    try {
-      if (ZKUtil.setData(zkw, task, slt.toByteArray(), taskZKVersion)) {
-        LOG.info("successfully transitioned task " + task + " to final state " + slt);
-        ctr.incrementAndGet();
-        return;
-      }
-      LOG.warn("failed to transistion task " + task + " to end state " + slt
-          + " because of version mismatch ");
-    } catch (KeeperException.BadVersionException bve) {
-      LOG.warn("transisition task " + task + " to " + slt
-          + " failed because of version mismatch", bve);
-    } catch (KeeperException.NoNodeException e) {
-      LOG.fatal(
-        "logic error - end task " + task + " " + slt
-          + " failed because task doesn't exist", e);
-    } catch (KeeperException e) {
-      LOG.warn("failed to end task, " + task + " " + slt, e);
-    }
-    SplitLogCounters.tot_wkr_final_transition_failed.incrementAndGet();
   }
 }

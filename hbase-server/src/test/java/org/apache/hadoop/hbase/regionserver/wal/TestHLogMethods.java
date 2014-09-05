@@ -18,7 +18,12 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.util.NavigableSet;
@@ -27,15 +32,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.EntryBuffers;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.RegionEntryBuffer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-
-import static org.mockito.Mockito.mock;
 
 /**
  * Simple testing of a few HLog methods.
@@ -45,7 +52,7 @@ public class TestHLogMethods {
   private static final byte[] TEST_REGION = Bytes.toBytes("test_region");;
   private static final TableName TEST_TABLE =
       TableName.valueOf("test_table");
-  
+
   private final HBaseTestingUtility util = new HBaseTestingUtility();
 
   /**
@@ -108,27 +115,27 @@ public class TestHLogMethods {
     reb.appendEntry(createTestLogEntry(1));
     assertTrue(reb.heapSize() > 0);
   }
-  
+
   @Test
   public void testEntrySink() throws Exception {
     Configuration conf = new Configuration();
-    RecoveryMode mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false) ? 
+    RecoveryMode mode = (conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, false) ?
       RecoveryMode.LOG_REPLAY : RecoveryMode.LOG_SPLITTING);
     HLogSplitter splitter = new HLogSplitter(
-      conf, mock(Path.class), mock(FileSystem.class), null, null, null, mode);
+      conf, mock(Path.class), mock(FileSystem.class), null, null, mode);
 
     EntryBuffers sink = splitter.new EntryBuffers(1*1024*1024);
     for (int i = 0; i < 1000; i++) {
       HLog.Entry entry = createTestLogEntry(i);
       sink.appendEntry(entry);
     }
-    
+
     assertTrue(sink.totalBuffered > 0);
     long amountInChunk = sink.totalBuffered;
     // Get a chunk
     RegionEntryBuffer chunk = sink.getChunkToWrite();
     assertEquals(chunk.heapSize(), amountInChunk);
-    
+
     // Make sure it got marked that a thread is "working on this"
     assertTrue(sink.isRegionCurrentlyWriting(TEST_REGION));
 
@@ -136,26 +143,26 @@ public class TestHLogMethods {
     for (int i = 0; i < 500; i++) {
       HLog.Entry entry = createTestLogEntry(i);
       sink.appendEntry(entry);
-    }    
+    }
     // Asking for another chunk shouldn't work since the first one
     // is still writing
     assertNull(sink.getChunkToWrite());
-    
+
     // If we say we're done writing the first chunk, then we should be able
     // to get the second
     sink.doneWriting(chunk);
-    
+
     RegionEntryBuffer chunk2 = sink.getChunkToWrite();
     assertNotNull(chunk2);
     assertNotSame(chunk, chunk2);
     long amountInChunk2 = sink.totalBuffered;
     // The second chunk had fewer rows than the first
     assertTrue(amountInChunk2 < amountInChunk);
-    
+
     sink.doneWriting(chunk2);
     assertEquals(0, sink.totalBuffered);
   }
-  
+
   private HLog.Entry createTestLogEntry(int i) {
     long seq = i;
     long now = i * 1000;

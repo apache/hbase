@@ -83,7 +83,6 @@ import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
-import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -160,6 +159,7 @@ import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Strings;
+import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 
@@ -1306,7 +1306,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
         if (previous == null) {
           // check if the region to be opened is marked in recovering state in ZK
-          if (SplitLogManager.isRegionMarkedRecoveringInZK(regionServer.getZooKeeper(),
+          if (ZKSplitLog.isRegionMarkedRecoveringInZK(regionServer.getZooKeeper(),
               region.getEncodedName())) {
             // check if current region open is for distributedLogReplay. This check is to support
             // rolling restart/upgrade where we want to Master/RS see same configuration
@@ -1318,7 +1318,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               // could happen when turn distributedLogReplay off from on.
               List<String> tmpRegions = new ArrayList<String>();
               tmpRegions.add(region.getEncodedName());
-              SplitLogManager.deleteRecoveringRegionZNodes(regionServer.getZooKeeper(), tmpRegions);
+              ZKSplitLog.deleteRecoveringRegionZNodes(regionServer.getZooKeeper(),
+                tmpRegions);
             }
           }
           // If there is no action in progress, we can submit a specific handler.

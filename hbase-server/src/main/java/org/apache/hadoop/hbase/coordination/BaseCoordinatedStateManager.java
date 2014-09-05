@@ -52,7 +52,14 @@ public abstract class BaseCoordinatedStateManager implements CoordinatedStateMan
   @Override
   public abstract TableStateManager getTableStateManager() throws InterruptedException,
     CoordinatedStateException;
-
+  /**
+   * Method to retrieve coordination for split log worker
+   */
+  public abstract  SplitLogWorkerCoordination getSplitLogWorkerCoordination();
+  /**
+   * Method to retrieve coordination for split log manager
+   */
+  public abstract SplitLogManagerCoordination getSplitLogManagerCoordination();
   /**
    * Method to retrieve coordination for split transaction.
    */

@@ -78,9 +78,10 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
+import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -110,7 +111,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.MultipleIOException;
 
 import com.google.common.base.Preconditions;
@@ -138,8 +138,7 @@ public class HLogSplitter {
 
   private Set<TableName> disablingOrDisabledTables =
       new HashSet<TableName>();
-  private ZooKeeperWatcher watcher;
-  private CoordinatedStateManager csm;
+  private BaseCoordinatedStateManager csm;
 
   // If an exception is thrown by one of the other threads, it will be
   // stored here.
@@ -173,7 +172,7 @@ public class HLogSplitter {
   private final int minBatchSize;
 
   HLogSplitter(Configuration conf, Path rootDir,
-      FileSystem fs, LastSequenceId idChecker, ZooKeeperWatcher zkw,
+      FileSystem fs, LastSequenceId idChecker,
       CoordinatedStateManager csm, RecoveryMode mode) {
     this.conf = HBaseConfiguration.create(conf);
     String codecClassName = conf
@@ -182,8 +181,7 @@ public class HLogSplitter {
     this.rootDir = rootDir;
     this.fs = fs;
     this.sequenceIdChecker = idChecker;
-    this.watcher = zkw;
-    this.csm = csm;
+    this.csm = (BaseCoordinatedStateManager)csm;
 
     entryBuffers = new EntryBuffers(
         this.conf.getInt("hbase.regionserver.hlog.splitlog.buffersize",
@@ -195,7 +193,7 @@ public class HLogSplitter {
     this.distributedLogReplay = (RecoveryMode.LOG_REPLAY == mode);
 
     this.numWriterThreads = this.conf.getInt("hbase.regionserver.hlog.splitlog.writer.threads", 3);
-    if (zkw != null && csm != null && this.distributedLogReplay) {
+    if (csm != null && this.distributedLogReplay) {
       outputSink = new LogReplayOutputSink(numWriterThreads);
     } else {
       if (this.distributedLogReplay) {
@@ -219,15 +217,14 @@ public class HLogSplitter {
    * @param conf
    * @param reporter
    * @param idChecker
-   * @param zkw ZooKeeperWatcher if it's null, we will back to the old-style log splitting where we
-   *          dump out recoved.edits files for regions to replay on.
+   * @param cp coordination state manager
    * @return false if it is interrupted by the progress-able.
    * @throws IOException
    */
   public static boolean splitLogFile(Path rootDir, FileStatus logfile, FileSystem fs,
       Configuration conf, CancelableProgressable reporter, LastSequenceId idChecker,
-      ZooKeeperWatcher zkw, CoordinatedStateManager cp, RecoveryMode mode) throws IOException {
-    HLogSplitter s = new HLogSplitter(conf, rootDir, fs, idChecker, zkw, cp, mode);
+      CoordinatedStateManager cp, RecoveryMode mode) throws IOException {
+    HLogSplitter s = new HLogSplitter(conf, rootDir, fs, idChecker, cp, mode);
     return s.splitLogFile(logfile, reporter);
   }
 
@@ -241,8 +238,8 @@ public class HLogSplitter {
     List<Path> splits = new ArrayList<Path>();
     if (logfiles != null && logfiles.length > 0) {
       for (FileStatus logfile: logfiles) {
-        HLogSplitter s = new HLogSplitter(conf, rootDir, fs, null, null, null,
-          RecoveryMode.LOG_SPLITTING);
+        HLogSplitter s =
+            new HLogSplitter(conf, rootDir, fs, null, null, RecoveryMode.LOG_SPLITTING);
         if (s.splitLogFile(logfile, null)) {
           finishSplitLogFile(rootDir, oldLogDir, logfile.getPath(), conf);
           if (s.outputSink.splits != null) {
@@ -295,7 +292,7 @@ public class HLogSplitter {
         LOG.warn("Nothing to split in log file " + logPath);
         return true;
       }
-      if(watcher != null && csm != null) {
+      if(csm != null) {
         try {
           TableStateManager tsm = csm.getTableStateManager();
           disablingOrDisabledTables = tsm.getTablesInStates(
@@ -320,7 +317,8 @@ public class HLogSplitter {
         if (lastFlushedSequenceId == null) {
           if (this.distributedLogReplay) {
             RegionStoreSequenceIds ids =
-                SplitLogManager.getRegionFlushedSequenceId(this.watcher, failedServerName, key);
+                csm.getSplitLogWorkerCoordination().getRegionFlushedSequenceId(failedServerName,
+                  key);
             if (ids != null) {
               lastFlushedSequenceId = ids.getLastFlushedSequenceId();
             }
@@ -358,7 +356,8 @@ public class HLogSplitter {
       throw iie;
     } catch (CorruptedLogFileException e) {
       LOG.warn("Could not parse, corrupted log file " + logPath, e);
-      ZKSplitLog.markCorrupted(rootDir, logfile.getPath().getName(), fs);
+      csm.getSplitLogWorkerCoordination().markCorrupted(rootDir,
+        logfile.getPath().getName(), fs);
       isCorrupted = true;
     } catch (IOException e) {
       e = RemoteExceptionHandler.checkIOException(e);
@@ -1368,8 +1367,9 @@ public class HLogSplitter {
 
     public LogReplayOutputSink(int numWriters) {
       super(numWriters);
-      this.waitRegionOnlineTimeOut = conf.getInt("hbase.splitlog.manager.timeout",
-        SplitLogManager.DEFAULT_TIMEOUT);
+      this.waitRegionOnlineTimeOut =
+          conf.getInt(HConstants.HBASE_SPLITLOG_MANAGER_TIMEOUT,
+            ZKSplitLogManagerCoordination.DEFAULT_TIMEOUT);
       this.logRecoveredEditsOutputSink = new LogRecoveredEditsOutputSink(numWriters);
       this.logRecoveredEditsOutputSink.setReporter(reporter);
     }
@@ -1590,8 +1590,8 @@ public class HLogSplitter {
         // retrieve last flushed sequence Id from ZK. Because region postOpenDeployTasks will
         // update the value for the region
         RegionStoreSequenceIds ids =
-            SplitLogManager.getRegionFlushedSequenceId(watcher, failedServerName, loc
-                .getRegionInfo().getEncodedName());
+            csm.getSplitLogWorkerCoordination().getRegionFlushedSequenceId(failedServerName,
+              loc.getRegionInfo().getEncodedName());
         if (ids != null) {
           lastFlushedSequenceId = ids.getLastFlushedSequenceId();
           Map<byte[], Long> storeIds = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);

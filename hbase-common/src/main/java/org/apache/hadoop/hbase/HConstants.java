@@ -353,7 +353,7 @@ public final class HConstants {
 
   /** Default value for cluster ID */
   public static final String CLUSTER_ID_DEFAULT = "default-cluster";
-  
+
   /** Parameter name for # days to keep MVCC values during a major compaction */
   public static final String KEEP_SEQID_PERIOD = "hbase.hstore.compaction.keep.seqId.period";
   /** At least to keep MVCC values in hfiles for 5 days */
@@ -1016,6 +1016,9 @@ public final class HConstants {
   /** Config for pluggable consensus provider */
   public static final String HBASE_COORDINATED_STATE_MANAGER_CLASS =
     "hbase.coordinated.state.manager.class";
+
+  /** Configuration key for SplitLog manager timeout */
+  public static final String HBASE_SPLITLOG_MANAGER_TIMEOUT = "hbase.splitlog.manager.timeout";
 
   /**
    * Configuration keys for Bucket cache
