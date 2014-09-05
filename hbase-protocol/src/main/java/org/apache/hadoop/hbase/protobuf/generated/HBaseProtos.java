@@ -10426,6 +10426,21 @@ public final class HBaseProtos {
      * <code>optional int32 version = 5;</code>
      */
     int getVersion();
+
+    // optional string owner = 6;
+    /**
+     * <code>optional string owner = 6;</code>
+     */
+    boolean hasOwner();
+    /**
+     * <code>optional string owner = 6;</code>
+     */
+    java.lang.String getOwner();
+    /**
+     * <code>optional string owner = 6;</code>
+     */
+    com.google.protobuf.ByteString
+        getOwnerBytes();
   }
   /**
    * Protobuf type {@code SnapshotDescription}
@@ -10512,6 +10527,11 @@ public final class HBaseProtos {
             case 40: {
               bitField0_ |= 0x00000010;
               version_ = input.readInt32();
+              break;
+            }
+            case 50: {
+              bitField0_ |= 0x00000020;
+              owner_ = input.readBytes();
               break;
             }
           }
@@ -10791,12 +10811,56 @@ public final class HBaseProtos {
       return version_;
     }
 
+    // optional string owner = 6;
+    public static final int OWNER_FIELD_NUMBER = 6;
+    private java.lang.Object owner_;
+    /**
+     * <code>optional string owner = 6;</code>
+     */
+    public boolean hasOwner() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    /**
+     * <code>optional string owner = 6;</code>
+     */
+    public java.lang.String getOwner() {
+      java.lang.Object ref = owner_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          owner_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string owner = 6;</code>
+     */
+    public com.google.protobuf.ByteString
+        getOwnerBytes() {
+      java.lang.Object ref = owner_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        owner_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private void initFields() {
       name_ = "";
       table_ = "";
       creationTime_ = 0L;
       type_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type.FLUSH;
       version_ = 0;
+      owner_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -10829,6 +10893,9 @@ public final class HBaseProtos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeInt32(5, version_);
       }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeBytes(6, getOwnerBytes());
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -10857,6 +10924,10 @@ public final class HBaseProtos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt32Size(5, version_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(6, getOwnerBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -10906,6 +10977,11 @@ public final class HBaseProtos {
         result = result && (getVersion()
             == other.getVersion());
       }
+      result = result && (hasOwner() == other.hasOwner());
+      if (hasOwner()) {
+        result = result && getOwner()
+            .equals(other.getOwner());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -10938,6 +11014,10 @@ public final class HBaseProtos {
       if (hasVersion()) {
         hash = (37 * hash) + VERSION_FIELD_NUMBER;
         hash = (53 * hash) + getVersion();
+      }
+      if (hasOwner()) {
+        hash = (37 * hash) + OWNER_FIELD_NUMBER;
+        hash = (53 * hash) + getOwner().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -11063,6 +11143,8 @@ public final class HBaseProtos {
         bitField0_ = (bitField0_ & ~0x00000008);
         version_ = 0;
         bitField0_ = (bitField0_ & ~0x00000010);
+        owner_ = "";
+        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
 
@@ -11111,6 +11193,10 @@ public final class HBaseProtos {
           to_bitField0_ |= 0x00000010;
         }
         result.version_ = version_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.owner_ = owner_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -11145,6 +11231,11 @@ public final class HBaseProtos {
         }
         if (other.hasVersion()) {
           setVersion(other.getVersion());
+        }
+        if (other.hasOwner()) {
+          bitField0_ |= 0x00000020;
+          owner_ = other.owner_;
+          onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -11447,6 +11538,80 @@ public final class HBaseProtos {
       public Builder clearVersion() {
         bitField0_ = (bitField0_ & ~0x00000010);
         version_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // optional string owner = 6;
+      private java.lang.Object owner_ = "";
+      /**
+       * <code>optional string owner = 6;</code>
+       */
+      public boolean hasOwner() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      /**
+       * <code>optional string owner = 6;</code>
+       */
+      public java.lang.String getOwner() {
+        java.lang.Object ref = owner_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          owner_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string owner = 6;</code>
+       */
+      public com.google.protobuf.ByteString
+          getOwnerBytes() {
+        java.lang.Object ref = owner_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          owner_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string owner = 6;</code>
+       */
+      public Builder setOwner(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
+        owner_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string owner = 6;</code>
+       */
+      public Builder clearOwner() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        owner_ = getDefaultInstance().getOwner();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string owner = 6;</code>
+       */
+      public Builder setOwnerBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
+        owner_ = value;
         onChanged();
         return this;
       }
@@ -16341,26 +16506,27 @@ public final class HBaseProtos {
       "\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \001(\014\"/\n\016BytesByt" +
       "esPair\022\r\n\005first\030\001 \002(\014\022\016\n\006second\030\002 \002(\014\",\n" +
       "\rNameInt64Pair\022\014\n\004name\030\001 \001(\t\022\r\n\005value\030\002 " +
-      "\001(\003\"\275\001\n\023SnapshotDescription\022\014\n\004name\030\001 \002(" +
+      "\001(\003\"\314\001\n\023SnapshotDescription\022\014\n\004name\030\001 \002(" +
       "\t\022\r\n\005table\030\002 \001(\t\022\030\n\rcreation_time\030\003 \001(\003:" +
       "\0010\022.\n\004type\030\004 \001(\0162\031.SnapshotDescription.T" +
-      "ype:\005FLUSH\022\017\n\007version\030\005 \001(\005\".\n\004Type\022\014\n\010D",
-      "ISABLED\020\000\022\t\n\005FLUSH\020\001\022\r\n\tSKIPFLUSH\020\002\"}\n\024P" +
-      "rocedureDescription\022\021\n\tsignature\030\001 \002(\t\022\020" +
-      "\n\010instance\030\002 \001(\t\022\030\n\rcreation_time\030\003 \001(\003:" +
-      "\0010\022&\n\rconfiguration\030\004 \003(\0132\017.NameStringPa" +
-      "ir\"\n\n\010EmptyMsg\"\033\n\007LongMsg\022\020\n\010long_msg\030\001 " +
-      "\002(\003\"\037\n\tDoubleMsg\022\022\n\ndouble_msg\030\001 \002(\001\"\'\n\r" +
-      "BigDecimalMsg\022\026\n\016bigdecimal_msg\030\001 \002(\014\"5\n" +
-      "\004UUID\022\026\n\016least_sig_bits\030\001 \002(\004\022\025\n\rmost_si" +
-      "g_bits\030\002 \002(\004\"K\n\023NamespaceDescriptor\022\014\n\004n" +
-      "ame\030\001 \002(\014\022&\n\rconfiguration\030\002 \003(\0132\017.NameS",
-      "tringPair\"$\n\020RegionServerInfo\022\020\n\010infoPor" +
-      "t\030\001 \001(\005*r\n\013CompareType\022\010\n\004LESS\020\000\022\021\n\rLESS" +
-      "_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tNOT_EQUAL\020\003\022\024\n" +
-      "\020GREATER_OR_EQUAL\020\004\022\013\n\007GREATER\020\005\022\t\n\005NO_O" +
-      "P\020\006B>\n*org.apache.hadoop.hbase.protobuf." +
-      "generatedB\013HBaseProtosH\001\240\001\001"
+      "ype:\005FLUSH\022\017\n\007version\030\005 \001(\005\022\r\n\005owner\030\006 \001",
+      "(\t\".\n\004Type\022\014\n\010DISABLED\020\000\022\t\n\005FLUSH\020\001\022\r\n\tS" +
+      "KIPFLUSH\020\002\"}\n\024ProcedureDescription\022\021\n\tsi" +
+      "gnature\030\001 \002(\t\022\020\n\010instance\030\002 \001(\t\022\030\n\rcreat" +
+      "ion_time\030\003 \001(\003:\0010\022&\n\rconfiguration\030\004 \003(\013" +
+      "2\017.NameStringPair\"\n\n\010EmptyMsg\"\033\n\007LongMsg" +
+      "\022\020\n\010long_msg\030\001 \002(\003\"\037\n\tDoubleMsg\022\022\n\ndoubl" +
+      "e_msg\030\001 \002(\001\"\'\n\rBigDecimalMsg\022\026\n\016bigdecim" +
+      "al_msg\030\001 \002(\014\"5\n\004UUID\022\026\n\016least_sig_bits\030\001" +
+      " \002(\004\022\025\n\rmost_sig_bits\030\002 \002(\004\"K\n\023Namespace" +
+      "Descriptor\022\014\n\004name\030\001 \002(\014\022&\n\rconfiguratio",
+      "n\030\002 \003(\0132\017.NameStringPair\"$\n\020RegionServer" +
+      "Info\022\020\n\010infoPort\030\001 \001(\005*r\n\013CompareType\022\010\n" +
+      "\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n" +
+      "\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GR" +
+      "EATER\020\005\022\t\n\005NO_OP\020\006B>\n*org.apache.hadoop." +
+      "hbase.protobuf.generatedB\013HBaseProtosH\001\240" +
+      "\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -16450,7 +16616,7 @@ public final class HBaseProtos {
           internal_static_SnapshotDescription_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_SnapshotDescription_descriptor,
-              new java.lang.String[] { "Name", "Table", "CreationTime", "Type", "Version", });
+              new java.lang.String[] { "Name", "Table", "CreationTime", "Type", "Version", "Owner", });
           internal_static_ProcedureDescription_descriptor =
             getDescriptor().getMessageTypes().get(14);
           internal_static_ProcedureDescription_fieldAccessorTable = new
