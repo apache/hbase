@@ -55,7 +55,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * which is appended at the end of the WAL. This is empty for now; it can contain some meta
  * information such as Region level stats, etc in future.
  */
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX, HBaseInterfaceAudience.CONFIG})
 public class ProtobufLogReader extends ReaderBase {
   private static final Log LOG = LogFactory.getLog(ProtobufLogReader.class);
   static final byte[] PB_WAL_MAGIC = Bytes.toBytes("PWAL");

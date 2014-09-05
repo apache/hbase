@@ -31,6 +31,7 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -54,7 +55,7 @@ import com.google.common.collect.MinMaxPriorityQueue;
  *
  * <p>This classes produces plans for the {@link AssignmentManager} to execute.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SimpleLoadBalancer extends BaseLoadBalancer {
   private static final Log LOG = LogFactory.getLog(SimpleLoadBalancer.class);
   private static final Random RANDOM = new Random(System.currentTimeMillis());

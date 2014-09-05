@@ -26,7 +26,9 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
@@ -36,6 +38,7 @@ import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader.WALHdrResult;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SecureProtobufLogReader extends ProtobufLogReader {
 
   private static final Log LOG = LogFactory.getLog(SecureProtobufLogReader.class);

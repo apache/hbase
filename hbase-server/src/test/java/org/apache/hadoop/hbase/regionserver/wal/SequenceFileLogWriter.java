@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.SequenceFile;
@@ -44,7 +45,7 @@ import org.apache.hadoop.io.compress.DefaultCodec;
  * Implementation of {@link HLog.Writer} that delegates to
  * SequenceFile.Writer. Legacy implementation only used for compat tests.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SequenceFileLogWriter extends WriterBase {
   private final Log LOG = LogFactory.getLog(this.getClass());
   // The sequence file we delegate to.

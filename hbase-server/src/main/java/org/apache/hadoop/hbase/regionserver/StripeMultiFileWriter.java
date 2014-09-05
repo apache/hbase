@@ -24,6 +24,7 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Base class for cell sink that separates the provided cells into multiple files.
  */
+@InterfaceAudience.Private
 public abstract class StripeMultiFileWriter implements Compactor.CellSink {
   private static final Log LOG = LogFactory.getLog(StripeMultiFileWriter.class);
 

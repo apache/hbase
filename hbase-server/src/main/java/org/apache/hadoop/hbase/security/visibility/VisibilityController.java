@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -110,7 +111,7 @@ import com.google.protobuf.Service;
  * Coprocessor that has both the MasterObserver and RegionObserver implemented that supports in
  * visibility labels
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class VisibilityController extends BaseMasterAndRegionObserver implements
     VisibilityLabelsService.Interface, CoprocessorService {
 
