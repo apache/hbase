@@ -36,6 +36,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -114,16 +116,18 @@ public class Get extends Query
     return checkExistenceOnly;
   }
 
-  public void setCheckExistenceOnly(boolean checkExistenceOnly) {
+  public Get setCheckExistenceOnly(boolean checkExistenceOnly) {
     this.checkExistenceOnly = checkExistenceOnly;
+    return this;
   }
 
   public boolean isClosestRowBefore() {
     return closestRowBefore;
   }
 
-  public void setClosestRowBefore(boolean closestRowBefore) {
+  public Get setClosestRowBefore(boolean closestRowBefore) {
     this.closestRowBefore = closestRowBefore;
+    return this;
   }
 
   /**
@@ -253,8 +257,9 @@ public class Get extends Query
    * @param cacheBlocks if false, default settings are overridden and blocks
    * will not be cached
    */
-  public void setCacheBlocks(boolean cacheBlocks) {
+  public Get setCacheBlocks(boolean cacheBlocks) {
     this.cacheBlocks = cacheBlocks;
+    return this;
   }
 
   /**
@@ -441,5 +446,40 @@ public class Get extends Query
     Row other = (Row) obj;
     // TODO: This is wrong.  Can't have two gets the same just because on same row.
     return compareTo(other) == 0;
+  }
+
+  @Override
+  public Get setAttribute(String name, byte[] value) {
+    return (Get) super.setAttribute(name, value);
+  }
+
+  @Override
+  public Get setId(String id) {
+    return (Get) super.setId(id);
+  }
+
+  @Override
+  public Get setAuthorizations(Authorizations authorizations) {
+    return (Get) super.setAuthorizations(authorizations);
+  }
+
+  @Override
+  public Get setACL(Map<String, Permission> perms) {
+    return (Get) super.setACL(perms);
+  }
+
+  @Override
+  public Get setACL(String user, Permission perms) {
+    return (Get) super.setACL(user, perms);
+  }
+
+  @Override
+  public Get setConsistency(Consistency consistency) {
+    return (Get) super.setConsistency(consistency);
+  }
+
+  @Override
+  public Get setReplicaId(int Id) {
+    return (Get) super.setReplicaId(Id);
   }
 }

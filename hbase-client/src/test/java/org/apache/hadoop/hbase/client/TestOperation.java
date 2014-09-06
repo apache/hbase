@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -30,6 +31,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -291,7 +293,7 @@ public class TestOperation {
   }
 
   /**
-   * Test the client Operations' JSON encoding to ensure that produced JSON is 
+   * Test the client Operations' JSON encoding to ensure that produced JSON is
    * parseable and that the details are present and not corrupted.
    * @throws IOException
    */
@@ -352,7 +354,7 @@ public class TestOperation {
     assertEquals("Qualifier incorrect in Put.toJSON()",
         Bytes.toStringBinary(QUALIFIER),
         kvMap.get("qualifier"));
-    assertEquals("Value length incorrect in Put.toJSON()", 
+    assertEquals("Value length incorrect in Put.toJSON()",
         VALUE.length, kvMap.get("vlen"));
 
     // produce a Delete operation
@@ -370,7 +372,7 @@ public class TestOperation {
     assertNotNull("Family absent in Delete.toJSON()", familyInfo);
     assertEquals("KeyValue absent in Delete.toJSON()", 1, familyInfo.size());
     kvMap = (Map) familyInfo.get(0);
-    assertEquals("Qualifier incorrect in Delete.toJSON()", 
+    assertEquals("Qualifier incorrect in Delete.toJSON()",
         Bytes.toStringBinary(QUALIFIER), kvMap.get("qualifier"));
   }
 
@@ -419,6 +421,50 @@ public class TestOperation {
     Assert.assertEquals(0, KeyValue.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
   }
 
+  @Test
+  @SuppressWarnings("rawtypes")
+  public void testOperationSubClassMethodsAreBuilderStyle() {
+    /* All Operation subclasses should have a builder style setup where setXXX/addXXX methods
+     * can be chainable together:
+     * . For example:
+     * Scan scan = new Scan()
+     *     .setFoo(foo)
+     *     .setBar(bar)
+     *     .setBuz(buz)
+     *
+     * This test ensures that all methods starting with "set" returns an Operation object
+     */
+
+    // TODO: We should ensure all subclasses of Operation is checked.
+    Class[] classes = new Class[] {
+        Operation.class,
+        OperationWithAttributes.class,
+        Mutation.class,
+        Query.class,
+        Delete.class,
+        Increment.class,
+        Append.class,
+        Put.class,
+        Get.class,
+        Scan.class};
+
+    for (Class clazz : classes) {
+      System.out.println("Checking " + clazz);
+      Method[] methods = clazz.getDeclaredMethods();
+      for (Method method : methods) {
+        Class<?> ret = method.getReturnType();
+        if (method.getName().startsWith("set") || method.getName().startsWith("add")) {
+          System.out.println("  " + clazz.getSimpleName() + "." + method.getName() + "() : "
+            + ret.getSimpleName());
+          String errorMsg = "All setXXX() methods in " + clazz.getSimpleName() + " should return a "
+              + clazz.getSimpleName() + " object in builder style. Offending method:"
+              + method.getName();
+          assertTrue(errorMsg, Operation.class.isAssignableFrom(ret)
+            || Attributes.class.isAssignableFrom(ret)); // for setAttributes()
+        }
+      }
+    }
+  }
 
 }
 

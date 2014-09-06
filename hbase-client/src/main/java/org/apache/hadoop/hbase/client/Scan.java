@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -378,29 +380,32 @@ public class Scan extends Query {
    * Set the maximum number of values to return for each call to next()
    * @param batch the maximum number of values
    */
-  public void setBatch(int batch) {
+  public Scan setBatch(int batch) {
     if (this.hasFilter() && this.filter.hasFilterRow()) {
       throw new IncompatibleFilterException(
         "Cannot set batch on a scan using a filter" +
         " that returns true for filter.hasFilterRow");
     }
     this.batch = batch;
+    return this;
   }
 
   /**
    * Set the maximum number of values to return per row per Column Family
    * @param limit the maximum number of values returned / row / CF
    */
-  public void setMaxResultsPerColumnFamily(int limit) {
+  public Scan setMaxResultsPerColumnFamily(int limit) {
     this.storeLimit = limit;
+    return this;
   }
 
   /**
    * Set offset for the row per Column Family.
    * @param offset is the number of kvs that will be skipped.
    */
-  public void setRowOffsetPerColumnFamily(int offset) {
+  public Scan setRowOffsetPerColumnFamily(int offset) {
     this.storeOffset = offset;
+    return this;
   }
 
   /**
@@ -409,8 +414,9 @@ public class Scan extends Query {
    * Higher caching values will enable faster scanners but will use more memory.
    * @param caching the number of rows for caching
    */
-  public void setCaching(int caching) {
+  public Scan setCaching(int caching) {
     this.caching = caching;
+    return this;
   }
 
   /**
@@ -427,8 +433,9 @@ public class Scan extends Query {
    *
    * @param maxResultSize The maximum result size in bytes.
    */
-  public void setMaxResultSize(long maxResultSize) {
+  public Scan setMaxResultSize(long maxResultSize) {
     this.maxResultSize = maxResultSize;
+    return this;
   }
 
   @Override
@@ -565,8 +572,9 @@ public class Scan extends Query {
    * @param cacheBlocks if false, default settings are overridden and blocks
    * will not be cached
    */
-  public void setCacheBlocks(boolean cacheBlocks) {
+  public Scan setCacheBlocks(boolean cacheBlocks) {
     this.cacheBlocks = cacheBlocks;
+    return this;
   }
 
   /**
@@ -615,8 +623,9 @@ public class Scan extends Query {
    * - if there's a concurrent split and you have more than 2 column families, some rows may be
    *   missing some column families.
    */
-  public void setLoadColumnFamiliesOnDemand(boolean value) {
+  public Scan setLoadColumnFamiliesOnDemand(boolean value) {
     this.loadColumnFamiliesOnDemand = value;
+    return this;
   }
 
   /**
@@ -729,8 +738,9 @@ public class Scan extends Query {
    * It is an error to specify any column when "raw" is set.
    * @param raw True/False to enable/disable "raw" mode.
    */
-  public void setRaw(boolean raw) {
+  public Scan setRaw(boolean raw) {
     setAttribute(RAW_ATTR, Bytes.toBytes(raw));
+    return this;
   }
 
   /**
@@ -752,8 +762,9 @@ public class Scan extends Query {
    * is assumed to be READ_COMMITTED.
    * @param level IsolationLevel for this scan
    */
-  public void setIsolationLevel(IsolationLevel level) {
+  public Scan setIsolationLevel(IsolationLevel level) {
     setAttribute(ISOLATION_LEVEL, level.toBytes());
+    return this;
   }
   /*
    * @return The isolation level of this scan.
@@ -787,8 +798,9 @@ public class Scan extends Query {
    *
    * @param small
    */
-  public void setSmall(boolean small) {
+  public Scan setSmall(boolean small) {
     this.small = small;
+    return this;
   }
 
   /**
@@ -797,5 +809,40 @@ public class Scan extends Query {
    */
   public boolean isSmall() {
     return small;
+  }
+
+  @Override
+  public Scan setAttribute(String name, byte[] value) {
+    return (Scan) super.setAttribute(name, value);
+  }
+
+  @Override
+  public Scan setId(String id) {
+    return (Scan) super.setId(id);
+  }
+
+  @Override
+  public Scan setAuthorizations(Authorizations authorizations) {
+    return (Scan) super.setAuthorizations(authorizations);
+  }
+
+  @Override
+  public Scan setACL(Map<String, Permission> perms) {
+    return (Scan) super.setACL(perms);
+  }
+
+  @Override
+  public Scan setACL(String user, Permission perms) {
+    return (Scan) super.setACL(user, perms);
+  }
+
+  @Override
+  public Scan setConsistency(Consistency consistency) {
+    return (Scan) super.setConsistency(consistency);
+  }
+
+  @Override
+  public Scan setReplicaId(int Id) {
+    return (Scan) super.setReplicaId(Id);
   }
 }

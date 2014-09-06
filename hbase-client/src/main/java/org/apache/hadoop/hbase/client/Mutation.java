@@ -226,16 +226,18 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @deprecated Use {@link #setDurability(Durability)} instead.
    */
   @Deprecated
-  public void setWriteToWAL(boolean write) {
+  public Mutation setWriteToWAL(boolean write) {
     setDurability(write ? Durability.USE_DEFAULT : Durability.SKIP_WAL);
+    return this;
   }
 
   /**
    * Set the durability for this mutation
    * @param d
    */
-  public void setDurability(Durability d) {
+  public Mutation setDurability(Durability d) {
     this.durability = d;
+    return this;
   }
 
   /** Get the current durability */
@@ -254,10 +256,11 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   /**
    * Method for setting the put's familyMap
    */
-  public void setFamilyCellMap(NavigableMap<byte [], List<Cell>> map) {
+  public Mutation setFamilyCellMap(NavigableMap<byte [], List<Cell>> map) {
     // TODO: Shut this down or move it up to be a Constructor.  Get new object rather than change
     // this internal data member.
     this.familyMap = map;
+    return this;
   }
 
   /**
@@ -284,12 +287,13 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @deprecated use {@link #setFamilyCellMap(NavigableMap)} instead.
    */
   @Deprecated
-  public void setFamilyMap(NavigableMap<byte [], List<KeyValue>> map) {
+  public Mutation setFamilyMap(NavigableMap<byte [], List<KeyValue>> map) {
     TreeMap<byte[], List<Cell>> fm = new TreeMap<byte[], List<Cell>>(Bytes.BYTES_COMPARATOR);
     for (Map.Entry<byte[], List<KeyValue>> e : map.entrySet()) {
       fm.put(e.getKey(), Lists.<Cell>newArrayList(e.getValue()));
     }
     this.familyMap = fm;
+    return this;
   }
 
   /**
@@ -326,7 +330,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * Marks that the clusters with the given clusterIds have consumed the mutation
    * @param clusterIds of the clusters that have consumed the mutation
    */
-  public void setClusterIds(List<UUID> clusterIds) {
+  public Mutation setClusterIds(List<UUID> clusterIds) {
     ByteArrayDataOutput out = ByteStreams.newDataOutput();
     out.writeInt(clusterIds.size());
     for (UUID clusterId : clusterIds) {
@@ -334,6 +338,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
       out.writeLong(clusterId.getLeastSignificantBits());
     }
     setAttribute(CONSUMED_CLUSTER_IDS, out.toByteArray());
+    return this;
   }
 
   /**
@@ -357,9 +362,10 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * It is illegal to set <code>CellVisibility</code> on <code>Delete</code> mutation.
    * @param expression
    */
-  public void setCellVisibility(CellVisibility expression) {
+  public Mutation setCellVisibility(CellVisibility expression) {
     this.setAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY, ProtobufUtil
         .toCellVisibility(expression).toByteArray());
+    return this;
   }
 
   /**
@@ -437,21 +443,23 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
    * @param user User short name
    * @param perms Permissions for the user
    */
-  public void setACL(String user, Permission perms) {
+  public Mutation setACL(String user, Permission perms) {
     setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
       ProtobufUtil.toUsersAndPermissions(user, perms).toByteArray());
+    return this;
   }
 
   /**
    * @param perms A map of permissions for a user or users
    */
-  public void setACL(Map<String, Permission> perms) {
+  public Mutation setACL(Map<String, Permission> perms) {
     ListMultimap<String, Permission> permMap = ArrayListMultimap.create();
     for (Map.Entry<String, Permission> entry : perms.entrySet()) {
       permMap.put(entry.getKey(), entry.getValue());
     }
     setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
       ProtobufUtil.toUsersAndPermissions(permMap).toByteArray());
+    return this;
   }
 
   /**

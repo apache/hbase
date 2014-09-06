@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.UUID;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -30,6 +31,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -166,6 +169,7 @@ public class Increment extends Mutation implements Comparable<Row> {
    * Method for retrieving the number of families to increment from
    * @return number of families
    */
+  @Override
   public int numFamilies() {
     return this.familyMap.size();
   }
@@ -274,7 +278,60 @@ public class Increment extends Mutation implements Comparable<Row> {
     return compareTo(other) == 0;
   }
 
+  @Override
   protected long extraHeapSize(){
     return HEAP_OVERHEAD;
+  }
+
+  @Override
+  public Increment setAttribute(String name, byte[] value) {
+    return (Increment) super.setAttribute(name, value);
+  }
+
+  @Override
+  public Increment setId(String id) {
+    return (Increment) super.setId(id);
+  }
+
+  @Override
+  @Deprecated
+  public Increment setWriteToWAL(boolean write) {
+    return (Increment) super.setWriteToWAL(write);
+  }
+
+  @Override
+  public Increment setDurability(Durability d) {
+    return (Increment) super.setDurability(d);
+  }
+
+  @Override
+  public Increment setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
+    return (Increment) super.setFamilyCellMap(map);
+  }
+
+  @Override
+  @Deprecated
+  public Increment setFamilyMap(NavigableMap<byte[], List<KeyValue>> map) {
+    return (Increment) super.setFamilyMap(map);
+  }
+
+  @Override
+  public Increment setClusterIds(List<UUID> clusterIds) {
+    return (Increment) super.setClusterIds(clusterIds);
+  }
+
+  @Override
+  public Increment setCellVisibility(CellVisibility expression) {
+    return (Increment) super.setCellVisibility(expression);
+  }
+
+  @Override
+  public Increment setACL(String user, Permission perms) {
+    return (Increment) super.setACL(user, perms);
+  }
+
+  @Override
+  public Increment setACL(Map<String, Permission> perms) {
+    return (Increment) super.setACL(perms);
   }
 }

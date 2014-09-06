@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.UUID;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -30,6 +32,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -308,11 +312,12 @@ public class Delete extends Mutation implements Comparable<Row> {
    *
    * @param timestamp
    */
-  public void setTimestamp(long timestamp) {
+  public Delete setTimestamp(long timestamp) {
     if (timestamp < 0) {
       throw new IllegalArgumentException("Timestamp cannot be negative. ts=" + timestamp);
     }
     this.ts = timestamp;
+    return this;
   }
 
   @Override
@@ -322,5 +327,57 @@ public class Delete extends Mutation implements Comparable<Row> {
     // why is put not doing this?
     map.put("ts", this.ts);
     return map;
+  }
+
+  @Override
+  public Delete setAttribute(String name, byte[] value) {
+    return (Delete) super.setAttribute(name, value);
+  }
+
+  @Override
+  public Delete setId(String id) {
+    return (Delete) super.setId(id);
+  }
+
+  @Override
+  @Deprecated
+  public Delete setWriteToWAL(boolean write) {
+    return (Delete) super.setWriteToWAL(write);
+  }
+
+  @Override
+  public Delete setDurability(Durability d) {
+    return (Delete) super.setDurability(d);
+  }
+
+  @Override
+  public Delete setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
+    return (Delete) super.setFamilyCellMap(map);
+  }
+
+  @Override
+  @Deprecated
+  public Delete setFamilyMap(NavigableMap<byte[], List<KeyValue>> map) {
+    return (Delete) super.setFamilyMap(map);
+  }
+
+  @Override
+  public Delete setClusterIds(List<UUID> clusterIds) {
+    return (Delete) super.setClusterIds(clusterIds);
+  }
+
+  @Override
+  public Delete setCellVisibility(CellVisibility expression) {
+    return (Delete) super.setCellVisibility(expression);
+  }
+
+  @Override
+  public Delete setACL(String user, Permission perms) {
+    return (Delete) super.setACL(user, perms);
+  }
+
+  @Override
+  public Delete setACL(Map<String, Permission> perms) {
+    return (Delete) super.setACL(perms);
   }
 }

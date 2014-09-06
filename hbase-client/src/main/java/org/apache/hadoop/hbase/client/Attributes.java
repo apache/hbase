@@ -34,7 +34,7 @@ public interface Attributes {
    * @param name attribute name
    * @param value attribute value
    */
-  void setAttribute(String name, byte[] value);
+  Attributes setAttribute(String name, byte[] value);
 
   /**
    * Gets an attribute
