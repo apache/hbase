@@ -213,7 +213,7 @@ public class TestDeleteMobTable {
     Result r = rs.next();
     Assert.assertNotNull(r);
     byte[] value = r.getValue(FAMILY, QF);
-    String fileName = Bytes.toString(value, Bytes.SIZEOF_LONG, value.length - Bytes.SIZEOF_LONG);
+    String fileName = Bytes.toString(value, Bytes.SIZEOF_INT, value.length - Bytes.SIZEOF_INT);
     Path filePath = new Path(
         MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), tn, familyName), fileName);
     FileSystem fs = TEST_UTIL.getTestFileSystem();

@@ -251,7 +251,7 @@ public class MobUtils {
     // find the original mob files by this table name. For details please see cloning
     // snapshot for mob files.
     existingTags.add(tableNameTag);
-    long valueLength = kv.getValueLength();
+    int valueLength = kv.getValueLength();
     byte[] refValue = Bytes.add(Bytes.toBytes(valueLength), fileName);
     KeyValue reference = new KeyValue(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
         kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(), kv.getQualifierArray(),

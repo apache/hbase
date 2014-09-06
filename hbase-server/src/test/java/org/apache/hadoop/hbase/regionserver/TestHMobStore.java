@@ -169,9 +169,9 @@ public class TestHMobStore {
     mobWriter.append(key3);
     mobWriter.close();
 
-    long valueLength1 = key1.getValueLength();
-    long valueLength2 = key2.getValueLength();
-    long valueLength3 = key3.getValueLength();
+    int valueLength1 = key1.getValueLength();
+    int valueLength2 = key2.getValueLength();
+    int valueLength3 = key3.getValueLength();
 
     String targetPathName = MobUtils.formatDate(currentDate);
     byte[] referenceValue =

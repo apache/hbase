@@ -219,9 +219,9 @@ public class HMobStore extends HStore {
    */
   public Cell resolve(Cell reference, boolean cacheBlocks) throws IOException {
     Cell result = null;
-    if (reference.getValueLength() > Bytes.SIZEOF_LONG) {
+    if (reference.getValueLength() > Bytes.SIZEOF_INT) {
       String fileName = Bytes.toString(reference.getValueArray(), reference.getValueOffset()
-          + Bytes.SIZEOF_LONG, reference.getValueLength() - Bytes.SIZEOF_LONG);
+          + Bytes.SIZEOF_INT, reference.getValueLength() - Bytes.SIZEOF_INT);
       Path targetPath = new Path(mobFamilyPath, fileName);
       MobFile file = null;
       try {
