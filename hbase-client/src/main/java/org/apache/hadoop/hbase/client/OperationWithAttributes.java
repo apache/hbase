@@ -37,9 +37,10 @@ public abstract class OperationWithAttributes extends Operation implements Attri
   // used for uniquely identifying an operation
   public static final String ID_ATRIBUTE = "_operation.attributes.id";
 
-  public void setAttribute(String name, byte[] value) {
+  @Override
+  public OperationWithAttributes setAttribute(String name, byte[] value) {
     if (attributes == null && value == null) {
-      return;
+      return this;
     }
 
     if (attributes == null) {
@@ -54,8 +55,10 @@ public abstract class OperationWithAttributes extends Operation implements Attri
     } else {
       attributes.put(name, value);
     }
+    return this;
   }
 
+  @Override
   public byte[] getAttribute(String name) {
     if (attributes == null) {
       return null;
@@ -64,6 +67,7 @@ public abstract class OperationWithAttributes extends Operation implements Attri
     return attributes.get(name);
   }
 
+  @Override
   public Map<String, byte[]> getAttributesMap() {
     if (attributes == null) {
       return Collections.emptyMap();
@@ -92,8 +96,9 @@ public abstract class OperationWithAttributes extends Operation implements Attri
    * @param id
    *          id to set for the scan
    */
-  public void setId(String id) {
+  public OperationWithAttributes setId(String id) {
     setAttribute(ID_ATRIBUTE, Bytes.toBytes(id));
+    return this;
   }
 
   /**

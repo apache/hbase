@@ -61,9 +61,10 @@ public abstract class Query extends OperationWithAttributes {
    * Sets the authorizations to be used by this Query
    * @param authorizations
    */
-  public void setAuthorizations(Authorizations authorizations) {
+  public Query setAuthorizations(Authorizations authorizations) {
     this.setAttribute(VisibilityConstants.VISIBILITY_LABELS_ATTR_KEY, ProtobufUtil
         .toAuthorizations(authorizations).toByteArray());
+    return this;
   }
 
   /**
@@ -87,21 +88,23 @@ public abstract class Query extends OperationWithAttributes {
    * @param user User short name
    * @param perms Permissions for the user
    */
-  public void setACL(String user, Permission perms) {
+  public Query setACL(String user, Permission perms) {
     setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
       ProtobufUtil.toUsersAndPermissions(user, perms).toByteArray());
+    return this;
   }
 
   /**
    * @param perms A map of permissions for a user or users
    */
-  public void setACL(Map<String, Permission> perms) {
+  public Query setACL(Map<String, Permission> perms) {
     ListMultimap<String, Permission> permMap = ArrayListMultimap.create();
     for (Map.Entry<String, Permission> entry : perms.entrySet()) {
       permMap.put(entry.getKey(), entry.getValue());
     }
     setAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL,
       ProtobufUtil.toUsersAndPermissions(permMap).toByteArray());
+    return this;
   }
 
   /**
@@ -116,8 +119,9 @@ public abstract class Query extends OperationWithAttributes {
    * Sets the consistency level for this operation
    * @param consistency the consistency level
    */
-  public void setConsistency(Consistency consistency) {
+  public Query setConsistency(Consistency consistency) {
     this.consistency = consistency;
+    return this;
   }
 
   /**
@@ -127,8 +131,9 @@ public abstract class Query extends OperationWithAttributes {
    * <br><b> Expert: </b>This is an advanced API exposed. Only use it if you know what you are doing
    * @param Id
    */
-  public void setReplicaId(int Id) {
+  public Query setReplicaId(int Id) {
     this.targetReplicaId = Id;
+    return this;
   }
 
   /**

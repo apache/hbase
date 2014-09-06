@@ -20,12 +20,16 @@ package org.apache.hadoop.hbase.client;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.UUID;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -50,8 +54,9 @@ public class Append extends Mutation {
    *          A client that is not interested in the result can save network
    *          bandwidth setting this to false.
    */
-  public void setReturnResults(boolean returnResults) {
+  public Append setReturnResults(boolean returnResults) {
     setAttribute(RETURN_RESULTS, Bytes.toBytes(returnResults));
+    return this;
   }
 
   /**
@@ -126,5 +131,57 @@ public class Append extends Mutation {
     list.add(kv);
     this.familyMap.put(family, list);
     return this;
+  }
+
+  @Override
+  public Append setAttribute(String name, byte[] value) {
+    return (Append) super.setAttribute(name, value);
+  }
+
+  @Override
+  public Append setId(String id) {
+    return (Append) super.setId(id);
+  }
+
+  @Override
+  @Deprecated
+  public Append setWriteToWAL(boolean write) {
+    return (Append) super.setWriteToWAL(write);
+  }
+
+  @Override
+  public Append setDurability(Durability d) {
+    return (Append) super.setDurability(d);
+  }
+
+  @Override
+  public Append setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
+    return (Append) super.setFamilyCellMap(map);
+  }
+
+  @Override
+  @Deprecated
+  public Append setFamilyMap(NavigableMap<byte[], List<KeyValue>> map) {
+    return (Append) super.setFamilyMap(map);
+  }
+
+  @Override
+  public Append setClusterIds(List<UUID> clusterIds) {
+    return (Append) super.setClusterIds(clusterIds);
+  }
+
+  @Override
+  public Append setCellVisibility(CellVisibility expression) {
+    return (Append) super.setCellVisibility(expression);
+  }
+
+  @Override
+  public Append setACL(String user, Permission perms) {
+    return (Append) super.setACL(user, perms);
+  }
+
+  @Override
+  public Append setACL(Map<String, Permission> perms) {
+    return (Append) super.setACL(perms);
   }
 }

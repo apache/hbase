@@ -238,8 +238,8 @@ EOF
     def _count_internal(interval = 1000, caching_rows = 10)
       # We can safely set scanner caching with the first key only filter
       scan = org.apache.hadoop.hbase.client.Scan.new
-      scan.cache_blocks = false
-      scan.caching = caching_rows
+      scan.setCacheBlocks(false)
+      scan.setCaching(caching_rows)
       scan.setFilter(org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter.new)
 
       # Run the scanner
