@@ -174,7 +174,6 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
       getAccessController().preCleanupBulkLoad(env);
       fs.delete(createStagingDir(baseStagingDir,
           getActiveUser(),
-          env.getRegion().getTableDesc().getTableName(),
           new Path(request.getBulkToken()).getName()),
           true);
       done.run(CleanupBulkLoadResponse.newBuilder().build());
@@ -291,14 +290,14 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
   private Path createStagingDir(Path baseDir,
                                 User user,
                                 TableName tableName) throws IOException {
-    String randomDir = user.getShortName()+"__"+ tableName +"__"+
+    String tblName = tableName.getNameAsString().replace(":", "_");
+    String randomDir = user.getShortName()+"__"+ tblName +"__"+
         (new BigInteger(RANDOM_WIDTH, random).toString(RANDOM_RADIX));
-    return createStagingDir(baseDir, user, tableName, randomDir);
+    return createStagingDir(baseDir, user, randomDir);
   }
 
   private Path createStagingDir(Path baseDir,
                                 User user,
-                                TableName tableName,
                                 String randomDir) throws IOException {
     Path p = new Path(baseDir, randomDir);
     fs.mkdirs(p, PERM_ALL_ACCESS);
