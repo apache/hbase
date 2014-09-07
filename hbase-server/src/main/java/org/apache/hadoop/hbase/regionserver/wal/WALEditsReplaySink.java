@@ -29,11 +29,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
@@ -230,10 +230,10 @@ public class WALEditsReplaySink {
       boolean skip = false;
       for (HLog.Entry entry : this.entries) {
         WALEdit edit = entry.getEdit();
-        List<KeyValue> kvs = edit.getKeyValues();
-        for (KeyValue kv : kvs) {
+        List<Cell> cells = edit.getCells();
+        for (Cell cell : cells) {
           // filtering HLog meta entries
-          setLocation(conn.locateRegion(tableName, kv.getRow()));
+          setLocation(conn.locateRegion(tableName, cell.getRow()));
           skip = true;
           break;
         }

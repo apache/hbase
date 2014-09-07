@@ -40,9 +40,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -629,7 +630,7 @@ public class ReplicationSource extends Thread
    */
   protected void removeNonReplicableEdits(HLog.Entry entry) {
     String tabName = entry.getKey().getTablename().getNameAsString();
-    ArrayList<KeyValue> kvs = entry.getEdit().getKeyValues();
+    ArrayList<Cell> cells = entry.getEdit().getCells();
     Map<String, List<String>> tableCFs = null;
     try {
       tableCFs = this.replicationPeers.getTableCFs(peerId);
@@ -637,45 +638,45 @@ public class ReplicationSource extends Thread
       LOG.error("should not happen: can't get tableCFs for peer " + peerId +
           ", degenerate as if it's not configured by keeping tableCFs==null");
     }
-    int size = kvs.size();
+    int size = cells.size();
 
     // clear kvs(prevent replicating) if logKey's table isn't in this peer's
     // replicable table list (empty tableCFs means all table are replicable)
     if (tableCFs != null && !tableCFs.containsKey(tabName)) {
-      kvs.clear();
+      cells.clear();
     } else {
       NavigableMap<byte[], Integer> scopes = entry.getKey().getScopes();
       List<String> cfs = (tableCFs == null) ? null : tableCFs.get(tabName);
       for (int i = size - 1; i >= 0; i--) {
-        KeyValue kv = kvs.get(i);
+        Cell cell = cells.get(i);
         // The scope will be null or empty if
         // there's nothing to replicate in that WALEdit
         // ignore(remove) kv if its cf isn't in the replicable cf list
         // (empty cfs means all cfs of this table are replicable)
-        if (scopes == null || !scopes.containsKey(kv.getFamily()) ||
-            (cfs != null && !cfs.contains(Bytes.toString(kv.getFamily())))) {
-          kvs.remove(i);
+        if (scopes == null || !scopes.containsKey(cell.getFamily()) ||
+            (cfs != null && !cfs.contains(Bytes.toString(cell.getFamily())))) {
+          cells.remove(i);
         }
       }
     }
 
-    if (kvs.size() < size/2) {
-      kvs.trimToSize();
+    if (cells.size() < size/2) {
+      cells.trimToSize();
     }
   }
 
   /**
    * Count the number of different row keys in the given edit because of
-   * mini-batching. We assume that there's at least one KV in the WALEdit.
+   * mini-batching. We assume that there's at least one Cell in the WALEdit.
    * @param edit edit to count row keys from
    * @return number of different row keys
    */
   private int countDistinctRowKeys(WALEdit edit) {
-    List<KeyValue> kvs = edit.getKeyValues();
+    List<Cell> cells = edit.getCells();
     int distinctRowKeys = 1;
-    KeyValue lastKV = kvs.get(0);
+    Cell lastCell = cells.get(0);
     for (int i = 0; i < edit.size(); i++) {
-      if (!kvs.get(i).matchingRow(lastKV)) {
+      if (!(CellUtil.matchingRow(cells.get(i), lastCell))) {
         distinctRowKeys++;
       }
     }

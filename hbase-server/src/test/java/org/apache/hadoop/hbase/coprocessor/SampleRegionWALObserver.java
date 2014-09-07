@@ -26,6 +26,7 @@ import java.util.Arrays;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -93,28 +94,28 @@ implements WALObserver {
     preWALWriteCalled = true;
     // here we're going to remove one keyvalue from the WALEdit, and add
     // another one to it.
-    List<KeyValue> kvs = logEdit.getKeyValues();
-    KeyValue deletedKV = null;
-    for (KeyValue kv : kvs) {
+    List<Cell> cells = logEdit.getCells();
+    Cell deletedCell = null;
+    for (Cell cell : cells) {
       // assume only one kv from the WALEdit matches.
-      byte[] family = kv.getFamily();
-      byte[] qulifier = kv.getQualifier();
+      byte[] family = cell.getFamily();
+      byte[] qulifier = cell.getQualifier();
 
       if (Arrays.equals(family, ignoredFamily) &&
           Arrays.equals(qulifier, ignoredQualifier)) {
         LOG.debug("Found the KeyValue from WALEdit which should be ignored.");
-        deletedKV = kv;
+        deletedCell = cell;
       }
       if (Arrays.equals(family, changedFamily) &&
           Arrays.equals(qulifier, changedQualifier)) {
-        LOG.debug("Found the KeyValue from WALEdit which should be changed.");
-        kv.getBuffer()[kv.getValueOffset()] += 1;
+        LOG.debug("Found the Cell from WALEdit which should be changed.");
+        cell.getValueArray()[cell.getValueOffset()] += 1;
       }
     }
-    kvs.add(new KeyValue(row, addedFamily, addedQualifier));
-    if (deletedKV != null) {
-      LOG.debug("About to delete a KeyValue from WALEdit.");
-      kvs.remove(deletedKV);
+    cells.add(new KeyValue(row, addedFamily, addedQualifier));
+    if (deletedCell != null) {
+      LOG.debug("About to delete a Cell from WALEdit.");
+      cells.remove(deletedCell);
     }
     return bypass;
   }
