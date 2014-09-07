@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -110,14 +111,14 @@ public class TestSecureHLog {
     HLog.Entry entry = new HLog.Entry();
     while (reader.next(entry) != null) {
       count++;
-      List<KeyValue> kvs = entry.getEdit().getKeyValues();
-      assertTrue("Should be one KV per WALEdit", kvs.size() == 1);
-      for (KeyValue kv: kvs) {
-        byte[] thisRow = kv.getRow();
+      List<Cell> cells = entry.getEdit().getCells();
+      assertTrue("Should be one KV per WALEdit", cells.size() == 1);
+      for (Cell cell: cells) {
+        byte[] thisRow = cell.getRow();
         assertTrue("Incorrect row", Bytes.equals(thisRow, row));
-        byte[] thisFamily = kv.getFamily();
+        byte[] thisFamily = cell.getFamily();
         assertTrue("Incorrect family", Bytes.equals(thisFamily, family));
-        byte[] thisValue = kv.getValue();
+        byte[] thisValue = cell.getValue();
         assertTrue("Incorrect value", Bytes.equals(thisValue, value));
       }
     }

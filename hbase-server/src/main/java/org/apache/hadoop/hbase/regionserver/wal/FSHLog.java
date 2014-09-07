@@ -57,11 +57,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Syncable;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -1455,7 +1457,7 @@ class FSHLog implements HLog, Syncable {
   public long postAppend(final Entry e, final long elapsedTime) {
     long len = 0;
     if (this.metrics == null) return len;
-    for (KeyValue kv : e.getEdit().getKeyValues()) len += kv.getLength();
+    for (Cell cell : e.getEdit().getCells()) len += CellUtil.estimatedLengthOf(cell);
     metrics.finishAppend(elapsedTime, len);
     return len;
   }

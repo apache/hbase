@@ -36,10 +36,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -634,16 +634,16 @@ public class ReplicationSource extends Thread
 
   /**
    * Count the number of different row keys in the given edit because of
-   * mini-batching. We assume that there's at least one KV in the WALEdit.
+   * mini-batching. We assume that there's at least one Cell in the WALEdit.
    * @param edit edit to count row keys from
    * @return number of different row keys
    */
   private int countDistinctRowKeys(WALEdit edit) {
-    List<KeyValue> kvs = edit.getKeyValues();
+    List<Cell> cells = edit.getCells();
     int distinctRowKeys = 1;
-    KeyValue lastKV = kvs.get(0);
+    Cell lastCell = cells.get(0);
     for (int i = 0; i < edit.size(); i++) {
-      if (!CellUtil.matchingRow(kvs.get(i), lastKV)) {
+      if (!CellUtil.matchingRow(cells.get(i), lastCell)) {
         distinctRowKeys++;
       }
     }

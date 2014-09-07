@@ -23,6 +23,7 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -37,8 +38,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -256,12 +259,10 @@ public class HLogPrettyPrinter {
           continue;
         // initialize list into which we will store atomic actions
         List<Map> actions = new ArrayList<Map>();
-        for (KeyValue kv : edit.getKeyValues()) {
+        for (Cell cell : edit.getCells()) {
           // add atomic operation to txn
-          Map<String, Object> op = 
-            new HashMap<String, Object>(kv.toStringMap());
-          if (outputValues)
-            op.put("value", Bytes.toStringBinary(kv.getValue()));
+          Map<String, Object> op = new HashMap<String, Object>(toStringMap(cell));
+          if (outputValues) op.put("value", Bytes.toStringBinary(cell.getValue()));
           // check row output filter
           if (row == null || ((String) op.get("row")).equals(row))
             actions.add(op);
@@ -304,6 +305,31 @@ public class HLogPrettyPrinter {
     if (outputJSON && !persistentOutput) {
       out.print("]");
     }
+  }
+
+  private static Map<String, Object> toStringMap(Cell cell) {
+    Map<String, Object> stringMap = new HashMap<String, Object>();
+    stringMap.put("row",
+        Bytes.toStringBinary(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
+    stringMap.put("family", Bytes.toStringBinary(cell.getFamilyArray(), cell.getFamilyOffset(),
+                cell.getFamilyLength()));
+    stringMap.put("qualifier",
+        Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
+            cell.getQualifierLength()));
+    stringMap.put("timestamp", cell.getTimestamp());
+    stringMap.put("vlen", cell.getValueLength());
+    if (cell.getTagsLength() > 0) {
+      List<String> tagsString = new ArrayList<String>();
+      Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
+          cell.getTagsLength());
+      while (tagsIterator.hasNext()) {
+        Tag tag = tagsIterator.next();
+        tagsString.add((tag.getType()) + ":"
+            + Bytes.toStringBinary(tag.getBuffer(), tag.getTagOffset(), tag.getTagLength()));
+      }
+      stringMap.put("tag", tagsString);
+    }
+    return stringMap;
   }
 
   public static void main(String[] args) throws IOException {

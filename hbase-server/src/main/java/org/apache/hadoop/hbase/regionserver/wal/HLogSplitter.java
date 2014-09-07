@@ -56,14 +56,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.CoordinatedStateException;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -1451,16 +1450,16 @@ public class HLogSplitter {
         boolean needSkip = false;
         HRegionLocation loc = null;
         String locKey = null;
-        List<KeyValue> kvs = edit.getKeyValues();
-        List<KeyValue> skippedKVs = new ArrayList<KeyValue>();
+        List<Cell> cells = edit.getCells();
+        List<Cell> skippedCells = new ArrayList<Cell>();
         HConnection hconn = this.getConnectionByTableName(table);
 
-        for (KeyValue kv : kvs) {
-          byte[] row = kv.getRow();
-          byte[] family = kv.getFamily();
+        for (Cell cell : cells) {
+          byte[] row = cell.getRow();
+          byte[] family = cell.getFamily();
           boolean isCompactionEntry = false;
-          if (CellUtil.matchingFamily(kv, WALEdit.METAFAMILY)) {
-            CompactionDescriptor compaction = WALEdit.getCompaction(kv);
+          if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
+            CompactionDescriptor compaction = WALEdit.getCompaction(cell);
             if (compaction != null && compaction.hasRegionName()) {
               try {
                 byte[][] regionName = HRegionInfo.parseRegionName(compaction.getRegionName()
@@ -1470,11 +1469,11 @@ public class HLogSplitter {
                 isCompactionEntry = true;
               } catch (Exception ex) {
                 LOG.warn("Unexpected exception received, ignoring " + ex);
-                skippedKVs.add(kv);
+                skippedCells.add(cell);
                 continue;
               }
             } else {
-              skippedKVs.add(kv);
+              skippedCells.add(cell);
               continue;
             }
           }
@@ -1521,7 +1520,7 @@ public class HLogSplitter {
               Long maxStoreSeqId = maxStoreSequenceIds.get(family);
               if (maxStoreSeqId == null || maxStoreSeqId >= entry.getKey().getLogSeqNum()) {
                 // skip current kv if column family doesn't exist anymore or already flushed
-                skippedKVs.add(kv);
+                skippedCells.add(cell);
                 continue;
               }
             }
@@ -1531,8 +1530,8 @@ public class HLogSplitter {
         // skip the edit
         if (loc == null || needSkip) continue;
 
-        if (!skippedKVs.isEmpty()) {
-          kvs.removeAll(skippedKVs);
+        if (!skippedCells.isEmpty()) {
+          cells.removeAll(skippedCells);
         }
 
         synchronized (serverToBufferQueueMap) {
@@ -1967,7 +1966,7 @@ public class HLogSplitter {
         throw new ArrayIndexOutOfBoundsException("Expected=" + count + ", index=" + i);
       }
       Cell cell = cells.current();
-      if (val != null) val.add(KeyValueUtil.ensureKeyValue(cell));
+      if (val != null) val.add(cell);
 
       boolean isNewRowOrType =
           previousCell == null || previousCell.getTypeByte() != cell.getTypeByte()
@@ -1989,13 +1988,13 @@ public class HLogSplitter {
         }
       }
       if (CellUtil.isDelete(cell)) {
-        ((Delete) m).addDeleteMarker(KeyValueUtil.ensureKeyValue(cell));
+        ((Delete) m).addDeleteMarker(cell);
       } else {
         Cell tmpNewCell = cell;
         if (addLogReplayTag) {
           tmpNewCell = tagReplayLogSequenceNumber(replaySeqId, cell);
         }
-        ((Put) m).add(KeyValueUtil.ensureKeyValue(tmpNewCell));
+        ((Put) m).add(tmpNewCell);
       }
       previousCell = cell;
     }

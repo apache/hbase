@@ -846,7 +846,7 @@ public class TestHRegion {
         if (entry == null) {
           break;
         }
-        Cell cell = entry.getEdit().getKeyValues().get(0);
+        Cell cell = entry.getEdit().getCells().get(0);
         if (WALEdit.isMetaEditFamily(cell)) {
           FlushDescriptor flushDesc = WALEdit.getFlushDescriptor(cell);
           assertNotNull(flushDesc);
@@ -912,14 +912,14 @@ public class TestHRegion {
     }
     @Override
     public boolean matches(Object edit) {
-      List<KeyValue> kvs = ((WALEdit)edit).getKeyValues();
-      if (kvs.isEmpty()) {
+      List<Cell> cells = ((WALEdit)edit).getCells();
+      if (cells.isEmpty()) {
         return false;
       }
-      if (WALEdit.isMetaEditFamily(kvs.get(0))) {
+      if (WALEdit.isMetaEditFamily(cells.get(0))) {
         FlushDescriptor desc = null;
         try {
-          desc = WALEdit.getFlushDescriptor(kvs.get(0));
+          desc = WALEdit.getFlushDescriptor(cells.get(0));
         } catch (IOException e) {
           LOG.warn(e);
           return false;
@@ -5527,9 +5527,9 @@ public class TestHRegion {
 
       WALEdit edit = editCaptor.getValue();
       assertNotNull(edit);
-      assertNotNull(edit.getKeyValues());
-      assertEquals(1, edit.getKeyValues().size());
-      RegionEventDescriptor desc = WALEdit.getRegionEventDescriptor(edit.getKeyValues().get(0));
+      assertNotNull(edit.getCells());
+      assertEquals(1, edit.getCells().size());
+      RegionEventDescriptor desc = WALEdit.getRegionEventDescriptor(edit.getCells().get(0));
       assertNotNull(desc);
 
       LOG.info("RegionEventDescriptor from WAL: " + desc);
@@ -5591,9 +5591,9 @@ public class TestHRegion {
 
     WALEdit edit = editCaptor.getAllValues().get(1);
     assertNotNull(edit);
-    assertNotNull(edit.getKeyValues());
-    assertEquals(1, edit.getKeyValues().size());
-    RegionEventDescriptor desc = WALEdit.getRegionEventDescriptor(edit.getKeyValues().get(0));
+    assertNotNull(edit.getCells());
+    assertEquals(1, edit.getCells().size());
+    RegionEventDescriptor desc = WALEdit.getRegionEventDescriptor(edit.getCells().get(0));
     assertNotNull(desc);
 
     LOG.info("RegionEventDescriptor from WAL: " + desc);

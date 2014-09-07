@@ -38,12 +38,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -539,9 +539,9 @@ public class TestLogRolling  {
               TEST_UTIL.getConfiguration());
           HLog.Entry entry;
           while ((entry = reader.next()) != null) {
-            LOG.debug("#"+entry.getKey().getLogSeqNum()+": "+entry.getEdit().getKeyValues());
-            for (KeyValue kv : entry.getEdit().getKeyValues()) {
-              loggedRows.add(Bytes.toStringBinary(kv.getRow()));
+            LOG.debug("#"+entry.getKey().getLogSeqNum()+": "+entry.getEdit().getCells());
+            for (Cell cell : entry.getEdit().getCells()) {
+              loggedRows.add(Bytes.toStringBinary(cell.getRow()));
             }
           }
         } catch (EOFException e) {

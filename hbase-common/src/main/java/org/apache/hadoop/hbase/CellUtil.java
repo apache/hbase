@@ -28,6 +28,7 @@ import java.util.NavigableMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -465,8 +466,23 @@ public final class CellUtil {
       // Serialization is probably preceded by a length (it is in the KeyValueCodec at least).
       Bytes.SIZEOF_INT;
   }
-  
-  
+
+  /**
+   * This is an estimate of the heap space occupied by a cell. When the cell is of type
+   * {@link HeapSize} we call {@link HeapSize#heapSize()} so cell can give a correct value. In other
+   * cases we just consider the byte occupied by the cell components ie. row, CF, qualifier,
+   * timestamp, type, value and tags.
+   * @param cell
+   * @return estimate of the heap space
+   */
+  public static long estimatedHeapSizeOf(final Cell cell) {
+    if (cell instanceof HeapSize) {
+      return ((HeapSize) cell).heapSize();
+    }
+    return cell.getRowLength() + cell.getFamilyLength() + cell.getQualifierLength()
+        + cell.getValueLength() + cell.getTagsLength() + KeyValue.TIMESTAMP_TYPE_SIZE;
+  }
+
   /********************* tags *************************************/
   /**
    * Util method to iterate through the tags
@@ -529,5 +545,19 @@ public final class CellUtil {
       throw new IOException(new UnsupportedOperationException("Cell is not of type "
           + SettableSequenceId.class.getName()));
     }
+  }
+
+  /**
+   * Estimation of total number of bytes used by the cell to store its key, value and tags. When the
+   * cell is a {@link KeyValue} we include the extra infrastructure size used by it.
+   * @param cell
+   * @return estimated length
+   */
+  public static int estimatedLengthOf(final Cell cell) {
+    if (cell instanceof KeyValue) {
+      return ((KeyValue)cell).getLength();
+    }
+    return cell.getRowLength() + cell.getFamilyLength() + cell.getQualifierLength()
+        + cell.getValueLength() + cell.getTagsLength() + KeyValue.TIMESTAMP_TYPE_SIZE;
   }
 }
