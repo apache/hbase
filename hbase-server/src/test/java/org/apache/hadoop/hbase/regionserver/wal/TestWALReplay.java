@@ -530,8 +530,8 @@ public class TestWALReplay {
         final AtomicInteger countOfRestoredEdits = new AtomicInteger(0);
         HRegion region3 = new HRegion(basedir, wal3, newFS, newConf, hri, htd, null) {
           @Override
-          protected boolean restoreEdit(Store s, KeyValue kv) {
-            boolean b = super.restoreEdit(s, kv);
+          protected boolean restoreEdit(Store s, Cell cell) {
+            boolean b = super.restoreEdit(s, cell);
             countOfRestoredEdits.incrementAndGet();
             return b;
           }

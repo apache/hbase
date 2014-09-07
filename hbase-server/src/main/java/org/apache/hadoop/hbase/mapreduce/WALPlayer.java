@@ -28,9 +28,11 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
@@ -82,7 +84,8 @@ public class WALPlayer extends Configured implements Tool {
       try {
         // skip all other tables
         if (Bytes.equals(table, key.getTablename().getName())) {
-          for (KeyValue kv : value.getKeyValues()) {
+          for (Cell cell : value.getCells()) {
+            KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
             if (WALEdit.isMetaEditFamily(kv.getFamily())) continue;
             context.write(new ImmutableBytesWritable(kv.getRow()), kv);
           }
@@ -125,33 +128,33 @@ public class WALPlayer extends Configured implements Tool {
           ImmutableBytesWritable tableOut = new ImmutableBytesWritable(targetTable.getName());
           Put put = null;
           Delete del = null;
-          KeyValue lastKV = null;
-          for (KeyValue kv : value.getKeyValues()) {
+          Cell lastCell = null;
+          for (Cell cell : value.getCells()) {
             // filtering HLog meta entries
-            if (WALEdit.isMetaEditFamily(kv.getFamily())) continue;
+            if (WALEdit.isMetaEditFamily(cell.getFamily())) continue;
 
             // A WALEdit may contain multiple operations (HBASE-3584) and/or
             // multiple rows (HBASE-5229).
             // Aggregate as much as possible into a single Put/Delete
             // operation before writing to the context.
-            if (lastKV == null || lastKV.getType() != kv.getType()
-                || !CellUtil.matchingRow(lastKV, kv)) {
+            if (lastCell == null || lastCell.getTypeByte() != cell.getTypeByte()
+                || !CellUtil.matchingRow(lastCell, cell)) {
               // row or type changed, write out aggregate KVs.
               if (put != null) context.write(tableOut, put);
               if (del != null) context.write(tableOut, del);
 
-              if (kv.isDelete()) {
-                del = new Delete(kv.getRow());
+              if (CellUtil.isDelete(cell)) {
+                del = new Delete(cell.getRow());
               } else {
-                put = new Put(kv.getRow());
+                put = new Put(cell.getRow());
               }
             }
-            if (kv.isDelete()) {
-              del.addDeleteMarker(kv);
+            if (CellUtil.isDelete(cell)) {
+              del.addDeleteMarker(cell);
             } else {
-              put.add(kv);
+              put.add(cell);
             }
-            lastKV = kv;
+            lastCell = cell;
           }
           // write residual KVs
           if (put != null) context.write(tableOut, put);

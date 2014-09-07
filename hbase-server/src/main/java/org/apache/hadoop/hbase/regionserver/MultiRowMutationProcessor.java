@@ -96,8 +96,7 @@ MultiRowMutationProcessorResponse> {
       for (List<Cell> cells : m.getFamilyCellMap().values()) {
         boolean writeToWAL = m.getDurability() != Durability.SKIP_WAL;
         for (Cell cell : cells) {
-          KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-          if (writeToWAL) walEdit.add(kv);
+          if (writeToWAL) walEdit.add(cell);
         }
       }
     }
@@ -146,8 +145,8 @@ MultiRowMutationProcessorResponse> {
         // itself. No need to apply again to region
         if (walEditsFromCP[i] != null) {
           // Add the WALEdit created by CP hook
-          for (KeyValue walKv : walEditsFromCP[i].getKeyValues()) {
-            walEdit.add(walKv);
+          for (Cell walCell : walEditsFromCP[i].getCells()) {
+            walEdit.add(walCell);
           }
         }
       }

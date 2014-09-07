@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.HTable;
@@ -173,10 +173,10 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       return; // first call
     }
     Assert.assertEquals(1, ReplicationEndpointForTest.lastEntries.size());
-    List<KeyValue> kvs = ReplicationEndpointForTest.lastEntries.get(0).getEdit().getKeyValues();
-    Assert.assertEquals(1, kvs.size());
-    Assert.assertTrue(Bytes.equals(kvs.get(0).getRowArray(), kvs.get(0).getRowOffset(),
-      kvs.get(0).getRowLength(), row, 0, row.length));
+    List<Cell> cells = ReplicationEndpointForTest.lastEntries.get(0).getEdit().getCells();
+    Assert.assertEquals(1, cells.size());
+    Assert.assertTrue(Bytes.equals(cells.get(0).getRowArray(), cells.get(0).getRowOffset(),
+      cells.get(0).getRowLength(), row, 0, row.length));
   }
 
   public static class ReplicationEndpointForTest extends BaseReplicationEndpoint {
@@ -255,13 +255,13 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       return new ChainWALEntryFilter(super.getWALEntryfilter(), new WALEntryFilter() {
         @Override
         public Entry filter(Entry entry) {
-          ArrayList<KeyValue> kvs = entry.getEdit().getKeyValues();
-          int size = kvs.size();
+          ArrayList<Cell> cells = entry.getEdit().getCells();
+          int size = cells.size();
           for (int i = size-1; i >= 0; i--) {
-            KeyValue kv = kvs.get(i);
-            if (!Bytes.equals(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
+            Cell cell = cells.get(i);
+            if (!Bytes.equals(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
               row, 0, row.length)) {
-              kvs.remove(i);
+              cells.remove(i);
             }
           }
           return entry;

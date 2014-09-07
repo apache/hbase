@@ -270,12 +270,12 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     public void append(RegionEntryBuffer buffer) throws IOException {
       List<Entry> entries = buffer.getEntryBuffer();
 
-      if (entries.isEmpty() || entries.get(0).getEdit().getKeyValues().isEmpty()) {
+      if (entries.isEmpty() || entries.get(0).getEdit().getCells().isEmpty()) {
         return;
       }
 
       sinkWriter.append(buffer.getTableName(), buffer.getEncodedRegionName(),
-        entries.get(0).getEdit().getKeyValues().get(0).getRow(), entries);
+        entries.get(0).getEdit().getCells().get(0).getRow(), entries);
     }
 
     @Override

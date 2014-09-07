@@ -1509,7 +1509,7 @@ public class TestDistributedLogSplitting {
     HLog.Reader in = HLogFactory.createReader(fs, log, conf);
     HLog.Entry e;
     while ((e = in.next()) != null) {
-      if (!WALEdit.isMetaEditFamily(e.getEdit().getKeyValues().get(0))) {
+      if (!WALEdit.isMetaEditFamily(e.getEdit().getCells().get(0))) {
         count++;
       }
     }

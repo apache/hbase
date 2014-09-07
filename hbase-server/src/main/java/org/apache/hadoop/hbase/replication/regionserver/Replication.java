@@ -37,12 +37,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
@@ -245,10 +245,10 @@ public class Replication implements WALActionsListener,
     NavigableMap<byte[], Integer> scopes =
         new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
     byte[] family;
-    for (KeyValue kv : logEdit.getKeyValues()) {
-      family = kv.getFamily();
+    for (Cell cell : logEdit.getCells()) {
+      family = cell.getFamily();
       // This is expected and the KV should not be replicated
-      if (CellUtil.matchingFamily(kv, WALEdit.METAFAMILY)) continue;
+      if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) continue;
       // Unexpected, has a tendency to happen in unit tests
       assert htd.getFamily(family) != null;
 

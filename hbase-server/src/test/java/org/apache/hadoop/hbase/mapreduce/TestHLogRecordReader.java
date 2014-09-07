@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -234,10 +235,10 @@ public class TestHLogRecordReader {
 
     for (byte[] column : columns) {
       assertTrue(reader.nextKeyValue());
-      KeyValue kv = reader.getCurrentValue().getKeyValues().get(0);
-      if (!Bytes.equals(column, kv.getQualifier())) {
+      Cell cell = reader.getCurrentValue().getCells().get(0);
+      if (!Bytes.equals(column, cell.getQualifier())) {
         assertTrue("expected [" + Bytes.toString(column) + "], actual ["
-            + Bytes.toString(kv.getQualifier()) + "]", false);
+            + Bytes.toString(cell.getQualifier()) + "]", false);
       }
     }
     assertFalse(reader.nextKeyValue());

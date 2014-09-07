@@ -28,12 +28,11 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
 
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.SizedCellScanner;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.protobuf.ServiceException;
@@ -90,8 +90,8 @@ public class ReplicationProtbufUtil {
    */
   public static Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner>
       buildReplicateWALEntryRequest(final HLog.Entry[] entries, byte[] encodedRegionName) {
-    // Accumulate all the KVs seen in here.
-    List<List<? extends Cell>> allkvs = new ArrayList<List<? extends Cell>>(entries.length);
+    // Accumulate all the Cells seen in here.
+    List<List<? extends Cell>> allCells = new ArrayList<List<? extends Cell>>(entries.length);
     int size = 0;
     WALProtos.FamilyScope.Builder scopeBuilder = WALProtos.FamilyScope.newBuilder();
     AdminProtos.WALEntry.Builder entryBuilder = AdminProtos.WALEntry.newBuilder();
@@ -135,19 +135,19 @@ public class ReplicationProtbufUtil {
           keyBuilder.addScopes(scopeBuilder.build());
         }
       }
-      List<KeyValue> kvs = edit.getKeyValues();
+      List<Cell> cells = edit.getCells();
       // Add up the size.  It is used later serializing out the kvs.
-      for (KeyValue kv: kvs) {
-        size += kv.getLength();
+      for (Cell cell: cells) {
+        size += CellUtil.estimatedLengthOf(cell);
       }
-      // Collect up the kvs
-      allkvs.add(kvs);
-      // Write out how many kvs associated with this entry.
-      entryBuilder.setAssociatedCellCount(kvs.size());
+      // Collect up the cells
+      allCells.add(cells);
+      // Write out how many cells associated with this entry.
+      entryBuilder.setAssociatedCellCount(cells.size());
       builder.addEntry(entryBuilder.build());
     }
     return new Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner>(builder.build(),
-      getCellScanner(allkvs, size));
+      getCellScanner(allCells, size));
   }
 
   /**

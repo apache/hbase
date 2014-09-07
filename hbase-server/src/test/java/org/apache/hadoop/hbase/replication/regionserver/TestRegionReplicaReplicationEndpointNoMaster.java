@@ -183,7 +183,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
       throws IOException, RuntimeException {
     HLog.Entry entry;
     while ((entry = entries.poll()) != null) {
-      byte[] row = entry.getEdit().getKeyValues().get(0).getRow();
+      byte[] row = entry.getEdit().getCells().get(0).getRow();
       RegionLocations locations = connection.locateRegion(tableName, row, true, true);
       RegionReplicaReplayCallable callable = new RegionReplicaReplayCallable(connection,
         RpcControllerFactory.instantiate(connection.getConfiguration()),

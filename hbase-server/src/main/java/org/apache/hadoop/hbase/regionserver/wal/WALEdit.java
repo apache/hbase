@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -78,7 +79,8 @@ import org.apache.hadoop.io.Writable;
  * is an old style KeyValue or the new style WALEdit.
  *
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
+@InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.REPLICATION,
+    HBaseInterfaceAudience.COPROC })
 public class WALEdit implements Writable, HeapSize {
   public static final Log LOG = LogFactory.getLog(WALEdit.class);
 
@@ -92,7 +94,7 @@ public class WALEdit implements Writable, HeapSize {
   private final int VERSION_2 = -1;
   private final boolean isReplay;
 
-  private final ArrayList<KeyValue> kvs = new ArrayList<KeyValue>(1);
+  private final ArrayList<Cell> cells = new ArrayList<Cell>(1);
 
   public static final WALEdit EMPTY_WALEDIT = new WALEdit();
 
@@ -134,21 +136,21 @@ public class WALEdit implements Writable, HeapSize {
     this.compressionContext = compressionContext;
   }
 
-  public WALEdit add(KeyValue kv) {
-    this.kvs.add(kv);
+  public WALEdit add(Cell cell) {
+    this.cells.add(cell);
     return this;
   }
 
   public boolean isEmpty() {
-    return kvs.isEmpty();
+    return cells.isEmpty();
   }
 
   public int size() {
-    return kvs.size();
+    return cells.size();
   }
 
-  public ArrayList<KeyValue> getKeyValues() {
-    return kvs;
+  public ArrayList<Cell> getCells() {
+    return cells;
   }
 
   public NavigableMap<byte[], Integer> getAndRemoveScopes() {
@@ -159,7 +161,7 @@ public class WALEdit implements Writable, HeapSize {
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    kvs.clear();
+    cells.clear();
     if (scopes != null) {
       scopes.clear();
     }
@@ -197,9 +199,11 @@ public class WALEdit implements Writable, HeapSize {
   public void write(DataOutput out) throws IOException {
     LOG.warn("WALEdit is being serialized to writable - only expected in test code");
     out.writeInt(VERSION_2);
-    out.writeInt(kvs.size());
+    out.writeInt(cells.size());
     // We interleave the two lists for code simplicity
-    for (KeyValue kv : kvs) {
+    for (Cell cell : cells) {
+      // This is not used in any of the core code flows so it is just fine to convert to KV
+      KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
       if (compressionContext != null) {
         KeyValueCompression.writeKV(out, kv, compressionContext);
       } else{
@@ -224,23 +228,19 @@ public class WALEdit implements Writable, HeapSize {
    * @return Number of KVs read.
    */
   public int readFromCells(Codec.Decoder cellDecoder, int expectedCount) throws IOException {
-    kvs.clear();
-    kvs.ensureCapacity(expectedCount);
-    while (kvs.size() < expectedCount && cellDecoder.advance()) {
-      Cell cell = cellDecoder.current();
-      if (!(cell instanceof KeyValue)) {
-        throw new IOException("WAL edit only supports KVs as cells");
-      }
-      kvs.add((KeyValue)cell);
+    cells.clear();
+    cells.ensureCapacity(expectedCount);
+    while (cells.size() < expectedCount && cellDecoder.advance()) {
+      cells.add(cellDecoder.current());
     }
-    return kvs.size();
+    return cells.size();
   }
 
   @Override
   public long heapSize() {
     long ret = ClassSize.ARRAYLIST;
-    for (KeyValue kv : kvs) {
-      ret += kv.heapSize();
+    for (Cell cell : cells) {
+      ret += CellUtil.estimatedHeapSizeOf(cell);
     }
     if (scopes != null) {
       ret += ClassSize.TREEMAP;
@@ -254,9 +254,9 @@ public class WALEdit implements Writable, HeapSize {
   public String toString() {
     StringBuilder sb = new StringBuilder();
 
-    sb.append("[#edits: " + kvs.size() + " = <");
-    for (KeyValue kv : kvs) {
-      sb.append(kv.toString());
+    sb.append("[#edits: " + cells.size() + " = <");
+    for (Cell cell : cells) {
+      sb.append(cell);
       sb.append("; ");
     }
     if (scopes != null) {

@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -56,7 +57,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -216,7 +216,7 @@ public class TestHLog  {
       for (Put p: puts) {
         CellScanner cs = p.cellScanner();
         while (cs.advance()) {
-          edits.add(KeyValueUtil.ensureKeyValue(cs.current()));
+          edits.add(cs.current());
         }
       }
       // Add any old cluster id.
@@ -567,7 +567,7 @@ public class TestHLog  {
     while (reader.next(entry) != null) {
       count++;
       assertTrue("Should be one KeyValue per WALEdit",
-                  entry.getEdit().getKeyValues().size() == 1);
+                  entry.getEdit().getCells().size() == 1);
     }
     assertEquals(total, count);
     reader.close();
@@ -623,9 +623,9 @@ public class TestHLog  {
         WALEdit val = entry.getEdit();
         assertTrue(Bytes.equals(info.getEncodedNameAsBytes(), key.getEncodedRegionName()));
         assertTrue(tableName.equals(key.getTablename()));
-        KeyValue kv = val.getKeyValues().get(0);
-        assertTrue(Bytes.equals(row, kv.getRow()));
-        assertEquals((byte)(i + '0'), kv.getValue()[0]);
+        Cell cell = val.getCells().get(0);
+        assertTrue(Bytes.equals(row, cell.getRow()));
+        assertEquals((byte)(i + '0'), cell.getValue()[0]);
         System.out.println(key + " " + val);
       }
     } finally {
@@ -675,7 +675,7 @@ public class TestHLog  {
       HLog.Entry entry = reader.next();
       assertEquals(COL_COUNT, entry.getEdit().size());
       int idx = 0;
-      for (KeyValue val : entry.getEdit().getKeyValues()) {
+      for (Cell val : entry.getEdit().getCells()) {
         assertTrue(Bytes.equals(hri.getEncodedNameAsBytes(),
           entry.getKey().getEncodedRegionName()));
         assertTrue(tableName.equals(entry.getKey().getTablename()));
@@ -917,7 +917,7 @@ public class TestHLog  {
         assertArrayEquals(hri.getEncodedNameAsBytes(), entry.getKey().getEncodedRegionName());
         assertEquals(tableName, entry.getKey().getTablename());
         int idx = 0;
-        for (KeyValue val : entry.getEdit().getKeyValues()) {
+        for (Cell val : entry.getEdit().getCells()) {
           assertTrue(Bytes.equals(row, val.getRow()));
           String value = i + "" + idx;
           assertArrayEquals(Bytes.toBytes(value), val.getValue());
@@ -1007,7 +1007,7 @@ public class TestHLog  {
         assertArrayEquals(hri.getEncodedNameAsBytes(), entry.getKey().getEncodedRegionName());
         assertEquals(tableName, entry.getKey().getTablename());
         int idx = 0;
-        for (KeyValue val : entry.getEdit().getKeyValues()) {
+        for (Cell val : entry.getEdit().getCells()) {
           assertTrue(Bytes.equals(row, val.getRow()));
           String value = i + "" + idx;
           assertArrayEquals(Bytes.toBytes(value), val.getValue());
