@@ -24,7 +24,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category(SmallTests.class)
 public class TestRegionLocations {
 
   ServerName sn0 = ServerName.valueOf("host0", 10, 10);
