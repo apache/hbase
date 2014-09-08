@@ -315,18 +315,31 @@ public class StoreFile {
   }
 
   /**
-   * @return true if this storefile was created by HFileOutputFormat
-   * for a bulk load.
+   * Check if this storefile was created by bulk load.
+   * When a hfile is bulk loaded into HBase, we append
+   * '_SeqId_<id-when-loaded>' to the hfile name, unless
+   * "hbase.mapreduce.bulkload.assign.sequenceNumbers" is
+   * explicitly turned off.
+   * If "hbase.mapreduce.bulkload.assign.sequenceNumbers"
+   * is turned off, fall back to BULKLOAD_TIME_KEY.
+   * @return true if this storefile was created by bulk load.
    */
   boolean isBulkLoadResult() {
-    return metadataMap.containsKey(BULKLOAD_TIME_KEY);
+    boolean bulkLoadedHFile = false;
+    String fileName = this.getPath().getName();
+    int startPos = fileName.indexOf("SeqId_");
+    if (startPos != -1) {
+      bulkLoadedHFile = true;
+    }
+    return bulkLoadedHFile || metadataMap.containsKey(BULKLOAD_TIME_KEY);
   }
 
   /**
    * Return the timestamp at which this bulk load file was generated.
    */
   public long getBulkLoadTimestamp() {
-    return Bytes.toLong(metadataMap.get(BULKLOAD_TIME_KEY));
+    byte[] bulkLoadTimestamp = metadataMap.get(BULKLOAD_TIME_KEY);
+    return (bulkLoadTimestamp == null) ? 0 : Bytes.toLong(bulkLoadTimestamp);
   }
 
   /**
@@ -372,7 +385,8 @@ public class StoreFile {
       // generate the sequenceId from the fileName
       // fileName is of the form <randomName>_SeqId_<id-when-loaded>_
       String fileName = this.getPath().getName();
-      int startPos = fileName.indexOf("SeqId_");
+      // Use lastIndexOf() to get the last, most recent bulk load seqId.
+      int startPos = fileName.lastIndexOf("SeqId_");
       if (startPos != -1) {
         this.sequenceid = Long.parseLong(fileName.substring(startPos + 6,
             fileName.indexOf('_', startPos + 6)));
