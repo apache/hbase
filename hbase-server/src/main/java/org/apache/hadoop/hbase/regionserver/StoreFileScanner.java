@@ -200,7 +200,7 @@ public class StoreFileScanner implements KeyValueScanner {
 
   protected void setCurrentCell(Cell newVal) throws IOException {
     this.cur = newVal;
-    if (this.cur != null && this.reader.isBulkLoaded() && cur.getSequenceId() <= 0) {
+    if (this.cur != null && this.reader.isBulkLoaded()) {
       CellUtil.setSequenceId(cur, this.reader.getSequenceID());
     }
   }
