@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
@@ -97,7 +98,7 @@ public class TestAcidGuarantees implements Tool {
     byte data[] = new byte[10];
     byte targetRows[][];
     byte targetFamilies[][];
-    HTable table;
+    Table table;
     AtomicLong numWritten = new AtomicLong();
 
     public AtomicityWriter(TestContext ctx, byte targetRows[][],
@@ -131,7 +132,7 @@ public class TestAcidGuarantees implements Tool {
   public static class AtomicGetReader extends RepeatingTestThread {
     byte targetRow[];
     byte targetFamilies[][];
-    HTable table;
+    Table table;
     int numVerified = 0;
     AtomicLong numRead = new AtomicLong();
 
@@ -189,7 +190,7 @@ public class TestAcidGuarantees implements Tool {
    */
   public static class AtomicScanReader extends RepeatingTestThread {
     byte targetFamilies[][];
-    HTable table;
+    Table table;
     AtomicLong numScans = new AtomicLong();
     AtomicLong numRowsScanned = new AtomicLong();
 

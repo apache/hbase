@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -96,7 +97,7 @@ public class TestTags {
 
   @Test
   public void testTags() throws Exception {
-    HTable table = null;
+    Table table = null;
     try {
       TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
       byte[] fam = Bytes.toBytes("info");
@@ -174,7 +175,7 @@ public class TestTags {
 
   @Test
   public void testFlushAndCompactionWithoutTags() throws Exception {
-    HTable table = null;
+    Table table = null;
     try {
       TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
       byte[] fam = Bytes.toBytes("info");
@@ -288,7 +289,7 @@ public class TestTags {
     byte[] row2 = Bytes.toBytes("rowc");
     byte[] rowd = Bytes.toBytes("rowd");
     byte[] rowe = Bytes.toBytes("rowe");
-    HTable table = null;
+    Table table = null;
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
       HTableDescriptor desc = new HTableDescriptor(tableName);
       HColumnDescriptor colDesc = new HColumnDescriptor(fam);
@@ -420,7 +421,7 @@ public class TestTags {
     desc.addFamily(colDesc);
     TEST_UTIL.getHBaseAdmin().createTable(desc);
 
-    HTable table = null;
+    Table table = null;
     try {
       table = new HTable(TEST_UTIL.getConfiguration(), tableName);
       Put put = new Put(row1);
@@ -541,7 +542,7 @@ public class TestTags {
     }
   }
 
-  private void result(byte[] fam, byte[] row, byte[] qual, byte[] row2, HTable table, byte[] value,
+  private void result(byte[] fam, byte[] row, byte[] qual, byte[] row2, Table table, byte[] value,
       byte[] value2, byte[] row1, byte[] value1) throws IOException {
     Scan s = new Scan(row);
     // If filters are used this attribute can be specifically check for in

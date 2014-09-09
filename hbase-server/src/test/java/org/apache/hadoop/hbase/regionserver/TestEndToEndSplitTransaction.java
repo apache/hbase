@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -188,7 +189,7 @@ public class TestEndToEndSplitTransaction {
 
     //SplitTransaction will update the meta table by offlining the parent region, and adding info
     //for daughters.
-    HTable table = TEST_UTIL.createTable(TABLENAME, FAMILY);
+    Table table = TEST_UTIL.createTable(TABLENAME, FAMILY);
 
     Stoppable stopper = new StoppableImplementation();
     RegionSplitter regionSplitter = new RegionSplitter(table);
@@ -215,13 +216,13 @@ public class TestEndToEndSplitTransaction {
 
   static class RegionSplitter extends Thread {
     Throwable ex;
-    HTable table;
+    Table table;
     TableName tableName;
     byte[] family;
     Admin admin;
     HRegionServer rs;
 
-    RegionSplitter(HTable table) throws IOException {
+    RegionSplitter(Table table) throws IOException {
       this.table = table;
       this.tableName = table.getName();
       this.family = table.getTableDescriptor().getFamiliesKeys().iterator().next();
@@ -423,7 +424,7 @@ public class TestEndToEndSplitTransaction {
     long start = System.currentTimeMillis();
     log("blocking until region is split:" +  Bytes.toStringBinary(regionName));
     HRegionInfo daughterA = null, daughterB = null;
-    HTable metaTable = new HTable(conf, TableName.META_TABLE_NAME);
+    Table metaTable = new HTable(conf, TableName.META_TABLE_NAME);
 
     try {
       while (System.currentTimeMillis() - start < timeout) {
@@ -462,12 +463,12 @@ public class TestEndToEndSplitTransaction {
     }
   }
 
-  public static Result getRegionRow(HTable metaTable, byte[] regionName) throws IOException {
+  public static Result getRegionRow(Table metaTable, byte[] regionName) throws IOException {
     Get get = new Get(regionName);
     return metaTable.get(get);
   }
 
-  public static void blockUntilRegionIsInMeta(HTable metaTable, long timeout, HRegionInfo hri)
+  public static void blockUntilRegionIsInMeta(Table metaTable, long timeout, HRegionInfo hri)
       throws IOException, InterruptedException {
     log("blocking until region is in META: " + hri.getRegionNameAsString());
     long start = System.currentTimeMillis();
@@ -488,7 +489,7 @@ public class TestEndToEndSplitTransaction {
       throws IOException, InterruptedException {
     log("blocking until region is opened for reading:" + hri.getRegionNameAsString());
     long start = System.currentTimeMillis();
-    HTable table = new HTable(conf, hri.getTable());
+    Table table = new HTable(conf, hri.getTable());
 
     try {
       byte [] row = hri.getStartKey();

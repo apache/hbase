@@ -21,12 +21,12 @@ package org.apache.hadoop.hbase.client.coprocessor;
 import static org.apache.hadoop.hbase.HConstants.EMPTY_START_ROW;
 import static org.apache.hadoop.hbase.HConstants.LAST_ROW;
 
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.ByteStringer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
@@ -47,9 +47,9 @@ import java.util.List;
  */
 @InterfaceAudience.Private
 public class SecureBulkLoadClient {
-  private HTable table;
+  private Table table;
 
-  public SecureBulkLoadClient(HTable table) {
+  public SecureBulkLoadClient(Table table) {
     this.table = table;
   }
 

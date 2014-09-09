@@ -36,10 +36,10 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -63,7 +63,7 @@ public class HBaseFsckRepair {
    * @param region Region to undeploy
    * @param servers list of Servers to undeploy from
    */
-  public static void fixMultiAssignment(HBaseAdmin admin, HRegionInfo region,
+  public static void fixMultiAssignment(Admin admin, HRegionInfo region,
       List<ServerName> servers)
   throws IOException, KeeperException, InterruptedException {
     HRegionInfo actualRegion = new HRegionInfo(region);
@@ -89,7 +89,7 @@ public class HBaseFsckRepair {
    * @throws IOException
    * @throws KeeperException
    */
-  public static void fixUnassigned(HBaseAdmin admin, HRegionInfo region)
+  public static void fixUnassigned(Admin admin, HRegionInfo region)
       throws IOException, KeeperException {
     HRegionInfo actualRegion = new HRegionInfo(region);
 
@@ -109,7 +109,7 @@ public class HBaseFsckRepair {
    * side-effect of requiring a HRegionInfo that considers regionId (timestamp)
    * in comparators that is addressed by HBASE-5563.
    */
-  private static void forceOfflineInZK(HBaseAdmin admin, final HRegionInfo region)
+  private static void forceOfflineInZK(Admin admin, final HRegionInfo region)
   throws ZooKeeperConnectionException, KeeperException, IOException {
     admin.assign(region.getRegionName());
   }
@@ -117,7 +117,7 @@ public class HBaseFsckRepair {
   /*
    * Should we check all assignments or just not in RIT?
    */
-  public static void waitUntilAssigned(HBaseAdmin admin,
+  public static void waitUntilAssigned(Admin admin,
       HRegionInfo region) throws IOException, InterruptedException {
     long timeout = admin.getConfiguration().getLong("hbase.hbck.assign.timeout", 120000);
     long expiration = timeout + System.currentTimeMillis();
@@ -179,7 +179,7 @@ public class HBaseFsckRepair {
    */
   public static void fixMetaHoleOnlineAndAddReplicas(Configuration conf,
       HRegionInfo hri, Collection<ServerName> servers, int numReplicas) throws IOException {
-    HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+    Table meta = new HTable(conf, TableName.META_TABLE_NAME);
     Put put = MetaTableAccessor.makePutFromRegionInfo(hri);
     if (numReplicas > 1) {
       Random r = new Random();

@@ -35,12 +35,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -66,7 +66,7 @@ public class TestSCVFWithMiniCluster {
   private static final byte[] QUALIFIER_FOO = Bytes.toBytes("foo");
   private static final byte[] QUALIFIER_BAR = Bytes.toBytes("bar");
 
-  private static HTable htable;
+  private static Table htable;
 
   private static Filter scanFilter;
 

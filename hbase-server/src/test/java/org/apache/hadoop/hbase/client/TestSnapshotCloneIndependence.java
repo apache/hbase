@@ -212,7 +212,7 @@ public class TestSnapshotCloneIndependence {
       TableName cloneTableName = TableName.valueOf("test-clone-" + localTableName);
       admin.cloneSnapshot(snapshotName, cloneTableName);
 
-      HTable clonedTable = new HTable(UTIL.getConfiguration(), cloneTableName);
+      Table clonedTable = new HTable(UTIL.getConfiguration(), cloneTableName);
 
       try {
         final int clonedTableRowCount = UTIL.countRows(clonedTable);

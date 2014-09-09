@@ -55,11 +55,11 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -923,7 +923,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private final Sampler<?> traceSampler;
     private final SpanReceiverHost receiverHost;
     protected HConnection connection;
-    protected HTableInterface table;
+    protected Table table;
 
     private String testName;
     private Histogram latency;
@@ -1567,7 +1567,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     // Log the configuration we're going to run with. Uses JSON mapper because lazy. It'll do
     // the TestOptions introspection for us and dump the output in a readable format.
     LOG.info(cmd.getSimpleName() + " test run options=" + MAPPER.writeValueAsString(opts));
-    HBaseAdmin admin = null;
+    Admin admin = null;
     try {
       admin = new HBaseAdmin(getConf());
       checkTable(admin, opts);

@@ -448,7 +448,7 @@ public void cleanUpCluster() throws Exception {
     HTableDescriptor htd = new HTableDescriptor(table);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
 
-    HBaseAdmin admin = new HBaseAdmin(getConf());
+    Admin admin = new HBaseAdmin(getConf());
     if (doLoad) {
       admin.createTable(htd, Bytes.toBytes(0L), Bytes.toBytes(-1L), numPresplits);
       doLoad(getConf(), htd);

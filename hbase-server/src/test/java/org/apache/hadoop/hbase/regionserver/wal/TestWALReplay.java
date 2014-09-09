@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
@@ -166,7 +167,7 @@ public class TestWALReplay {
     byte[] value = Bytes.toBytes("testV");
     byte[][] familys = { family1, family2 };
     TEST_UTIL.createTable(tableName, familys);
-    HTable htable = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table htable = new HTable(TEST_UTIL.getConfiguration(), tableName);
     Put put = new Put(Bytes.toBytes("r1"));
     put.add(family1, qualifier, value);
     htable.put(put);

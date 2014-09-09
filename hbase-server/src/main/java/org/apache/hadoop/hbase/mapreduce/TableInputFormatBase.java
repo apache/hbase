@@ -19,10 +19,8 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

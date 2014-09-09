@@ -43,12 +43,12 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -115,7 +115,7 @@ public class TestRegionMergeTransactionOnCluster {
         TableName.valueOf("testWholesomeMerge");
 
     // Create table and load data.
-    HTable table = createTableAndLoadData(master, tableName);
+    Table table = createTableAndLoadData(master, tableName);
     // Merge 1st and 2nd region
     mergeRegionsAndVerifyRegionNum(master, tableName, 0, 1,
         INITIAL_REGION_NUM - 1);
@@ -164,7 +164,7 @@ public class TestRegionMergeTransactionOnCluster {
       final TableName tableName =
           TableName.valueOf("testCleanMergeReference");
       // Create table and load data.
-      HTable table = createTableAndLoadData(master, tableName);
+      Table table = createTableAndLoadData(master, tableName);
       // Merge 1st and 2nd region
       mergeRegionsAndVerifyRegionNum(master, tableName, 0, 1,
           INITIAL_REGION_NUM - 1);
@@ -245,7 +245,7 @@ public class TestRegionMergeTransactionOnCluster {
 
     try {
       // Create table and load data.
-      HTable table = createTableAndLoadData(master, tableName);
+      Table table = createTableAndLoadData(master, tableName);
       RegionStates regionStates = master.getAssignmentManager().getRegionStates();
       List<HRegionInfo> regions = regionStates.getRegionsOfTable(tableName);
       // Fake offline one region
@@ -369,12 +369,12 @@ public class TestRegionMergeTransactionOnCluster {
     assertEquals(expectedRegionNum, tableRegionsInMeta.size());
   }
 
-  private HTable createTableAndLoadData(HMaster master, TableName tablename)
+  private Table createTableAndLoadData(HMaster master, TableName tablename)
       throws Exception {
     return createTableAndLoadData(master, tablename, INITIAL_REGION_NUM, 1);
   }
 
-  private HTable createTableAndLoadData(HMaster master, TableName tablename,
+  private Table createTableAndLoadData(HMaster master, TableName tablename,
       int numRegions, int replication) throws Exception {
     assertTrue("ROWSIZE must > numregions:" + numRegions, ROWSIZE > numRegions);
     byte[][] splitRows = new byte[numRegions - 1][];
@@ -382,7 +382,7 @@ public class TestRegionMergeTransactionOnCluster {
       splitRows[i] = ROWS[(i + 1) * ROWSIZE / numRegions];
     }
 
-    HTable table = TEST_UTIL.createTable(tablename, FAMILYNAME, splitRows);
+    Table table = TEST_UTIL.createTable(tablename, FAMILYNAME, splitRows);
     if (replication > 1) {
       HBaseTestingUtility.setReplicas(admin, tablename, replication);
     }
@@ -415,7 +415,7 @@ public class TestRegionMergeTransactionOnCluster {
     return ret;
   }
 
-  private void loadData(HTable table) throws IOException {
+  private void loadData(Table table) throws IOException {
     for (int i = 0; i < ROWSIZE; i++) {
       Put put = new Put(ROWS[i]);
       put.add(FAMILYNAME, QUALIFIER, Bytes.toBytes(i));
@@ -423,7 +423,7 @@ public class TestRegionMergeTransactionOnCluster {
     }
   }
 
-  private void verifyRowCount(HTable table, int expectedRegionNum)
+  private void verifyRowCount(Table table, int expectedRegionNum)
       throws IOException {
     ResultScanner scanner = table.getScanner(new Scan());
     int rowCount = 0;

@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -119,7 +120,7 @@ public class TestMergeTable {
           desc.getTableName());
       LOG.info("originalTableRegions size=" + originalTableRegions.size() +
         "; " + originalTableRegions);
-      HBaseAdmin admin = new HBaseAdmin(c);
+      Admin admin = new HBaseAdmin(c);
       admin.disableTable(desc.getTableName());
       HMerge.merge(c, FileSystem.get(c), desc.getTableName());
       List<HRegionInfo> postMergeTableRegions =

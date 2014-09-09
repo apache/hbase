@@ -34,6 +34,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer;
@@ -249,14 +251,14 @@ public class TestZooKeeper {
     HColumnDescriptor family = new HColumnDescriptor("fam");
     desc.addFamily(family);
     LOG.info("Creating table " + tableName);
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    Admin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     try {
       admin.createTable(desc);
     } finally {
       admin.close();
     }
 
-    HTable table =
+    Table table =
       new HTable(new Configuration(TEST_UTIL.getConfiguration()), tableName);
     Put put = new Put(Bytes.toBytes("testrow"));
     put.add(Bytes.toBytes("fam"),
@@ -269,11 +271,11 @@ public class TestZooKeeper {
   @Test
   public void testMultipleZK()
   throws IOException, NoSuchMethodException, InvocationTargetException, IllegalAccessException {
-    HTable localMeta =
+    Table localMeta =
       new HTable(new Configuration(TEST_UTIL.getConfiguration()), TableName.META_TABLE_NAME);
     Configuration otherConf = new Configuration(TEST_UTIL.getConfiguration());
     otherConf.set(HConstants.ZOOKEEPER_QUORUM, "127.0.0.1");
-    HTable ipMeta = new HTable(otherConf, TableName.META_TABLE_NAME);
+    Table ipMeta = new HTable(otherConf, TableName.META_TABLE_NAME);
 
     // dummy, just to open the connection
     final byte [] row = new byte [] {'r'};
@@ -490,7 +492,7 @@ public class TestZooKeeper {
     ZooKeeperWatcher zkw = m.getZooKeeper();
     int expectedNumOfListeners = zkw.getNumberOfListeners();
     // now the cluster is up. So assign some regions.
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    Admin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     try {
       byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"),
         Bytes.toBytes("c"), Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
@@ -527,8 +529,8 @@ public class TestZooKeeper {
     cluster.startRegionServer();
     HMaster m = cluster.getMaster();
     // now the cluster is up. So assign some regions.
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
-    HTable table = null;
+    Admin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    Table table = null;
     try {
       byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("1"), Bytes.toBytes("2"),
         Bytes.toBytes("3"), Bytes.toBytes("4"), Bytes.toBytes("5") };

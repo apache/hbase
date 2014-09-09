@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
@@ -203,7 +204,7 @@ public class TestAssignmentListener {
       assertEquals(0, listener.getCloseCount());
 
       // Add some data
-      HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE_NAME);
+      Table table = new HTable(TEST_UTIL.getConfiguration(), TABLE_NAME);
       try {
         for (int i = 0; i < 10; ++i) {
           byte[] key = Bytes.toBytes("row-" + i);

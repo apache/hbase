@@ -35,11 +35,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -135,7 +135,7 @@ public class TestScannersWithFilters {
       htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
       htd.addFamily(new HColumnDescriptor(FAMILIES[1]));
       admin.createTable(htd);
-      HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
+      Table table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
       // Insert first half
       for(byte [] ROW : ROWS_ONE) {
         Put p = new Put(ROW);

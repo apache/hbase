@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -160,7 +161,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
   @VisibleForTesting
-  static void configureCompression(HTable table, Configuration conf) throws IOException {
+  static void configureCompression(Table table, Configuration conf) throws IOException {
     HFileOutputFormat2.configureCompression(table, conf);
   }
 
@@ -174,7 +175,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    *           on failure to read column family descriptors
    */
   @VisibleForTesting
-  static void configureBlockSize(HTable table, Configuration conf) throws IOException {
+  static void configureBlockSize(Table table, Configuration conf) throws IOException {
     HFileOutputFormat2.configureBlockSize(table, conf);
   }
 
@@ -188,7 +189,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    *           on failure to read column family descriptors
    */
   @VisibleForTesting
-  static void configureBloomType(HTable table, Configuration conf) throws IOException {
+  static void configureBloomType(Table table, Configuration conf) throws IOException {
     HFileOutputFormat2.configureBloomType(table, conf);
   }
 
@@ -202,7 +203,7 @@ public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
    *           on failure to read column family descriptors
    */
   @VisibleForTesting
-  static void configureDataBlockEncoding(HTable table,
+  static void configureDataBlockEncoding(Table table,
       Configuration conf) throws IOException {
     HFileOutputFormat2.configureDataBlockEncoding(table, conf);
   }

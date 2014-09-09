@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -107,7 +108,7 @@ public class TableNamespaceManager {
     isTableAvailableAndInitialized();
   }
 
-  private synchronized HTable getNamespaceTable() throws IOException {
+  private synchronized Table getNamespaceTable() throws IOException {
     if (!isTableAvailableAndInitialized()) {
       throw new IOException(this.getClass().getName() + " isn't ready to serve");
     }
@@ -125,14 +126,14 @@ public class TableNamespaceManager {
   }
 
   public synchronized void update(NamespaceDescriptor ns) throws IOException {
-    HTable table = getNamespaceTable();
+    Table table = getNamespaceTable();
     if (get(table, ns.getName()) == null) {
       throw new NamespaceNotFoundException(ns.getName());
     }
     upsert(table, ns);
   }
 
-  private NamespaceDescriptor get(HTable table, String name) throws IOException {
+  private NamespaceDescriptor get(Table table, String name) throws IOException {
     Result res = table.get(new Get(Bytes.toBytes(name)));
     if (res.isEmpty()) {
       return null;
@@ -144,7 +145,7 @@ public class TableNamespaceManager {
             HBaseProtos.NamespaceDescriptor.parseFrom(val));
   }
 
-  private void create(HTable table, NamespaceDescriptor ns) throws IOException {
+  private void create(Table table, NamespaceDescriptor ns) throws IOException {
     if (get(table, ns.getName()) != null) {
       throw new NamespaceExistException(ns.getName());
     }
@@ -154,7 +155,7 @@ public class TableNamespaceManager {
     upsert(table, ns);
   }
 
-  private void upsert(HTable table, NamespaceDescriptor ns) throws IOException {
+  private void upsert(Table table, NamespaceDescriptor ns) throws IOException {
     Put p = new Put(Bytes.toBytes(ns.getName()));
     p.addImmutable(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
         HTableDescriptor.NAMESPACE_COL_DESC_BYTES,

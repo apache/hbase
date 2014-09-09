@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -174,7 +175,7 @@ public class MetaTableAccessor {
    * @throws IOException
    * @SuppressWarnings("deprecation")
    */
-  private static HTable getHTable(final HConnection hConnection,
+  private static Table getHTable(final HConnection hConnection,
       final TableName tableName)
   throws IOException {
     // We used to pass whole CatalogTracker in here, now we just pass in HConnection
@@ -190,7 +191,7 @@ public class MetaTableAccessor {
    * @return An {@link HTable} for <code>hbase:meta</code>
    * @throws IOException
    */
-  static HTable getMetaHTable(final HConnection hConnection)
+  static Table getMetaHTable(final HConnection hConnection)
   throws IOException {
     return getHTable(hConnection, TableName.META_TABLE_NAME);
   }
@@ -200,7 +201,7 @@ public class MetaTableAccessor {
    * @param g Get to run
    * @throws IOException
    */
-  private static Result get(final HTable t, final Get g) throws IOException {
+  private static Result get(final Table t, final Get g) throws IOException {
     try {
       return t.get(g);
     } finally {
@@ -599,7 +600,7 @@ public class MetaTableAccessor {
       scan.setCaching(caching);
     }
     scan.addFamily(HConstants.CATALOG_FAMILY);
-    HTable metaTable = getMetaHTable(hConnection);
+    Table metaTable = getMetaHTable(hConnection);
     ResultScanner scanner = null;
     try {
       scanner = metaTable.getScanner(scan);
@@ -948,7 +949,7 @@ public class MetaTableAccessor {
    * @param p put to make
    * @throws IOException
    */
-  private static void put(final HTable t, final Put p) throws IOException {
+  private static void put(final Table t, final Put p) throws IOException {
     try {
       t.put(p);
     } finally {
@@ -964,7 +965,7 @@ public class MetaTableAccessor {
    */
   public static void putsToMetaTable(final HConnection hConnection, final List<Put> ps)
     throws IOException {
-    HTable t = getMetaHTable(hConnection);
+    Table t = getMetaHTable(hConnection);
     try {
       t.put(ps);
     } finally {
@@ -993,7 +994,7 @@ public class MetaTableAccessor {
    */
   public static void deleteFromMetaTable(final HConnection hConnection, final List<Delete> deletes)
     throws IOException {
-    HTable t = getMetaHTable(hConnection);
+    Table t = getMetaHTable(hConnection);
     try {
       t.delete(deletes);
     } finally {
@@ -1036,7 +1037,7 @@ public class MetaTableAccessor {
   public static void mutateMetaTable(final HConnection hConnection,
                                      final List<Mutation> mutations)
     throws IOException {
-    HTable t = getMetaHTable(hConnection);
+    Table t = getMetaHTable(hConnection);
     try {
       t.batch(mutations);
     } catch (InterruptedException e) {
@@ -1068,7 +1069,7 @@ public class MetaTableAccessor {
    * @param regionInfo region information
    * @throws IOException if problem connecting or updating meta
    */
-  public static void addRegionToMeta(HTable meta, HRegionInfo regionInfo) throws IOException {
+  public static void addRegionToMeta(Table meta, HRegionInfo regionInfo) throws IOException {
     addRegionToMeta(meta, regionInfo, null, null);
   }
 
@@ -1085,7 +1086,7 @@ public class MetaTableAccessor {
    * @param splitB second split daughter of the parent regionInfo
    * @throws IOException if problem connecting or updating meta
    */
-  public static void addRegionToMeta(HTable meta, HRegionInfo regionInfo,
+  public static void addRegionToMeta(Table meta, HRegionInfo regionInfo,
                                      HRegionInfo splitA, HRegionInfo splitB) throws IOException {
     Put put = makePutFromRegionInfo(regionInfo);
     addDaughtersToPut(put, splitA, splitB);
@@ -1109,7 +1110,7 @@ public class MetaTableAccessor {
    */
   public static void addRegionToMeta(HConnection hConnection, HRegionInfo regionInfo,
                                      HRegionInfo splitA, HRegionInfo splitB) throws IOException {
-    HTable meta = getMetaHTable(hConnection);
+    Table meta = getMetaHTable(hConnection);
     try {
       addRegionToMeta(meta, regionInfo, splitA, splitB);
     } finally {
@@ -1168,7 +1169,7 @@ public class MetaTableAccessor {
    */
   public static void mergeRegions(final HConnection hConnection, HRegionInfo mergedRegion,
       HRegionInfo regionA, HRegionInfo regionB, ServerName sn) throws IOException {
-    HTable meta = getMetaHTable(hConnection);
+    Table meta = getMetaHTable(hConnection);
     try {
       HRegionInfo copyOfMerged = new HRegionInfo(mergedRegion);
 
@@ -1208,7 +1209,7 @@ public class MetaTableAccessor {
   public static void splitRegion(final HConnection hConnection,
                                  HRegionInfo parent, HRegionInfo splitA, HRegionInfo splitB,
                                  ServerName sn) throws IOException {
-    HTable meta = getMetaHTable(hConnection);
+    Table meta = getMetaHTable(hConnection);
     try {
       HRegionInfo copyOfParent = new HRegionInfo(parent);
       copyOfParent.setOffline(true);
@@ -1235,7 +1236,7 @@ public class MetaTableAccessor {
   /**
    * Performs an atomic multi-Mutate operation against the given table.
    */
-  private static void multiMutate(HTable table, byte[] row, Mutation... mutations)
+  private static void multiMutate(Table table, byte[] row, Mutation... mutations)
       throws IOException {
     CoprocessorRpcChannel channel = table.coprocessorService(row);
     MultiRowMutationProtos.MutateRowsRequest.Builder mmrBuilder

@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
@@ -96,7 +98,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
     conf.set("hbase.coprocessor.master.classes", OperationAttributesTestController.class.getName());
     conf.set("hbase.coprocessor.region.classes", OperationAttributesTestController.class.getName());
     util.startMiniCluster();
-    HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
+    Admin admin = new HBaseAdmin(util.getConfiguration());
     util.startMiniMapReduceCluster();
   }
 
@@ -192,7 +194,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
       int valueMultiplier, boolean dataAvailable) throws IOException {
 
     LOG.debug("Validating table.");
-    HTable table = new HTable(conf, tableName);
+    Table table = new HTable(conf, tableName);
     boolean verified = false;
     long pause = conf.getLong("hbase.client.pause", 5 * 1000);
     int numRetries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);

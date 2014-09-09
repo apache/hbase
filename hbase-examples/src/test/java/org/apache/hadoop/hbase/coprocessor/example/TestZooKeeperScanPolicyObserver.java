@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -74,7 +75,7 @@ public class TestZooKeeperScanPolicyObserver {
     .setTimeToLive(1);
     desc.addFamily(hcd);
     TEST_UTIL.getHBaseAdmin().createTable(desc);
-    HTable t = new HTable(new Configuration(TEST_UTIL.getConfiguration()), tableName);
+    Table t = new HTable(new Configuration(TEST_UTIL.getConfiguration()), tableName);
     long now = EnvironmentEdgeManager.currentTime();
 
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(), "test", null);

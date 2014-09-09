@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.MapWritable;
@@ -57,7 +59,7 @@ public class TestTimeRangeMapRed {
   private final static Log log = LogFactory.getLog(TestTimeRangeMapRed.class);
   private static final HBaseTestingUtility UTIL =
     new HBaseTestingUtility();
-  private HBaseAdmin admin;
+  private Admin admin;
 
   private static final byte [] KEY = Bytes.toBytes("row1");
   private static final NavigableMap<Long, Boolean> TIMESTAMP =
@@ -103,7 +105,7 @@ public class TestTimeRangeMapRed {
   implements Configurable {
 
     private Configuration conf = null;
-    private HTable table = null;
+    private Table table = null;
 
     @Override
     public void map(ImmutableBytesWritable key, Result result,
@@ -147,13 +149,13 @@ public class TestTimeRangeMapRed {
     col.setMaxVersions(Integer.MAX_VALUE);
     desc.addFamily(col);
     admin.createTable(desc);
-    HTable table = new HTable(UTIL.getConfiguration(), desc.getTableName());
+    Table table = new HTable(UTIL.getConfiguration(), desc.getTableName());
     prepareTest(table);
     runTestOnTable();
     verify(table);
   }
 
-  private void prepareTest(final HTable table) throws IOException {
+  private void prepareTest(final Table table) throws IOException {
     for (Map.Entry<Long, Boolean> entry : TIMESTAMP.entrySet()) {
       Put put = new Put(KEY);
       put.setDurability(Durability.SKIP_WAL);
@@ -190,7 +192,7 @@ public class TestTimeRangeMapRed {
     }
   }
 
-  private void verify(final HTable table) throws IOException {
+  private void verify(final Table table) throws IOException {
     Scan scan = new Scan();
     scan.addColumn(FAMILY_NAME, COLUMN_NAME);
     scan.setMaxVersions(1);

@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LA
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -72,7 +73,7 @@ public class VisibilityClient {
    */
   public static VisibilityLabelsResponse addLabels(Configuration conf, final String[] labels)
       throws Throwable {
-    HTable ht = null;
+    Table ht = null;
     try {
       ht = new HTable(conf, LABELS_TABLE_NAME.getName());
       Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse> callable = 
@@ -126,7 +127,7 @@ public class VisibilityClient {
    * @throws Throwable
    */
   public static GetAuthsResponse getAuths(Configuration conf, final String user) throws Throwable {
-    HTable ht = null;
+    Table ht = null;
     try {
       ht = new HTable(conf, LABELS_TABLE_NAME.getName());
       Batch.Call<VisibilityLabelsService, GetAuthsResponse> callable = 
@@ -168,7 +169,7 @@ public class VisibilityClient {
 
   private static VisibilityLabelsResponse setOrClearAuths(Configuration conf, final String[] auths,
       final String user, final boolean setOrClear) throws IOException, ServiceException, Throwable {
-    HTable ht = null;
+    Table ht = null;
     try {
       ht = new HTable(conf, LABELS_TABLE_NAME.getName());
       Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse> callable = 

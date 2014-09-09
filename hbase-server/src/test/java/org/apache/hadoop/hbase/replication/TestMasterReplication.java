@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -123,7 +125,7 @@ public class TestMasterReplication {
   public void testCyclicReplication1() throws Exception {
     LOG.info("testSimplePutDelete");
     int numClusters = 2;
-    HTable[] htables = null;
+    Table[] htables = null;
     try {
       startMiniClusters(numClusters);
       createTableOnClusters(table);
@@ -163,7 +165,7 @@ public class TestMasterReplication {
   public void testCyclicReplication2() throws Exception {
     LOG.info("testCyclicReplication1");
     int numClusters = 3;
-    HTable[] htables = null;
+    Table[] htables = null;
     try {
       startMiniClusters(numClusters);
       createTableOnClusters(table);
@@ -214,7 +216,7 @@ public class TestMasterReplication {
   public void testCyclicReplication3() throws Exception {
     LOG.info("testCyclicReplication2");
     int numClusters = 3;
-    HTable[] htables = null;
+    Table[] htables = null;
     try {
       startMiniClusters(numClusters);
       createTableOnClusters(table);
@@ -285,7 +287,7 @@ public class TestMasterReplication {
   private void createTableOnClusters(HTableDescriptor table) throws Exception {
     int numClusters = configurations.length;
     for (int i = 0; i < numClusters; i++) {
-      HBaseAdmin hbaseAdmin = null;
+      Admin hbaseAdmin = null;
       try {
         hbaseAdmin = new HBaseAdmin(configurations[i]);
         hbaseAdmin.createTable(table);
@@ -343,18 +345,18 @@ public class TestMasterReplication {
   }
 
   @SuppressWarnings("resource")
-  private HTable[] getHTablesOnClusters(byte[] tableName) throws Exception {
+  private Table[] getHTablesOnClusters(byte[] tableName) throws Exception {
     int numClusters = utilities.length;
-    HTable[] htables = new HTable[numClusters];
+    Table[] htables = new Table[numClusters];
     for (int i = 0; i < numClusters; i++) {
-      HTable htable = new HTable(configurations[i], tableName);
+      Table htable = new HTable(configurations[i], tableName);
       htable.setWriteBufferSize(1024);
       htables[i] = htable;
     }
     return htables;
   }
 
-  private void validateCounts(HTable[] htables, byte[] type,
+  private void validateCounts(Table[] htables, byte[] type,
       int[] expectedCounts) throws IOException {
     for (int i = 0; i < htables.length; i++) {
       assertEquals(Bytes.toString(type) + " were replicated back ",
@@ -362,21 +364,21 @@ public class TestMasterReplication {
     }
   }
 
-  private int getCount(HTable t, byte[] type) throws IOException {
+  private int getCount(Table t, byte[] type) throws IOException {
     Get test = new Get(row);
     test.setAttribute("count", new byte[] {});
     Result res = t.get(test);
     return Bytes.toInt(res.getValue(count, type));
   }
 
-  private void deleteAndWait(byte[] row, HTable source, HTable target)
+  private void deleteAndWait(byte[] row, Table source, Table target)
       throws Exception {
     Delete del = new Delete(row);
     source.delete(del);
     wait(row, target, true);
   }
 
-  private void putAndWait(byte[] row, byte[] fam, HTable source, HTable target)
+  private void putAndWait(byte[] row, byte[] fam, Table source, Table target)
       throws Exception {
     Put put = new Put(row);
     put.add(fam, row, row);
@@ -384,7 +386,7 @@ public class TestMasterReplication {
     wait(row, target, false);
   }
 
-  private void wait(byte[] row, HTable target, boolean isDeleted)
+  private void wait(byte[] row, Table target, boolean isDeleted)
       throws Exception {
     Get get = new Get(row);
     for (int i = 0; i < NB_RETRIES; i++) {

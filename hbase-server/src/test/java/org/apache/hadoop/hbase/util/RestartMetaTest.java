@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
@@ -120,7 +121,7 @@ public class RestartMetaTest extends AbstractHBaseTool {
 
     LOG.debug("Trying to scan meta");
 
-    HTable metaTable = new HTable(conf, TableName.META_TABLE_NAME);
+    Table metaTable = new HTable(conf, TableName.META_TABLE_NAME);
     ResultScanner scanner = metaTable.getScanner(new Scan());
     Result result;
     while ((result = scanner.next()) != null) {

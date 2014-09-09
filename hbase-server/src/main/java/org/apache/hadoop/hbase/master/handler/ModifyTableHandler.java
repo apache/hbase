@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -94,7 +95,7 @@ public class ModifyTableHandler extends TableEventHandler {
     Set<byte[]> tableRows = new HashSet<byte[]>();
     Scan scan = MetaTableAccessor.getScanForTableName(table);
     scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-    HTable htable = null;
+    Table htable = null;
     try {
       htable = new HTable(masterServices.getConfiguration(), TableName.META_TABLE_NAME);
       ResultScanner resScanner = htable.getScanner(scan);

@@ -44,12 +44,14 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MetaTableAccessor.Visitor;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -60,7 +62,7 @@ import org.junit.experimental.categories.Category;
 public class TestMasterOperationsForRegionReplicas {
   final static Log LOG = LogFactory.getLog(TestRegionPlacement.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static HBaseAdmin admin;
+  private static Admin admin;
   private static int numSlaves = 2;
   private static Configuration conf;
 
@@ -252,7 +254,7 @@ public class TestMasterOperationsForRegionReplicas {
       admin.disableTable(table);
       // now delete one replica info from all the rows
       // this is to make the meta appear to be only partially updated
-      HTable metaTable = new HTable(TableName.META_TABLE_NAME, admin.getConnection());
+      Table metaTable = new HTable(TableName.META_TABLE_NAME, admin.getConnection());
       for (byte[] row : tableRows) {
         Delete deleteOneReplicaLocation = new Delete(row);
         deleteOneReplicaLocation.deleteColumns(HConstants.CATALOG_FAMILY,

@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -217,7 +217,7 @@ public class TestMasterFailover {
     assertTrue(master.isInitialized());
 
     // Create a table with a region online
-    HTable onlineTable = TEST_UTIL.createTable("onlineTable", "family");
+    RegionLocator onlineTable = TEST_UTIL.createTable("onlineTable", "family");
 
     // Create a table in META, so it has a region offline
     HTableDescriptor offlineTable = new HTableDescriptor(

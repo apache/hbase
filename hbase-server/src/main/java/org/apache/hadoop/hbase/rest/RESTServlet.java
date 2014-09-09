@@ -23,7 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.ConnectionCache;
@@ -100,7 +100,7 @@ public class RESTServlet implements Constants {
   /**
    * Caller closes the table afterwards.
    */
-  HTableInterface getTable(String tableName) throws IOException {
+  Table getTable(String tableName) throws IOException {
     return connectionCache.getTable(tableName);
   }
 

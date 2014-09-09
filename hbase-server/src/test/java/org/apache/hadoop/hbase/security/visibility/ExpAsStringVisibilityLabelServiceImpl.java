@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
@@ -141,7 +142,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
     Get get = new Get(user);
     List<Cell> cells = null;
     if (labelsRegion == null) {
-      HTable table = null;
+      Table table = null;
       try {
         table = new HTable(conf, VisibilityConstants.LABELS_TABLE_NAME);
         Result result = table.get(get);

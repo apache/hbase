@@ -28,10 +28,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.UnknownScannerException;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.rest.model.ScannerModel;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
@@ -67,7 +67,7 @@ public class ScannerResultGenerator extends ResultGenerator {
   public ScannerResultGenerator(final String tableName, final RowSpec rowspec,
       final Filter filter, final int caching, final boolean cacheBlocks)
       throws IllegalArgumentException, IOException {
-    HTableInterface table = RESTServlet.getInstance().getTable(tableName);
+    Table table = RESTServlet.getInstance().getTable(tableName);
     try {
       Scan scan;
       if (rowspec.hasEndRow()) {

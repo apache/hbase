@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
@@ -120,7 +121,7 @@ public class FavoredNodeAssignmentHelper {
       }
     }
     // Write the region assignments to the meta table.
-    HTable metaTable = null;
+    Table metaTable = null;
     try {
       metaTable = new HTable(conf, TableName.META_TABLE_NAME);
       metaTable.put(puts);

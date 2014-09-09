@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Partitioner;
@@ -53,7 +54,7 @@ implements Configurable {
 
   private static final Log LOG = LogFactory.getLog(HRegionPartitioner.class);
   private Configuration conf = null;
-  private HTable table;
+  private RegionLocator table;
   private byte[][] startKeys;
 
   /**

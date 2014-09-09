@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -96,7 +97,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
   @Test
   public void testAclTableEntries() throws Exception {
     String userTestNamespace = "userTestNsp";
-    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
       // Grant and check state in ACL table
       grantOnNamespace(UTIL, userTestNamespace, TestNamespace,
@@ -151,7 +152,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
 
     AccessTestAction grantAction = new AccessTestAction() {
       public Object run() throws Exception {
-        HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
         try {
           BlockingRpcChannel service =
               acl.coprocessorService(HConstants.EMPTY_START_ROW);
@@ -167,7 +168,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
 
     AccessTestAction revokeAction = new AccessTestAction() {
       public Object run() throws Exception {
-        HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
         try {
           BlockingRpcChannel service =
               acl.coprocessorService(HConstants.EMPTY_START_ROW);

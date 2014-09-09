@@ -46,9 +46,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -692,7 +692,7 @@ public class SnapshotTestingUtils {
     waitForTableToBeOnline(util, table.getName());
   }
 
-  private static void putData(final HTable table, final byte[][] families,
+  private static void putData(final Table table, final byte[][] families,
       final byte[] key, final byte[] value) throws IOException {
     byte[] q = Bytes.toBytes("q");
     Put put = new Put(key);
@@ -722,7 +722,7 @@ public class SnapshotTestingUtils {
 
   public static void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
       long expectedRows) throws IOException {
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = new HTable(util.getConfiguration(), tableName);
     try {
       assertEquals(expectedRows, util.countRows(table));
     } finally {

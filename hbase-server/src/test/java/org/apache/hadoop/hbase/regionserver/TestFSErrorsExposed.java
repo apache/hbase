@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -188,7 +189,7 @@ public class TestFSErrorsExposed {
       byte[] tableName = Bytes.toBytes("table");
       byte[] fam = Bytes.toBytes("fam");
 
-      HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
+      Admin admin = new HBaseAdmin(util.getConfiguration());
       HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
       desc.addFamily(new HColumnDescriptor(fam)
           .setMaxVersions(1)

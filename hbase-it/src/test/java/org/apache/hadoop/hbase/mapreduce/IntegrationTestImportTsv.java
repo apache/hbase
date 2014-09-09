@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -153,7 +154,7 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
     assertEquals("Loading HFiles failed.",
       0, ToolRunner.run(new LoadIncrementalHFiles(new Configuration(getConf())), args));
 
-    HTable table = null;
+    Table table = null;
     Scan scan = new Scan() {{
       setCacheBlocks(false);
       setCaching(1000);

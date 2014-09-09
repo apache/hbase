@@ -150,7 +150,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     Configuration localConfig = HBaseConfiguration.create(this.conf);
     // This override mocks up our exists/get call to throw a RegionServerStoppedException.
     localConfig.set("hbase.client.connection.impl", RpcTimeoutConnection.class.getName());
-    HTable table = new HTable(localConfig, TableName.META_TABLE_NAME);
+    Table table = new HTable(localConfig, TableName.META_TABLE_NAME);
     Throwable t = null;
     LOG.info("Start");
     try {
@@ -187,7 +187,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     // and it has expired.  Otherwise, if this functionality is broke, all retries will be run --
     // all ten of them -- and we'll get the RetriesExhaustedException exception.
     localConfig.setInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, pause - 1);
-    HTable table = new HTable(localConfig, TableName.META_TABLE_NAME);
+    Table table = new HTable(localConfig, TableName.META_TABLE_NAME);
     Throwable t = null;
     try {
       // An exists call turns into a get w/ a flag.
@@ -219,7 +219,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     // Go against meta else we will try to find first region for the table on construction which
     // means we'll have to do a bunch more mocking.  Tests that go against meta only should be
     // good for a bit of testing.
-    HTable table = new HTable(this.conf, TableName.META_TABLE_NAME);
+    Table table = new HTable(this.conf, TableName.META_TABLE_NAME);
     ResultScanner scanner = table.getScanner(HConstants.CATALOG_FAMILY);
     try {
       Result result = null;
@@ -239,7 +239,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     // Go against meta else we will try to find first region for the table on construction which
     // means we'll have to do a bunch more mocking.  Tests that go against meta only should be
     // good for a bit of testing.
-    HTable table = new HTable(this.conf, TableName.META_TABLE_NAME);
+    Table table = new HTable(this.conf, TableName.META_TABLE_NAME);
     ResultScanner scanner = table.getScanner(HConstants.CATALOG_FAMILY);
     try {
       Result result = null;
@@ -700,7 +700,7 @@ public class TestClientNoCluster extends Configured implements Tool {
    * @throws IOException
    */
   static void cycle(int id, final Configuration c, final HConnection sharedConnection) throws IOException {
-    HTableInterface table = sharedConnection.getTable(BIG_USER_TABLE);
+    Table table = sharedConnection.getTable(BIG_USER_TABLE);
     table.setAutoFlushTo(false);
     long namespaceSpan = c.getLong("hbase.test.namespace.span", 1000000);
     long startTime = System.currentTimeMillis();

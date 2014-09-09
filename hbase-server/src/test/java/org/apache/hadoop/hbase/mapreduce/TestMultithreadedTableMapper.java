@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
@@ -160,7 +161,7 @@ public class TestMultithreadedTableMapper {
   }
 
   private void verify(String tableName) throws IOException {
-    HTable table = new HTable(new Configuration(UTIL.getConfiguration()), tableName);
+    Table table = new HTable(new Configuration(UTIL.getConfiguration()), tableName);
     boolean verified = false;
     long pause = UTIL.getConfiguration().getLong("hbase.client.pause", 5 * 1000);
     int numRetries = UTIL.getConfiguration().getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
@@ -193,7 +194,7 @@ public class TestMultithreadedTableMapper {
    * @throws IOException
    * @throws NullPointerException if we failed to find a cell value
    */
-  private void verifyAttempt(final HTable table)
+  private void verifyAttempt(final Table table)
       throws IOException, NullPointerException {
     Scan scan = new Scan();
     scan.addFamily(INPUT_FAMILY);

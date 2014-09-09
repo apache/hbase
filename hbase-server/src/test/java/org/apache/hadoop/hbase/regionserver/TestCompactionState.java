@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -85,7 +85,7 @@ public class TestCompactionState {
     byte [] fakecf = Bytes.toBytes("fakecf");
     boolean caughtMinorCompact = false;
     boolean caughtMajorCompact = false;
-    HTable ht = null;
+    Table ht = null;
     try {
       ht = TEST_UTIL.createTable(table, family);
       HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
@@ -128,7 +128,7 @@ public class TestCompactionState {
     byte [] family = Bytes.toBytes("family");
     byte [][] families =
       {family, Bytes.add(family, Bytes.toBytes("2")), Bytes.add(family, Bytes.toBytes("3"))};
-    HTable ht = null;
+    Table ht = null;
     try {
       ht = TEST_UTIL.createTable(table, families);
       loadData(ht, families, 3000, flushes);
@@ -213,7 +213,7 @@ public class TestCompactionState {
     return count;
   }
 
-  private static void loadData(final HTable ht, final byte[][] families,
+  private static void loadData(final Table ht, final byte[][] families,
       final int rows, final int flushes) throws IOException {
     List<Put> puts = new ArrayList<Put>(rows);
     byte[] qualifier = Bytes.toBytes("val");

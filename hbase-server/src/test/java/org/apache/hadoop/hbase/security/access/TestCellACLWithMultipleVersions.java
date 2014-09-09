@@ -36,10 +36,10 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
@@ -145,7 +145,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Put p;
           // with ro ACL
@@ -179,7 +179,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW);
         get.setMaxVersions(10);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           return t.get(get).listCells();
         } finally {
@@ -193,7 +193,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW);
         get.setMaxVersions(10);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           return t.get(get).listCells();
         } finally {
@@ -210,7 +210,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Put p;
           p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1, ZERO);
@@ -249,7 +249,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           // with rw ACL for "user1"
           Put p = new Put(TEST_ROW1);
@@ -275,7 +275,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           // with rw ACL for "user1" and "user2"
           Put p = new Put(TEST_ROW1);
@@ -306,7 +306,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user1.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Delete d = new Delete(TEST_ROW1);
           d.deleteColumns(TEST_FAMILY1, TEST_Q1);
@@ -323,7 +323,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user2.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Delete d = new Delete(TEST_ROW2);
           d.deleteColumns(TEST_FAMILY1, TEST_Q1);
@@ -342,7 +342,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user1.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Delete d = new Delete(TEST_ROW2);
           d.deleteFamily(TEST_FAMILY1);
@@ -363,7 +363,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           // Store read only ACL at a future time
           Put p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1,
@@ -389,7 +389,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           return t.get(get).listCells();
         } finally {
@@ -402,7 +402,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Get get = new Get(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q2);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           return t.get(get).listCells();
         } finally {
@@ -422,7 +422,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Delete delete = new Delete(TEST_ROW).deleteFamily(TEST_FAMILY1);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           t.delete(delete);
         } finally {
@@ -448,7 +448,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     USER_OWNER.runAs(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           // This version (TS = 123) with rw ACL for USER_OTHER and USER_OTHER2
           Put p = new Put(TEST_ROW);
@@ -493,7 +493,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     USER_OTHER2.runAs(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Delete d = new Delete(TEST_ROW, 124L);
           d.deleteColumns(TEST_FAMILY1, TEST_Q1);
@@ -509,7 +509,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     USER_OTHER2.runAs(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Delete d = new Delete(TEST_ROW);
           d.deleteColumns(TEST_FAMILY1, TEST_Q2, 124L);
@@ -535,7 +535,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Map<String, Permission> permsU1andOwner = new HashMap<String, Permission>();
           permsU1andOwner.put(user1.getShortName(), new Permission(Permission.Action.READ,
@@ -592,7 +592,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user1.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Delete d = new Delete(TEST_ROW1);
           d.deleteColumn(TEST_FAMILY1, TEST_Q1, 123);
@@ -609,7 +609,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user2.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Delete d = new Delete(TEST_ROW1, 127);
           d.deleteColumns(TEST_FAMILY1, TEST_Q1);
@@ -640,7 +640,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Map<String, Permission> permsU1andOwner = new HashMap<String, Permission>();
           permsU1andOwner.put(user1.getShortName(), new Permission(Permission.Action.READ,
@@ -680,7 +680,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user1.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Increment inc = new Increment(TEST_ROW1);
           inc.setTimeRange(0, 123);
@@ -697,7 +697,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user2.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Increment inc = new Increment(TEST_ROW1);
           inc.setTimeRange(0, 127);
@@ -727,7 +727,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Map<String, Permission> permsU1andOwner = new HashMap<String, Permission>();
           permsU1andOwner.put(user1.getShortName(), new Permission(Permission.Action.READ,
@@ -769,7 +769,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user1.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Put p = new Put(TEST_ROW1);
           p.add(TEST_FAMILY1, TEST_Q1, 125, ZERO);
@@ -788,7 +788,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user2.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Put p = new Put(TEST_ROW1);
           // column Q1 covers version at 123 fr which user2 do not have permission
@@ -817,7 +817,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Map<String, Permission> permsU1andOwner = new HashMap<String, Permission>();
           permsU1andOwner.put(user1.getShortName(), new Permission(Permission.Action.READ,
@@ -870,7 +870,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user1.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Delete d = new Delete(TEST_ROW1);
           d.deleteColumns(TEST_FAMILY1, TEST_Q1, 120);
@@ -886,7 +886,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user2.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Delete d = new Delete(TEST_ROW1);
           d.deleteColumns(TEST_FAMILY1, TEST_Q1);
@@ -905,7 +905,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     user2.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Delete d = new Delete(TEST_ROW1);
           d.deleteColumn(TEST_FAMILY1, TEST_Q2, 120);

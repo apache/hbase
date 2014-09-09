@@ -178,7 +178,7 @@ public class TestReplicasClient {
     TestRegionServerNoMaster.stopMasterAndAssignMeta(HTU);
     Configuration c = new Configuration(HTU.getConfiguration());
     c.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
-    HBaseAdmin ha = new HBaseAdmin(c);
+    Admin ha = new HBaseAdmin(c);
     for (boolean masterRuns = true; masterRuns; ) {
       Thread.sleep(100);
       try {

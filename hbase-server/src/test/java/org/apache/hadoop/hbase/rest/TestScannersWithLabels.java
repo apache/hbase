@@ -40,9 +40,9 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
@@ -90,7 +90,7 @@ public class TestScannersWithLabels {
   private static int insertData(TableName tableName, String column, double prob) throws IOException {
     Random rng = new Random();
     int count = 0;
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table table = new HTable(TEST_UTIL.getConfiguration(), tableName);
     byte[] k = new byte[3];
     byte[][] famAndQf = KeyValue.parseColumn(Bytes.toBytes(column));
 

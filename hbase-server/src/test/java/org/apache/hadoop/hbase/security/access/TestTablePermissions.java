@@ -40,6 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
@@ -287,7 +288,7 @@ public class TestTablePermissions {
     ListMultimap<String,TablePermission> preperms =
         AccessControlLists.getTablePermissions(conf, TEST_TABLE);
 
-    HTable table = new HTable(conf, TEST_TABLE);
+    Table table = new HTable(conf, TEST_TABLE);
     table.put(new Put(Bytes.toBytes("row1"))
         .add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes("v1")));
     table.put(new Put(Bytes.toBytes("row2"))

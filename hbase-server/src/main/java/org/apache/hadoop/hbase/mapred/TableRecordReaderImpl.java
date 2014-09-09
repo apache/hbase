@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ScannerCallable;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
@@ -52,7 +53,7 @@ public class TableRecordReaderImpl {
   private byte [] lastSuccessfulRow;
   private Filter trrRowFilter;
   private ResultScanner scanner;
-  private HTable htable;
+  private Table htable;
   private byte [][] trrInputColumns;
   private long timestamp;
   private int rowcount;
@@ -116,7 +117,7 @@ public class TableRecordReaderImpl {
   /**
    * @param htable the {@link HTable} to scan.
    */
-  public void setHTable(HTable htable) {
+  public void setHTable(Table htable) {
     Configuration conf = htable.getConfiguration();
     logScannerActivity = conf.getBoolean(
       ScannerCallable.LOG_SCANNER_ACTIVITY, false);

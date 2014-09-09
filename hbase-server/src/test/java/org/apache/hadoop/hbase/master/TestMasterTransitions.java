@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -479,8 +480,8 @@ public class TestMasterTransitions {
    * @throws IOException
    */
   private static int addToEachStartKey(final int expected) throws IOException {
-    HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
-    HTable meta = new HTable(TEST_UTIL.getConfiguration(),
+    Table t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
+    Table meta = new HTable(TEST_UTIL.getConfiguration(),
         TableName.META_TABLE_NAME);
     int rows = 0;
     Scan scan = new Scan();

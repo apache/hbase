@@ -27,18 +27,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -79,7 +75,7 @@ public class TestLogRollPeriod {
 
     TEST_UTIL.createTable(tableName, "cf");
     try {
-      HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      Table table = new HTable(TEST_UTIL.getConfiguration(), tableName);
       try {
         HRegionServer server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
         HLog log = server.getWAL();
@@ -104,7 +100,7 @@ public class TestLogRollPeriod {
     try {
       HRegionServer server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
       HLog log = server.getWAL();
-      final HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      final Table table = new HTable(TEST_UTIL.getConfiguration(), tableName);
 
       Thread writerThread = new Thread("writer") {
         @Override

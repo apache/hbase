@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
@@ -75,7 +76,7 @@ public class TestAccessController2 extends SecureTestUtil {
       public Object run() throws Exception {
         HTableDescriptor desc = new HTableDescriptor(TEST_TABLE.getTableName());
         desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        HBaseAdmin admin = new HBaseAdmin(conf);
+        Admin admin = new HBaseAdmin(conf);
         try {
           admin.createTable(desc);
         } finally {

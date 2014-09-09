@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -44,7 +45,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
@@ -107,7 +107,7 @@ public class TestRowProcessorEndpoint {
   private static volatile int expectedCounter = 0;
   private static int rowSize, row2Size;
 
-  private volatile static HTable table = null;
+  private volatile static Table table = null;
   private volatile static boolean swapped = false;
   private volatile CountDownLatch startSignal;
   private volatile CountDownLatch doneSignal;
@@ -196,7 +196,7 @@ public class TestRowProcessorEndpoint {
     }
   }
 
-  private int incrementCounter(HTable table) throws Throwable {
+  private int incrementCounter(Table table) throws Throwable {
     CoprocessorRpcChannel channel = table.coprocessorService(ROW);
     RowProcessorEndpoint.IncrementCounterProcessor processor =
         new RowProcessorEndpoint.IncrementCounterProcessor(ROW);
@@ -259,7 +259,7 @@ public class TestRowProcessorEndpoint {
     }
   }
 
-  private void swapRows(HTable table) throws Throwable {
+  private void swapRows(Table table) throws Throwable {
     CoprocessorRpcChannel channel = table.coprocessorService(ROW);
     RowProcessorEndpoint.RowSwapProcessor processor =
         new RowProcessorEndpoint.RowSwapProcessor(ROW, ROW2);

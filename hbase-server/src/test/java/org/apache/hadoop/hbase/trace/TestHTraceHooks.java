@@ -26,8 +26,8 @@ import java.util.Collection;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.htrace.Sampler;
 import org.htrace.Span;
 import org.htrace.Trace;
@@ -63,7 +63,7 @@ public class TestHTraceHooks {
   @Test
   public void testTraceCreateTable() throws Exception {
     TraceScope tableCreationSpan = Trace.startSpan("creating table", Sampler.ALWAYS);
-    HTable table; 
+    Table table;
     try {
 
       table = TEST_UTIL.createTable("table".getBytes(),

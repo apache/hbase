@@ -33,7 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 
 /** Creates multiple threads that write key/values into the */
@@ -89,7 +89,7 @@ public abstract class MultiThreadedWriterBase extends MultiThreadedAction {
     }
   }
 
-  protected String getRegionDebugInfoSafe(HTableInterface table, byte[] rowKey) {
+  protected String getRegionDebugInfoSafe(Table table, byte[] rowKey) {
     HRegionLocation cached = null, real = null;
     try {
       cached = connection.getRegionLocation(tableName, rowKey, false);

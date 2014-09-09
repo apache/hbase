@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.HBaseHandler;
 import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -265,7 +265,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
             continue;
           }
           try {
-            HTable table = handler.getTable(row.getTable());
+            Table table = handler.getTable(row.getTable());
             if (failures > 2) {
               throw new IOException("Auto-Fail rest of ICVs");
             }

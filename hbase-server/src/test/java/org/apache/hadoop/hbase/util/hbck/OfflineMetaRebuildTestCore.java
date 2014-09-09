@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -136,7 +137,7 @@ public class OfflineMetaRebuildTestCore {
     }
   }
 
-  private void populateTable(HTable tbl) throws IOException {
+  private void populateTable(Table tbl) throws IOException {
     byte[] values = { 'A', 'B', 'C', 'D' };
     for (int i = 0; i < values.length; i++) {
       for (int j = 0; j < values.length; j++) {
@@ -190,7 +191,7 @@ public class OfflineMetaRebuildTestCore {
             hri.getEncodedName());
         fs.delete(p, true);
 
-        HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+        Table meta = new HTable(conf, TableName.META_TABLE_NAME);
         Delete delete = new Delete(deleteRow);
         meta.delete(delete);
         meta.close();
@@ -203,9 +204,9 @@ public class OfflineMetaRebuildTestCore {
     dumpMeta(htd);
   }
 
-  protected HRegionInfo createRegion(Configuration conf, final HTable htbl,
+  protected HRegionInfo createRegion(Configuration conf, final Table htbl,
       byte[] startKey, byte[] endKey) throws IOException {
-    HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+    Table meta = new HTable(conf, TableName.META_TABLE_NAME);
     HTableDescriptor htd = htbl.getTableDescriptor();
     HRegionInfo hri = new HRegionInfo(htbl.getName(), startKey, endKey);
 
@@ -230,7 +231,7 @@ public class OfflineMetaRebuildTestCore {
     // Mess it up by blowing up meta.
     Admin admin = TEST_UTIL.getHBaseAdmin();
     Scan s = new Scan();
-    HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+    Table meta = new HTable(conf, TableName.META_TABLE_NAME);
     ResultScanner scanner = meta.getScanner(s);
     List<Delete> dels = new ArrayList<Delete>();
     for (Result r : scanner) {
@@ -257,7 +258,7 @@ public class OfflineMetaRebuildTestCore {
    */
   protected int tableRowCount(Configuration conf, TableName table)
       throws IOException {
-    HTable t = new HTable(conf, table);
+    Table t = new HTable(conf, table);
     Scan st = new Scan();
 
     ResultScanner rst = t.getScanner(st);

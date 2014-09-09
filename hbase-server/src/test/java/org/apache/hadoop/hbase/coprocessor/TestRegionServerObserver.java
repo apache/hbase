@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -74,7 +75,7 @@ public class TestRegionServerObserver {
     // Start the cluster
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
-    HBaseAdmin admin = new HBaseAdmin(conf);
+    Admin admin = new HBaseAdmin(conf);
     try {
       MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       HRegionServer regionServer = cluster.getRegionServer(0);

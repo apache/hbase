@@ -28,8 +28,10 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSource;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -63,7 +65,7 @@ public class TestReplicationBase {
   protected static ReplicationAdmin admin;
 
   protected static HTable htable1;
-  protected static HTable htable2;
+  protected static Table htable2;
 
   protected static HBaseTestingUtility utility1;
   protected static HBaseTestingUtility utility2;
@@ -134,8 +136,8 @@ public class TestReplicationBase {
     table.addFamily(fam);
     fam = new HColumnDescriptor(noRepfamName);
     table.addFamily(fam);
-    HBaseAdmin admin1 = new HBaseAdmin(conf1);
-    HBaseAdmin admin2 = new HBaseAdmin(conf2);
+    Admin admin1 = new HBaseAdmin(conf1);
+    Admin admin2 = new HBaseAdmin(conf2);
     admin1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
     htable1 = new HTable(conf1, tableName);

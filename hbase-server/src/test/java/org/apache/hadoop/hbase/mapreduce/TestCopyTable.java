@@ -33,9 +33,9 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.mapreduce.Job;
@@ -84,8 +84,8 @@ public class TestCopyTable {
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] COLUMN1 = Bytes.toBytes("c1");
 
-    HTable t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
-    HTable t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
+    Table t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
+    Table t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
 
     // put rows into the first table
     for (int i = 0; i < 10; i++) {
@@ -125,8 +125,8 @@ public class TestCopyTable {
     final byte[] ROW1 = Bytes.toBytes("row1");
     final byte[] ROW2 = Bytes.toBytes("row2");
 
-    HTable t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
-    HTable t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
+    Table t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
+    Table t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
 
     // put rows into the first table
     Put p = new Put(ROW0);
@@ -176,8 +176,8 @@ public class TestCopyTable {
 
     byte[][] families = { FAMILY_A, FAMILY_B };
 
-    HTable t = TEST_UTIL.createTable(Bytes.toBytes(sourceTable), families);
-    HTable t2 = TEST_UTIL.createTable(Bytes.toBytes(targetTable), families);
+    Table t = TEST_UTIL.createTable(Bytes.toBytes(sourceTable), families);
+    Table t2 = TEST_UTIL.createTable(Bytes.toBytes(targetTable), families);
     Put p = new Put(ROW1);
     p.add(FAMILY_A, QUALIFIER,  Bytes.toBytes("Data11"));
     p.add(FAMILY_B, QUALIFIER,  Bytes.toBytes("Data12"));

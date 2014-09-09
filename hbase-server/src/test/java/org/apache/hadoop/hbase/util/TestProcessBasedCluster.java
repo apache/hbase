@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.client.Table;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -60,7 +61,7 @@ public class TestProcessBasedCluster {
           HTestConst.DEFAULT_CF_STR_SET,
           HColumnDescriptor.DEFAULT_VERSIONS, COLS_PER_ROW, FLUSHES, NUM_REGIONS,
           ROWS_PER_FLUSH);
-      HTable table = new HTable(TEST_UTIL.getConfiguration(), HTestConst.DEFAULT_TABLE_BYTES);
+      Table table = new HTable(TEST_UTIL.getConfiguration(), HTestConst.DEFAULT_TABLE_BYTES);
       ResultScanner scanner = table.getScanner(HTestConst.DEFAULT_CF_BYTES);
       Result result;
       int rows = 0;

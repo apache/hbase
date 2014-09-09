@@ -41,8 +41,8 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.RpcRetryingCaller;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -149,8 +149,8 @@ public class TestRegionReplicaReplicationEndpoint {
     HTU.createTable(tableNameNoReplicas, HBaseTestingUtility.fam1);
 
     HConnection connection = HConnectionManager.createConnection(HTU.getConfiguration());
-    HTableInterface table = connection.getTable(tableName);
-    HTableInterface tableNoReplicas = connection.getTable(tableNameNoReplicas);
+    Table table = connection.getTable(tableName);
+    Table tableNoReplicas = connection.getTable(tableNameNoReplicas);
 
     try {
       // load some data to the non-replicated table
@@ -236,7 +236,7 @@ public class TestRegionReplicaReplicationEndpoint {
 
 
     HConnection connection = HConnectionManager.createConnection(HTU.getConfiguration());
-    HTableInterface table = connection.getTable(tableName);
+    Table table = connection.getTable(tableName);
 
     try {
       // load the data to the table
@@ -292,8 +292,8 @@ public class TestRegionReplicaReplicationEndpoint {
     // now that the replication is disabled, write to the table to be dropped, then drop the table.
 
     HConnection connection = HConnectionManager.createConnection(HTU.getConfiguration());
-    HTableInterface table = connection.getTable(tableName);
-    HTableInterface tableToBeDisabled = connection.getTable(toBeDisabledTable);
+    Table table = connection.getTable(tableName);
+    Table tableToBeDisabled = connection.getTable(toBeDisabledTable);
 
     HTU.loadNumericRows(tableToBeDisabled, HBaseTestingUtility.fam1, 6000, 7000);
 

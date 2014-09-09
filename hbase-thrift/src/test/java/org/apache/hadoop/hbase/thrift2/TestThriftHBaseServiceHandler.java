@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
@@ -133,7 +134,7 @@ public class TestThriftHBaseServiceHandler {
   @BeforeClass
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();
-    HBaseAdmin admin = new HBaseAdmin(UTIL.getConfiguration());
+    Admin admin = new HBaseAdmin(UTIL.getConfiguration());
     HTableDescriptor tableDescriptor = new HTableDescriptor(TableName.valueOf(tableAname));
     for (HColumnDescriptor family : families) {
       tableDescriptor.addFamily(family);

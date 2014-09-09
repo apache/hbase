@@ -41,9 +41,9 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.WALPlayer.HLogKeyValueMapper;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -92,8 +92,8 @@ public class TestWALPlayer {
     final byte[] COLUMN1 = Bytes.toBytes("c1");
     final byte[] COLUMN2 = Bytes.toBytes("c2");
     final byte[] ROW = Bytes.toBytes("row");
-    HTable t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
-    HTable t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
+    Table t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
+    Table t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
 
     // put a row into the first table
     Put p = new Put(ROW);

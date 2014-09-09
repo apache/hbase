@@ -95,11 +95,11 @@ import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
@@ -4045,7 +4045,7 @@ public class TestHRegion {
     try {
       cluster = htu.startMiniCluster(1, regionServersCount, dataNodeHosts);
       byte[][] families = { fam1, fam2 };
-      HTable ht = htu.createTable(Bytes.toBytes(this.getName()), families);
+      Table ht = htu.createTable(Bytes.toBytes(this.getName()), families);
 
       // Setting up region
       byte row[] = Bytes.toBytes("row1");

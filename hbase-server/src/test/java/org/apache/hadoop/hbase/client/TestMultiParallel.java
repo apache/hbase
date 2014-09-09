@@ -147,7 +147,7 @@ public class TestMultiParallel {
    */
   @Test(timeout=300000)
   public void testActiveThreadsCount() throws Exception{
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
     List<Row> puts = constructPutRequests(); // creates a Put for every region
     table.batch(puts);
     Field poolField = table.getClass().getDeclaredField("pool");
@@ -160,7 +160,7 @@ public class TestMultiParallel {
   @Test(timeout=300000)
   public void testBatchWithGet() throws Exception {
     LOG.info("test=testBatchWithGet");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
     // load test data
     List<Row> puts = constructPutRequests();
@@ -199,7 +199,7 @@ public class TestMultiParallel {
   @Test
   public void testBadFam() throws Exception {
     LOG.info("test=testBadFam");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
     List<Row> actions = new ArrayList<Row>();
     Put p = new Put(Bytes.toBytes("row1"));
@@ -321,7 +321,7 @@ public class TestMultiParallel {
   @Test (timeout=300000)
   public void testBatchWithPut() throws Exception {
     LOG.info("test=testBatchWithPut");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
     // put multiple rows using a batch
     List<Row> puts = constructPutRequests();
@@ -354,7 +354,7 @@ public class TestMultiParallel {
   @Test(timeout=300000)
   public void testBatchWithDelete() throws Exception {
     LOG.info("test=testBatchWithDelete");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
     // Load some data
     List<Row> puts = constructPutRequests();
@@ -383,7 +383,7 @@ public class TestMultiParallel {
   @Test(timeout=300000)
   public void testHTableDeleteWithList() throws Exception {
     LOG.info("test=testHTableDeleteWithList");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
     // Load some data
     List<Row> puts = constructPutRequests();
@@ -412,7 +412,7 @@ public class TestMultiParallel {
   @Test(timeout=300000)
   public void testBatchWithManyColsInOneRowGetAndPut() throws Exception {
     LOG.info("test=testBatchWithManyColsInOneRowGetAndPut");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
     List<Row> puts = new ArrayList<Row>();
     for (int i = 0; i < 100; i++) {
@@ -453,7 +453,7 @@ public class TestMultiParallel {
     final byte[] QUAL2 = Bytes.toBytes("qual2");
     final byte[] QUAL3 = Bytes.toBytes("qual3");
     final byte[] QUAL4 = Bytes.toBytes("qual4");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
     Delete d = new Delete(ONE_ROW);
     table.delete(d);
     Put put = new Put(ONE_ROW);
@@ -531,7 +531,7 @@ public class TestMultiParallel {
         Runnable r = new Runnable() {
           @Override
           public void run() {
-            HTable table = null;
+            Table table = null;
             try {
               table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
             } catch (IOException e) {
@@ -573,7 +573,7 @@ public class TestMultiParallel {
   @Test(timeout=300000)
   public void testBatchWithMixedActions() throws Exception {
     LOG.info("test=testBatchWithMixedActions");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
 
     // Load some data to start
     Object[] results = table.batch(constructPutRequests());
@@ -666,7 +666,7 @@ public class TestMultiParallel {
     return puts;
   }
 
-  private void validateLoadedData(HTable table) throws IOException {
+  private void validateLoadedData(Table table) throws IOException {
     // get the data back and validate that it is correct
     for (byte[] k : KEYS) {
       Get get = new Get(k);

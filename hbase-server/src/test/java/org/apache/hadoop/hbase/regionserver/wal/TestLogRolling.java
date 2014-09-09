@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -175,7 +176,7 @@ public class TestLogRolling  {
     this.server = cluster.getRegionServerThreads().get(0).getRegionServer();
     this.log = server.getWAL();
 
-    HTable table = createTestTable(this.tableName);
+    Table table = createTestTable(this.tableName);
 
     server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
     this.log = server.getWAL();
@@ -242,7 +243,7 @@ public class TestLogRolling  {
     return "TestLogRolling";
   }
 
-  void writeData(HTable table, int rownum) throws IOException {
+  void writeData(Table table, int rownum) throws IOException {
     doPut(table, rownum);
 
     // sleep to let the log roller run (if it needs to)
@@ -253,7 +254,7 @@ public class TestLogRolling  {
     }
   }
 
-  void validateData(HTable table, int rownum) throws IOException {
+  void validateData(Table table, int rownum) throws IOException {
     String row = "row" + String.format("%1$04d", rownum);
     Get get = new Get(Bytes.toBytes(row));
     get.addFamily(HConstants.CATALOG_FAMILY);
@@ -264,7 +265,7 @@ public class TestLogRolling  {
     LOG.info("Validated row " + row);
   }
 
-  void batchWriteAndWait(HTable table, int start, boolean expect, int timeout)
+  void batchWriteAndWait(Table table, int start, boolean expect, int timeout)
       throws IOException {
     for (int i = 0; i < 10; i++) {
       Put put = new Put(Bytes.toBytes("row"
@@ -335,7 +336,7 @@ public class TestLogRolling  {
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
 
     admin.createTable(desc);
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table table = new HTable(TEST_UTIL.getConfiguration(), tableName);
     assertTrue(table.isAutoFlush());
 
     server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
@@ -432,7 +433,7 @@ public class TestLogRolling  {
     LOG.info("Replication=" +
       fs.getDefaultReplication(TEST_UTIL.getDataTestDirOnTestFS()));
     // When the hbase:meta table can be opened, the region servers are running
-    HTable t = new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
+    Table t = new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
     try {
       this.server = cluster.getRegionServer(0);
       this.log = server.getWAL();
@@ -591,11 +592,11 @@ public class TestLogRolling  {
    */
   @Test
   public void testCompactionRecordDoesntBlockRolling() throws Exception {
-    HTable table = null;
-    HTable table2 = null;
+    Table table = null;
+    Table table2 = null;
 
     // When the hbase:meta table can be opened, the region servers are running
-    HTable t = new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
+    Table t = new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
     try {
       String tableName = getName();
       table = createTestTable(tableName);
@@ -649,13 +650,13 @@ public class TestLogRolling  {
     }
   }
 
-  private void doPut(HTable table, int i) throws IOException {
+  private void doPut(Table table, int i) throws IOException {
     Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", i)));
     put.add(HConstants.CATALOG_FAMILY, null, value);
     table.put(put);
   }
 
-  private HTable createTestTable(String tableName) throws IOException {
+  private Table createTestTable(String tableName) throws IOException {
     // Create the test table and open it
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));

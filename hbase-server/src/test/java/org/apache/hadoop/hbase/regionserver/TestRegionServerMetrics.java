@@ -189,7 +189,7 @@ public class TestRegionServerMetrics {
 
     TEST_UTIL.createTable(tableName, cf);
 
-    HTable t = new HTable(conf, tableName);
+    Table t = new HTable(conf, tableName);
 
     Put p = new Put(row);
     p.add(cf, qualifier, val);
@@ -221,7 +221,7 @@ public class TestRegionServerMetrics {
     TEST_UTIL.createTable(tableName, cf);
 
     //Force a hfile.
-    HTable t = new HTable(conf, tableName);
+    Table t = new HTable(conf, tableName);
     Put p = new Put(row);
     p.add(cf, qualifier, val);
     t.put(p);
@@ -247,7 +247,7 @@ public class TestRegionServerMetrics {
     byte[] valThree = Bytes.toBytes("ValueThree");
 
     TEST_UTIL.createTable(tableName, cf);
-    HTable t = new HTable(conf, tableName);
+    Table t = new HTable(conf, tableName);
     Put p = new Put(row);
     p.add(cf, qualifier, valOne);
     t.put(p);
@@ -282,7 +282,7 @@ public class TestRegionServerMetrics {
 
 
     TEST_UTIL.createTable(tableName, cf);
-    HTable t = new HTable(conf, tableName);
+    Table t = new HTable(conf, tableName);
 
     Put p = new Put(row);
     p.add(cf, qualifier, val);
@@ -314,7 +314,7 @@ public class TestRegionServerMetrics {
 
 
     TEST_UTIL.createTable(tableName, cf);
-    HTable t = new HTable(conf, tableName);
+    Table t = new HTable(conf, tableName);
 
     Put p = new Put(row);
     p.add(cf, qualifier, val);

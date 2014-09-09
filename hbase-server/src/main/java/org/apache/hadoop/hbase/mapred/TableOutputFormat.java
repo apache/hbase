@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.mapred.InvalidJobConfException;
@@ -56,14 +57,14 @@ FileOutputFormat<ImmutableBytesWritable, Put> {
    */
   protected static class TableRecordWriter
     implements RecordWriter<ImmutableBytesWritable, Put> {
-    private HTable m_table;
+    private Table m_table;
 
     /**
      * Instantiate a TableRecordWriter with the HBase HClient for writing.
      *
      * @param table
      */
-    public TableRecordWriter(HTable table) {
+    public TableRecordWriter(Table table) {
       m_table = table;
     }
 

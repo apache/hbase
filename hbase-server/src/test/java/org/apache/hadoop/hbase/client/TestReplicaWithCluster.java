@@ -139,7 +139,7 @@ public class TestReplicaWithCluster {
     HTableDescriptor hdt = HTU.createTableDescriptor("testCreateDeleteTable");
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(SlowMeCopro.class.getName());
-    HTable table = HTU.createTable(hdt, new byte[][]{f}, HTU.getConfiguration());
+    Table table = HTU.createTable(hdt, new byte[][]{f}, HTU.getConfiguration());
 
     Put p = new Put(row);
     p.add(f, row, row);
@@ -171,7 +171,7 @@ public class TestReplicaWithCluster {
     HTableDescriptor hdt = HTU.createTableDescriptor("testChangeTable");
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(SlowMeCopro.class.getName());
-    HTable table = HTU.createTable(hdt, new byte[][]{f}, HTU.getConfiguration());
+    Table table = HTU.createTable(hdt, new byte[][]{f}, HTU.getConfiguration());
 
     // basic test: it should work.
     Put p = new Put(row);
@@ -213,7 +213,7 @@ public class TestReplicaWithCluster {
     }
 
     HTU.getHBaseCluster().stopMaster(0);
-    HBaseAdmin admin = new HBaseAdmin(HTU.getConfiguration());
+    Admin admin = new HBaseAdmin(HTU.getConfiguration());
     nHdt =admin.getTableDescriptor(hdt.getTableName());
     Assert.assertEquals("fams=" + Arrays.toString(nHdt.getColumnFamilies()),
         bHdt.getColumnFamilies().length + 1, nHdt.getColumnFamilies().length);
@@ -253,7 +253,7 @@ public class TestReplicaWithCluster {
 
     Put p = new Put(row);
     p.add(row, row, row);
-    final HTable table = new HTable(HTU.getConfiguration(), hdt.getTableName());
+    final Table table = new HTable(HTU.getConfiguration(), hdt.getTableName());
     table.put(p);
 
     HTU.getHBaseAdmin().flush(table.getName());
@@ -277,7 +277,7 @@ public class TestReplicaWithCluster {
     table.close();
     LOG.info("stale get on the first cluster done. Now for the second.");
 
-    final HTable table2 = new HTable(HTU.getConfiguration(), hdt.getTableName());
+    final Table table2 = new HTable(HTU.getConfiguration(), hdt.getTableName());
     Waiter.waitFor(HTU.getConfiguration(), 1000, new Waiter.Predicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -312,7 +312,7 @@ public class TestReplicaWithCluster {
     HTableDescriptor hdt = HTU.createTableDescriptor("testBulkLoad");
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(SlowMeCopro.class.getName());
-    HTable table = HTU.createTable(hdt, new byte[][]{f}, HTU.getConfiguration());
+    Table table = HTU.createTable(hdt, new byte[][]{f}, HTU.getConfiguration());
 
     // create hfiles to load.
     LOG.debug("Creating test data");

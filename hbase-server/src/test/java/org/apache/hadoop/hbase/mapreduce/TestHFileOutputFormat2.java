@@ -56,9 +56,11 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -475,7 +477,7 @@ public class TestHFileOutputFormat2  {
   }
 
   /**
-   * Test for {@link HFileOutputFormat2#configureCompression(HTable,
+   * Test for {@link HFileOutputFormat2#configureCompression(org.apache.hadoop.hbase.client.Table,
    * Configuration)} and {@link HFileOutputFormat2#createFamilyCompressionMap
    * (Configuration)}.
    * Tests that the compression map is correctly serialized into
@@ -489,7 +491,7 @@ public class TestHFileOutputFormat2  {
       Configuration conf = new Configuration(this.util.getConfiguration());
       Map<String, Compression.Algorithm> familyToCompression =
           getMockColumnFamiliesForCompression(numCfs);
-      HTable table = Mockito.mock(HTable.class);
+      Table table = Mockito.mock(HTable.class);
       setupMockColumnFamiliesForCompression(table, familyToCompression);
       HFileOutputFormat2.configureCompression(table, conf);
 
@@ -507,7 +509,7 @@ public class TestHFileOutputFormat2  {
     }
   }
 
-  private void setupMockColumnFamiliesForCompression(HTable table,
+  private void setupMockColumnFamiliesForCompression(Table table,
       Map<String, Compression.Algorithm> familyToCompression) throws IOException {
     HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
     for (Entry<String, Compression.Algorithm> entry : familyToCompression.entrySet()) {
@@ -546,7 +548,7 @@ public class TestHFileOutputFormat2  {
 
 
   /**
-   * Test for {@link HFileOutputFormat2#configureBloomType(HTable,
+   * Test for {@link HFileOutputFormat2#configureBloomType(org.apache.hadoop.hbase.client.Table,
    * Configuration)} and {@link HFileOutputFormat2#createFamilyBloomTypeMap
    * (Configuration)}.
    * Tests that the compression map is correctly serialized into
@@ -560,7 +562,7 @@ public class TestHFileOutputFormat2  {
       Configuration conf = new Configuration(this.util.getConfiguration());
       Map<String, BloomType> familyToBloomType =
           getMockColumnFamiliesForBloomType(numCfs);
-      HTable table = Mockito.mock(HTable.class);
+      Table table = Mockito.mock(HTable.class);
       setupMockColumnFamiliesForBloomType(table,
           familyToBloomType);
       HFileOutputFormat2.configureBloomType(table, conf);
@@ -581,7 +583,7 @@ public class TestHFileOutputFormat2  {
     }
   }
 
-  private void setupMockColumnFamiliesForBloomType(HTable table,
+  private void setupMockColumnFamiliesForBloomType(Table table,
       Map<String, BloomType> familyToDataBlockEncoding) throws IOException {
     HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
     for (Entry<String, BloomType> entry : familyToDataBlockEncoding.entrySet()) {
@@ -617,7 +619,7 @@ public class TestHFileOutputFormat2  {
   }
 
   /**
-   * Test for {@link HFileOutputFormat2#configureBlockSize(HTable,
+   * Test for {@link HFileOutputFormat2#configureBlockSize(org.apache.hadoop.hbase.client.Table,
    * Configuration)} and {@link HFileOutputFormat2#createFamilyBlockSizeMap
    * (Configuration)}.
    * Tests that the compression map is correctly serialized into
@@ -631,7 +633,7 @@ public class TestHFileOutputFormat2  {
       Configuration conf = new Configuration(this.util.getConfiguration());
       Map<String, Integer> familyToBlockSize =
           getMockColumnFamiliesForBlockSize(numCfs);
-      HTable table = Mockito.mock(HTable.class);
+      Table table = Mockito.mock(HTable.class);
       setupMockColumnFamiliesForBlockSize(table,
           familyToBlockSize);
       HFileOutputFormat2.configureBlockSize(table, conf);
@@ -653,7 +655,7 @@ public class TestHFileOutputFormat2  {
     }
   }
 
-  private void setupMockColumnFamiliesForBlockSize(HTable table,
+  private void setupMockColumnFamiliesForBlockSize(Table table,
       Map<String, Integer> familyToDataBlockEncoding) throws IOException {
     HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
     for (Entry<String, Integer> entry : familyToDataBlockEncoding.entrySet()) {
@@ -693,7 +695,7 @@ public class TestHFileOutputFormat2  {
   }
 
     /**
-   * Test for {@link HFileOutputFormat2#configureDataBlockEncoding(HTable,
+   * Test for {@link HFileOutputFormat2#configureDataBlockEncoding(org.apache.hadoop.hbase.client.Table,
    * Configuration)} and {@link HFileOutputFormat2#createFamilyDataBlockEncodingMap
    * (Configuration)}.
    * Tests that the compression map is correctly serialized into
@@ -707,7 +709,7 @@ public class TestHFileOutputFormat2  {
       Configuration conf = new Configuration(this.util.getConfiguration());
       Map<String, DataBlockEncoding> familyToDataBlockEncoding =
           getMockColumnFamiliesForDataBlockEncoding(numCfs);
-      HTable table = Mockito.mock(HTable.class);
+      Table table = Mockito.mock(HTable.class);
       setupMockColumnFamiliesForDataBlockEncoding(table,
           familyToDataBlockEncoding);
       HFileOutputFormat2.configureDataBlockEncoding(table, conf);
@@ -728,7 +730,7 @@ public class TestHFileOutputFormat2  {
     }
   }
 
-  private void setupMockColumnFamiliesForDataBlockEncoding(HTable table,
+  private void setupMockColumnFamiliesForDataBlockEncoding(Table table,
       Map<String, DataBlockEncoding> familyToDataBlockEncoding) throws IOException {
     HTableDescriptor mockTableDescriptor = new HTableDescriptor(TABLE_NAME);
     for (Entry<String, DataBlockEncoding> entry : familyToDataBlockEncoding.entrySet()) {
@@ -767,7 +769,7 @@ public class TestHFileOutputFormat2  {
     return familyToDataBlockEncoding;
   }
 
-  private void setupMockStartKeys(HTable table) throws IOException {
+  private void setupMockStartKeys(RegionLocator table) throws IOException {
     byte[][] mockKeys = new byte[][] {
         HConstants.EMPTY_BYTE_ARRAY,
         Bytes.toBytes("aaa"),

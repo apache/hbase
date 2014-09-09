@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Utils.OutputFileUtils.OutputFilesFilter;
@@ -302,7 +303,7 @@ public class TestImportTsv implements Configurable {
       String family, int valueMultiplier) throws IOException {
 
     LOG.debug("Validating table.");
-    HTable table = new HTable(conf, tableName);
+    Table table = new HTable(conf, tableName);
     boolean verified = false;
     long pause = conf.getLong("hbase.client.pause", 5 * 1000);
     int numRetries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);

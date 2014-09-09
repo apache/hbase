@@ -42,12 +42,14 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
@@ -118,7 +120,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     // Wait for the labels table to become available
     util.waitTableEnabled(VisibilityConstants.LABELS_TABLE_NAME.getName(), 50000);
     createLabels();
-    HBaseAdmin admin = new HBaseAdmin(util.getConfiguration());
+    Admin admin = new HBaseAdmin(util.getConfiguration());
     util.startMiniMapReduceCluster();
   }
 
@@ -181,7 +183,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   private void issueDeleteAndVerifyData(String tableName) throws IOException {
     LOG.debug("Validating table after delete.");
-    HTable table = new HTable(conf, tableName);
+    Table table = new HTable(conf, tableName);
     boolean verified = false;
     long pause = conf.getLong("hbase.client.pause", 5 * 1000);
     int numRetries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
@@ -365,7 +367,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
       int valueMultiplier) throws IOException {
 
     LOG.debug("Validating table.");
-    HTable table = new HTable(conf, tableName);
+    Table table = new HTable(conf, tableName);
     boolean verified = false;
     long pause = conf.getLong("hbase.client.pause", 5 * 1000);
     int numRetries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);

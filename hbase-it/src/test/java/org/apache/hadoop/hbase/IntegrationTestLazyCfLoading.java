@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
@@ -222,7 +223,7 @@ public class IntegrationTestLazyCfLoading {
     long maxRuntime = conf.getLong(timeoutKey, DEFAULT_TIMEOUT_MINUTES);
     long serverCount = util.getHBaseClusterInterface().getClusterStatus().getServersSize();
     long keysToWrite = serverCount * KEYS_TO_WRITE_PER_SERVER;
-    HTable table = new HTable(conf, TABLE_NAME);
+    Table table = new HTable(conf, TABLE_NAME);
 
     // Create multi-threaded writer and start it. We write multiple columns/CFs and verify
     // their integrity, therefore multi-put is necessary.

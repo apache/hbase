@@ -31,11 +31,11 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
@@ -155,7 +155,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       public Object run() throws Exception {
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Put put = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1, ZERO);
           t.put(put);
@@ -180,7 +180,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       public Object run() throws Exception {
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Scan scan = new Scan().addFamily(TEST_FAMILY1);
           Result result = t.getScanner(scan).next();
@@ -204,7 +204,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       public Object run() throws Exception {
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Scan scan = new Scan();
           Result result = t.getScanner(scan).next();
@@ -226,7 +226,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       public Object run() throws Exception {
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Scan scan = new Scan().addFamily(TEST_FAMILY2);
           Result result = t.getScanner(scan).next();
@@ -252,7 +252,7 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       public Object run() throws Exception {
         // force a new RS connection
         conf.set("testkey", UUID.randomUUID().toString());
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Scan scan = new Scan();
           Result result = t.getScanner(scan).next();

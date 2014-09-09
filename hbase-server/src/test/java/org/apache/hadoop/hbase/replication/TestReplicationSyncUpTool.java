@@ -25,10 +25,12 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp;
@@ -52,7 +54,7 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
   private HTableDescriptor t1_syncupSource, t1_syncupTarget;
   private HTableDescriptor t2_syncupSource, t2_syncupTarget;
 
-  private HTable ht1Source, ht2Source, ht1TargetAtPeer1, ht2TargetAtPeer1;
+  private Table ht1Source, ht2Source, ht1TargetAtPeer1, ht2TargetAtPeer1;
 
   @Before
   public void setUp() throws Exception {
@@ -175,7 +177,7 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
     ReplicationAdmin admin1 = new ReplicationAdmin(conf1);
     ReplicationAdmin admin2 = new ReplicationAdmin(conf2);
 
-    HBaseAdmin ha = new HBaseAdmin(conf1);
+    Admin ha = new HBaseAdmin(conf1);
     ha.createTable(t1_syncupSource);
     ha.createTable(t2_syncupSource);
     ha.close();

@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -247,7 +248,7 @@ public class LoadTestTool extends AbstractHBaseTool {
    */
   protected void applyColumnFamilyOptions(TableName tableName,
       byte[][] columnFamilies) throws IOException {
-    HBaseAdmin admin = new HBaseAdmin(conf);
+    Admin admin = new HBaseAdmin(conf);
     HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
     LOG.info("Disabling table " + tableName);
     admin.disableTable(tableName);

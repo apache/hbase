@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
@@ -172,7 +173,7 @@ public class AccessControlLists {
           Bytes.toString(key)+": "+Bytes.toStringBinary(value)
       );
     }
-    HTable acls = null;
+    Table acls = null;
     try {
       acls = new HTable(conf, ACL_TABLE_NAME);
       acls.put(p);
@@ -203,7 +204,7 @@ public class AccessControlLists {
       LOG.debug("Removing permission "+ userPerm.toString());
     }
     d.deleteColumns(ACL_LIST_FAMILY, key);
-    HTable acls = null;
+    Table acls = null;
     try {
       acls = new HTable(conf, ACL_TABLE_NAME);
       acls.delete(d);
@@ -223,7 +224,7 @@ public class AccessControlLists {
       LOG.debug("Removing permissions of removed table "+ tableName);
     }
 
-    HTable acls = null;
+    Table acls = null;
     try {
       acls = new HTable(conf, ACL_TABLE_NAME);
       acls.delete(d);
@@ -243,7 +244,7 @@ public class AccessControlLists {
       LOG.debug("Removing permissions of removed namespace "+ namespace);
     }
 
-    HTable acls = null;
+    Table acls = null;
     try {
       acls = new HTable(conf, ACL_TABLE_NAME);
       acls.delete(d);
@@ -263,7 +264,7 @@ public class AccessControlLists {
                 " from table "+ tableName);
     }
 
-    HTable acls = null;
+    Table acls = null;
     try {
       acls = new HTable(conf, ACL_TABLE_NAME);
 
@@ -424,7 +425,7 @@ public class AccessControlLists {
     Scan scan = new Scan();
     scan.addFamily(ACL_LIST_FAMILY);
 
-    HTable acls = null;
+    Table acls = null;
     ResultScanner scanner = null;
     try {
       acls = new HTable(conf, ACL_TABLE_NAME);
@@ -467,7 +468,7 @@ public class AccessControlLists {
 
     // for normal user tables, we just read the table row from _acl_
     ListMultimap<String, TablePermission> perms = ArrayListMultimap.create();
-    HTable acls = null;
+    Table acls = null;
     try {
       acls = new HTable(conf, ACL_TABLE_NAME);
       Get get = new Get(entryName);

@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
@@ -159,7 +160,7 @@ public class TestImportExport {
   @Test
   public void testSimpleCase() throws Exception {
     String EXPORT_TABLE = "exportSimpleCase";
-    HTable t = UTIL.createTable(Bytes.toBytes(EXPORT_TABLE), FAMILYA, 3);
+    Table t = UTIL.createTable(Bytes.toBytes(EXPORT_TABLE), FAMILYA, 3);
     Put p = new Put(ROW1);
     p.add(FAMILYA, QUAL, now, QUAL);
     p.add(FAMILYA, QUAL, now+1, QUAL);
@@ -222,7 +223,7 @@ public class TestImportExport {
     fs.copyFromLocalFile(importPath, new Path(FQ_OUTPUT_DIR + Path.SEPARATOR
         + "exportedTableIn94Format"));
     String IMPORT_TABLE = "importTableExportedFrom94";
-    HTable t = UTIL.createTable(Bytes.toBytes(IMPORT_TABLE), Bytes.toBytes("f1"), 3);
+    Table t = UTIL.createTable(Bytes.toBytes(IMPORT_TABLE), Bytes.toBytes("f1"), 3);
     String[] args = new String[] {
         "-Dhbase.import.version=0.94" ,
         IMPORT_TABLE, FQ_OUTPUT_DIR
@@ -252,7 +253,7 @@ public class TestImportExport {
         .setMaxVersions(1)
     );
     UTIL.getHBaseAdmin().createTable(desc);
-    HTable t = new HTable(UTIL.getConfiguration(), BATCH_TABLE);
+    Table t = new HTable(UTIL.getConfiguration(), BATCH_TABLE);
 
     Put p = new Put(ROW1);
     p.add(FAMILYA, QUAL, now, QUAL);
@@ -283,7 +284,7 @@ public class TestImportExport {
         .setKeepDeletedCells(true)
     );
     UTIL.getHBaseAdmin().createTable(desc);
-    HTable t = new HTable(UTIL.getConfiguration(), EXPORT_TABLE);
+    Table t = new HTable(UTIL.getConfiguration(), EXPORT_TABLE);
 
     Put p = new Put(ROW1);
     p.add(FAMILYA, QUAL, now, QUAL);
@@ -349,7 +350,7 @@ public class TestImportExport {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(EXPORT_TABLE));
     desc.addFamily(new HColumnDescriptor(FAMILYA).setMaxVersions(5));
     UTIL.getHBaseAdmin().createTable(desc);
-    HTable exportTable = new HTable(UTIL.getConfiguration(), EXPORT_TABLE);
+    Table exportTable = new HTable(UTIL.getConfiguration(), EXPORT_TABLE);
 
     Put p = new Put(ROW1);
     p.add(FAMILYA, QUAL, now, QUAL);
@@ -376,7 +377,7 @@ public class TestImportExport {
     desc.addFamily(new HColumnDescriptor(FAMILYA).setMaxVersions(5));
     UTIL.getHBaseAdmin().createTable(desc);
 
-    HTable importTable = new HTable(UTIL.getConfiguration(), IMPORT_TABLE);
+    Table importTable = new HTable(UTIL.getConfiguration(), IMPORT_TABLE);
     args = new String[] { "-D" + Import.FILTER_CLASS_CONF_KEY + "=" + PrefixFilter.class.getName(),
         "-D" + Import.FILTER_ARGS_CONF_KEY + "=" + Bytes.toString(ROW1), IMPORT_TABLE, FQ_OUTPUT_DIR,
         "1000" };
@@ -410,7 +411,7 @@ public class TestImportExport {
    * @return
    * @throws IOException
    */
-  private int getCount(HTable table, Filter filter) throws IOException {
+  private int getCount(Table table, Filter filter) throws IOException {
     Scan scan = new Scan();
     scan.setFilter(filter);
     ResultScanner results = table.getScanner(scan);
@@ -542,7 +543,7 @@ public class TestImportExport {
   public void testDurability() throws IOException, InterruptedException, ClassNotFoundException {
     // Create an export table.
     String exportTableName = "exporttestDurability";
-    HTable exportTable = UTIL.createTable(Bytes.toBytes(exportTableName), FAMILYA, 3);
+    Table exportTable = UTIL.createTable(Bytes.toBytes(exportTableName), FAMILYA, 3);
 
     // Insert some data
     Put put = new Put(ROW1);
@@ -563,7 +564,7 @@ public class TestImportExport {
 
     // Create the table for import
     String importTableName = "importTestDurability1";
-    HTable importTable = UTIL.createTable(Bytes.toBytes(importTableName), FAMILYA, 3);
+    Table importTable = UTIL.createTable(Bytes.toBytes(importTableName), FAMILYA, 3);
 
     // Register the hlog listener for the import table
     TableWALActionListener walListener = new TableWALActionListener(importTableName);

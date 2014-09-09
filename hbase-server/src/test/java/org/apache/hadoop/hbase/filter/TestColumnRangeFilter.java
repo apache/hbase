@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.filter;
 
 import static org.junit.Assert.*;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -30,14 +29,12 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.After;
@@ -161,7 +158,7 @@ public class TestColumnRangeFilter {
   public void TestColumnRangeFilterClient() throws Exception {
     String family = "Family";
     String table = "TestColumnRangeFilterClient";
-    HTable ht = TEST_UTIL.createTable(Bytes.toBytes(table),
+    Table ht = TEST_UTIL.createTable(Bytes.toBytes(table),
         Bytes.toBytes(family), Integer.MAX_VALUE);
 
     List<String> rows = generateRandomWords(10, 8);

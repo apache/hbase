@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -150,7 +151,7 @@ public class TestMiniClusterLoadSequential {
     LOG.info("Starting load test: dataBlockEncoding=" + dataBlockEncoding +
         ", isMultiPut=" + isMultiPut);
     numKeys = numKeys();
-    HBaseAdmin admin = new HBaseAdmin(conf);
+    Admin admin = new HBaseAdmin(conf);
     while (admin.getClusterStatus().getServers().size() < NUM_RS) {
       LOG.info("Sleeping until " + NUM_RS + " RSs are online");
       Threads.sleepWithoutInterrupt(1000);
@@ -172,7 +173,7 @@ public class TestMiniClusterLoadSequential {
     return 1000;
   }
 
-  protected HColumnDescriptor getColumnDesc(HBaseAdmin admin)
+  protected HColumnDescriptor getColumnDesc(Admin admin)
       throws TableNotFoundException, IOException {
     return admin.getTableDescriptor(TABLE).getFamily(CF);
   }

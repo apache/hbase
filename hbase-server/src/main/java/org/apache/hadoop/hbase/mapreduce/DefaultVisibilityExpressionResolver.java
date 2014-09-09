@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.VisibilityLabelOrdinalProvider;
 import org.apache.hadoop.hbase.security.visibility.VisibilityUtils;
@@ -66,7 +67,7 @@ public class DefaultVisibilityExpressionResolver implements VisibilityExpression
   public void init() {
     // Reading all the labels and ordinal.
     // This scan should be done by user with global_admin previliges.. Ensure that it works
-    HTable labelsTable = null;
+    Table labelsTable = null;
     try {
       labelsTable = new HTable(conf, LABELS_TABLE_NAME);
     } catch (TableNotFoundException e) {

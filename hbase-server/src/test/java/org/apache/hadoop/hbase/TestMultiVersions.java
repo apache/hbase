@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestCase.FlushCache;
 import org.apache.hadoop.hbase.HBaseTestCase.HTableIncommon;
 import org.apache.hadoop.hbase.HBaseTestCase.Incommon;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -40,6 +41,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -56,7 +58,7 @@ import org.junit.experimental.categories.Category;
 public class TestMultiVersions {
   private static final Log LOG = LogFactory.getLog(TestMultiVersions.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private HBaseAdmin admin;
+  private Admin admin;
   
   private static final int NUM_SLAVES = 3;
 
@@ -97,7 +99,7 @@ public class TestMultiVersions {
     hcd.setMaxVersions(3);
     desc.addFamily(hcd);
     this.admin.createTable(desc);
-    HTable table = new HTable(UTIL.getConfiguration(), desc.getTableName());
+    Table table = new HTable(UTIL.getConfiguration(), desc.getTableName());
     // TODO: Remove these deprecated classes or pull them in here if this is
     // only test using them.
     Incommon incommon = new HTableIncommon(table);
@@ -140,7 +142,7 @@ public class TestMultiVersions {
     this.admin.createTable(desc);
     Put put = new Put(row, timestamp1);
     put.add(contents, contents, value1);
-    HTable table = new HTable(UTIL.getConfiguration(), tableName);
+    Table table = new HTable(UTIL.getConfiguration(), tableName);
     table.put(put);
     // Shut down and restart the HBase cluster
     table.close();

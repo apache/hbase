@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.junit.Test;
@@ -52,7 +53,7 @@ public class TestRegionSizeCalculator {
 
     HTable table = mockTable("region1", "region2", "region3");
 
-    HBaseAdmin admin = mockAdmin(
+    Admin admin = mockAdmin(
       mockServer(
         mockRegion("region1", 123),
         mockRegion("region3", 1232)
@@ -84,7 +85,7 @@ public class TestRegionSizeCalculator {
 
     HTable table = mockTable("largeRegion");
 
-    HBaseAdmin admin = mockAdmin(
+    Admin admin = mockAdmin(
       mockServer(
         mockRegion("largeRegion", Integer.MAX_VALUE)
       )
@@ -101,7 +102,7 @@ public class TestRegionSizeCalculator {
     String regionName = "cz.goout:/index.html";
     HTable table = mockTable(regionName);
 
-    HBaseAdmin admin = mockAdmin(
+    Admin admin = mockAdmin(
       mockServer(
         mockRegion(regionName, 999)
       )
@@ -141,9 +142,9 @@ public class TestRegionSizeCalculator {
   /**
    * Creates mock returing ClusterStatus info about given servers.
   */
-  private HBaseAdmin mockAdmin(ServerLoad... servers) throws Exception {
+  private Admin mockAdmin(ServerLoad... servers) throws Exception {
     //get clusterstatus
-    HBaseAdmin mockAdmin = Mockito.mock(HBaseAdmin.class);
+    Admin mockAdmin = Mockito.mock(HBaseAdmin.class);
     ClusterStatus clusterStatus = mockCluster(servers);
     when(mockAdmin.getClusterStatus()).thenReturn(clusterStatus);
     return mockAdmin;

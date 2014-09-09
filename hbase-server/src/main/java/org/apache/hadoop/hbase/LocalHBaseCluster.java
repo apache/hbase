@@ -29,6 +29,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.User;
@@ -462,7 +463,7 @@ public class LocalHBaseCluster {
     Configuration conf = HBaseConfiguration.create();
     LocalHBaseCluster cluster = new LocalHBaseCluster(conf);
     cluster.startup();
-    HBaseAdmin admin = new HBaseAdmin(conf);
+    Admin admin = new HBaseAdmin(conf);
     HTableDescriptor htd =
       new HTableDescriptor(TableName.valueOf(cluster.getClass().getName()));
     admin.createTable(htd);

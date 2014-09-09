@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapred.RecordReader;
@@ -62,7 +63,7 @@ implements RecordReader<ImmutableBytesWritable, Result> {
   /**
    * @param htable the {@link HTable} to scan.
    */
-  public void setHTable(HTable htable) {
+  public void setHTable(Table htable) {
     this.recordReaderImpl.setHTable(htable);
   }
 

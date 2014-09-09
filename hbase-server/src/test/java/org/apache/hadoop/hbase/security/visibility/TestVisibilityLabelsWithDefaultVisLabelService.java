@@ -35,9 +35,9 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
@@ -142,7 +142,7 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
     // Scan the visibility label
     Scan s = new Scan();
     s.setAuthorizations(new Authorizations(VisibilityUtils.SYSTEM_LABEL));
-    HTable ht = new HTable(conf, LABELS_TABLE_NAME.getName());
+    Table ht = new HTable(conf, LABELS_TABLE_NAME.getName());
     int i = 0;
     try {
       ResultScanner scanner = ht.getScanner(s);

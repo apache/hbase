@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -92,7 +93,7 @@ public class RegionPlacementMaintainer {
   private Configuration conf;
   private final boolean enforceLocality;
   private final boolean enforceMinAssignmentMove;
-  private HBaseAdmin admin;
+  private Admin admin;
   private RackManager rackManager;
   private Set<TableName> targetTableSet;
 
@@ -127,7 +128,7 @@ public class RegionPlacementMaintainer {
    * @return the cached HBaseAdmin
    * @throws IOException
    */
-  private HBaseAdmin getHBaseAdmin() throws IOException {
+  private Admin getHBaseAdmin() throws IOException {
     if (this.admin == null) {
       this.admin = new HBaseAdmin(this.conf);
     }
