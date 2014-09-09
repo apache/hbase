@@ -314,18 +314,31 @@ public class StoreFile {
   }
 
   /**
-   * @return true if this storefile was created by HFileOutputFormat
-   * for a bulk load.
+   * Check if this storefile was created by bulk load.
+   * When a hfile is bulk loaded into HBase, we append
+   * '_SeqId_<id-when-loaded>' to the hfile name, unless
+   * "hbase.mapreduce.bulkload.assign.sequenceNumbers" is
+   * explicitly turned off.
+   * If "hbase.mapreduce.bulkload.assign.sequenceNumbers"
+   * is turned off, fall back to BULKLOAD_TIME_KEY.
+   * @return true if this storefile was created by bulk load.
    */
   boolean isBulkLoadResult() {
-    return metadataMap.containsKey(BULKLOAD_TIME_KEY);
+    boolean bulkLoadedHFile = false;
+    String fileName = this.getPath().getName();
+    int startPos = fileName.indexOf("SeqId_");
+    if (startPos != -1) {
+      bulkLoadedHFile = true;
+    }
+    return metadataMap.containsKey(BULKLOAD_TIME_KEY) || bulkLoadedHFile;
   }
 
   /**
    * Return the timestamp at which this bulk load file was generated.
    */
   public long getBulkLoadTimestamp() {
-    return Bytes.toLong(metadataMap.get(BULKLOAD_TIME_KEY));
+    byte[] bulkLoadTimestamp = metadataMap.get(BULKLOAD_TIME_KEY);
+    return (bulkLoadTimestamp == null) ? 0 : Bytes.toLong(bulkLoadTimestamp);
   }
 
   /**
@@ -371,7 +384,8 @@ public class StoreFile {
       // generate the sequenceId from the fileName
       // fileName is of the form <randomName>_SeqId_<id-when-loaded>_
       String fileName = this.getPath().getName();
-      int startPos = fileName.indexOf("SeqId_");
+      // Use lastIndexOf() to get the last, most recent bulk load seqId.
+      int startPos = fileName.lastIndexOf("SeqId_");
       if (startPos != -1) {
         this.sequenceid = Long.parseLong(fileName.substring(startPos + 6,
             fileName.indexOf('_', startPos + 6)));
@@ -380,6 +394,7 @@ public class StoreFile {
           this.sequenceid += 1;
         }
       }
+      this.reader.setBulkLoaded(true);
     }
     this.reader.setSequenceID(this.sequenceid);
 
@@ -1008,6 +1023,7 @@ public class StoreFile {
     protected long sequenceID = -1;
     private byte[] lastBloomKey;
     private long deleteFamilyCnt = -1;
+    private boolean bulkLoadResult = false;
 
     public Reader(FileSystem fs, Path path, CacheConfig cacheConf, Configuration conf)
         throws IOException {
@@ -1050,6 +1066,9 @@ public class StoreFile {
 
     /**
      * Get a scanner to scan over this StoreFile.
+     * Bulk loaded files may or may not have mvcc info.
+     * We will consistently ignore MVCC info in bulk loaded file.
+     * They will be visible to scanners immediately following bulk load.
      *
      * @param cacheBlocks should this scanner cache blocks?
      * @param pread use pread (for highly concurrent small readers)
@@ -1061,7 +1080,8 @@ public class StoreFile {
                                                boolean isCompaction, long readPt) {
       return new StoreFileScanner(this,
                                  getScanner(cacheBlocks, pread, isCompaction),
-                                 !isCompaction, reader.hasMVCCInfo(), readPt);
+                                 !isCompaction, reader.hasMVCCInfo() && !this.bulkLoadResult,
+                                 readPt);
     }
 
     /**
@@ -1507,6 +1527,14 @@ public class StoreFile {
 
     public long getMaxTimestamp() {
       return timeRangeTracker == null ? Long.MAX_VALUE : timeRangeTracker.getMaximumTimestamp();
+    }
+
+    public void setBulkLoaded(boolean bulkLoadResult) {
+      this.bulkLoadResult = bulkLoadResult;
+    }
+
+    public boolean isBulkLoaded() {
+      return this.bulkLoadResult;
     }
   }
 
