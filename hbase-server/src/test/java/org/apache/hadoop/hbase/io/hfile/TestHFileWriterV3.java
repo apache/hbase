@@ -191,8 +191,7 @@ public class TestHFileWriterV3 {
     // Data index. We also read statistics about the block index written after
     // the root level.
     dataBlockIndexReader.readMultiLevelIndexRoot(
-        blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX),
-        trailer.getDataIndexCount());
+        blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), trailer.getDataIndexCount());
     
     if (findMidKey) {
       byte[] midkey = dataBlockIndexReader.midkey();
@@ -201,8 +200,8 @@ public class TestHFileWriterV3 {
     
     // Meta index.
     metaBlockIndexReader.readRootIndex(
-        blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX).getByteStream(),
-        trailer.getMetaIndexCount());
+        blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX)
+          .getByteStream(), trailer.getMetaIndexCount());
     // File info
     FileInfo fileInfo = new FileInfo();
     fileInfo.read(blockIter.nextBlockWithBlockType(BlockType.FILE_INFO).getByteStream());
@@ -220,7 +219,8 @@ public class TestHFileWriterV3 {
     fsdis.seek(0);
     long curBlockPos = 0;
     while (curBlockPos <= trailer.getLastDataBlockOffset()) {
-      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1, false);
+      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1, false)
+        .unpack(context, blockReader);
       assertEquals(BlockType.DATA, block.getBlockType());
       ByteBuffer buf = block.getBufferWithoutHeader();
       int keyLen = -1;
@@ -278,7 +278,8 @@ public class TestHFileWriterV3 {
     while (fsdis.getPos() < trailer.getLoadOnOpenDataOffset()) {
       LOG.info("Current offset: " + fsdis.getPos() + ", scanning until " +
           trailer.getLoadOnOpenDataOffset());
-      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1, false);
+      HFileBlock block = blockReader.readBlockData(curBlockPos, -1, -1, false)
+        .unpack(context, blockReader);
       assertEquals(BlockType.META, block.getBlockType());
       Text t = new Text();
       ByteBuffer buf = block.getBufferWithoutHeader();

@@ -316,7 +316,8 @@ public class TestHFile extends HBaseTestCase {
       ByteBuffer actual = reader.getMetaBlock("HFileMeta" + i, false);
       ByteBuffer expected = 
         ByteBuffer.wrap(("something to test" + i).getBytes());
-      assertTrue("failed to match metadata", actual.compareTo(expected) == 0);
+      assertEquals("failed to match metadata",
+        Bytes.toStringBinary(expected), Bytes.toStringBinary(actual));
     }
   }
 

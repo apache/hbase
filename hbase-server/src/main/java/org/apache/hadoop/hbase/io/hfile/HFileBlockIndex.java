@@ -772,7 +772,7 @@ public class HFileBlockIndex {
      * {@link #writeIndexBlocks(FSDataOutputStream)} has been called. The
      * initial value accounts for the root level, and will be increased to two
      * as soon as we find out there is a leaf-level in
-     * {@link #blockWritten(long, int)}.
+     * {@link #blockWritten(long, int, int)}.
      */
     private int numLevels = 1;
 
@@ -798,8 +798,8 @@ public class HFileBlockIndex {
     /** Whether we require this block index to always be single-level. */
     private boolean singleLevelOnly;
 
-    /** Block cache, or null if cache-on-write is disabled */
-    private BlockCache blockCache;
+    /** CacheConfig, or null if cache-on-write is disabled */
+    private CacheConfig cacheConf;
 
     /** Name to use for computing cache keys */
     private String nameForCaching;
@@ -814,18 +814,17 @@ public class HFileBlockIndex {
      * Creates a multi-level block index writer.
      *
      * @param blockWriter the block writer to use to write index blocks
-     * @param blockCache if this is not null, index blocks will be cached
-     *    on write into this block cache.
+     * @param cacheConf used to determine when and how a block should be cached-on-write.
      */
     public BlockIndexWriter(HFileBlock.Writer blockWriter,
-        BlockCache blockCache, String nameForCaching) {
-      if ((blockCache == null) != (nameForCaching == null)) {
+        CacheConfig cacheConf, String nameForCaching) {
+      if ((cacheConf == null) != (nameForCaching == null)) {
         throw new IllegalArgumentException("Block cache and file name for " +
             "caching must be both specified or both null");
       }
 
       this.blockWriter = blockWriter;
-      this.blockCache = blockCache;
+      this.cacheConf = cacheConf;
       this.nameForCaching = nameForCaching;
       this.maxChunkSize = HFileBlockIndex.DEFAULT_MAX_CHUNK_SIZE;
     }
@@ -979,9 +978,9 @@ public class HFileBlockIndex {
       byte[] curFirstKey = curChunk.getBlockKey(0);
       blockWriter.writeHeaderAndData(out);
 
-      if (blockCache != null) {
-        HFileBlock blockForCaching = blockWriter.getBlockForCaching();
-        blockCache.cacheBlock(new BlockCacheKey(nameForCaching,
+      if (cacheConf != null) {
+        HFileBlock blockForCaching = blockWriter.getBlockForCaching(cacheConf);
+        cacheConf.getBlockCache().cacheBlock(new BlockCacheKey(nameForCaching,
           beginOffset), blockForCaching);
       }
 
@@ -1090,8 +1089,7 @@ public class HFileBlockIndex {
      * entry referring to that block to the parent-level index.
      */
     @Override
-    public void blockWritten(long offset, int onDiskSize, int uncompressedSize)
-    {
+    public void blockWritten(long offset, int onDiskSize, int uncompressedSize) {
       // Add leaf index block size
       totalBlockOnDiskSize += onDiskSize;
       totalBlockUncompressedSize += uncompressedSize;
@@ -1156,7 +1154,7 @@ public class HFileBlockIndex {
      */
     @Override
     public boolean getCacheOnWrite() {
-      return blockCache != null;
+      return cacheConf != null && cacheConf.shouldCacheIndexesOnWrite();
     }
 
     /**

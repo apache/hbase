@@ -124,7 +124,7 @@ public class TestChecksum {
         assertEquals(algo == GZ ? 2173 : 4936, 
                      b.getOnDiskSizeWithoutHeader() - b.totalChecksumBytes());
         // read data back from the hfile, exclude header and checksum
-        ByteBuffer bb = b.getBufferWithoutHeader(); // read back data
+        ByteBuffer bb = b.unpack(meta, hbr).getBufferWithoutHeader(); // read back data
         DataInputStream in = new DataInputStream(
                                new ByteArrayInputStream(
                                  bb.array(), bb.arrayOffset(), bb.limit()));
@@ -163,6 +163,7 @@ public class TestChecksum {
         b = hbr.readBlockData(0, -1, -1, pread);
         is.close();
         b.sanityCheck();
+        b = b.unpack(meta, hbr);
         assertEquals(4936, b.getUncompressedSizeWithoutHeader());
         assertEquals(algo == GZ ? 2173 : 4936, 
                      b.getOnDiskSizeWithoutHeader() - b.totalChecksumBytes());
@@ -272,12 +273,7 @@ public class TestChecksum {
     // validate data
     for (int i = 0; i < 1234; i++) {
       int val = in.readInt();
-      if (val != i) {
-        String msg = "testChecksumCorruption: data mismatch at index " +
-                     i + " expected " + i + " found " + val;
-        LOG.warn(msg);
-        assertEquals(i, val);
-      }
+      assertEquals("testChecksumCorruption: data mismatch at index " + i, i, val);
     }
   }
 

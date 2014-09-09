@@ -157,9 +157,9 @@ org.apache.hadoop.util.StringUtils;
         reader is closed</td>
     </tr>
     <tr>
-        <td>Compress blocks</td>
-        <td><% cacheConfig.shouldCacheCompressed() %></td>
-        <td>True if blocks are compressed in cache</td>
+        <td>Cache DATA in compressed format</td>
+        <td><% cacheConfig.shouldCacheDataCompressed() %></td>
+        <td>True if DATA blocks are cached in their compressed form</td>
     </tr>
     <tr>
         <td>Prefetch on Open</td>
