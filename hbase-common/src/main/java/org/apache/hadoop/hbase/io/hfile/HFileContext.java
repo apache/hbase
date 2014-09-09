@@ -96,6 +96,23 @@ public class HFileContext implements HeapSize, Cloneable {
     this.cryptoContext = cryptoContext;
   }
 
+  /**
+   * @return true when on-disk blocks from this file are compressed, and/or encrypted;
+   * false otherwise.
+   */
+  public boolean isCompressedOrEncrypted() {
+    Compression.Algorithm compressAlgo = getCompression();
+    boolean compressed =
+      compressAlgo != null
+        && compressAlgo != Compression.Algorithm.NONE;
+
+    Encryption.Context cryptoContext = getEncryptionContext();
+    boolean encrypted = cryptoContext != null
+      && cryptoContext != Encryption.Context.NONE;
+
+    return compressed || encrypted;
+  }
+
   public Compression.Algorithm getCompression() {
     return compressAlgo;
   }

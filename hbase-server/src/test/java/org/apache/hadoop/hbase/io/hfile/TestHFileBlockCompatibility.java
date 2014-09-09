@@ -20,9 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.GZ;
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.NONE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -205,7 +203,7 @@ public class TestHFileBlockCompatibility {
         assertEquals(4936, b.getUncompressedSizeWithoutHeader());
         assertEquals(algo == GZ ? 2173 : 4936,
                      b.getOnDiskSizeWithoutHeader() - b.totalChecksumBytes());
-        String blockStr = b.toString();
+        HFileBlock expected = b;
 
         if (algo == GZ) {
           is = fs.open(path);
@@ -213,7 +211,7 @@ public class TestHFileBlockCompatibility {
               meta);
           b = hbr.readBlockData(0, 2173 + HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM +
                                 b.totalChecksumBytes(), -1, pread);
-          assertEquals(blockStr, b.toString());
+          assertEquals(expected, b);
           int wrongCompressedSize = 2172;
           try {
             b = hbr.readBlockData(0, wrongCompressedSize
@@ -301,6 +299,10 @@ public class TestHFileBlockCompatibility {
           for (int blockId = 0; blockId < numBlocks; ++blockId) {
             b = hbr.readBlockData(pos, -1, -1, pread);
             b.sanityCheck();
+            if (meta.isCompressedOrEncrypted()) {
+              assertFalse(b.isUnpacked());
+              b = b.unpack(meta, hbr);
+            }
             pos += b.getOnDiskSizeWithHeader();
 
             assertEquals((int) encodedSizes.get(blockId),
@@ -335,7 +337,7 @@ public class TestHFileBlockCompatibility {
    * in this class but the code in HFileBlock.Writer will continually
    * evolve.
    */
-  public static final class Writer extends HFileBlock.Writer{
+  public static final class Writer extends HFileBlock.Writer {
 
     // These constants are as they were in minorVersion 0.
     private static final int HEADER_SIZE = HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM;
@@ -416,10 +418,6 @@ public class TestHFileBlockCompatibility {
 
     private int unencodedDataSizeWritten;
 
-    /**
-     * @param compressionAlgorithm compression algorithm to use
-     * @param dataBlockEncoderAlgo data block encoding algorithm to use
-     */
     public Writer(Compression.Algorithm compressionAlgorithm,
         HFileDataBlockEncoder dataBlockEncoder, boolean includesMemstoreTS, boolean includesTag) {
       this(dataBlockEncoder, new HFileContextBuilder().withHBaseCheckSum(false)

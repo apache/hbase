@@ -182,10 +182,9 @@ public class TestCacheConfig {
     if (sizing) {
       long originalSize = bc.getCurrentSize();
       bc.cacheBlock(bck, c, cc.isInMemory(), cc.isCacheDataInL1());
-      long size = bc.getCurrentSize();
       assertTrue(bc.getCurrentSize() > originalSize);
       bc.evictBlock(bck);
-      size = bc.getCurrentSize();
+      long size = bc.getCurrentSize();
       assertEquals(originalSize, size);
     }
   }
