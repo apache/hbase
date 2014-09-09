@@ -111,10 +111,10 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.master.logcleaner.plugins</name>
     <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner</value>
-    <description>A comma-separated list of LogCleanerDelegate invoked by
+    <description>A comma-separated list of BaseLogCleanerDelegate invoked by
     the LogsCleaner service. These WAL/HLog cleaners are called in order,
     so put the HLog cleaner that prunes the most HLog files in front. To
-    implement your own LogCleanerDelegate, just put it in HBase's classpath
+    implement your own BaseLogCleanerDelegate, just put it in HBase's classpath
     and add the fully qualified class name here. Always add the above
     default log cleaners in the list.</description>
   </property>
@@ -127,10 +127,10 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.master.hfilecleaner.plugins</name>
     <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner</value>
-    <description>A comma-separated list of HFileCleanerDelegate invoked by
+    <description>A comma-separated list of BaseHFileCleanerDelegate invoked by
     the HFileCleaner service. These HFiles cleaners are called in order,
     so put the cleaner that prunes the most files in front. To
-    implement your own HFileCleanerDelegate, just put it in HBase's classpath
+    implement your own BaseHFileCleanerDelegate, just put it in HBase's classpath
     and add the fully qualified class name here. Always add the above
     default log cleaners in the list as they will be overwritten in
     hbase-site.xml.</description>
@@ -880,12 +880,6 @@ possible configurations would overwhelm and obscure the important.
       <value>false</value>
       <description>Whether an HFile block should be added to the block cache when the
           block is finished.</description>
-  </property>
-  <property>
-    <name>hbase.rpc.server.engine</name>
-    <value>org.apache.hadoop.hbase.ipc.ProtobufRpcServerEngine</value>
-    <description>Implementation of org.apache.hadoop.hbase.ipc.RpcServerEngine to be
-    used for server RPC call marshalling.</description>
   </property>
   <property>
     <name>hbase.rpc.timeout</name>
