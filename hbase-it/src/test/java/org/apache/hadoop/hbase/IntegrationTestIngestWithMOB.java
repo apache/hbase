@@ -112,7 +112,7 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
     for (HColumnDescriptor columnDescriptor : tableDesc.getFamilies()) {
       if(Arrays.equals(columnDescriptor.getName(), mobColumnFamily)) {
         columnDescriptor.setValue(MobConstants.IS_MOB, Bytes.toBytes(Boolean.TRUE));
-        columnDescriptor.setValue(MobConstants.MOB_THRESHOLD, Bytes.toBytes(threshold));
+        columnDescriptor.setValue(MobConstants.MOB_THRESHOLD, Bytes.toBytes((long) threshold));
         admin.modifyColumn(tableName, columnDescriptor);
       }
     }
@@ -130,7 +130,7 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
     tmp.add(HIPHEN + LoadTestTool.OPT_GENERATOR);
     StringBuilder sb = new StringBuilder(LoadTestDataGeneratorWithMOB.class.getName());
     sb.append(COLON);
-    sb.append(mobColumnFamily);
+    sb.append(Bytes.toString(mobColumnFamily));
     sb.append(COLON);
     sb.append(minMobDataSize);
     sb.append(COLON);
