@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -703,10 +702,6 @@ public class StoreFile {
     private long earliestPutTs = HConstants.LATEST_TIMESTAMP;
     private KeyValue lastDeleteFamilyKV = null;
     private long deleteFamilyCnt = 0;
-
-
-    /** Checksum type */
-    protected ChecksumType checksumType;
 
     /** Bytes per Checksum */
     protected int bytesPerChecksum;

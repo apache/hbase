@@ -65,7 +65,7 @@ public enum ChecksumType {
       // check if hadoop library is available
       try {
         ctor = ChecksumFactory.newConstructor(PURECRC32);
-        LOG.debug("Checksum using " + PURECRC32);
+        LOG.debug(PURECRC32 + " available");
       } catch (Exception e) {
         LOG.trace(PURECRC32 + " not available.");
       }
@@ -74,7 +74,7 @@ public enum ChecksumType {
         // This is available on all JVMs.
         if (ctor == null) {
           ctor = ChecksumFactory.newConstructor(JDKCRC);
-          LOG.debug("Checksum can use " + JDKCRC);
+          LOG.debug(JDKCRC + " available");
         }
       } catch (Exception e) {
         LOG.trace(JDKCRC + " not available.");
@@ -108,7 +108,7 @@ public enum ChecksumType {
       LOG = LogFactory.getLog(ChecksumType.class);
       try {
         ctor = ChecksumFactory.newConstructor(PURECRC32C);
-        LOG.debug("Checksum can use " + PURECRC32C);
+        LOG.debug(PURECRC32C + " available");
       } catch (Exception e) {
         LOG.trace(PURECRC32C + " not available.");
       }

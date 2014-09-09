@@ -251,7 +251,6 @@ public class TestHFileBlockIndex {
                         .withIncludesMvcc(includesMemstoreTS)
                         .withIncludesTags(useTags)
                         .withCompression(compr)
-                        .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
                         .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                         .build();
     HFileBlock.Writer hbw = new HFileBlock.Writer(null,

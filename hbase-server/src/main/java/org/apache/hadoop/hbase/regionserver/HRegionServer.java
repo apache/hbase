@@ -870,7 +870,7 @@ public class HRegionServer extends HasThread implements
     }
 
     // so callers waiting for meta without timeout can stop
-    metaTableLocator.stop();
+    if (this.metaTableLocator != null) this.metaTableLocator.stop();
     if (this.shortCircuitConnection != null && !shortCircuitConnection.isClosed()) {
       try {
         this.shortCircuitConnection.close();

@@ -205,7 +205,6 @@ public class TestHFileBlock {
                         .withIncludesMvcc(includesMemstoreTS)
                         .withIncludesTags(includesTag)
                         .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
-                        .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
                         .build();
     HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
     DataOutputStream dos = hbw.startWriting(blockType);
@@ -289,7 +288,6 @@ public class TestHFileBlock {
                            .withIncludesMvcc(includesMemstoreTS)
                            .withIncludesTags(includesTag)
                            .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
-                           .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
                            .build();
         HFileBlock.Writer hbw = new HFileBlock.Writer(null,
            meta);
@@ -372,7 +370,6 @@ public class TestHFileBlock {
                               .withIncludesMvcc(includesMemstoreTS)
                               .withIncludesTags(includesTag)
                               .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
-                              .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
                               .build();
           HFileBlock.Writer hbw = new HFileBlock.Writer(dataBlockEncoder, meta);
           long totalSize = 0;
@@ -722,7 +719,6 @@ public class TestHFileBlock {
                         .withIncludesTags(includesTag)
                         .withCompression(compressAlgo)
                         .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
-                        .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
                         .build();
     HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
     Map<BlockType, Long> prevOffsetByType = new HashMap<BlockType, Long>();

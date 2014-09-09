@@ -1204,7 +1204,7 @@ class AsyncProcess {
         .append("/").append(numTries).append(" ");
 
       if (failureCount > 0 || error != null){
-        sb.append("failed ").append(failureCount).append(" ops").append(", last exception: ").
+        sb.append("failed=").append(failureCount).append("ops").append(", last exception: ").
             append(error == null ? "null" : error);
       } else {
         sb.append("succeeded");
@@ -1213,8 +1213,8 @@ class AsyncProcess {
       sb.append(" on ").append(sn).append(", tracking started ").append(startTime);
 
       if (willRetry) {
-        sb.append(", retrying after ").append(backOffTime).append(" ms").
-            append(", replay ").append(replaySize).append(" ops");
+        sb.append(", retrying after=").append(backOffTime).append("ms").
+            append(", replay=").append(replaySize).append("ops");
       } else if (failureCount > 0) {
         if (stopped > 0) {
           sb.append("; not retrying ").append(stopped).append(" due to success from other replica");
