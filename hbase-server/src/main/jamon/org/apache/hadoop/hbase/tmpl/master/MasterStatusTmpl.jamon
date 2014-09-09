@@ -178,7 +178,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                         <a href="#tab_userTables" data-toggle="tab">User Tables</a>
                     </li>
                     <li class="">
-                        <a href="#tab_catalogTables" data-toggle="tab">Catalog Tables</a>
+                        <a href="#tab_catalogTables" data-toggle="tab">System Tables</a>
                     </li>
                     <li class="">
                         <a href="#tab_userSnapshots" data-toggle="tab">Snapshots</a>
