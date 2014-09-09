@@ -129,6 +129,8 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
                 vcInitialized.set(false);
                 LOG.warn("VisibilityController was not yet initialized");
                 Threads.sleep(10);
+              } else {
+                vcInitialized.set(true);
               }
             } else LOG.debug("new labels added: " + resp);
           } catch (Throwable t) {
