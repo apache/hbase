@@ -2144,7 +2144,7 @@ rs.close();
       <note><title>Block Cache Reporting: UI</title>
       <para>See the RegionServer UI for detail on caching deploy.  Since HBase-0.98.4, the
           Block Cache detail has been significantly extended showing configurations,
-          sizings, current usage, and even detail on block counts and types.</para>
+          sizings, current usage, time-in-the-cache, and even detail on block counts and types.</para>
   </note>
 
         <section>
@@ -2154,6 +2154,11 @@ rs.close();
               entirely within the Java heap. <classname>BucketCache</classname> is mainly
               intended for keeping blockcache data offheap, although BucketCache can also
               keep data onheap and serve from a file-backed cache.
+              <note><title>BucketCache is production ready as of hbase-0.98.6</title>
+                <para>To run with BucketCache, you need HBASE-11678. This was included in
+                  hbase-0.98.6.
+                </para>
+              </note>
           </para>
 
           <para>Fetching will always be slower when fetching from BucketCache,
