@@ -36,13 +36,12 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
-import org.apache.hadoop.hbase.rest.filter.GzipFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -102,7 +101,7 @@ public class TestGzipFilter {
     Response response = client.put(path, headers, value_1_gzip);
     assertEquals(response.getCode(), 200);
 
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
+    Table table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
     Get get = new Get(Bytes.toBytes(ROW_1));
     get.addColumn(Bytes.toBytes(CFA), Bytes.toBytes("1"));
     Result result = table.get(get);

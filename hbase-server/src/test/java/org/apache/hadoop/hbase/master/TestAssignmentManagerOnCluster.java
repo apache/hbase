@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -169,7 +170,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -213,7 +214,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = new HTable(conf, TableName.META_TABLE_NAME);
       final HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -427,7 +428,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -476,7 +477,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -522,7 +523,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -564,7 +565,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -662,7 +663,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -716,7 +717,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -789,7 +790,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -864,7 +865,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -905,7 +906,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -984,7 +985,7 @@ public class TestAssignmentManagerOnCluster {
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
 
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = new HRegionInfo(
         desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);
@@ -1059,7 +1060,7 @@ public class TestAssignmentManagerOnCluster {
       HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
       desc.addFamily(new HColumnDescriptor(FAMILY));
       admin.createTable(desc);
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      Table meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri =
           new HRegionInfo(desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
       MetaTableAccessor.addRegionToMeta(meta, hri);

@@ -29,8 +29,10 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -63,7 +65,7 @@ public class TestRegionRebalancing {
   private static final byte[] FAMILY_NAME = Bytes.toBytes("col");
   public static final Log LOG = LogFactory.getLog(TestRegionRebalancing.class);
   private final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private HTable table;
+  private RegionLocator table;
   private HTableDescriptor desc;
   private String balancerName;
 
@@ -94,7 +96,7 @@ public class TestRegionRebalancing {
   @Test (timeout=300000)
   public void testRebalanceOnRegionServerNumberChange()
   throws IOException, InterruptedException {
-    HBaseAdmin admin = new HBaseAdmin(UTIL.getConfiguration());
+    Admin admin = new HBaseAdmin(UTIL.getConfiguration());
     admin.createTable(this.desc, Arrays.copyOfRange(HBaseTestingUtility.KEYS,
         1, HBaseTestingUtility.KEYS.length));
     this.table = new HTable(UTIL.getConfiguration(), this.desc.getTableName());

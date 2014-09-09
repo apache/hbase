@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -117,7 +118,7 @@ public class SecureTestUtil {
     for (Permission p : perms) {
       request.addPermission(ProtobufUtil.toPermission(p));
     }
-    HTable acl = new HTable(conf, table);
+    Table acl = new HTable(conf, table);
     try {
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(acl.coprocessorService(new byte[0]));
@@ -327,7 +328,7 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
+        Table acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
         try {
           BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
@@ -351,7 +352,7 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
+        Table acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
         try {
           BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
@@ -375,7 +376,7 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
+        Table acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
         try {
           BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
@@ -399,7 +400,7 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
+        Table acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
         try {
           BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
@@ -424,7 +425,7 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
+        Table acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
         try {
           BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =
@@ -449,7 +450,7 @@ public class SecureTestUtil {
     SecureTestUtil.updateACLs(util, new Callable<Void>() {
       @Override
       public Void call() throws Exception {
-        HTable acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
+        Table acl = new HTable(util.getConfiguration(), AccessControlLists.ACL_TABLE_NAME);
         try {
           BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
           AccessControlService.BlockingInterface protocol =

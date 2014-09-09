@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -259,7 +259,7 @@ public class TestBlockReorder {
     // We use the regionserver file system & conf as we expect it to have the hook.
     conf = targetRs.getConfiguration();
     HFileSystem rfs = (HFileSystem) targetRs.getFileSystem();
-    HTable h = htu.createTable("table".getBytes(), sb);
+    Table h = htu.createTable("table".getBytes(), sb);
 
     // Now, we have 4 datanodes and a replication count of 3. So we don't know if the datanode
     // with the same node will be used. We can't really stop an existing datanode, this would

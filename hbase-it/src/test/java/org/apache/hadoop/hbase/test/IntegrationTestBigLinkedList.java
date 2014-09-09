@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -60,6 +61,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ScannerCallable;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
@@ -448,7 +450,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
     protected void createSchema() throws IOException {
       Configuration conf = getConf();
-      HBaseAdmin admin = new HBaseAdmin(conf);
+      Admin admin = new HBaseAdmin(conf);
       TableName tableName = getTableName(conf);
       try {
         if (!admin.tableExists(tableName)) {
@@ -873,7 +875,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         System.exit(-1);
       }
 
-      HTable table = new HTable(getConf(), getTableName(getConf()));
+      Table table = new HTable(getConf(), getTableName(getConf()));
 
       Scan scan = new Scan();
       scan.setBatch(10000);
@@ -923,7 +925,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       org.apache.hadoop.hbase.client.Delete delete
         = new org.apache.hadoop.hbase.client.Delete(val);
 
-      HTable table = new HTable(getConf(), getTableName(getConf()));
+      Table table = new HTable(getConf(), getTableName(getConf()));
 
       table.delete(delete);
       table.flushCommits();
@@ -969,7 +971,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       byte[] startKey = isSpecificStart ? Bytes.toBytesBinary(cmd.getOptionValue('s')) : null;
       int logEvery = cmd.hasOption('l') ? Integer.parseInt(cmd.getOptionValue('l')) : 1;
 
-      HTable table = new HTable(getConf(), getTableName(getConf()));
+      Table table = new HTable(getConf(), getTableName(getConf()));
       long numQueries = 0;
       // If isSpecificStart is set, only walk one list from that particular node.
       // Note that in case of circular (or P-shaped) list it will walk forever, as is
@@ -1005,7 +1007,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       return 0;
     }
 
-    private static CINode findStartNode(HTable table, byte[] startKey) throws IOException {
+    private static CINode findStartNode(Table table, byte[] startKey) throws IOException {
       Scan scan = new Scan();
       scan.setStartRow(startKey);
       scan.setBatch(1);
@@ -1028,7 +1030,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       return null;
     }
 
-    private CINode getNode(byte[] row, HTable table, CINode node) throws IOException {
+    private CINode getNode(byte[] row, Table table, CINode node) throws IOException {
       Get get = new Get(row);
       get.addColumn(FAMILY_NAME, COLUMN_PREV);
       Result result = table.get(get);

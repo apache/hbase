@@ -75,6 +75,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.hfile.TestHFile;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -159,7 +160,7 @@ public class TestHBaseFsck {
 
     // Now let's mess it up and change the assignment in hbase:meta to
     // point to a different region server
-    HTable meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getTableName(),
+    Table meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getTableName(),
         executorService);
     Scan scan = new Scan();
     scan.setStartRow(Bytes.toBytes(table+",,"));
@@ -204,7 +205,7 @@ public class TestHBaseFsck {
     assertNoErrors(doFsck(conf, false));
 
     // comment needed - what is the purpose of this line
-    HTable t = new HTable(conf, Bytes.toBytes(table), executorService);
+    Table t = new HTable(conf, Bytes.toBytes(table), executorService);
     ResultScanner s = t.getScanner(new Scan());
     s.close();
     t.close();
@@ -216,7 +217,7 @@ public class TestHBaseFsck {
   @Test(timeout=180000)
   public void testFixAssignmentsWhenMETAinTransition() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    HBaseAdmin admin = null;
+    Admin admin = null;
     try {
       admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
       admin.closeRegion(cluster.getServerHoldingMeta(),
@@ -241,7 +242,7 @@ public class TestHBaseFsck {
   private HRegionInfo createRegion(Configuration conf, final HTableDescriptor
       htd, byte[] startKey, byte[] endKey)
       throws IOException {
-    HTable meta = new HTable(conf, TableName.META_TABLE_NAME, executorService);
+    Table meta = new HTable(conf, TableName.META_TABLE_NAME, executorService);
     HRegionInfo hri = new HRegionInfo(htd.getTableName(), startKey, endKey);
     MetaTableAccessor.addRegionToMeta(meta, hri);
     meta.close();
@@ -337,7 +338,7 @@ public class TestHBaseFsck {
         }
 
         if (metaRow) {
-          HTable meta = new HTable(conf, TableName.META_TABLE_NAME, executorService);
+          Table meta = new HTable(conf, TableName.META_TABLE_NAME, executorService);
           Delete delete = new Delete(deleteRow);
           meta.delete(delete);
         }
@@ -357,7 +358,7 @@ public class TestHBaseFsck {
    * @throws InterruptedException
    * @throws KeeperException
    */
-  HTable setupTable(TableName tablename) throws Exception {
+  Table setupTable(TableName tablename) throws Exception {
     return setupTableWithRegionReplica(tablename, 1);
   }
 
@@ -368,7 +369,7 @@ public class TestHBaseFsck {
    * @return
    * @throws Exception
    */
-  HTable setupTableWithRegionReplica(TableName tablename, int replicaCount) throws Exception {
+  Table setupTableWithRegionReplica(TableName tablename, int replicaCount) throws Exception {
     HTableDescriptor desc = new HTableDescriptor(tablename);
     desc.setRegionReplication(replicaCount);
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
@@ -407,7 +408,7 @@ public class TestHBaseFsck {
    * @throws IOException
    */
   void deleteTable(TableName tablename) throws IOException {
-    HBaseAdmin admin = new HBaseAdmin(conf);
+    Admin admin = new HBaseAdmin(conf);
     admin.getConnection().clearRegionCache();
     if (admin.isTableEnabled(tablename)) {
       admin.disableTableAsync(tablename);
@@ -813,7 +814,7 @@ public class TestHBaseFsck {
 
       assertNotNull(regionName);
       assertNotNull(serverName);
-      HTable meta = new HTable(conf, TableName.META_TABLE_NAME, executorService);
+      Table meta = new HTable(conf, TableName.META_TABLE_NAME, executorService);
       Put put = new Put(regionName);
       put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
         Bytes.toBytes(serverName.getHostAndPort()));
@@ -1295,7 +1296,7 @@ public class TestHBaseFsck {
   public void testLingeringSplitParent() throws Exception {
     TableName table =
         TableName.valueOf("testLingeringSplitParent");
-    HTable meta = null;
+    Table meta = null;
     try {
       setupTable(table);
       assertEquals(ROWKEYS.length, countRows());
@@ -1375,7 +1376,7 @@ public class TestHBaseFsck {
   public void testValidLingeringSplitParent() throws Exception {
     TableName table =
         TableName.valueOf("testLingeringSplitParent");
-    HTable meta = null;
+    Table meta = null;
     try {
       setupTable(table);
       assertEquals(ROWKEYS.length, countRows());
@@ -1425,7 +1426,7 @@ public class TestHBaseFsck {
   public void testSplitDaughtersNotInMeta() throws Exception {
     TableName table =
         TableName.valueOf("testSplitdaughtersNotInMeta");
-    HTable meta = null;
+    Table meta = null;
     try {
       setupTable(table);
       assertEquals(ROWKEYS.length, countRows());
@@ -1977,7 +1978,7 @@ public class TestHBaseFsck {
 
       // Mess it up by removing the RegionInfo for one region.
       final List<Delete> deletes = new LinkedList<Delete>();
-      HTable meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getTableName());
+      Table meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getTableName());
       MetaScanner.metaScan(conf, new MetaScanner.MetaScannerVisitor() {
 
         @Override
@@ -2281,7 +2282,7 @@ public class TestHBaseFsck {
   @Test
   public void testHbckAfterRegionMerge() throws Exception {
     TableName table = TableName.valueOf("testMergeRegionFilesInHdfs");
-    HTable meta = null;
+    Table meta = null;
     try {
       // disable CatalogJanitor
       TEST_UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(false);

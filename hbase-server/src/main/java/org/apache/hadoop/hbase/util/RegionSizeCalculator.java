@@ -27,11 +27,11 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 
 import java.io.IOException;
-import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -65,7 +65,7 @@ public class RegionSizeCalculator {
   }
 
   /** ctor for unit testing */
-  RegionSizeCalculator (HTable table, HBaseAdmin admin) throws IOException {
+  RegionSizeCalculator (HTable table, Admin admin) throws IOException {
 
     try {
       if (!enabled(table.getConfiguration())) {

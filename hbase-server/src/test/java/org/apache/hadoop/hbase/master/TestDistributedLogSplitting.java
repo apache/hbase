@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.client.PerClientRandomNonceGenerator;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
@@ -283,7 +284,7 @@ public class TestDistributedLogSplitting {
     master.balanceSwitch(false);
 
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     HRegionServer hrs = findRSToKill(false, "table");
     List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
@@ -381,7 +382,7 @@ public class TestDistributedLogSplitting {
     master.balanceSwitch(false);
 
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     HRegionServer hrs = findRSToKill(true, "table");
     List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
@@ -392,7 +393,7 @@ public class TestDistributedLogSplitting {
     zkw.close();
   }
 
-  private void abortRSAndVerifyRecovery(HRegionServer hrs, HTable ht, final ZooKeeperWatcher zkw,
+  private void abortRSAndVerifyRecovery(HRegionServer hrs, Table ht, final ZooKeeperWatcher zkw,
       final int numRegions, final int numofLines) throws Exception {
 
     abortRSAndWaitForRecovery(hrs, zkw, numRegions);
@@ -449,7 +450,7 @@ public class TestDistributedLogSplitting {
     master.balanceSwitch(false);
 
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     HRegionServer hrs = findRSToKill(false, "table");
     List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
@@ -506,7 +507,7 @@ public class TestDistributedLogSplitting {
     master.balanceSwitch(false);
 
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     HRegionServer hrs = findRSToKill(false, "table");
     List<HRegionInfo> regions = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
@@ -564,7 +565,7 @@ public class TestDistributedLogSplitting {
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     List<HRegionInfo> regions = null;
     HRegionServer hrs1 = findRSToKill(false, "table");
@@ -641,7 +642,7 @@ public class TestDistributedLogSplitting {
     master.balanceSwitch(false);
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = master.getZooKeeper();
-    HTable ht = installTable(zkw, "table", "family", 40);
+    Table ht = installTable(zkw, "table", "family", 40);
     final SplitLogManager slm = master.getMasterFileSystem().splitLogManager;
 
     Set<HRegionInfo> regionSet = new HashSet<HRegionInfo>();
@@ -734,8 +735,8 @@ public class TestDistributedLogSplitting {
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable disablingHT = installTable(zkw, "disableTable", "family", NUM_REGIONS_TO_CREATE);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE, NUM_REGIONS_TO_CREATE);
+    Table disablingHT = installTable(zkw, "disableTable", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE, NUM_REGIONS_TO_CREATE);
 
     // turn off load balancing to prevent regions from moving around otherwise
     // they will consume recovered.edits
@@ -1012,7 +1013,7 @@ public class TestDistributedLogSplitting {
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf,
         "distributed log splitting test", null);
 
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
     populateDataInTable(NUM_ROWS_PER_REGION, "family");
 
 
@@ -1189,7 +1190,7 @@ public class TestDistributedLogSplitting {
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     List<HRegionInfo> regions = null;
     HRegionServer hrs = null;
@@ -1281,7 +1282,7 @@ public class TestDistributedLogSplitting {
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     List<HRegionInfo> regions = null;
     HRegionServer hrs = null;

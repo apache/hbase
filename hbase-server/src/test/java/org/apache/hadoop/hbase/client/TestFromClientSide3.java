@@ -98,7 +98,7 @@ public class TestFromClientSide3 {
     // Nothing to do.
   }
 
-  private void randomCFPuts(HTable table, byte[] row, byte[] family, int nPuts)
+  private void randomCFPuts(Table table, byte[] row, byte[] family, int nPuts)
       throws Exception {
     Put put = new Put(row);
     for (int i = 0; i < nPuts; i++) {
@@ -269,7 +269,7 @@ public class TestFromClientSide3 {
 
   @Test
   public void testHTableBatchWithEmptyPut() throws Exception {
-    HTable table = TEST_UTIL.createTable(
+    Table table = TEST_UTIL.createTable(
       Bytes.toBytes("testHTableBatchWithEmptyPut"), new byte[][] { FAMILY });
     try {
       List actions = (List) new ArrayList();
@@ -296,7 +296,7 @@ public class TestFromClientSide3 {
 
     // Test with a single region table.
 
-    HTable table = TEST_UTIL.createTable(
+    Table table = TEST_UTIL.createTable(
       Bytes.toBytes("testHTableExistsMethodSingleRegionSingleGet"), new byte[][] { FAMILY });
 
     Put put = new Put(ROW);
@@ -336,7 +336,7 @@ public class TestFromClientSide3 {
   @Test
   public void testHTableExistsMethodMultipleRegionsSingleGet() throws Exception {
 
-    HTable table = TEST_UTIL.createTable(
+    Table table = TEST_UTIL.createTable(
       Bytes.toBytes("testHTableExistsMethodMultipleRegionsSingleGet"), new byte[][] { FAMILY }, 1,
       new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
     Put put = new Put(ROW);
@@ -409,7 +409,7 @@ public class TestFromClientSide3 {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes.toBytes("test")));
     desc.addFamily(new HColumnDescriptor(FAMILY));
     admin.createTable(desc);
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), "test");
+    Table table = new HTable(TEST_UTIL.getConfiguration(), "test");
 
     Put put = new Put(ROW_BYTES);
     put.add(FAMILY, COL_QUAL, VAL_BYTES);

@@ -30,8 +30,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.util.StringUtils;
 
@@ -45,7 +45,7 @@ public class RowResultGenerator extends ResultGenerator {
   public RowResultGenerator(final String tableName, final RowSpec rowspec,
       final Filter filter, final boolean cacheBlocks)
       throws IllegalArgumentException, IOException {
-    HTableInterface table = RESTServlet.getInstance().getTable(tableName);
+    Table table = RESTServlet.getInstance().getTable(tableName);
     try {
       Get get = new Get(rowspec.getRow());
       if (rowspec.hasColumns()) {

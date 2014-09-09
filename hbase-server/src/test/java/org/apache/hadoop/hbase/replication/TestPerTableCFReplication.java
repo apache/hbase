@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -272,17 +273,17 @@ public class TestPerTableCFReplication {
     new HBaseAdmin(conf3).createTable(tabB);
     new HBaseAdmin(conf3).createTable(tabC);
 
-    HTable htab1A = new HTable(conf1, tabAName);
-    HTable htab2A = new HTable(conf2, tabAName);
-    HTable htab3A = new HTable(conf3, tabAName);
+    Table htab1A = new HTable(conf1, tabAName);
+    Table htab2A = new HTable(conf2, tabAName);
+    Table htab3A = new HTable(conf3, tabAName);
 
-    HTable htab1B = new HTable(conf1, tabBName);
-    HTable htab2B = new HTable(conf2, tabBName);
-    HTable htab3B = new HTable(conf3, tabBName);
+    Table htab1B = new HTable(conf1, tabBName);
+    Table htab2B = new HTable(conf2, tabBName);
+    Table htab3B = new HTable(conf3, tabBName);
 
-    HTable htab1C = new HTable(conf1, tabCName);
-    HTable htab2C = new HTable(conf2, tabCName);
-    HTable htab3C = new HTable(conf3, tabCName);
+    Table htab1C = new HTable(conf1, tabCName);
+    Table htab2C = new HTable(conf2, tabCName);
+    Table htab3C = new HTable(conf3, tabCName);
 
     // A. add cluster2/cluster3 as peers to cluster1
     admin1.addPeer("2", utility2.getClusterKey(), "TC;TB:f1,f3");
@@ -371,17 +372,17 @@ public class TestPerTableCFReplication {
     deleteAndWaitWithFamily(row2, f3Name, htab1C, htab2C, htab3C);
  }
 
-  private void ensureRowNotReplicated(byte[] row, byte[] fam, HTable... tables) throws IOException {
+  private void ensureRowNotReplicated(byte[] row, byte[] fam, Table... tables) throws IOException {
     Get get = new Get(row);
     get.addFamily(fam);
-    for (HTable table : tables) {
+    for (Table table : tables) {
       Result res = table.get(get);
       assertEquals(0, res.size());
     }
   }
 
   private void deleteAndWaitWithFamily(byte[] row, byte[] fam,
-      HTable source, HTable... targets)
+      Table source, Table... targets)
     throws Exception {
     Delete del = new Delete(row);
     del.deleteFamily(fam);
@@ -394,7 +395,7 @@ public class TestPerTableCFReplication {
         fail("Waited too much time for del replication");
       }
       boolean removedFromAll = true;
-      for (HTable target : targets) {
+      for (Table target : targets) {
         Result res = target.get(get);
         if (res.size() >= 1) {
           LOG.info("Row not deleted");
@@ -411,7 +412,7 @@ public class TestPerTableCFReplication {
   }
 
   private void putAndWaitWithFamily(byte[] row, byte[] fam,
-      HTable source, HTable... targets)
+      Table source, Table... targets)
     throws Exception {
     Put put = new Put(row);
     put.add(fam, row, val);
@@ -424,7 +425,7 @@ public class TestPerTableCFReplication {
         fail("Waited too much time for put replication");
       }
       boolean replicatedToAll = true;
-      for (HTable target : targets) {
+      for (Table target : targets) {
         Result res = target.get(get);
         if (res.size() == 0) {
           LOG.info("Row not available");

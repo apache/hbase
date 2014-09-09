@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnectable;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
@@ -124,7 +126,7 @@ class HMerge {
         throw new IllegalStateException(
             "HBase instance must be running to merge a normal table");
       }
-      HBaseAdmin admin = new HBaseAdmin(conf);
+      Admin admin = new HBaseAdmin(conf);
       try {
         if (!admin.isTableDisabled(tableName)) {
           throw new TableNotDisabledException(tableName);
@@ -231,7 +233,7 @@ class HMerge {
   /** Instantiated to compact a normal user table */
   private static class OnlineMerger extends Merger {
     private final TableName tableName;
-    private final HTable table;
+    private final Table table;
     private final ResultScanner metaScanner;
     private HRegionInfo latestRegion;
 

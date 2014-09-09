@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableSnapshotScanner;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -146,7 +147,7 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
     Stopwatch scanTimer = new Stopwatch();
 
     tableOpenTimer.start();
-    HTable table = new HTable(getConf(), TableName.valueOf(tablename));
+    Table table = new HTable(getConf(), TableName.valueOf(tablename));
     tableOpenTimer.stop();
 
     Scan scan = getScan();

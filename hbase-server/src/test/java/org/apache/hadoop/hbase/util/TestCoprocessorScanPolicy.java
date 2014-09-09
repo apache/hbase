@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -108,7 +109,7 @@ public class TestCoprocessorScanPolicy {
     if (TEST_UTIL.getHBaseAdmin().tableExists(tableName)) {
       TEST_UTIL.deleteTable(tableName);
     }
-    HTable t = TEST_UTIL.createTable(tableName, F, 1);
+    Table t = TEST_UTIL.createTable(tableName, F, 1);
     // set the version override to 2
     Put p = new Put(R);
     p.setAttribute("versions", new byte[]{});
@@ -164,7 +165,7 @@ public class TestCoprocessorScanPolicy {
     .setTimeToLive(1);
     desc.addFamily(hcd);
     TEST_UTIL.getHBaseAdmin().createTable(desc);
-    HTable t = new HTable(new Configuration(TEST_UTIL.getConfiguration()), tableName);
+    Table t = new HTable(new Configuration(TEST_UTIL.getConfiguration()), tableName);
     long now = EnvironmentEdgeManager.currentTime();
     ManualEnvironmentEdge me = new ManualEnvironmentEdge();
     me.setValue(now);

@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -56,7 +57,7 @@ public class TestScannerWithBulkload {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  private static void createTable(HBaseAdmin admin, String tableName) throws IOException {
+  private static void createTable(Admin admin, String tableName) throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor("col");
     hcd.setMaxVersions(3);

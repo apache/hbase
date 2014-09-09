@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mapreduce.Import;
@@ -130,7 +132,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       if(!acl) {
         LOG.info("No ACL available.");
       }
-      HBaseAdmin admin = new HBaseAdmin(getConf());
+      Admin admin = new HBaseAdmin(getConf());
       for (int i = 0; i < DEFAULT_TABLES_COUNT; i++) {
         TableName tableName = IntegrationTestBigLinkedListWithVisibility.getTableName(i);
         createTable(admin, tableName, false, acl);
@@ -140,7 +142,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       admin.close();
     }
 
-    private void createTable(HBaseAdmin admin, TableName tableName, boolean setVersion, 
+    private void createTable(Admin admin, TableName tableName, boolean setVersion,
         boolean acl) throws IOException {
       if (!admin.tableExists(tableName)) {
         HTableDescriptor htd = new HTableDescriptor(tableName);
@@ -170,8 +172,8 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
     }
 
     static class VisibilityGeneratorMapper extends GeneratorMapper {
-      HTable[] tables = new HTable[DEFAULT_TABLES_COUNT];
-      HTable commonTable = null;
+      Table[] tables = new Table[DEFAULT_TABLES_COUNT];
+      Table commonTable = null;
 
       @Override
       protected void setup(org.apache.hadoop.mapreduce.Mapper.Context context) throws IOException,

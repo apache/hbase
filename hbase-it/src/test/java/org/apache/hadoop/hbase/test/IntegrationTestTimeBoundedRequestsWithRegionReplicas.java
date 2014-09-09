@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.MultiThreadedReader;
@@ -326,7 +326,7 @@ public class IntegrationTestTimeBoundedRequestsWithRegionReplicas extends Integr
 
       @Override
       protected void verifyResultsAndUpdateMetrics(boolean verify, Get[] gets, long elapsedNano,
-          Result[] results, HTableInterface table, boolean isNullExpected)
+          Result[] results, Table table, boolean isNullExpected)
           throws IOException {
         super.verifyResultsAndUpdateMetrics(verify, gets, elapsedNano, results, table, isNullExpected);
         for (Result r : results) {

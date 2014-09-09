@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
@@ -332,7 +333,7 @@ public class TestMetaTableAccessor {
     long seqNum100 = random.nextLong();
 
 
-    HTable meta = MetaTableAccessor.getMetaHTable(hConnection);
+    Table meta = MetaTableAccessor.getMetaHTable(hConnection);
     try {
       MetaTableAccessor.updateRegionLocation(hConnection, primary, serverName0, seqNum0);
 
@@ -359,7 +360,7 @@ public class TestMetaTableAccessor {
     }
   }
 
-  public static void assertMetaLocation(HTable meta, byte[] row, ServerName serverName,
+  public static void assertMetaLocation(Table meta, byte[] row, ServerName serverName,
       long seqNum, int replicaId, boolean checkSeqNum) throws IOException {
     Get get = new Get(row);
     Result result = meta.get(get);

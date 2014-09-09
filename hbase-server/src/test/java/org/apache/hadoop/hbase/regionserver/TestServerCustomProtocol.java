@@ -38,6 +38,8 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -181,7 +183,7 @@ public class TestServerCustomProtocol {
 
   @Test
   public void testSingleProxy() throws Throwable {
-    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+    Table table = new HTable(util.getConfiguration(), TEST_TABLE);
     Map<byte [], String> results = ping(table, null, null);
     // There are three regions so should get back three results.
     assertEquals(3, results.size());
@@ -231,7 +233,7 @@ public class TestServerCustomProtocol {
     table.close();
   }
 
-  private Map<byte [], String> hello(final HTable table, final String send, final String response)
+  private Map<byte [], String> hello(final Table table, final String send, final String response)
   throws ServiceException, Throwable {
     Map<byte [], String> results = hello(table, send);
     for (Map.Entry<byte [], String> e: results.entrySet()) {
@@ -240,12 +242,12 @@ public class TestServerCustomProtocol {
     return results;
   }
 
-  private Map<byte [], String> hello(final HTable table, final String send)
+  private Map<byte [], String> hello(final Table table, final String send)
   throws ServiceException, Throwable {
     return hello(table, send, null, null);
   }
 
-  private Map<byte [], String> hello(final HTable table, final String send, final byte [] start,
+  private Map<byte [], String> hello(final Table table, final String send, final byte [] start,
       final byte [] end)
   throws ServiceException, Throwable {
     return table.coprocessorService(PingProtos.PingService.class,
@@ -264,7 +266,7 @@ public class TestServerCustomProtocol {
         });
   }
 
-  private Map<byte [], String> compoundOfHelloAndPing(final HTable table, final byte [] start,
+  private Map<byte [], String> compoundOfHelloAndPing(final Table table, final byte [] start,
       final byte [] end)
   throws ServiceException, Throwable {
     return table.coprocessorService(PingProtos.PingService.class,
@@ -284,7 +286,7 @@ public class TestServerCustomProtocol {
         });
   }
 
-  private Map<byte [], String> noop(final HTable table, final byte [] start,
+  private Map<byte [], String> noop(final Table table, final byte [] start,
       final byte [] end)
   throws ServiceException, Throwable {
     return table.coprocessorService(PingProtos.PingService.class, start, end,
@@ -391,7 +393,7 @@ public class TestServerCustomProtocol {
     table.close();
   }
 
-  private Map<byte [], String> ping(final HTable table, final byte [] start, final byte [] end)
+  private Map<byte [], String> ping(final Table table, final byte [] start, final byte [] end)
   throws ServiceException, Throwable {
     return table.coprocessorService(PingProtos.PingService.class, start, end,
       new Batch.Call<PingProtos.PingService, String>() {
@@ -439,7 +441,7 @@ public class TestServerCustomProtocol {
 
   @Test
   public void testEmptyReturnType() throws Throwable {
-    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+    Table table = new HTable(util.getConfiguration(), TEST_TABLE);
     Map<byte[],String> results = noop(table, ROW_A, ROW_C);
     assertEquals("Should have results from three regions", 3, results.size());
     // all results should be null
@@ -448,12 +450,12 @@ public class TestServerCustomProtocol {
     }
   }
 
-  private void verifyRegionResults(HTable table,
+  private void verifyRegionResults(RegionLocator table,
       Map<byte[],String> results, byte[] row) throws Exception {
     verifyRegionResults(table, results, "pong", row);
   }
 
-  private void verifyRegionResults(HTable table,
+  private void verifyRegionResults(RegionLocator table,
       Map<byte[], String> results, String expected, byte[] row)
   throws Exception {
     for (Map.Entry<byte [], String> e: results.entrySet()) {

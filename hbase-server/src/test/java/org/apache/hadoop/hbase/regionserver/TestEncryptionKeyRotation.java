@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
@@ -206,7 +207,7 @@ public class TestEncryptionKeyRotation {
     TEST_UTIL.getHBaseAdmin().createTable(htd);
     TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
     // Create a store file
-    HTable table = new HTable(conf, htd.getName());
+    Table table = new HTable(conf, htd.getName());
     try {
       table.put(new Put(Bytes.toBytes("testrow"))
         .add(hcd.getName(), Bytes.toBytes("q"), Bytes.toBytes("value")));

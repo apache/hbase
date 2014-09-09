@@ -46,10 +46,10 @@ import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 
@@ -230,7 +230,7 @@ public class ReplicationSink {
     if (allRows.isEmpty()) {
       return;
     }
-    HTableInterface table = null;
+    Table table = null;
     try {
       table = this.sharedHtableCon.getTable(tableName);
       for (List<Row> rows : allRows) {

@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -100,7 +101,7 @@ public class TestJoinedScanners {
         desc.addFamily(hcd);
       }
       htu.getHBaseAdmin().createTable(desc);
-      HTable ht = new HTable(htu.getConfiguration(), tableName);
+      Table ht = new HTable(htu.getConfiguration(), tableName);
 
       long rows_to_insert = 1000;
       int insert_batch = 20;
@@ -150,7 +151,7 @@ public class TestJoinedScanners {
     }
   }
 
-  private void runScanner(HTable table, boolean slow) throws Exception {
+  private void runScanner(Table table, boolean slow) throws Exception {
     long time = System.nanoTime();
     Scan scan = new Scan();
     scan.addColumn(cf_essential, col_name);

@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
@@ -182,7 +183,7 @@ public class TestRegionReplicas {
   @Test(timeout = 60000)
   public void testRegionReplicaUpdatesMetaLocation() throws Exception {
     openRegion(hriSecondary);
-    HTable meta = null;
+    Table meta = null;
     try {
       meta = new HTable(HTU.getConfiguration(), TableName.META_TABLE_NAME);
       TestMetaTableAccessor.assertMetaLocation(meta, hriPrimary.getRegionName()

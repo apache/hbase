@@ -36,7 +36,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.mortbay.log.Log;
-import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -71,7 +70,7 @@ public class TestHBaseAdminNoCluster {
         thenThrow(new ServiceException("Test fail").initCause(new PleaseHoldException("test")));
     Mockito.when(connection.getKeepAliveMasterService()).thenReturn(masterAdmin);
     // Mock up our admin Interfaces
-    HBaseAdmin admin = new HBaseAdmin(configuration);
+    Admin admin = new HBaseAdmin(configuration);
     try {
       HTableDescriptor htd =
           new HTableDescriptor(TableName.valueOf("testMasterMonitorCollableRetries"));

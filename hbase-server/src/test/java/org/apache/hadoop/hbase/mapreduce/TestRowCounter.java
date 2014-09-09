@@ -32,8 +32,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.mapreduce.RowCounter.RowCounterMapper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
@@ -67,7 +67,7 @@ public class TestRowCounter {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
     TEST_UTIL.startMiniMapReduceCluster();
-    HTable table = TEST_UTIL.createTable(Bytes.toBytes(TABLE_NAME),
+    Table table = TEST_UTIL.createTable(Bytes.toBytes(TABLE_NAME),
         Bytes.toBytes(COL_FAM));
     writeRows(table);
     table.close();
@@ -164,7 +164,7 @@ public class TestRowCounter {
    * @param table
    * @throws IOException
    */
-  private static void writeRows(HTable table) throws IOException {
+  private static void writeRows(Table table) throws IOException {
     final byte[] family = Bytes.toBytes(COL_FAM);
     final byte[] value = Bytes.toBytes("abcd");
     final byte[] col1 = Bytes.toBytes(COL1);

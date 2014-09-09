@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -80,7 +81,7 @@ public class TestConstraint {
     Constraints.add(desc, CheckWasRunConstraint.class);
 
     util.getHBaseAdmin().createTable(desc);
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = new HTable(util.getConfiguration(), tableName);
     try {
       // test that we don't fail on a valid put
       Put put = new Put(row1);
@@ -112,7 +113,7 @@ public class TestConstraint {
     Constraints.add(desc, AllFailConstraint.class);
 
     util.getHBaseAdmin().createTable(desc);
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = new HTable(util.getConfiguration(), tableName);
 
     // test that we do fail on violation
     Put put = new Put(row1);
@@ -155,7 +156,7 @@ public class TestConstraint {
     Constraints.disableConstraint(desc, AllFailConstraint.class);
 
     util.getHBaseAdmin().createTable(desc);
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = new HTable(util.getConfiguration(), tableName);
     try {
       // test that we don't fail because its disabled
       Put put = new Put(row1);
@@ -187,7 +188,7 @@ public class TestConstraint {
     Constraints.disable(desc);
 
     util.getHBaseAdmin().createTable(desc);
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = new HTable(util.getConfiguration(), tableName);
     try {
       // test that we do fail on violation
       Put put = new Put(row1);
@@ -219,7 +220,7 @@ public class TestConstraint {
     CheckWasRunConstraint.wasRun = false;
 
     util.getHBaseAdmin().createTable(desc);
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = new HTable(util.getConfiguration(), tableName);
 
     // test that we do fail on violation
     Put put = new Put(row1);

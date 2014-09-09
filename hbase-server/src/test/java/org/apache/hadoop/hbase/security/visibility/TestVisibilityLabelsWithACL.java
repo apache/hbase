@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
@@ -122,7 +123,7 @@ public class TestVisibilityLabelsWithACL {
       public Void run() throws Exception {
         Scan s = new Scan();
         s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
-        HTable t = new HTable(conf, table.getTableName());
+        Table t = new HTable(conf, table.getTableName());
         try {
           ResultScanner scanner = t.getScanner(s);
           Result result = scanner.next();
@@ -151,7 +152,7 @@ public class TestVisibilityLabelsWithACL {
       public Void run() throws Exception {
         Scan s = new Scan();
         s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
-        HTable t = new HTable(conf, table.getTableName());
+        Table t = new HTable(conf, table.getTableName());
         try {
           ResultScanner scanner = t.getScanner(s);
           Result[] result = scanner.next(5);
@@ -177,7 +178,7 @@ public class TestVisibilityLabelsWithACL {
       public Void run() throws Exception {
         Get g = new Get(row1);
         g.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
-        HTable t = new HTable(conf, table.getTableName());
+        Table t = new HTable(conf, table.getTableName());
         try {
           Result result = t.get(g);
           assertTrue(!result.isEmpty());
@@ -206,7 +207,7 @@ public class TestVisibilityLabelsWithACL {
       public Void run() throws Exception {
         Get g = new Get(row1);
         g.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
-        HTable t = new HTable(conf, table.getTableName());
+        Table t = new HTable(conf, table.getTableName());
         try {
           Result result = t.get(g);
           assertTrue(result.isEmpty());

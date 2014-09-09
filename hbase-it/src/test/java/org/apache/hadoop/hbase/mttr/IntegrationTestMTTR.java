@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.chaos.actions.RestartActiveMasterAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRsHoldingMetaAction;
 import org.apache.hadoop.hbase.chaos.actions.RestartRsHoldingTableAction;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.ipc.FatalConnectionException;
@@ -461,7 +463,7 @@ public class IntegrationTestMTTR {
    */
   static class PutCallable extends TimingCallable {
 
-    private final HTable table;
+    private final Table table;
 
     public PutCallable(Future<?> f) throws IOException {
       super(f);
@@ -488,7 +490,7 @@ public class IntegrationTestMTTR {
    * supplied future returns.  Returns the max time taken to scan.
    */
   static class ScanCallable extends TimingCallable {
-    private final HTable table;
+    private final Table table;
 
     public ScanCallable(Future<?> f) throws IOException {
       super(f);
@@ -531,7 +533,7 @@ public class IntegrationTestMTTR {
 
     @Override
     protected boolean doAction() throws Exception {
-      HBaseAdmin admin = null;
+      Admin admin = null;
       try {
         admin = new HBaseAdmin(util.getConfiguration());
         ClusterStatus status = admin.getClusterStatus();

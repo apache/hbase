@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
@@ -88,14 +89,14 @@ implements Configurable {
   extends RecordWriter<KEY, Mutation> {
 
     /** The table to write to. */
-    private HTable table;
+    private Table table;
 
     /**
      * Instantiate a TableRecordWriter with the HBase HClient for writing.
      *
      * @param table  The table to write to.
      */
-    public TableRecordWriter(HTable table) {
+    public TableRecordWriter(Table table) {
       this.table = table;
     }
 

@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -326,7 +327,7 @@ public final class Canary implements Tool {
   public static abstract class Monitor implements Runnable {
 
     protected Configuration config;
-    protected HBaseAdmin admin;
+    protected Admin admin;
     protected String[] targets;
     protected boolean useRegExp;
     protected boolean initialized = false;
@@ -476,7 +477,7 @@ public final class Canary implements Tool {
    */
   private static void sniff(final Admin admin, final Sink sink, HTableDescriptor tableDesc)
       throws Exception {
-    HTable table = null;
+    Table table = null;
 
     try {
       table = new HTable(admin.getConfiguration(), tableDesc.getName());
@@ -506,7 +507,7 @@ public final class Canary implements Tool {
       final Admin admin,
       final Sink sink,
       HRegionInfo region,
-      HTable table) throws Exception {
+      Table table) throws Exception {
     HTableDescriptor tableDesc = table.getTableDescriptor();
     byte[] startKey = null;
     Get get = null;
@@ -607,7 +608,7 @@ public final class Canary implements Tool {
       String serverName = null;
       String tableName = null;
       HRegionInfo region = null;
-      HTable table = null;
+      Table table = null;
       Get get = null;
       byte[] startKey = null;
       Scan scan = null;

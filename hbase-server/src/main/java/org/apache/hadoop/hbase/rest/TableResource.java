@@ -35,8 +35,8 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.ParseFilter;
@@ -144,7 +144,7 @@ public class TableResource extends ResourceBase {
           + " End Row => " + endRow + " Columns => " + column + " Start Time => " + startTime
           + " End Time => " + endTime + " Cache Blocks => " + cacheBlocks + " Max Versions => "
           + maxVersions + " Batch Size => " + batchSize);
-      HTableInterface hTable = RESTServlet.getInstance().getTable(this.table);
+      Table hTable = RESTServlet.getInstance().getTable(this.table);
       Scan tableScan = new Scan();
       tableScan.setBatch(batchSize);
       tableScan.setMaxVersions(maxVersions);

@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import org.junit.AfterClass;
@@ -83,7 +83,7 @@ public class TestFilterWrapper {
       FilterList filter = new FilterList(fs);
 
       scan.setFilter(filter);
-      HTable table = new HTable(conf, name);
+      Table table = new HTable(conf, name);
       ResultScanner scanner = table.getScanner(scan);
 
       // row2 (c1-c4) and row3(c1-c4) are returned
@@ -110,7 +110,7 @@ public class TestFilterWrapper {
 
   private static void prepareData() {
     try {
-      HTable table = new HTable(TestFilterWrapper.conf, name);
+      Table table = new HTable(TestFilterWrapper.conf, name);
       assertTrue("Fail to create the table", admin.tableExists(name));
       List<Put> puts = new ArrayList<Put>();
 

@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.apache.hadoop.hbase.client.Table;
+import org.junit.Assert;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.logging.Log;
@@ -29,7 +35,6 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -112,7 +117,7 @@ public class TestLogRollAbort {
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
 
     admin.createTable(desc);
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table table = new HTable(TEST_UTIL.getConfiguration(), tableName);
     try {
 
       HRegionServer server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));

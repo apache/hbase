@@ -106,7 +106,7 @@ public class TestScannersFromClientSide {
     byte [] TABLE = Bytes.toBytes("testScanBatch");
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 8);
 
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
 
     Put put;
     Scan scan;
@@ -182,7 +182,7 @@ public class TestScannersFromClientSide {
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 20);
 
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES);
 
     Get get;
     Put put;
@@ -303,7 +303,7 @@ public class TestScannersFromClientSide {
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 10);
 
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES);
 
     Put put;
     Scan scan;
@@ -352,7 +352,7 @@ public class TestScannersFromClientSide {
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 20);
 
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES);
 
     Get get;
     Put put;

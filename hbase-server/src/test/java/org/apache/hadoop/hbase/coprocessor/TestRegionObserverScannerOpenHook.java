@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -257,7 +258,7 @@ public class TestRegionObserverScannerOpenHook {
     Admin admin = UTIL.getHBaseAdmin();
     admin.createTable(desc);
 
-    HTable table = new HTable(conf, desc.getTableName());
+    Table table = new HTable(conf, desc.getTableName());
 
     // put a row and flush it to disk
     Put put = new Put(ROW);

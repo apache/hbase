@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
@@ -101,7 +102,7 @@ public class TestHBaseFsckEncryption {
   @Test
   public void testFsckWithEncryption() throws Exception {
     // Populate the table with some data
-    HTable table = new HTable(conf, htd.getName());
+    Table table = new HTable(conf, htd.getName());
     try {
       byte[] values = { 'A', 'B', 'C', 'D' };
       for (int i = 0; i < values.length; i++) {

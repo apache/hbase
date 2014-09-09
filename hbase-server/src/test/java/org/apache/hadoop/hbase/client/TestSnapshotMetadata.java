@@ -169,7 +169,7 @@ public class TestSnapshotMetadata {
     assertTrue(htd.getConfiguration().size() > 0);
 
     admin.createTable(htd);
-    HTable original = new HTable(UTIL.getConfiguration(), originalTableName);
+    Table original = new HTable(UTIL.getConfiguration(), originalTableName);
     originalTableName = TableName.valueOf(sourceTableNameAsString);
     originalTableDescriptor = admin.getTableDescriptor(originalTableName);
     originalTableDescription = originalTableDescriptor.toStringCustomizedValues();
@@ -201,7 +201,7 @@ public class TestSnapshotMetadata {
       familiesList, snapshotNameAsString, rootDir, fs, /* onlineSnapshot= */ false);
 
     admin.cloneSnapshot(snapshotName, clonedTableName);
-    HTable clonedTable = new HTable(UTIL.getConfiguration(), clonedTableName);
+    Table clonedTable = new HTable(UTIL.getConfiguration(), clonedTableName);
     HTableDescriptor cloneHtd = admin.getTableDescriptor(clonedTableName);
     assertEquals(
       originalTableDescription.replace(originalTableName.getNameAsString(),clonedTableNameAsString),
@@ -312,7 +312,7 @@ public class TestSnapshotMetadata {
     admin.enableTable(originalTableName);
 
     // verify that the descrption is reverted
-    HTable original = new HTable(UTIL.getConfiguration(), originalTableName);
+    Table original = new HTable(UTIL.getConfiguration(), originalTableName);
     try {
       assertTrue(originalTableDescriptor.equals(admin.getTableDescriptor(originalTableName)));
       assertTrue(originalTableDescriptor.equals(original.getTableDescriptor()));

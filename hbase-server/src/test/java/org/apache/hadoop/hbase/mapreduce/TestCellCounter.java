@@ -25,8 +25,8 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.mapreduce.Job;
@@ -80,7 +80,7 @@ public class TestCellCounter {
   public void testCellCounter() throws Exception {
     String sourceTable = "sourceTable";
     byte[][] families = { FAMILY_A, FAMILY_B };
-    HTable t = UTIL.createTable(Bytes.toBytes(sourceTable), families);
+    Table t = UTIL.createTable(Bytes.toBytes(sourceTable), families);
     try{
     Put p = new Put(ROW1);
     p.add(FAMILY_A, QUALIFIER, now, Bytes.toBytes("Data11"));

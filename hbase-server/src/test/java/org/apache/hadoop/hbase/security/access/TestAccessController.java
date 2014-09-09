@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
@@ -62,6 +61,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -98,7 +98,6 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.TestTableName;
-import org.apache.hadoop.hbase.security.access.AccessControlClient;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.After;
@@ -691,7 +690,7 @@ public class TestAccessController extends SecureTestUtil {
       public Object run() throws Exception {
         Get g = new Get(TEST_ROW);
         g.addFamily(TEST_FAMILY);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           t.get(g);
         } finally {
@@ -709,7 +708,7 @@ public class TestAccessController extends SecureTestUtil {
         Scan s = new Scan();
         s.addFamily(TEST_FAMILY);
 
-        HTable table = new HTable(conf, TEST_TABLE.getTableName());
+        Table table = new HTable(conf, TEST_TABLE.getTableName());
         try {
           ResultScanner scanner = table.getScanner(s);
           try {
@@ -738,7 +737,7 @@ public class TestAccessController extends SecureTestUtil {
       public Object run() throws Exception {
         Put p = new Put(TEST_ROW);
         p.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(1));
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           t.put(p);
         } finally {
@@ -755,7 +754,7 @@ public class TestAccessController extends SecureTestUtil {
       public Object run() throws Exception {
         Delete d = new Delete(TEST_ROW);
         d.deleteFamily(TEST_FAMILY);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           t.delete(d);
         } finally {
@@ -772,7 +771,7 @@ public class TestAccessController extends SecureTestUtil {
       public Object run() throws Exception {
         Increment inc = new Increment(TEST_ROW);
         inc.addColumn(TEST_FAMILY, TEST_QUALIFIER, 1);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           t.increment(inc);
         } finally {
@@ -792,7 +791,7 @@ public class TestAccessController extends SecureTestUtil {
       public Object run() throws Exception {
         Delete d = new Delete(TEST_ROW);
         d.deleteFamily(TEST_FAMILY);
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           t.checkAndDelete(TEST_ROW, TEST_FAMILY, TEST_QUALIFIER,
             Bytes.toBytes("test_value"), d);
@@ -810,7 +809,7 @@ public class TestAccessController extends SecureTestUtil {
       public Object run() throws Exception {
         Put p = new Put(TEST_ROW);
         p.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(1));
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           t.checkAndPut(TEST_ROW, TEST_FAMILY, TEST_QUALIFIER,
            Bytes.toBytes("test_value"), p);
@@ -948,7 +947,7 @@ public class TestAccessController extends SecureTestUtil {
         put.add(TEST_FAMILY, qualifier, Bytes.toBytes(1));
         Append append = new Append(row);
         append.add(TEST_FAMILY, qualifier, Bytes.toBytes(2));
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           t.put(put);
           t.append(append);
@@ -968,7 +967,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction grantAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
         try {
           BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName().getName());
           AccessControlService.BlockingInterface protocol =
@@ -985,7 +984,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction revokeAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
         try {
           BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName().getName());
           AccessControlService.BlockingInterface protocol =
@@ -1002,7 +1001,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction getPermissionsAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
         try {
           BlockingRpcChannel service = acl.coprocessorService(TEST_TABLE.getTableName().getName());
           AccessControlService.BlockingInterface protocol =
@@ -1057,7 +1056,7 @@ public class TestAccessController extends SecureTestUtil {
         Put p = new Put(Bytes.toBytes("a"));
         p.add(family1, qualifier, Bytes.toBytes("v1"));
         p.add(family2, qualifier, Bytes.toBytes("v2"));
-        HTable t = new HTable(conf, tableName);
+        Table t = new HTable(conf, tableName);
         try {
           t.put(p);
         } finally {
@@ -1072,7 +1071,7 @@ public class TestAccessController extends SecureTestUtil {
       public Object run() throws Exception {
         Put p = new Put(Bytes.toBytes("a"));
         p.add(family1, qualifier, Bytes.toBytes("v1"));
-        HTable t = new HTable(conf, tableName);
+        Table t = new HTable(conf, tableName);
         try {
           t.put(p);
         } finally {
@@ -1087,7 +1086,7 @@ public class TestAccessController extends SecureTestUtil {
       public Object run() throws Exception {
         Put p = new Put(Bytes.toBytes("a"));
         p.add(family2, qualifier, Bytes.toBytes("v2"));
-        HTable t = new HTable(conf, tableName);
+        Table t = new HTable(conf, tableName);
         try {
           t.put(p);
         } finally {
@@ -1103,7 +1102,7 @@ public class TestAccessController extends SecureTestUtil {
         Get g = new Get(TEST_ROW);
         g.addFamily(family1);
         g.addFamily(family2);
-        HTable t = new HTable(conf, tableName);
+        Table t = new HTable(conf, tableName);
         try {
           t.get(g);
         } finally {
@@ -1118,7 +1117,7 @@ public class TestAccessController extends SecureTestUtil {
       public Object run() throws Exception {
         Get g = new Get(TEST_ROW);
         g.addFamily(family1);
-        HTable t = new HTable(conf, tableName);
+        Table t = new HTable(conf, tableName);
         try {
           t.get(g);
         } finally {
@@ -1133,7 +1132,7 @@ public class TestAccessController extends SecureTestUtil {
       public Object run() throws Exception {
         Get g = new Get(TEST_ROW);
         g.addFamily(family2);
-        HTable t = new HTable(conf, tableName);
+        Table t = new HTable(conf, tableName);
         try {
           t.get(g);
         } finally {
@@ -1149,7 +1148,7 @@ public class TestAccessController extends SecureTestUtil {
         Delete d = new Delete(TEST_ROW);
         d.deleteFamily(family1);
         d.deleteFamily(family2);
-        HTable t = new HTable(conf, tableName);
+        Table t = new HTable(conf, tableName);
         try {
           t.delete(d);
         } finally {
@@ -1164,7 +1163,7 @@ public class TestAccessController extends SecureTestUtil {
       public Object run() throws Exception {
         Delete d = new Delete(TEST_ROW);
         d.deleteFamily(family1);
-        HTable t = new HTable(conf, tableName);
+        Table t = new HTable(conf, tableName);
         try {
           t.delete(d);
         } finally {
@@ -1179,7 +1178,7 @@ public class TestAccessController extends SecureTestUtil {
       public Object run() throws Exception {
         Delete d = new Delete(TEST_ROW);
         d.deleteFamily(family2);
-        HTable t = new HTable(conf, tableName);
+        Table t = new HTable(conf, tableName);
         try {
           t.delete(d);
         } finally {
@@ -1326,7 +1325,7 @@ public class TestAccessController extends SecureTestUtil {
       public Object run() throws Exception {
         Get g = new Get(TEST_ROW);
         g.addColumn(family1, qualifier);
-        HTable t = new HTable(conf, tableName);
+        Table t = new HTable(conf, tableName);
         try {
           t.get(g);
         } finally {
@@ -1341,7 +1340,7 @@ public class TestAccessController extends SecureTestUtil {
       public Object run() throws Exception {
         Put p = new Put(TEST_ROW);
         p.add(family1, qualifier, Bytes.toBytes("v1"));
-        HTable t = new HTable(conf, tableName);
+        Table t = new HTable(conf, tableName);
         try {
           t.put(p);
         } finally {
@@ -1357,7 +1356,7 @@ public class TestAccessController extends SecureTestUtil {
         Delete d = new Delete(TEST_ROW);
         d.deleteColumn(family1, qualifier);
         // d.deleteFamily(family1);
-        HTable t = new HTable(conf, tableName);
+        Table t = new HTable(conf, tableName);
         try {
           t.delete(d);
         } finally {
@@ -1435,7 +1434,7 @@ public class TestAccessController extends SecureTestUtil {
 
     List<UserPermission> perms;
 
-    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
       BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
       AccessControlService.BlockingInterface protocol =
@@ -1548,7 +1547,7 @@ public class TestAccessController extends SecureTestUtil {
   @Test
   public void testGlobalPermissionList() throws Exception {
     List<UserPermission> perms;
-    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
       BlockingRpcChannel service = acl.coprocessorService(HConstants.EMPTY_START_ROW);
       AccessControlService.BlockingInterface protocol =
@@ -1583,7 +1582,7 @@ public class TestAccessController extends SecureTestUtil {
               AccessControlProtos.GlobalPermission.newBuilder()
                   .addAction(ProtobufUtil.toPermissionAction(a)).build()));
     }
-    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
       BlockingRpcChannel channel = acl.coprocessorService(new byte[0]);
       AccessControlService.BlockingInterface protocol =
@@ -1613,7 +1612,7 @@ public class TestAccessController extends SecureTestUtil {
     for (Permission p : perms) {
       request.addPermission(ProtobufUtil.toPermission(p));
     }
-    HTable acl = new HTable(conf, table);
+    Table acl = new HTable(conf, table);
     try {
       AccessControlService.BlockingInterface protocol =
         AccessControlService.newBlockingStub(acl.coprocessorService(new byte[0]));
@@ -1763,7 +1762,7 @@ public class TestAccessController extends SecureTestUtil {
                   .setTableName(ProtobufUtil.toProtoTableName(TEST_TABLE.getTableName()))
                   .addAction(AccessControlProtos.Permission.Action.CREATE))
       ).build();
-    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    Table acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
       BlockingRpcChannel channel = acl.coprocessorService(new byte[0]);
       AccessControlService.BlockingInterface protocol =
@@ -2022,7 +2021,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction getAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           return t.get(new Get(TEST_ROW));
         } finally {
@@ -2112,7 +2111,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction execEndpointAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           BlockingRpcChannel service = t.coprocessorService(HConstants.EMPTY_BYTE_ARRAY);
           PingCoprocessor.newBlockingStub(service).noop(null, NoopRequest.newBuilder().build());
@@ -2141,7 +2140,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction putWithReservedTag = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        Table t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           KeyValue kv = new KeyValue(TEST_ROW, TEST_FAMILY, TEST_QUALIFIER,
             HConstants.LATEST_TIMESTAMP, HConstants.EMPTY_BYTE_ARRAY,

@@ -84,7 +84,7 @@ public class TestClientScannerRPCTimeout {
   @Test
   public void testScannerNextRPCTimesout() throws Exception {
     final byte[] TABLE_NAME = Bytes.toBytes("testScannerNextRPCTimesout");
-    HTable ht = TEST_UTIL.createTable(TABLE_NAME, FAMILY);
+    Table ht = TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     byte[] r1 = Bytes.toBytes("row-1");
     byte[] r2 = Bytes.toBytes("row-2");
     byte[] r3 = Bytes.toBytes("row-3");
@@ -123,7 +123,7 @@ public class TestClientScannerRPCTimeout {
         RSRpcServicesWithScanTimeout.tryNumber <= CLIENT_RETRIES_NUMBER);
   }
 
-  private void putToTable(HTable ht, byte[] rowkey) throws IOException {
+  private void putToTable(Table ht, byte[] rowkey) throws IOException {
     Put put = new Put(rowkey);
     put.add(FAMILY, QUALIFIER, VALUE);
     ht.put(put);

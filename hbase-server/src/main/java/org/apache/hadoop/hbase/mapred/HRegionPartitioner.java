@@ -26,6 +26,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.JobConf;
@@ -46,7 +47,7 @@ import org.apache.hadoop.mapred.Partitioner;
 public class HRegionPartitioner<K2,V2>
 implements Partitioner<ImmutableBytesWritable, V2> {
   private static final Log LOG = LogFactory.getLog(HRegionPartitioner.class);
-  private HTable table;
+  private RegionLocator table;
   private byte[][] startKeys;
 
   public void configure(JobConf job) {

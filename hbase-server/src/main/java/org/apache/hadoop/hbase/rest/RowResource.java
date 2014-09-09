@@ -45,8 +45,8 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
@@ -182,7 +182,7 @@ public class RowResource extends ResourceBase {
         .build();
     }
 
-    HTableInterface table = null;
+    Table table = null;
     try {
       List<RowModel> rows = model.getRows();
       List<Put> puts = new ArrayList<Put>();
@@ -253,7 +253,7 @@ public class RowResource extends ResourceBase {
         .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF)
         .build();
     }
-    HTableInterface table = null;
+    Table table = null;
     try {
       byte[] row = rowspec.getRow();
       byte[][] columns = rowspec.getColumns();
@@ -393,7 +393,7 @@ public class RowResource extends ResourceBase {
         }
       }
     }
-    HTableInterface table = null;
+    Table table = null;
     try {
       table = servlet.getTable(tableResource.getName());
       table.delete(delete);
@@ -422,7 +422,7 @@ public class RowResource extends ResourceBase {
    * @return Response 200 OK, 304 Not modified, 400 Bad request
    */
   Response checkAndPut(final CellSetModel model) {
-    HTableInterface table = null;
+    Table table = null;
     try {
       table = servlet.getTable(tableResource.getName());
       if (model.getRows().size() != 1) {
@@ -513,7 +513,7 @@ public class RowResource extends ResourceBase {
    * @return Response 200 OK, 304 Not modified, 400 Bad request
    */
   Response checkAndDelete(final CellSetModel model) {
-    HTableInterface table = null;
+    Table table = null;
     Delete delete = null;
     try {
       table = servlet.getTable(tableResource.getName());

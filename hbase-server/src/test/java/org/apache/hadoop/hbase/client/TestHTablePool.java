@@ -21,6 +21,10 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
 import org.junit.*;
@@ -60,14 +64,14 @@ public class TestHTablePool {
 			String tableName = Bytes.toString(TABLENAME);
 
 			// Request a table from an empty pool
-			HTableInterface table = pool.getTable(tableName);
+			Table table = pool.getTable(tableName);
 			Assert.assertNotNull(table);
 
 			// Close table (returns table to the pool)
 			table.close();
 
 			// Request a table of the same name
-			HTableInterface sameTable = pool.getTable(tableName);
+			Table sameTable = pool.getTable(tableName);
 			Assert.assertSame(
 					((HTablePool.PooledHTable) table).getWrappedTable(),
 					((HTablePool.PooledHTable) sameTable).getWrappedTable());
@@ -79,14 +83,14 @@ public class TestHTablePool {
 					Integer.MAX_VALUE, getPoolType());
 
 			// Request a table from an empty pool
-			HTableInterface table = pool.getTable(TABLENAME);
+			Table table = pool.getTable(TABLENAME);
 			Assert.assertNotNull(table);
 
 			// Close table (returns table to the pool)
 			table.close();
 
 			// Request a table of the same name
-			HTableInterface sameTable = pool.getTable(TABLENAME);
+			Table sameTable = pool.getTable(TABLENAME);
 			Assert.assertSame(
 					((HTablePool.PooledHTable) table).getWrappedTable(),
 					((HTablePool.PooledHTable) sameTable).getWrappedTable());
@@ -104,8 +108,8 @@ public class TestHTablePool {
 			TEST_UTIL.createTable(otherTable, HConstants.CATALOG_FAMILY);
 
 			// Request a table from an empty pool
-			HTableInterface table1 = pool.getTable(TABLENAME);
-			HTableInterface table2 = pool.getTable(otherTable);
+			Table table1 = pool.getTable(TABLENAME);
+			Table table2 = pool.getTable(otherTable);
 			Assert.assertNotNull(table2);
 
 			// Close tables (returns tables to the pool)
@@ -113,8 +117,8 @@ public class TestHTablePool {
 			table2.close();
 
 			// Request tables of the same names
-			HTableInterface sameTable1 = pool.getTable(TABLENAME);
-			HTableInterface sameTable2 = pool.getTable(otherTable);
+			Table sameTable1 = pool.getTable(TABLENAME);
+			Table sameTable2 = pool.getTable(otherTable);
 			Assert.assertSame(
 					((HTablePool.PooledHTable) table1).getWrappedTable(),
 					((HTablePool.PooledHTable) sameTable1).getWrappedTable());
@@ -129,7 +133,7 @@ public class TestHTablePool {
       String tableName = Bytes.toString(TABLENAME);// Request a table from
                               // an
                               // empty pool
-      HTableInterface table = pool.getTable(tableName);
+      Table table = pool.getTable(tableName);
 
       // Test if proxy implementation is returned
       Assert.assertTrue(table instanceof HTablePool.PooledHTable);
@@ -150,7 +154,7 @@ public class TestHTablePool {
       pool.putTable(table);
 
       // Request a table of the same name
-      HTableInterface sameTable = pool.getTable(tableName);
+      Table sameTable = pool.getTable(tableName);
 
       // test no proxy over proxy created
       Assert.assertSame(((HTablePool.PooledHTable) table).getWrappedTable(),
@@ -166,7 +170,7 @@ public class TestHTablePool {
                               // empty pool
 
       // get table will return proxy implementation
-      final HTableInterface table = pool.getTable(tableName);
+      final Table table = pool.getTable(tableName);
       HTableInterface alienTable = new HTable(TEST_UTIL.getConfiguration(),
           TABLENAME) {
         // implementation doesn't matter as long the table is not from
@@ -188,7 +192,7 @@ public class TestHTablePool {
       String tableName = Bytes.toString(TABLENAME);
 
       // Request a table from an empty pool
-      HTableInterface table = pool.getTable(tableName);
+      Table table = pool.getTable(tableName);
       Assert.assertNotNull(table);
       Assert.assertTrue(((HTablePool.PooledHTable) table).isOpen());
       // Close table (returns table to the pool)
@@ -223,9 +227,9 @@ public class TestHTablePool {
 					getPoolType());
 
 			// Request tables from an empty pool
-			HTableInterface table1 = pool.getTable(TABLENAME);
-			HTableInterface table2 = pool.getTable(TABLENAME);
-			HTableInterface table3 = pool.getTable(TABLENAME);
+			Table table1 = pool.getTable(TABLENAME);
+			Table table2 = pool.getTable(TABLENAME);
+			Table table3 = pool.getTable(TABLENAME);
 
 			// Close tables (returns tables to the pool)
 			table1.close();
@@ -234,9 +238,9 @@ public class TestHTablePool {
 			table3.close();
 
 			// Request tables of the same name
-			HTableInterface sameTable1 = pool.getTable(TABLENAME);
-			HTableInterface sameTable2 = pool.getTable(TABLENAME);
-			HTableInterface sameTable3 = pool.getTable(TABLENAME);
+			Table sameTable1 = pool.getTable(TABLENAME);
+			Table sameTable2 = pool.getTable(TABLENAME);
+			Table sameTable3 = pool.getTable(TABLENAME);
 			Assert.assertSame(
 					((HTablePool.PooledHTable) table1).getWrappedTable(),
 					((HTablePool.PooledHTable) sameTable1).getWrappedTable());
@@ -264,7 +268,7 @@ public class TestHTablePool {
 			admin.createTable(tableDescriptor);
 
 			// Request tables from an empty pool
-			HTableInterface[] tables = new HTableInterface[4];
+			Table[] tables = new Table[4];
 			for (int i = 0; i < 4; ++i) {
 				tables[i] = pool.getTable(TABLENAME);
 			}
@@ -298,9 +302,9 @@ public class TestHTablePool {
 					getPoolType());
 
 			// Request tables from an empty pool
-			HTableInterface table1 = pool.getTable(TABLENAME);
-			HTableInterface table2 = pool.getTable(TABLENAME);
-			HTableInterface table3 = pool.getTable(TABLENAME);
+			Table table1 = pool.getTable(TABLENAME);
+			Table table2 = pool.getTable(TABLENAME);
+			Table table3 = pool.getTable(TABLENAME);
 
 			// Close tables (returns tables to the pool)
 			table1.close();
@@ -310,9 +314,9 @@ public class TestHTablePool {
 			table3.close();
 
 			// Request tables of the same name
-			HTableInterface sameTable1 = pool.getTable(TABLENAME);
-			HTableInterface sameTable2 = pool.getTable(TABLENAME);
-			HTableInterface sameTable3 = pool.getTable(TABLENAME);
+			Table sameTable1 = pool.getTable(TABLENAME);
+			Table sameTable2 = pool.getTable(TABLENAME);
+			Table sameTable3 = pool.getTable(TABLENAME);
 			Assert.assertSame(
 					((HTablePool.PooledHTable) table3).getWrappedTable(),
 					((HTablePool.PooledHTable) sameTable1).getWrappedTable());
@@ -340,7 +344,7 @@ public class TestHTablePool {
 			admin.createTable(tableDescriptor);
 
 			// Request tables from an empty pool
-			HTableInterface[] tables = new HTableInterface[4];
+			Table[] tables = new Table[4];
 			for (int i = 0; i < 4; ++i) {
 				tables[i] = pool.getTable(TABLENAME);
 			}

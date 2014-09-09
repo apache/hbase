@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -86,6 +87,7 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -183,8 +185,8 @@ public class HBaseFsck extends Configured {
   private static final Log LOG = LogFactory.getLog(HBaseFsck.class.getName());
   private ClusterStatus status;
   private HConnection connection;
-  private HBaseAdmin admin;
-  private HTable meta;
+  private Admin admin;
+  private Table meta;
   // threads to do ||izable tasks: retrieve data from regionservers, handle overlapping regions
   protected ExecutorService executor;
   private long startMillis = System.currentTimeMillis();
@@ -2722,7 +2724,7 @@ public class HBaseFsck extends Configured {
 
   HTableDescriptor[] getHTableDescriptors(List<TableName> tableNames) {
     HTableDescriptor[] htd = new HTableDescriptor[0];
-    HBaseAdmin admin = null;
+    Admin admin = null;
     try {
       LOG.info("getHTableDescriptors == tableNames => " + tableNames);
       admin = new HBaseAdmin(getConf());

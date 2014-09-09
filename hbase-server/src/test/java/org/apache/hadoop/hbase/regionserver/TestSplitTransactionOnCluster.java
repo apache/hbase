@@ -57,6 +57,8 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -67,6 +69,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coordination.ZKSplitTransactionCoordination;
 import org.apache.hadoop.hbase.coordination.ZkCloseRegionCoordination;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TestReplicasClient.SlowMeCopro;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -278,7 +282,7 @@ public class TestSplitTransactionOnCluster {
         TableName.valueOf("testRITStateForRollback");
     try {
       // Create table then get the single region for our new table.
-      HTable t = createTableAndWait(tableName.getName(), Bytes.toBytes("cf"));
+      Table t = createTableAndWait(tableName.getName(), Bytes.toBytes("cf"));
       final List<HRegion> regions = cluster.getRegions(tableName);
       final HRegionInfo hri = getAndCheckSingleTableRegion(regions);
       insertData(tableName.getName(), admin, t);
@@ -340,7 +344,7 @@ public class TestSplitTransactionOnCluster {
     int regionServerIndex = cluster.getServerWith(region.getRegionName());
     HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
     
-    HTable t  = new HTable(conf, tableName);
+    Table t  = new HTable(conf, tableName);
     // insert data
     insertData(tableName, admin, t);
     insertData(tableName, admin, t);
@@ -624,7 +628,7 @@ public class TestSplitTransactionOnCluster {
     HColumnDescriptor hcd = new HColumnDescriptor("col");
     htd.addFamily(hcd);
     admin.createTable(htd);
-    HTable table = new HTable(conf, userTableName);
+    Table table = new HTable(conf, userTableName);
     try {
       for (int i = 0; i <= 5; i++) {
         String row = "row" + i;
@@ -886,7 +890,7 @@ public class TestSplitTransactionOnCluster {
     final TableName tableName =
         TableName.valueOf("testTableExistsIfTheSpecifiedTableRegionIsSplitParent");
     // Create table then get the single region for our new table.
-    HTable t = createTableAndWait(tableName.getName(), Bytes.toBytes("cf"));
+    Table t = createTableAndWait(tableName.getName(), Bytes.toBytes("cf"));
     List<HRegion> regions = null;
     try {
       regions = cluster.getRegions(tableName);
@@ -924,7 +928,7 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
-  private void insertData(final byte[] tableName, HBaseAdmin admin, HTable t) throws IOException,
+  private void insertData(final byte[] tableName, HBaseAdmin admin, Table t) throws IOException,
       InterruptedException {
     Put p = new Put(Bytes.toBytes("row1"));
     p.add(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("1"));
@@ -1044,8 +1048,8 @@ public class TestSplitTransactionOnCluster {
         cluster.getServerHoldingRegion(firstTableregions.get(0).getRegionName());
     admin.move(secondTableRegions.get(0).getRegionInfo().getEncodedNameAsBytes(),
       Bytes.toBytes(serverName.getServerName()));
-    HTable table1 = null;
-    HTable table2 = null;
+    Table table1 = null;
+    Table table2 = null;
     try {
       table1 = new HTable(TESTING_UTIL.getConfiguration(), firstTable);
       table2 = new HTable(TESTING_UTIL.getConfiguration(), firstTable);
@@ -1258,7 +1262,7 @@ public class TestSplitTransactionOnCluster {
    * @throws org.apache.hadoop.hbase.ZooKeeperConnectionException
    * @throws InterruptedException
    */
-  private int ensureTableRegionNotOnSameServerAsMeta(final HBaseAdmin admin,
+  private int ensureTableRegionNotOnSameServerAsMeta(final Admin admin,
       final HRegionInfo hri)
   throws HBaseIOException, MasterNotRunningException,
   ZooKeeperConnectionException, InterruptedException {

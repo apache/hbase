@@ -212,7 +212,7 @@ public class TestHCM {
   @Test
   public void testAdminFactory() throws IOException {
     HConnection con1 = HConnectionManager.createConnection(TEST_UTIL.getConfiguration());
-    HBaseAdmin admin = (HBaseAdmin)con1.getAdmin();
+    Admin admin = con1.getAdmin();
     assertTrue(admin.getConnection() == con1);
     assertTrue(admin.getConfiguration() == TEST_UTIL.getConfiguration());
     con1.close();
@@ -425,7 +425,7 @@ public class TestHCM {
     c2.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1); // Don't retry: retry = test failed
     c2.setInt(RpcClient.IDLE_TIME, idleTime);
 
-    final HTable table = new HTable(c2, tableName.getBytes());
+    final Table table = new HTable(c2, tableName.getBytes());
 
     Put put = new Put(ROW);
     put.add(FAM_NAM, ROW, ROW);
@@ -777,9 +777,9 @@ public class TestHCM {
    */
   @Test
   public void testConnectionManagement() throws Exception{
-    HTable table0 = TEST_UTIL.createTable(TABLE_NAME1, FAM_NAM);
+    Table table0 = TEST_UTIL.createTable(TABLE_NAME1, FAM_NAM);
     HConnection conn = HConnectionManager.createConnection(TEST_UTIL.getConfiguration());
-    HTableInterface table = conn.getTable(TABLE_NAME1.getName());
+    Table table = conn.getTable(TABLE_NAME1.getName());
     table.close();
     assertFalse(conn.isClosed());
     assertFalse(((HTable)table).getPool().isShutdown());
@@ -1233,7 +1233,7 @@ public class TestHCM {
       try {
         c1 = ConnectionManager.getConnectionInternal(config);
         LOG.info("HTable connection " + i + " " + c1);
-        HTable table = new HTable(config, TABLE_NAME4, pool);
+        Table table = new HTable(config, TABLE_NAME4, pool);
         table.close();
         LOG.info("HTable connection " + i + " closed " + c1);
       } catch (Exception e) {
@@ -1273,7 +1273,7 @@ public class TestHCM {
     TEST_UTIL.createTable(tableName.getName(), new byte[][] {FAM_NAM}, config).close();
 
     HConnection connection = HConnectionManager.createConnection(config);
-    HTableInterface table = connection.getTable(tableName);
+    Table table = connection.getTable(tableName);
 
     // this will cache the meta location and table's region location
     table.get(new Get(Bytes.toBytes("foo")));

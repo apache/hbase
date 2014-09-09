@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
@@ -136,7 +137,7 @@ public static void beforeClass() throws Exception {
   // Wait for the labels table to become available
   UTIL.waitTableEnabled(VisibilityConstants.LABELS_TABLE_NAME.getName(), 50000);
   createLabels();
-  HBaseAdmin admin = new HBaseAdmin(UTIL.getConfiguration());
+  Admin admin = new HBaseAdmin(UTIL.getConfiguration());
   HTableDescriptor tableDescriptor = new HTableDescriptor(
       TableName.valueOf(tableAname));
   for (HColumnDescriptor family : families) {

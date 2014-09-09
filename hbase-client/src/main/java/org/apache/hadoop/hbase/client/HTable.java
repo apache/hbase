@@ -22,7 +22,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -1779,7 +1778,7 @@ public class HTable implements HTableInterface, RegionLocator {
    * @throws IOException
    */
   public static void main(String[] args) throws IOException {
-    HTable t = new HTable(HBaseConfiguration.create(), args[0]);
+    Table t = new HTable(HBaseConfiguration.create(), args[0]);
     try {
       System.out.println(t.get(new Get(Bytes.toBytes(args[1]))));
     } finally {

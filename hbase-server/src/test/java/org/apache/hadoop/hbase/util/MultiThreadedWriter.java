@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.util.StringUtils;
 
@@ -79,7 +80,7 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
   }
 
   public class HBaseWriterThread extends Thread {
-    private final HTableInterface table;
+    private final Table table;
 
     public HBaseWriterThread(int writerId) throws IOException {
       setName(getClass().getSimpleName() + "_" + writerId);
@@ -138,7 +139,7 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
       }
     }
 
-    public void insert(HTableInterface table, Put put, long keyBase) {
+    public void insert(Table table, Put put, long keyBase) {
       long start = System.currentTimeMillis();
       try {
         put = (Put) dataGenerator.beforeMutate(keyBase, put);

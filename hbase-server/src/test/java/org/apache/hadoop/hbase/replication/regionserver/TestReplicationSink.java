@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -37,7 +38,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -69,7 +69,7 @@ public class TestReplicationSink {
   private static final byte[] FAM_NAME1 = Bytes.toBytes("info1");
   private static final byte[] FAM_NAME2 = Bytes.toBytes("info2");
 
-  private static HTable table1;
+  private static Table table1;
   private static Stoppable STOPPABLE = new Stoppable() {
     final AtomicBoolean stop = new AtomicBoolean(false);
 
@@ -86,7 +86,7 @@ public class TestReplicationSink {
     
   };
 
-  private static HTable table2;
+  private static Table table2;
 
    /**
    * @throws java.lang.Exception

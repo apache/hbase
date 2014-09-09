@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -114,7 +115,7 @@ public class TestRegionObserverInterface {
     TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".testRegionObserver");
     // recreate table every time in order to reset the status of the
     // coprocessor.
-    HTable table = util.createTable(tableName, new byte[][] {A, B, C});
+    Table table = util.createTable(tableName, new byte[][] {A, B, C});
     try {
       verifyMethodResult(SimpleRegionObserver.class, new String[] { "hadPreGet", "hadPostGet",
           "hadPrePut", "hadPostPut", "hadDelete", "hadPostStartRegionOperation",
@@ -176,7 +177,7 @@ public class TestRegionObserverInterface {
   @Test
   public void testRowMutation() throws IOException {
     TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".testRowMutation");
-    HTable table = util.createTable(tableName, new byte[][] {A, B, C});
+    Table table = util.createTable(tableName, new byte[][] {A, B, C});
     try {
       verifyMethodResult(SimpleRegionObserver.class,
         new String[] {"hadPreGet", "hadPostGet", "hadPrePut", "hadPostPut",
@@ -213,7 +214,7 @@ public class TestRegionObserverInterface {
   @Test
   public void testIncrementHook() throws IOException {
     TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".testIncrementHook");
-    HTable table = util.createTable(tableName, new byte[][] {A, B, C});
+    Table table = util.createTable(tableName, new byte[][] {A, B, C});
     try {
       Increment inc = new Increment(Bytes.toBytes(0));
       inc.addColumn(A, A, 1);
@@ -241,7 +242,7 @@ public class TestRegionObserverInterface {
   public void testCheckAndPutHooks() throws IOException {
     TableName tableName =
         TableName.valueOf(TEST_TABLE.getNameAsString() + ".testCheckAndPutHooks");
-    HTable table = util.createTable(tableName, new byte[][] {A, B, C});
+    Table table = util.createTable(tableName, new byte[][] {A, B, C});
     try {
       Put p = new Put(Bytes.toBytes(0));
       p.add(A, A, A);
@@ -272,7 +273,7 @@ public class TestRegionObserverInterface {
   public void testCheckAndDeleteHooks() throws IOException {
     TableName tableName =
         TableName.valueOf(TEST_TABLE.getNameAsString() + ".testCheckAndDeleteHooks");
-    HTable table = util.createTable(tableName, new byte[][] {A, B, C});
+    Table table = util.createTable(tableName, new byte[][] {A, B, C});
     try {
       Put p = new Put(Bytes.toBytes(0));
       p.add(A, A, A);
@@ -302,7 +303,7 @@ public class TestRegionObserverInterface {
   @Test
   public void testAppendHook() throws IOException {
     TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".testAppendHook");
-    HTable table = util.createTable(tableName, new byte[][] {A, B, C});
+    Table table = util.createTable(tableName, new byte[][] {A, B, C});
     try {
       Append app = new Append(Bytes.toBytes(0));
       app.add(A, A, A);
@@ -341,7 +342,7 @@ public class TestRegionObserverInterface {
         new Boolean[] {false, false, false, false}
     );
 
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = new HTable(util.getConfiguration(), tableName);
     Put put = new Put(ROW);
     put.add(A, A, A);
     table.put(put);
@@ -391,7 +392,7 @@ public class TestRegionObserverInterface {
         new Boolean[] {false, false}
     );
 
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = new HTable(util.getConfiguration(), tableName);
     Put put = new Put(ROW);
     put.add(A, A, A);
     table.put(put);
@@ -498,7 +499,7 @@ public class TestRegionObserverInterface {
     htd.addCoprocessor(EvenOnlyCompactor.class.getName());
     admin.createTable(htd);
 
-    HTable table = new HTable(util.getConfiguration(), compactTable);
+    Table table = new HTable(util.getConfiguration(), compactTable);
     for (long i=1; i<=10; i++) {
       byte[] iBytes = Bytes.toBytes(i);
       Put put = new Put(iBytes);
@@ -560,7 +561,7 @@ public class TestRegionObserverInterface {
     String testName = TestRegionObserverInterface.class.getName()+".bulkLoadHFileTest";
     TableName tableName = TableName.valueOf(TEST_TABLE.getNameAsString() + ".bulkLoadHFileTest");
     Configuration conf = util.getConfiguration();
-    HTable table = util.createTable(tableName, new byte[][] {A, B, C});
+    Table table = util.createTable(tableName, new byte[][] {A, B, C});
     try {
       verifyMethodResult(SimpleRegionObserver.class,
           new String[] {"hadPreBulkLoadHFile", "hadPostBulkLoadHFile"},

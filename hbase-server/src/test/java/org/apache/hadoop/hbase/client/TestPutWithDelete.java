@@ -52,7 +52,7 @@ public class TestPutWithDelete {
     final TableName tableName = TableName.valueOf("TestPutWithDelete");
     final byte[] rowKey = Bytes.toBytes("12345");
     final byte[] family = Bytes.toBytes("cf");
-    HTable table = TEST_UTIL.createTable(tableName, family);
+    Table table = TEST_UTIL.createTable(tableName, family);
     TEST_UTIL.waitTableAvailable(tableName.getName(), 5000);
     try {
       // put one row

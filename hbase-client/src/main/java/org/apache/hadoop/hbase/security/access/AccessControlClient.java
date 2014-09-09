@@ -32,8 +32,10 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
@@ -70,7 +72,7 @@ public class AccessControlClient {
   public static GrantResponse grant(Configuration conf, final TableName tableName,
       final String userName, final byte[] family, final byte[] qual,
       final AccessControlProtos.Permission.Action... actions) throws Throwable {
-    HTable ht = null;
+    Table ht = null;
     try {
       TableName aclTableName =
           TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "acl");
@@ -150,7 +152,7 @@ public class AccessControlClient {
   public static RevokeResponse revoke(Configuration conf, final String username,
       final TableName tableName, final byte[] family, final byte[] qualifier,
       final AccessControlProtos.Permission.Action... actions) throws Throwable {
-    HTable ht = null;
+    Table ht = null;
     try {
       TableName aclTableName = TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR,
           "acl");
@@ -211,8 +213,8 @@ public class AccessControlClient {
   public static List<UserPermission> getUserPermissions(Configuration conf, String tableRegex)
       throws Throwable {
     List<UserPermission> permList = new ArrayList<UserPermission>();
-    HTable ht = null;
-    HBaseAdmin ha = null;
+    Table ht = null;
+    Admin ha = null;
     try {
       TableName aclTableName =
           TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "acl");

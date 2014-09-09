@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -125,13 +126,13 @@ public class TestVisibilityWithCheckAuths {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(colDesc);
     hBaseAdmin.createTable(desc);
-    HTable table = null;
+    Table table = null;
     try {
       TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          HTable table = null;
+          Table table = null;
           try {
             table = new HTable(conf, TEST_NAME.getMethodName());
             Put p = new Put(row1);
@@ -169,7 +170,7 @@ public class TestVisibilityWithCheckAuths {
     };
     SUPERUSER.runAs(action);
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    HTable table = null;
+    Table table = null;
     try {
       table = TEST_UTIL.createTable(tableName, fam);
       final byte[] row1 = Bytes.toBytes("row1");
@@ -177,7 +178,7 @@ public class TestVisibilityWithCheckAuths {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          HTable table = null;
+          Table table = null;
           try {
             table = new HTable(conf, TEST_NAME.getMethodName());
             Put put = new Put(row1);
@@ -194,7 +195,7 @@ public class TestVisibilityWithCheckAuths {
       actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          HTable table = null;
+          Table table = null;
           try {
             table = new HTable(conf, TEST_NAME.getMethodName());
             Append append = new Append(row1);
@@ -210,7 +211,7 @@ public class TestVisibilityWithCheckAuths {
       actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          HTable table = null;
+          Table table = null;
           try {
             table = new HTable(conf, TEST_NAME.getMethodName());
             Append append = new Append(row1);

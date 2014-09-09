@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -124,11 +125,11 @@ public class TestMultiSlaveReplication {
     new HBaseAdmin(conf1).createTable(table);
     new HBaseAdmin(conf2).createTable(table);
     new HBaseAdmin(conf3).createTable(table);
-    HTable htable1 = new HTable(conf1, tableName);
+    Table htable1 = new HTable(conf1, tableName);
     htable1.setWriteBufferSize(1024);
-    HTable htable2 = new HTable(conf2, tableName);
+    Table htable2 = new HTable(conf2, tableName);
     htable2.setWriteBufferSize(1024);
-    HTable htable3 = new HTable(conf3, tableName);
+    Table htable3 = new HTable(conf3, tableName);
     htable3.setWriteBufferSize(1024);
     
     admin1.addPeer("1", utility2.getClusterKey());
@@ -187,7 +188,7 @@ public class TestMultiSlaveReplication {
     utility1.shutdownMiniCluster();
   }
  
-  private void checkWithWait(byte[] row, int count, HTable table) throws Exception {
+  private void checkWithWait(byte[] row, int count, Table table) throws Exception {
     Get get = new Get(row);
     for (int i = 0; i < NB_RETRIES; i++) {
       if (i == NB_RETRIES - 1) {
@@ -209,15 +210,15 @@ public class TestMultiSlaveReplication {
     }
   }
   
-  private void checkRow(byte[] row, int count, HTable... tables) throws IOException {
+  private void checkRow(byte[] row, int count, Table... tables) throws IOException {
     Get get = new Get(row);
-    for (HTable table : tables) {
+    for (Table table : tables) {
       Result res = table.get(get);
       assertEquals(count, res.size());
     }
   }
 
-  private void deleteAndWait(byte[] row, HTable source, HTable... targets)
+  private void deleteAndWait(byte[] row, Table source, Table... targets)
   throws Exception {
     Delete del = new Delete(row);
     source.delete(del);
@@ -228,7 +229,7 @@ public class TestMultiSlaveReplication {
         fail("Waited too much time for del replication");
       }
       boolean removedFromAll = true;
-      for (HTable target : targets) {
+      for (Table target : targets) {
         Result res = target.get(get);
         if (res.size() >= 1) {
           LOG.info("Row not deleted");
@@ -244,7 +245,7 @@ public class TestMultiSlaveReplication {
     }
   }
 
-  private void putAndWait(byte[] row, byte[] fam, HTable source, HTable... targets)
+  private void putAndWait(byte[] row, byte[] fam, Table source, Table... targets)
   throws Exception {
     Put put = new Put(row);
     put.add(fam, row, row);
@@ -256,7 +257,7 @@ public class TestMultiSlaveReplication {
         fail("Waited too much time for put replication");
       }
       boolean replicatedToAll = true;
-      for (HTable target : targets) {
+      for (Table target : targets) {
         Result res = target.get(get);
         if (res.size() == 0) {
           LOG.info("Row not available");

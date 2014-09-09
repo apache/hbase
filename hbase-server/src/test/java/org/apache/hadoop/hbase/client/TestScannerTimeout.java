@@ -65,7 +65,7 @@ public class TestScannerTimeout {
     c.setInt(HConstants.THREAD_WAKE_FREQUENCY, THREAD_WAKE_FREQUENCY);
     // We need more than one region server for this test
     TEST_UTIL.startMiniCluster(2);
-    HTable table = TEST_UTIL.createTable(TABLE_NAME, SOME_BYTES);
+    Table table = TEST_UTIL.createTable(TABLE_NAME, SOME_BYTES);
      for (int i = 0; i < NB_ROWS; i++) {
       Put put = new Put(Bytes.toBytes(i));
       put.add(SOME_BYTES, SOME_BYTES, SOME_BYTES);
@@ -99,7 +99,7 @@ public class TestScannerTimeout {
     LOG.info("START ************ test2481");
     Scan scan = new Scan();
     scan.setCaching(1);
-    HTable table =
+    Table table =
       new HTable(new Configuration(TEST_UTIL.getConfiguration()), TABLE_NAME);
     ResultScanner r = table.getScanner(scan);
     int count = 0;
@@ -139,7 +139,7 @@ public class TestScannerTimeout {
     // this new table
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, SCANNER_TIMEOUT * 100);
-    HTable higherScanTimeoutTable = new HTable(conf, TABLE_NAME);
+    Table higherScanTimeoutTable = new HTable(conf, TABLE_NAME);
     ResultScanner r = higherScanTimeoutTable.getScanner(scan);
     // This takes way less than SCANNER_TIMEOUT*100
     rs.abort("die!");
@@ -173,7 +173,7 @@ public class TestScannerTimeout {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt(
         HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, SCANNER_TIMEOUT*100);
-    HTable table = new HTable(conf, TABLE_NAME);
+    Table table = new HTable(conf, TABLE_NAME);
     LOG.info("START ************ TEST3686A---22");
 
     ResultScanner r = table.getScanner(scan);
@@ -212,7 +212,7 @@ public class TestScannerTimeout {
     // this new table
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, SCANNER_TIMEOUT * 100);
-    HTable higherScanTimeoutTable = new HTable(conf, TABLE_NAME);
+    Table higherScanTimeoutTable = new HTable(conf, TABLE_NAME);
     ResultScanner r = higherScanTimeoutTable.getScanner(scan);
     int count = 1;
     r.next();

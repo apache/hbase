@@ -246,7 +246,7 @@ public class TestAdmin {
     final byte [] qualifier = Bytes.toBytes("qualifier");
     final byte [] value = Bytes.toBytes("value");
     final TableName table = TableName.valueOf("testDisableAndEnableTable");
-    HTable ht = TEST_UTIL.createTable(table, HConstants.CATALOG_FAMILY);
+    Table ht = TEST_UTIL.createTable(table, HConstants.CATALOG_FAMILY);
     Put put = new Put(row);
     put.add(HConstants.CATALOG_FAMILY, qualifier, value);
     ht.put(put);
@@ -291,8 +291,8 @@ public class TestAdmin {
     final byte [] value = Bytes.toBytes("value");
     final byte [] table1 = Bytes.toBytes("testDisableAndEnableTable1");
     final byte [] table2 = Bytes.toBytes("testDisableAndEnableTable2");
-    HTable ht1 = TEST_UTIL.createTable(table1, HConstants.CATALOG_FAMILY);
-    HTable ht2 = TEST_UTIL.createTable(table2, HConstants.CATALOG_FAMILY);
+    Table ht1 = TEST_UTIL.createTable(table1, HConstants.CATALOG_FAMILY);
+    Table ht2 = TEST_UTIL.createTable(table2, HConstants.CATALOG_FAMILY);
     Put put = new Put(row);
     put.add(HConstants.CATALOG_FAMILY, qualifier, value);
     ht1.put(put);
@@ -400,7 +400,7 @@ public class TestAdmin {
     htd.addFamily(fam2);
     htd.addFamily(fam3);
     this.admin.createTable(htd);
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), "myTestTable");
+    Table table = new HTable(TEST_UTIL.getConfiguration(), "myTestTable");
     HTableDescriptor confirmedHtd = table.getTableDescriptor();
     assertEquals(htd.compareTo(confirmedHtd), 0);
     table.close();
@@ -816,7 +816,7 @@ public class TestAdmin {
     TableName TABLE_4 = TableName.valueOf(tableName.getNameAsString() + "_4");
     desc = new HTableDescriptor(TABLE_4);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    HBaseAdmin ladmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    Admin ladmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     try {
       ladmin.createTable(desc, splitKeys);
       assertTrue("Should not be able to create this table because of " +
@@ -1238,7 +1238,7 @@ public class TestAdmin {
       // Use 80 bit numbers to make sure we aren't limited
       byte [] startKey = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
       byte [] endKey =   { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 };
-      HBaseAdmin hbaseadmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+      Admin hbaseadmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
       htd.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
       hbaseadmin.createTable(htd, startKey, endKey, expectedRegions);
@@ -1255,7 +1255,7 @@ public class TestAdmin {
   @Test (timeout=300000)
   public void testReadOnlyTable() throws Exception {
     byte [] name = Bytes.toBytes("testReadOnlyTable");
-    HTable table = TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
+    Table table = TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
     byte[] value = Bytes.toBytes("somedata");
     // This used to use an empty row... That must have been a bug
     Put put = new Put(value);
@@ -1324,7 +1324,7 @@ public class TestAdmin {
   @Test (expected=TableNotDisabledException.class, timeout=300000)
   public void testTableNotDisabledExceptionWithATable() throws IOException {
     final TableName name = TableName.valueOf("testTableNotDisabledExceptionWithATable");
-    HTable t = TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
+    Table t = TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
     try {
     this.admin.enableTable(name);
     }finally {
@@ -1338,7 +1338,7 @@ public class TestAdmin {
    */
   @Test (expected=TableNotFoundException.class, timeout=300000)
   public void testTableNotFoundExceptionWithoutAnyTables() throws IOException {
-    HTable ht =
+    Table ht =
         new HTable(TEST_UTIL.getConfiguration(),"testTableNotFoundExceptionWithoutAnyTables");
     ht.get(new Get("e".getBytes()));
   }
@@ -1659,7 +1659,7 @@ public class TestAdmin {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc);
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table table = new HTable(TEST_UTIL.getConfiguration(), tableName);
 
     HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
     for (int i = 1; i <= 256; i++) { // 256 writes should cause 8 log rolls

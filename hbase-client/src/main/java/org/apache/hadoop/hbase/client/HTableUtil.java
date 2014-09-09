@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HRegionLocation;
 
 import java.io.IOException;
@@ -102,7 +101,7 @@ public class HTableUtil {
 		
   }
 
-  private static Map<String,List<Put>> createRsPutMap(HTable htable, List<Put> puts) throws IOException {
+  private static Map<String,List<Put>> createRsPutMap(RegionLocator htable, List<Put> puts) throws IOException {
 
     Map<String, List<Put>> putMap = new HashMap<String, List<Put>>();
     for (Put put: puts) {
@@ -118,7 +117,7 @@ public class HTableUtil {
     return putMap;
   }
 
-  private static Map<String,List<Row>> createRsRowMap(HTable htable, List<Row> rows) throws IOException {
+  private static Map<String,List<Row>> createRsRowMap(RegionLocator htable, List<Row> rows) throws IOException {
 
     Map<String, List<Row>> rowMap = new HashMap<String, List<Row>>();
     for (Row row: rows) {

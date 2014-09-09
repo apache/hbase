@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
@@ -123,7 +124,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
             ResultScanner rs = null;
             try {
               innerScope = Trace.startSpan("Scan", Sampler.ALWAYS);
-              HTable ht = new HTable(util.getConfiguration(), tableName);
+              Table ht = new HTable(util.getConfiguration(), tableName);
               Scan s = new Scan();
               s.setStartRow(Bytes.toBytes(rowKeyQueue.take()));
               s.setBatch(7);
@@ -171,7 +172,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
         public void run() {
 
 
-          HTable ht = null;
+          Table ht = null;
           try {
             ht = new HTable(util.getConfiguration(), tableName);
           } catch (IOException e) {

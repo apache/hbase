@@ -35,13 +35,12 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
@@ -69,7 +68,7 @@ public class TestOpenTableInCoprocessor {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
         final WALEdit edit, final Durability durability) throws IOException {
-      HTableInterface table = e.getEnvironment().getTable(otherTable);
+      Table table = e.getEnvironment().getTable(otherTable);
       table.put(put);
       table.flushCommits();
       completed[0] = true;
@@ -102,7 +101,7 @@ public class TestOpenTableInCoprocessor {
     @Override
     public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, final Put put,
         final WALEdit edit, final Durability durability) throws IOException {
-      HTableInterface table = e.getEnvironment().getTable(otherTable, getPool());
+      Table table = e.getEnvironment().getTable(otherTable, getPool());
       Put p = new Put(new byte[] { 'a' });
       p.add(family, null, new byte[] { 'a' });
       try {
@@ -162,14 +161,14 @@ public class TestOpenTableInCoprocessor {
     admin.createTable(primary);
     admin.createTable(other);
 
-    HTable table = new HTable(UTIL.getConfiguration(), "primary");
+    Table table = new HTable(UTIL.getConfiguration(), "primary");
     Put p = new Put(new byte[] { 'a' });
     p.add(family, null, new byte[] { 'a' });
     table.put(p);
     table.flushCommits();
     table.close();
 
-    HTable target = new HTable(UTIL.getConfiguration(), otherTable);
+    Table target = new HTable(UTIL.getConfiguration(), otherTable);
     assertTrue("Didn't complete update to target table!", completeCheck[0]);
     assertEquals("Didn't find inserted row", 1, getKeyValueCount(target));
     target.close();
@@ -181,7 +180,7 @@ public class TestOpenTableInCoprocessor {
    * @return number of keyvalues over all rows in the table
    * @throws IOException
    */
-  private int getKeyValueCount(HTable table) throws IOException {
+  private int getKeyValueCount(Table table) throws IOException {
     Scan scan = new Scan();
     scan.setMaxVersions(Integer.MAX_VALUE - 1);
 

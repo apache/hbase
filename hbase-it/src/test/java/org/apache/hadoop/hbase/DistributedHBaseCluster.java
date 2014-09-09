@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterManager.ServiceType;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -45,7 +46,7 @@ import com.google.common.collect.Sets;
 @InterfaceAudience.Private
 public class DistributedHBaseCluster extends HBaseCluster {
 
-  private HBaseAdmin admin;
+  private Admin admin;
 
   private ClusterManager clusterManager;
 

@@ -35,8 +35,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -249,7 +249,7 @@ public class TestLoadIncrementalHFiles {
     String [] args= {dir.toString(), tableName.toString()};
     loader.run(args);
 
-    HTable table = new HTable(util.getConfiguration(), tableName);
+    Table table = new HTable(util.getConfiguration(), tableName);
     try {
       assertEquals(expectedRows, util.countRows(table));
     } finally {

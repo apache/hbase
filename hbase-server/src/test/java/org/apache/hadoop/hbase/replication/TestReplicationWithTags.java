@@ -39,12 +39,14 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
@@ -70,8 +72,8 @@ public class TestReplicationWithTags {
 
   private static ReplicationAdmin replicationAdmin;
 
-  private static HTable htable1;
-  private static HTable htable2;
+  private static Table htable1;
+  private static Table htable2;
 
   private static HBaseTestingUtility utility1;
   private static HBaseTestingUtility utility2;
@@ -134,7 +136,7 @@ public class TestReplicationWithTags {
     fam.setMaxVersions(3);
     fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     table.addFamily(fam);
-    HBaseAdmin admin = null;
+    Admin admin = null;
     try {
       admin = new HBaseAdmin(conf1);
       admin.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);

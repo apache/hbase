@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -97,7 +98,7 @@ public class TestEnforcingScanLabelGenerator {
 
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
-        HTable table = TEST_UTIL.createTable(tableName, CF);
+        Table table = TEST_UTIL.createTable(tableName, CF);
         try {
           Put put = new Put(ROW_1);
           put.add(CF, Q1, HConstants.LATEST_TIMESTAMP, value);
@@ -119,7 +120,7 @@ public class TestEnforcingScanLabelGenerator {
 
     TESTUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
-        HTable table = new HTable(conf, tableName);
+        Table table = new HTable(conf, tableName);
         try {
           // Test that we enforce the defined set
           Get get = new Get(ROW_1);

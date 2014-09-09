@@ -41,7 +41,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.commons.logging.Log;
@@ -63,11 +62,13 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.SecureBulkLoadClient;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
@@ -106,7 +107,7 @@ import java.util.UUID;
 @InterfaceStability.Stable
 public class LoadIncrementalHFiles extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(LoadIncrementalHFiles.class);
-  private HBaseAdmin hbAdmin;
+  private Admin hbAdmin;
 
   public static final String NAME = "completebulkload";
   public static final String MAX_FILES_PER_REGION_PER_FAMILY
@@ -359,7 +360,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * them.  Any failures are re-queued for another pass with the
    * groupOrSplitPhase.
    */
-  protected void bulkLoadPhase(final HTable table, final HConnection conn,
+  protected void bulkLoadPhase(final Table table, final HConnection conn,
       ExecutorService pool, Deque<LoadQueueItem> queue,
       final Multimap<ByteBuffer, LoadQueueItem> regionGroups) throws IOException {
     // atomically bulk load the groups.
@@ -482,7 +483,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   protected List<LoadQueueItem> splitStoreFile(final LoadQueueItem item,
-      final HTable table, byte[] startKey,
+      final Table table, byte[] startKey,
       byte[] splitKey) throws IOException {
     final Path hfilePath = item.hfilePath;
 
@@ -646,7 +647,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           if(!userProvider.isHBaseSecurityEnabled()) {
             success = ProtobufUtil.bulkLoadHFile(getStub(), famPaths, regionName, assignSeqIds);
           } else {
-            HTable table = new HTable(conn.getConfiguration(), getTableName());
+            Table table = new HTable(conn.getConfiguration(), getTableName());
             secureClient = new SecureBulkLoadClient(table);
             success = secureClient.bulkLoadHFiles(famPaths, fsDelegationToken.getUserToken(),
               bulkToken, getLocation().getRegionInfo().getStartKey());

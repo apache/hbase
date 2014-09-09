@@ -30,12 +30,12 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.MediumTests;
@@ -133,7 +133,7 @@ public class TestHRegionOnCluster {
     }
   }
 
-  private void putDataAndVerify(HTable table, String row, byte[] family,
+  private void putDataAndVerify(Table table, String row, byte[] family,
       String value, int verifyNum) throws IOException {
     System.out.println("=========Putting data :" + row);
     Put put = new Put(Bytes.toBytes(row));

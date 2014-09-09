@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -249,7 +250,7 @@ public class TestNamespace {
     }
 
     //sanity check try to write and read from table
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), desc.getTableName());
+    Table table = new HTable(TEST_UTIL.getConfiguration(), desc.getTableName());
     Put p = new Put(Bytes.toBytes("row1"));
     p.add(Bytes.toBytes("my_cf"),Bytes.toBytes("my_col"),Bytes.toBytes("value1"));
     table.put(p);

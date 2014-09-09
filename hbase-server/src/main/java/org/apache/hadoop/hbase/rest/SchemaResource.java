@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.rest.model.ColumnSchemaModel;
 import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -74,7 +74,7 @@ public class SchemaResource extends ResourceBase {
 
   private HTableDescriptor getTableSchema() throws IOException,
       TableNotFoundException {
-    HTableInterface table = servlet.getTable(tableResource.getName());
+    Table table = servlet.getTable(tableResource.getName());
     try {
       return table.getTableDescriptor();
     } finally {

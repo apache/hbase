@@ -45,6 +45,8 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
@@ -284,7 +286,7 @@ public class HFileOutputFormat2
    * Return the start keys of all of the regions in this table,
    * as a list of ImmutableBytesWritable.
    */
-  private static List<ImmutableBytesWritable> getRegionStartKeys(HTable table)
+  private static List<ImmutableBytesWritable> getRegionStartKeys(RegionLocator table)
   throws IOException {
     byte[][] byteKeys = table.getStartKeys();
     ArrayList<ImmutableBytesWritable> ret =
@@ -544,7 +546,7 @@ public class HFileOutputFormat2
       value="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE")
   @VisibleForTesting
   static void configureCompression(
-      HTable table, Configuration conf) throws IOException {
+      Table table, Configuration conf) throws IOException {
     StringBuilder compressionConfigValue = new StringBuilder();
     HTableDescriptor tableDescriptor = table.getTableDescriptor();
     if(tableDescriptor == null){
@@ -578,7 +580,7 @@ public class HFileOutputFormat2
    */
   @VisibleForTesting
   static void configureBlockSize(
-      HTable table, Configuration conf) throws IOException {
+      Table table, Configuration conf) throws IOException {
     StringBuilder blockSizeConfigValue = new StringBuilder();
     HTableDescriptor tableDescriptor = table.getTableDescriptor();
     if (tableDescriptor == null) {
@@ -612,7 +614,7 @@ public class HFileOutputFormat2
    */
   @VisibleForTesting
   static void configureBloomType(
-      HTable table, Configuration conf) throws IOException {
+      Table table, Configuration conf) throws IOException {
     HTableDescriptor tableDescriptor = table.getTableDescriptor();
     if (tableDescriptor == null) {
       // could happen with mock table instance
@@ -647,7 +649,7 @@ public class HFileOutputFormat2
    *           on failure to read column family descriptors
    */
   @VisibleForTesting
-  static void configureDataBlockEncoding(HTable table,
+  static void configureDataBlockEncoding(Table table,
       Configuration conf) throws IOException {
     HTableDescriptor tableDescriptor = table.getTableDescriptor();
     if (tableDescriptor == null) {

@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
@@ -137,7 +138,7 @@ public class TestChangingEncoding {
   static void writeTestDataBatch(Configuration conf, String tableName,
       int batchId) throws Exception {
     LOG.debug("Writing test data batch " + batchId);
-    HTable table = new HTable(conf, tableName);
+    Table table = new HTable(conf, tableName);
     table.setAutoFlushTo(false);
     for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
       Put put = new Put(getRowKey(batchId, i));
@@ -155,7 +156,7 @@ public class TestChangingEncoding {
   static void verifyTestDataBatch(Configuration conf, String tableName,
       int batchId) throws Exception {
     LOG.debug("Verifying test data batch " + batchId);
-    HTable table = new HTable(conf, tableName);
+    Table table = new HTable(conf, tableName);
     for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
       Get get = new Get(getRowKey(batchId, i));
       Result result = table.get(get);

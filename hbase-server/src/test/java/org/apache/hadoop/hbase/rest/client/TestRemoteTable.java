@@ -42,12 +42,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.rest.HBaseRESTTestingUtility;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -99,7 +99,7 @@ public class TestRemoteTable {
     htd.addFamily(new HColumnDescriptor(COLUMN_2).setMaxVersions(3));
     htd.addFamily(new HColumnDescriptor(COLUMN_3).setMaxVersions(3));
     admin.createTable(htd);
-    HTable table = null;
+    Table table = null;
     try {
       table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
       Put put = new Put(ROW_1);
@@ -133,7 +133,7 @@ public class TestRemoteTable {
 
   @Test
   public void testGetTableDescriptor() throws IOException {
-    HTable table = null;
+    Table table = null;
     try {
       table = new HTable(TEST_UTIL.getConfiguration(), TABLE);
       HTableDescriptor local = table.getTableDescriptor();

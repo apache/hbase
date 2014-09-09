@@ -31,6 +31,7 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -92,14 +93,14 @@ public class TestCoprocessorEndpoint {
     conf.setStrings(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         ProtobufCoprocessorService.class.getName());
     util.startMiniCluster(2);
-    HBaseAdmin admin = new HBaseAdmin(conf);
+    Admin admin = new HBaseAdmin(conf);
     HTableDescriptor desc = new HTableDescriptor(TEST_TABLE);
     desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
     admin.createTable(desc, new byte[][]{ROWS[rowSeperator1], ROWS[rowSeperator2]});
     util.waitUntilAllRegionsAssigned(TEST_TABLE);
     admin.close();
 
-    HTable table = new HTable(conf, TEST_TABLE);
+    Table table = new HTable(conf, TEST_TABLE);
     for (int i = 0; i < ROWSIZE; i++) {
       Put put = new Put(ROWS[i]);
       put.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(i));
@@ -113,7 +114,7 @@ public class TestCoprocessorEndpoint {
     util.shutdownMiniCluster();
   }
 
-  private Map<byte [], Long> sum(final HTable table, final byte [] family,
+  private Map<byte [], Long> sum(final Table table, final byte [] family,
       final byte [] qualifier, final byte [] start, final byte [] end)
   throws ServiceException, Throwable {
     return table.coprocessorService(ColumnAggregationProtos.ColumnAggregationService.class,
@@ -138,7 +139,7 @@ public class TestCoprocessorEndpoint {
 
   @Test
   public void testAggregation() throws Throwable {
-    HTable table = new HTable(util.getConfiguration(), TEST_TABLE);
+    Table table = new HTable(util.getConfiguration(), TEST_TABLE);
     Map<byte[], Long> results = sum(table, TEST_FAMILY, TEST_QUALIFIER,
       ROWS[0], ROWS[ROWS.length-1]);
     int sumResult = 0;
@@ -297,7 +298,7 @@ public class TestCoprocessorEndpoint {
     Configuration configuration = new Configuration(util.getConfiguration());
     // Make it not retry forever
     configuration.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
-    HTable table = new HTable(configuration, TEST_TABLE);
+    Table table = new HTable(configuration, TEST_TABLE);
 
     try {
       CoprocessorRpcChannel protocol = table.coprocessorService(ROWS[0]);

@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
@@ -229,7 +230,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * @throws IOException 
    */
   void assertExpectedTable(String table, int count, int value) throws IOException {
-    HTable t = null;
+    Table t = null;
     try {
       assertEquals(util.getHBaseAdmin().listTables(table).length, 1);
       t = new HTable(util.getConfiguration(), table);
@@ -341,7 +342,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     LoadIncrementalHFiles lih2 = new LoadIncrementalHFiles(
         util.getConfiguration()) {
 
-      protected void bulkLoadPhase(final HTable htable, final HConnection conn,
+      protected void bulkLoadPhase(final Table htable, final HConnection conn,
           ExecutorService pool, Deque<LoadQueueItem> queue,
           final Multimap<ByteBuffer, LoadQueueItem> regionGroups) throws IOException {
         int i = attemptedCalls.incrementAndGet();

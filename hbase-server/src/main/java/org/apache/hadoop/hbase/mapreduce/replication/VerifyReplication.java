@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
@@ -120,7 +121,7 @@ public class VerifyReplication extends Configured implements Tool {
             Configuration peerConf = HBaseConfiguration.create(conf);
             ZKUtil.applyClusterKeyToConf(peerConf, zkClusterKey);
 
-            HTable replicatedTable = new HTable(peerConf, conf.get(NAME + ".tableName"));
+            Table replicatedTable = new HTable(peerConf, conf.get(NAME + ".tableName"));
             scan.setStartRow(value.getRow());
             replicatedScanner = replicatedTable.getScanner(scan);
             return null;

@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ScannerCallable;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -85,7 +86,7 @@ public class TestFilterWithScanLimits {
 
       // add filter after batch defined
       scan.setFilter(filter);
-      HTable table = new HTable(conf, name);
+      Table table = new HTable(conf, name);
       ResultScanner scanner = table.getScanner(scan);
       // Expect to get following row
       // row2 => <f1:c1, 2_c1>, <f1:c2, 2_c2>,
@@ -111,7 +112,7 @@ public class TestFilterWithScanLimits {
 
   private static void prepareData() {
     try {
-      HTable table = new HTable(TestFilterWithScanLimits.conf, name);
+      Table table = new HTable(TestFilterWithScanLimits.conf, name);
       assertTrue("Fail to create the table", admin.tableExists(name));
       List<Put> puts = new ArrayList<Put>();
 

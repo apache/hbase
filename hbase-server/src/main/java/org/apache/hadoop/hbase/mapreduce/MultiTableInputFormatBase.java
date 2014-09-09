@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -84,7 +85,7 @@ public abstract class MultiTableInputFormatBase extends
           + " previous error. Please look at the previous logs lines from"
           + " the task's full log for more details.");
     }
-    HTable table =
+    Table table =
         new HTable(context.getConfiguration(), tSplit.getTableName());
 
     TableRecordReader trr = this.tableRecordReader;

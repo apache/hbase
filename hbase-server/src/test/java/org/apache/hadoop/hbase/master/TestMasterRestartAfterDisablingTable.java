@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
@@ -102,7 +103,7 @@ public class TestMasterRestartAfterDisablingTable {
         ZooKeeperProtos.Table.State.DISABLING));
     log("Enabling table\n");
     // Need a new Admin, the previous one is on the old master
-    HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    Admin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     admin.enableTable(table);
     admin.close();
     log("Waiting for no more RIT\n");

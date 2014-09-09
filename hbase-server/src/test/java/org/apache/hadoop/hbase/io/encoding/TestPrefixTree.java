@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -79,7 +80,7 @@ public class TestPrefixTree {
   @Test
   public void testHBASE11728() throws Exception {
     TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    HTable table = null;
+    Table table = null;
     try {
       Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
       HColumnDescriptor colDesc = new HColumnDescriptor(fam);

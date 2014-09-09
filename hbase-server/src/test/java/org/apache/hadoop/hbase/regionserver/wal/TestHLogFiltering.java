@@ -30,8 +30,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
@@ -72,7 +72,7 @@ public class TestHLogFiltering {
   }
 
   private void fillTable() throws IOException, InterruptedException {
-    HTable table = TEST_UTIL.createTable(TABLE_NAME, FAMILIES, 3,
+    Table table = TEST_UTIL.createTable(TABLE_NAME, FAMILIES, 3,
         Bytes.toBytes("row0"), Bytes.toBytes("row99"), NUM_RS);
     Random rand = new Random(19387129L);
     for (int iStoreFile = 0; iStoreFile < 4; ++iStoreFile) {

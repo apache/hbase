@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.IntegrationTests;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -369,7 +370,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     HTableDescriptor htd = new HTableDescriptor(getTablename());
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
 
-    HBaseAdmin admin = new HBaseAdmin(getConf());
+    Admin admin = new HBaseAdmin(getConf());
     try {
       admin.createTable(htd, Bytes.toBytes(0L), Bytes.toBytes(-1L), numPresplits);
     } finally {
