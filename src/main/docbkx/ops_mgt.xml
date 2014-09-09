@@ -1578,6 +1578,17 @@ hbase> restore_snapshot 'myTableSnapshot-122112'
             xrefstyle="template:above" /> should be.</emphasis> So, if your data is compressed and
         replicated 3 ways by HDFS, "9 Gb region" means 9 Gb of compressed data. HDFS replication
         factor only affects your disk usage and is invisible to most HBase code.</para>
+      <section>
+        <title>Viewing the Current Number of Regions</title>
+        <para>You can view the current number of regions for a given table using the HMaster UI. In
+          the <guilabel>Tables</guilabel> section, the number of online regions for each table is
+          listed in the <guilabel>Online Regions</guilabel> column. This total only includes the
+          in-memory state and does not include disabled or offline regions. If you do not want to
+          use the HMaster UI, you can determine the number of regions by counting the number of
+          subdirectories of the /hbase/&lt;table&gt;/ subdirectories in HDFS, or by running the
+            <command>bin/hbase hbck</command> command. Each of these methods may return a slightly
+          different number, depending on the status of each region.</para>
+      </section>
       <section
         xml:id="ops.capacity.regions.count">
         <title>Number of regions per RS - upper bound</title>
