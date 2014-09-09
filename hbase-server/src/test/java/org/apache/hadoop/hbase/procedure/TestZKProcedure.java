@@ -266,17 +266,15 @@ public class TestZKProcedure {
     }
 
     // pass out a task per member
-    final int[] i = new int[] { 0 };
+    final AtomicInteger taskIndex = new AtomicInteger();
     Mockito.when(
       subprocFactory.buildSubprocedure(Mockito.eq(opName),
         (byte[]) Mockito.argThat(new ArrayEquals(data)))).thenAnswer(
       new Answer<Subprocedure>() {
         @Override
         public Subprocedure answer(InvocationOnMock invocation) throws Throwable {
-          int index = i[0];
+          int index = taskIndex.getAndIncrement();
           Subprocedure commit = cohortTasks.get(index);
-          index++;
-          i[0] = index;
           return commit;
         }
       });
