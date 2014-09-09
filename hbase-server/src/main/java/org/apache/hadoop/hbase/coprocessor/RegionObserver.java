@@ -476,15 +476,6 @@ public interface RegionObserver extends Coprocessor {
     throws IOException;
 
   /**
-   * WARNING: please override preGetOp instead of this method.  This is to maintain some
-   * compatibility and to ease the transition from 0.94 -> 0.96.
-   */
-  @Deprecated
-  void preGet(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
-      final List<KeyValue> result)
-    throws IOException;
-
-  /**
    * Called after the client performs a Get
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained
@@ -496,15 +487,6 @@ public interface RegionObserver extends Coprocessor {
    */
   void postGetOp(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
       final List<Cell> result)
-    throws IOException;
-
-  /**
-   * WARNING: please override postGetOp instead of this method.  This is to maintain some
-   * compatibility and to ease the transition from 0.94 -> 0.96.
-   */
-  @Deprecated
-  void postGet(final ObserverContext<RegionCoprocessorEnvironment> c, final Get get,
-      final List<KeyValue> result)
     throws IOException;
 
   /**
