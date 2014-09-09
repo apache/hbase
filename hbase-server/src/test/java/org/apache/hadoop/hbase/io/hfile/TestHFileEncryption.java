@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.*;
-
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -48,6 +46,8 @@ import org.apache.hadoop.hbase.util.test.RedundantKVGenerator;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import static org.junit.Assert.*;
 
 @Category(SmallTests.class)
 public class TestHFileEncryption {
@@ -91,11 +91,13 @@ public class TestHFileEncryption {
     return hbw.getOnDiskSizeWithHeader();
   }
 
-  private long readAndVerifyBlock(long pos, HFileBlock.FSReaderV2 hbr, int size)
+  private long readAndVerifyBlock(long pos, HFileContext ctx, HFileBlock.FSReaderV2 hbr, int size)
       throws IOException {
     HFileBlock b = hbr.readBlockData(pos, -1, -1, false);
     assertEquals(0, HFile.getChecksumFailuresCount());
     b.sanityCheck();
+    assertFalse(b.isUnpacked());
+    b = b.unpack(ctx, hbr);
     LOG.info("Read a block at " + pos + " with" +
         " onDiskSizeWithHeader=" + b.getOnDiskSizeWithHeader() +
         " uncompressedSizeWithoutHeader=" + b.getOnDiskSizeWithoutHeader() +
@@ -138,7 +140,7 @@ public class TestHFileEncryption {
         HFileBlock.FSReaderV2 hbr = new HFileBlock.FSReaderV2(is, totalSize, fileContext);
         long pos = 0;
         for (int i = 0; i < blocks; i++) {
-          pos += readAndVerifyBlock(pos, hbr, blockSizes[i]);
+          pos += readAndVerifyBlock(pos, fileContext, hbr, blockSizes[i]);
         }
       } finally {
         is.close();

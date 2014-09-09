@@ -119,7 +119,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     // Data block index writer
     boolean cacheIndexesOnWrite = cacheConf.shouldCacheIndexesOnWrite();
     dataBlockIndexWriter = new HFileBlockIndex.BlockIndexWriter(fsBlockWriter,
-        cacheIndexesOnWrite ? cacheConf.getBlockCache(): null,
+        cacheIndexesOnWrite ? cacheConf : null,
         cacheIndexesOnWrite ? name : null);
     dataBlockIndexWriter.setMaxChunkSize(
         HFileBlockIndex.getMaxChunkSize(conf));
@@ -144,7 +144,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     newBlock();
   }
 
-  /** Clean up the current block */
+  /** Clean up the current data block */
   private void finishBlock() throws IOException {
     if (!fsBlockWriter.isWriting() || fsBlockWriter.blockSizeWritten() == 0)
       return;
@@ -192,7 +192,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    *          the cache key.
    */
   private void doCacheOnWrite(long offset) {
-    HFileBlock cacheFormatBlock = fsBlockWriter.getBlockForCaching();
+    HFileBlock cacheFormatBlock = fsBlockWriter.getBlockForCaching(cacheConf);
     cacheConf.getBlockCache().cacheBlock(
         new BlockCacheKey(name, offset, blockEncoder.getDataBlockEncoding(),
             cacheFormatBlock.getBlockType()), cacheFormatBlock);

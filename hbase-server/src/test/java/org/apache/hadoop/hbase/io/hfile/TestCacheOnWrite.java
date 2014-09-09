@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -84,6 +85,7 @@ public class TestCacheOnWrite {
   private final Compression.Algorithm compress;
   private final BlockEncoderTestType encoderType;
   private final HFileDataBlockEncoder encoder;
+  private final boolean cacheCompressedData;
 
   private static final int DATA_BLOCK_SIZE = 2048;
   private static final int NUM_KV = 25000;
@@ -154,14 +156,15 @@ public class TestCacheOnWrite {
     }
   }
 
-  public TestCacheOnWrite(CacheOnWriteType cowType,
-      Compression.Algorithm compress, BlockEncoderTestType encoderType) {
+  public TestCacheOnWrite(CacheOnWriteType cowType, Compression.Algorithm compress,
+      BlockEncoderTestType encoderType, boolean cacheCompressedData) {
     this.cowType = cowType;
     this.compress = compress;
     this.encoderType = encoderType;
     this.encoder = encoderType.getEncoder();
-    testDescription = "[cacheOnWrite=" + cowType + ", compress=" + compress + 
-        ", encoderType=" + encoderType + "]";
+    this.cacheCompressedData = cacheCompressedData;
+    testDescription = "[cacheOnWrite=" + cowType + ", compress=" + compress +
+        ", encoderType=" + encoderType + ", cacheCompressedData=" + cacheCompressedData + "]";
     System.out.println(testDescription);
   }
 
@@ -173,7 +176,9 @@ public class TestCacheOnWrite {
            HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
         for (BlockEncoderTestType encoderType :
              BlockEncoderTestType.values()) {
-          cowTypes.add(new Object[] { cowType, compress, encoderType });
+          for (boolean cacheCompressedData : new boolean[] { false, true }) {
+            cowTypes.add(new Object[] { cowType, compress, encoderType, cacheCompressedData });
+          }
         }
       }
     }
@@ -189,11 +194,12 @@ public class TestCacheOnWrite {
     conf.setInt(BloomFilterFactory.IO_STOREFILE_BLOOM_BLOCK_SIZE,
         BLOOM_BLOCK_SIZE);
     conf.setBoolean(CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY,
-        cowType.shouldBeCached(BlockType.DATA));
+      cowType.shouldBeCached(BlockType.DATA));
     conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY,
         cowType.shouldBeCached(BlockType.LEAF_INDEX));
     conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
         cowType.shouldBeCached(BlockType.BLOOM_CHUNK));
+    conf.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, cacheCompressedData);
     cowType.modifyConf(conf);
     fs = HFileSystem.get(conf);
     cacheConf = new CacheConfig(conf);
@@ -225,6 +231,10 @@ public class TestCacheOnWrite {
         reader = (HFileReaderV2) HFile.createReader(fs, storeFilePath, cacheConf, conf);
     }
     LOG.info("HFile information: " + reader);
+    HFileContext meta = new HFileContextBuilder().withCompression(compress)
+      .withBytesPerCheckSum(CKBYTES).withChecksumType(ChecksumType.NULL)
+      .withBlockSize(DATA_BLOCK_SIZE).withDataBlockEncoding(encoder.getDataBlockEncoding())
+      .withIncludesTags(useTags).build();
     final boolean cacheBlocks = false;
     final boolean pread = false;
     HFileScanner scanner = reader.getScanner(cacheBlocks, pread);
@@ -247,17 +257,37 @@ public class TestCacheOnWrite {
       HFileBlock block = reader.readBlock(offset, onDiskSize, false, true,
           false, true, null);
       BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(),
-          offset, encodingInCache, block.getBlockType());
-      boolean isCached = blockCache.getBlock(blockCacheKey, true, false, true) != null;
+      offset, encodingInCache, block.getBlockType());
+      HFileBlock fromCache = (HFileBlock) blockCache.getBlock(blockCacheKey, true, false, true);
+      boolean isCached = fromCache != null;
       boolean shouldBeCached = cowType.shouldBeCached(block.getBlockType());
-      if (shouldBeCached != isCached) {
-        throw new AssertionError(
-            "shouldBeCached: " + shouldBeCached+ "\n" +
-            "isCached: " + isCached + "\n" +
-            "Test description: " + testDescription + "\n" +
-            "block: " + block + "\n" +
-            "encodingInCache: " + encodingInCache + "\n" +
-            "blockCacheKey: " + blockCacheKey);
+      assertTrue("shouldBeCached: " + shouldBeCached+ "\n" +
+          "isCached: " + isCached + "\n" +
+          "Test description: " + testDescription + "\n" +
+          "block: " + block + "\n" +
+          "encodingInCache: " + encodingInCache + "\n" +
+          "blockCacheKey: " + blockCacheKey,
+        shouldBeCached == isCached);
+      if (isCached) {
+        if (cacheConf.shouldCacheCompressed(fromCache.getBlockType().getCategory())) {
+          if (compress != Compression.Algorithm.NONE) {
+            assertFalse(fromCache.isUnpacked());
+          }
+          fromCache = fromCache.unpack(meta, reader.getUncachedBlockReader());
+        } else {
+          assertTrue(fromCache.isUnpacked());
+        }
+        // block we cached at write-time and block read from file should be identical
+        assertEquals(block.getChecksumType(), fromCache.getChecksumType());
+        assertEquals(block.getBlockType(), fromCache.getBlockType());
+        if (block.getBlockType() == BlockType.ENCODED_DATA) {
+          assertEquals(block.getDataBlockEncodingId(), fromCache.getDataBlockEncodingId());
+          assertEquals(block.getDataBlockEncoding(), fromCache.getDataBlockEncoding());
+        }
+        assertEquals(block.getOnDiskSizeWithHeader(), fromCache.getOnDiskSizeWithHeader());
+        assertEquals(block.getOnDiskSizeWithoutHeader(), fromCache.getOnDiskSizeWithoutHeader());
+        assertEquals(
+          block.getUncompressedSizeWithoutHeader(), fromCache.getUncompressedSizeWithoutHeader());
       }
       prevBlock = block;
       offset += block.getOnDiskSizeWithHeader();

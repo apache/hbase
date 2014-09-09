@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -29,7 +30,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.DirectMemoryUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -61,11 +61,10 @@ public class CacheConfig {
       "hfile.block.bloom.cacheonwrite";
 
   /**
-   * TODO: Implement this (jgray)
-   * Configuration key to cache data blocks in compressed format.
+   * Configuration key to cache data blocks in compressed and/or encrypted format.
    */
   public static final String CACHE_DATA_BLOCKS_COMPRESSED_KEY =
-      "hbase.rs.blockcache.cachedatacompressed";
+      "hbase.block.data.cachecompressed";
 
   /**
    * Configuration key to evict all blocks of a given file from the block cache
@@ -109,6 +108,14 @@ public class CacheConfig {
   public static final String PREFETCH_BLOCKS_ON_OPEN_KEY =
       "hbase.rs.prefetchblocksonopen";
 
+  /**
+   * The target block size used by blockcache instances. Defaults to
+   * {@link HConstants#DEFAULT_BLOCKSIZE}.
+   * TODO: this config point is completely wrong, as it's used to determine the
+   * target block size of BlockCache instances. Rename.
+   */
+  public static final String BLOCKCACHE_BLOCKSIZE_KEY = "hbase.offheapcache.minblocksize";
+
   // Defaults
 
   public static final boolean DEFAULT_CACHE_DATA_ON_READ = true;
@@ -117,7 +124,7 @@ public class CacheConfig {
   public static final boolean DEFAULT_CACHE_INDEXES_ON_WRITE = false;
   public static final boolean DEFAULT_CACHE_BLOOMS_ON_WRITE = false;
   public static final boolean DEFAULT_EVICT_ON_CLOSE = false;
-  public static final boolean DEFAULT_COMPRESSED_CACHE = false;
+  public static final boolean DEFAULT_CACHE_DATA_COMPRESSED = false;
   public static final boolean DEFAULT_PREFETCH_ON_OPEN = false;
 
   /** Local reference to the block cache, null if completely disabled */
@@ -144,8 +151,8 @@ public class CacheConfig {
   /** Whether blocks of a file should be evicted when the file is closed */
   private boolean evictOnClose;
 
-  /** Whether data blocks should be stored in compressed form in the cache */
-  private final boolean cacheCompressed;
+  /** Whether data blocks should be stored in compressed and/or encrypted form in the cache */
+  private final boolean cacheDataCompressed;
 
   /** Whether data blocks should be prefetched into the cache */
   private final boolean prefetchOnOpen;
@@ -170,7 +177,7 @@ public class CacheConfig {
             DEFAULT_CACHE_BLOOMS_ON_WRITE) || family.shouldCacheBloomsOnWrite(),
         conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY,
             DEFAULT_EVICT_ON_CLOSE) || family.shouldEvictBlocksOnClose(),
-        conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_COMPRESSED_CACHE),
+        conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED),
         conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY,
             DEFAULT_PREFETCH_ON_OPEN) || family.shouldPrefetchBlocksOnOpen()
      );
@@ -187,15 +194,12 @@ public class CacheConfig {
         DEFAULT_IN_MEMORY, // This is a family-level setting so can't be set
                            // strictly from conf
         conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE),
-        conf.getBoolean(CACHE_INDEX_BLOCKS_ON_WRITE_KEY,
-            DEFAULT_CACHE_INDEXES_ON_WRITE),
-            conf.getBoolean(CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
-                DEFAULT_CACHE_BLOOMS_ON_WRITE),
+        conf.getBoolean(CACHE_INDEX_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_INDEXES_ON_WRITE),
+        conf.getBoolean(CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_BLOOMS_ON_WRITE),
         conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE),
-        conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY,
-            DEFAULT_COMPRESSED_CACHE),
+        conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED),
         conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN)
-     );
+    );
   }
 
   /**
@@ -208,14 +212,14 @@ public class CacheConfig {
    * @param cacheIndexesOnWrite whether index blocks should be cached on write
    * @param cacheBloomsOnWrite whether blooms should be cached on write
    * @param evictOnClose whether blocks should be evicted when HFile is closed
-   * @param cacheCompressed whether to store blocks as compressed in the cache
+   * @param cacheDataCompressed whether to store blocks as compressed in the cache
    * @param prefetchOnOpen whether to prefetch blocks upon open
    */
   CacheConfig(final BlockCache blockCache,
       final boolean cacheDataOnRead, final boolean inMemory,
       final boolean cacheDataOnWrite, final boolean cacheIndexesOnWrite,
       final boolean cacheBloomsOnWrite, final boolean evictOnClose,
-      final boolean cacheCompressed, final boolean prefetchOnOpen) {
+      final boolean cacheDataCompressed, final boolean prefetchOnOpen) {
     this.blockCache = blockCache;
     this.cacheDataOnRead = cacheDataOnRead;
     this.inMemory = inMemory;
@@ -223,7 +227,7 @@ public class CacheConfig {
     this.cacheIndexesOnWrite = cacheIndexesOnWrite;
     this.cacheBloomsOnWrite = cacheBloomsOnWrite;
     this.evictOnClose = evictOnClose;
-    this.cacheCompressed = cacheCompressed;
+    this.cacheDataCompressed = cacheDataCompressed;
     this.prefetchOnOpen = prefetchOnOpen;
   }
 
@@ -235,7 +239,7 @@ public class CacheConfig {
     this(cacheConf.blockCache, cacheConf.cacheDataOnRead, cacheConf.inMemory,
         cacheConf.cacheDataOnWrite, cacheConf.cacheIndexesOnWrite,
         cacheConf.cacheBloomsOnWrite, cacheConf.evictOnClose,
-        cacheConf.cacheCompressed, cacheConf.prefetchOnOpen);
+        cacheConf.cacheDataCompressed, cacheConf.prefetchOnOpen);
   }
 
   /**
@@ -267,14 +271,13 @@ public class CacheConfig {
    * available.
    */
   public boolean shouldCacheBlockOnRead(BlockCategory category) {
-    boolean shouldCache = isBlockCacheEnabled()
+    return isBlockCacheEnabled()
         && (cacheDataOnRead ||
             category == BlockCategory.INDEX ||
             category == BlockCategory.BLOOM ||
             (prefetchOnOpen &&
                 (category != BlockCategory.META &&
                  category != BlockCategory.UNKNOWN)));
-    return shouldCache;
   }
 
   /**
@@ -335,10 +338,23 @@ public class CacheConfig {
   }
 
   /**
-   * @return true if blocks should be compressed in the cache, false if not
+   * @return true if data blocks should be compressed in the cache, false if not
    */
-  public boolean shouldCacheCompressed() {
-    return isBlockCacheEnabled() && this.cacheCompressed;
+  public boolean shouldCacheDataCompressed() {
+    return isBlockCacheEnabled() && this.cacheDataCompressed;
+  }
+
+  /**
+   * @return true if this {@link BlockCategory} should be compressed in blockcache, false otherwise
+   */
+  public boolean shouldCacheCompressed(BlockCategory category) {
+    if (!isBlockCacheEnabled()) return false;
+    switch (category) {
+      case DATA:
+        return this.cacheDataCompressed;
+      default:
+        return false;
+    }
   }
 
   /**
@@ -359,7 +375,7 @@ public class CacheConfig {
       "[cacheIndexesOnWrite=" + shouldCacheIndexesOnWrite() + "] " +
       "[cacheBloomsOnWrite=" + shouldCacheBloomsOnWrite() + "] " +
       "[cacheEvictOnClose=" + shouldEvictOnClose() + "] " +
-      "[cacheCompressed=" + shouldCacheCompressed() + "]" +
+      "[cacheDataCompressed=" + shouldCacheDataCompressed() + "] " +
       "[prefetchOnOpen=" + shouldPrefetchOnOpen() + "]";
   }
 
@@ -369,7 +385,8 @@ public class CacheConfig {
    * Static reference to the block cache, or null if no caching should be used
    * at all.
    */
-  private static BlockCache globalBlockCache;
+  @VisibleForTesting
+  static BlockCache GLOBAL_BLOCK_CACHE_INSTANCE;
 
   /** Boolean whether we have disabled the block cache entirely. */
   private static boolean blockCacheDisabled = false;
@@ -381,7 +398,7 @@ public class CacheConfig {
    * @return The block cache or <code>null</code>.
    */
   private static synchronized BlockCache instantiateBlockCache(Configuration conf) {
-    if (globalBlockCache != null) return globalBlockCache;
+    if (GLOBAL_BLOCK_CACHE_INSTANCE != null) return GLOBAL_BLOCK_CACHE_INSTANCE;
     if (blockCacheDisabled) return null;
 
     float cachePercentage = conf.getFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY,
@@ -398,7 +415,7 @@ public class CacheConfig {
     // Calculate the amount of heap to give the heap.
     MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
     long lruCacheSize = (long) (mu.getMax() * cachePercentage);
-    int blockSize = conf.getInt("hbase.offheapcache.minblocksize", HConstants.DEFAULT_BLOCKSIZE);
+    int blockSize = conf.getInt(BLOCKCACHE_BLOCKSIZE_KEY, HConstants.DEFAULT_BLOCKSIZE);
     long offHeapCacheSize =
       (long) (conf.getFloat("hbase.offheapcache.percentage", (float) 0) *
           DirectMemoryUtils.getDirectMemorySize());
@@ -450,15 +467,15 @@ public class CacheConfig {
       LruBlockCache lruCache = new LruBlockCache(lruCacheSize, blockSize, true, conf);
       lruCache.setVictimCache(bucketCache);
       if (bucketCache != null && combinedWithLru) {
-        globalBlockCache = new CombinedBlockCache(lruCache, bucketCache);
+        GLOBAL_BLOCK_CACHE_INSTANCE = new CombinedBlockCache(lruCache, bucketCache);
       } else {
-        globalBlockCache = lruCache;
+        GLOBAL_BLOCK_CACHE_INSTANCE = lruCache;
       }
     } else {
       LOG.warn("SlabCache is deprecated. Consider BucketCache as a replacement.");
-      globalBlockCache = new DoubleBlockCache(
+      GLOBAL_BLOCK_CACHE_INSTANCE = new DoubleBlockCache(
           lruCacheSize, offHeapCacheSize, blockSize, blockSize, conf);
     }
-    return globalBlockCache;
+    return GLOBAL_BLOCK_CACHE_INSTANCE;
   }
 }

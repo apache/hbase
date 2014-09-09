@@ -74,14 +74,15 @@ public class TestForceCacheImportantBlocks {
   @Parameters
   public static Collection<Object[]> parameters() {
     // HFile versions
-    return Arrays.asList(new Object[][] {
-        new Object[] { new Integer(2), false },
-        new Object[] { new Integer(2), true }
-    });
+    return Arrays.asList(
+      new Object[] { 2, true },
+      new Object[] { 2, false },
+      new Object[] { 3, true },
+      new Object[] { 3, false }
+    );
   }
 
-  public TestForceCacheImportantBlocks(int hfileVersion,
-      boolean cfCacheEnabled) {
+  public TestForceCacheImportantBlocks(int hfileVersion, boolean cfCacheEnabled) {
     this.hfileVersion = hfileVersion;
     this.cfCacheEnabled = cfCacheEnabled;
     TEST_UTIL.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY,
@@ -119,7 +120,6 @@ public class TestForceCacheImportantBlocks {
     }
   }
 
-
   private void writeTestData(HRegion region) throws IOException {
     for (int i = 0; i < NUM_ROWS; ++i) {
       Put put = new Put(Bytes.toBytes("row" + i));
@@ -135,6 +135,4 @@ public class TestForceCacheImportantBlocks {
       }
     }
   }
-
 }
-
