@@ -779,11 +779,6 @@ public class HFile {
     return res;
   }
 
-  public static void main(String[] args) throws IOException {
-    HFilePrettyPrinter prettyPrinter = new HFilePrettyPrinter();
-    System.exit(prettyPrinter.run(args));
-  }
-
   /**
    * Checks the given {@link HFile} format version, and throws an exception if
    * invalid. Note that if the version number comes from an input file and has
@@ -800,5 +795,10 @@ public class HFile {
           + " (expected to be " + "between " + MIN_FORMAT_VERSION + " and "
           + MAX_FORMAT_VERSION + ")");
     }
+  }
+
+  public static void main(String[] args) throws Exception {
+    // delegate to preserve old behavior
+    HFilePrettyPrinter.main(args);
   }
 }

@@ -43,8 +43,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -58,13 +60,15 @@ import org.apache.hadoop.hbase.util.ByteBloomFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * Implements pretty-printing functionality for {@link HFile}s.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class HFilePrettyPrinter {
+public class HFilePrettyPrinter extends Configured implements Tool {
 
   private static final Log LOG = LogFactory.getLog(HFilePrettyPrinter.class);
 
@@ -84,7 +88,6 @@ public class HFilePrettyPrinter {
    * The row which the user wants to specify and print all the KeyValues for.
    */
   private byte[] row = null;
-  private Configuration conf;
 
   private List<Path> files = new ArrayList<Path>();
   private int count;
@@ -92,6 +95,16 @@ public class HFilePrettyPrinter {
   private static final String FOUR_SPACES = "    ";
 
   public HFilePrettyPrinter() {
+    super();
+    init();
+  }
+
+  public HFilePrettyPrinter(Configuration conf) {
+    super(conf);
+    init();
+  }
+
+  private void init() {
     options.addOption("v", "verbose", false,
         "Verbose output; emits file and meta data delimiters");
     options.addOption("p", "printkv", false, "Print key/value pairs");
@@ -148,13 +161,13 @@ public class HFilePrettyPrinter {
       String regionName = cmd.getOptionValue("r");
       byte[] rn = Bytes.toBytes(regionName);
       byte[][] hri = HRegionInfo.parseRegionName(rn);
-      Path rootDir = FSUtils.getRootDir(conf);
+      Path rootDir = FSUtils.getRootDir(getConf());
       Path tableDir = FSUtils.getTableDir(rootDir, TableName.valueOf(hri[0]));
       String enc = HRegionInfo.encodeRegionName(rn);
       Path regionDir = new Path(tableDir, enc);
       if (verbose)
         System.out.println("region dir -> " + regionDir);
-      List<Path> regionFiles = HFile.getStoreFiles(FileSystem.get(conf),
+      List<Path> regionFiles = HFile.getStoreFiles(FileSystem.get(getConf()),
           regionDir);
       if (verbose)
         System.out.println("Number of region files found -> "
@@ -177,9 +190,8 @@ public class HFilePrettyPrinter {
    * exit code (zero for success, non-zero for failure).
    */
   public int run(String[] args) {
-    conf = HBaseConfiguration.create();
     try {
-      FSUtils.setFsDefault(conf, FSUtils.getRootDir(conf));
+      FSUtils.setFsDefault(getConf(), FSUtils.getRootDir(getConf()));
       if (!parseOptions(args))
         return 1;
     } catch (IOException ex) {
@@ -209,12 +221,12 @@ public class HFilePrettyPrinter {
   private void processFile(Path file) throws IOException {
     if (verbose)
       System.out.println("Scanning -> " + file);
-    FileSystem fs = file.getFileSystem(conf);
+    FileSystem fs = file.getFileSystem(getConf());
     if (!fs.exists(file)) {
       System.err.println("ERROR, file doesnt exist: " + file);
     }
 
-    HFile.Reader reader = HFile.createReader(fs, file, new CacheConfig(conf), conf);
+    HFile.Reader reader = HFile.createReader(fs, file, new CacheConfig(getConf()), getConf());
 
     Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
 
@@ -483,5 +495,13 @@ public class HFilePrettyPrinter {
       super.processHistogram(name, histogram, stream);
       stream.printf(Locale.getDefault(), "             count = %d\n", histogram.count());
     }
+  }
+
+  public static void main(String[] args) throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    // no need for a block cache
+    conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
+    int ret = ToolRunner.run(conf, new HFilePrettyPrinter(), args);
+    System.exit(ret);
   }
 }
