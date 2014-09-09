@@ -483,7 +483,7 @@
             <!--This stops our running tests for each stage of maven release.
                 But it builds the test jar.  From SUREFIRE-172.
               -->
-            <arguments>-Dmaven.test.skip.exec</arguments>
+            <arguments>-Dmaven.test.skip.exec ${arguments}</arguments>
             <pomFileName>pom.xml</pomFileName>
           </configuration>
         </plugin>
