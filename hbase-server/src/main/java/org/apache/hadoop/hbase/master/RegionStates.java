@@ -796,7 +796,7 @@ public class RegionStates {
       Set<HRegionInfo> regions = e.getValue();
       ServerName serverName = e.getKey();
       int regionCount = regions.size();
-      if (regionCount > 0 || serverManager.isServerOnline(serverName)) {
+      if (serverManager.isServerOnline(serverName)) {
         totalLoad += regionCount;
         numServers++;
       }
