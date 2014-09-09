@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.concurrent.Callable;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 

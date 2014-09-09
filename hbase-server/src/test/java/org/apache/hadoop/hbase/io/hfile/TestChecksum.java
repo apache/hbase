@@ -93,7 +93,6 @@ public class TestChecksum {
                             .withCompression(algo)
                             .withIncludesMvcc(true)
                             .withIncludesTags(useTags)
-                            .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
                             .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                             .build();
         HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
@@ -202,7 +201,6 @@ public class TestChecksum {
                             .withIncludesTags(useTags)
                             .withHBaseCheckSum(true)
                             .withBytesPerCheckSum(bytesPerChecksum)
-                            .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
                             .build();
         HFileBlock.Writer hbw = new HFileBlock.Writer(null,
            meta);
