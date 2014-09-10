@@ -43,7 +43,7 @@
         <title>About This Guide</title>
         <para>This reference guide is a work in progress. The source for this guide can be found in
             the <filename>src/main/docbkx</filename> directory of the HBase source. This reference
-            guide is marked up using <link xlink:href="http://www.docbook.com/">DocBook</link> from
+            guide is marked up using <link xlink:href="http://www.docbook.org/">DocBook</link> from
             which the the finished guide is generated as part of the 'site' build target. Run
             <programlisting language="bourne">mvn site</programlisting> to generate this documentation. Amendments and
             improvements to the documentation are welcomed. Click <link

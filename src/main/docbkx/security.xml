@@ -32,11 +32,9 @@
   <section
     xml:id="hbase.secure.configuration">
     <title>Secure Client Access to Apache HBase</title>
-    <para>Newer releases of Apache HBase (&gt;= 0.92) support optional SASL authentication of clients<footnote>
-        <para>See also Matteo Bertozzi's article on <link
+    <para>Newer releases of Apache HBase (&gt;= 0.92) support optional SASL authentication of clients. See also Matteo Bertozzi's article on <link
             xlink:href="http://www.cloudera.com/blog/2012/09/understanding-user-authentication-and-authorization-in-apache-hbase/">Understanding
             User Authentication and Authorization in Apache HBase</link>.</para>
-      </footnote>.</para>
     <para>This describes how to set up Apache HBase and clients for connection to secure HBase
       resources.</para>
 
@@ -339,11 +337,9 @@ grant 'rest_server', 'RWCA'
   <section
     xml:id="hbase.secure.simpleconfiguration">
     <title>Simple User Access to Apache HBase</title>
-    <para>Newer releases of Apache HBase (&gt;= 0.92) support optional SASL authentication of clients<footnote>
-        <para>See also Matteo Bertozzi's article on <link
+    <para>Newer releases of Apache HBase (&gt;= 0.92) support optional SASL authentication of clients. See also Matteo Bertozzi's article on <link
             xlink:href="http://www.cloudera.com/blog/2012/09/understanding-user-authentication-and-authorization-in-apache-hbase/">Understanding
             User Authentication and Authorization in Apache HBase</link>.</para>
-      </footnote>.</para>
     <para>This describes how to set up Apache HBase and clients for simple user access to HBase
       resources.</para>
 

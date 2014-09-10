@@ -807,6 +807,7 @@
             <phase>pre-site</phase>
             <configuration>
               <targetDirectory>${basedir}/target/docbkx/</targetDirectory>
+              <includes>book.xml</includes>
               <preProcess>
                 <copy todir="target/docbkx/images">
                   <fileset dir="src/main/site/resources/images/"/>

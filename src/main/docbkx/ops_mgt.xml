@@ -757,11 +757,9 @@ false
         <para>Without this facility, decommissioning mulitple nodes may be non-optimal because
           regions that are being drained from one region server may be moved to other regionservers
           that are also draining. Marking RegionServers to be in the draining state prevents this
-          from happening<footnote>
-            <para>See this <link
-                xlink:href="http://inchoate-clatter.blogspot.com/2012/03/hbase-ops-automation.html">blog
-                post</link> for more details.</para>
-          </footnote>. </para>
+          from happening. See this <link
+            xlink:href="http://inchoate-clatter.blogspot.com/2012/03/hbase-ops-automation.html">blog
+            post</link> for more details.</para>
       </section>
 
       <section
@@ -1206,9 +1204,9 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
           <imageobject>
             <imagedata fileref="bc_basic.png" width="100%"/>
           </imageobject>
-          <textobject>
+          <caption>
             <para>Shows the cache implementation</para>
-          </textobject>
+          </caption>
         </mediaobject>
       </figure>
       <figure>
@@ -1217,9 +1215,9 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
           <imageobject>
             <imagedata fileref="bc_config.png" width="100%"/>
           </imageobject>
-          <textobject>
+          <caption>
             <para>Shows all cache configuration options.</para>
-          </textobject>
+          </caption>
         </mediaobject>
       </figure>
       <figure>
@@ -1228,9 +1226,9 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
           <imageobject>
             <imagedata fileref="bc_stats.png" width="100%"/>
           </imageobject>
-          <textobject>
+          <caption>
             <para>Shows statistics about the performance of the cache.</para>
-          </textobject>
+          </caption>
         </mediaobject>
       </figure>
       <figure>
@@ -1242,9 +1240,9 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
           <imageobject>
             <imagedata fileref="bc_l2_buckets.png" width="100%"/>
           </imageobject>
-          <textobject>
+          <caption>
             <para>Shows information about the L1 and L2 caches.</para>
-          </textobject>
+          </caption>
         </mediaobject>
       </figure>
       <para>This is not an exhaustive list of all the screens and reports available. Have a look in
@@ -1305,10 +1303,10 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
         <imageobject>
           <imagedata fileref="replication_overview.png" />
         </imageobject>
-        <textobject>
+        <caption>
           <para>Illustration of the replication architecture in HBase, as described in the prior
             text.</para>
-        </textobject>
+        </caption>
       </mediaobject>
     </figure>
     

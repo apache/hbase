@@ -31,18 +31,22 @@
     <para>As we will be discussing changes to the HFile format, it is useful to give a short overview of the original (HFile version 1) format.</para>
     <section xml:id="hfilev1.overview">
       <title>Overview of Version 1</title>
-      <para>An HFile in version 1 format is structured as follows:
-           <inlinemediaobject>
-               <imageobject>
-                   <imagedata align="center" valign="middle" fileref="hfile.png" />
-               </imageobject>
-               <textobject>
-                 <phrase>HFile Version 1</phrase>
-               </textobject>
-               
-           </inlinemediaobject>
-           <footnote><para>Image courtesy of Lars George, <link xlink:href="http://www.larsgeorge.com/2009/10/hbase-architecture-101-storage.html">hbase-architecture-101-storage.html</link>.</para></footnote>
-       </para>
+      <para>An HFile in version 1 format is structured as follows:</para>
+      <figure>
+         <title>HFile V1 Format</title>
+         <mediaobject>
+            <imageobject>
+               <imagedata align="center" valign="middle" fileref="hfile.png"/>
+            </imageobject>
+            <textobject>
+               <phrase>HFile Version 1</phrase>
+            </textobject>
+            <caption><para>Image courtesy of Lars George, <link
+                     xlink:href="http://www.larsgeorge.com/2009/10/hbase-architecture-101-storage.html"
+                     >hbase-architecture-101-storage.html</link>.</para></caption>
+         </mediaobject>
+      </figure>
+
     </section>
        <section><title> Block index format in version 1 </title>
    <para>The block index in version 1 is very straightforward. For each entry, it contains: </para>

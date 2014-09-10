@@ -52,12 +52,10 @@
       <varname>hbase.zookeeper.property.clientPort</varname> property. For all default values used
     by HBase, including ZooKeeper configuration, see <xref
       linkend="hbase_default_configurations" />. Look for the
-      <varname>hbase.zookeeper.property</varname> prefix <footnote>
-      <para>For the full list of ZooKeeper configurations, see ZooKeeper's
+      <varname>hbase.zookeeper.property</varname> prefix. For the full list of ZooKeeper configurations, see ZooKeeper's
           <filename>zoo.cfg</filename>. HBase does not ship with a <filename>zoo.cfg</filename> so
         you will need to browse the <filename>conf</filename> directory in an appropriate ZooKeeper
         download.</para>
-    </footnote></para>
 
   <para>You must at least list the ensemble servers in <filename>hbase-site.xml</filename> using the
       <varname>hbase.zookeeper.quorum</varname> property. This property defaults to a single
