@@ -201,12 +201,10 @@
         <term>DNS</term>
         <listitem>
           <para>HBase uses the local hostname to self-report its IP address. Both forward and
-            reverse DNS resolving must work in versions of HBase previous to 0.92.0.<footnote>
-              <para>The <link
+            reverse DNS resolving must work in versions of HBase previous to 0.92.0. The <link
                   xlink:href="https://github.com/sujee/hadoop-dns-checker">hadoop-dns-checker</link>
                 tool can be used to verify DNS is working correctly on the cluster. The project
                 README file provides detailed instructions on usage. </para>
-            </footnote></para>
 
           <para>If your server has multiple network interfaces, HBase defaults to using the
             interface that the primary hostname resolves to. To override this behavior, set the
@@ -295,11 +293,10 @@
             running the HBase process is an operating system configuration, rather than an HBase
             configuration. It is also important to be sure that the settings are changed for the
             user that actually runs HBase. To see which user started HBase, and that user's ulimit
-            configuration, look at the first line of the HBase log for that instance.<footnote>
-              <para>A useful read setting config on you hadoop cluster is Aaron Kimballs' <link
-                  xlink:href="http://www.cloudera.com/blog/2009/03/configuration-parameters-what-can-you-just-ignore/">Configuration
-                  Parameters: What can you just ignore?</link></para>
-            </footnote></para>
+            configuration, look at the first line of the HBase log for that instance. A useful read
+            setting config on you hadoop cluster is Aaron Kimballs' <link
+              xlink:href="http://www.cloudera.com/blog/2009/03/configuration-parameters-what-can-you-just-ignore/"
+              >Configuration Parameters: What can you just ignore?</link></para>
           <formalpara xml:id="ulimit_ubuntu">
             <title><command>ulimit</command> Settings on Ubuntu</title>
             <para>To configure <command>ulimit</command> settings on Ubuntu, edit
@@ -403,12 +400,8 @@ hadoop  -       nproc   32000
               <entry>HBase-0.92.x</entry>
               <entry>HBase-0.94.x</entry>
               <entry>HBase-0.96.x</entry>
-              <entry>HBase-0.98.x<footnote>
-                  <para>Support for Hadoop 1.x is deprecated.</para>
-                </footnote></entry>
-              <entry>HBase-1.0.x<footnote>
-                  <para>Hadoop 1.x is NOT supported</para>
-                </footnote></entry>
+              <entry><para>HBase-0.98.x (Support for Hadoop 1.x is deprecated.)</para></entry>
+              <entry><para>HBase-1.0.x (Hadoop 1.x is NOT supported)</para></entry>
             </row>
           </thead>
           <tbody>
@@ -429,11 +422,9 @@ hadoop  -       nproc   32000
               <entry>X</entry>
             </row>
             <row>
-              <entry>Hadoop-1.0.0-1.0.2<footnote>
-                  <para>HBase requires hadoop 1.0.3 at a minimum; there is an issue where we cannot
-                    find KerberosUtil compiling against earlier versions of Hadoop.</para>
-                </footnote>
-              </entry>
+              <entry><para>Hadoop-1.0.0-1.0.2 (HBase requires hadoop 1.0.3 at a minimum; there is an
+                  issue where we cannot find KerberosUtil compiling against earlier versions of
+                  Hadoop.)</para></entry>
               <entry>X</entry>
               <entry>X</entry>
               <entry>X</entry>
@@ -483,10 +474,9 @@ hadoop  -       nproc   32000
             <row>
               <entry>Hadoop-2.2.0 </entry>
               <entry>X</entry>
-              <entry>NT <footnote>
-                  <para>To get 0.94.x to run on hadoop 2.2.0, you need to change the hadoop 2 and
-                    protobuf versions in the <filename>pom.xml</filename>: Here is a diff with
-                    pom.xml changes: </para>
+              <entry><para>NT - To get 0.94.x to run on hadoop 2.2.0, you need to change the hadoop
+                  2 and protobuf versions in the <filename>pom.xml</filename>: Here is a diff with
+                  pom.xml changes: </para>
                   <programlisting><![CDATA[$ svn diff pom.xml
 Index: pom.xml
 ===================================================================
@@ -590,11 +580,9 @@ Index: pom.xml
         <para> As of Apache HBase 0.96.x, Apache Hadoop 1.0.x at least is required. Hadoop 2 is
           strongly encouraged (faster but also has fixes that help MTTR). We will no longer run
           properly on older Hadoops such as 0.20.205 or branch-0.20-append. Do not move to Apache
-          HBase 0.96.x if you cannot upgrade your Hadoop.<footnote>
-            <para>See <link
+          HBase 0.96.x if you cannot upgrade your Hadoop.. See <link
                 xlink:href="http://search-hadoop.com/m/7vFVx4EsUb2">HBase, mail # dev - DISCUSS:
                 Have hbase require at least hadoop 1.0.0 in hbase 0.96.0?</link></para>
-          </footnote></para>
       </section>
 
       <section
@@ -604,13 +592,12 @@ Index: pom.xml
             <code>sync</code> implementation. DO NOT use Hadoop 0.20.2, Hadoop 0.20.203.0, and
           Hadoop 0.20.204.0 which DO NOT have this attribute. Currently only Hadoop versions
           0.20.205.x or any release in excess of this version -- this includes hadoop-1.0.0 -- have
-          a working, durable sync <footnote>
-            <para>The Cloudera blog post <link
-                xlink:href="http://www.cloudera.com/blog/2012/01/an-update-on-apache-hadoop-1-0/">An
-                update on Apache Hadoop 1.0</link> by Charles Zedlweski has a nice exposition on how
-              all the Hadoop versions relate. Its worth checking out if you are having trouble
-              making sense of the Hadoop version morass. </para>
-          </footnote>. Sync has to be explicitly enabled by setting
+          a working, durable sync. The Cloudera blog post <link
+            xlink:href="http://www.cloudera.com/blog/2012/01/an-update-on-apache-hadoop-1-0/">An
+            update on Apache Hadoop 1.0</link> by Charles Zedlweski has a nice exposition on how all
+          the Hadoop versions relate. Its worth checking out if you are having trouble making sense
+          of the Hadoop version morass. </para>
+        <para>Sync has to be explicitly enabled by setting
             <varname>dfs.support.append</varname> equal to true on both the client side -- in
             <filename>hbase-site.xml</filename> -- and on the serverside in
             <filename>hdfs-site.xml</filename> (The sync facility HBase needs is a subset of the
@@ -702,9 +689,7 @@ Index: pom.xml
       <para>Distributed mode can be subdivided into distributed but all daemons run on a single node
         -- a.k.a <emphasis>pseudo-distributed</emphasis>-- and
           <emphasis>fully-distributed</emphasis> where the daemons are spread across all nodes in
-        the cluster <footnote>
-          <para>The pseudo-distributed vs fully-distributed nomenclature comes from Hadoop.</para>
-        </footnote>.</para>
+        the cluster. The pseudo-distributed vs fully-distributed nomenclature comes from Hadoop.</para>
 
       <para>Pseudo-distributed mode can run against the local filesystem or it can run against an
         instance of the <emphasis>Hadoop Distributed File System</emphasis> (HDFS).

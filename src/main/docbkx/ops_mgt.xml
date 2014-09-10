@@ -757,11 +757,9 @@ false
         <para>Without this facility, decommissioning mulitple nodes may be non-optimal because
           regions that are being drained from one region server may be moved to other regionservers
           that are also draining. Marking RegionServers to be in the draining state prevents this
-          from happening<footnote>
-            <para>See this <link
-                xlink:href="http://inchoate-clatter.blogspot.com/2012/03/hbase-ops-automation.html">blog
-                post</link> for more details.</para>
-          </footnote>. </para>
+          from happening. See this <link
+            xlink:href="http://inchoate-clatter.blogspot.com/2012/03/hbase-ops-automation.html">blog
+            post</link> for more details.</para>
       </section>
 
       <section

@@ -631,24 +631,19 @@ try {
         store file, the most recent values are found first.</para>
 
       <para>There is a lot of confusion over the semantics of <literal>cell</literal> versions, in
-        HBase. In particular, a couple questions that often come up are:</para>
+        HBase. In particular:</para>
       <itemizedlist>
         <listitem>
-          <para>If multiple writes to a cell have the same version, are all versions maintained or
-            just the last?<footnote>
-              <para>Currently, only the last written is fetchable.</para>
-            </footnote></para>
+          <para>If multiple writes to a cell have the same version, only the last written is
+            fetchable.</para>
         </listitem>
 
         <listitem>
-          <para>Is it OK to write cells in a non-increasing version order?<footnote>
-              <para>Yes</para>
-            </footnote></para>
+          <para>It is OK to write cells in a non-increasing version order.</para>
         </listitem>
       </itemizedlist>
 
-      <para>Below we describe how the version dimension in HBase currently works<footnote>
-          <para>See <link
+      <para>Below we describe how the version dimension in HBase currently works. See <link
               xlink:href="https://issues.apache.org/jira/browse/HBASE-2406">HBASE-2406</link> for
             discussion of HBase versions. <link
               xlink:href="http://outerthought.org/blog/417-ot.html">Bending time in HBase</link>
@@ -657,7 +652,6 @@ try {
               <emphasis>Overwriting values at existing timestamps</emphasis> mentioned in the
             article no longer holds in HBase. This section is basically a synopsis of this article
             by Bruno Dumon.</para>
-        </footnote>.</para>
 
       <section
         xml:id="versions.ops">
@@ -775,11 +769,10 @@ htable.put(put);
           xml:id="version.delete">
           <title>Delete</title>
 
-          <para>There are three different types of internal delete markers <footnote>
-              <para>See Lars Hofhansl's blog for discussion of his attempt adding another, <link
-                  xlink:href="http://hadoop-hbase.blogspot.com/2012/01/scanning-in-hbase.html">Scanning
-                  in HBase: Prefix Delete Marker</link></para>
-            </footnote>: </para>
+          <para>There are three different types of internal delete markers. See Lars Hofhansl's blog
+            for discussion of his attempt adding another, <link
+              xlink:href="http://hadoop-hbase.blogspot.com/2012/01/scanning-in-hbase.html">Scanning
+              in HBase: Prefix Delete Marker</link>. </para>
           <itemizedlist>
             <listitem>
               <para>Delete: for a specific version of a column.</para>
@@ -800,11 +793,10 @@ htable.put(put);
             modifies data in place, so for example a delete will not immediately delete (or mark as
             deleted) the entries in the storage file that correspond to the delete condition.
             Rather, a so-called <emphasis>tombstone</emphasis> is written, which will mask the
-            deleted values<footnote>
-              <para>When HBase does a major compaction, the tombstones are processed to actually
-                remove the dead values, together with the tombstones themselves.</para>
-            </footnote>. If the version you specified when deleting a row is larger than the version
-            of any value in the row, then you can consider the complete row to be deleted.</para>
+            deleted values. When HBase does a major compaction, the tombstones are processed to
+            actually remove the dead values, together with the tombstones themselves. If the version
+            you specified when deleting a row is larger than the version of any value in the row,
+            then you can consider the complete row to be deleted.</para>
           <para>For an informative discussion on how deletes and versioning interact, see the thread <link
               xlink:href="http://comments.gmane.org/gmane.comp.java.hadoop.hbase.user/28421">Put w/
               timestamp -> Deleteall -> Put w/ timestamp fails</link> up on the user mailing
@@ -838,10 +830,8 @@ htable.put(put);
           <title>Deletes mask Puts</title>
 
           <para>Deletes mask puts, even puts that happened after the delete
-          was entered<footnote>
-              <para><link
-              xlink:href="https://issues.apache.org/jira/browse/HBASE-2256">HBASE-2256</link></para>
-            </footnote>. Remember that a delete writes a tombstone, which only
+          was entered. See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-2256"
+              >HBASE-2256</link>. Remember that a delete writes a tombstone, which only
           disappears after then next major compaction has run. Suppose you do
           a delete of everything &lt;= T. After this you do a new put with a
           timestamp &lt;= T. This put, even if it happened after the delete,
@@ -860,14 +850,12 @@ htable.put(put);
           <title>Major compactions change query results</title>
           
           <para><quote>...create three cell versions at t1, t2 and t3, with a maximum-versions
-            setting of 2. So when getting all versions, only the values at t2 and t3 will be
-            returned. But if you delete the version at t2 or t3, the one at t1 will appear again.
-            Obviously, once a major compaction has run, such behavior will not be the case anymore...<footnote>
-              <para>See <emphasis>Garbage Collection</emphasis> in <link
-                xlink:href="http://outerthought.org/blog/417-ot.html">Bending time in
-                HBase</link>
-              </para>
-            </footnote></quote></para>
+              setting of 2. So when getting all versions, only the values at t2 and t3 will be
+              returned. But if you delete the version at t2 or t3, the one at t1 will appear again.
+              Obviously, once a major compaction has run, such behavior will not be the case
+              anymore...</quote> (See <emphasis>Garbage Collection</emphasis> in <link
+              xlink:href="http://outerthought.org/blog/417-ot.html">Bending time in
+            HBase</link>.)</para>
         </section>
       </section>
     </section>
@@ -2012,14 +2000,13 @@ rs.close();
 	</section>  <!--  client.filter -->
 
     <section xml:id="master"><title>Master</title>
-       <para><code>HMaster</code> is the implementation of the Master Server.  The Master server
-       is responsible for monitoring all RegionServer instances in the cluster, and is
-       the interface for all metadata changes.  In a distributed cluster, the Master typically runs on the <xref linkend="arch.hdfs.nn" /><footnote>
-            <para>J Mohamed Zahoor goes into some more detail on the Master Architecture in this blog posting, <link
-            xlink:href="http://blog.zahoor.in/2012/08/hbase-hmaster-architecture/">HBase HMaster Architecture
-            </link>.</para>
-          </footnote>
-       </para>
+      <para><code>HMaster</code> is the implementation of the Master Server. The Master server is
+        responsible for monitoring all RegionServer instances in the cluster, and is the interface
+        for all metadata changes. In a distributed cluster, the Master typically runs on the <xref
+          linkend="arch.hdfs.nn"/>. J Mohamed Zahoor goes into some more detail on the Master
+        Architecture in this blog posting, <link
+          xlink:href="http://blog.zahoor.in/2012/08/hbase-hmaster-architecture/">HBase HMaster
+          Architecture </link>.</para>
        <section xml:id="master.startup"><title>Startup Behavior</title>
          <para>If run in a multi-Master environment, all Masters compete to run the cluster.  If the active
          Master loses its lease in ZooKeeper (or the Master shuts down), then then the remaining Masters jostle to
@@ -2531,12 +2518,10 @@ rs.close();
             </itemizedlist>
             <para>If the <varname>hbase.hlog.split.skip.errors</varname> optionset to
                 <literal>false</literal>, the default, the exception will be propagated and the
-              split will be logged as failed.<footnote>
-                <para>See <link
+              split will be logged as failed. See <link
                     xlink:href="https://issues.apache.org/jira/browse/HBASE-2958">HBASE-2958 When
                     hbase.hlog.split.skip.errors is set to false, we fail the split but thats
                     it</link>. We need to do more than just fail split if this flag is set.</para>
-              </footnote></para>
             
             <section>
               <title>How EOFExceptions are treated when splitting a crashed RegionServers'
@@ -2546,11 +2531,9 @@ rs.close();
                   <varname>hbase.hlog.split.skip.errors</varname> is set to
                 <literal>false</literal>. An EOFException while reading the last log in the set of
                 files to split is likely, because the RegionServer is likely to be in the process of
-                writing a record at the time of a crash. <footnote>
-                  <para>For background, see <link
+                writing a record at the time of a crash. For background, see <link
                       xlink:href="https://issues.apache.org/jira/browse/HBASE-2643">HBASE-2643
                       Figure how to deal with eof splitting logs</link></para>
-                </footnote></para>
             </section>
           </section>
           
@@ -2960,9 +2943,9 @@ ctime = Sat Jun 23 11:13:40 PDT 2012
              </listitem>
              <listitem><para>Third replica is written on the same rack as the second, but on a different node chosen randomly</para>
              </listitem>
-             <listitem><para>Subsequent replicas are written on random nodes on the cluster
-<footnote><para>See <emphasis>Replica Placement: The First Baby Steps</emphasis> on this page: <link xlink:href="http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html">HDFS Architecture</link></para></footnote>
-             </para></listitem>
+             <listitem><para>Subsequent replicas are written on random nodes on the cluster. See <emphasis>Replica Placement: The First Baby Steps</emphasis> on this page: <link
+                xlink:href="http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/HdfsDesign.html"
+                >HDFS Architecture</link></para></listitem>
            </orderedlist>
         <para>
           Thus, HBase eventually achieves locality for a region after a flush or a compaction.

@@ -233,19 +233,16 @@ export SERVER_GC_OPTS="$SERVER_GC_OPTS -XX:NewSize=64m -XX:MaxNewSize=64m"
     <section
       xml:id="trouble.resources.lists">
       <title>Mailing Lists</title>
-      <para>Ask a question on the <link
-          xlink:href="http://hbase.apache.org/mail-lists.html">Apache HBase mailing lists</link>.
-        The 'dev' mailing list is aimed at the community of developers actually building Apache
-        HBase and for features currently under development, and 'user' is generally used for
-        questions on released versions of Apache HBase. Before going to the mailing list, make sure
-        your question has not already been answered by searching the mailing list archives first.
-        Use <xref
-          linkend="trouble.resources.searchhadoop" />. Take some time crafting your question<footnote>
-          <para>See <link
-              xlink:href="http://www.mikeash.com/getting_answers.html">Getting Answers</link></para>
-        </footnote>; a quality question that includes all context and exhibits evidence the author
-        has tried to find answers in the manual and out on lists is more likely to get a prompt
-        response. </para>
+      <para>Ask a question on the <link xlink:href="http://hbase.apache.org/mail-lists.html">Apache
+          HBase mailing lists</link>. The 'dev' mailing list is aimed at the community of developers
+        actually building Apache HBase and for features currently under development, and 'user' is
+        generally used for questions on released versions of Apache HBase. Before going to the
+        mailing list, make sure your question has not already been answered by searching the mailing
+        list archives first. Use <xref linkend="trouble.resources.searchhadoop"/>. Take some time
+        crafting your question. See <link xlink:href="http://www.mikeash.com/getting_answers.html"
+          >Getting Answers</link> for ideas on crafting good questions. A quality question that
+        includes all context and exhibits evidence the author has tried to find answers in the
+        manual and out on lists is more likely to get a prompt response. </para>
     </section>
     <section
       xml:id="trouble.resources.irc">

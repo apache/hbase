@@ -29,16 +29,14 @@
  */
 -->
   <title>Apache HBase Coprocessors</title>
-  <para> HBase coprocessors are modeled after the coprocessors which are part of Google's BigTable<footnote>
-      <para><link
-          xlink:href="http://www.scribd.com/doc/21631448/Dean-Keynote-Ladis2009" />, pages
-        66-67.</para>
-    </footnote>. Coprocessors function in a similar way to Linux kernel modules. They provide a way
-    to run server-level code against locally-stored data. The functionality they provide is very
+  <para> HBase coprocessors are modeled after the coprocessors which are part of Google's BigTable
+      (<link xlink:href="http://www.scribd.com/doc/21631448/Dean-Keynote-Ladis2009"/>, pages
+    66-67.). Coprocessors function in a similar way to Linux kernel modules. They provide a way to
+    run server-level code against locally-stored data. The functionality they provide is very
     powerful, but also carries great risk and can have adverse effects on the system, at the level
     of the operating system. The information in this chapter is primarily sourced and heavily reused
     from Mingjie Lai's blog post at <link
-      xlink:href="https://blogs.apache.org/hbase/entry/coprocessor_introduction" />. </para>
+      xlink:href="https://blogs.apache.org/hbase/entry/coprocessor_introduction"/>. </para>
 
   <para> Coprocessors are not designed to be used by end users of HBase, but by HBase developers who
     need to add specialized functionality to HBase. One example of the use of coprocessors is

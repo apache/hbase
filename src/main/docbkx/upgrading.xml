@@ -71,12 +71,10 @@
                 out the jars of one version and replace them with the jars of another, compatible
                 version and all will just work. Unless otherwise specified, HBase point versions are
                 binary compatible. You can safely do rolling upgrades between binary compatible
-                versions; i.e. across point versions: e.g. from 0.94.5 to 0.94.6<footnote>
-                    <para>See <link
+                versions; i.e. across point versions: e.g. from 0.94.5 to 0.94.6. See <link
                             xlink:href="http://search-hadoop.com/m/bOOvwHGW981/Does+compatibility+between+versions+also+mean+binary+compatibility%253F&amp;subj=Re+Does+compatibility+between+versions+also+mean+binary+compatibility+">Does
                             compatibility between versions also mean binary compatibility?</link>
                         discussion on the hbaes dev mailing list. </para>
-                </footnote>. </para>
         </section>
         <section
             xml:id="hbase.rolling.restart">
@@ -472,12 +470,10 @@ Successfully completed Log splitting
             to change this (The 'normal'/default value is 64MB (67108864)). Run the script
                 <filename>bin/set_meta_memstore_size.rb</filename>. This will make the necessary
             edit to your <varname>.META.</varname> schema. Failure to run this change will make for
-            a slow cluster <footnote>
-                <para> See <link
+            a slow cluster. See <link
                         xlink:href="https://issues.apache.org/jira/browse/HBASE-3499">HBASE-3499
                         Users upgrading to 0.90.0 need to have their .META. table updated with the
                         right MEMSTORE_SIZE</link>
                 </para>
-            </footnote> . </para>
     </section>
 </chapter>
