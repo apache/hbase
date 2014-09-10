@@ -70,7 +70,7 @@ import org.apache.zookeeper.proto.SetDataRequest;
 public class RecoverableZooKeeper {
   private static final Log LOG = LogFactory.getLog(RecoverableZooKeeper.class);
   // the actual ZooKeeper client instance
-  private volatile ZooKeeper zk;
+  private ZooKeeper zk;
   private final RetryCounterFactory retryCounterFactory;
   // An identifier of this process in the cluster
   private final String identifier;
@@ -114,7 +114,7 @@ public class RecoverableZooKeeper {
    * @return The created Zookeeper connection object
    * @throws KeeperException
    */
-  protected ZooKeeper checkZk() throws KeeperException {
+  protected synchronized ZooKeeper checkZk() throws KeeperException {
     if (this.zk == null) {
       try {
         this.zk = new ZooKeeper(quorumServers, sessionTimeout, watcher);
@@ -126,7 +126,7 @@ public class RecoverableZooKeeper {
     return zk;
   }
 
-  public void reconnectAfterExpiration()
+  public synchronized void reconnectAfterExpiration()
         throws IOException, KeeperException, InterruptedException {
     if (zk != null) {
       LOG.info("Closing dead ZooKeeper connection, session" +
