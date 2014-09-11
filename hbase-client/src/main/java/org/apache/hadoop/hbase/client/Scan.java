@@ -89,7 +89,6 @@ public class Scan extends Query {
   private static final Log LOG = LogFactory.getLog(Scan.class);
 
   private static final String RAW_ATTR = "_raw_";
-  private static final String ISOLATION_LEVEL = "_isolationlevel_";
 
   /**
    * EXPERT ONLY.
@@ -751,32 +750,7 @@ public class Scan extends Query {
     return attr == null ? false : Bytes.toBoolean(attr);
   }
 
-  /*
-   * Set the isolation level for this scan. If the
-   * isolation level is set to READ_UNCOMMITTED, then
-   * this scan will return data from committed and
-   * uncommitted transactions. If the isolation level
-   * is set to READ_COMMITTED, then this scan will return
-   * data from committed transactions only. If a isolation
-   * level is not explicitly set on a Scan, then it
-   * is assumed to be READ_COMMITTED.
-   * @param level IsolationLevel for this scan
-   */
-  public Scan setIsolationLevel(IsolationLevel level) {
-    setAttribute(ISOLATION_LEVEL, level.toBytes());
-    return this;
-  }
-  /*
-   * @return The isolation level of this scan.
-   * If no isolation level was set for this scan object,
-   * then it returns READ_COMMITTED.
-   * @return The IsolationLevel for this scan
-   */
-  public IsolationLevel getIsolationLevel() {
-    byte[] attr = getAttribute(ISOLATION_LEVEL);
-    return attr == null ? IsolationLevel.READ_COMMITTED :
-                          IsolationLevel.fromBytes(attr);
-  }
+
 
   /**
    * Set whether this scan is a small scan
@@ -845,4 +819,10 @@ public class Scan extends Query {
   public Scan setReplicaId(int Id) {
     return (Scan) super.setReplicaId(Id);
   }
+
+  @Override
+  public Scan setIsolationLevel(IsolationLevel level) {
+    return (Scan) super.setIsolationLevel(level);
+  }
+
 }
