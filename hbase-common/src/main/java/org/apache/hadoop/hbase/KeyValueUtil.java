@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IterableUtils;
@@ -42,14 +45,23 @@ public class KeyValueUtil {
   /**************** length *********************/
 
   public static int length(final Cell cell) {
-    return (int) (KeyValue.getKeyValueDataStructureSize(cell.getRowLength(),
-        cell.getFamilyLength(), cell.getQualifierLength(), cell.getValueLength(),
-        cell.getTagsLength()));
+    return length(cell.getRowLength(), cell.getFamilyLength(), cell.getQualifierLength(),
+        cell.getValueLength(), cell.getTagsLength(), true);
+  }
+
+  private static int length(short rlen, byte flen, int qlen, int vlen, int tlen, boolean withTags) {
+    if (withTags) {
+      return (int) (KeyValue.getKeyValueDataStructureSize(rlen, flen, qlen, vlen, tlen));
+    }
+    return (int) (KeyValue.getKeyValueDataStructureSize(rlen, flen, qlen, vlen));
   }
 
   protected static int keyLength(final Cell cell) {
-    return (int)KeyValue.getKeyDataStructureSize(cell.getRowLength(), cell.getFamilyLength(),
-      cell.getQualifierLength());
+    return keyLength(cell.getRowLength(), cell.getFamilyLength(), cell.getQualifierLength());
+  }
+
+  private static int keyLength(short rlen, byte flen, int qlen) {
+    return (int) KeyValue.getKeyDataStructureSize(rlen, flen, qlen);
   }
 
   public static int lengthWithMvccVersion(final KeyValue kv, final boolean includeMvccVersion) {
@@ -514,4 +526,46 @@ public class KeyValueUtil {
     return new ArrayList<KeyValue>(lazyList);
   }
 
+  public static void oswrite(final Cell cell, final OutputStream out, final boolean withTags)
+      throws IOException {
+    if (cell instanceof KeyValue) {
+      KeyValue.oswrite((KeyValue) cell, out, withTags);
+    } else {
+      short rlen = cell.getRowLength();
+      byte flen = cell.getFamilyLength();
+      int qlen = cell.getQualifierLength();
+      int vlen = cell.getValueLength();
+      int tlen = cell.getTagsLength();
+
+      // write total length
+      StreamUtils.writeInt(out, length(rlen, flen, qlen, vlen, tlen, withTags));
+      // write key length
+      StreamUtils.writeInt(out, keyLength(rlen, flen, qlen));
+      // write value length
+      StreamUtils.writeInt(out, vlen);
+      // Write rowkey - 2 bytes rk length followed by rowkey bytes
+      StreamUtils.writeShort(out, rlen);
+      out.write(cell.getRowArray(), cell.getRowOffset(), rlen);
+      // Write cf - 1 byte of cf length followed by the family bytes
+      out.write(flen);
+      out.write(cell.getFamilyArray(), cell.getFamilyOffset(), flen);
+      // write qualifier
+      out.write(cell.getQualifierArray(), cell.getQualifierOffset(), qlen);
+      // write timestamp
+      StreamUtils.writeLong(out, cell.getTimestamp());
+      // write the type
+      out.write(cell.getTypeByte());
+      // write value
+      out.write(cell.getValueArray(), cell.getValueOffset(), vlen);
+      // write tags if we have to
+      if (withTags) {
+        // 2 bytes tags length followed by tags bytes
+        // tags length is serialized with 2 bytes only(short way) even if the type is int. As this
+        // is non -ve numbers, we save the sign bit. See HBASE-11437
+        out.write((byte) (0xff & (tlen >> 8)));
+        out.write((byte) (0xff & tlen));
+        out.write(cell.getTagsArray(), cell.getTagsOffset(), tlen);
+      }
+    }
+  }
 }
