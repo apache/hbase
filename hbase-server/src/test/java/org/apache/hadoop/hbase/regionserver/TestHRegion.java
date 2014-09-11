@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -5615,6 +5616,59 @@ public class TestHRegion {
     assertTrue(Bytes.equals(store.getFamilyName().toByteArray(), fam2));
     assertEquals(store.getStoreHomeDir(), Bytes.toString(fam2));
     assertEquals(0, store.getStoreFileCount()); // no store files
+  }
+
+  /**
+   * Test RegionTooBusyException thrown when region is busy
+   */
+  @Test (timeout=24000)
+  public void testRegionTooBusy() throws IOException {
+    String method = "testRegionTooBusy";
+    byte[] tableName = Bytes.toBytes(method);
+    byte[] family = Bytes.toBytes("family");
+    long defaultBusyWaitDuration = CONF.getLong("hbase.busy.wait.duration",
+      HRegion.DEFAULT_BUSY_WAIT_DURATION);
+    CONF.setLong("hbase.busy.wait.duration", 1000);
+    region = initHRegion(tableName, method, CONF, family);
+    final AtomicBoolean stopped = new AtomicBoolean(true);
+    Thread t = new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          region.lock.writeLock().lock();
+          stopped.set(false);
+          while (!stopped.get()) {
+            Thread.sleep(100);
+          }
+        } catch (InterruptedException ie) {
+        } finally {
+          region.lock.writeLock().unlock();
+        }
+      }
+    });
+    t.start();
+    Get get = new Get(row);
+    try {
+      while (stopped.get()) {
+        Thread.sleep(100);
+      }
+      region.get(get);
+      fail("Should throw RegionTooBusyException");
+    } catch (InterruptedException ie) {
+      fail("test interrupted");
+    } catch (RegionTooBusyException e) {
+      // Good, expected
+    } finally {
+      stopped.set(true);
+      try {
+        t.join();
+      } catch (Throwable e) {
+      }
+
+      HRegion.closeHRegion(region);
+      region = null;
+      CONF.setLong("hbase.busy.wait.duration", defaultBusyWaitDuration);
+    }
   }
 
   private static HRegion initHRegion(byte[] tableName, String callingMethod,
