@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.security.access.AccessControlConstants;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
-import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
@@ -36,6 +35,7 @@ import com.google.common.collect.ListMultimap;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class Query extends OperationWithAttributes {
+  private static final String ISOLATION_LEVEL = "_isolationlevel_";
   protected Filter filter = null;
 
   /**
@@ -117,5 +117,32 @@ public abstract class Query extends OperationWithAttributes {
    */
   @Deprecated
   public void setACLStrategy(boolean cellFirstStrategy) {
+  }
+
+  /**
+   * Set the isolation level for this query. If the
+   * isolation level is set to READ_UNCOMMITTED, then
+   * this query will return data from committed and
+   * uncommitted transactions. If the isolation level
+   * is set to READ_COMMITTED, then this query will return
+   * data from committed transactions only. If a isolation
+   * level is not explicitly set on a Query, then it
+   * is assumed to be READ_COMMITTED.
+   * @param level IsolationLevel for this query
+   */
+  public void setIsolationLevel(IsolationLevel level) {
+    setAttribute(ISOLATION_LEVEL, level.toBytes());
+  }
+
+  /**
+   * @return The isolation level of this scan.
+   * If no isolation level was set for this scan object,
+   * then it returns READ_COMMITTED.
+   * @return The IsolationLevel for this scan
+   */
+  public IsolationLevel getIsolationLevel() {
+    byte[] attr = getAttribute(ISOLATION_LEVEL);
+    return attr == null ? IsolationLevel.READ_COMMITTED :
+                          IsolationLevel.fromBytes(attr);
   }
 }
