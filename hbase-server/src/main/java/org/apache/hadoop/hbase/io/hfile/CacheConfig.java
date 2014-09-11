@@ -465,6 +465,7 @@ public class CacheConfig {
    */
   private static LruBlockCache getL1(final Configuration c, final MemoryUsage mu) {
     long lruCacheSize = getLruCacheSize(c, mu);
+    if (lruCacheSize < 0) return null;
     int blockSize = c.getInt(BLOCKCACHE_BLOCKSIZE_KEY, HConstants.DEFAULT_BLOCKSIZE);
     LOG.info("Allocating LruBlockCache size=" +
       StringUtils.byteDesc(lruCacheSize) + ", blockSize=" + StringUtils.byteDesc(blockSize));
@@ -530,6 +531,8 @@ public class CacheConfig {
     if (blockCacheDisabled) return null;
     MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
     LruBlockCache l1 = getL1(conf, mu);
+    // blockCacheDisabled is set as a side-effect of getL1(), so check it again after the call.
+    if (blockCacheDisabled) return null;
     BucketCache l2 = getL2(conf, mu);
     if (l2 == null) {
       GLOBAL_BLOCK_CACHE_INSTANCE = l1;
