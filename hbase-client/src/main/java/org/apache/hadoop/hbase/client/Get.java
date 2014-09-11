@@ -482,4 +482,10 @@ public class Get extends Query
   public Get setReplicaId(int Id) {
     return (Get) super.setReplicaId(Id);
   }
+
+  @Override
+  public Get setIsolationLevel(IsolationLevel level) {
+      return (Get) super.setIsolationLevel(level);
+  }
+
 }
