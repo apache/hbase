@@ -520,7 +520,7 @@ Index: pom.xml
                   <para> Building against the hadoop 2 profile by running something like the
                     following command: </para>
                   <screen>$  mvn clean install assembly:single -Dhadoop.profile=2.0 -DskipTests</screen>
-                </footnote></entry>
+                </entry>
               <entry>S</entry>
               <entry>S</entry>
               <entry>NT</entry>
