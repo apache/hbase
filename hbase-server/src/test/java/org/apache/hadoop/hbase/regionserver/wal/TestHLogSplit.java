@@ -34,7 +34,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -1068,52 +1067,6 @@ public class TestHLogSplit {
       assertEquals((long)entry.getValue(), numFakeEdits / regions.size());
     }
     assertEquals(regions.size(), outputCounts.size());
-  }
-
-  /**
-   * This thread will keep adding new log files
-   * It simulates a region server that was considered dead but woke up and wrote
-   * some more to a new hlog
-   */
-  class ZombieNewLogWriterRegionServer extends Thread {
-    AtomicBoolean stop;
-    CountDownLatch latch;
-    public ZombieNewLogWriterRegionServer(CountDownLatch latch, AtomicBoolean stop) {
-      super("ZombieNewLogWriterRegionServer");
-      this.latch = latch;
-      this.stop = stop;
-    }
-
-    @Override
-    public void run() {
-      if (stop.get()) {
-        return;
-      }
-      Path tableDir = FSUtils.getTableDir(HBASEDIR, TABLE_NAME);
-      Path regionDir = new Path(tableDir, REGIONS.get(0));
-      Path recoveredEdits = new Path(regionDir, HConstants.RECOVERED_EDITS_DIR);
-      String region = "juliet";
-      Path julietLog = new Path(HLOGDIR, HLOG_FILE_PREFIX + ".juliet");
-      try {
-
-        while (!fs.exists(recoveredEdits) && !stop.get()) {
-          LOG.info("Juliet: split not started, sleeping a bit...");
-          Threads.sleep(10);
-        }
-
-        fs.mkdirs(new Path(tableDir, region));
-        HLog.Writer writer = HLogFactory.createWALWriter(fs,
-          julietLog, conf);
-        appendEntry(writer, TableName.valueOf("juliet"), ("juliet").getBytes(),
-            ("r").getBytes(), FAMILY, QUALIFIER, VALUE, 0);
-        writer.close();
-        LOG.info("Juliet file creator: created file " + julietLog);
-        latch.countDown();
-      } catch (IOException e1) {
-        LOG.error("Failed to create file " + julietLog, e1);
-        assertTrue("Failed to create file " + julietLog, false);
-      }
-    }
   }
 
   @Test (timeout=300000)
