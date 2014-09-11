@@ -965,6 +965,9 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         }
         ServerName dest = keyIt.next();
         if (masterServerName.equals(dest)) {
+          if (!keyIt.hasNext()) {
+            keyIt = clusterMap.keySet().iterator();
+          }
           dest = keyIt.next();
         }
 
