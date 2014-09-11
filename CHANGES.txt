@@ -161,6 +161,7 @@ Release Notes - HBase - Version 0.99.0 9/17/2014
     * [HBASE-11822] - Convert EnvironmentEdge#getCurrentTimeMillis to getCurrentTime
     * [HBASE-11919] - Remove the deprecated pre/postGet CP hook
     * [HBASE-11923] - Potential race condition in RecoverableZookeeper.checkZk()
+    * [HBASE-11934] - Support KeyValueCodec to encode non KeyValue cells.
 
 
 ** Brainstorming
@@ -704,6 +705,7 @@ Release Notes - HBase - Version 0.99.0 9/17/2014
     * [HBASE-11898] - CoprocessorHost.Environment should cache class loader instance
     * [HBASE-11905] - Add orca to server UIs and update logo.
     * [HBASE-11921] - Minor fixups that come of testing branch-1
+    * [HBASE-11932] - Stop the html-single from building a html-single of every chapter and cluttering the docbkx directory
 
 
 
@@ -863,6 +865,7 @@ Release Notes - HBase - Version 0.99.0 9/17/2014
     * [HBASE-11315] - Keeping MVCC for configurable longer time 
     * [HBASE-11319] - No need to use favored node mapping initialization to find all regions
     * [HBASE-11326] - Use an InputFormat for ExportSnapshot
+    * [HBASE-11331] - [blockcache] lazy block decompression
     * [HBASE-11344] - Hide row keys and such from the web UIs
     * [HBASE-11348] - Make frequency and sleep times of  chaos monkeys configurable 
     * [HBASE-11349] - [Thrift] support authentication/impersonation
@@ -1055,9 +1058,9 @@ Release Notes - HBase - Version 0.99.0 9/17/2014
     * [HBASE-11615] - TestZKLessAMOnCluster.testForceAssignWhileClosing failed on Jenkins
     * [HBASE-11713] - Adding hbase shell unit test coverage for visibility labels.
     * [HBASE-11918] - TestVisibilityLabelsWithDistributedLogReplay#testAddVisibilityLabelsOnRSRestart sometimes fails due to VisibilityController initialization not being recognized
+    * [HBASE-11942] - Fix TestHRegionBusyWait
 
 ** Umbrella
     * [HBASE-7319] - Extend Cell usage through read path
     * [HBASE-9945] - Coprocessor loading and execution improvements
     * [HBASE-10909] - Abstract out ZooKeeper usage in HBase - phase 1
-
