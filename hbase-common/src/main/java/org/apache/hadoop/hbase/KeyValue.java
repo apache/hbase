@@ -38,6 +38,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.IOUtils;
@@ -2413,6 +2414,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId {
    * @throws IOException
    * @see #create(DataInput) for the inverse function
    * @see #write(KeyValue, DataOutput)
+   * @deprecated use {@link #oswrite(KeyValue, OutputStream, boolean)} instead
    */
   @Deprecated
   public static long oswrite(final KeyValue kv, final OutputStream out)
@@ -2435,15 +2437,18 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId {
    * @throws IOException
    * @see #create(DataInput) for the inverse function
    * @see #write(KeyValue, DataOutput)
+   * @see KeyValueUtil#oswrite(Cell, OutputStream, boolean)
    */
   public static long oswrite(final KeyValue kv, final OutputStream out, final boolean withTags)
       throws IOException {
+    // In KeyValueUtil#oswrite we do a Cell serialization as KeyValue. Any changes doing here, pls
+    // check KeyValueUtil#oswrite also and do necessary changes.
     int length = kv.getLength();
     if (!withTags) {
       length = kv.getKeyLength() + kv.getValueLength() + KEYVALUE_INFRASTRUCTURE_SIZE;
     }
     // This does same as DataOuput#writeInt (big-endian, etc.)
-    out.write(Bytes.toBytes(length));
+    StreamUtils.writeInt(out, length);
     out.write(kv.getBuffer(), kv.getOffset(), length);
     return length + Bytes.SIZEOF_INT;
   }
