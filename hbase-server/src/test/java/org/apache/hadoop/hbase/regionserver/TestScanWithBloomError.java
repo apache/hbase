@@ -149,7 +149,7 @@ public class TestScanWithBloomError {
     for (StoreFileScanner sfScanner : scanners)
       lastStoreFileReader = sfScanner.getReaderForTesting();
 
-    new HFilePrettyPrinter().run(new String[]{ "-m", "-p", "-f",
+    new HFilePrettyPrinter(conf).run(new String[]{ "-m", "-p", "-f",
         lastStoreFileReader.getHFileReader().getPath().toString()});
 
     // Disable Bloom filter for the last store file. The disabled Bloom filter

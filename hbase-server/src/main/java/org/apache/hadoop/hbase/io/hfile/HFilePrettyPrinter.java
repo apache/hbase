@@ -190,6 +190,9 @@ public class HFilePrettyPrinter extends Configured implements Tool {
    * exit code (zero for success, non-zero for failure).
    */
   public int run(String[] args) {
+    if (getConf() == null) {
+      throw new RuntimeException("A Configuration instance must be provided.");
+    }
     try {
       FSUtils.setFsDefault(getConf(), FSUtils.getRootDir(getConf()));
       if (!parseOptions(args))
