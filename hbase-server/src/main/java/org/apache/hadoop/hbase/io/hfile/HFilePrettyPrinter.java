@@ -35,6 +35,8 @@ import com.yammer.metrics.reporting.ConsoleReporter;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
@@ -52,6 +54,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.BloomFilter;
@@ -78,7 +81,8 @@ public class HFilePrettyPrinter extends Configured implements Tool {
   private boolean printValue;
   private boolean printKey;
   private boolean shouldPrintMeta;
-  private boolean printBlocks;
+  private boolean printBlockIndex;
+  private boolean printBlockHeaders;
   private boolean printStats;
   private boolean checkRow;
   private boolean checkFamily;
@@ -111,16 +115,20 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     options.addOption("e", "printkey", false, "Print keys");
     options.addOption("m", "printmeta", false, "Print meta data of file");
     options.addOption("b", "printblocks", false, "Print block index meta data");
+    options.addOption("h", "printblockheaders", false, "Print block headers for each block.");
     options.addOption("k", "checkrow", false,
         "Enable row order check; looks for out-of-order keys");
     options.addOption("a", "checkfamily", false, "Enable family check");
-    options.addOption("f", "file", true,
-        "File to scan. Pass full-path; e.g. hdfs://a:9000/hbase/hbase:meta/12/34");
     options.addOption("w", "seekToRow", true,
       "Seek to this row and print all the kvs for this row only");
-    options.addOption("r", "region", true,
-        "Region to scan. Pass region name; e.g. 'hbase:meta,,1'");
     options.addOption("s", "stats", false, "Print statistics");
+
+    OptionGroup files = new OptionGroup();
+    files.addOption(new Option("f", "file", true,
+      "File to scan. Pass full-path; e.g. hdfs://a:9000/hbase/hbase:meta/12/34"));
+    files.addOption(new Option("r", "region", true,
+      "Region to scan. Pass region name; e.g. 'hbase:meta,,1'"));
+    options.addOptionGroup(files);
   }
 
   public boolean parseOptions(String args[]) throws ParseException,
@@ -137,7 +145,8 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     printValue = cmd.hasOption("p");
     printKey = cmd.hasOption("e") || printValue;
     shouldPrintMeta = cmd.hasOption("m");
-    printBlocks = cmd.hasOption("b");
+    printBlockIndex = cmd.hasOption("b");
+    printBlockHeaders = cmd.hasOption("h");
     printStats = cmd.hasOption("s");
     checkRow = cmd.hasOption("k");
     checkFamily = cmd.hasOption("a");
@@ -256,9 +265,30 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       printMeta(reader, fileInfo);
     }
 
-    if (printBlocks) {
+    if (printBlockIndex) {
       System.out.println("Block Index:");
       System.out.println(reader.getDataBlockIndexReader());
+    }
+
+    if (printBlockHeaders) {
+      System.out.println("Block Headers:");
+      /*
+       * TODO: this same/similar block iteration logic is used in HFileBlock#blockRange and
+       * TestLazyDataBlockDecompression. Refactor?
+       */
+      FSDataInputStreamWrapper fsdis = new FSDataInputStreamWrapper(fs, file);
+      long fileSize = fs.getFileStatus(file).getLen();
+      FixedFileTrailer trailer =
+        FixedFileTrailer.readFromStream(fsdis.getStream(false), fileSize);
+      long offset = trailer.getFirstDataBlockOffset(),
+        max = trailer.getLastDataBlockOffset();
+      HFileBlock block;
+      while (offset <= max) {
+        block = reader.readBlock(offset, -1, /* cacheBlock */ false, /* pread */ false,
+          /* isCompaction */ false, /* updateCacheMetrics */ false, null);
+        offset += block.getOnDiskSizeWithHeader();
+        System.out.println(block);
+      }
     }
 
     if (printStats) {
