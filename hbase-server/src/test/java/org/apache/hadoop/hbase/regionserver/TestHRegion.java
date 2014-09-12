@@ -1542,7 +1542,7 @@ public class TestHRegion {
       Delete delete = new Delete(row1);
       delete.deleteColumn(fam1, qf1);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(val1),
-          put, true);
+          delete, true);
       assertEquals(true, res);
     } finally {
       HRegion.closeHRegion(this.region);
