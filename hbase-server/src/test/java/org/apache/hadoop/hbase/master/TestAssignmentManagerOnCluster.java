@@ -96,6 +96,8 @@ public class TestAssignmentManagerOnCluster {
       MyRegionObserver.class, RegionObserver.class);
     // Reduce the maximum attempts to speed up the test
     conf.setInt("hbase.assignment.maximum.attempts", 3);
+    // Put meta on master to avoid meta server shutdown handling
+    conf.set("hbase.balancer.tablesOnMaster", "hbase:meta");
 
     TEST_UTIL.startMiniCluster(1, 4, null, MyMaster.class, MyRegionServer.class);
     admin = TEST_UTIL.getHBaseAdmin();

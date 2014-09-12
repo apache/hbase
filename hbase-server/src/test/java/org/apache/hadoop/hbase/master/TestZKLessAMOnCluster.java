@@ -30,8 +30,6 @@ public class TestZKLessAMOnCluster extends TestAssignmentManagerOnCluster {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    // Put meta on master to avoid meta server shutdown handling
-    conf.set("hbase.balancer.tablesOnMaster", "hbase:meta");
     // Don't use ZK for region assignment
     conf.setBoolean("hbase.assignment.usezk", false);
     setupOnce();
