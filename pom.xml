@@ -1896,7 +1896,7 @@
           <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
         </configuration>
       </plugin>
-    <!--
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jxr-plugin</artifactId>
@@ -1955,8 +1955,7 @@
             </configuration>
           </reportSet>
         </reportSets>
-      </plugin>
-      --> 
+      </plugin> 
 
     </plugins>
   </reporting>
