@@ -3042,6 +3042,205 @@ ctime = Sat Jun 23 11:13:40 PDT 2012
           </para>
         </section>
 
+        <section xml:id="regions.arch.states">
+          <title>Region State Transition</title>
+          <para> HBase maintains a state for each region and persists the state in META. The state
+            of the META region itself is persisted in ZooKeeper. You can see the states of regions
+            in transition in the Master web UI. Following is the list of possible region
+            states.</para>
+
+          <itemizedlist>
+            <title>Possible Region States</title>
+            <listitem>
+              <para>OFFLINE: the region is offline and not opening</para>
+            </listitem>
+            <listitem>
+              <para>OPENING: the region is in the process of being opened</para>
+            </listitem>
+            <listitem>
+              <para>OPEN: the region is open and the region server has notified the master</para>
+            </listitem>
+            <listitem>
+              <para>FAILED_OPEN: the region server failed to open the region</para>
+            </listitem>
+            <listitem>
+              <para>CLOSING: the region is in the process of being closed</para>
+            </listitem>
+            <listitem>
+              <para>CLOSED: the region server has closed the region and notified the master</para>
+            </listitem>
+            <listitem>
+              <para>FAILED_CLOSE: the region server failed to close the region</para>
+            </listitem>
+            <listitem>
+              <para>SPLITTING: the region server notified the master that the region is
+                splitting</para>
+            </listitem>
+            <listitem>
+              <para>SPLIT: the region server notified the master that the region has finished
+                splitting</para>
+            </listitem>
+            <listitem>
+              <para>SPLITTING_NEW: this region is being created by a split which is in
+                progress</para>
+            </listitem>
+            <listitem>
+              <para>MERGING: the region server notified the master that this region is being merged
+                with another region</para>
+            </listitem>
+            <listitem>
+              <para>MERGED: the region server notified the master that this region has been
+                merged</para>
+            </listitem>
+            <listitem>
+              <para>MERGING_NEW: this region is being created by a merge of two regions</para>
+            </listitem>
+          </itemizedlist>
+
+          <figure>
+            <title>Region State Transitions</title>
+            <mediaobject>
+              <imageobject>
+                <imagedata align="center" valign="middle" fileref="region_states.png"/>
+              </imageobject>
+              <caption>
+                <para>This graph shows all allowed transitions a region can undergo. In the graph,
+                  each node is a state. A node has a color based on the state type, for readability.
+                  A directed line in the graph is a possible state transition.</para>
+              </caption>
+            </mediaobject>
+          </figure>
+
+          <itemizedlist>
+            <title>Graph Legend</title>
+             <listitem>
+              <para>Brown: Offline state, a special state that can be transient (after closed before
+                opening), terminal (regions of disabled tables), or initial (regions of newly
+                created tables)</para></listitem>
+             <listitem>
+              <para>Palegreen: Online state that regions can serve requests</para></listitem>
+             <listitem>
+              <para>Lightblue: Transient states</para></listitem>
+             <listitem>
+              <para>Red: Failure states that need OPS attention</para></listitem>
+             <listitem>
+              <para>Gold: Terminal states of regions split/merged</para></listitem>
+             <listitem>
+              <para>Grey: Initial states of regions created through split/merge</para></listitem>
+          </itemizedlist>
+
+          <orderedlist>
+            <title>Region State Transitions Explained</title>
+             <listitem>
+              <para>The master moves a region from <literal>OFFLINE</literal> to
+                  <literal>OPENING</literal> state and tries to assign the region to a region
+                server. The region server may or may not have received the open region request. The
+                master retries sending the open region request to the region server until the RPC
+                goes through or the master runs out of retries. After the region server receives the
+                open region request, the region server begins opening the region.</para>
+             </listitem>
+             <listitem>
+              <para>If the master is running out of retries, the master prevents the region server
+                from opening the region by moving the region to <literal>CLOSING</literal> state and
+                trying to close it, even if the region server is starting to open the region.</para>
+             </listitem>
+             <listitem>
+              <para>After the region server opens the region, it continues to try to notify the
+                master until the master moves the region to <literal>OPEN</literal> state and
+                notifies the region server. The region is now open.</para>
+             </listitem>
+             <listitem>
+              <para>If the region server cannot open the region, it notifies the master. The master
+                moves the region to <literal>CLOSED</literal> state and tries to open the region on
+                a different region server.</para>
+             </listitem>
+             <listitem>
+              <para>If the master cannot open the region on any of a certain number of regions, it
+                moves the region to <literal>FAILED_OPEN</literal> state, and takes no further
+                action until an operator intervenes from the HBase shell, or the server is
+                dead.</para>
+             </listitem>
+             <listitem>
+              <para>The master moves a region from <literal>OPEN</literal> to
+                  <literal>CLOSING</literal> state. The region server holding the region may or may
+                not have received the close region request. The master retries sending the close
+                request to the server until the RPC goes through or the master runs out of
+                retries.</para>
+             </listitem>
+             <listitem>
+              <para>If the region server is not online, or throws
+                  <code>NotServingRegionException</code>, the master moves the region to
+                  <literal>OFFLINE</literal> state and re-assigns it to a different region
+                server.</para>
+             </listitem>
+             <listitem>
+              <para>If the region server is online, but not reachable after the master runs out of
+                retries, the master moves the region to <literal>FAILED_CLOSE</literal> state and
+                takes no further action until an operator intervenes from the HBase shell, or the
+                server is dead.</para>
+             </listitem>
+             <listitem>
+              <para>If the region server gets the close region request, it closes the region and
+                notifies the master. The master moves the region to <literal>CLOSED</literal> state
+                and re-assigns it to a different region server.</para>
+             </listitem>
+             <listitem>
+              <para>Before assigning a region, the master moves the region to
+                  <literal>OFFLINE</literal> state automatically if it is in
+                  <literal>CLOSED</literal> state.</para>
+             </listitem>
+             <listitem>
+              <para>When a region server is about to split a region, it notifies the master. The
+                master moves the region to be split from <literal>OPEN</literal> to
+                  <literal>SPLITTING</literal> state and add the two new regions to be created to
+                the region server. These two regions are in <literal>SPLITING_NEW</literal> state
+                initially.</para>
+             </listitem>
+             <listitem>
+              <para>After notifying the master, the region server starts to split the region. Once
+                past the point of no return, the region server notifies the master again so the
+                master can update the META. However, the master does not update the region states
+                until it is notified by the server that the split is done. If the split is
+                successful, the splitting region is moved from <literal>SPLITTING</literal> to
+                  <literal>SPLIT</literal> state and the two new regions are moved from
+                  <literal>SPLITTING_NEW</literal> to <literal>OPEN</literal> state.</para>
+             </listitem>
+             <listitem>
+              <para>If the split fails, the splitting region is moved from
+                  <literal>SPLITTING</literal> back to <literal>OPEN</literal> state, and the two
+                new regions which were created are moved from <literal>SPLITTING_NEW</literal> to
+                  <literal>OFFLINE</literal> state.</para>
+             </listitem>
+             <listitem>
+              <para>When a region server is about to merge two regions, it notifies the master
+                first. The master moves the two regions to be merged from <literal>OPEN</literal> to
+                  <literal>MERGING</literal>state, and adds the new region which will hold the
+                contents of the merged regions region to the region server. The new region is in
+                  <literal>MERGING_NEW</literal> state initially.</para>
+             </listitem>
+             <listitem>
+              <para>After notifying the master, the region server starts to merge the two regions.
+                Once past the point of no return, the region server notifies the master again so the
+                master can update the META. However, the master does not update the region states
+                until it is notified by the region server that the merge has completed. If the merge
+                is successful, the two merging regions are moved from <literal>MERGING</literal> to
+                  <literal>MERGED</literal> state and the new region is moved from
+                  <literal>MERGING_NEW</literal> to <literal>OPEN</literal> state.</para>
+             </listitem>
+             <listitem>
+              <para>If the merge fails, the two merging regions are moved from
+                  <literal>MERGING</literal> back to <literal>OPEN</literal> state, and the new
+                region which was created to hold the contents of the merged regions is moved from
+                  <literal>MERGING_NEW</literal> to <literal>OFFLINE</literal> state.</para>
+             </listitem>
+             <listitem>
+              <para>For regions in <literal>FAILED_OPEN</literal> or <literal>FAILED_CLOSE</literal>
+                states , the master tries to close them again when they are reassigned by an
+                operator via HBase Shell. </para>
+             </listitem>
+          </orderedlist>
+        </section>
+
       </section>  <!--  assignment -->
 
       <section xml:id="regions.arch.locality">
