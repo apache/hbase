@@ -24,6 +24,7 @@ import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -94,7 +95,7 @@ public interface ReplicationPeers {
    * @param peerId a short that identifies the cluster
    * @return the table and column-family list which will be replicated for this peer
    */
-  public Map<String, List<String>> getTableCFs(String peerId);
+  public Map<TableName, List<String>> getTableCFs(String peerId);
 
   /**
    * Returns the ReplicationPeer

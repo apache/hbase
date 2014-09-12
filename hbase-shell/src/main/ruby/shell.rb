@@ -338,6 +338,8 @@ Shell.load_command_group(
     show_peer_tableCFs
     set_peer_tableCFs
     list_replicated_tables
+    append_peer_tableCFs
+    remove_peer_tableCFs
   ]
 )
 

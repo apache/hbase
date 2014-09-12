@@ -25,6 +25,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -39,9 +40,9 @@ public class TableCfWALEntryFilter implements WALEntryFilter {
 
   @Override
   public Entry filter(Entry entry) {
-    String tabName = entry.getKey().getTablename().getNameAsString();
+    TableName tabName = entry.getKey().getTablename();
     ArrayList<Cell> cells = entry.getEdit().getCells();
-    Map<String, List<String>> tableCFs = null;
+    Map<TableName, List<String>> tableCFs = null;
 
     try {
       tableCFs = this.peer.getTableCFs();

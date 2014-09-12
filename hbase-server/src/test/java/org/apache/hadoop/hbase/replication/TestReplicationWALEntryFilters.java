@@ -212,31 +212,31 @@ public class TestReplicationWALEntryFilters {
 
     // empty map
     userEntry = createEntry(a, b, c);
-    Map<String, List<String>> tableCfs = new HashMap<String, List<String>>();
+    Map<TableName, List<String>> tableCfs = new HashMap<TableName, List<String>>();
     when(peer.getTableCFs()).thenReturn(tableCfs);
     filter = new TableCfWALEntryFilter(peer);
     assertEquals(null, filter.filter(userEntry));
 
     // table bar
     userEntry = createEntry(a, b, c);
-    tableCfs = new HashMap<String, List<String>>();
-    tableCfs.put("bar", null);
+    tableCfs = new HashMap<TableName, List<String>>();
+    tableCfs.put(TableName.valueOf("bar"), null);
     when(peer.getTableCFs()).thenReturn(tableCfs);
     filter = new TableCfWALEntryFilter(peer);
     assertEquals(null, filter.filter(userEntry));
 
     // table foo:a
     userEntry = createEntry(a, b, c);
-    tableCfs = new HashMap<String, List<String>>();
-    tableCfs.put("foo", Lists.newArrayList("a"));
+    tableCfs = new HashMap<TableName, List<String>>();
+    tableCfs.put(TableName.valueOf("foo"), Lists.newArrayList("a"));
     when(peer.getTableCFs()).thenReturn(tableCfs);
     filter = new TableCfWALEntryFilter(peer);
     assertEquals(createEntry(a), filter.filter(userEntry));
 
     // table foo:a,c
     userEntry = createEntry(a, b, c, d);
-    tableCfs = new HashMap<String, List<String>>();
-    tableCfs.put("foo", Lists.newArrayList("a", "c"));
+    tableCfs = new HashMap<TableName, List<String>>();
+    tableCfs.put(TableName.valueOf("foo"), Lists.newArrayList("a", "c"));
     when(peer.getTableCFs()).thenReturn(tableCfs);
     filter = new TableCfWALEntryFilter(peer);
     assertEquals(createEntry(a,c), filter.filter(userEntry));
@@ -273,6 +273,4 @@ public class TestReplicationWALEntryFilters {
       KeyValue.COMPARATOR.compare(cells1.get(i), cells2.get(i));
     }
   }
-
-
 }

@@ -23,6 +23,7 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.TableName;
 
 /**
  * ReplicationPeer manages enabled / disabled state for the peer.
@@ -67,6 +68,6 @@ public interface ReplicationPeer {
    * Get replicable (table, cf-list) map of this peer
    * @return the replicable (table, cf-list) map
    */
-  public Map<String, List<String>> getTableCFs();
+  public Map<TableName, List<String>> getTableCFs();
 
 }

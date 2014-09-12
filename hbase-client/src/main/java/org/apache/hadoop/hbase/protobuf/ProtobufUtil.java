@@ -1484,8 +1484,8 @@ public final class ProtobufUtil {
   /**
    * Convert a protocol buffer DeleteType to delete KeyValue type.
    *
-   * @param protocol buffer DeleteType
-   * @return type
+   * @param type The DeleteType
+   * @return The type.
    * @throws IOException
    */
   public static KeyValue.Type fromDeleteType(
