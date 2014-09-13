@@ -238,18 +238,23 @@ public class ReplicationZookeeper {
     if (peer == null) {
       return Collections.emptyList();
     }
-    
-    List<ServerName> addresses;
-    try {
-      addresses = fetchSlavesAddresses(peer.getZkw());
-    } catch (KeeperException ke) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Fetch salves addresses failed.", ke);
+    // Synchronize peer cluster connection attempts to avoid races and rate
+    // limit connections when multiple replication sources try to connect to
+    // the peer cluster. If the peer cluster is down we can get out of control
+    // over time.
+    synchronized (peer) {
+      List<ServerName> addresses;
+      try {
+        addresses = fetchSlavesAddresses(peer.getZkw());
+      } catch (KeeperException ke) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Fetch salves addresses failed.", ke);
+        }
+        reconnectPeer(ke, peer);
+        addresses = Collections.emptyList();
       }
-      reconnectPeer(ke, peer);
-      addresses = Collections.emptyList();
+      peer.setRegionServers(addresses);
     }
-    peer.setRegionServers(addresses);
     return peer.getRegionServers();
   }
 
@@ -869,10 +874,16 @@ public class ReplicationZookeeper {
   public UUID getPeerUUID(String peerId) {
     ReplicationPeer peer = getPeerClusters().get(peerId);
     UUID peerUUID = null;
-    try {
-      peerUUID = getUUIDForCluster(peer.getZkw());
-    } catch (KeeperException ke) {
-      reconnectPeer(ke, peer);
+    // Synchronize peer cluster connection attempts to avoid races and rate
+    // limit connections when multiple replication sources try to connect to
+    // the peer cluster. If the peer cluster is down we can get out of control
+    // over time.
+    synchronized (peer) {
+      try {
+        peerUUID = getUUIDForCluster(peer.getZkw());
+      } catch (KeeperException ke) {
+        reconnectPeer(ke, peer);
+      }
     }
     return peerUUID;
   }
