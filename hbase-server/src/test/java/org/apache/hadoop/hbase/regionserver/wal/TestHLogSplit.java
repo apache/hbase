@@ -54,7 +54,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -1022,12 +1021,12 @@ public class TestHLogSplit {
             }
             HLog.Entry entry = (Entry) invocation.getArguments()[0];
             WALEdit edit = entry.getEdit();
-            List<Cell> cells = edit.getCells();
-            assertEquals(1, cells.size());
-            Cell c = cells.get(0);
+            List<KeyValue> keyValues = edit.getKeyValues();
+            assertEquals(1, keyValues.size());
+            KeyValue kv = keyValues.get(0);
 
             // Check that the edits come in the right order.
-            assertEquals(expectedIndex, Bytes.toInt(c.getRow()));
+            assertEquals(expectedIndex, Bytes.toInt(kv.getRow()));
             expectedIndex++;
             return null;
           }

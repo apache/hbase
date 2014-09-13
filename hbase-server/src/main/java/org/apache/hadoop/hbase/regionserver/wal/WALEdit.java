@@ -22,20 +22,19 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseInterfaceAudience;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -76,7 +75,7 @@ import org.apache.hadoop.io.Writable;
  * is an old style KeyValue or the new style WALEdit.
  *
  */
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@InterfaceAudience.Private
 public class WALEdit implements Writable, HeapSize {
   public static final Log LOG = LogFactory.getLog(WALEdit.class);
 
@@ -88,7 +87,7 @@ public class WALEdit implements Writable, HeapSize {
   private final int VERSION_2 = -1;
   private final boolean isReplay;
 
-  private final ArrayList<Cell> cells = new ArrayList<Cell>(1);
+  private final ArrayList<KeyValue> kvs = new ArrayList<KeyValue>(1);
 
   // Only here for legacy writable deserialization
   @Deprecated
@@ -124,41 +123,20 @@ public class WALEdit implements Writable, HeapSize {
     this.compressionContext = compressionContext;
   }
 
-  public WALEdit add(Cell cell) {
-    this.cells.add(cell);
+  public WALEdit add(KeyValue kv) {
+    this.kvs.add(kv);
     return this;
   }
 
-  /**
-   * @param kv
-   * @return this
-   * @deprecated Use {@link #add(Cell)} instead
-   */
-  @Deprecated
-  public WALEdit add(KeyValue kv) {
-    return add((Cell) kv);
-  }
-
   public boolean isEmpty() {
-    return cells.isEmpty();
+    return kvs.isEmpty();
   }
 
   public int size() {
-    return cells.size();
+    return kvs.size();
   }
 
-  public ArrayList<Cell> getCells() {
-    return cells;
-  }
-
-  /**
-   * @return Cells within this Edit as KeyValue objects
-   * @deprecated Use {@link #getCells()} instead.
-   */
-  @Deprecated
   public ArrayList<KeyValue> getKeyValues() {
-    ArrayList<KeyValue> kvs = new ArrayList<KeyValue>(cells.size());
-    kvs.addAll(KeyValueUtil.ensureKeyValues(cells));
     return kvs;
   }
 
@@ -170,7 +148,7 @@ public class WALEdit implements Writable, HeapSize {
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    cells.clear();
+    kvs.clear();
     if (scopes != null) {
       scopes.clear();
     }
@@ -208,11 +186,9 @@ public class WALEdit implements Writable, HeapSize {
   public void write(DataOutput out) throws IOException {
     LOG.warn("WALEdit is being serialized to writable - only expected in test code");
     out.writeInt(VERSION_2);
-    out.writeInt(cells.size());
+    out.writeInt(kvs.size());
     // We interleave the two lists for code simplicity
-    for (Cell cell : cells) {
-      // This is not used in any of the core code flows so it is just fine to convert to KV
-      KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+    for (KeyValue kv : kvs) {
       if (compressionContext != null) {
         KeyValueCompression.writeKV(out, kv, compressionContext);
       } else{
@@ -237,19 +213,23 @@ public class WALEdit implements Writable, HeapSize {
    * @return Number of KVs read.
    */
   public int readFromCells(Codec.Decoder cellDecoder, int expectedCount) throws IOException {
-    cells.clear();
-    cells.ensureCapacity(expectedCount);
-    while (cells.size() < expectedCount && cellDecoder.advance()) {
-      cells.add(cellDecoder.current());
+    kvs.clear();
+    kvs.ensureCapacity(expectedCount);
+    while (kvs.size() < expectedCount && cellDecoder.advance()) {
+      Cell cell = cellDecoder.current();
+      if (!(cell instanceof KeyValue)) {
+        throw new IOException("WAL edit only supports KVs as cells");
+      }
+      kvs.add((KeyValue)cell);
     }
-    return cells.size();
+    return kvs.size();
   }
 
   @Override
   public long heapSize() {
     long ret = ClassSize.ARRAYLIST;
-    for (Cell cell : cells) {
-      ret += CellUtil.estimatedHeapSizeOf(cell);
+    for (KeyValue kv : kvs) {
+      ret += kv.heapSize();
     }
     if (scopes != null) {
       ret += ClassSize.TREEMAP;
@@ -263,9 +243,9 @@ public class WALEdit implements Writable, HeapSize {
   public String toString() {
     StringBuilder sb = new StringBuilder();
 
-    sb.append("[#edits: " + cells.size() + " = <");
-    for (Cell cell : cells) {
-      sb.append(cell);
+    sb.append("[#edits: " + kvs.size() + " = <");
+    for (KeyValue kv : kvs) {
+      sb.append(kv.toString());
       sb.append("; ");
     }
     if (scopes != null) {

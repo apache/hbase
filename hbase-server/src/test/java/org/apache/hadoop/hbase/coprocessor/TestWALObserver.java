@@ -19,10 +19,30 @@
 
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
+import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdge;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -31,40 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
-import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdge;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import static org.junit.Assert.*;
 
 /**
  * Tests invocation of the
@@ -180,17 +167,17 @@ public class TestWALObserver {
     boolean foundFamily2 = false;
     boolean modifiedFamily1 = false;
 
-    List<Cell> cells = edit.getCells();
+    List<KeyValue> kvs = edit.getKeyValues();
 
-    for (Cell c : cells) {
-      if (Arrays.equals(c.getFamily(), TEST_FAMILY[0])) {
+    for (KeyValue kv : kvs) {
+      if (Arrays.equals(kv.getFamily(), TEST_FAMILY[0])) {
         foundFamily0 = true;
       }
-      if (Arrays.equals(c.getFamily(), TEST_FAMILY[2])) {
+      if (Arrays.equals(kv.getFamily(), TEST_FAMILY[2])) {
         foundFamily2 = true;
       }
-      if (Arrays.equals(c.getFamily(), TEST_FAMILY[1])) {
-        if (!Arrays.equals(c.getValue(), TEST_VALUE[1])) {
+      if (Arrays.equals(kv.getFamily(), TEST_FAMILY[1])) {
+        if (!Arrays.equals(kv.getValue(), TEST_VALUE[1])) {
           modifiedFamily1 = true;
         }
       }
@@ -207,15 +194,15 @@ public class TestWALObserver {
     foundFamily0 = false;
     foundFamily2 = false;
     modifiedFamily1 = false;
-    for (Cell c : cells) {
-      if (Arrays.equals(c.getFamily(), TEST_FAMILY[0])) {
+    for (KeyValue kv : kvs) {
+      if (Arrays.equals(kv.getFamily(), TEST_FAMILY[0])) {
         foundFamily0 = true;
       }
-      if (Arrays.equals(c.getFamily(), TEST_FAMILY[2])) {
+      if (Arrays.equals(kv.getFamily(), TEST_FAMILY[2])) {
         foundFamily2 = true;
       }
-      if (Arrays.equals(c.getFamily(), TEST_FAMILY[1])) {
-        if (!Arrays.equals(c.getValue(), TEST_VALUE[1])) {
+      if (Arrays.equals(kv.getFamily(), TEST_FAMILY[1])) {
+        if (!Arrays.equals(kv.getValue(), TEST_VALUE[1])) {
           modifiedFamily1 = true;
         }
       }
@@ -363,7 +350,7 @@ public class TestWALObserver {
     for (List<Cell> edits : familyMap.values()) {
       for (Cell cell : edits) {
         // KeyValue v1 expectation. Cast for now until we go all Cell all the time. TODO.
-        walEdit.add(cell);
+        walEdit.add((KeyValue)cell);
       }
     }
   }

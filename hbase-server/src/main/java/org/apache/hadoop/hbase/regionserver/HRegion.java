@@ -2538,8 +2538,8 @@ public class HRegion implements HeapSize { // , Writable{
         // Add WAL edits by CP
         WALEdit fromCP = batchOp.walEditsFromCoprocessors[i];
         if (fromCP != null) {
-          for (Cell cell : fromCP.getCells()) {
-            walEdit.add(cell);
+          for (KeyValue kv : fromCP.getKeyValues()) {
+            walEdit.add(kv);
           }
         }
         addFamilyMapToWALEdit(familyMaps[i], walEdit);
@@ -3023,7 +3023,7 @@ public class HRegion implements HeapSize { // , Writable{
       WALEdit walEdit) {
     for (List<Cell> edits : familyMap.values()) {
       for (Cell cell : edits) {
-        walEdit.add(cell);
+        walEdit.add(KeyValueUtil.ensureKeyValue(cell));
       }
     }
   }
@@ -3261,14 +3261,14 @@ public class HRegion implements HeapSize { // , Writable{
           }
           currentEditSeqId = key.getLogSeqNum();
           boolean flush = false;
-          for (Cell cell: val.getCells()) {
+          for (KeyValue kv: val.getKeyValues()) {
             // Check this edit is for me. Also, guard against writing the special
             // METACOLUMN info such as HBASE::CACHEFLUSH entries
-            if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY) ||
+            if (kv.matchingFamily(WALEdit.METAFAMILY) ||
                 !Bytes.equals(key.getEncodedRegionName(),
                   this.getRegionInfo().getEncodedNameAsBytes())) {
               //this is a special edit, we should handle it
-              CompactionDescriptor compaction = WALEdit.getCompaction(cell);
+              CompactionDescriptor compaction = WALEdit.getCompaction(kv);
               if (compaction != null) {
                 //replay the compaction
                 completeCompactionMarker(compaction);
@@ -3278,13 +3278,13 @@ public class HRegion implements HeapSize { // , Writable{
               continue;
             }
             // Figure which store the edit is meant for.
-            if (store == null || !(CellUtil.matchingFamily(cell, store.getFamily().getName()))) {
-              store = this.stores.get(cell.getFamily());
+            if (store == null || !kv.matchingFamily(store.getFamily().getName())) {
+              store = this.stores.get(kv.getFamily());
             }
             if (store == null) {
               // This should never happen.  Perhaps schema was changed between
               // crash and redeploy?
-              LOG.warn("No family for " + cell);
+              LOG.warn("No family for " + kv);
               skippedEdits++;
               continue;
             }
@@ -3297,7 +3297,7 @@ public class HRegion implements HeapSize { // , Writable{
             // Once we are over the limit, restoreEdit will keep returning true to
             // flush -- but don't flush until we've played all the kvs that make up
             // the WALEdit.
-            flush = restoreEdit(store, KeyValueUtil.ensureKeyValue(cell));
+            flush = restoreEdit(store, kv);
             editsCount++;
           }
           if (flush) internalFlushcache(null, currentEditSeqId, status);

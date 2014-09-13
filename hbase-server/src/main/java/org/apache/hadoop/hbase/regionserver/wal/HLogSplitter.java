@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -1435,17 +1436,17 @@ public class HLogSplitter {
         boolean needSkip = false;
         HRegionLocation loc = null;
         String locKey = null;
-        List<Cell> cells = edit.getCells();
-        List<Cell> skippedCells = new ArrayList<Cell>();
+        List<KeyValue> kvs = edit.getKeyValues();
+        List<KeyValue> skippedKVs = new ArrayList<KeyValue>();
         HConnection hconn = this.getConnectionByTableName(table);
 
-        for (Cell cell : cells) {
-          byte[] row = cell.getRow();
-          byte[] family = cell.getFamily();
+        for (KeyValue kv : kvs) {
+          byte[] row = kv.getRow();
+          byte[] family = kv.getFamily();
           boolean isCompactionEntry = false;
 	
-          if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
-            CompactionDescriptor compaction = WALEdit.getCompaction(cell);
+          if (kv.matchingFamily(WALEdit.METAFAMILY)) {
+            CompactionDescriptor compaction = WALEdit.getCompaction(kv);
             if (compaction != null && compaction.hasRegionName()) {
               try {
                 byte[][] regionName = HRegionInfo.parseRegionName(compaction.getRegionName()
@@ -1455,11 +1456,11 @@ public class HLogSplitter {
                 isCompactionEntry = true;
               } catch (Exception ex) {
                 LOG.warn("Unexpected exception received, ignoring " + ex);
-                skippedCells.add(cell);
+                skippedKVs.add(kv);
                 continue;
               }
             } else {
-              skippedCells.add(cell);
+              skippedKVs.add(kv);
               continue;
             }
           }
@@ -1506,7 +1507,7 @@ public class HLogSplitter {
               Long maxStoreSeqId = maxStoreSequenceIds.get(family);
               if (maxStoreSeqId == null || maxStoreSeqId >= entry.getKey().getLogSeqNum()) {
                 // skip current kv if column family doesn't exist anymore or already flushed
-                skippedCells.add(cell);
+                skippedKVs.add(kv);
                 continue;
               }
             }
@@ -1516,8 +1517,8 @@ public class HLogSplitter {
         // skip the edit
         if (loc == null || needSkip) continue;
 
-        if (!skippedCells.isEmpty()) {
-          cells.removeAll(skippedCells);
+        if (!skippedKVs.isEmpty()) {
+          kvs.removeAll(skippedKVs);
         }
 
         synchronized (serverToBufferQueueMap) {
@@ -1947,7 +1948,7 @@ public class HLogSplitter {
         throw new ArrayIndexOutOfBoundsException("Expected=" + count + ", index=" + i);
       }
       Cell cell = cells.current();
-      if (val != null) val.add(cell);
+      if (val != null) val.add(KeyValueUtil.ensureKeyValue(cell));
 
       boolean isNewRowOrType =
           previousCell == null || previousCell.getTypeByte() != cell.getTypeByte()
@@ -1969,13 +1970,13 @@ public class HLogSplitter {
         }
       }
       if (CellUtil.isDelete(cell)) {
-        ((Delete) m).addDeleteMarker(cell);
+        ((Delete) m).addDeleteMarker(KeyValueUtil.ensureKeyValue(cell));
       } else {
         Cell tmpNewCell = cell;
         if (addLogReplayTag) {
           tmpNewCell = tagReplayLogSequenceNumber(entry, cell);
         }
-        ((Put) m).add(tmpNewCell);
+        ((Put) m).add(KeyValueUtil.ensureKeyValue(tmpNewCell));
       }
       previousCell = cell;
     }

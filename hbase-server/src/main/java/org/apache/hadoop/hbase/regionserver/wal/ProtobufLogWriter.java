@@ -28,8 +28,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
@@ -113,9 +113,9 @@ public class ProtobufLogWriter extends WriterBase {
     entry.setCompressionContext(compressionContext);
     entry.getKey().getBuilder(compressor).setFollowingKvCount(entry.getEdit().size())
       .build().writeDelimitedTo(output);
-    for (Cell cell : entry.getEdit().getCells()) {
+    for (KeyValue kv : entry.getEdit().getKeyValues()) {
       // cellEncoder must assume little about the stream, since we write PB and cells in turn.
-      cellEncoder.write(cell);
+      cellEncoder.write(kv);
     }
   }
 

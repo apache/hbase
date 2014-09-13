@@ -28,11 +28,12 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.UUID;
 
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.SizedCellScanner;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
@@ -42,7 +43,6 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.protobuf.ServiceException;
@@ -117,15 +117,15 @@ public class ReplicationProtbufUtil {
           keyBuilder.addScopes(scopeBuilder.build());
         }
       }
-      List<Cell> cells = edit.getCells();
-      // Add up the size.  It is used later serializing out the cells.
-      for (Cell cell: cells) {
-        size += CellUtil.estimatedLengthOf(cell);
+      List<KeyValue> kvs = edit.getKeyValues();
+      // Add up the size.  It is used later serializing out the kvs.
+      for (KeyValue kv: kvs) {
+        size += kv.getLength();
       }
       // Collect up the kvs
-      allkvs.add(cells);
+      allkvs.add(kvs);
       // Write out how many kvs associated with this entry.
-      entryBuilder.setAssociatedCellCount(cells.size());
+      entryBuilder.setAssociatedCellCount(kvs.size());
       builder.addEntry(entryBuilder.build());
     }
     return new Pair<AdminProtos.ReplicateWALEntryRequest, CellScanner>(builder.build(),

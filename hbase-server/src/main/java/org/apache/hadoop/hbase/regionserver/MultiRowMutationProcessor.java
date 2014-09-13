@@ -146,8 +146,8 @@ MultiRowMutationProcessorResponse> {
         // itself. No need to apply again to region
         if (walEditsFromCP[i] != null) {
           // Add the WALEdit created by CP hook
-          for (Cell walCell : walEditsFromCP[i].getCells()) {
-            walEdit.add(walCell);
+          for (KeyValue walKv : walEditsFromCP[i].getKeyValues()) {
+            walEdit.add(walKv);
           }
         }
       }

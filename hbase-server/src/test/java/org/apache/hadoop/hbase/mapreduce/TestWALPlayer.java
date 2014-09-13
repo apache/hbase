@@ -20,25 +20,21 @@ package org.apache.hadoop.hbase.mapreduce;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -59,6 +55,9 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.*;
 
 /**
  * Basic test for the WALPlayer M/R tool
@@ -144,12 +143,12 @@ public class TestWALPlayer {
     when(context.getConfiguration()).thenReturn(configuration);
 
     WALEdit value = mock(WALEdit.class);
-    ArrayList<Cell> values = new ArrayList<Cell>();
+    ArrayList<KeyValue> values = new ArrayList<KeyValue>();
     KeyValue kv1 = mock(KeyValue.class);
     when(kv1.getFamily()).thenReturn(Bytes.toBytes("family"));
     when(kv1.getRow()).thenReturn(Bytes.toBytes("row"));
     values.add(kv1);
-    when(value.getCells()).thenReturn(values);
+    when(value.getKeyValues()).thenReturn(values);
     mapper.setup(context);
 
     doAnswer(new Answer<Void>() {
