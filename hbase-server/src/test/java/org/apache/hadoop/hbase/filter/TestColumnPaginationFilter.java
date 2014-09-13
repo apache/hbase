@@ -21,9 +21,10 @@ package org.apache.hadoop.hbase.filter;
 import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;
@@ -33,7 +34,7 @@ import org.junit.experimental.categories.Category;
  * Test for the ColumnPaginationFilter, used mainly to test the successful serialization of the filter.
  * More test functionality can be found within {@link org.apache.hadoop.hbase.filter.TestFilter#testColumnPaginationFilter()}
  */
-@Category(SmallTests.class)
+@Category({FilterTests.class, SmallTests.class})
 public class TestColumnPaginationFilter
 {
     private static final byte[] ROW = Bytes.toBytes("row_1_test");

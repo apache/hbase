@@ -30,11 +30,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -42,7 +43,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /** Unit tests to test retrieving table/region compaction state*/
-@Category(LargeTests.class)
+@Category({VerySlowRegionServerTests.class, LargeTests.class})
 public class TestCompactionState {
   final static Log LOG = LogFactory.getLog(TestCompactionState.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

@@ -28,6 +28,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -40,7 +42,7 @@ import static org.junit.Assert.*;
 /**
  * Test that the actions are called while playing with an HLog
  */
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestWALActionsListener {
   protected static final Log LOG = LogFactory.getLog(TestWALActionsListener.class);
 

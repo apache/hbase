@@ -38,6 +38,8 @@ import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.After;
@@ -55,7 +57,7 @@ import com.google.protobuf.ServiceException;
  * Test MetaTableAccessor but without spinning up a cluster.
  * We mock regionserver back and forth (we do spin up a zk cluster).
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestMetaTableAccessorNoCluster {
   private static final Log LOG = LogFactory.getLog(TestMetaTableAccessorNoCluster.class);
   private static final  HBaseTestingUtility UTIL = new HBaseTestingUtility();

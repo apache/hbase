@@ -25,9 +25,10 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
@@ -43,7 +44,7 @@ import com.google.protobuf.RpcController;
 /**
  * Test snapshot logic from the client
  */
-@Category(SmallTests.class)
+@Category({SmallTests.class, ClientTests.class})
 public class TestSnapshotFromAdmin {
 
   private static final Log LOG = LogFactory.getLog(TestSnapshotFromAdmin.class);

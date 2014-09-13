@@ -33,7 +33,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Delete;
@@ -48,7 +49,7 @@ import org.junit.experimental.categories.Category;
  * TestGet is a medley of tests of get all done up as a single test.
  * This class
  */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestGetClosestAtOrBefore extends HBaseTestCase {
   private static final Log LOG = LogFactory.getLog(TestGetClosestAtOrBefore.class);
 

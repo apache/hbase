@@ -32,6 +32,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.R
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.EntryBuffers;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.PipelineController;
 import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.RegionEntryBuffer;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -39,7 +41,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Simple testing of a few HLog methods.
  */
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestHLogMethods {
   private static final byte[] TEST_REGION = Bytes.toBytes("test_region");;
   private static final TableName TEST_TABLE =

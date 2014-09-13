@@ -20,10 +20,11 @@ package org.apache.hadoop.hbase.replication;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -31,7 +32,7 @@ import org.junit.experimental.categories.Category;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.fail;
 
-@Category(LargeTests.class)
+@Category({ReplicationTests.class, LargeTests.class})
 public class TestReplicationDisableInactivePeer extends TestReplicationBase {
 
   private static final Log LOG = LogFactory.getLog(TestReplicationDisableInactivePeer.class);

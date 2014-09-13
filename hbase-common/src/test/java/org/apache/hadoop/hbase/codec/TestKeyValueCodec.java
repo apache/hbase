@@ -28,9 +28,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.codec.Codec;
-import org.apache.hadoop.hbase.codec.KeyValueCodec;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -38,7 +37,7 @@ import org.junit.experimental.categories.Category;
 import com.google.common.io.CountingInputStream;
 import com.google.common.io.CountingOutputStream;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestKeyValueCodec {
   @Test
   public void testEmptyWorks() throws IOException {

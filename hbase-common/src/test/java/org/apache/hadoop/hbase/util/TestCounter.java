@@ -18,12 +18,13 @@
 package org.apache.hadoop.hbase.util;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestCounter {
   private static final int[] THREAD_COUNTS = {1, 10, 100};
   private static final int DATA_COUNT = 1000000;

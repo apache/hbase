@@ -43,7 +43,8 @@ import javax.security.sasl.RealmCallback;
 import javax.security.sasl.RealmChoiceCallback;
 import javax.security.sasl.SaslClient;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcClient.SaslClientCallbackHandler;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -58,7 +59,7 @@ import org.mockito.Mockito;
 
 import com.google.common.base.Strings;
 
-@Category(SmallTests.class)
+@Category({SecurityTests.class, SmallTests.class})
 public class TestHBaseSaslRpcClient {
   
   static {

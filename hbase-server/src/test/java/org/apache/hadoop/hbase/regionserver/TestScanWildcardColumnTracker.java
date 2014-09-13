@@ -25,10 +25,12 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestScanWildcardColumnTracker extends HBaseTestCase {
 
   final static int VERSIONS = 2;

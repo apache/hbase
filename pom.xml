@@ -960,8 +960,8 @@
     <surefire.skipSecondPart>false</surefire.skipSecondPart>
     <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
     <surefire.secondPartForkCount>2</surefire.secondPartForkCount>
-    <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
-    <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
+    <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.SmallTests</surefire.firstPartGroups>
+    <surefire.secondPartGroups>org.apache.hadoop.hbase.testclassification.MediumTests</surefire.secondPartGroups>
     <surefire.testFailureIgnore>false</surefire.testFailureIgnore>
     <test.output.tofile>true</test.output.tofile>
     <surefire.timeout>900</surefire.timeout>
@@ -1507,8 +1507,8 @@
       <id>hadoop-2.0</id>
       <activation>
         <property>
-            <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
-            <!--h2--><name>!hadoop.profile</name>
+          <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
+          <!--h2--><name>!hadoop.profile</name>
         </property>
       </activation>
       <modules>
@@ -1744,7 +1744,7 @@
         <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
-        <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.SmallTests</surefire.firstPartGroups>
         <surefire.secondPartGroups/>
       </properties>
     </profile>
@@ -1757,7 +1757,7 @@
       <properties>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
-        <surefire.firstPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.firstPartGroups>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.MediumTests</surefire.firstPartGroups>
         <surefire.secondPartGroups/>
       </properties>
     </profile>
@@ -1770,7 +1770,7 @@
       <properties>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
-        <surefire.firstPartGroups>org.apache.hadoop.hbase.LargeTests</surefire.firstPartGroups>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
         <surefire.secondPartGroups/>
       </properties>
     </profile>
@@ -1784,8 +1784,8 @@
         <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>false</surefire.skipSecondPart>
-        <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.SmallTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups>org.apache.hadoop.hbase.testclassification.MediumTests</surefire.secondPartGroups>
       </properties>
     </profile>
     <profile>
@@ -1799,10 +1799,258 @@
         <surefire.secondPartForkCount>5</surefire.secondPartForkCount>
         <surefire.skipFirstPart>false</surefire.skipFirstPart>
         <surefire.skipSecondPart>false</surefire.skipSecondPart>
-        <surefire.firstPartGroups>org.apache.hadoop.hbase.SmallTests</surefire.firstPartGroups>
-        <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests,org.apache.hadoop.hbase.LargeTests</surefire.secondPartGroups>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.SmallTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups>org.apache.hadoop.hbase.testclassification.MediumTests,org.apache.hadoop.hbase.testclassification.LargeTests</surefire.secondPartGroups>
       </properties>
     </profile>
+    <profile>
+      <id>runMiscTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.MiscTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runCoprocessorTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>
+          org.apache.hadoop.hbase.testclassification.CoprocessorTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runClientTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.ClientTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runMasterTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.MasterTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runMapredTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.MapredTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runMapreduceTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.MapReduceTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runRegionServerTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>
+          org.apache.hadoop.hbase.testclassification.RegionServerTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runVerySlowMapReduceTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>2</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>
+          org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>runVerySlowRegionServerTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>2</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>
+          org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>runFilterTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.FilterTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runIOTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.IOTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runRestTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.RestTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runRPCTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.RPCTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runReplicationTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>
+          org.apache.hadoop.hbase.testclassification.ReplicationTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runSecurityTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.SecurityTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+    <profile>
+      <id>runFlakeyTests</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.firstPartForkCount>1</surefire.firstPartForkCount>
+        <surefire.secondPartForkCount>1</surefire.secondPartForkCount>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.FlakeyTests
+        </surefire.firstPartGroups>
+        <surefire.secondPartGroups></surefire.secondPartGroups>
+      </properties>
+    </profile>
+
     <profile>
       <!-- Use it to launch tests locally-->
       <id>localTests</id>

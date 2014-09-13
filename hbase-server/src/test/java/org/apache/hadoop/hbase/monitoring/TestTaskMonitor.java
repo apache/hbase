@@ -22,11 +22,12 @@ import static org.junit.Assert.*;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestTaskMonitor {
 
   @Test

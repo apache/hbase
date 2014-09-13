@@ -45,6 +45,8 @@ import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.rest.model.ScannerModel;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import static org.junit.Assert.*;
@@ -54,7 +56,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({RestTests.class, MediumTests.class})
 public class TestScannerResource {
   private static final TableName TABLE = TableName.valueOf("TestScannerResource");
   private static final String NONEXISTENT_TABLE = "ThisTableDoesNotExist";

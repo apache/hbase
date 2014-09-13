@@ -36,13 +36,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.GenericTestUtils;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.net.NetUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestServletFilter extends HttpServerFunctionalTest {
   static final Log LOG = LogFactory.getLog(HttpServer.class);
   static volatile String uri = null; 

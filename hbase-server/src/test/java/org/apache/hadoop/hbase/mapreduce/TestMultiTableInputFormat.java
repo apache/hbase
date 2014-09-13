@@ -33,11 +33,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
@@ -54,7 +55,7 @@ import org.junit.experimental.categories.Category;
  * tested in a MapReduce job to see if that is handed over and done properly
  * too.
  */
-@Category(LargeTests.class)
+@Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestMultiTableInputFormat {
 
   static final Log LOG = LogFactory.getLog(TestMultiTableInputFormat.class);

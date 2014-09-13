@@ -50,7 +50,8 @@ import org.apache.hadoop.hbase.HBaseTestCase.HRegionIncommon;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -77,7 +78,7 @@ import org.mockito.stubbing.Answer;
 /**
  * Test compaction framework and common functions
  */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestCompaction {
   @Rule public TestName name = new TestName();
   static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());

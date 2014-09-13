@@ -27,9 +27,10 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -51,7 +52,7 @@ import static org.junit.Assert.*;
  * A kind of integration test at the intersection of {@link HFileBlock}, {@link CacheConfig},
  * and {@link LruBlockCache}.
  */
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 @RunWith(Parameterized.class)
 public class TestLazyDataBlockDecompression {
   private static final Log LOG = LogFactory.getLog(TestLazyDataBlockDecompression.class);

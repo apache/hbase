@@ -44,10 +44,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.experimental.categories.Category;
@@ -57,7 +58,7 @@ import org.junit.experimental.categories.Category;
  * {@link MiniHBaseCluster}, starts daemons as separate processes, allowing to
  * do real kill testing.
  */
-@Category(LargeTests.class)
+@Category({MiscTests.class, LargeTests.class})
 public class ProcessBasedLocalHBaseCluster {
 
   private final String hbaseHome, workDir;

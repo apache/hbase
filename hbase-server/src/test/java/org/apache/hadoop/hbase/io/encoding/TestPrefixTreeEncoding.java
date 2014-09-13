@@ -38,13 +38,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeCodec;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder.EncodedSeeker;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.junit.Assert;
@@ -59,7 +60,7 @@ import org.junit.runners.Parameterized.Parameters;
  * Tests scanning/seeking data with PrefixTree Encoding.
  */
 @RunWith(Parameterized.class)
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestPrefixTreeEncoding {
   private static final Log LOG = LogFactory.getLog(TestPrefixTreeEncoding.class);
   private static final String CF = "EncodingTestCF";

@@ -31,10 +31,11 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -47,7 +48,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test to verify that the cloned table is independent of the table from which it was cloned
  */
-@Category(LargeTests.class)
+@Category({LargeTests.class, ClientTests.class})
 public class TestSnapshotCloneIndependence {
   private static final Log LOG = LogFactory.getLog(TestSnapshotCloneIndependence.class);
 

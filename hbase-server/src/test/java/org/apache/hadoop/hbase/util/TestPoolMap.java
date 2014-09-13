@@ -24,10 +24,10 @@ import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import junit.framework.Test;
 import junit.framework.TestCase;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -36,7 +36,7 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({TestPoolMap.TestRoundRobinPoolType.class, TestPoolMap.TestThreadLocalPoolType.class,
         TestPoolMap.TestReusablePoolType.class})
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestPoolMap {
   public abstract static class TestPoolType extends TestCase {
     protected PoolMap<String, String> poolMap;
@@ -74,7 +74,7 @@ public class TestPoolMap {
     }
   }
 
-  @Category(SmallTests.class)
+  @Category({MiscTests.class, SmallTests.class})
   public static class TestRoundRobinPoolType extends TestPoolType {
     @Override
     protected PoolType getPoolType() {
@@ -136,7 +136,7 @@ public class TestPoolMap {
 
   }
 
-  @Category(SmallTests.class)
+  @Category({MiscTests.class, SmallTests.class})
   public static class TestThreadLocalPoolType extends TestPoolType {
     @Override
     protected PoolType getPoolType() {
@@ -181,7 +181,7 @@ public class TestPoolMap {
 
   }
 
-  @Category(SmallTests.class)
+  @Category({MiscTests.class, SmallTests.class})
   public static class TestReusablePoolType extends TestPoolType {
     @Override
     protected PoolType getPoolType() {

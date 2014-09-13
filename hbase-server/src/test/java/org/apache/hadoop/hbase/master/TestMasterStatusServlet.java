@@ -32,6 +32,8 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -50,7 +52,7 @@ import com.google.common.collect.Maps;
 /**
  * Tests for the master status page and its template.
  */
-@Category(MediumTests.class)
+@Category({MasterTests.class,MediumTests.class})
 public class TestMasterStatusServlet {
   
   private HMaster master;

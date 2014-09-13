@@ -30,7 +30,8 @@ import java.io.FileOutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -38,7 +39,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test TestCoprocessorClassLoader. More tests are in TestClassLoading
  */
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestCoprocessorClassLoader {
 
   private static final HBaseCommonTestingUtility TEST_UTIL = new HBaseCommonTestingUtility();

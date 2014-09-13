@@ -29,7 +29,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -46,7 +47,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Do the complex testing of constraints against a minicluster
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestConstraint {
   private static final Log LOG = LogFactory
       .getLog(TestConstraint.class);

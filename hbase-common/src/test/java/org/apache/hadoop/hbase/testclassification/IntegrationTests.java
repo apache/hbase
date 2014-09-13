@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.testclassification;
 
 /**
  * Tag a test as 'integration/system' test, meaning that the test class has the following

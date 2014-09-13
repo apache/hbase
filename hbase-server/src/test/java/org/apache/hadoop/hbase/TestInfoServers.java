@@ -27,6 +27,8 @@ import java.net.URL;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -37,7 +39,7 @@ import org.junit.experimental.categories.Category;
  * Testing, info servers are disabled.  This test enables then and checks that
  * they serve pages.
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestInfoServers {
   static final Log LOG = LogFactory.getLog(TestInfoServers.class);
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();

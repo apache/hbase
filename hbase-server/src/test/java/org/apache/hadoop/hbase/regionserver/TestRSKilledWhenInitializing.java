@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
@@ -37,6 +36,8 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.Test;
@@ -45,7 +46,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests region server termination during startup.
  */
-@Category(LargeTests.class)
+@Category({RegionServerTests.class, LargeTests.class})
 public class TestRSKilledWhenInitializing {
   private static boolean masterActive = false;
   private static AtomicBoolean firstRS = new AtomicBoolean(true);
@@ -56,7 +57,7 @@ public class TestRSKilledWhenInitializing {
    * @throws Exception
    */
   @Test(timeout = 180000)
-  public void testRSTermnationAfterRegisteringToMasterBeforeCreatingEphemeralNod() throws Exception {
+  public void testRSTerminationAfterRegisteringToMasterBeforeCreatingEphemeralNod() throws Exception {
 
     final int NUM_MASTERS = 1;
     final int NUM_RS = 2;

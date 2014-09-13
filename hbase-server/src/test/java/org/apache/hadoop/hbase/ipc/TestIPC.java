@@ -48,7 +48,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RPCTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.codec.Codec;
@@ -88,7 +89,7 @@ import com.google.protobuf.ServiceException;
 /**
  * Some basic ipc tests.
  */
-@Category(SmallTests.class)
+@Category({RPCTests.class, SmallTests.class})
 public class TestIPC {
   public static final Log LOG = LogFactory.getLog(TestIPC.class);
   static byte [] CELL_BYTES =  Bytes.toBytes("xyz");

@@ -32,7 +32,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
@@ -51,7 +52,7 @@ import org.junit.runners.Parameterized.Parameters;
  * Test the optimization that does not scan files where all key ranges are excluded.
  */
 @RunWith(Parameterized.class)
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestScannerSelectionUsingKeyRange {
   private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   private static TableName TABLE = TableName.valueOf("myTable");

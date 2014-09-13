@@ -22,7 +22,8 @@ import static org.mockito.Mockito.when;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 import org.junit.Test;
@@ -35,7 +36,7 @@ import com.google.protobuf.Message;
  * Basic test that qos function is sort of working; i.e. a change in method naming style
  * over in pb doesn't break it.
  */
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestQosFunction {
   @Test
   public void testPriority() {

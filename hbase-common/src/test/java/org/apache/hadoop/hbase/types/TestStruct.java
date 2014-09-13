@@ -25,7 +25,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
@@ -43,7 +44,7 @@ import org.junit.runners.Parameterized.Parameters;
  * custom data type extension for an application POJO.
  */
 @RunWith(Parameterized.class)
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestStruct {
 
   private Struct generic;

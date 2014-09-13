@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
+import org.apache.hadoop.hbase.testclassification.FlakeyTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
@@ -53,7 +55,7 @@ import com.google.common.collect.Lists;
  * This can run as a junit test, or with a main() function which runs against
  * a real cluster (eg for testing with failures, region movement, etc)
  */
-@Category(MediumTests.class)
+@Category({FlakeyTests.class, MediumTests.class})
 public class TestAcidGuarantees implements Tool {
   protected static final Log LOG = LogFactory.getLog(TestAcidGuarantees.class);
   public static final byte [] TABLE_NAME = Bytes.toBytes("TestAcidGuarantees");

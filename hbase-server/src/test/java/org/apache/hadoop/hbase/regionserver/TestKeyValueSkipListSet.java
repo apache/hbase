@@ -22,13 +22,14 @@ import java.util.Iterator;
 import java.util.SortedSet;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestKeyValueSkipListSet extends TestCase {
   private final KeyValueSkipListSet kvsls =
     new KeyValueSkipListSet(KeyValue.COMPARATOR);

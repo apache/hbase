@@ -47,7 +47,8 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -91,7 +92,7 @@ import com.google.protobuf.ServiceException;
  * Test client behavior w/o setting up a cluster.
  * Mock up cluster emissions.
  */
-@Category(SmallTests.class)
+@Category({ClientTests.class, SmallTests.class})
 public class TestClientNoCluster extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(TestClientNoCluster.class);
   private Configuration conf;

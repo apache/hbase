@@ -28,7 +28,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,7 +39,7 @@ import org.mockito.Mockito;
 /**
  * Test our recoverLease loop against mocked up filesystem.
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestFSHDFSUtils {
   private static final Log LOG = LogFactory.getLog(TestFSHDFSUtils.class);
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();

@@ -25,7 +25,8 @@ import java.util.Collection;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -49,7 +50,7 @@ import org.junit.runners.Parameterized.Parameters;
  * need to reveal more about what is being cached whether DATA or INDEX blocks and then we could
  * do more verification in this test.
  */
-@Category(MediumTests.class)
+@Category({IOTests.class, MediumTests.class})
 @RunWith(Parameterized.class)
 public class TestForceCacheImportantBlocks {
   private final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();

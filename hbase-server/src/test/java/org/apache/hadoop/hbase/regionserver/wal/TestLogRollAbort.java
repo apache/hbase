@@ -20,8 +20,9 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.junit.Assert;
 import static org.junit.Assert.assertTrue;
 
@@ -36,7 +37,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -56,7 +56,7 @@ import org.junit.experimental.categories.Category;
  * Tests for conditions that should trigger RegionServer aborts when
  * rolling the current HLog fails.
  */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestLogRollAbort {
   private static final Log LOG = LogFactory.getLog(TestLogRolling.class);
   private static MiniDFSCluster dfsCluster;

@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
@@ -48,7 +50,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test {@link org.apache.hadoop.hbase.MetaTableAccessor}.
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 @SuppressWarnings("deprecation")
 public class TestMetaTableAccessor {
   private static final Log LOG = LogFactory.getLog(TestMetaTableAccessor.class);

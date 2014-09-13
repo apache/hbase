@@ -38,11 +38,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.mapreduce.HLogInputFormat.HLogRecordReader;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.MapReduceTestUtil;
@@ -55,7 +56,7 @@ import org.junit.experimental.categories.Category;
 /**
  * JUnit tests for the HLogRecordReader
  */
-@Category(MediumTests.class)
+@Category({MapReduceTests.class, MediumTests.class})
 public class TestHLogRecordReader {
   private final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

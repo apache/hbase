@@ -34,9 +34,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.RegionSplitter.HexStringSplit;
 import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
 import org.apache.hadoop.hbase.util.RegionSplitter.UniformSplit;
@@ -49,7 +50,7 @@ import org.junit.experimental.categories.Category;
  * Tests for {@link RegionSplitter}, which can create a pre-split table or do a
  * rolling split of an existing table.
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestRegionSplitter {
     private final static Log LOG = LogFactory.getLog(TestRegionSplitter.class);
     private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();

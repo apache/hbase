@@ -29,7 +29,8 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.ImplType;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -56,7 +57,7 @@ import com.google.common.base.Joiner;
  * Start the HBase Thrift server on a random port through the command-line
  * interface and talk to it from client side.
  */
-@Category(LargeTests.class)
+@Category({ClientTests.class, LargeTests.class})
 @RunWith(Parameterized.class)
 public class TestThriftServerCmdLine {
 

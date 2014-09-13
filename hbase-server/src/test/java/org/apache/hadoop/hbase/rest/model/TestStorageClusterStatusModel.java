@@ -21,14 +21,14 @@ package org.apache.hadoop.hbase.rest.model;
 
 import java.util.Iterator;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RestTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({RestTests.class, SmallTests.class})
 public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterStatusModel> {
 
   public TestStorageClusterStatusModel() throws Exception {

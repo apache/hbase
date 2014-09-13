@@ -29,7 +29,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -45,7 +46,7 @@ import org.junit.rules.TestName;
 /**
  * Test Minimum Versions feature (HBASE-4071).
  */
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestMinVersions {
   HBaseTestingUtility hbu = HBaseTestingUtility.createLocalHTU();
   private final byte[] T0 = Bytes.toBytes("0");

@@ -42,7 +42,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -61,7 +62,7 @@ import org.junit.experimental.categories.Category;
  * Test cases that ensure that file system level errors are bubbled up
  * appropriately to clients, rather than swallowed.
  */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestFSErrorsExposed {
   private static final Log LOG = LogFactory.getLog(TestFSErrorsExposed.class);
 

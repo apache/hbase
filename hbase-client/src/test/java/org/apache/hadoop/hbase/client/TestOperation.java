@@ -24,9 +24,10 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -72,7 +73,7 @@ import org.junit.experimental.categories.Category;
  * Run tests that use the functionality of the Operation superclass for
  * Puts, Gets, Deletes, Scans, and MultiPuts.
  */
-@Category(SmallTests.class)
+@Category({ClientTests.class, SmallTests.class})
 public class TestOperation {
   private static byte [] ROW = Bytes.toBytes("testRow");
   private static byte [] FAMILY = Bytes.toBytes("testFamily");

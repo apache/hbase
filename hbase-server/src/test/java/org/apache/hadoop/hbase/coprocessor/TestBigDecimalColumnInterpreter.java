@@ -33,6 +33,8 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BigDecimalMsg;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -42,7 +44,7 @@ import org.junit.experimental.categories.Category;
 /**
  * A test class to test BigDecimalColumnInterpreter for AggregationsProtocol
  */
-@Category(MediumTests.class)
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestBigDecimalColumnInterpreter {
   protected static Log myLog = LogFactory.getLog(TestBigDecimalColumnInterpreter.class);
 

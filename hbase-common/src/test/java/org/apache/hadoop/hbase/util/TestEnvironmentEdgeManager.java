@@ -18,7 +18,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -31,7 +32,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestEnvironmentEdgeManager {
 
   @Test

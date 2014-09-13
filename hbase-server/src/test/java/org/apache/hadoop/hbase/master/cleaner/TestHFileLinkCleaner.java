@@ -31,11 +31,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -47,7 +48,7 @@ import org.junit.experimental.categories.Category;
  * Test the HFileLink Cleaner.
  * HFiles with links cannot be deleted until a link is present.
  */
-@Category(SmallTests.class)
+@Category({MasterTests.class, SmallTests.class})
 public class TestHFileLinkCleaner {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

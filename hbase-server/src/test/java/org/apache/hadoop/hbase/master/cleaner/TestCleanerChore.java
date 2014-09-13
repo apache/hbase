@@ -29,8 +29,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.junit.After;
@@ -40,7 +41,7 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-@Category(SmallTests.class)
+@Category({MasterTests.class, SmallTests.class})
 public class TestCleanerChore {
 
   private static final Log LOG = LogFactory.getLog(TestCleanerChore.class);

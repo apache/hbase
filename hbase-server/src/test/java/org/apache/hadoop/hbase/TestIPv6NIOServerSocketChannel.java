@@ -27,6 +27,8 @@ import java.nio.channels.ServerSocketChannel;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -42,7 +44,7 @@ import org.junit.experimental.categories.Category;
  * the test ensures that we are running with java.net.preferIPv4Stack=true, so
  * that ZK will not fail to bind to ipv6 address using ClientCnxnSocketNIO.
  */
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestIPv6NIOServerSocketChannel {
 
   private static final Log LOG = LogFactory.getLog(TestIPv6NIOServerSocketChannel.class);

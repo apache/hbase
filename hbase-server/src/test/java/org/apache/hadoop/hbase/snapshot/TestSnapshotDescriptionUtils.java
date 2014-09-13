@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
@@ -30,8 +29,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.After;
 import org.junit.BeforeClass;
@@ -41,7 +41,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test that the {@link SnapshotDescription} helper is helping correctly.
  */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestSnapshotDescriptionUtils {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static FileSystem fs;

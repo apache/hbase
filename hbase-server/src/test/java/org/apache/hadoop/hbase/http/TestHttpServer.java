@@ -54,7 +54,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.http.HttpServer.QuotingInputFilter.RequestQuoter;
 import org.apache.hadoop.hbase.http.resource.JerseyResource;
 import org.apache.hadoop.net.NetUtils;
@@ -72,7 +73,7 @@ import org.mockito.internal.util.reflection.Whitebox;
 import org.mortbay.jetty.Connector;
 import org.mortbay.util.ajax.JSON;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestHttpServer extends HttpServerFunctionalTest {
   static final Log LOG = LogFactory.getLog(TestHttpServer.class);
   private static HttpServer server;

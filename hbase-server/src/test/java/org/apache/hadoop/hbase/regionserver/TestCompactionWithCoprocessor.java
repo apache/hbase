@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.junit.experimental.categories.Category;
 
@@ -25,7 +26,7 @@ import org.junit.experimental.categories.Category;
  * Make sure compaction tests still pass with the preFlush and preCompact
  * overridden to implement the default behavior
  */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestCompactionWithCoprocessor extends TestCompaction {
   /** constructor */
   public TestCompactionWithCoprocessor() throws Exception {

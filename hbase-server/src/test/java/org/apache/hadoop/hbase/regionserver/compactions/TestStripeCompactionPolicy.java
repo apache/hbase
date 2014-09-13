@@ -48,7 +48,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -75,7 +76,7 @@ import org.mockito.ArgumentMatcher;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestStripeCompactionPolicy {
   private static final byte[] KEY_A = Bytes.toBytes("aaa");
   private static final byte[] KEY_B = Bytes.toBytes("bbb");

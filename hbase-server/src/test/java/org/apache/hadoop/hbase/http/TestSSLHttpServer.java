@@ -29,7 +29,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
@@ -44,7 +45,7 @@ import org.junit.experimental.categories.Category;
  * HTTPS using the created certficates and calls an echo servlet using the
  * corresponding HTTPS URL.
  */
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestSSLHttpServer extends HttpServerFunctionalTest {
   private static final String BASEDIR = System.getProperty("test.build.dir",
       "target/test-dir") + "/" + TestSSLHttpServer.class.getSimpleName();

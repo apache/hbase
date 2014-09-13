@@ -31,7 +31,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -47,7 +48,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test that we correctly reload the cache, filter directories, etc.
  */
-@Category(MediumTests.class)
+@Category({MasterTests.class, MediumTests.class})
 public class TestSnapshotFileCache {
 
   private static final Log LOG = LogFactory.getLog(TestSnapshotFileCache.class);

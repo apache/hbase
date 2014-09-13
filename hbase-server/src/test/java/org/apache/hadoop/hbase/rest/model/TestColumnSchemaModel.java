@@ -19,19 +19,11 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
-import java.io.StringReader;
-import java.io.StringWriter;
-
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-
-import junit.framework.TestCase;
-import org.apache.hadoop.hbase.SmallTests;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.apache.hadoop.hbase.testclassification.RestTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({RestTests.class, SmallTests.class})
 public class TestColumnSchemaModel extends TestModelBase<ColumnSchemaModel> {
 
   protected static final String COLUMN_NAME = "testcolumn";

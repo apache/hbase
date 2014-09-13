@@ -24,7 +24,8 @@ import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.mapred.OutputCollector;
@@ -33,7 +34,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category(SmallTests.class)
+@Category({MapReduceTests.class, SmallTests.class})
 public class TestIdentityTableMap {
 
   @Test

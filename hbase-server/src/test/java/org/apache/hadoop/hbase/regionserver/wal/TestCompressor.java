@@ -27,7 +27,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -38,7 +39,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test our compressor class.
  */
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestCompressor {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {

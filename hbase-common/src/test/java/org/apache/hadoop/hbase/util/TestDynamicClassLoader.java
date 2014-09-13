@@ -27,14 +27,15 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
  * Test TestDynamicClassLoader
  */
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestDynamicClassLoader {
   private static final Log LOG = LogFactory.getLog(TestDynamicClassLoader.class);
 

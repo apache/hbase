@@ -24,11 +24,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -40,7 +40,7 @@ import static org.junit.Assert.assertTrue;
  * Tests for master and regionserver coprocessor stop method
  *
  */
-@Category(MediumTests.class)
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestCoprocessorStop {
   private static final Log LOG = LogFactory.getLog(TestCoprocessorStop.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();

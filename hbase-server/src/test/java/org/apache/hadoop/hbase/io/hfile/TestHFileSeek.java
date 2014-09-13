@@ -42,9 +42,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.io.BytesWritable;
 import org.junit.experimental.categories.Category;
 
@@ -56,7 +57,7 @@ import org.junit.experimental.categories.Category;
  * Remove after tfile is committed and use the tfile version of this class
  * instead.</p>
  */
-@Category(MediumTests.class)
+@Category({IOTests.class, MediumTests.class})
 public class TestHFileSeek extends TestCase {
   private static final boolean USE_PREAD = true;
   private MyOptions options;

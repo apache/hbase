@@ -34,7 +34,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
@@ -47,7 +48,7 @@ import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
 
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestDefaultCompactSelection extends TestCase {
   private final static Log LOG = LogFactory.getLog(TestDefaultCompactSelection.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

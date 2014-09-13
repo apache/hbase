@@ -41,8 +41,9 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -69,7 +70,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
+@Category({MapReduceTests.class, LargeTests.class})
 public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   protected static final Log LOG = LogFactory.getLog(TestImportTSVWithVisibilityLabels.class);

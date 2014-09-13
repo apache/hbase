@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.LoadTestDataGeneratorWithTags;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.junit.experimental.categories.Category;

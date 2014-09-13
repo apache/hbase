@@ -19,7 +19,8 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -30,7 +31,7 @@ import java.util.HashSet;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-@Category(SmallTests.class)
+@Category({MapReduceTests.class, SmallTests.class})
 public class TestTableSplit {
   @Test
   public void testHashCode() {

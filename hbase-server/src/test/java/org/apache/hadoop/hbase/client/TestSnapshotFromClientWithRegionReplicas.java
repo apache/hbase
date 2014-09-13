@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
+@Category({LargeTests.class, ClientTests.class})
 public class TestSnapshotFromClientWithRegionReplicas extends TestSnapshotFromClient {
 
   @Override

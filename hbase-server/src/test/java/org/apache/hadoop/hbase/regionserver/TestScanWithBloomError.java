@@ -42,7 +42,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -61,7 +62,7 @@ import org.junit.runners.Parameterized.Parameters;
  * This is needed for the multi-column Bloom filter optimization.
  */
 @RunWith(Parameterized.class)
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestScanWithBloomError {
 
   private static final Log LOG =

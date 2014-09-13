@@ -18,7 +18,8 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.CompatibilityFactory;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -30,7 +31,7 @@ import static org.junit.Assert.assertNotNull;
 /**
  * Unit test version of rs metrics tests.
  */
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestMetricsRegionServer {
   public static MetricsAssertHelper HELPER =
       CompatibilityFactory.getInstance(MetricsAssertHelper.class);

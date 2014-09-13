@@ -22,6 +22,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -29,7 +31,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Checks tests are categorized.
  */
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestCheckTestClasses {
   /**
    * Throws an assertion if we find a test class without category (small/medium/large/integration).

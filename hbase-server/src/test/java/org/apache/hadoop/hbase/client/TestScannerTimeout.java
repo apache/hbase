@@ -26,9 +26,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -39,7 +40,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test various scanner timeout issues.
  */
-@Category(LargeTests.class)
+@Category({LargeTests.class, ClientTests.class})
 public class TestScannerTimeout {
 
   private final static HBaseTestingUtility

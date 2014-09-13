@@ -18,7 +18,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BucketEntry;
@@ -43,7 +44,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestBucketWriterThread {
   public static final int MAX_NUMBER_OF_TRIES_BEFORE_TEST_FAILURE = 1000000;
   private BucketCache bc;

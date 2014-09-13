@@ -19,7 +19,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
@@ -31,7 +32,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test different variants of initTableMapperJob method
  */
-@Category(SmallTests.class)
+@Category({MapReduceTests.class, SmallTests.class})
 public class TestTableMapReduceUtil {
 
   /*

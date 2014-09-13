@@ -42,8 +42,9 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.InterProcessLock;
 import org.apache.hadoop.hbase.InterProcessLock.MetadataHandler;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -55,7 +56,7 @@ import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
 
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestZKInterProcessReadWriteLock {
 
   private static final Log LOG =

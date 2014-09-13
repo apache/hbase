@@ -28,10 +28,11 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -42,7 +43,7 @@ import org.junit.rules.TestName;
 
 import com.google.protobuf.ByteString;
 
-@Category(MediumTests.class)
+@Category({SecurityTests.class, MediumTests.class})
 public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
   private static final String PRIVATE = "private";
   private static final String CONFIDENTIAL = "confidential";

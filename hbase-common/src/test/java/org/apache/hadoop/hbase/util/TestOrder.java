@@ -24,11 +24,12 @@ import static org.junit.Assert.assertArrayEquals;
 import java.util.Arrays;
 import java.util.Collections;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestOrder {
 
   byte[][] VALS = { Bytes.toBytes("foo"), Bytes.toBytes("bar"), Bytes.toBytes("baz") };

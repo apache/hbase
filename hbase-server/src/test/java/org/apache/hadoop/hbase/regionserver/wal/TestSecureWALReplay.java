@@ -19,13 +19,14 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestSecureWALReplay extends TestWALReplay {
 
   @BeforeClass

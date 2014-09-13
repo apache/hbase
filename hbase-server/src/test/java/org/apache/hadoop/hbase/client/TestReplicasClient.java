@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -54,6 +53,8 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.StorefileRefresherChore;
 import org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
@@ -68,7 +69,7 @@ import org.junit.experimental.categories.Category;
  * Tests for region replicas. Sad that we cannot isolate these without bringing up a whole
  * cluster. See {@link org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster}.
  */
-@Category(MediumTests.class)
+@Category({MediumTests.class, ClientTests.class})
 @SuppressWarnings("deprecation")
 public class TestReplicasClient {
   private static final Log LOG = LogFactory.getLog(TestReplicasClient.class);

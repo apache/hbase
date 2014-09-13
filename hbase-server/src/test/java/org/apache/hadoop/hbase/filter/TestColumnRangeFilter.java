@@ -35,6 +35,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.After;
@@ -115,7 +117,7 @@ class StringRange {
 }
 
 
-@Category(MediumTests.class)
+@Category({FilterTests.class, MediumTests.class})
 public class TestColumnRangeFilter {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

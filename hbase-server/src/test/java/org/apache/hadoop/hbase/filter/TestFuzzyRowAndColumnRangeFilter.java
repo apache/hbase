@@ -27,13 +27,14 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
@@ -47,7 +48,7 @@ import com.google.common.collect.Lists;
 
 /**
  */
-@Category(MediumTests.class)
+@Category({FilterTests.class, MediumTests.class})
 public class TestFuzzyRowAndColumnRangeFilter {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final Log LOG = LogFactory.getLog(this.getClass());

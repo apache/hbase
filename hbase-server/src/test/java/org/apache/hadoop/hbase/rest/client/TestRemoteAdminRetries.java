@@ -32,7 +32,8 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RestTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,7 +42,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests {@link RemoteAdmin} retries.
  */
-@Category(SmallTests.class)
+@Category({RestTests.class, SmallTests.class})
 public class TestRemoteAdminRetries {
 
   private static final int SLEEP_TIME = 50;

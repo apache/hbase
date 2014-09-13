@@ -16,7 +16,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest;
 
 import java.io.ByteArrayInputStream;
@@ -28,12 +27,13 @@ import javax.xml.bind.JAXBException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
 import org.apache.hadoop.hbase.rest.model.StorageClusterVersionModel;
 import org.apache.hadoop.hbase.rest.model.VersionModel;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import static org.junit.Assert.*;
@@ -45,7 +45,7 @@ import org.junit.Test;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({RestTests.class, MediumTests.class})
 public class TestVersionResource {
   private static final Log LOG = LogFactory.getLog(TestVersionResource.class);
 

@@ -25,7 +25,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Set;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
@@ -35,7 +36,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 // TODO: cover more test cases
-@Category(SmallTests.class)
+@Category({ClientTests.class, SmallTests.class})
 public class TestScan {
   @Test
   public void testAttributesSerialization() throws IOException {

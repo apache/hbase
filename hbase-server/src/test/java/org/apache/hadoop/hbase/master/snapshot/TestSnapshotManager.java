@@ -29,7 +29,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -46,7 +47,7 @@ import org.mockito.Mockito;
 /**
  * Test basic snapshot manager functionality
  */
-@Category(SmallTests.class)
+@Category({MasterTests.class, SmallTests.class})
 public class TestSnapshotManager {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

@@ -35,7 +35,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -48,7 +49,7 @@ import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.ImmutableList;
 
-@Category(SmallTests.class)
+@Category({MapReduceTests.class, SmallTests.class})
 public class TestGroupingTableMap {
 
   @Test

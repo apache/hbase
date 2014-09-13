@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.coprocessor.example;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -29,6 +28,8 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
@@ -42,7 +43,7 @@ import static junit.framework.Assert.*;
  * Test case demonstrating client interactions with the {@link RowCountEndpoint}
  * sample coprocessor Service implementation.
  */
-@Category(MediumTests.class)
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestRowCountEndpoint {
   private static final byte[] TEST_TABLE = Bytes.toBytes("testrowcounter");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f");

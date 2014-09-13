@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({ClientTests.class, SmallTests.class})
 /**
  * Addresses HBASE-6047
  * We test put.has call with all of its polymorphic magic

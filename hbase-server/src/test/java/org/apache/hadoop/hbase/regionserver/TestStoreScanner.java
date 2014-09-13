@@ -34,7 +34,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
@@ -42,7 +43,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.junit.experimental.categories.Category;
 
 // Can't be small as it plays with EnvironmentEdgeManager
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestStoreScanner extends TestCase {
   private static final String CF_STR = "cf";
   final byte [] CF = Bytes.toBytes(CF_STR);

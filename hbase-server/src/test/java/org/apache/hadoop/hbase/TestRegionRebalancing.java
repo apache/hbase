@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.testclassification.FlakeyTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
@@ -50,7 +52,7 @@ import org.junit.runners.Parameterized.Parameters;
 /**
  * Test whether region re-balancing works. (HBASE-71)
  */
-@Category(LargeTests.class)
+@Category({FlakeyTests.class, LargeTests.class})
 @RunWith(value = Parameterized.class)
 public class TestRegionRebalancing {
 

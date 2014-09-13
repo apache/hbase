@@ -40,7 +40,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -64,7 +65,7 @@ import com.google.common.collect.Lists;
 /**
  * Test cases against ReversibleKeyValueScanner
  */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestReversibleScanners {
   private static final Log LOG = LogFactory.getLog(TestReversibleScanners.class);
   HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

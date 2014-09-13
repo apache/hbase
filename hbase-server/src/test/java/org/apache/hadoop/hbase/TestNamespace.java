@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -53,7 +55,7 @@ import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Sets;
 
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestNamespace {
   protected static final Log LOG = LogFactory.getLog(TestNamespace.class);
   private static HMaster master;

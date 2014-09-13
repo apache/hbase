@@ -30,13 +30,14 @@ import java.io.IOException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RestTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.rest.filter.GZIPResponseStream;
 import org.apache.hadoop.hbase.rest.filter.GZIPResponseWrapper;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({RestTests.class, SmallTests.class})
 public class TestGZIPResponseWrapper {
 
   private final HttpServletResponse response = mock(HttpServletResponse.class);

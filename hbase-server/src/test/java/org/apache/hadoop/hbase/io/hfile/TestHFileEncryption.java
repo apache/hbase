@@ -36,12 +36,13 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.test.RedundantKVGenerator;
 import org.junit.BeforeClass;
@@ -50,7 +51,7 @@ import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.*;
 
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestHFileEncryption {
   private static final Log LOG = LogFactory.getLog(TestHFileEncryption.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

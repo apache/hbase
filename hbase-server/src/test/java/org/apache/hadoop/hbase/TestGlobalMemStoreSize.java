@@ -30,6 +30,8 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
@@ -40,7 +42,7 @@ import org.junit.experimental.categories.Category;
  * Test HBASE-3694 whether the GlobalMemStoreSize is the same as the summary
  * of all the online region's MemStoreSize
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestGlobalMemStoreSize {
   private final Log LOG = LogFactory.getLog(this.getClass().getName());
   private static int regionServerNum = 4;

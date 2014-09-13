@@ -24,7 +24,8 @@ import static org.junit.Assert.assertTrue;
 import java.util.LinkedList;
 import java.util.TreeSet;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -32,7 +33,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({FilterTests.class, SmallTests.class})
 public class TestFilterSerialization {
 
   @Test

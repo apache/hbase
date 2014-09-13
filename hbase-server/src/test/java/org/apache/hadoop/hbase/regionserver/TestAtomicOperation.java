@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
@@ -62,6 +61,8 @@ import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -75,7 +76,7 @@ import org.junit.rules.TestName;
  * Testing of HRegion.incrementColumnValue, HRegion.increment,
  * and HRegion.append
  */
-@Category(MediumTests.class) // Starts 100 threads
+@Category({VerySlowRegionServerTests.class, MediumTests.class}) // Starts 100 threads
 public class TestAtomicOperation {
   static final Log LOG = LogFactory.getLog(TestAtomicOperation.class);
   @Rule public TestName name = new TestName();

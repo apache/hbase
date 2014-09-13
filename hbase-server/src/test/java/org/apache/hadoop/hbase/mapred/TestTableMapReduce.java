@@ -26,7 +26,8 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -46,7 +47,7 @@ import org.junit.experimental.categories.Category;
  * on our tables is simple - take every row in the table, reverse the value of
  * a particular cell, and write it back to the table.
  */
-@Category(LargeTests.class)
+@Category({MapReduceTests.class, LargeTests.class})
 @SuppressWarnings("deprecation")
 public class TestTableMapReduce extends TestTableMapReduceBase {
   private static final Log LOG =

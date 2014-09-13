@@ -16,23 +16,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.rest.model;
 
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
+import org.apache.hadoop.hbase.testclassification.RestTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.util.Base64;
-
-import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({RestTests.class, SmallTests.class})
 public class TestVersionModel extends TestModelBase<VersionModel> {
   private static final String REST_VERSION = "0.0.1";
   private static final String OS_VERSION = 

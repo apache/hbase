@@ -19,23 +19,16 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
-import java.io.IOException;
-import java.io.StringReader;
-import java.io.StringWriter;
 import java.util.Iterator;
 
 import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
 
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.util.Base64;
+import org.apache.hadoop.hbase.testclassification.RestTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 
-import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
-
-import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({RestTests.class, SmallTests.class})
 public class TestTableSchemaModel extends TestModelBase<TableSchemaModel> {
 
   public static final String TABLE_NAME = "testTable";

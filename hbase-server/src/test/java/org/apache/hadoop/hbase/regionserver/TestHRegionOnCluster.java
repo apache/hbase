@@ -37,8 +37,9 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.MediumTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mortbay.log.Log;
@@ -48,7 +49,7 @@ import org.mortbay.log.Log;
  * {@link TestHRegion} if you don't need a cluster, if you can test w/ a
  * standalone {@link HRegion}.
  */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestHRegionOnCluster {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

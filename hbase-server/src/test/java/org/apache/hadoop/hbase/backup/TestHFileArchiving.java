@@ -35,11 +35,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -61,7 +61,7 @@ import org.junit.experimental.categories.Category;
  * Test that the {@link HFileArchiver} correctly removes all the parts of a region when cleaning up
  * a region
  */
-@Category(MediumTests.class)
+@Category({MediumTests.class, MiscTests.class})
 public class TestHFileArchiving {
 
   private static final Log LOG = LogFactory.getLog(TestHFileArchiving.class);

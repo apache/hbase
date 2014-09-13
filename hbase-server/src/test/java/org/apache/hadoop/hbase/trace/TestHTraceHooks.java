@@ -24,10 +24,11 @@ import static org.junit.Assert.assertTrue;
 import java.util.Collection;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.htrace.Sampler;
 import org.htrace.Span;
 import org.htrace.Trace;
@@ -41,7 +42,7 @@ import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Multimap;
 
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestHTraceHooks {
 
   private static final byte[] FAMILY_BYTES = "family".getBytes();

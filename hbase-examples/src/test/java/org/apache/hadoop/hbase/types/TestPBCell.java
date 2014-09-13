@@ -23,13 +23,17 @@ import static org.junit.Assert.assertTrue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedByteRange;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
+@Category({SmallTests.class, MiscTests.class})
 public class TestPBCell {
 
   private static final PBCell CODEC = new PBCell();

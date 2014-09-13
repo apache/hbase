@@ -27,13 +27,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -47,7 +48,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests ReplicationSource and ReplicationEndpoint interactions
  */
-@Category(MediumTests.class)
+@Category({ReplicationTests.class, MediumTests.class})
 public class TestReplicationEndpoint extends TestReplicationBase {
 
   static int numRegionServers;

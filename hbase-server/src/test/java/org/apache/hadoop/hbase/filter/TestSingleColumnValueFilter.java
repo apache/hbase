@@ -24,8 +24,9 @@ import static org.junit.Assert.assertTrue;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,7 +35,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests the value filter
  */
-@Category(SmallTests.class)
+@Category({FilterTests.class, SmallTests.class})
 public class TestSingleColumnValueFilter {
   private static final byte[] ROW = Bytes.toBytes("test");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");

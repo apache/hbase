@@ -29,7 +29,8 @@ import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -47,7 +48,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-@Category(LargeTests.class)
+@Category({SecurityTests.class, LargeTests.class})
 public class TestAccessControlFilter extends SecureTestUtil {
   @Rule public TestName name = new TestName();
   private static HBaseTestingUtility TEST_UTIL;

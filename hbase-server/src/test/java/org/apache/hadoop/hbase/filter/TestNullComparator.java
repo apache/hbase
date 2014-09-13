@@ -16,12 +16,13 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({FilterTests.class, SmallTests.class})
 public class TestNullComparator {
 
   @Test

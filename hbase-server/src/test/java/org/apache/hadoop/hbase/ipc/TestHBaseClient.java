@@ -19,9 +19,8 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.MediumTests;
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.util.EnvironmentEdge;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.Assert;
@@ -30,7 +29,7 @@ import org.junit.experimental.categories.Category;
 
 import java.net.InetSocketAddress;
 
-@Category(MediumTests.class)   // Can't be small, we're playing with the EnvironmentEdge
+@Category({RPCTests.class, MediumTests.class})   // Can't be small, we're playing with the EnvironmentEdge
 public class TestHBaseClient {
 
   @Test

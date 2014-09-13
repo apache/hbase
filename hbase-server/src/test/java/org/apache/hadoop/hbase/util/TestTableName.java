@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.fail;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestWatcher;
@@ -30,7 +30,7 @@ import org.junit.runner.Description;
 /**
  * Returns a {@code byte[]} containing the name of the currently running test method.
  */
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestTableName extends TestWatcher {
   private TableName tableName;
 

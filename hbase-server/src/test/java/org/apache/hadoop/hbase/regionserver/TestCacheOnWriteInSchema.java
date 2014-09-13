@@ -37,7 +37,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -68,7 +69,7 @@ import org.junit.runners.Parameterized.Parameters;
  * index blocks, and Bloom filter blocks, as specified by the column family.
  */
 @RunWith(Parameterized.class)
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestCacheOnWriteInSchema {
 
   private static final Log LOG = LogFactory.getLog(TestCacheOnWriteInSchema.class);

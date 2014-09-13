@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -58,6 +57,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
@@ -73,7 +74,7 @@ import com.google.protobuf.ServiceException;
 /**
  * Test cases for the atomic load error handling of the bulk load functionality.
  */
-@Category(LargeTests.class)
+@Category({MapReduceTests.class, LargeTests.class})
 public class TestLoadIncrementalHFilesSplitRecovery {
   final static Log LOG = LogFactory.getLog(TestHRegionServerBulkLoad.class);
 

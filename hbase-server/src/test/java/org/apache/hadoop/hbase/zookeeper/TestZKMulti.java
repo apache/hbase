@@ -31,7 +31,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.zookeeper.KeeperException;
@@ -43,7 +44,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test ZooKeeper multi-update functionality
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestZKMulti {
   private static final Log LOG = LogFactory.getLog(TestZKMulti.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

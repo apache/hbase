@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.Assert.*;
@@ -35,7 +34,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ClusterConnection;
@@ -51,6 +49,8 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.testclassification.FlakeyTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.log4j.Level;
@@ -65,7 +65,7 @@ import com.google.common.collect.Lists;
  * Tests RegionReplicaReplicationEndpoint class by setting up region replicas and verifying
  * async wal replication replays the edits to the secondary region in various scenarios.
  */
-@Category(MediumTests.class)
+@Category({FlakeyTests.class, MediumTests.class})
 public class TestRegionReplicaReplicationEndpoint {
 
   private static final Log LOG = LogFactory.getLog(TestRegionReplicaReplicationEndpoint.class);

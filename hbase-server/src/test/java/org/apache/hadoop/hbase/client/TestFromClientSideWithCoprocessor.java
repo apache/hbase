@@ -18,7 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.regionserver.NoOpScanPolicyObserver;
@@ -29,7 +30,7 @@ import org.junit.experimental.categories.Category;
  * Test all client operations with a coprocessor that
  * just implements the default flush/compact/scan policy
  */
-@Category(LargeTests.class)
+@Category({LargeTests.class, ClientTests.class})
 public class TestFromClientSideWithCoprocessor extends TestFromClientSide {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {

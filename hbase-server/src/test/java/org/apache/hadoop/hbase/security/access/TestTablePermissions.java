@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.assertEquals;
@@ -43,10 +42,11 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.Text;
@@ -62,7 +62,7 @@ import com.google.common.collect.ListMultimap;
 /**
  * Test the reading and writing of access permissions on {@code _acl_} table.
  */
-@Category(LargeTests.class)
+@Category({SecurityTests.class, LargeTests.class})
 public class TestTablePermissions {
   private static final Log LOG = LogFactory.getLog(TestTablePermissions.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();

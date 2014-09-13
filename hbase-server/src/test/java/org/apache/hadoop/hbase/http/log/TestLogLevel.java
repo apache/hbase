@@ -22,9 +22,9 @@ import static org.junit.Assert.assertTrue;
 import java.io.*;
 import java.net.*;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.http.HttpServer;
-import org.apache.hadoop.hbase.http.log.LogLevel;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.commons.logging.*;
 import org.apache.commons.logging.impl.*;
@@ -32,7 +32,7 @@ import org.apache.log4j.*;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestLogLevel {
   static final PrintStream out = System.out;
 

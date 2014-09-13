@@ -25,7 +25,8 @@ import java.util.Arrays;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,7 +35,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests LRUDictionary
  */
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestLRUDictionary {
   LRUDictionary testee;
 

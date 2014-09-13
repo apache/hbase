@@ -27,7 +27,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
@@ -47,7 +48,7 @@ import org.junit.runners.Parameterized;
  * concurrency
  */
 @RunWith(Parameterized.class)
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestBucketCache {
 
   private static final Random RAND = new Random();

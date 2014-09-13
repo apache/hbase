@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -38,7 +40,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test setting values in the descriptor
  */
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestHTableDescriptor {
   final static Log LOG = LogFactory.getLog(TestHTableDescriptor.class);
 

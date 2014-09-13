@@ -24,7 +24,8 @@ import static org.junit.Assert.assertTrue;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache.EvictionThread;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -38,7 +39,7 @@ import org.junit.experimental.categories.Category;
  * evictions run when they're supposed to and do what they should,
  * and that cached blocks are accessible when expected to be.
  */
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestLruBlockCache {
 
 

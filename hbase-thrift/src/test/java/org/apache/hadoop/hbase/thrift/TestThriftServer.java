@@ -36,11 +36,12 @@ import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.HBaseHandler;
 import org.apache.hadoop.hbase.thrift.generated.BatchMutation;
 import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
@@ -64,7 +65,7 @@ import org.junit.experimental.categories.Category;
  * Unit testing for ThriftServerRunner.HBaseHandler, a part of the
  * org.apache.hadoop.hbase.thrift package.
  */
-@Category(LargeTests.class)
+@Category({ClientTests.class, LargeTests.class})
 public class TestThriftServer {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final Log LOG = LogFactory.getLog(TestThriftServer.class);

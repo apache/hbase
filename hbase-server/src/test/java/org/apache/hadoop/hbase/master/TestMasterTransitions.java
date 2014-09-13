@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -34,6 +33,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -47,7 +48,7 @@ import org.junit.experimental.categories.Category;
  * Test transitions of state across the master.  Sets up the cluster once and
  * then runs a couple of tests.
  */
-@Category(LargeTests.class)
+@Category({MasterTests.class, LargeTests.class})
 public class TestMasterTransitions {
   private static final Log LOG = LogFactory.getLog(TestMasterTransitions.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

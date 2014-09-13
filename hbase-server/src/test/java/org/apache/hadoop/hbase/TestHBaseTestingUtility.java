@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -40,7 +42,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test our testing utility class
  */
-@Category(LargeTests.class)
+@Category({MiscTests.class, LargeTests.class})
 public class TestHBaseTestingUtility {
   private final Log LOG = LogFactory.getLog(this.getClass());
 

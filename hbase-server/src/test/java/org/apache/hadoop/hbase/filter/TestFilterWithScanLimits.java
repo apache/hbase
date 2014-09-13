@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -52,6 +51,8 @@ import org.apache.hadoop.hbase.client.ScannerCallable;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
@@ -62,7 +63,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Test if Filter is incompatible with scan-limits
  */
-@Category(MediumTests.class)
+@Category({FilterTests.class, MediumTests.class})
 public class TestFilterWithScanLimits {
   private static final Log LOG = LogFactory
       .getLog(TestFilterWithScanLimits.class);

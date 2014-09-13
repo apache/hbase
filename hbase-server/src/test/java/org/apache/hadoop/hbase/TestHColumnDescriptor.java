@@ -25,12 +25,14 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.experimental.categories.Category;
 
 import org.junit.Test;
 
 /** Tests the HColumnDescriptor with appropriate arguments */
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestHColumnDescriptor {
   @Test
   public void testPb() throws DeserializationException {

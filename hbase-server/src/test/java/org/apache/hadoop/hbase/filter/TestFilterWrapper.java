@@ -43,6 +43,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import org.junit.AfterClass;
@@ -50,14 +52,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-import org.apache.hadoop.hbase.MediumTests;
 import org.junit.experimental.categories.Category;
 
 /**
  * Test if the FilterWrapper retains the same semantics defined in the
  * {@link org.apache.hadoop.hbase.filter.Filter}
  */
-@Category(MediumTests.class)
+@Category({FilterTests.class, MediumTests.class})
 public class TestFilterWrapper {
   private static final Log LOG = LogFactory.getLog(TestFilterWrapper.class);
 

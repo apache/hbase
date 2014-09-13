@@ -26,6 +26,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.replication.ReplicationException;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -40,7 +42,7 @@ import static org.junit.Assert.assertFalse;
 /**
  * Unit testing of ReplicationAdmin
  */
-@Category(MediumTests.class)
+@Category({MediumTests.class, ClientTests.class})
 public class TestReplicationAdmin {
 
   private static final Log LOG =

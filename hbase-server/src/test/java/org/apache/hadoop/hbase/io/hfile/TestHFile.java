@@ -37,11 +37,12 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
 import org.junit.experimental.categories.Category;
@@ -54,7 +55,7 @@ import org.junit.experimental.categories.Category;
  * Remove after tfile is committed and use the tfile version of this class
  * instead.</p>
  */
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestHFile extends HBaseTestCase {
   static final Log LOG = LogFactory.getLog(TestHFile.class);
 

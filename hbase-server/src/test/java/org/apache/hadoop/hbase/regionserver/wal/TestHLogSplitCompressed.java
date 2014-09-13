@@ -20,11 +20,12 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
-@Category(LargeTests.class)
+@Category({RegionServerTests.class, LargeTests.class})
 public class TestHLogSplitCompressed extends TestHLogSplit {
 
   @BeforeClass

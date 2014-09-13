@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -27,7 +29,7 @@ import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertTrue;
 
-@Category(MediumTests.class)
+@Category({MediumTests.class, ClientTests.class})
 public class TestPutWithDelete {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

@@ -21,7 +21,8 @@
 package org.apache.hadoop.hbase.rest.model;
 
 import junit.framework.TestCase;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RestTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.provider.JAXBContextResolver;
 import org.apache.hadoop.hbase.util.Base64;
@@ -37,7 +38,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 
-@Category(SmallTests.class)
+@Category({RestTests.class, SmallTests.class})
 public abstract class TestModelBase<T> extends TestCase {
 
   protected String AS_XML;

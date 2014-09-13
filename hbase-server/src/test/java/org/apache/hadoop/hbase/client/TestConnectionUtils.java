@@ -19,7 +19,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -28,7 +29,7 @@ import java.util.TreeSet;
 
 import static org.junit.Assert.assertTrue;
 
-@Category(SmallTests.class)
+@Category({SmallTests.class, ClientTests.class})
 public class TestConnectionUtils {
 
   @Test

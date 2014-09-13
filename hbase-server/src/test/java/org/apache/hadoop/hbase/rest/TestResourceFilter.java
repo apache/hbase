@@ -20,16 +20,17 @@ package org.apache.hadoop.hbase.rest;
 import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(MediumTests.class)
+@Category({RestTests.class, MediumTests.class})
 public class TestResourceFilter {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

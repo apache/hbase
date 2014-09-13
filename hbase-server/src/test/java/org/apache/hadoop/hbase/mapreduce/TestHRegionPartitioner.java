@@ -17,7 +17,8 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -27,7 +28,7 @@ import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 
-@Category(MediumTests.class)
+@Category({MapReduceTests.class, MediumTests.class})
 public class TestHRegionPartitioner {
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

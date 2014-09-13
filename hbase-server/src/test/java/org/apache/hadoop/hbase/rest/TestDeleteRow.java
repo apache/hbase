@@ -20,16 +20,14 @@ package org.apache.hadoop.hbase.rest;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-
 import javax.xml.bind.JAXBException;
-
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.rest.client.Response;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-
-@Category(MediumTests.class)
+@Category({RestTests.class, MediumTests.class})
 public class TestDeleteRow extends RowResourceBase {
 
   @Test

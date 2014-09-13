@@ -23,7 +23,8 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.http.HttpServerFunctionalTest;
 import org.junit.AfterClass;
@@ -31,7 +32,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestJMXJsonServlet extends HttpServerFunctionalTest {
   private   static final Log LOG = LogFactory.getLog(TestJMXJsonServlet.class);
   private static HttpServer server;

@@ -21,10 +21,7 @@ package org.apache.hadoop.hbase.http;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.junit.Assert;
-import org.junit.experimental.categories.Category;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.http.HttpServer.Builder;
 
 import java.io.File;

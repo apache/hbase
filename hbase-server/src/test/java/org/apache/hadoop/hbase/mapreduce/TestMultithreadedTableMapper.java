@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -52,7 +54,7 @@ import static org.junit.Assert.assertTrue;
  * on our tables is simple - take every row in the table, reverse the value of
  * a particular cell, and write it back to the table.
  */
-@Category(LargeTests.class)
+@Category({MapReduceTests.class, LargeTests.class})
 public class TestMultithreadedTableMapper {
   private static final Log LOG = LogFactory.getLog(TestMultithreadedTableMapper.class);
   private static final HBaseTestingUtility UTIL =

@@ -22,7 +22,8 @@ package org.apache.hadoop.hbase.util;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -38,7 +39,7 @@ import java.io.IOException;
 
 import static org.junit.Assert.*;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestCompressionTest {
   static final Log LOG = LogFactory.getLog(TestCompressionTest.class);
 

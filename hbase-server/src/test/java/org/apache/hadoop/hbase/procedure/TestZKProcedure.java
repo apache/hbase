@@ -38,7 +38,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.TimeoutException;
@@ -60,7 +61,7 @@ import com.google.common.collect.Lists;
 /**
  * Cluster-wide testing of a distributed three-phase commit using a 'real' zookeeper cluster
  */
-@Category(MediumTests.class)
+@Category({MasterTests.class, MediumTests.class})
 public class TestZKProcedure {
 
   private static final Log LOG = LogFactory.getLog(TestZKProcedure.class);

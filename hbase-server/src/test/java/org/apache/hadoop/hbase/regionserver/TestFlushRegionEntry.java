@@ -12,7 +12,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.*;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.regionserver.MemStoreFlusher.FlushRegionEntry;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
@@ -22,7 +23,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestFlushRegionEntry {
   @Before
   public void setUp() throws Exception {

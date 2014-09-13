@@ -20,15 +20,16 @@ package org.apache.hadoop.hbase.security.visibility;
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
 
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
 /**
  * Test class that tests the visibility labels with distributed log replay feature ON.
  */
-@Category(MediumTests.class)
+@Category({SecurityTests.class, MediumTests.class})
 public class TestVisibilityLabelsWithDistributedLogReplay extends
     TestVisibilityLabelsWithDefaultVisLabelService {
 

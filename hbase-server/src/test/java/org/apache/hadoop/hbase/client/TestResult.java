@@ -34,11 +34,12 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({SmallTests.class, ClientTests.class})
 public class TestResult extends TestCase {
 
   private static final Log LOG = LogFactory.getLog(TestResult.class.getName());

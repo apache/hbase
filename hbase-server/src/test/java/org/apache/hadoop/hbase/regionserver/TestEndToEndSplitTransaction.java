@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
@@ -58,6 +57,8 @@ import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
+import org.apache.hadoop.hbase.testclassification.FlakeyTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
@@ -72,7 +73,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Sets;
 import com.google.protobuf.ServiceException;
 
-@Category(LargeTests.class)
+@Category({FlakeyTests.class, LargeTests.class})
 @SuppressWarnings("deprecation")
 public class TestEndToEndSplitTransaction {
   private static final Log LOG = LogFactory.getLog(TestEndToEndSplitTransaction.class);

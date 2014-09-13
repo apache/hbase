@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LongMsg;
+import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -44,7 +46,7 @@ import org.junit.experimental.categories.Category;
  * A test class to cover aggregate functions, that can be implemented using
  * Coprocessors.
  */
-@Category(MediumTests.class)
+@Category({CoprocessorTests.class, MediumTests.class})
 public class TestAggregateProtocol {
   protected static Log myLog = LogFactory.getLog(TestAggregateProtocol.class);
 

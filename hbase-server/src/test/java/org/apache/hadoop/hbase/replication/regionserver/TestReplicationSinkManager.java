@@ -25,7 +25,8 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
@@ -37,7 +38,7 @@ import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.Lists;
 
-@Category(SmallTests.class)
+@Category({ReplicationTests.class, SmallTests.class})
 public class TestReplicationSinkManager {
 
   private static final String PEER_CLUSTER_ID = "PEER_CLUSTER_ID";

@@ -19,11 +19,12 @@
 
 package org.apache.hadoop.hbase.rest.model;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RestTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({RestTests.class, SmallTests.class})
 public class TestScannerModel extends TestModelBase<ScannerModel> {
   private static final String PRIVATE = "private";
   private static final String PUBLIC = "public";

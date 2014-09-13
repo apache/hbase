@@ -24,7 +24,8 @@ import java.util.NavigableMap;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -43,7 +44,7 @@ import org.junit.runners.Parameterized.Parameters;
 /**
  * Uses the load tester
  */
-@Category(MediumTests.class)
+@Category({IOTests.class, MediumTests.class})
 public class TestLoadAndSwitchEncodeOnDisk extends
     TestMiniClusterLoadSequential {
 

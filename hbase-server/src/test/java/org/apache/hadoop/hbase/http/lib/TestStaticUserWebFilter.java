@@ -28,7 +28,8 @@ import javax.servlet.http.HttpServletRequestWrapper;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.http.ServerConfigurationKeys;
 import org.apache.hadoop.hbase.http.lib.StaticUserWebFilter.StaticUserFilter;
 import org.junit.Test;
@@ -36,7 +37,7 @@ import org.junit.experimental.categories.Category;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 public class TestStaticUserWebFilter {
   private FilterConfig mockConfig(String username) {
     FilterConfig mock = Mockito.mock(FilterConfig.class);

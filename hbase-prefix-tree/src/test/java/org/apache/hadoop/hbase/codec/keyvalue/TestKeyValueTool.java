@@ -25,7 +25,8 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.codec.prefixtree.row.TestRowData;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataRandomKeyValuesWithTags;
 import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataTrivialWithTags;
@@ -36,7 +37,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-@Category(SmallTests.class)
+@Category({MiscTests.class, SmallTests.class})
 @RunWith(Parameterized.class)
 public class TestKeyValueTool {
 

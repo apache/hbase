@@ -22,11 +22,12 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.TableName;
@@ -40,7 +41,7 @@ import org.mortbay.log.Log;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
-@Category(SmallTests.class)
+@Category({SmallTests.class, ClientTests.class})
 public class TestHBaseAdminNoCluster {
   /**
    * Verify that PleaseHoldException gets retried.

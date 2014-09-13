@@ -25,6 +25,8 @@ import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
 import org.junit.*;
@@ -37,7 +39,7 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({TestHTablePool.TestHTableReusablePool.class, TestHTablePool.TestHTableThreadLocalPool.class})
-@Category(MediumTests.class)
+@Category({ClientTests.class, MediumTests.class})
 public class TestHTablePool {
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static byte[] TABLENAME = Bytes.toBytes("TestHTablePool");
@@ -207,14 +209,10 @@ public class TestHTablePool {
       } finally {
         pool.close();
       }
-
     }
-
-   
-
   }
 
-  @Category(MediumTests.class)
+  @Category({ClientTests.class, MediumTests.class})
 	public static class TestHTableReusablePool extends TestHTablePoolType {
 		@Override
 		protected PoolType getPoolType() {
@@ -289,7 +287,7 @@ public class TestHTablePool {
 		}
 	}
 
-  @Category(MediumTests.class)
+  @Category({ClientTests.class, MediumTests.class})
 	public static class TestHTableThreadLocalPool extends TestHTablePoolType {
 		@Override
 		protected PoolType getPoolType() {

@@ -26,17 +26,18 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
  * Test scan/get offset and limit settings within one row through HRegion API.
  */
-@Category(SmallTests.class)
+@Category({SmallTests.class, ClientTests.class})
 public class TestIntraRowPagination {
 
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

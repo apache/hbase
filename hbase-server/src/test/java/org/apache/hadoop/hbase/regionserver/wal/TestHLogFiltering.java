@@ -27,7 +27,8 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
@@ -47,7 +48,7 @@ import org.junit.experimental.categories.Category;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ServiceException;
 
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 public class TestHLogFiltering {
   private static final int NUM_MASTERS = 1;
   private static final int NUM_RS = 4;

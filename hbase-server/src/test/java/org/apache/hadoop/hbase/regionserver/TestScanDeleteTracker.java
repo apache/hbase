@@ -21,13 +21,13 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.regionserver.DeleteTracker.DeleteResult;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
-
-@Category(SmallTests.class)
+@Category({RegionServerTests.class, SmallTests.class})
 public class TestScanDeleteTracker extends HBaseTestCase {
 
   private ScanDeleteTracker sdt;

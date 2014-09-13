@@ -38,7 +38,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -49,6 +48,8 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.KeyValueSkipListSet;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -60,7 +61,7 @@ import static org.junit.Assert.assertEquals;
  * Testing the sizing that HeapSize offers and compares to the size given by
  * ClassSize.
  */
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestHeapSize  {
   static final Log LOG = LogFactory.getLog(TestHeapSize.class);
   // List of classes implementing HeapSize

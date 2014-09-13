@@ -28,7 +28,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -44,7 +45,7 @@ import com.google.common.collect.Lists;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-@Category(SmallTests.class)
+@Category({ReplicationTests.class, SmallTests.class})
 public class TestReplicationWALEntryFilters {
 
   static byte[] a = new byte[] {'a'};

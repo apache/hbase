@@ -30,6 +30,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.TimestampsFilter;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -43,7 +45,7 @@ import org.junit.experimental.categories.Category;
  * Sets up the HBase mini cluster once at start. Each creates a table
  * named for the method and does its stuff against that.
  */
-@Category(MediumTests.class)
+@Category({MediumTests.class, ClientTests.class})
 public class TestTimestampsFilter {
   final Log LOG = LogFactory.getLog(getClass());
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

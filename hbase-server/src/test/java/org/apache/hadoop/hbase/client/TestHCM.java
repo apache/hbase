@@ -52,7 +52,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.FlakeyTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -89,7 +90,7 @@ import com.google.common.collect.Lists;
 /**
  * This class is for testing HBaseConnectionManager features
  */
-@Category(MediumTests.class)
+@Category({MediumTests.class, FlakeyTests.class})
 public class TestHCM {
   private static final Log LOG = LogFactory.getLog(TestHCM.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();

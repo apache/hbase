@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -44,6 +43,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
@@ -56,7 +57,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests changing data block encoding settings of a column family.
  */
-@Category(LargeTests.class)
+@Category({IOTests.class, LargeTests.class})
 public class TestChangingEncoding {
   private static final Log LOG = LogFactory.getLog(TestChangingEncoding.class);
   static final String CF = "EncodingTestCF";

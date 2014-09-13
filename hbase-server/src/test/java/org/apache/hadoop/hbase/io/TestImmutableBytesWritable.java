@@ -21,7 +21,8 @@ package org.apache.hadoop.hbase.io;
 
 import junit.framework.TestCase;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.experimental.categories.Category;
 
@@ -29,7 +30,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestImmutableBytesWritable extends TestCase {
   public void testHash() throws Exception {
     assertEquals(

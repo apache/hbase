@@ -35,7 +35,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
@@ -62,7 +63,7 @@ import org.mockito.stubbing.Answer;
  * Spin up a small cluster and check that the hfiles of region are properly long-term archived as
  * specified via the {@link ZKTableArchiveClient}.
  */
-@Category(MediumTests.class)
+@Category({MiscTests.class, MediumTests.class})
 public class TestZooKeeperTableArchiveClient {
 
   private static final Log LOG = LogFactory.getLog(TestZooKeeperTableArchiveClient.class);

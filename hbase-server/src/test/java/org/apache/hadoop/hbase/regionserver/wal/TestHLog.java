@@ -57,7 +57,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
@@ -88,7 +90,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /** JUnit test case for HLog */
-@Category(LargeTests.class)
+@Category({RegionServerTests.class, LargeTests.class})
 @SuppressWarnings("deprecation")
 public class TestHLog  {
   private static final Log LOG = LogFactory.getLog(TestHLog.class);

@@ -24,15 +24,15 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.io.hfile.bucket.FileIOEngine;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
  * Basic test for {@link FileIOEngine}
  */
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestFileIOEngine {
   @Test
   public void testFileIOEngine() throws IOException {

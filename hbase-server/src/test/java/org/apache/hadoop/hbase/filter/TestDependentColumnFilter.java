@@ -33,6 +33,8 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter.ReturnCode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.testclassification.FilterTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import org.junit.After;
@@ -44,7 +46,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({FilterTests.class, SmallTests.class})
 public class TestDependentColumnFilter {
   private final Log LOG = LogFactory.getLog(this.getClass());
   private static final byte[][] ROWS = {

@@ -37,7 +37,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -48,7 +49,7 @@ import org.junit.experimental.categories.Category;
 /**
  * Tests to read old ROOT, Meta edits.
  */
-@Category(MediumTests.class)
+@Category({RegionServerTests.class, MediumTests.class})
 
 public class TestReadOldRootAndMetaEdits {
 

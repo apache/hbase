@@ -20,9 +20,10 @@ package org.apache.hadoop.hbase.master;
 
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -33,7 +34,7 @@ import java.util.List;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-@Category(LargeTests.class)
+@Category({MasterTests.class, LargeTests.class})
 public class TestMasterFailoverBalancerPersistence {
 
   /**

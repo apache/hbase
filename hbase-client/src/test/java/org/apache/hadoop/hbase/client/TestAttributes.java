@@ -21,13 +21,14 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.Arrays;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category(SmallTests.class)
+@Category({ClientTests.class, SmallTests.class})
 public class TestAttributes {
   private static final byte [] ROW = new byte [] {'r'};
   @Test

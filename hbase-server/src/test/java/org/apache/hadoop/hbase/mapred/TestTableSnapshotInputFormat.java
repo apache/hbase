@@ -23,11 +23,12 @@ import static org.mockito.Mockito.mock;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatTestBase;
+import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapred.InputSplit;
@@ -47,7 +48,7 @@ import org.junit.experimental.categories.Category;
 import java.io.IOException;
 import java.util.Iterator;
 
-@Category(LargeTests.class)
+@Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBase {
 
   private static final byte[] aaa = Bytes.toBytes("aaa");

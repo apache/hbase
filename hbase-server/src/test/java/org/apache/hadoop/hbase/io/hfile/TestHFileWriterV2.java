@@ -41,10 +41,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
@@ -57,7 +58,7 @@ import org.junit.experimental.categories.Category;
  * Testing writing a version 2 {@link HFile}. This is a low-level test written
  * during the development of {@link HFileWriterV2}.
  */
-@Category(SmallTests.class)
+@Category({IOTests.class, SmallTests.class})
 public class TestHFileWriterV2 {
 
   private static final Log LOG = LogFactory.getLog(TestHFileWriterV2.class);
