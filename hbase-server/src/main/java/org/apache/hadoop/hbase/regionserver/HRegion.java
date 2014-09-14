@@ -109,6 +109,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CallerDisconnectedException;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -3554,6 +3555,12 @@ public class HRegion implements HeapSize { // , Writable{
 
   protected HStore instantiateHStore(final HColumnDescriptor family) throws IOException {
     if (MobUtils.isMobFamily(family)) {
+      if (HFile.getFormatVersion(this.conf) < HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
+        throw new IOException("A minimum HFile version of "
+            + HFile.MIN_FORMAT_VERSION_WITH_TAGS
+            + " is required for MOB feature. Consider setting " + HFile.FORMAT_VERSION_KEY
+            + " accordingly.");
+      }
       return new HMobStore(this, family, this.conf);
     }
     return new HStore(this, family, this.conf);
