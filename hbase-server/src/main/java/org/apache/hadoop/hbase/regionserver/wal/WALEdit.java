@@ -22,19 +22,19 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.codec.Codec;
-import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.codec.Codec;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -123,9 +123,25 @@ public class WALEdit implements Writable, HeapSize {
     this.compressionContext = compressionContext;
   }
 
+  /**
+   * Adds a KeyValue to this edit
+   * @param kv
+   * @return this for chained action
+   * @deprecated Use {@link #add(Cell)} instead
+   */
+  @Deprecated
   public WALEdit add(KeyValue kv) {
     this.kvs.add(kv);
     return this;
+  }
+
+  /**
+   * Adds a Cell to this edit
+   * @param cell
+   * @return this for chained action
+   */
+  public WALEdit add(Cell cell) {
+    return add(KeyValueUtil.ensureKeyValue(cell));
   }
 
   public boolean isEmpty() {
@@ -136,8 +152,22 @@ public class WALEdit implements Writable, HeapSize {
     return kvs.size();
   }
 
+  /**
+   * @return The KeyValues associated with this edit
+   * @deprecated Use {@link #getCells()} instead
+   */
+  @Deprecated
   public ArrayList<KeyValue> getKeyValues() {
     return kvs;
+  }
+
+  /**
+   * @return The Cells associated with this edit
+   */
+  public ArrayList<Cell> getCells() {
+    ArrayList<Cell> cells = new ArrayList<Cell>(kvs.size());
+    cells.addAll(kvs);
+    return cells;
   }
 
   public NavigableMap<byte[], Integer> getAndRemoveScopes() {
