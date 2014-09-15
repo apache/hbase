@@ -43,8 +43,10 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
@@ -454,7 +456,9 @@ public class MasterFileSystem {
     }
 
     // Create tableinfo-s for hbase:meta if not already there.
-    new FSTableDescriptors(fs, rd).createTableDescriptor(HTableDescriptor.META_TABLEDESC);
+    // assume, created table descriptor is for enabling table
+    new FSTableDescriptors(fs, rd).createTableDescriptor(
+        new TableDescriptor(HTableDescriptor.META_TABLEDESC, TableState.State.ENABLING));
 
     return rd;
   }

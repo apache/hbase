@@ -208,6 +208,13 @@ public interface HConnection extends Abortable, Closeable {
   boolean isTableDisabled(byte[] tableName) throws IOException;
 
   /**
+   * Retrieve TableState, represent current table state.
+   * @param tableName table state for
+   * @return state of the table
+   */
+  public TableState getTableState(TableName tableName)  throws IOException;
+
+  /**
    * @param tableName table name
    * @return true if all regions of the table are available, false otherwise
    * @throws IOException if a remote or network exception occurs

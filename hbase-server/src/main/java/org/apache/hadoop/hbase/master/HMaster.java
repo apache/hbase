@@ -71,6 +71,7 @@ import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
@@ -100,7 +101,6 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
@@ -114,6 +114,7 @@ import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
+import org.apache.hadoop.hbase.util.ZKDataMigrator;
 import org.apache.hadoop.hbase.zookeeper.DrainingServerTracker;
 import org.apache.hadoop.hbase.zookeeper.LoadBalancerTracker;
 import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
@@ -223,6 +224,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   SnapshotManager snapshotManager;
   // monitor for distributed procedures
   MasterProcedureManagerHost mpmHost;
+
+  // handle table states
+  private TableStateManager tableStateManager;
 
   /** flag used in test cases in order to simulate RS failures during master initialization */
   private volatile boolean initializationBeforeMetaAssignment = false;
@@ -409,7 +413,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.loadBalancerTracker.start();
     this.assignmentManager = new AssignmentManager(this, serverManager,
       this.balancer, this.service, this.metricsMaster,
-      this.tableLockManager);
+      this.tableLockManager, tableStateManager);
 
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this,
         this.serverManager);
@@ -436,6 +440,14 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.mpmHost.register(new MasterFlushTableProcedureManager());
     this.mpmHost.loadProcedures(conf);
     this.mpmHost.initialize(this, this.metricsMaster);
+
+    // migrating existent table state from zk
+    for (Map.Entry<TableName, TableState.State> entry : ZKDataMigrator
+        .queryForTableStates(getZooKeeper()).entrySet()) {
+      LOG.info("Converting state from zk to new states:" + entry);
+      tableStateManager.setTableState(entry.getKey(), entry.getValue());
+    }
+    ZKUtil.deleteChildrenRecursively(getZooKeeper(), getZooKeeper().tableZNode);
   }
 
   /**
@@ -489,6 +501,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     // Invalidate all write locks held previously
     this.tableLockManager.reapWriteLocks();
+
+    this.tableStateManager = new TableStateManager(this);
+    this.tableStateManager.start();
 
     status.setStatus("Initializing ZK system trackers");
     initializeZKBasedSystemTrackers();
@@ -737,8 +752,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   private void enableMeta(TableName metaTableName) {
-    if (!this.assignmentManager.getTableStateManager().isTableState(metaTableName,
-        ZooKeeperProtos.Table.State.ENABLED)) {
+    if (!this.tableStateManager.isTableState(metaTableName,
+            TableState.State.ENABLED)) {
       this.assignmentManager.setEnabledTable(metaTableName);
     }
   }
@@ -775,6 +790,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   @Override
   public MasterFileSystem getMasterFileSystem() {
     return this.fileSystemManager;
+  }
+
+  @Override
+  public TableStateManager getTableStateManager() {
+    return tableStateManager;
   }
 
   /*
@@ -1452,7 +1472,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       throw new TableNotFoundException(tableName);
     }
     if (!getAssignmentManager().getTableStateManager().
-        isTableState(tableName, ZooKeeperProtos.Table.State.DISABLED)) {
+        isTableState(tableName, TableState.State.DISABLED)) {
       throw new TableNotDisabledException(tableName);
     }
   }

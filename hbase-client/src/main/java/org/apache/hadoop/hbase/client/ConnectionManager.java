@@ -176,6 +176,8 @@ import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
+import static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.*;
+
 /**
  * An internal, A non-instantiable class that manages creation of {@link HConnection}s.
  */
@@ -893,7 +895,7 @@ class ConnectionManager {
 
     @Override
     public boolean isTableEnabled(TableName tableName) throws IOException {
-      return this.registry.isTableOnlineState(tableName, true);
+      return getTableState(tableName).inStates(TableState.State.ENABLED);
     }
 
     @Override
@@ -903,7 +905,7 @@ class ConnectionManager {
 
     @Override
     public boolean isTableDisabled(TableName tableName) throws IOException {
-      return this.registry.isTableOnlineState(tableName, false);
+      return getTableState(tableName).inStates(TableState.State.DISABLED);
     }
 
     @Override
@@ -1993,6 +1995,13 @@ class ConnectionManager {
         }
 
         @Override
+        public GetTableStateResponse getTableState(
+                RpcController controller, GetTableStateRequest request)
+                throws ServiceException {
+          return stub.getTableState(controller, request);
+        }
+
+        @Override
         public void close() {
           release(this.mss);
         }
@@ -2497,6 +2506,20 @@ class ConnectionManager {
     public HTableDescriptor getHTableDescriptor(final byte[] tableName)
     throws IOException {
       return getHTableDescriptor(TableName.valueOf(tableName));
+    }
+
+    @Override
+    public TableState getTableState(TableName tableName) throws IOException {
+      MasterKeepAliveConnection master = getKeepAliveMasterService();
+      try {
+        GetTableStateResponse resp = master.getTableState(null,
+                RequestConverter.buildGetTableStateRequest(tableName));
+        return TableState.convert(resp.getTableState());
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
+      } finally {
+        master.close();
+      }
     }
   }
 

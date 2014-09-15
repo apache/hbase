@@ -27,6 +27,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -65,8 +67,9 @@ public class ModifyTableHandler extends TableEventHandler {
     // Check operation is possible on the table in its current state
     // Also checks whether the table exists
     if (masterServices.getAssignmentManager().getTableStateManager()
-        .isTableState(this.htd.getTableName(), ZooKeeperProtos.Table.State.ENABLED)
-        && this.htd.getRegionReplication() != getTableDescriptor().getRegionReplication()) {
+        .isTableState(this.htd.getTableName(), TableState.State.ENABLED)
+        && this.htd.getRegionReplication() != getTableDescriptor()
+        .getHTableDescriptor().getRegionReplication()) {
       throw new IOException("REGION_REPLICATION change is not supported for enabled tables");
     }
   }
@@ -79,11 +82,14 @@ public class ModifyTableHandler extends TableEventHandler {
       cpHost.preModifyTableHandler(this.tableName, this.htd);
     }
     // Update descriptor
-    HTableDescriptor oldHtd = getTableDescriptor();
-    this.masterServices.getTableDescriptors().add(this.htd);
-    deleteFamilyFromFS(hris, oldHtd.getFamiliesKeys());
-    removeReplicaColumnsIfNeeded(this.htd.getRegionReplication(), oldHtd.getRegionReplication(),
-        htd.getTableName());
+    HTableDescriptor oldDescriptor =
+        this.masterServices.getTableDescriptors().get(this.tableName);
+    this.masterServices.getTableDescriptors().add(htd);
+    deleteFamilyFromFS(hris, oldDescriptor.getFamiliesKeys());
+    removeReplicaColumnsIfNeeded(
+        this.htd.getRegionReplication(),
+        oldDescriptor.getRegionReplication(),
+        this.htd.getTableName());
     if (cpHost != null) {
       cpHost.postModifyTableHandler(this.tableName, this.htd);
     }

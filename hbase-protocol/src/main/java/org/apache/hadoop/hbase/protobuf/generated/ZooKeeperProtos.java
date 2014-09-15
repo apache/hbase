@@ -3242,12 +3242,12 @@ public final class ZooKeeperProtos {
     // @@protoc_insertion_point(class_scope:SplitLogTask)
   }
 
-  public interface TableOrBuilder
+  public interface DeprecatedTableStateOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .Table.State state = 1 [default = ENABLED];
+    // required .DeprecatedTableState.State state = 1 [default = ENABLED];
     /**
-     * <code>required .Table.State state = 1 [default = ENABLED];</code>
+     * <code>required .DeprecatedTableState.State state = 1 [default = ENABLED];</code>
      *
      * <pre>
      * This is the table's state.  If no znode for a table,
@@ -3257,7 +3257,7 @@ public final class ZooKeeperProtos {
      */
     boolean hasState();
     /**
-     * <code>required .Table.State state = 1 [default = ENABLED];</code>
+     * <code>required .DeprecatedTableState.State state = 1 [default = ENABLED];</code>
      *
      * <pre>
      * This is the table's state.  If no znode for a table,
@@ -3265,32 +3265,33 @@ public final class ZooKeeperProtos {
      * for more.
      * </pre>
      */
-    org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.State getState();
+    org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.State getState();
   }
   /**
-   * Protobuf type {@code Table}
+   * Protobuf type {@code DeprecatedTableState}
    *
    * <pre>
    **
    * The znode that holds state of table.
+   * Deprected, table state is stored in table descriptor on HDFS.
    * </pre>
    */
-  public static final class Table extends
+  public static final class DeprecatedTableState extends
       com.google.protobuf.GeneratedMessage
-      implements TableOrBuilder {
-    // Use Table.newBuilder() to construct.
-    private Table(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      implements DeprecatedTableStateOrBuilder {
+    // Use DeprecatedTableState.newBuilder() to construct.
+    private DeprecatedTableState(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
       super(builder);
       this.unknownFields = builder.getUnknownFields();
     }
-    private Table(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+    private DeprecatedTableState(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
 
-    private static final Table defaultInstance;
-    public static Table getDefaultInstance() {
+    private static final DeprecatedTableState defaultInstance;
+    public static DeprecatedTableState getDefaultInstance() {
       return defaultInstance;
     }
 
-    public Table getDefaultInstanceForType() {
+    public DeprecatedTableState getDefaultInstanceForType() {
       return defaultInstance;
     }
 
@@ -3300,7 +3301,7 @@ public final class ZooKeeperProtos {
         getUnknownFields() {
       return this.unknownFields;
     }
-    private Table(
+    private DeprecatedTableState(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
@@ -3325,7 +3326,7 @@ public final class ZooKeeperProtos {
             }
             case 8: {
               int rawValue = input.readEnum();
-              org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.State value = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.State.valueOf(rawValue);
+              org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.State value = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.State.valueOf(rawValue);
               if (value == null) {
                 unknownFields.mergeVarintField(1, rawValue);
               } else {
@@ -3348,33 +3349,33 @@ public final class ZooKeeperProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_Table_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_DeprecatedTableState_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_Table_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_DeprecatedTableState_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
-              org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.Builder.class);
+              org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.Builder.class);
     }
 
-    public static com.google.protobuf.Parser<Table> PARSER =
-        new com.google.protobuf.AbstractParser<Table>() {
-      public Table parsePartialFrom(
+    public static com.google.protobuf.Parser<DeprecatedTableState> PARSER =
+        new com.google.protobuf.AbstractParser<DeprecatedTableState>() {
+      public DeprecatedTableState parsePartialFrom(
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new Table(input, extensionRegistry);
+        return new DeprecatedTableState(input, extensionRegistry);
       }
     };
 
     @java.lang.Override
-    public com.google.protobuf.Parser<Table> getParserForType() {
+    public com.google.protobuf.Parser<DeprecatedTableState> getParserForType() {
       return PARSER;
     }
 
     /**
-     * Protobuf enum {@code Table.State}
+     * Protobuf enum {@code DeprecatedTableState.State}
      *
      * <pre>
      * Table's current state
@@ -3452,7 +3453,7 @@ public final class ZooKeeperProtos {
       }
       public static final com.google.protobuf.Descriptors.EnumDescriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.getDescriptor().getEnumTypes().get(0);
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.getDescriptor().getEnumTypes().get(0);
       }
 
       private static final State[] VALUES = values();
@@ -3474,15 +3475,15 @@ public final class ZooKeeperProtos {
         this.value = value;
       }
 
-      // @@protoc_insertion_point(enum_scope:Table.State)
+      // @@protoc_insertion_point(enum_scope:DeprecatedTableState.State)
     }
 
     private int bitField0_;
-    // required .Table.State state = 1 [default = ENABLED];
+    // required .DeprecatedTableState.State state = 1 [default = ENABLED];
     public static final int STATE_FIELD_NUMBER = 1;
-    private org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.State state_;
+    private org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.State state_;
     /**
-     * <code>required .Table.State state = 1 [default = ENABLED];</code>
+     * <code>required .DeprecatedTableState.State state = 1 [default = ENABLED];</code>
      *
      * <pre>
      * This is the table's state.  If no znode for a table,
@@ -3494,7 +3495,7 @@ public final class ZooKeeperProtos {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .Table.State state = 1 [default = ENABLED];</code>
+     * <code>required .DeprecatedTableState.State state = 1 [default = ENABLED];</code>
      *
      * <pre>
      * This is the table's state.  If no znode for a table,
@@ -3502,12 +3503,12 @@ public final class ZooKeeperProtos {
      * for more.
      * </pre>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.State getState() {
+    public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.State getState() {
       return state_;
     }
 
     private void initFields() {
-      state_ = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.State.ENABLED;
+      state_ = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.State.ENABLED;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -3558,10 +3559,10 @@ public final class ZooKeeperProtos {
       if (obj == this) {
        return true;
       }
-      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table)) {
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState)) {
         return super.equals(obj);
       }
-      org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table other = (org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table) obj;
+      org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState other = (org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState) obj;
 
       boolean result = true;
       result = result && (hasState() == other.hasState());
@@ -3591,53 +3592,53 @@ public final class ZooKeeperProtos {
       return hash;
     }
 
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState parseFrom(
         com.google.protobuf.ByteString data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState parseFrom(
         com.google.protobuf.ByteString data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table parseFrom(byte[] data)
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState parseFrom(byte[] data)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState parseFrom(
         byte[] data,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       return PARSER.parseFrom(data, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table parseFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState parseFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState parseFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table parseDelimitedFrom(java.io.InputStream input)
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState parseDelimitedFrom(java.io.InputStream input)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table parseDelimitedFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState parseDelimitedFrom(
         java.io.InputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
       return PARSER.parseDelimitedFrom(input, extensionRegistry);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState parseFrom(
         com.google.protobuf.CodedInputStream input)
         throws java.io.IOException {
       return PARSER.parseFrom(input);
     }
-    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table parseFrom(
+    public static org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState parseFrom(
         com.google.protobuf.CodedInputStream input,
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws java.io.IOException {
@@ -3646,7 +3647,7 @@ public final class ZooKeeperProtos {
 
     public static Builder newBuilder() { return Builder.create(); }
     public Builder newBuilderForType() { return newBuilder(); }
-    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table prototype) {
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState prototype) {
       return newBuilder().mergeFrom(prototype);
     }
     public Builder toBuilder() { return newBuilder(this); }
@@ -3658,29 +3659,30 @@ public final class ZooKeeperProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code Table}
+     * Protobuf type {@code DeprecatedTableState}
      *
      * <pre>
      **
      * The znode that holds state of table.
+     * Deprected, table state is stored in table descriptor on HDFS.
      * </pre>
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
-       implements org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.TableOrBuilder {
+       implements org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableStateOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_Table_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_DeprecatedTableState_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_Table_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_DeprecatedTableState_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
-                org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.Builder.class);
+                org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.Builder.class);
       }
 
-      // Construct using org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.newBuilder()
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.newBuilder()
       private Builder() {
         maybeForceBuilderInitialization();
       }
@@ -3700,7 +3702,7 @@ public final class ZooKeeperProtos {
 
       public Builder clear() {
         super.clear();
-        state_ = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.State.ENABLED;
+        state_ = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.State.ENABLED;
         bitField0_ = (bitField0_ & ~0x00000001);
         return this;
       }
@@ -3711,23 +3713,23 @@ public final class ZooKeeperProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_Table_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_DeprecatedTableState_descriptor;
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table getDefaultInstanceForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.getDefaultInstance();
+      public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.getDefaultInstance();
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table build() {
-        org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table result = buildPartial();
+      public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState build() {
+        org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState result = buildPartial();
         if (!result.isInitialized()) {
           throw newUninitializedMessageException(result);
         }
         return result;
       }
 
-      public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table buildPartial() {
-        org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table result = new org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table(this);
+      public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState result = new org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState(this);
         int from_bitField0_ = bitField0_;
         int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
@@ -3740,16 +3742,16 @@ public final class ZooKeeperProtos {
       }
 
       public Builder mergeFrom(com.google.protobuf.Message other) {
-        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table) {
-          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table)other);
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState)other);
         } else {
           super.mergeFrom(other);
           return this;
         }
       }
 
-      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table other) {
-        if (other == org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.getDefaultInstance()) return this;
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.getDefaultInstance()) return this;
         if (other.hasState()) {
           setState(other.getState());
         }
@@ -3769,11 +3771,11 @@ public final class ZooKeeperProtos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws java.io.IOException {
-        org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table parsedMessage = null;
+        org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState parsedMessage = null;
         try {
           parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
         } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table) e.getUnfinishedMessage();
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState) e.getUnfinishedMessage();
           throw e;
         } finally {
           if (parsedMessage != null) {
@@ -3784,10 +3786,10 @@ public final class ZooKeeperProtos {
       }
       private int bitField0_;
 
-      // required .Table.State state = 1 [default = ENABLED];
-      private org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.State state_ = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.State.ENABLED;
+      // required .DeprecatedTableState.State state = 1 [default = ENABLED];
+      private org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.State state_ = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.State.ENABLED;
       /**
-       * <code>required .Table.State state = 1 [default = ENABLED];</code>
+       * <code>required .DeprecatedTableState.State state = 1 [default = ENABLED];</code>
        *
        * <pre>
        * This is the table's state.  If no znode for a table,
@@ -3799,7 +3801,7 @@ public final class ZooKeeperProtos {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .Table.State state = 1 [default = ENABLED];</code>
+       * <code>required .DeprecatedTableState.State state = 1 [default = ENABLED];</code>
        *
        * <pre>
        * This is the table's state.  If no znode for a table,
@@ -3807,11 +3809,11 @@ public final class ZooKeeperProtos {
        * for more.
        * </pre>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.State getState() {
+      public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.State getState() {
         return state_;
       }
       /**
-       * <code>required .Table.State state = 1 [default = ENABLED];</code>
+       * <code>required .DeprecatedTableState.State state = 1 [default = ENABLED];</code>
        *
        * <pre>
        * This is the table's state.  If no znode for a table,
@@ -3819,7 +3821,7 @@ public final class ZooKeeperProtos {
        * for more.
        * </pre>
        */
-      public Builder setState(org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.State value) {
+      public Builder setState(org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.State value) {
         if (value == null) {
           throw new NullPointerException();
         }
@@ -3829,7 +3831,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .Table.State state = 1 [default = ENABLED];</code>
+       * <code>required .DeprecatedTableState.State state = 1 [default = ENABLED];</code>
        *
        * <pre>
        * This is the table's state.  If no znode for a table,
@@ -3839,20 +3841,20 @@ public final class ZooKeeperProtos {
        */
       public Builder clearState() {
         bitField0_ = (bitField0_ & ~0x00000001);
-        state_ = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.State.ENABLED;
+        state_ = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.DeprecatedTableState.State.ENABLED;
         onChanged();
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:Table)
+      // @@protoc_insertion_point(builder_scope:DeprecatedTableState)
     }
 
     static {
-      defaultInstance = new Table(true);
+      defaultInstance = new DeprecatedTableState(true);
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:Table)
+    // @@protoc_insertion_point(class_scope:DeprecatedTableState)
   }
 
   public interface ReplicationPeerOrBuilder
@@ -9512,10 +9514,10 @@ public final class ZooKeeperProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_SplitLogTask_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_Table_descriptor;
+    internal_static_DeprecatedTableState_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_Table_fieldAccessorTable;
+      internal_static_DeprecatedTableState_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_ReplicationPeer_descriptor;
   private static
@@ -9573,27 +9575,28 @@ public final class ZooKeeperProtos {
       "UNASSIGNED\020\000\022\t\n\005OWNED\020\001\022\014\n\010RESIGNED\020\002\022\010\n" +
       "\004DONE\020\003\022\007\n\003ERR\020\004\">\n\014RecoveryMode\022\013\n\007UNKN" +
       "OWN\020\000\022\021\n\rLOG_SPLITTING\020\001\022\016\n\nLOG_REPLAY\020\002" +
-      "\"n\n\005Table\022$\n\005state\030\001 \002(\0162\014.Table.State:\007" +
-      "ENABLED\"?\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DISABLE" +
-      "D\020\001\022\r\n\tDISABLING\020\002\022\014\n\010ENABLING\020\003\"\215\001\n\017Rep" +
-      "licationPeer\022\022\n\nclusterkey\030\001 \002(\t\022\037\n\027repl" +
-      "icationEndpointImpl\030\002 \001(\t\022\035\n\004data\030\003 \003(\0132" +
-      "\017.BytesBytesPair\022&\n\rconfiguration\030\004 \003(\0132" +
-      "\017.NameStringPair\"^\n\020ReplicationState\022&\n\005",
-      "state\030\001 \002(\0162\027.ReplicationState.State\"\"\n\005" +
-      "State\022\013\n\007ENABLED\020\000\022\014\n\010DISABLED\020\001\"+\n\027Repl" +
-      "icationHLogPosition\022\020\n\010position\030\001 \002(\003\"%\n" +
-      "\017ReplicationLock\022\022\n\nlock_owner\030\001 \002(\t\"\230\001\n" +
-      "\tTableLock\022\036\n\ntable_name\030\001 \001(\0132\n.TableNa" +
-      "me\022\037\n\nlock_owner\030\002 \001(\0132\013.ServerName\022\021\n\tt" +
-      "hread_id\030\003 \001(\003\022\021\n\tis_shared\030\004 \001(\010\022\017\n\007pur" +
-      "pose\030\005 \001(\t\022\023\n\013create_time\030\006 \001(\003\";\n\017Store" +
-      "SequenceId\022\023\n\013family_name\030\001 \002(\014\022\023\n\013seque" +
-      "nce_id\030\002 \002(\004\"g\n\026RegionStoreSequenceIds\022 ",
-      "\n\030last_flushed_sequence_id\030\001 \002(\004\022+\n\021stor" +
-      "e_sequence_id\030\002 \003(\0132\020.StoreSequenceIdBE\n" +
-      "*org.apache.hadoop.hbase.protobuf.genera" +
-      "tedB\017ZooKeeperProtosH\001\210\001\001\240\001\001"
+      "\"\214\001\n\024DeprecatedTableState\0223\n\005state\030\001 \002(\016" +
+      "2\033.DeprecatedTableState.State:\007ENABLED\"?" +
+      "\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DISABLED\020\001\022\r\n\tDI" +
+      "SABLING\020\002\022\014\n\010ENABLING\020\003\"\215\001\n\017ReplicationP" +
+      "eer\022\022\n\nclusterkey\030\001 \002(\t\022\037\n\027replicationEn" +
+      "dpointImpl\030\002 \001(\t\022\035\n\004data\030\003 \003(\0132\017.BytesBy" +
+      "tesPair\022&\n\rconfiguration\030\004 \003(\0132\017.NameStr",
+      "ingPair\"^\n\020ReplicationState\022&\n\005state\030\001 \002" +
+      "(\0162\027.ReplicationState.State\"\"\n\005State\022\013\n\007" +
+      "ENABLED\020\000\022\014\n\010DISABLED\020\001\"+\n\027ReplicationHL" +
+      "ogPosition\022\020\n\010position\030\001 \002(\003\"%\n\017Replicat" +
+      "ionLock\022\022\n\nlock_owner\030\001 \002(\t\"\230\001\n\tTableLoc" +
+      "k\022\036\n\ntable_name\030\001 \001(\0132\n.TableName\022\037\n\nloc" +
+      "k_owner\030\002 \001(\0132\013.ServerName\022\021\n\tthread_id\030" +
+      "\003 \001(\003\022\021\n\tis_shared\030\004 \001(\010\022\017\n\007purpose\030\005 \001(" +
+      "\t\022\023\n\013create_time\030\006 \001(\003\";\n\017StoreSequenceI" +
+      "d\022\023\n\013family_name\030\001 \002(\014\022\023\n\013sequence_id\030\002 ",
+      "\002(\004\"g\n\026RegionStoreSequenceIds\022 \n\030last_fl" +
+      "ushed_sequence_id\030\001 \002(\004\022+\n\021store_sequenc" +
+      "e_id\030\002 \003(\0132\020.StoreSequenceIdBE\n*org.apac" +
+      "he.hadoop.hbase.protobuf.generatedB\017ZooK" +
+      "eeperProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -9624,11 +9627,11 @@ public final class ZooKeeperProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_SplitLogTask_descriptor,
               new java.lang.String[] { "State", "ServerName", "Mode", });
-          internal_static_Table_descriptor =
+          internal_static_DeprecatedTableState_descriptor =
             getDescriptor().getMessageTypes().get(4);
-          internal_static_Table_fieldAccessorTable = new
+          internal_static_DeprecatedTableState_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_Table_descriptor,
+              internal_static_DeprecatedTableState_descriptor,
               new java.lang.String[] { "State", });
           internal_static_ReplicationPeer_descriptor =
             getDescriptor().getMessageTypes().get(5);

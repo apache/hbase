@@ -50,7 +50,7 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
   @Override
   protected void prepareWithTableLock() throws IOException {
     super.prepareWithTableLock();
-    HTableDescriptor htd = getTableDescriptor();
+    HTableDescriptor htd = getTableDescriptor().getHTableDescriptor();
     this.familyName = hasColumnFamily(htd, familyName);
   }
 

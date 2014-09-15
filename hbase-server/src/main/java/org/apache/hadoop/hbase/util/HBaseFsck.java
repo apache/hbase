@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URI;
@@ -70,6 +69,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -89,6 +89,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -107,7 +108,6 @@ import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandler;
 import org.apache.hadoop.hbase.util.hbck.TableIntegrityErrorHandlerImpl;
 import org.apache.hadoop.hbase.util.hbck.TableLockChecker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZKTableStateClientSideReader;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.io.IOUtils;
@@ -953,9 +953,9 @@ public class HBaseFsck extends Configured {
         modTInfo = new TableInfo(tableName);
         tablesInfo.put(tableName, modTInfo);
         try {
-          HTableDescriptor htd =
+          TableDescriptor htd =
               FSTableDescriptors.getTableDescriptorFromFs(fs, hbaseRoot, tableName);
-          modTInfo.htds.add(htd);
+          modTInfo.htds.add(htd.getHTableDescriptor());
         } catch (IOException ioe) {
           if (!orphanTableDirs.containsKey(tableName)) {
             LOG.warn("Unable to read .tableinfo from " + hbaseRoot, ioe);
@@ -1009,7 +1009,7 @@ public class HBaseFsck extends Configured {
     for (String columnfamimly : columns) {
       htd.addFamily(new HColumnDescriptor(columnfamimly));
     }
-    fstd.createTableDescriptor(htd, true);
+    fstd.createTableDescriptor(new TableDescriptor(htd, TableState.State.ENABLED), true);
     return true;
   }
 
@@ -1057,7 +1057,7 @@ public class HBaseFsck extends Configured {
           if (tableName.equals(htds[j].getTableName())) {
             HTableDescriptor htd = htds[j];
             LOG.info("fixing orphan table: " + tableName + " from cache");
-            fstd.createTableDescriptor(htd, true);
+            fstd.createTableDescriptor(new TableDescriptor(htd, TableState.State.ENABLED), true);
             j++;
             iter.remove();
           }
@@ -1382,22 +1382,16 @@ public class HBaseFsck extends Configured {
    * @throws IOException
    */
   private void loadDisabledTables()
-  throws ZooKeeperConnectionException, IOException {
+  throws IOException {
     HConnectionManager.execute(new HConnectable<Void>(getConf()) {
       @Override
       public Void connect(HConnection connection) throws IOException {
-        ZooKeeperWatcher zkw = createZooKeeperWatcher();
-        try {
-          for (TableName tableName :
-              ZKTableStateClientSideReader.getDisabledOrDisablingTables(zkw)) {
-            disabledTables.add(tableName);
+        TableName[] tables = connection.listTableNames();
+        for (TableName table : tables) {
+          if (connection.getTableState(table)
+              .inStates(TableState.State.DISABLED, TableState.State.DISABLING)) {
+            disabledTables.add(table);
           }
-        } catch (KeeperException ke) {
-          throw new IOException(ke);
-        } catch (InterruptedException e) {
-          throw new InterruptedIOException();
-        } finally {
-          zkw.close();
         }
         return null;
       }

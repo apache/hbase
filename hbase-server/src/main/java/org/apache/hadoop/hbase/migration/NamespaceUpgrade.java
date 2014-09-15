@@ -39,12 +39,14 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
@@ -374,7 +376,7 @@ public class NamespaceUpgrade implements Tool {
       HTableDescriptor newDesc = new HTableDescriptor(oldDesc);
       newDesc.setName(newTableName);
       new FSTableDescriptors(this.conf).createTableDescriptorForTableDirectory(
-        newTablePath, newDesc, true);
+        newTablePath, new TableDescriptor(newDesc, TableState.State.ENABLED), true);
     }
 
 

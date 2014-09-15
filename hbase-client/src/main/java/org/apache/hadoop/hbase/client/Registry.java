@@ -44,12 +44,6 @@ interface Registry {
   String getClusterId();
 
   /**
-   * @param enabled Return true if table is enabled
-   * @throws IOException
-   */
-  boolean isTableOnlineState(TableName tableName, boolean enabled) throws IOException;
-
-  /**
    * @return Count of 'running' regionservers
    * @throws IOException
    */

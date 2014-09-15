@@ -27,7 +27,6 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
@@ -95,16 +94,8 @@ public class EnableTableHandler extends EventHandler {
         // retainAssignment is true only during recovery.  In normal case it is false
         if (!this.skipTableStateCheck) {
           throw new TableNotFoundException(tableName);
-        } 
-        try {
-          this.assignmentManager.getTableStateManager().checkAndRemoveTableState(tableName,
-            ZooKeeperProtos.Table.State.ENABLING, true);
-          throw new TableNotFoundException(tableName);
-        } catch (CoordinatedStateException e) {
-          // TODO : Use HBCK to clear such nodes
-          LOG.warn("Failed to delete the ENABLING node for the table " + tableName
-              + ".  The table will remain unusable. Run HBCK to manually fix the problem.");
         }
+        this.assignmentManager.getTableStateManager().setDeletedTable(tableName);
       }
 
       // There could be multiple client requests trying to disable or enable
@@ -112,16 +103,11 @@ public class EnableTableHandler extends EventHandler {
       // After that, no other requests can be accepted until the table reaches
       // DISABLED or ENABLED.
       if (!skipTableStateCheck) {
-        try {
-          if (!this.assignmentManager.getTableStateManager().setTableStateIfInStates(
-              this.tableName, ZooKeeperProtos.Table.State.ENABLING,
-              ZooKeeperProtos.Table.State.DISABLED)) {
-            LOG.info("Table " + tableName + " isn't disabled; skipping enable");
-            throw new TableNotDisabledException(this.tableName);
-          }
-        } catch (CoordinatedStateException e) {
-          throw new IOException("Unable to ensure that the table will be" +
-            " enabling because of a coordination engine issue", e);
+        if (!this.assignmentManager.getTableStateManager().setTableStateIfInStates(
+            this.tableName, TableState.State.ENABLING,
+            TableState.State.DISABLED)) {
+          LOG.info("Table " + tableName + " isn't disabled; skipping enable");
+          throw new TableNotDisabledException(this.tableName);
         }
       }
       success = true;
@@ -156,11 +142,7 @@ public class EnableTableHandler extends EventHandler {
       if (cpHost != null) {
         cpHost.postEnableTableHandler(this.tableName);
       }
-    } catch (IOException e) {
-      LOG.error("Error trying to enable the table " + this.tableName, e);
-    } catch (CoordinatedStateException e) {
-      LOG.error("Error trying to enable the table " + this.tableName, e);
-    } catch (InterruptedException e) {
+    } catch (IOException | InterruptedException e) {
       LOG.error("Error trying to enable the table " + this.tableName, e);
     } finally {
       releaseTableLock();
@@ -177,14 +159,13 @@ public class EnableTableHandler extends EventHandler {
     }
   }
 
-  private void handleEnableTable() throws IOException, CoordinatedStateException,
+  private void handleEnableTable() throws IOException,
       InterruptedException {
     // I could check table is disabling and if so, not enable but require
     // that user first finish disabling but that might be obnoxious.
 
-    // Set table enabling flag up in zk.
     this.assignmentManager.getTableStateManager().setTableState(this.tableName,
-      ZooKeeperProtos.Table.State.ENABLING);
+      TableState.State.ENABLING);
     boolean done = false;
     ServerManager serverManager = ((HMaster)this.server).getServerManager();
     // Get the regions of this table. We're done when all listed
@@ -236,7 +217,7 @@ public class EnableTableHandler extends EventHandler {
     if (done) {
       // Flip the table to enabled.
       this.assignmentManager.getTableStateManager().setTableState(
-        this.tableName, ZooKeeperProtos.Table.State.ENABLED);
+        this.tableName, TableState.State.ENABLED);
       LOG.info("Table '" + this.tableName
       + "' was successfully enabled. Status: done=" + done);
     } else {

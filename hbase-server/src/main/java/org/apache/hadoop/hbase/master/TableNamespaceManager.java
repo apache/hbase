@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -258,7 +259,7 @@ public class TableNamespaceManager {
     }
 
     // Now check if the table is assigned, if not then fail fast
-    if (isTableAssigned()) {
+    if (isTableAssigned() && isTableEnabled()) {
       try {
         nsTable = new HTable(conf, TableName.NAMESPACE_TABLE_NAME);
         zkNamespaceManager = new ZKNamespaceManager(masterServices.getZooKeeper());
@@ -296,6 +297,12 @@ public class TableNamespaceManager {
       }
     }
     return false;
+  }
+
+  private boolean isTableEnabled() throws IOException {
+    return masterServices.getTableStateManager().getTableState(
+            TableName.NAMESPACE_TABLE_NAME
+    ).equals(TableState.State.ENABLED);
   }
 
   private boolean isTableAssigned() {

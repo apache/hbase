@@ -326,6 +326,14 @@ message GetTableNamesResponse {
   repeated TableName table_names = 1;
 }
 
+message GetTableStateRequest {
+  required TableName table_name = 1;
+}
+
+message GetTableStateResponse {
+  required TableState table_state = 1;
+}
+
 message GetClusterStatusRequest {
 }
 
@@ -565,4 +573,8 @@ service MasterService {
   /** returns a list of tables for a given namespace*/
   rpc ListTableNamesByNamespace(ListTableNamesByNamespaceRequest)
     returns(ListTableNamesByNamespaceResponse);
+
+  /** returns table state */
+  rpc GetTableState(GetTableStateRequest)
+    returns(GetTableStateResponse);
 }

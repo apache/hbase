@@ -94,6 +94,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   // znode containing the current cluster state
   public String clusterStateZNode;
   // znode used for table disabling/enabling
+  @Deprecated
   public String tableZNode;
   // znode containing the unique cluster ID
   public String clusterIdZNode;

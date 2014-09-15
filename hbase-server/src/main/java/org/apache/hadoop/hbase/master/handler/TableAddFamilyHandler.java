@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -50,8 +51,8 @@ public class TableAddFamilyHandler extends TableEventHandler {
   @Override
   protected void prepareWithTableLock() throws IOException {
     super.prepareWithTableLock();
-    HTableDescriptor htd = getTableDescriptor();
-    if (htd.hasFamily(familyDesc.getName())) {
+    TableDescriptor htd = getTableDescriptor();
+    if (htd.getHTableDescriptor().hasFamily(familyDesc.getName())) {
       throw new InvalidFamilyOperationException("Family '" +
         familyDesc.getNameAsString() + "' already exists so cannot be added");
     }

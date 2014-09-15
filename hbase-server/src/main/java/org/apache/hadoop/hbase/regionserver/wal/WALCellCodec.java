@@ -89,6 +89,7 @@ public class WALCellCodec implements Codec {
    * Fully prepares the codec for use.
    * @param conf {@link Configuration} to read for the user-specified codec. If none is specified,
    *          uses a {@link WALCellCodec}.
+   * @param cellCodecClsName name of codec
    * @param compression compression the codec should use
    * @return a {@link WALCellCodec} ready for use.
    * @throws UnsupportedOperationException if the codec cannot be instantiated

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.protobuf;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.util.ByteStringer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -105,6 +106,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.protobuf.ByteString;
+
+import static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.*;
 
 /**
  * Helper utility to build protocol buffer requests,
@@ -1174,6 +1177,19 @@ public final class RequestConverter {
       }
     }
     return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer GetTableStateRequest
+   *
+   * @param tableName table to get request for
+   * @return a GetTableStateRequest
+   */
+  public static GetTableStateRequest buildGetTableStateRequest(
+          final TableName tableName) {
+    return GetTableStateRequest.newBuilder()
+            .setTableName(ProtobufUtil.toProtoTableName(tableName))
+            .build();
   }
 
   /**

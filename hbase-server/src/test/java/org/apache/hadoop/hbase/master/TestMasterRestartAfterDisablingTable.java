@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -95,8 +95,8 @@ public class TestMasterRestartAfterDisablingTable {
 
     assertTrue("The table should not be in enabled state", cluster.getMaster()
         .getAssignmentManager().getTableStateManager().isTableState(
-        TableName.valueOf("tableRestart"), ZooKeeperProtos.Table.State.DISABLED,
-        ZooKeeperProtos.Table.State.DISABLING));
+        TableName.valueOf("tableRestart"), TableState.State.DISABLED,
+        TableState.State.DISABLING));
     log("Enabling table\n");
     // Need a new Admin, the previous one is on the old master
     Admin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
@@ -111,7 +111,7 @@ public class TestMasterRestartAfterDisablingTable {
           6, regions.size());
     assertTrue("The table should be in enabled state", cluster.getMaster()
         .getAssignmentManager().getTableStateManager()
-        .isTableState(TableName.valueOf("tableRestart"), ZooKeeperProtos.Table.State.ENABLED));
+        .isTableState(TableName.valueOf("tableRestart"), TableState.State.ENABLED));
     ht.close();
     TEST_UTIL.shutdownMiniCluster();
   }

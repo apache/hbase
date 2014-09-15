@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -39,10 +40,8 @@ import org.apache.hadoop.hbase.master.DeadServer;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 
 /**
@@ -231,23 +230,23 @@ public class ServerShutdownHandler extends EventHandler {
                   continue;
                 }
                 LOG.info("Reassigning region with rs = " + rit);
-                regionStates.updateRegionState(hri, State.OFFLINE);
+                regionStates.updateRegionState(hri, RegionState.State.OFFLINE);
               } else if (regionStates.isRegionInState(
-                  hri, State.SPLITTING_NEW, State.MERGING_NEW)) {
-                regionStates.updateRegionState(hri, State.OFFLINE);
+                  hri, RegionState.State.SPLITTING_NEW, RegionState.State.MERGING_NEW)) {
+                regionStates.updateRegionState(hri, RegionState.State.OFFLINE);
               }
               toAssignRegions.add(hri);
             } else if (rit != null) {
               if ((rit.isClosing() || rit.isFailedClose() || rit.isOffline())
                   && am.getTableStateManager().isTableState(hri.getTable(),
-                  ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING) ||
+                  TableState.State.DISABLED, TableState.State.DISABLING) ||
                   am.getReplicasToClose().contains(hri)) {
                 // If the table was partially disabled and the RS went down, we should clear the RIT
                 // and remove the node for the region.
                 // The rit that we use may be stale in case the table was in DISABLING state
                 // but though we did assign we will not be clearing the znode in CLOSING state.
                 // Doing this will have no harm. See HBASE-5927
-                regionStates.updateRegionState(hri, State.OFFLINE);
+                regionStates.updateRegionState(hri, RegionState.State.OFFLINE);
                 am.offlineDisabledRegion(hri);
               } else {
                 LOG.warn("THIS SHOULD NOT HAPPEN: unexpected region in transition "
@@ -323,7 +322,7 @@ public class ServerShutdownHandler extends EventHandler {
     }
     // If table is not disabled but the region is offlined,
     boolean disabled = assignmentManager.getTableStateManager().isTableState(hri.getTable(),
-      ZooKeeperProtos.Table.State.DISABLED);
+      TableState.State.DISABLED);
     if (disabled){
       LOG.info("The table " + hri.getTable()
           + " was disabled.  Hence not proceeding.");
@@ -336,7 +335,7 @@ public class ServerShutdownHandler extends EventHandler {
       return false;
     }
     boolean disabling = assignmentManager.getTableStateManager().isTableState(hri.getTable(),
-      ZooKeeperProtos.Table.State.DISABLING);
+      TableState.State.DISABLING);
     if (disabling) {
       LOG.info("The table " + hri.getTable()
           + " is disabled.  Hence not assigning region" + hri.getEncodedName());

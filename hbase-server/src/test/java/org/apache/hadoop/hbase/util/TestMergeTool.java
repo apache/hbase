@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -146,7 +147,8 @@ public class TestMergeTool extends HBaseTestCase {
     try {
       // Create meta region
       createMetaRegion();
-      new FSTableDescriptors(this.fs, this.testDir).createTableDescriptor(this.desc);
+      new FSTableDescriptors(this.fs, this.testDir).createTableDescriptor(
+          new TableDescriptor(this.desc));
       /*
        * Create the regions we will merge
        */

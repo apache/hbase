@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -47,7 +46,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -60,9 +58,9 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -76,8 +74,6 @@ import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
@@ -207,14 +203,14 @@ public class AssignmentManager {
    * @param service Executor service
    * @param metricsMaster metrics manager
    * @param tableLockManager TableLock manager
-   * @throws CoordinatedStateException
    * @throws IOException
    */
   public AssignmentManager(Server server, ServerManager serverManager,
       final LoadBalancer balancer,
       final ExecutorService service, MetricsMaster metricsMaster,
-      final TableLockManager tableLockManager)
-          throws IOException, CoordinatedStateException {
+      final TableLockManager tableLockManager,
+      final TableStateManager tableStateManager)
+          throws IOException {
     this.server = server;
     this.serverManager = serverManager;
     this.executorService = service;
@@ -226,15 +222,9 @@ public class AssignmentManager {
     this.shouldAssignRegionsWithFavoredNodes = conf.getClass(
            HConstants.HBASE_MASTER_LOADBALANCER_CLASS, Object.class).equals(
            FavoredNodeLoadBalancer.class);
-    try {
-      if (server.getCoordinatedStateManager() != null) {
-        this.tableStateManager = server.getCoordinatedStateManager().getTableStateManager();
-      } else {
-        this.tableStateManager = null;
-      }
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException();
-    }
+
+    this.tableStateManager = tableStateManager;
+
     // This is the max attempts, not retries, so it should be at least 1.
     this.maximumAttempts = Math.max(1,
       this.server.getConfiguration().getInt("hbase.assignment.maximum.attempts", 10));
@@ -392,10 +382,9 @@ public class AssignmentManager {
    * @throws IOException
    * @throws KeeperException
    * @throws InterruptedException
-   * @throws CoordinatedStateException
    */
   void joinCluster() throws IOException,
-      KeeperException, InterruptedException, CoordinatedStateException {
+          KeeperException, InterruptedException {
     long startTime = System.currentTimeMillis();
     // Concurrency note: In the below the accesses on regionsInTransition are
     // outside of a synchronization block where usually all accesses to RIT are
@@ -430,10 +419,9 @@ public class AssignmentManager {
    *          Map of dead servers and their regions. Can be null.
    * @throws IOException
    * @throws InterruptedException
-   * @throws CoordinatedStateException
    */
   boolean processDeadServersAndRegionsInTransition(final Set<ServerName> deadServers)
-      throws IOException, InterruptedException, CoordinatedStateException {
+          throws IOException, InterruptedException {
     boolean failover = !serverManager.getDeadServers().isEmpty();
     if (failover) {
       // This may not be a failover actually, especially if meta is on this master.
@@ -502,8 +490,8 @@ public class AssignmentManager {
 
     if (!failover) {
       disabledOrDisablingOrEnabling = tableStateManager.getTablesInStates(
-        ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING,
-        ZooKeeperProtos.Table.State.ENABLING);
+        TableState.State.DISABLED, TableState.State.DISABLING,
+        TableState.State.ENABLING);
 
       // Clean re/start, mark all user regions closed before reassignment
       allRegions = regionStates.closeAllUserRegions(
@@ -1011,7 +999,7 @@ public class AssignmentManager {
         // will not be in ENABLING or ENABLED state.
         TableName tableName = region.getTable();
         if (!tableStateManager.isTableState(tableName,
-          ZooKeeperProtos.Table.State.ENABLED, ZooKeeperProtos.Table.State.ENABLING)) {
+          TableState.State.ENABLED, TableState.State.ENABLING)) {
           LOG.debug("Setting table " + tableName + " to ENABLED state.");
           setEnabledTable(tableName);
         }
@@ -1147,8 +1135,8 @@ public class AssignmentManager {
 
   private boolean isDisabledorDisablingRegionInRIT(final HRegionInfo region) {
     if (this.tableStateManager.isTableState(region.getTable(),
-        ZooKeeperProtos.Table.State.DISABLED,
-        ZooKeeperProtos.Table.State.DISABLING) || replicasToClose.contains(region)) {
+            TableState.State.DISABLED,
+            TableState.State.DISABLING) || replicasToClose.contains(region)) {
       LOG.info("Table " + region.getTable() + " is disabled or disabling;"
         + " skipping assign of " + region.getRegionNameAsString());
       offlineDisabledRegion(region);
@@ -1480,7 +1468,7 @@ public class AssignmentManager {
     for (HRegionInfo hri : regionsFromMetaScan) {
       TableName tableName = hri.getTable();
       if (!tableStateManager.isTableState(tableName,
-          ZooKeeperProtos.Table.State.ENABLED)) {
+              TableState.State.ENABLED)) {
         setEnabledTable(tableName);
       }
     }
@@ -1525,14 +1513,14 @@ public class AssignmentManager {
    * @throws IOException
    */
   Set<ServerName> rebuildUserRegions() throws
-      IOException, KeeperException, CoordinatedStateException {
+          IOException, KeeperException {
     Set<TableName> disabledOrEnablingTables = tableStateManager.getTablesInStates(
-      ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.ENABLING);
+            TableState.State.DISABLED, TableState.State.ENABLING);
 
     Set<TableName> disabledOrDisablingOrEnabling = tableStateManager.getTablesInStates(
-      ZooKeeperProtos.Table.State.DISABLED,
-      ZooKeeperProtos.Table.State.DISABLING,
-      ZooKeeperProtos.Table.State.ENABLING);
+            TableState.State.DISABLED,
+            TableState.State.DISABLING,
+            TableState.State.ENABLING);
 
     // Region assignment from META
     List<Result> results = MetaTableAccessor.fullScanOfMeta(server.getShortCircuitConnection());
@@ -1597,7 +1585,7 @@ public class AssignmentManager {
         // this will be used in rolling restarts
         if (!disabledOrDisablingOrEnabling.contains(tableName)
           && !getTableStateManager().isTableState(tableName,
-            ZooKeeperProtos.Table.State.ENABLED)) {
+                TableState.State.ENABLED)) {
           setEnabledTable(tableName);
         }
       }
@@ -1614,9 +1602,9 @@ public class AssignmentManager {
    * @throws IOException
    */
   private void recoverTableInDisablingState()
-      throws KeeperException, IOException, CoordinatedStateException {
+          throws KeeperException, IOException {
     Set<TableName> disablingTables =
-      tableStateManager.getTablesInStates(ZooKeeperProtos.Table.State.DISABLING);
+            tableStateManager.getTablesInStates(TableState.State.DISABLING);
     if (disablingTables.size() != 0) {
       for (TableName tableName : disablingTables) {
         // Recover by calling DisableTableHandler
@@ -1638,9 +1626,9 @@ public class AssignmentManager {
    * @throws IOException
    */
   private void recoverTableInEnablingState()
-      throws KeeperException, IOException, CoordinatedStateException {
+          throws KeeperException, IOException {
     Set<TableName> enablingTables = tableStateManager.
-      getTablesInStates(ZooKeeperProtos.Table.State.ENABLING);
+            getTablesInStates(TableState.State.ENABLING);
     if (enablingTables.size() != 0) {
       for (TableName tableName : enablingTables) {
         // Recover by calling EnableTableHandler
@@ -1675,7 +1663,7 @@ public class AssignmentManager {
       if (!serverManager.isServerOnline(regionState.getServerName())) {
         continue; // SSH will handle it
       }
-      State state = regionState.getState();
+      RegionState.State state = regionState.getState();
       LOG.info("Processing " + regionState);
       switch (state) {
       case CLOSED:
@@ -1809,7 +1797,7 @@ public class AssignmentManager {
                   } catch (InterruptedException ie) {
                     LOG.warn("Failed to unassign "
                       + hri.getRegionNameAsString() + " since interrupted", ie);
-                    regionStates.updateRegionState(hri, State.FAILED_CLOSE);
+                    regionStates.updateRegionState(hri, RegionState.State.FAILED_CLOSE);
                     Thread.currentThread().interrupt();
                     return;
                   }
@@ -1987,7 +1975,7 @@ public class AssignmentManager {
           it.remove();
         } else {
           if (tableStateManager.isTableState(hri.getTable(),
-              ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+                  TableState.State.DISABLED, TableState.State.DISABLING)) {
             regionStates.regionOffline(hri);
             it.remove();
             continue;
@@ -2009,7 +1997,7 @@ public class AssignmentManager {
     HRegionInfo hri = plan.getRegionInfo();
     TableName tableName = hri.getTable();
     if (tableStateManager.isTableState(tableName,
-      ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
+            TableState.State.DISABLED, TableState.State.DISABLING)) {
       LOG.info("Ignored moving region of disabling/disabled table "
         + tableName);
       return;
@@ -2043,8 +2031,8 @@ public class AssignmentManager {
   protected void setEnabledTable(TableName tableName) {
     try {
       this.tableStateManager.setTableState(tableName,
-        ZooKeeperProtos.Table.State.ENABLED);
-    } catch (CoordinatedStateException e) {
+              TableState.State.ENABLED);
+    } catch (IOException e) {
       // here we can abort as it is the start up flow
       String errorMsg = "Unable to ensure that the table " + tableName
           + " will be" + " enabled because of a ZooKeeper issue";
@@ -2087,8 +2075,9 @@ public class AssignmentManager {
       if (regionState != null) {
         // When there are more than one region server a new RS is selected as the
         // destination and the same is updated in the region plan. (HBASE-5546)
-        if (getTableStateManager().isTableState(hri.getTable(), Table.State.DISABLED,
-            Table.State.DISABLING) || replicasToClose.contains(hri)) {
+        if (getTableStateManager().isTableState(hri.getTable(),
+                TableState.State.DISABLED, TableState.State.DISABLING) ||
+                replicasToClose.contains(hri)) {
           offlineDisabledRegion(hri);
           return null;
         }
@@ -2131,7 +2120,7 @@ public class AssignmentManager {
     // reset the count, if any
     failedOpenTracker.remove(hri.getEncodedName());
     if (getTableStateManager().isTableState(hri.getTable(),
-        Table.State.DISABLED, Table.State.DISABLING)) {
+            TableState.State.DISABLED, TableState.State.DISABLING)) {
       invokeUnAssign(hri);
     }
     return null;
@@ -2149,8 +2138,8 @@ public class AssignmentManager {
     if (current == null || !current.isOnServer(serverName) || !current.isClosing()) {
       return hri.getShortNameToLog() + " is not closing on " + serverName;
     }
-    if (getTableStateManager().isTableState(hri.getTable(), Table.State.DISABLED,
-        Table.State.DISABLING) || replicasToClose.contains(hri)) {
+    if (getTableStateManager().isTableState(hri.getTable(), TableState.State.DISABLED,
+        TableState.State.DISABLING) || replicasToClose.contains(hri)) {
       offlineDisabledRegion(hri);
       return null;
     }
@@ -2263,7 +2252,7 @@ public class AssignmentManager {
 
     // User could disable the table before master knows the new region.
     if (getTableStateManager().isTableState(hri.getTable(),
-        Table.State.DISABLED, Table.State.DISABLING)) {
+        TableState.State.DISABLED, TableState.State.DISABLING)) {
       invokeUnAssign(a);
       invokeUnAssign(b);
     } else {
@@ -2308,7 +2297,7 @@ public class AssignmentManager {
     regionOffline(a);
     regionOffline(b);
     if (getTableStateManager().isTableState(hri.getTable(),
-        Table.State.DISABLED, Table.State.DISABLING)) {
+        TableState.State.DISABLED, TableState.State.DISABLING)) {
       invokeUnAssign(hri);
     }
     return null;
@@ -2419,7 +2408,7 @@ public class AssignmentManager {
 
     // User could disable the table before master knows the new region.
     if (getTableStateManager().isTableState(hri.getTable(),
-        Table.State.DISABLED, Table.State.DISABLING)) {
+        TableState.State.DISABLED, TableState.State.DISABLING)) {
       invokeUnAssign(hri);
     } else {
       Callable<Object> mergeReplicasCallable = new Callable<Object>() {
@@ -2464,7 +2453,7 @@ public class AssignmentManager {
     regionOffline(hri);
 
     if (getTableStateManager().isTableState(hri.getTable(),
-        Table.State.DISABLED, Table.State.DISABLING)) {
+        TableState.State.DISABLED, TableState.State.DISABLING)) {
       invokeUnAssign(a);
       invokeUnAssign(b);
     }

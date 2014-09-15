@@ -29,6 +29,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -40,15 +42,11 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
 
 /**
  * Region state accountant. It holds the states of all regions in the memory.
@@ -509,7 +507,7 @@ public class RegionStates {
       if (oldServerName != null && serverHoldings.containsKey(oldServerName)
           && (newState == State.MERGED || newState == State.SPLIT
             || hri.isMetaRegion() || tableStateManager.isTableState(hri.getTable(),
-              ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING))) {
+              TableState.State.DISABLED, TableState.State.DISABLING))) {
         // Offline the region only if it's merged/split, or the table is disabled/disabling.
         // Otherwise, offline it from this server only when it is online on a different server.
         LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
@@ -937,8 +935,8 @@ public class RegionStates {
    * Update a region state. It will be put in transition if not already there.
    */
   private RegionState updateRegionState(final HRegionInfo hri,
-      final State state, final ServerName serverName, long openSeqNum) {
-    if (state == State.FAILED_CLOSE || state == State.FAILED_OPEN) {
+      final RegionState.State state, final ServerName serverName, long openSeqNum) {
+    if (state == RegionState.State.FAILED_CLOSE || state == RegionState.State.FAILED_OPEN) {
       LOG.warn("Failed to open/close " + hri.getShortNameToLog()
         + " on " + serverName + ", set to " + state);
     }

@@ -53,15 +53,14 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
-import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -127,7 +126,8 @@ public class TestAssignmentManagerOnCluster {
       }
       RegionState metaState =
         MetaTableLocator.getMetaRegionState(master.getZooKeeper());
-      assertEquals("Meta should be not in transition", metaState.getState(), State.OPEN);
+      assertEquals("Meta should be not in transition",
+          metaState.getState(), RegionState.State.OPEN);
       assertNotEquals("Meta should be moved off master",
         metaState.getServerName(), master.getServerName());
       assertEquals("Meta should be on the meta server",
@@ -153,7 +153,8 @@ public class TestAssignmentManagerOnCluster {
         regionStates.isRegionOnline(HRegionInfo.FIRST_META_REGIONINFO));
       // Now, make sure meta is registered in zk
       metaState = MetaTableLocator.getMetaRegionState(master.getZooKeeper());
-      assertEquals("Meta should be not in transition", metaState.getState(), State.OPEN);
+      assertEquals("Meta should be not in transition",
+          metaState.getState(), RegionState.State.OPEN);
       assertEquals("Meta should be assigned", metaState.getServerName(),
         regionStates.getRegionServerOfRegion(HRegionInfo.FIRST_META_REGIONINFO));
       assertNotEquals("Meta should be assigned on a different server",
@@ -209,7 +210,8 @@ public class TestAssignmentManagerOnCluster {
     String table = "testAssignRegionOnRestartedServer";
     TEST_UTIL.getMiniHBaseCluster().getConf().setInt("hbase.assignment.maximum.attempts", 20);
     TEST_UTIL.getMiniHBaseCluster().stopMaster(0);
-    TEST_UTIL.getMiniHBaseCluster().startMaster(); //restart the master so that conf take into affect
+    //restart the master so that conf take into affect
+    TEST_UTIL.getMiniHBaseCluster().startMaster();
 
     ServerName deadServer = null;
     HMaster master = null;
@@ -619,9 +621,9 @@ public class TestAssignmentManagerOnCluster {
         }
       }
       am.regionOffline(hri);
-      am.getRegionStates().updateRegionState(hri, State.PENDING_OPEN, destServerName);
+      am.getRegionStates().updateRegionState(hri, RegionState.State.PENDING_OPEN, destServerName);
 
-      am.getTableStateManager().setTableState(table, ZooKeeperProtos.Table.State.DISABLING);
+      am.getTableStateManager().setTableState(table, TableState.State.DISABLING);
       List<HRegionInfo> toAssignRegions = am.processServerShutdown(destServerName);
       assertTrue("Regions to be assigned should be empty.", toAssignRegions.isEmpty());
       assertTrue("Regions to be assigned should be empty.", am.getRegionStates()
@@ -630,7 +632,7 @@ public class TestAssignmentManagerOnCluster {
       if (hri != null && serverName != null) {
         am.regionOnline(hri, serverName);
       }
-      am.getTableStateManager().setTableState(table, ZooKeeperProtos.Table.State.DISABLED);
+      am.getTableStateManager().setTableState(table, TableState.State.DISABLED);
       TEST_UTIL.deleteTable(table);
     }
   }

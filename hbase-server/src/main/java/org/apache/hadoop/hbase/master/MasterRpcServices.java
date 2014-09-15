@@ -37,8 +37,10 @@ import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
@@ -848,7 +850,7 @@ public class MasterRpcServices extends RSRpcServices
   public GetTableNamesResponse getTableNames(RpcController controller,
       GetTableNamesRequest req) throws ServiceException {
     try {
-      master.checkInitialized();
+      master.checkServiceStarted();
       Collection<HTableDescriptor> descriptors = master.getTableDescriptors().getAll().values();
       GetTableNamesResponse.Builder builder = GetTableNamesResponse.newBuilder();
       for (HTableDescriptor descriptor: descriptors) {
@@ -857,6 +859,25 @@ public class MasterRpcServices extends RSRpcServices
         }
         builder.addTableNames(ProtobufUtil.toProtoTableName(descriptor.getTableName()));
       }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public MasterProtos.GetTableStateResponse getTableState(RpcController controller,
+      MasterProtos.GetTableStateRequest request) throws ServiceException {
+    try {
+      master.checkServiceStarted();
+      TableName tableName = ProtobufUtil.toTableName(request.getTableName());
+      TableState.State state = master.getTableStateManager()
+              .getTableState(tableName);
+      if (state == null)
+        throw new TableNotFoundException(tableName);
+      MasterProtos.GetTableStateResponse.Builder builder =
+              MasterProtos.GetTableStateResponse.newBuilder();
+      builder.setTableState(new TableState(tableName, state).convert());
       return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
