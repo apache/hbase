@@ -37,6 +37,14 @@ public interface TableDescriptors {
   throws IOException;
 
   /**
+   * @param tableName
+   * @return TableDescriptor for tablename
+   * @throws IOException
+   */
+  TableDescriptor getDescriptor(final TableName tableName)
+      throws IOException;
+
+  /**
    * Get Map of all NamespaceDescriptors for a given namespace.
    * @return Map of all descriptors.
    * @throws IOException
@@ -54,12 +62,29 @@ public interface TableDescriptors {
   throws IOException;
 
   /**
+   * Get Map of all TableDescriptors. Populates the descriptor cache as a
+   * side effect.
+   * @return Map of all descriptors.
+   * @throws IOException
+   */
+  Map<String, TableDescriptor> getAllDescriptors()
+      throws IOException;
+
+  /**
    * Add or update descriptor
    * @param htd Descriptor to set into TableDescriptors
    * @throws IOException
    */
   void add(final HTableDescriptor htd)
   throws IOException;
+
+  /**
+   * Add or update descriptor
+   * @param htd Descriptor to set into TableDescriptors
+   * @throws IOException
+   */
+  void add(final TableDescriptor htd)
+      throws IOException;
 
   /**
    * @param tablename

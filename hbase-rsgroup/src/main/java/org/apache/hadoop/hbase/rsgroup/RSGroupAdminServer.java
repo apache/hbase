@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.LoadBalancer;
@@ -54,7 +55,6 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 
 /**
  * Service to support Region Server Grouping (HBase-6721)
@@ -269,8 +269,8 @@ public class RSGroupAdminServer implements RSGroupAdmin {
     }
     for(TableName table: tables) {
       if (master.getAssignmentManager().getTableStateManager().isTableState(table,
-          ZooKeeperProtos.Table.State.DISABLED,
-          ZooKeeperProtos.Table.State.DISABLING)) {
+          TableState.State.DISABLED,
+          TableState.State.DISABLING)) {
         LOG.debug("Skipping move regions because the table" + table + " is disabled.");
         continue;
       }

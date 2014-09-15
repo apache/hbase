@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -49,11 +50,8 @@ import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.zookeeper.ZKTableStateClientSideReader;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -255,7 +253,7 @@ public class TestAdmin1 {
     this.admin.disableTable(ht.getName());
     assertTrue("Table must be disabled.", TEST_UTIL.getHBaseCluster()
         .getMaster().getAssignmentManager().getTableStateManager().isTableState(
-        ht.getName(), ZooKeeperProtos.Table.State.DISABLED));
+        ht.getName(), TableState.State.DISABLED));
 
     // Test that table is disabled
     get = new Get(row);
@@ -282,7 +280,7 @@ public class TestAdmin1 {
     this.admin.enableTable(table);
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster()
         .getMaster().getAssignmentManager().getTableStateManager().isTableState(
-        ht.getName(), ZooKeeperProtos.Table.State.ENABLED));
+        ht.getName(), TableState.State.ENABLED));
 
     // Test that table is enabled
     try {
@@ -354,7 +352,7 @@ public class TestAdmin1 {
     assertEquals(numTables + 1, tables.length);
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster()
         .getMaster().getAssignmentManager().getTableStateManager().isTableState(
-        TableName.valueOf("testCreateTable"), ZooKeeperProtos.Table.State.ENABLED));
+        TableName.valueOf("testCreateTable"), TableState.State.ENABLED));
   }
 
   @Test (timeout=300000)
@@ -1340,11 +1338,9 @@ public class TestAdmin1 {
 
   @Test (timeout=300000)
   public void testEnableDisableAddColumnDeleteColumn() throws Exception {
-	ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
     TableName tableName = TableName.valueOf("testEnableDisableAddColumnDeleteColumn");
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
-    while (!ZKTableStateClientSideReader.isEnabledTable(zkw,
-      TableName.valueOf("testEnableDisableAddColumnDeleteColumn"))) {
+    while (!this.admin.isTableEnabled(tableName)) {
       Thread.sleep(10);
     }
     this.admin.disableTable(tableName);
@@ -1485,18 +1481,6 @@ public class TestAdmin1 {
     } finally {
       this.admin.disableTable(tableName);
       this.admin.deleteTable(tableName);
-    }
-  }
-
-  @Test (timeout=30000)
-  public void testTableNotFoundException() throws Exception {
-    ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
-    TableName table = TableName.valueOf("tableNotExists");
-    try {
-      ZKTableStateClientSideReader.isDisabledTable(zkw, table);
-      fail("Shouldn't be here");
-    } catch (TableNotFoundException e) {
-      // This is expected.
     }
   }
 }

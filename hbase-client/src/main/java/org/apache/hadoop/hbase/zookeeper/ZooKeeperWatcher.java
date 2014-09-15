@@ -138,6 +138,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   // znode used for region transitioning and assignment
   public String assignmentZNode;
   // znode used for table disabling/enabling
+  @Deprecated
   public String tableZNode;
   // znode containing the unique cluster ID
   public String clusterIdZNode;

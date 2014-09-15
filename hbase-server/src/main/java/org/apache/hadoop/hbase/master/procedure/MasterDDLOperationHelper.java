@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionLocator;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.BulkReOpen;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -78,7 +78,7 @@ public final class MasterDDLOperationHelper {
 
     // We only execute this procedure with table online if online schema change config is set.
     if (!env.getMasterServices().getAssignmentManager().getTableStateManager()
-        .isTableState(tableName, ZooKeeperProtos.Table.State.DISABLED)
+        .isTableState(tableName, TableState.State.DISABLED)
         && !MasterDDLOperationHelper.isOnlineSchemaChangeAllowed(env)) {
       throw new TableNotDisabledException(tableName);
     }

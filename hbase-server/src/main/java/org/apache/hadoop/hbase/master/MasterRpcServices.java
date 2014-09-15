@@ -40,10 +40,12 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -952,13 +954,11 @@ public class MasterRpcServices extends RSRpcServices
   public GetTableNamesResponse getTableNames(RpcController controller,
       GetTableNamesRequest req) throws ServiceException {
     try {
-      master.checkInitialized();
-
+      master.checkServiceStarted();
       final String regex = req.hasRegex() ? req.getRegex() : null;
       final String namespace = req.hasNamespace() ? req.getNamespace() : null;
       List<TableName> tableNames = master.listTableNames(namespace, regex,
           req.getIncludeSysTables());
-
       GetTableNamesResponse.Builder builder = GetTableNamesResponse.newBuilder();
       if (tableNames != null && tableNames.size() > 0) {
         // Add the table names to the response
@@ -966,6 +966,26 @@ public class MasterRpcServices extends RSRpcServices
           builder.addTableNames(ProtobufUtil.toProtoTableName(table));
         }
       }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public MasterProtos.GetTableStateResponse getTableState(RpcController controller,
+      MasterProtos.GetTableStateRequest request) throws ServiceException {
+    try {
+      master.checkServiceStarted();
+      TableName tableName = ProtobufUtil.toTableName(request.getTableName());
+      TableState.State state = master.getTableStateManager()
+              .getTableState(tableName);
+      if (state == null) {
+        throw new TableNotFoundException(tableName);
+      }
+      MasterProtos.GetTableStateResponse.Builder builder =
+              MasterProtos.GetTableStateResponse.newBuilder();
+      builder.setTableState(new TableState(tableName, state).convert());
       return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);

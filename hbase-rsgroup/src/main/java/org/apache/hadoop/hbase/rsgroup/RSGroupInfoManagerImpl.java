@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -61,11 +60,13 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.ServerListener;
+import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.net.Address;
@@ -74,7 +75,6 @@ import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
 import org.apache.hadoop.hbase.regionserver.DisabledRegionSplitPolicy;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -646,7 +646,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
                     if (sn == null) {
                       found.set(false);
                     } else if (tsm.isTableState(RSGROUP_TABLE_NAME,
-                        ZooKeeperProtos.Table.State.ENABLED)) {
+                        TableState.State.ENABLED)) {
                       try {
                         ClientProtos.ClientService.BlockingInterface rs = conn.getClient(sn);
                         ClientProtos.GetRequest request =
@@ -670,7 +670,7 @@ public class RSGroupInfoManagerImpl implements RSGroupInfoManager, ServerListene
                     if (sn == null) {
                       nsFound.set(false);
                     } else if (tsm.isTableState(TableName.NAMESPACE_TABLE_NAME,
-                        ZooKeeperProtos.Table.State.ENABLED)) {
+                        TableState.State.ENABLED)) {
                       try {
                         ClientProtos.ClientService.BlockingInterface rs = conn.getClient(sn);
                         ClientProtos.GetRequest request =

@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -54,6 +55,7 @@ import java.util.Set;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 
 /**
@@ -98,70 +100,72 @@ public class TestDrainingServer {
     final HRegionInfo REGIONINFO = new HRegionInfo(TableName.valueOf("table_test"),
         HConstants.EMPTY_START_ROW, HConstants.EMPTY_START_ROW);
 
-    ZooKeeperWatcher zkWatcher = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
-      "zkWatcher-Test", abortable, true);
+    try (ZooKeeperWatcher zkWatcher = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+      "zkWatcher-Test", abortable, true)) {
 
-    Map<ServerName, ServerLoad> onlineServers = new HashMap<ServerName, ServerLoad>();
+      Map<ServerName, ServerLoad> onlineServers = new HashMap<ServerName, ServerLoad>();
 
-    onlineServers.put(SERVERNAME_A, ServerLoad.EMPTY_SERVERLOAD);
-    onlineServers.put(SERVERNAME_B, ServerLoad.EMPTY_SERVERLOAD);
+      onlineServers.put(SERVERNAME_A, ServerLoad.EMPTY_SERVERLOAD);
+      onlineServers.put(SERVERNAME_B, ServerLoad.EMPTY_SERVERLOAD);
 
-    Mockito.when(server.getConfiguration()).thenReturn(conf);
-    Mockito.when(server.getServerName()).thenReturn(ServerName.valueOf("masterMock,1,1"));
-    Mockito.when(server.getZooKeeper()).thenReturn(zkWatcher);
-    Mockito.when(server.getRegionServerVersion(Mockito.any(ServerName.class))).thenReturn("0.0.0");
+      Mockito.when(server.getConfiguration()).thenReturn(conf);
+      Mockito.when(server.getServerName()).thenReturn(ServerName.valueOf("masterMock,1,1"));
+      Mockito.when(server.getZooKeeper()).thenReturn(zkWatcher);
+      Mockito.when(server.getRegionServerVersion(Mockito.any(ServerName.class))).thenReturn("0.0.0");
 
-    CoordinatedStateManager cp = new ZkCoordinatedStateManager();
-    cp.initialize(server);
-    cp.start();
+      CoordinatedStateManager cp = new ZkCoordinatedStateManager();
+      cp.initialize(server);
+      cp.start();
 
-    Mockito.when(server.getCoordinatedStateManager()).thenReturn(cp);
+      Mockito.when(server.getCoordinatedStateManager()).thenReturn(cp);
 
-    Mockito.when(serverManager.getOnlineServers()).thenReturn(onlineServers);
-    Mockito.when(serverManager.getOnlineServersList())
-    .thenReturn(new ArrayList<ServerName>(onlineServers.keySet()));
+      Mockito.when(serverManager.getOnlineServers()).thenReturn(onlineServers);
+      Mockito.when(serverManager.getOnlineServersList())
+          .thenReturn(new ArrayList<ServerName>(onlineServers.keySet()));
 
-    Mockito.when(serverManager.createDestinationServersList())
-        .thenReturn(new ArrayList<ServerName>(onlineServers.keySet()));
-    Mockito.when(serverManager.createDestinationServersList(null))
-        .thenReturn(new ArrayList<ServerName>(onlineServers.keySet()));
-    Mockito.when(serverManager.createDestinationServersList(Mockito.anyList())).thenReturn(
-        new ArrayList<ServerName>(onlineServers.keySet()));
+      Mockito.when(serverManager.createDestinationServersList())
+          .thenReturn(new ArrayList<ServerName>(onlineServers.keySet()));
+      Mockito.when(serverManager.createDestinationServersList(null))
+          .thenReturn(new ArrayList<ServerName>(onlineServers.keySet()));
+      Mockito.when(serverManager.createDestinationServersList(Mockito.anyList())).thenReturn(
+          new ArrayList<ServerName>(onlineServers.keySet()));
 
-    for (ServerName sn : onlineServers.keySet()) {
-      Mockito.when(serverManager.isServerOnline(sn)).thenReturn(true);
-      Mockito.when(serverManager.sendRegionClose(sn, REGIONINFO, -1)).thenReturn(true);
-      Mockito.when(serverManager.sendRegionClose(sn, REGIONINFO, -1, null, false)).thenReturn(true);
-      Mockito.when(serverManager.sendRegionOpen(sn, REGIONINFO, -1, new ArrayList<ServerName>()))
-      .thenReturn(RegionOpeningState.OPENED);
-      Mockito.when(serverManager.sendRegionOpen(sn, REGIONINFO, -1, null))
-      .thenReturn(RegionOpeningState.OPENED);
-      Mockito.when(serverManager.addServerToDrainList(sn)).thenReturn(true);
+      for (ServerName sn : onlineServers.keySet()) {
+        Mockito.when(serverManager.isServerOnline(sn)).thenReturn(true);
+        Mockito.when(serverManager.sendRegionClose(sn, REGIONINFO, -1)).thenReturn(true);
+        Mockito.when(serverManager.sendRegionClose(sn, REGIONINFO, -1, null, false)).thenReturn(true);
+        Mockito.when(serverManager.sendRegionOpen(sn, REGIONINFO, -1, new ArrayList<ServerName>()))
+            .thenReturn(RegionOpeningState.OPENED);
+        Mockito.when(serverManager.sendRegionOpen(sn, REGIONINFO, -1, null))
+            .thenReturn(RegionOpeningState.OPENED);
+        Mockito.when(serverManager.addServerToDrainList(sn)).thenReturn(true);
+      }
+
+      Mockito.when(master.getServerManager()).thenReturn(serverManager);
+
+      TableStateManager tsm = mock(TableStateManager.class);
+      am = new AssignmentManager(server, serverManager,
+          balancer, startupMasterExecutor("mockExecutorService"), null, null, tsm);
+
+      Mockito.when(master.getAssignmentManager()).thenReturn(am);
+      Mockito.when(master.getZooKeeper()).thenReturn(zkWatcher);
+
+      am.addPlan(REGIONINFO.getEncodedName(), new RegionPlan(REGIONINFO, null, SERVERNAME_A));
+
+      zkWatcher.registerListenerFirst(am);
+
+      addServerToDrainedList(SERVERNAME_A, onlineServers, serverManager);
+
+      am.assign(REGIONINFO, true);
+
+      setRegionOpenedOnZK(zkWatcher, SERVERNAME_A, REGIONINFO);
+      setRegionOpenedOnZK(zkWatcher, SERVERNAME_B, REGIONINFO);
+
+      am.waitForAssignment(REGIONINFO);
+
+      assertTrue(am.getRegionStates().isRegionOnline(REGIONINFO));
+      assertNotEquals(am.getRegionStates().getRegionServerOfRegion(REGIONINFO), SERVERNAME_A);
     }
-
-    Mockito.when(master.getServerManager()).thenReturn(serverManager);
-
-    am = new AssignmentManager(server, serverManager,
-        balancer, startupMasterExecutor("mockExecutorService"), null, null);
-
-    Mockito.when(master.getAssignmentManager()).thenReturn(am);
-    Mockito.when(master.getZooKeeper()).thenReturn(zkWatcher);
-
-    am.addPlan(REGIONINFO.getEncodedName(), new RegionPlan(REGIONINFO, null, SERVERNAME_A));
-
-    zkWatcher.registerListenerFirst(am);
-
-    addServerToDrainedList(SERVERNAME_A, onlineServers, serverManager);
-
-    am.assign(REGIONINFO, true);
-
-    setRegionOpenedOnZK(zkWatcher, SERVERNAME_A, REGIONINFO);
-    setRegionOpenedOnZK(zkWatcher, SERVERNAME_B, REGIONINFO);
-
-    am.waitForAssignment(REGIONINFO);
-
-    assertTrue(am.getRegionStates().isRegionOnline(REGIONINFO));
-    assertNotEquals(am.getRegionStates().getRegionServerOfRegion(REGIONINFO), SERVERNAME_A);
   }
 
   @Test
@@ -207,80 +211,82 @@ public class TestDrainingServer {
     bulk.put(REGIONINFO_D, SERVERNAME_D);
     bulk.put(REGIONINFO_E, SERVERNAME_E);
 
-    ZooKeeperWatcher zkWatcher = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
-        "zkWatcher-BulkAssignTest", abortable, true);
+   try (ZooKeeperWatcher zkWatcher = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
+        "zkWatcher-BulkAssignTest", abortable, true)) {
 
-    Mockito.when(server.getConfiguration()).thenReturn(conf);
-    Mockito.when(server.getServerName()).thenReturn(ServerName.valueOf("masterMock,1,1"));
-    Mockito.when(server.getZooKeeper()).thenReturn(zkWatcher);
+     Mockito.when(server.getConfiguration()).thenReturn(conf);
+     Mockito.when(server.getServerName()).thenReturn(ServerName.valueOf("masterMock,1,1"));
+     Mockito.when(server.getZooKeeper()).thenReturn(zkWatcher);
 
-    CoordinatedStateManager cp = new ZkCoordinatedStateManager();
-    cp.initialize(server);
-    cp.start();
+     CoordinatedStateManager cp = new ZkCoordinatedStateManager();
+     cp.initialize(server);
+     cp.start();
 
-    Mockito.when(server.getCoordinatedStateManager()).thenReturn(cp);
+     Mockito.when(server.getCoordinatedStateManager()).thenReturn(cp);
 
-    Mockito.when(serverManager.getOnlineServers()).thenReturn(onlineServers);
-    Mockito.when(serverManager.getOnlineServersList()).thenReturn(
-      new ArrayList<ServerName>(onlineServers.keySet()));
+     Mockito.when(serverManager.getOnlineServers()).thenReturn(onlineServers);
+     Mockito.when(serverManager.getOnlineServersList()).thenReturn(
+         new ArrayList<ServerName>(onlineServers.keySet()));
 
-    Mockito.when(serverManager.createDestinationServersList()).thenReturn(
-      new ArrayList<ServerName>(onlineServers.keySet()));
-    Mockito.when(serverManager.createDestinationServersList(null)).thenReturn(
-      new ArrayList<ServerName>(onlineServers.keySet()));
-    Mockito.when(serverManager.createDestinationServersList(Mockito.anyList())).thenReturn(
-        new ArrayList<ServerName>(onlineServers.keySet()));
+     Mockito.when(serverManager.createDestinationServersList()).thenReturn(
+         new ArrayList<ServerName>(onlineServers.keySet()));
+     Mockito.when(serverManager.createDestinationServersList(null)).thenReturn(
+         new ArrayList<ServerName>(onlineServers.keySet()));
+     Mockito.when(serverManager.createDestinationServersList(Mockito.anyList())).thenReturn(
+         new ArrayList<ServerName>(onlineServers.keySet()));
 
-    for (Entry<HRegionInfo, ServerName> entry : bulk.entrySet()) {
-      Mockito.when(serverManager.isServerOnline(entry.getValue())).thenReturn(true);
-      Mockito.when(serverManager.sendRegionClose(entry.getValue(),
-        entry.getKey(), -1)).thenReturn(true);
-      Mockito.when(serverManager.sendRegionOpen(entry.getValue(),
-        entry.getKey(), -1, null)).thenReturn(RegionOpeningState.OPENED);
-      Mockito.when(serverManager.addServerToDrainList(entry.getValue())).thenReturn(true);
-    }
+     for (Entry<HRegionInfo, ServerName> entry : bulk.entrySet()) {
+       Mockito.when(serverManager.isServerOnline(entry.getValue())).thenReturn(true);
+       Mockito.when(serverManager.sendRegionClose(entry.getValue(),
+           entry.getKey(), -1)).thenReturn(true);
+       Mockito.when(serverManager.sendRegionOpen(entry.getValue(),
+           entry.getKey(), -1, null)).thenReturn(RegionOpeningState.OPENED);
+       Mockito.when(serverManager.addServerToDrainList(entry.getValue())).thenReturn(true);
+     }
 
-    Mockito.when(master.getServerManager()).thenReturn(serverManager);
+     Mockito.when(master.getServerManager()).thenReturn(serverManager);
 
-    drainedServers.add(SERVERNAME_A);
-    drainedServers.add(SERVERNAME_B);
-    drainedServers.add(SERVERNAME_C);
-    drainedServers.add(SERVERNAME_D);
+     drainedServers.add(SERVERNAME_A);
+     drainedServers.add(SERVERNAME_B);
+     drainedServers.add(SERVERNAME_C);
+     drainedServers.add(SERVERNAME_D);
 
-    am = new AssignmentManager(server, serverManager,
-      balancer, startupMasterExecutor("mockExecutorServiceBulk"), null, null);
+     TableStateManager tsm = mock(TableStateManager.class);
+     am = new AssignmentManager(server, serverManager, balancer,
+         startupMasterExecutor("mockExecutorServiceBulk"), null, null, tsm);
 
-    Mockito.when(master.getAssignmentManager()).thenReturn(am);
+     Mockito.when(master.getAssignmentManager()).thenReturn(am);
 
-    zkWatcher.registerListener(am);
+     zkWatcher.registerListener(am);
 
-    for (ServerName drained : drainedServers) {
-      addServerToDrainedList(drained, onlineServers, serverManager);
-    }
+     for (ServerName drained : drainedServers) {
+       addServerToDrainedList(drained, onlineServers, serverManager);
+     }
 
-    am.assign(bulk);
+     am.assign(bulk);
 
-    Set<RegionState> regionsInTransition = am.getRegionStates().getRegionsInTransition();
-    for (RegionState rs : regionsInTransition) {
-      setRegionOpenedOnZK(zkWatcher, rs.getServerName(), rs.getRegion());
-    }
+     Set<RegionState> regionsInTransition = am.getRegionStates().getRegionsInTransition();
+     for (RegionState rs : regionsInTransition) {
+       setRegionOpenedOnZK(zkWatcher, rs.getServerName(), rs.getRegion());
+     }
 
-    am.waitForAssignment(REGIONINFO_A);
-    am.waitForAssignment(REGIONINFO_B);
-    am.waitForAssignment(REGIONINFO_C);
-    am.waitForAssignment(REGIONINFO_D);
-    am.waitForAssignment(REGIONINFO_E);
+     am.waitForAssignment(REGIONINFO_A);
+     am.waitForAssignment(REGIONINFO_B);
+     am.waitForAssignment(REGIONINFO_C);
+     am.waitForAssignment(REGIONINFO_D);
+     am.waitForAssignment(REGIONINFO_E);
 
-    Map<HRegionInfo, ServerName> regionAssignments = am.getRegionStates().getRegionAssignments();
-    for (Entry<HRegionInfo, ServerName> entry : regionAssignments.entrySet()) {
-      LOG.info("Region Assignment: "
-          + entry.getKey().getRegionNameAsString() + " Server: " + entry.getValue());
-      bunchServersAssigned.add(entry.getValue());
-    }
+     Map<HRegionInfo, ServerName> regionAssignments = am.getRegionStates().getRegionAssignments();
+     for (Entry<HRegionInfo, ServerName> entry : regionAssignments.entrySet()) {
+       LOG.info("Region Assignment: "
+           + entry.getKey().getRegionNameAsString() + " Server: " + entry.getValue());
+       bunchServersAssigned.add(entry.getValue());
+     }
 
-    for (ServerName sn : drainedServers) {
-      assertFalse(bunchServersAssigned.contains(sn));
-    }
+     for (ServerName sn : drainedServers) {
+       assertFalse(bunchServersAssigned.contains(sn));
+     }
+   }
   }
 
   private void addServerToDrainedList(ServerName serverName,

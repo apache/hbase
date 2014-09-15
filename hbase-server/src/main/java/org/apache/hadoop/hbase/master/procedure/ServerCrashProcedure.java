@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
@@ -48,7 +49,6 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashState;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -526,7 +526,7 @@ implements ServerProcedureInterface {
           } else if (rit != null) {
             if ((rit.isPendingCloseOrClosing() || rit.isOffline())
                 && am.getTableStateManager().isTableState(hri.getTable(),
-                ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING) ||
+                TableState.State.DISABLED, TableState.State.DISABLING) ||
                 am.getReplicasToClose().contains(hri)) {
               // If the table was partially disabled and the RS went down, we should clear the
               // RIT and remove the node for the region.
@@ -713,7 +713,7 @@ implements ServerProcedureInterface {
     }
     // If table is not disabled but the region is offlined,
     boolean disabled = assignmentManager.getTableStateManager().isTableState(hri.getTable(),
-      ZooKeeperProtos.Table.State.DISABLED);
+      TableState.State.DISABLED);
     if (disabled){
       LOG.info("The table " + hri.getTable() + " was disabled.  Hence not proceeding.");
       return false;
@@ -725,7 +725,7 @@ implements ServerProcedureInterface {
       return false;
     }
     boolean disabling = assignmentManager.getTableStateManager().isTableState(hri.getTable(),
-      ZooKeeperProtos.Table.State.DISABLING);
+      TableState.State.DISABLING);
     if (disabling) {
       LOG.info("The table " + hri.getTable() + " is disabled.  Hence not assigning region" +
         hri.getEncodedName());
