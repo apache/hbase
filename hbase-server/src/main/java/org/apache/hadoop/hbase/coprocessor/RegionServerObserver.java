@@ -105,4 +105,20 @@ public interface RegionServerObserver extends Coprocessor {
   void postRollBackMerge(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
       final HRegion regionA, final HRegion regionB) throws IOException;
 
+  /**
+   * This will be called before executing user request to roll a region server WAL.
+   * @param ctx An instance of ObserverContext
+   * @throws IOException Signals that an I/O exception has occurred.
+   */
+  void preRollWALWriterRequest(final ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException;
+
+  /**
+   * This will be called after executing user request to roll a region server WAL.
+   * @param ctx An instance of ObserverContext
+   * @throws IOException Signals that an I/O exception has occurred.
+   */
+  void postRollWALWriterRequest(final ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException;
+
 }

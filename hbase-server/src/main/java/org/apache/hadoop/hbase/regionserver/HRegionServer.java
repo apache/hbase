@@ -4148,6 +4148,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     try {
       checkOpen();
       requestCount.increment();
+      if (this.rsHost != null) {
+        this.rsHost.preRollWALWriterRequest();
+      }
       HLog wal = this.getWAL();
       byte[][] regionsToFlush = wal.rollWriter(true);
       RollWALWriterResponse.Builder builder = RollWALWriterResponse.newBuilder();

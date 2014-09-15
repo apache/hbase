@@ -68,4 +68,12 @@ public class BaseRegionServerObserver implements RegionServerObserver {
   public void postRollBackMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
       HRegion regionA, HRegion regionB) throws IOException { }
 
+  @Override
+  public void preRollWALWriterRequest(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException { }
+
+  @Override
+  public void postRollWALWriterRequest(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException { }
+
 }
