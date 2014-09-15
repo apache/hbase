@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.protobuf;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.util.ByteStringer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -704,17 +703,21 @@ public final class RequestConverter {
  /**
   * Create a protocol buffer OpenRegionRequest to open a list of regions
   *
+  * @param server the serverName for the RPC
   * @param regionOpenInfos info of a list of regions to open
   * @param openForReplay
   * @return a protocol buffer OpenRegionRequest
   */
  public static OpenRegionRequest
-     buildOpenRegionRequest(final List<Pair<HRegionInfo,
+     buildOpenRegionRequest(ServerName server, final List<Pair<HRegionInfo,
          List<ServerName>>> regionOpenInfos, Boolean openForReplay) {
    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
    for (Pair<HRegionInfo, List<ServerName>> regionOpenInfo: regionOpenInfos) {
      builder.addOpenInfo(buildRegionOpenInfo(regionOpenInfo.getFirst(),
        regionOpenInfo.getSecond(), openForReplay));
+   }
+   if (server != null) {
+     builder.setServerStartCode(server.getStartcode());
    }
    return builder.build();
  }
