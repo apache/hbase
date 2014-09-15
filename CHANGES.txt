@@ -1,5 +1,14 @@
 HBase Change Log
 
+Release 0.98.6.1 - 9/16/2014
+
+** Sub-task
+    * [HBASE-11963] - Synchronize peer cluster replication connection attempts
+
+** Bug
+    * [HBASE-11972] - The "doAs user" used in the update to hbase:acl table RPC is incorrect
+
+
 Release 0.98.6 - 9/10/2014
 
 ** Sub-task
