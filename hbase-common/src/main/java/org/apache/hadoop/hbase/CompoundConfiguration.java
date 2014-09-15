@@ -31,7 +31,7 @@ import java.util.Map;
 import org.apache.commons.collections.iterators.UnmodifiableIterator;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -149,27 +149,27 @@ public class CompoundConfiguration extends Configuration {
   }
 
   /**
-   * Add ImmutableBytesWritable map to config list. This map is generally
+   * Add Bytes map to config list. This map is generally
    * created by HTableDescriptor or HColumnDescriptor, but can be abstractly
    * used. The added configuration overrides the previous ones if there are
    * name collisions.
    *
    * @param map
-   *          ImmutableBytesWritable map
+   *          Bytes map
    * @return this, for builder pattern
    */
-  public CompoundConfiguration addWritableMap(
-      final Map<ImmutableBytesWritable, ImmutableBytesWritable> map) {
+  public CompoundConfiguration addBytesMap(
+      final Map<Bytes, Bytes> map) {
     freezeMutableConf();
 
     // put new map at the front of the list (top priority)
     this.configs.add(0, new ImmutableConfigMap() {
-      Map<ImmutableBytesWritable, ImmutableBytesWritable> m = map;
+      Map<Bytes, Bytes> m = map;
 
       @Override
       public Iterator<Map.Entry<String,String>> iterator() {
         Map<String, String> ret = new HashMap<String, String>();
-        for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> entry : map.entrySet()) {
+        for (Map.Entry<Bytes, Bytes> entry : map.entrySet()) {
           String key = Bytes.toString(entry.getKey().get());
           String val = entry.getValue() == null ? null : Bytes.toString(entry.getValue().get());
           ret.put(key, val);
@@ -179,11 +179,11 @@ public class CompoundConfiguration extends Configuration {
       
       @Override
       public String get(String key) {
-        ImmutableBytesWritable ibw = new ImmutableBytesWritable(Bytes
+        Bytes ibw = new Bytes(Bytes
             .toBytes(key));
         if (!m.containsKey(ibw))
           return null;
-        ImmutableBytesWritable value = m.get(ibw);
+        Bytes value = m.get(ibw);
         if (value == null || value.get() == null)
           return null;
         return Bytes.toString(value.get());

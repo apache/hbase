@@ -586,7 +586,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.conf = new CompoundConfiguration()
       .add(confParam)
       .addStringMap(htd.getConfiguration())
-      .addWritableMap(htd.getValues());
+      .addBytesMap(htd.getValues());
     this.flushCheckInterval = conf.getInt(MEMSTORE_PERIODIC_FLUSH_INTERVAL,
         DEFAULT_CACHE_FLUSH_INTERVAL);
     this.flushPerChanges = conf.getLong(MEMSTORE_FLUSH_PER_CHANGES, DEFAULT_FLUSH_PER_CHANGES);

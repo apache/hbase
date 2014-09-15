@@ -80,30 +80,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class HRegionInfo implements Comparable<HRegionInfo> {
-  /*
-   * There are two versions associated with HRegionInfo: HRegionInfo.VERSION and
-   * HConstants.META_VERSION. HRegionInfo.VERSION indicates the data structure's versioning
-   * while HConstants.META_VERSION indicates the versioning of the serialized HRIs stored in
-   * the hbase:meta table.
-   *
-   * Pre-0.92:
-   *   HRI.VERSION == 0 and HConstants.META_VERSION does not exist (is not stored at hbase:meta table)
-   *   HRegionInfo had an HTableDescriptor reference inside it.
-   *   HRegionInfo is serialized as Writable to hbase:meta table.
-   * For 0.92.x and 0.94.x:
-   *   HRI.VERSION == 1 and HConstants.META_VERSION == 0
-   *   HRI no longer has HTableDescriptor in it.
-   *   HRI is serialized as Writable to hbase:meta table.
-   * For 0.96.x:
-   *   HRI.VERSION == 1 and HConstants.META_VERSION == 1
-   *   HRI data structure is the same as 0.92 and 0.94
-   *   HRI is serialized as PB to hbase:meta table.
-   *
-   * Versioning of HRegionInfo is deprecated. HRegionInfo does protobuf
-   * serialization using RegionInfo class, which has it's own versioning.
-   */
-  @Deprecated
-  public static final byte VERSION = 1;
+
   private static final Log LOG = LogFactory.getLog(HRegionInfo.class);
 
   /**
@@ -829,86 +806,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     return this.hashCode;
   }
 
-  /** @return the object version number
-   * @deprecated HRI is no longer a VersionedWritable */
-  @Deprecated
-  public byte getVersion() {
-    return VERSION;
-  }
-
-  /**
-   * @deprecated Use protobuf serialization instead.  See {@link #toByteArray()} and
-   * {@link #toDelimitedByteArray()}
-   */
-  @Deprecated
-  public void write(DataOutput out) throws IOException {
-    out.writeByte(getVersion());
-    Bytes.writeByteArray(out, endKey);
-    out.writeBoolean(offLine);
-    out.writeLong(regionId);
-    Bytes.writeByteArray(out, regionName);
-    out.writeBoolean(split);
-    Bytes.writeByteArray(out, startKey);
-    Bytes.writeByteArray(out, tableName.getName());
-    out.writeInt(hashCode);
-  }
-
-  /**
-   * @deprecated Use protobuf deserialization instead.
-   * @see #parseFrom(byte[])
-   */
-  @Deprecated
-  public void readFields(DataInput in) throws IOException {
-    // Read the single version byte.  We don't ask the super class do it
-    // because freaks out if its not the current classes' version.  This method
-    // can deserialize version 0 and version 1 of HRI.
-    byte version = in.readByte();
-    if (version == 0) {
-      // This is the old HRI that carried an HTD.  Migrate it.  The below
-      // was copied from the old 0.90 HRI readFields.
-      this.endKey = Bytes.readByteArray(in);
-      this.offLine = in.readBoolean();
-      this.regionId = in.readLong();
-      this.regionName = Bytes.readByteArray(in);
-      this.split = in.readBoolean();
-      this.startKey = Bytes.readByteArray(in);
-      try {
-        HTableDescriptor htd = new HTableDescriptor();
-        htd.readFields(in);
-        this.tableName = htd.getTableName();
-      } catch(EOFException eofe) {
-         throw new IOException("HTD not found in input buffer", eofe);
-      }
-      this.hashCode = in.readInt();
-    } else if (getVersion() == version) {
-      this.endKey = Bytes.readByteArray(in);
-      this.offLine = in.readBoolean();
-      this.regionId = in.readLong();
-      this.regionName = Bytes.readByteArray(in);
-      this.split = in.readBoolean();
-      this.startKey = Bytes.readByteArray(in);
-      this.tableName = TableName.valueOf(Bytes.readByteArray(in));
-      this.hashCode = in.readInt();
-    } else {
-      throw new IOException("Non-migratable/unknown version=" + getVersion());
-    }
-  }
-
-  @Deprecated
-  private void readFields(byte[] bytes, int offset, int len) throws IOException {
-    if (bytes == null || len <= 0) {
-      throw new IllegalArgumentException("Can't build a writable with empty " +
-          "bytes array");
-    }
-    DataInputBuffer in = new DataInputBuffer();
-    try {
-      in.reset(bytes, offset, len);
-      this.readFields(in);
-    } finally {
-      in.close();
-    }
-  }
-
   //
   // Comparable
   //
@@ -1106,13 +1003,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
         throw new DeserializationException(e);
       }
     } else {
-      try {
-        HRegionInfo hri = new HRegionInfo();
-        hri.readFields(bytes, offset, len);
-        return hri;
-      } catch (IOException e) {
-        throw new DeserializationException(e);
-      }
+      throw new DeserializationException("PB encoded HRegionInfo expected");
     }
   }
 
@@ -1354,25 +1245,12 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     if (in.markSupported()) { //read it with mark()
       in.mark(pblen);
     }
-    int read = in.read(pbuf); //assumption: if Writable serialization, it should be longer than pblen.
+    int read = in.read(pbuf); //assumption: it should be longer than pblen.
     if (read != pblen) throw new IOException("read=" + read + ", wanted=" + pblen);
     if (ProtobufUtil.isPBMagicPrefix(pbuf)) {
       return convert(HBaseProtos.RegionInfo.parseDelimitedFrom(in));
     } else {
-        // Presume Writables.  Need to reset the stream since it didn't start w/ pb.
-      if (in.markSupported()) {
-        in.reset();
-        HRegionInfo hri = new HRegionInfo();
-        hri.readFields(in);
-        return hri;
-      } else {
-        //we cannot use BufferedInputStream, it consumes more than we read from the underlying IS
-        ByteArrayInputStream bais = new ByteArrayInputStream(pbuf);
-        SequenceInputStream sis = new SequenceInputStream(bais, in); //concatenate input streams
-        HRegionInfo hri = new HRegionInfo();
-        hri.readFields(new DataInputStream(sis));
-        return hri;
-      }
+      throw new IOException("PB encoded HRegionInfo expected");
     }
   }
 

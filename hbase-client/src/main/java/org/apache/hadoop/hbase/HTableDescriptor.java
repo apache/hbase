@@ -18,8 +18,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.DataInput;
-import java.io.DataOutput;
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,7 +33,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 
-import org.apache.hadoop.hbase.util.ByteStringer;
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -42,7 +41,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
@@ -50,11 +48,8 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Writables;
-import org.apache.hadoop.io.WritableComparable;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * HTableDescriptor contains the details about an HBase table  such as the descriptors of
@@ -64,19 +59,9 @@ import com.google.protobuf.InvalidProtocolBufferException;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
+public class HTableDescriptor implements Comparable<HTableDescriptor> {
 
   private static final Log LOG = LogFactory.getLog(HTableDescriptor.class);
-
-  /**
-   *  Changes prior to version 3 were not recorded here.
-   *  Version 3 adds metadata as a map where keys and values are byte[].
-   *  Version 4 adds indexes
-   *  Version 5 removed transactional pollution -- e.g. indexes
-   *  Version 6 changed metadata to BytesBytesPair in PB
-   *  Version 7 adds table-level configuration
-   */
-  private static final byte TABLE_DESCRIPTOR_VERSION = 7;
 
   private TableName name = null;
 
@@ -85,8 +70,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * includes values like IS_ROOT, IS_META, DEFERRED_LOG_FLUSH, SPLIT_POLICY,
    * MAX_FILE_SIZE, READONLY, MEMSTORE_FLUSHSIZE etc...
    */
-  private final Map<ImmutableBytesWritable, ImmutableBytesWritable> values =
-    new HashMap<ImmutableBytesWritable, ImmutableBytesWritable>();
+  private final Map<Bytes, Bytes> values =
+      new HashMap<Bytes, Bytes>();
 
   /**
    * A map which holds the configuration specific to the table.
@@ -105,12 +90,12 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @see #getMaxFileSize()
    */
   public static final String MAX_FILESIZE = "MAX_FILESIZE";
-  private static final ImmutableBytesWritable MAX_FILESIZE_KEY =
-    new ImmutableBytesWritable(Bytes.toBytes(MAX_FILESIZE));
+  private static final Bytes MAX_FILESIZE_KEY =
+      new Bytes(Bytes.toBytes(MAX_FILESIZE));
 
   public static final String OWNER = "OWNER";
-  public static final ImmutableBytesWritable OWNER_KEY =
-    new ImmutableBytesWritable(Bytes.toBytes(OWNER));
+  public static final Bytes OWNER_KEY =
+      new Bytes(Bytes.toBytes(OWNER));
 
   /**
    * <em>INTERNAL</em> Used by rest interface to access this metadata
@@ -119,8 +104,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @see #isReadOnly()
    */
   public static final String READONLY = "READONLY";
-  private static final ImmutableBytesWritable READONLY_KEY =
-    new ImmutableBytesWritable(Bytes.toBytes(READONLY));
+  private static final Bytes READONLY_KEY =
+      new Bytes(Bytes.toBytes(READONLY));
 
   /**
    * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata
@@ -129,8 +114,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @see #isCompactionEnabled()
    */
   public static final String COMPACTION_ENABLED = "COMPACTION_ENABLED";
-  private static final ImmutableBytesWritable COMPACTION_ENABLED_KEY =
-    new ImmutableBytesWritable(Bytes.toBytes(COMPACTION_ENABLED));
+  private static final Bytes COMPACTION_ENABLED_KEY =
+      new Bytes(Bytes.toBytes(COMPACTION_ENABLED));
 
   /**
    * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata
@@ -140,8 +125,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @see #getMemStoreFlushSize()
    */
   public static final String MEMSTORE_FLUSHSIZE = "MEMSTORE_FLUSHSIZE";
-  private static final ImmutableBytesWritable MEMSTORE_FLUSHSIZE_KEY =
-    new ImmutableBytesWritable(Bytes.toBytes(MEMSTORE_FLUSHSIZE));
+  private static final Bytes MEMSTORE_FLUSHSIZE_KEY =
+      new Bytes(Bytes.toBytes(MEMSTORE_FLUSHSIZE));
 
   /**
    * <em>INTERNAL</em> Used by rest interface to access this metadata
@@ -150,8 +135,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @see #isRootRegion()
    */
   public static final String IS_ROOT = "IS_ROOT";
-  private static final ImmutableBytesWritable IS_ROOT_KEY =
-    new ImmutableBytesWritable(Bytes.toBytes(IS_ROOT));
+  private static final Bytes IS_ROOT_KEY =
+      new Bytes(Bytes.toBytes(IS_ROOT));
 
   /**
    * <em>INTERNAL</em> Used by rest interface to access this metadata
@@ -161,8 +146,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @see #isMetaRegion()
    */
   public static final String IS_META = "IS_META";
-  private static final ImmutableBytesWritable IS_META_KEY =
-    new ImmutableBytesWritable(Bytes.toBytes(IS_META));
+  private static final Bytes IS_META_KEY =
+      new Bytes(Bytes.toBytes(IS_META));
 
   /**
    * <em>INTERNAL</em> Used by HBase Shell interface to access this metadata
@@ -172,22 +157,22 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   @Deprecated
   public static final String DEFERRED_LOG_FLUSH = "DEFERRED_LOG_FLUSH";
   @Deprecated
-  private static final ImmutableBytesWritable DEFERRED_LOG_FLUSH_KEY =
-    new ImmutableBytesWritable(Bytes.toBytes(DEFERRED_LOG_FLUSH));
+  private static final Bytes DEFERRED_LOG_FLUSH_KEY =
+      new Bytes(Bytes.toBytes(DEFERRED_LOG_FLUSH));
 
   /**
    * <em>INTERNAL</em> {@link Durability} setting for the table.
    */
   public static final String DURABILITY = "DURABILITY";
-  private static final ImmutableBytesWritable DURABILITY_KEY =
-      new ImmutableBytesWritable(Bytes.toBytes("DURABILITY"));
+  private static final Bytes DURABILITY_KEY =
+      new Bytes(Bytes.toBytes("DURABILITY"));
 
   /**
    * <em>INTERNAL</em> number of region replicas for the table.
    */
   public static final String REGION_REPLICATION = "REGION_REPLICATION";
-  private static final ImmutableBytesWritable REGION_REPLICATION_KEY =
-      new ImmutableBytesWritable(Bytes.toBytes(REGION_REPLICATION));
+  private static final Bytes REGION_REPLICATION_KEY =
+      new Bytes(Bytes.toBytes(REGION_REPLICATION));
 
   /** Default durability for HTD is USE_DEFAULT, which defaults to HBase-global default value */
   private static final Durability DEFAULT_DURABLITY = Durability.USE_DEFAULT;
@@ -197,11 +182,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    *  replace booleans being saved as Strings with plain booleans.  Need a
    *  migration script to do this.  TODO.
    */
-  private static final ImmutableBytesWritable FALSE =
-    new ImmutableBytesWritable(Bytes.toBytes(Boolean.FALSE.toString()));
+  private static final Bytes FALSE =
+      new Bytes(Bytes.toBytes(Boolean.FALSE.toString()));
 
-  private static final ImmutableBytesWritable TRUE =
-    new ImmutableBytesWritable(Bytes.toBytes(Boolean.TRUE.toString()));
+  private static final Bytes TRUE =
+      new Bytes(Bytes.toBytes(Boolean.TRUE.toString()));
 
   private static final boolean DEFAULT_DEFERRED_LOG_FLUSH = false;
 
@@ -225,8 +210,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
   private final static Map<String, String> DEFAULT_VALUES
     = new HashMap<String, String>();
-  private final static Set<ImmutableBytesWritable> RESERVED_KEYWORDS
-    = new HashSet<ImmutableBytesWritable>();
+  private final static Set<Bytes> RESERVED_KEYWORDS
+      = new HashSet<Bytes>();
+
   static {
     DEFAULT_VALUES.put(MAX_FILESIZE,
         String.valueOf(HConstants.DEFAULT_MAX_FILE_SIZE));
@@ -238,7 +224,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     DEFAULT_VALUES.put(DURABILITY, DEFAULT_DURABLITY.name()); //use the enum name
     DEFAULT_VALUES.put(REGION_REPLICATION, String.valueOf(DEFAULT_REGION_REPLICATION));
     for (String s : DEFAULT_VALUES.keySet()) {
-      RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(s)));
+      RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(s)));
     }
     RESERVED_KEYWORDS.add(IS_ROOT_KEY);
     RESERVED_KEYWORDS.add(IS_META_KEY);
@@ -280,12 +266,12 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * catalog tables, <code>hbase:meta</code> and <code>-ROOT-</code>.
    */
   protected HTableDescriptor(final TableName name, HColumnDescriptor[] families,
-      Map<ImmutableBytesWritable,ImmutableBytesWritable> values) {
+      Map<Bytes, Bytes> values) {
     setName(name);
     for(HColumnDescriptor descriptor : families) {
       this.families.put(descriptor.getName(), descriptor);
     }
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> entry:
+    for (Map.Entry<Bytes, Bytes> entry :
         values.entrySet()) {
       setValue(entry.getKey(), entry.getValue());
     }
@@ -345,7 +331,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     for (HColumnDescriptor c: desc.families.values()) {
       this.families.put(c.getName(), new HColumnDescriptor(c));
     }
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+    for (Map.Entry<Bytes, Bytes> e :
         desc.values.entrySet()) {
       setValue(e.getKey(), e.getValue());
     }
@@ -409,7 +395,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     return (value != null)? Boolean.valueOf(Bytes.toString(value)): Boolean.FALSE;
   }
 
-  private boolean isSomething(final ImmutableBytesWritable key,
+  private boolean isSomething(final Bytes key,
       final boolean valueIfNull) {
     byte [] value = getValue(key);
     if (value != null) {
@@ -447,11 +433,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @see #values
    */
   public byte[] getValue(byte[] key) {
-    return getValue(new ImmutableBytesWritable(key));
+    return getValue(new Bytes(key));
   }
 
-  private byte[] getValue(final ImmutableBytesWritable key) {
-    ImmutableBytesWritable ibw = values.get(key);
+  private byte[] getValue(final Bytes key) {
+    Bytes ibw = values.get(key);
     if (ibw == null)
       return null;
     return ibw.get();
@@ -477,7 +463,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @return unmodifiable map {@link #values}.
    * @see #values
    */
-  public Map<ImmutableBytesWritable,ImmutableBytesWritable> getValues() {
+  public Map<Bytes, Bytes> getValues() {
     // shallow pointer copy
     return Collections.unmodifiableMap(values);
   }
@@ -490,16 +476,16 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @see #values
    */
   public void setValue(byte[] key, byte[] value) {
-    setValue(new ImmutableBytesWritable(key), new ImmutableBytesWritable(value));
+    setValue(new Bytes(key), new Bytes(value));
   }
 
   /*
    * @param key The key.
    * @param value The value.
    */
-  private void setValue(final ImmutableBytesWritable key,
+  private void setValue(final Bytes key,
       final String value) {
-    setValue(key, new ImmutableBytesWritable(Bytes.toBytes(value)));
+    setValue(key, new Bytes(Bytes.toBytes(value)));
   }
 
   /*
@@ -508,8 +494,8 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @param key The key.
    * @param value The value.
    */
-  public void setValue(final ImmutableBytesWritable key,
-      final ImmutableBytesWritable value) {
+  public void setValue(final Bytes key,
+      final Bytes value) {
     if (key.compareTo(DEFERRED_LOG_FLUSH_KEY) == 0) {
       boolean isDeferredFlush = Boolean.valueOf(Bytes.toString(value.get()));
       LOG.warn("HTableDescriptor property:" + DEFERRED_LOG_FLUSH + " is deprecated, " +
@@ -542,7 +528,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * parameters.
    */
   public void remove(final String key) {
-    remove(new ImmutableBytesWritable(Bytes.toBytes(key)));
+    remove(new Bytes(Bytes.toBytes(key)));
   }
 
   /**
@@ -551,7 +537,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @param key Key whose key and value we're to remove from HTableDescriptor
    * parameters.
    */
-  public void remove(ImmutableBytesWritable key) {
+  public void remove(Bytes key) {
     values.remove(key);
   }
 
@@ -562,7 +548,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * parameters.
    */
   public void remove(final byte [] key) {
-    remove(new ImmutableBytesWritable(key));
+    remove(new Bytes(key));
   }
 
   /**
@@ -817,9 +803,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     StringBuilder s = new StringBuilder();
 
     // step 1: set partitioning and pruning
-    Set<ImmutableBytesWritable> reservedKeys = new TreeSet<ImmutableBytesWritable>();
-    Set<ImmutableBytesWritable> userKeys = new TreeSet<ImmutableBytesWritable>();
-    for (ImmutableBytesWritable k : values.keySet()) {
+    Set<Bytes> reservedKeys = new TreeSet<Bytes>();
+    Set<Bytes> userKeys = new TreeSet<Bytes>();
+    for (Bytes k : values.keySet()) {
       if (k == null || k.get() == null) continue;
       String key = Bytes.toString(k.get());
       // in this section, print out reserved keywords + coprocessor info
@@ -851,7 +837,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
 
       // print all reserved keys first
       boolean printCommaForAttr = false;
-      for (ImmutableBytesWritable k : reservedKeys) {
+      for (Bytes k : reservedKeys) {
         String key = Bytes.toString(k.get());
         String value = Bytes.toStringBinary(values.get(k).get());
         if (printCommaForAttr) s.append(", ");
@@ -868,7 +854,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
         s.append(HConstants.METADATA).append(" => ");
         s.append("{");
         boolean printCommaForCfg = false;
-        for (ImmutableBytesWritable k : userKeys) {
+        for (Bytes k : userKeys) {
           String key = Bytes.toString(k.get());
           String value = Bytes.toStringBinary(values.get(k).get());
           if (printCommaForCfg) s.append(", ");
@@ -931,8 +917,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   @Override
   public int hashCode() {
     int result = this.name.hashCode();
-    result ^= Byte.valueOf(TABLE_DESCRIPTOR_VERSION).hashCode();
-    if (this.families != null && this.families.size() > 0) {
+    if (this.families.size() > 0) {
       for (HColumnDescriptor e: this.families.values()) {
         result ^= e.hashCode();
       }
@@ -940,84 +925,6 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     result ^= values.hashCode();
     result ^= configuration.hashCode();
     return result;
-  }
-
-  /**
-   * <em> INTERNAL </em> This method is a part of {@link WritableComparable} interface
-   * and is used for de-serialization of the HTableDescriptor over RPC
-   * @deprecated Writables are going away.  Use pb {@link #parseFrom(byte[])} instead.
-   */
-  @Deprecated
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    int version = in.readInt();
-    if (version < 3)
-      throw new IOException("versions < 3 are not supported (and never existed!?)");
-    // version 3+
-    name = TableName.valueOf(Bytes.readByteArray(in));
-    setRootRegion(in.readBoolean());
-    setMetaRegion(in.readBoolean());
-    values.clear();
-    configuration.clear();
-    int numVals = in.readInt();
-    for (int i = 0; i < numVals; i++) {
-      ImmutableBytesWritable key = new ImmutableBytesWritable();
-      ImmutableBytesWritable value = new ImmutableBytesWritable();
-      key.readFields(in);
-      value.readFields(in);
-      setValue(key, value);
-    }
-    families.clear();
-    int numFamilies = in.readInt();
-    for (int i = 0; i < numFamilies; i++) {
-      HColumnDescriptor c = new HColumnDescriptor();
-      c.readFields(in);
-      families.put(c.getName(), c);
-    }
-    if (version >= 7) {
-      int numConfigs = in.readInt();
-      for (int i = 0; i < numConfigs; i++) {
-        ImmutableBytesWritable key = new ImmutableBytesWritable();
-        ImmutableBytesWritable value = new ImmutableBytesWritable();
-        key.readFields(in);
-        value.readFields(in);
-        configuration.put(
-          Bytes.toString(key.get(), key.getOffset(), key.getLength()),
-          Bytes.toString(value.get(), value.getOffset(), value.getLength()));
-      }
-    }
-  }
-
-  /**
-   * <em> INTERNAL </em> This method is a part of {@link WritableComparable} interface
-   * and is used for serialization of the HTableDescriptor over RPC
-   * @deprecated Writables are going away.
-   * Use {@link com.google.protobuf.MessageLite#toByteArray} instead.
-   */
-  @Deprecated
-  @Override
-  public void write(DataOutput out) throws IOException {
-	  out.writeInt(TABLE_DESCRIPTOR_VERSION);
-    Bytes.writeByteArray(out, name.toBytes());
-    out.writeBoolean(isRootRegion());
-    out.writeBoolean(isMetaRegion());
-    out.writeInt(values.size());
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
-        values.entrySet()) {
-      e.getKey().write(out);
-      e.getValue().write(out);
-    }
-    out.writeInt(families.size());
-    for(Iterator<HColumnDescriptor> it = families.values().iterator();
-        it.hasNext(); ) {
-      HColumnDescriptor family = it.next();
-      family.write(out);
-    }
-    out.writeInt(configuration.size());
-    for (Map.Entry<String, String> e : configuration.entrySet()) {
-      new ImmutableBytesWritable(Bytes.toBytes(e.getKey())).write(out);
-      new ImmutableBytesWritable(Bytes.toBytes(e.getValue())).write(out);
-    }
   }
 
   // Comparable
@@ -1030,7 +937,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * 		 1 if there is a mismatch in the contents
    */
   @Override
-  public int compareTo(final HTableDescriptor other) {
+  public int compareTo(@Nonnull final HTableDescriptor other) {
     int result = this.name.compareTo(other.name);
     if (result == 0) {
       result = families.size() - other.families.size();
@@ -1094,7 +1001,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public void setRegionReplication(int regionReplication) {
     setValue(REGION_REPLICATION_KEY,
-        new ImmutableBytesWritable(Bytes.toBytes(Integer.toString(regionReplication))));
+        new Bytes(Bytes.toBytes(Integer.toString(regionReplication))));
   }
 
   /**
@@ -1207,7 +1114,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     // generate a coprocessor key
     int maxCoprocessorNumber = 0;
     Matcher keyMatcher;
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+    for (Map.Entry<Bytes, Bytes> e :
         this.values.entrySet()) {
       keyMatcher =
           HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(
@@ -1237,7 +1144,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public boolean hasCoprocessor(String className) {
     Matcher keyMatcher;
     Matcher valueMatcher;
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+    for (Map.Entry<Bytes, Bytes> e :
         this.values.entrySet()) {
       keyMatcher =
           HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(
@@ -1269,7 +1176,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     List<String> result = new ArrayList<String>();
     Matcher keyMatcher;
     Matcher valueMatcher;
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e : this.values.entrySet()) {
+    for (Map.Entry<Bytes, Bytes> e : this.values.entrySet()) {
       keyMatcher = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e.getKey().get()));
       if (!keyMatcher.matches()) {
         continue;
@@ -1289,10 +1196,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * @param className Class name of the co-processor
    */
   public void removeCoprocessor(String className) {
-    ImmutableBytesWritable match = null;
+    Bytes match = null;
     Matcher keyMatcher;
     Matcher valueMatcher;
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e : this.values
+    for (Map.Entry<Bytes, Bytes> e : this.values
         .entrySet()) {
       keyMatcher = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e
           .getKey().get()));
@@ -1427,7 +1334,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public static HTableDescriptor parseFrom(final byte [] bytes)
   throws DeserializationException, IOException {
     if (!ProtobufUtil.isPBMagicPrefix(bytes)) {
-      return (HTableDescriptor)Writables.getWritable(bytes, new HTableDescriptor());
+      throw new DeserializationException("Expected PB encoded HTableDescriptor");
     }
     int pblen = ProtobufUtil.lengthOfPBMagic();
     TableSchema.Builder builder = TableSchema.newBuilder();
@@ -1446,7 +1353,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   public TableSchema convert() {
     TableSchema.Builder builder = TableSchema.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName(getTableName()));
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e: this.values.entrySet()) {
+    for (Map.Entry<Bytes, Bytes> e : this.values.entrySet()) {
       BytesBytesPair.Builder aBuilder = BytesBytesPair.newBuilder();
       aBuilder.setFirst(ByteStringer.wrap(e.getKey().get()));
       aBuilder.setSecond(ByteStringer.wrap(e.getValue().get()));

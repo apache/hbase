@@ -141,9 +141,8 @@ public class TestSerialization {
   @Test public void testTableDescriptor() throws Exception {
     final String name = "testTableDescriptor";
     HTableDescriptor htd = createTableDescriptor(name);
-    byte [] mb = Writables.getBytes(htd);
-    HTableDescriptor deserializedHtd =
-      (HTableDescriptor)Writables.getWritable(mb, new HTableDescriptor());
+    byte [] mb = htd.toByteArray();
+    HTableDescriptor deserializedHtd = HTableDescriptor.parseFrom(mb);
     assertEquals(htd.getTableName(), deserializedHtd.getTableName());
   }
 

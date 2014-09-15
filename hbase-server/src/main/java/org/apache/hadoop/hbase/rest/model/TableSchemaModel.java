@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.ColumnSchemaMessage.ColumnSchema;
 import org.apache.hadoop.hbase.rest.protobuf.generated.TableSchemaMessage.TableSchema;
@@ -88,7 +87,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
    */
   public TableSchemaModel(HTableDescriptor htd) {
     setName(htd.getTableName().getNameAsString());
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+    for (Map.Entry<Bytes, Bytes> e:
         htd.getValues().entrySet()) {
       addAttribute(Bytes.toString(e.getKey().get()), 
         Bytes.toString(e.getValue().get()));
@@ -96,9 +95,9 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
     for (HColumnDescriptor hcd: htd.getFamilies()) {
       ColumnSchemaModel columnModel = new ColumnSchemaModel();
       columnModel.setName(hcd.getNameAsString());
-      for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+      for (Map.Entry<Bytes, Bytes> e:
           hcd.getValues().entrySet()) {
-        columnModel.addAttribute(Bytes.toString(e.getKey().get()), 
+        columnModel.addAttribute(Bytes.toString(e.getKey().get()),
             Bytes.toString(e.getValue().get()));
       }
       addColumnFamily(columnModel);

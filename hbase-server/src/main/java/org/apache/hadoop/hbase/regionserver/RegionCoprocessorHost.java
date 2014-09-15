@@ -32,6 +32,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
 import org.apache.commons.collections.map.AbstractReferenceMap;
 import org.apache.commons.collections.map.ReferenceMap;
 import org.apache.commons.logging.Log;
@@ -68,7 +72,6 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver.MutationType;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
@@ -77,11 +80,6 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
 
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
@@ -192,7 +190,7 @@ public class RegionCoprocessorHost
     // scan the table attributes for coprocessor load specifications
     // initialize the coprocessors
     List<RegionEnvironment> configured = new ArrayList<RegionEnvironment>();
-    for (Map.Entry<ImmutableBytesWritable,ImmutableBytesWritable> e:
+    for (Map.Entry<Bytes, Bytes> e :
         region.getTableDesc().getValues().entrySet()) {
       String key = Bytes.toString(e.getKey().get()).trim();
       String spec = Bytes.toString(e.getValue().get()).trim();

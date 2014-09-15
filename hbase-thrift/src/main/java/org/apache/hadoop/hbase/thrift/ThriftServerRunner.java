@@ -153,6 +153,7 @@ public class ThriftServerRunner implements Runnable {
 
   private static final String DEFAULT_BIND_ADDR = "0.0.0.0";
   public static final int DEFAULT_LISTEN_PORT = 9090;
+  public static final int HREGION_VERSION = 1;
   private final int listenPort;
 
   private Configuration conf;
@@ -749,7 +750,7 @@ public class ThriftServerRunner implements Runnable {
           region.endKey = ByteBuffer.wrap(info.getEndKey());
           region.id = info.getRegionId();
           region.name = ByteBuffer.wrap(info.getRegionName());
-          region.version = info.getVersion();
+          region.version = HREGION_VERSION; // HRegion now not versioned, PB encoding used
           results.add(region);
         }
         return results;
@@ -1554,7 +1555,7 @@ public class ThriftServerRunner implements Runnable {
         region.setEndKey(regionInfo.getEndKey());
         region.id = regionInfo.getRegionId();
         region.setName(regionInfo.getRegionName());
-        region.version = regionInfo.getVersion();
+        region.version = HREGION_VERSION; // version not used anymore, PB encoding used.
 
         // find region assignment to server
         ServerName serverName = HRegionInfo.getServerName(startRowResult);

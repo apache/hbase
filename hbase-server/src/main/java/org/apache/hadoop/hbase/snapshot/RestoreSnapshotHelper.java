@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -59,6 +58,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.IOUtils;
@@ -690,7 +690,7 @@ public class RestoreSnapshotHelper {
     for (HColumnDescriptor hcd: snapshotTableDescriptor.getColumnFamilies()) {
       htd.addFamily(hcd);
     }
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+    for (Map.Entry<Bytes, Bytes> e:
         snapshotTableDescriptor.getValues().entrySet()) {
       htd.setValue(e.getKey(), e.getValue());
     }

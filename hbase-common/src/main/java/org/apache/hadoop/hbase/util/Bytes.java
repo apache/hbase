@@ -39,13 +39,13 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
+import com.google.protobuf.ByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
@@ -58,11 +58,14 @@ import com.google.common.collect.Lists;
 /**
  * Utility class that handles byte arrays, conversions to/from other types,
  * comparisons, hash code generation, manufacturing keys for HashMaps or
- * HashSets, etc.
+ * HashSets, and can be used as key in maps or trees.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Bytes {
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    value="EQ_CHECK_FOR_OPERAND_NOT_COMPATIBLE_WITH_THIS",
+    justification="It has been like this forever")
+public class Bytes implements Comparable<Bytes> {
   //HConstants.UTF8_ENCODING should be updated if this changed
   /** When we encode strings, we always specify UTF8 encoding */
   private static final String UTF8_ENCODING = "UTF-8";
@@ -136,6 +139,190 @@ public class Bytes {
     return b == null ? 0 : b.length;
   }
 
+  private byte[] bytes;
+  private int offset;
+  private int length;
+
+  /**
+   * Create a zero-size sequence.
+   */
+  public Bytes() {
+    super();
+  }
+
+  /**
+   * Create a Bytes using the byte array as the initial value.
+   * @param bytes This array becomes the backing storage for the object.
+   */
+  public Bytes(byte[] bytes) {
+    this(bytes, 0, bytes.length);
+  }
+
+  /**
+   * Set the new Bytes to the contents of the passed
+   * <code>ibw</code>.
+   * @param ibw the value to set this Bytes to.
+   */
+  public Bytes(final Bytes ibw) {
+    this(ibw.get(), ibw.getOffset(), ibw.getLength());
+  }
+
+  /**
+   * Set the value to a given byte range
+   * @param bytes the new byte range to set to
+   * @param offset the offset in newData to start at
+   * @param length the number of bytes in the range
+   */
+  public Bytes(final byte[] bytes, final int offset,
+      final int length) {
+    this.bytes = bytes;
+    this.offset = offset;
+    this.length = length;
+  }
+
+  /**
+   * Copy bytes from ByteString instance.
+   * @param byteString copy from
+   */
+  public Bytes(final ByteString byteString) {
+    this(byteString.toByteArray());
+  }
+
+  /**
+   * Get the data from the Bytes.
+   * @return The data is only valid between offset and offset+length.
+   */
+  public byte [] get() {
+    if (this.bytes == null) {
+      throw new IllegalStateException("Uninitialiized. Null constructor " +
+          "called w/o accompaying readFields invocation");
+    }
+    return this.bytes;
+  }
+
+  /**
+   * @param b Use passed bytes as backing array for this instance.
+   */
+  public void set(final byte [] b) {
+    set(b, 0, b.length);
+  }
+
+  /**
+   * @param b Use passed bytes as backing array for this instance.
+   * @param offset
+   * @param length
+   */
+  public void set(final byte [] b, final int offset, final int length) {
+    this.bytes = b;
+    this.offset = offset;
+    this.length = length;
+  }
+
+  /**
+   * @return the number of valid bytes in the buffer
+   * @deprecated use {@link #getLength()} instead
+   */
+  @Deprecated
+  public int getSize() {
+    if (this.bytes == null) {
+      throw new IllegalStateException("Uninitialiized. Null constructor " +
+          "called w/o accompaying readFields invocation");
+    }
+    return this.length;
+  }
+
+  /**
+   * @return the number of valid bytes in the buffer
+   */
+  public int getLength() {
+    if (this.bytes == null) {
+      throw new IllegalStateException("Uninitialiized. Null constructor " +
+          "called w/o accompaying readFields invocation");
+    }
+    return this.length;
+  }
+
+  /**
+   * @return offset
+   */
+  public int getOffset(){
+    return this.offset;
+  }
+
+  public ByteString toByteString() {
+    return ByteString.copyFrom(this.bytes, this.offset, this.length);
+  }
+
+  @Override
+  public int hashCode() {
+    return Bytes.hashCode(bytes, offset, length);
+  }
+
+  /**
+   * Define the sort order of the Bytes.
+   * @param that The other bytes writable
+   * @return Positive if left is bigger than right, 0 if they are equal, and
+   *         negative if left is smaller than right.
+   */
+  public int compareTo(Bytes that) {
+    return BYTES_RAWCOMPARATOR.compare(
+        this.bytes, this.offset, this.length,
+        that.bytes, that.offset, that.length);
+  }
+
+  /**
+   * Compares the bytes in this object to the specified byte array
+   * @param that
+   * @return Positive if left is bigger than right, 0 if they are equal, and
+   *         negative if left is smaller than right.
+   */
+  public int compareTo(final byte [] that) {
+    return BYTES_RAWCOMPARATOR.compare(
+        this.bytes, this.offset, this.length,
+        that, 0, that.length);
+  }
+
+  /**
+   * @see Object#equals(Object)
+   */
+  @Override
+  public boolean equals(Object right_obj) {
+    if (right_obj instanceof byte []) {
+      return compareTo((byte [])right_obj) == 0;
+    }
+    if (right_obj instanceof Bytes) {
+      return compareTo((Bytes)right_obj) == 0;
+    }
+    return false;
+  }
+
+  /**
+   * @see Object#toString()
+   */
+  @Override
+  public String toString() {
+    return Bytes.toString(bytes, offset, length);
+  }
+
+  /**
+   * @param array List of byte [].
+   * @return Array of byte [].
+   */
+  public static byte [][] toArray(final List<byte []> array) {
+    // List#toArray doesn't work on lists of byte [].
+    byte[][] results = new byte[array.size()][];
+    for (int i = 0; i < array.size(); i++) {
+      results[i] = array.get(i);
+    }
+    return results;
+  }
+
+  /**
+   * Returns a copy of the bytes referred to by this writable
+   */
+  public byte[] copyBytes() {
+    return Arrays.copyOfRange(bytes, offset, offset+length);
+  }
   /**
    * Byte array comparator class.
    */
@@ -1356,8 +1543,8 @@ public class Bytes {
   /**
    * @param b bytes to hash
    * @return Runs {@link WritableComparator#hashBytes(byte[], int)} on the
-   * passed in array.  This method is what {@link org.apache.hadoop.io.Text} and
-   * {@link ImmutableBytesWritable} use calculating hash code.
+   * passed in array.  This method is what {@link org.apache.hadoop.io.Text}
+   * use calculating hash code.
    */
   public static int hashCode(final byte [] b) {
     return hashCode(b, b.length);
@@ -1367,8 +1554,8 @@ public class Bytes {
    * @param b value
    * @param length length of the value
    * @return Runs {@link WritableComparator#hashBytes(byte[], int)} on the
-   * passed in array.  This method is what {@link org.apache.hadoop.io.Text} and
-   * {@link ImmutableBytesWritable} use calculating hash code.
+   * passed in array.  This method is what {@link org.apache.hadoop.io.Text}
+   * use calculating hash code.
    */
   public static int hashCode(final byte [] b, final int length) {
     return WritableComparator.hashBytes(b, length);

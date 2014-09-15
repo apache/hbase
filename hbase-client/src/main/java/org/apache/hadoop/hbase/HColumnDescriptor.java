@@ -18,19 +18,17 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.base.Preconditions;
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -38,15 +36,10 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.apache.hadoop.hbase.util.PrettyPrinter.Unit;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableComparable;
-
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.hbase.util.ByteStringer;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * An HColumnDescriptor contains information about a column family such as the
@@ -56,7 +49,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> {
+public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   // For future backward compatibility
 
   // Version  3 was when column names become byte arrays and when we picked up
@@ -235,8 +228,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
 
   private final static Map<String, String> DEFAULT_VALUES
     = new HashMap<String, String>();
-  private final static Set<ImmutableBytesWritable> RESERVED_KEYWORDS
-    = new HashSet<ImmutableBytesWritable>();
+  private final static Set<Bytes> RESERVED_KEYWORDS
+      = new HashSet<Bytes>();
+
   static {
       DEFAULT_VALUES.put(BLOOMFILTER, DEFAULT_BLOOMFILTER);
       DEFAULT_VALUES.put(REPLICATION_SCOPE, String.valueOf(DEFAULT_REPLICATION_SCOPE));
@@ -256,10 +250,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       DEFAULT_VALUES.put(EVICT_BLOCKS_ON_CLOSE, String.valueOf(DEFAULT_EVICT_BLOCKS_ON_CLOSE));
       DEFAULT_VALUES.put(PREFETCH_BLOCKS_ON_OPEN, String.valueOf(DEFAULT_PREFETCH_BLOCKS_ON_OPEN));
       for (String s : DEFAULT_VALUES.keySet()) {
-        RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(s)));
+        RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(s)));
       }
-      RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(ENCRYPTION)));
-      RESERVED_KEYWORDS.add(new ImmutableBytesWritable(Bytes.toBytes(ENCRYPTION_KEY)));
+    RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION)));
+    RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION_KEY)));
   }
 
   private static final int UNINITIALIZED = -1;
@@ -268,8 +262,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   private byte [] name;
 
   // Column metadata
-  private final Map<ImmutableBytesWritable, ImmutableBytesWritable> values =
-    new HashMap<ImmutableBytesWritable,ImmutableBytesWritable>();
+  private final Map<Bytes, Bytes> values =
+      new HashMap<Bytes, Bytes>();
 
   /**
    * A map which holds the configuration specific to the column family.
@@ -328,7 +322,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public HColumnDescriptor(HColumnDescriptor desc) {
     super();
     this.name = desc.name.clone();
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
+    for (Map.Entry<Bytes, Bytes> e :
         desc.values.entrySet()) {
       this.values.put(e.getKey(), e.getValue());
     }
@@ -522,7 +516,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @return The value.
    */
   public byte[] getValue(byte[] key) {
-    ImmutableBytesWritable ibw = values.get(new ImmutableBytesWritable(key));
+    Bytes ibw = values.get(new Bytes(key));
     if (ibw == null)
       return null;
     return ibw.get();
@@ -542,7 +536,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @return All values.
    */
-  public Map<ImmutableBytesWritable,ImmutableBytesWritable> getValues() {
+  public Map<Bytes, Bytes> getValues() {
     // shallow pointer copy
     return Collections.unmodifiableMap(values);
   }
@@ -553,8 +547,8 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @return this (for chained invocation)
    */
   public HColumnDescriptor setValue(byte[] key, byte[] value) {
-    values.put(new ImmutableBytesWritable(key),
-      new ImmutableBytesWritable(value));
+    values.put(new Bytes(key),
+        new Bytes(value));
     return this;
   }
 
@@ -562,7 +556,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @param key Key whose key and value we're to remove from HCD parameters.
    */
   public void remove(final byte [] key) {
-    values.remove(new ImmutableBytesWritable(key));
+    values.remove(new Bytes(key));
   }
 
   /**
@@ -1022,7 +1016,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     boolean hasConfigKeys = false;
 
     // print all reserved keys first
-    for (ImmutableBytesWritable k : values.keySet()) {
+    for (Bytes k : values.keySet()) {
       if (!RESERVED_KEYWORDS.contains(k)) {
         hasConfigKeys = true;
         continue;
@@ -1045,7 +1039,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
       s.append(HConstants.METADATA).append(" => ");
       s.append('{');
       boolean printComma = false;
-      for (ImmutableBytesWritable k : values.keySet()) {
+      for (Bytes k : values.keySet()) {
         if (RESERVED_KEYWORDS.contains(k)) {
           continue;
         }
@@ -1123,111 +1117,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     return result;
   }
 
-  /**
-   * @deprecated Writables are going away.  Use pb {@link #parseFrom(byte[])} instead.
-   */
-  @Deprecated
-  public void readFields(DataInput in) throws IOException {
-    int version = in.readByte();
-    if (version < 6) {
-      if (version <= 2) {
-        Text t = new Text();
-        t.readFields(in);
-        this.name = t.getBytes();
-//        if(KeyValue.getFamilyDelimiterIndex(this.name, 0, this.name.length)
-//            > 0) {
-//          this.name = stripColon(this.name);
-//        }
-      } else {
-        this.name = Bytes.readByteArray(in);
-      }
-      this.values.clear();
-      setMaxVersions(in.readInt());
-      int ordinal = in.readInt();
-      setCompressionType(Compression.Algorithm.values()[ordinal]);
-      setInMemory(in.readBoolean());
-      setBloomFilterType(in.readBoolean() ? BloomType.ROW : BloomType.NONE);
-      if (getBloomFilterType() != BloomType.NONE && version < 5) {
-        // If a bloomFilter is enabled and the column descriptor is less than
-        // version 5, we need to skip over it to read the rest of the column
-        // descriptor. There are no BloomFilterDescriptors written to disk for
-        // column descriptors with a version number >= 5
-        throw new UnsupportedClassVersionError(this.getClass().getName() +
-            " does not support backward compatibility with versions older " +
-            "than version 5");
-      }
-      if (version > 1) {
-        setBlockCacheEnabled(in.readBoolean());
-      }
-      if (version > 2) {
-       setTimeToLive(in.readInt());
-      }
-    } else {
-      // version 6+
-      this.name = Bytes.readByteArray(in);
-      this.values.clear();
-      int numValues = in.readInt();
-      for (int i = 0; i < numValues; i++) {
-        ImmutableBytesWritable key = new ImmutableBytesWritable();
-        ImmutableBytesWritable value = new ImmutableBytesWritable();
-        key.readFields(in);
-        value.readFields(in);
-
-        // in version 8, the BloomFilter setting changed from bool to enum
-        if (version < 8 && Bytes.toString(key.get()).equals(BLOOMFILTER)) {
-          value.set(Bytes.toBytes(
-              Boolean.getBoolean(Bytes.toString(value.get()))
-                ? BloomType.ROW.toString()
-                : BloomType.NONE.toString()));
-        }
-
-        values.put(key, value);
-      }
-      if (version == 6) {
-        // Convert old values.
-        setValue(COMPRESSION, Compression.Algorithm.NONE.getName());
-      }
-      String value = getValue(HConstants.VERSIONS);
-      this.cachedMaxVersions = (value != null)?
-          Integer.valueOf(value).intValue(): DEFAULT_VERSIONS;
-      if (version > 10) {
-        configuration.clear();
-        int numConfigs = in.readInt();
-        for (int i = 0; i < numConfigs; i++) {
-          ImmutableBytesWritable key = new ImmutableBytesWritable();
-          ImmutableBytesWritable val = new ImmutableBytesWritable();
-          key.readFields(in);
-          val.readFields(in);
-          configuration.put(
-            Bytes.toString(key.get(), key.getOffset(), key.getLength()),
-            Bytes.toString(val.get(), val.getOffset(), val.getLength()));
-        }
-      }
-    }
-  }
-
-  /**
-   * @deprecated Writables are going away.  Use {@link #toByteArray()} instead.
-   */
-  @Deprecated
-  public void write(DataOutput out) throws IOException {
-    out.writeByte(COLUMN_DESCRIPTOR_VERSION);
-    Bytes.writeByteArray(out, this.name);
-    out.writeInt(values.size());
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e:
-        values.entrySet()) {
-      e.getKey().write(out);
-      e.getValue().write(out);
-    }
-    out.writeInt(configuration.size());
-    for (Map.Entry<String, String> e : configuration.entrySet()) {
-      new ImmutableBytesWritable(Bytes.toBytes(e.getKey())).write(out);
-      new ImmutableBytesWritable(Bytes.toBytes(e.getValue())).write(out);
-    }
-  }
-
   // Comparable
-
   public int compareTo(HColumnDescriptor o) {
     int result = Bytes.compareTo(this.name, o.getName());
     if (result == 0) {
@@ -1300,7 +1190,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   public ColumnFamilySchema convert() {
     ColumnFamilySchema.Builder builder = ColumnFamilySchema.newBuilder();
     builder.setName(ByteStringer.wrap(getName()));
-    for (Map.Entry<ImmutableBytesWritable, ImmutableBytesWritable> e: this.values.entrySet()) {
+    for (Map.Entry<Bytes, Bytes> e : this.values.entrySet()) {
       BytesBytesPair.Builder aBuilder = BytesBytesPair.newBuilder();
       aBuilder.setFirst(ByteStringer.wrap(e.getKey().get()));
       aBuilder.setSecond(ByteStringer.wrap(e.getValue().get()));

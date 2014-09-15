@@ -221,7 +221,7 @@ public class HStore implements Store {
       .add(confParam)
       .addStringMap(region.getTableDesc().getConfiguration())
       .addStringMap(family.getConfiguration())
-      .addWritableMap(family.getValues());
+      .addBytesMap(family.getValues());
     this.blocksize = family.getBlocksize();
 
     this.dataBlockEncoder =
