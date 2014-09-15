@@ -16,6 +16,7 @@ package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -880,7 +881,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   @Override
-  public void postCreateTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
+  public void postCreateTableHandler(final ObserverContext<MasterCoprocessorEnvironment> c,
       HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
     // When AC is used, it should be configured as the 1st CP.
     // In Master, the table operations like create, are handled by a Thread pool but the max size
@@ -909,9 +910,17 @@ public class AccessController extends BaseMasterAndRegionObserver
         // default the table owner to current user, if not specified.
         if (owner == null)
           owner = getActiveUser().getShortName();
-        UserPermission userperm = new UserPermission(Bytes.toBytes(owner), desc.getTableName(),
-            null, Action.values());
-        AccessControlLists.addUserPermission(c.getEnvironment().getConfiguration(), userperm);
+        final UserPermission userperm = new UserPermission(Bytes.toBytes(owner),
+            desc.getTableName(), null, Action.values());
+        // switch to the real hbase master user for doing the RPC on the ACL table
+        User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            AccessControlLists.addUserPermission(c.getEnvironment().getConfiguration(),
+                userperm);
+            return null;
+          }
+        });
       }
     }
   }
