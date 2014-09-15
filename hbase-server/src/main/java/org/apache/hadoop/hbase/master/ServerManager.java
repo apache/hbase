@@ -760,7 +760,7 @@ public class ServerManager {
       return null;
     }
 
-    OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(regionOpenInfos, 
+    OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(server, regionOpenInfos,
       (RecoveryMode.LOG_REPLAY == this.services.getMasterFileSystem().getLogRecoveryMode()));
     try {
       OpenRegionResponse response = admin.openRegion(null, request);
