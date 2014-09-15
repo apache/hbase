@@ -35,8 +35,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.BulkAssigner;
@@ -45,11 +45,11 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.EnableTableState;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -307,7 +307,7 @@ public class EnableTableProcedure
       // was implemented. With table lock, there is no need to set the state here (it will
       // set the state later on). A quick state check should be enough for us to move forward.
       TableStateManager tsm = env.getMasterServices().getAssignmentManager().getTableStateManager();
-      if (!tsm.isTableState(tableName, ZooKeeperProtos.Table.State.DISABLED)) {
+      if (!tsm.isTableState(tableName, TableState.State.DISABLED)) {
         LOG.info("Table " + tableName + " isn't disabled; skipping enable");
         setFailure("master-enable-table", new TableNotDisabledException(this.tableName));
         canTableBeEnabled = false;
@@ -344,8 +344,7 @@ public class EnableTableProcedure
     // Set table disabling flag up in zk.
     LOG.info("Attempting to enable the table " + tableName);
     env.getMasterServices().getAssignmentManager().getTableStateManager().setTableState(
-      tableName,
-      ZooKeeperProtos.Table.State.ENABLING);
+      tableName, TableState.State.ENABLING);
   }
 
   /**
@@ -490,8 +489,7 @@ public class EnableTableProcedure
       final TableName tableName) throws HBaseException, IOException {
     // Flip the table to Enabled
     env.getMasterServices().getAssignmentManager().getTableStateManager().setTableState(
-      tableName,
-      ZooKeeperProtos.Table.State.ENABLED);
+      tableName, TableState.State.ENABLED);
     LOG.info("Table '" + tableName + "' was successfully enabled.");
   }
 

@@ -547,7 +547,6 @@ public class MasterFileSystem {
       fsd.createTableDescriptor(
           new HTableDescriptor(fsd.get(TableName.META_TABLE_NAME)));
     }
-
     return rd;
   }
 

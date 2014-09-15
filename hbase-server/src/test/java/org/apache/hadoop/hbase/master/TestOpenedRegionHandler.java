@@ -42,9 +42,9 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
-import org.apache.hadoop.hbase.zookeeper.ZKTableStateManager;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -140,7 +140,10 @@ public class TestOpenedRegionHandler {
       // create a node with OPENED state
       zkw = HBaseTestingUtility.createAndForceNodeToOpenedState(TEST_UTIL,
           region, server.getServerName());
-      when(am.getTableStateManager()).thenReturn(new ZKTableStateManager(zkw));
+      MasterServices masterServices = Mockito.mock(MasterServices.class);
+      when(masterServices.getTableDescriptors()).thenReturn(new FSTableDescriptors(conf));
+      TableStateManager tsm = new TableStateManager(masterServices);
+      when(am.getTableStateManager()).thenReturn(tsm);
       Stat stat = new Stat();
       String nodeName = ZKAssign.getNodeName(zkw, region.getRegionInfo()
           .getEncodedName());
@@ -171,8 +174,8 @@ public class TestOpenedRegionHandler {
       } catch (Exception e) {
         expectedException = true;
       }
-      assertFalse("The process method should not throw any exception.",
-          expectedException);
+      assertFalse("The process method should not throw any exception. "
+          , expectedException);
       List<String> znodes = ZKUtil.listChildrenAndWatchForNewChildren(zkw,
           zkw.assignmentZNode);
       String regionName = znodes.get(0);

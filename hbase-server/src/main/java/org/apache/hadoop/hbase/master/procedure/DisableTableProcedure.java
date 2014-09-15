@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -41,11 +41,11 @@ import org.apache.hadoop.hbase.master.BulkAssigner;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionStates;
+import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DisableTableState;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.htrace.Trace;
@@ -286,8 +286,8 @@ public class DisableTableProcedure
       // this issue.
       TableStateManager tsm =
         env.getMasterServices().getAssignmentManager().getTableStateManager();
-      if (!tsm.setTableStateIfInStates(tableName, ZooKeeperProtos.Table.State.DISABLING,
-            ZooKeeperProtos.Table.State.DISABLING, ZooKeeperProtos.Table.State.ENABLED)) {
+      if (!tsm.setTableStateIfInStates(tableName, TableState.State.DISABLING,
+            TableState.State.DISABLING, TableState.State.ENABLED)) {
         LOG.info("Table " + tableName + " isn't enabled; skipping disable");
         setFailure("master-disable-table", new TableNotEnabledException(tableName));
         canTableBeDisabled = false;
@@ -311,7 +311,7 @@ public class DisableTableProcedure
       try {
         // If the state was changed, undo it.
         if (env.getMasterServices().getAssignmentManager().getTableStateManager().isTableState(
-            tableName, ZooKeeperProtos.Table.State.DISABLING)) {
+            tableName, TableState.State.DISABLING)) {
           EnableTableProcedure.setTableStateToEnabled(env, tableName);
         }
       } catch (Exception e) {
@@ -344,7 +344,7 @@ public class DisableTableProcedure
     // Set table disabling flag up in zk.
     env.getMasterServices().getAssignmentManager().getTableStateManager().setTableState(
       tableName,
-      ZooKeeperProtos.Table.State.DISABLING);
+      TableState.State.DISABLING);
   }
 
   /**
@@ -435,7 +435,7 @@ public class DisableTableProcedure
     // Flip the table to disabled
     env.getMasterServices().getAssignmentManager().getTableStateManager().setTableState(
       tableName,
-      ZooKeeperProtos.Table.State.DISABLED);
+      TableState.State.DISABLED);
     LOG.info("Disabled table, " + tableName + ", is completed.");
   }
 

@@ -33,20 +33,21 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateTableState;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -299,8 +300,8 @@ public class CreateTableProcedure
         !(env.getMasterServices().isInitialized()) && tableName.isSystemTable();
     if (!skipTableStateCheck) {
       TableStateManager tsm = env.getMasterServices().getAssignmentManager().getTableStateManager();
-      if (tsm.isTableState(tableName, true, ZooKeeperProtos.Table.State.ENABLING,
-          ZooKeeperProtos.Table.State.ENABLED)) {
+      if (tsm.isTableState(tableName, TableState.State.ENABLING,
+          TableState.State.ENABLED)) {
         LOG.warn("The table " + tableName + " does not exist in meta but has a znode. " +
                "run hbck to fix inconsistencies.");
         setFailure("master-create-table", new TableExistsException(getTableName()));
@@ -375,7 +376,7 @@ public class CreateTableProcedure
     // using a copy of descriptor, table will be created enabling first
     final Path tempTableDir = FSUtils.getTableDir(tempdir, hTableDescriptor.getTableName());
     new FSTableDescriptors(env.getMasterConfiguration()).createTableDescriptorForTableDirectory(
-      tempTableDir, hTableDescriptor, false);
+      tempTableDir, new TableDescriptor(hTableDescriptor), false);
 
     // 2. Create Regions
     newRegions = hdfsRegionHandler.createHdfsRegions(env, tempdir,
@@ -448,14 +449,14 @@ public class CreateTableProcedure
 
     // Mark the table as Enabling
     assignmentManager.getTableStateManager().setTableState(tableName,
-        ZooKeeperProtos.Table.State.ENABLING);
+        TableState.State.ENABLING);
 
     // Trigger immediate assignment of the regions in round-robin fashion
     ModifyRegionUtils.assignRegions(assignmentManager, regions);
 
     // Enable table
     assignmentManager.getTableStateManager()
-      .setTableState(tableName, ZooKeeperProtos.Table.State.ENABLED);
+      .setTableState(tableName, TableState.State.ENABLED);
   }
 
   /**

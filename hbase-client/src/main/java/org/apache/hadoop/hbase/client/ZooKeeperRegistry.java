@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -27,10 +26,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
-import org.apache.hadoop.hbase.zookeeper.ZKTableStateClientSideReader;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.zookeeper.KeeperException;
 
@@ -114,24 +111,6 @@ class ZooKeeperRegistry implements Registry {
       if (zkw != null) zkw.close();
     }
     return this.clusterId;
-  }
-
-  @Override
-  public boolean isTableOnlineState(TableName tableName, boolean enabled)
-  throws IOException {
-    ZooKeeperKeepAliveConnection zkw = hci.getKeepAliveZooKeeperWatcher();
-    try {
-      if (enabled) {
-        return ZKTableStateClientSideReader.isEnabledTable(zkw, tableName);
-      }
-      return ZKTableStateClientSideReader.isDisabledTable(zkw, tableName);
-    } catch (KeeperException e) {
-      throw new IOException("Enable/Disable failed", e);
-    } catch (InterruptedException e) {
-      throw new InterruptedIOException();
-    } finally {
-       zkw.close();
-    }
   }
 
   @Override

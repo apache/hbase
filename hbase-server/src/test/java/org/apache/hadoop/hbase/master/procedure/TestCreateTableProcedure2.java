@@ -23,10 +23,10 @@ import static org.junit.Assert.assertTrue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -45,6 +45,8 @@ public class TestCreateTableProcedure2 {
     TEST_UTIL.shutdownMiniZKCluster();
   }
 
+  /*
+  Note: Relevant fix was undone by HBASE-7767.
   @Test
   public void testMasterRestartAfterNameSpaceEnablingNodeIsCreated() throws Exception {
     // Step 1: start mini zk cluster.
@@ -54,8 +56,9 @@ public class TestCreateTableProcedure2 {
     TableName tableName = TableName.valueOf("hbase:namespace");
     ZooKeeperWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     String znode = ZKUtil.joinZNode(zkw.tableZNode, tableName.getNameAsString());
-    ZooKeeperProtos.Table.Builder builder = ZooKeeperProtos.Table.newBuilder();
-    builder.setState(ZooKeeperProtos.Table.State.ENABLED);
+    HBaseProtos.TableState.Builder builder = HBaseProtos.TableState.newBuilder();
+    builder.setState(HBaseProtos.TableState.State.ENABLED);
+    builder.setTable(ProtobufUtil.toProtoTableName(tableName));
     byte [] data = ProtobufUtil.prependPBMagic(builder.build().toByteArray());
     ZKUtil.createSetData(zkw, znode, data);
     LOG.info("Create an orphaned Znode " + znode);
@@ -65,4 +68,5 @@ public class TestCreateTableProcedure2 {
     TEST_UTIL.startMiniCluster();
     assertTrue(TEST_UTIL.getHBaseCluster().getLiveMasterThreads().size() == 1);
   }
+  */
 }
