@@ -136,6 +136,26 @@ public class RegionServerCoprocessorHost extends
     });
   }
 
+  public void preRollWALWriterRequest() throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(RegionServerObserver oserver,
+          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
+        oserver.preRollWALWriterRequest(ctx);
+      }
+    });
+  }
+
+  public void postRollWALWriterRequest() throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(RegionServerObserver oserver,
+          ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
+        oserver.postRollWALWriterRequest(ctx);
+      }
+    });
+  }
+
   private static abstract class CoprocessorOperation
       extends ObserverContext<RegionServerCoprocessorEnvironment> {
     public CoprocessorOperation() {

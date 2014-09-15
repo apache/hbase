@@ -1469,6 +1469,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     try {
       checkOpen();
       requestCount.increment();
+      regionServer.getRegionServerCoprocessorHost().preRollWALWriterRequest();
       HLog wal = regionServer.getWAL();
       byte[][] regionsToFlush = wal.rollWriter(true);
       RollWALWriterResponse.Builder builder = RollWALWriterResponse.newBuilder();

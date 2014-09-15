@@ -2207,4 +2207,14 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void postRollBackMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
       HRegion regionA, HRegion regionB) throws IOException { }
+
+  @Override
+  public void preRollWALWriterRequest(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException {
+    requirePermission("preRollLogWriterRequest", Permission.Action.ADMIN);
+  }
+
+  @Override
+  public void postRollWALWriterRequest(ObserverContext<RegionServerCoprocessorEnvironment> ctx)
+      throws IOException { }
 }
