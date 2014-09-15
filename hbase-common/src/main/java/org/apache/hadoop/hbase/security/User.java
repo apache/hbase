@@ -165,6 +165,25 @@ public abstract class User {
   }
 
   /**
+   * Executes the given action as the login user
+   * @param action
+   * @return
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  @SuppressWarnings({ "rawtypes", "unchecked" })
+  public static <T> T runAsLoginUser(PrivilegedExceptionAction<T> action) throws IOException {
+    try {
+      Class c = Class.forName("org.apache.hadoop.security.SecurityUtil");
+      Class [] types = new Class[]{PrivilegedExceptionAction.class};
+      Object[] args = new Object[]{action};
+      return (T) Methods.call(c, null, "doAsLoginUser", types, args);
+    } catch (Throwable e) {
+      throw new IOException(e);
+    }
+  }
+
+  /**
    * Wraps an underlying {@code UserGroupInformation} instance.
    * @param ugi The base Hadoop user
    * @return User
