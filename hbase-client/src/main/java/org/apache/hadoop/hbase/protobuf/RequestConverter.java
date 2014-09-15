@@ -22,7 +22,6 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
 
-import org.apache.commons.configuration.Configuration;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -702,12 +701,13 @@ public final class RequestConverter {
  /**
   * Create a protocol buffer OpenRegionRequest to open a list of regions
   *
+  * @param server the serverName for the RPC
   * @param regionOpenInfos info of a list of regions to open
   * @param openForReplay
   * @return a protocol buffer OpenRegionRequest
   */
  public static OpenRegionRequest
-     buildOpenRegionRequest(final List<Triple<HRegionInfo, Integer,
+     buildOpenRegionRequest(ServerName server, final List<Triple<HRegionInfo, Integer,
          List<ServerName>>> regionOpenInfos, Boolean openForReplay) {
    OpenRegionRequest.Builder builder = OpenRegionRequest.newBuilder();
    for (Triple<HRegionInfo, Integer, List<ServerName>> regionOpenInfo: regionOpenInfos) {
@@ -715,6 +715,9 @@ public final class RequestConverter {
      int versionOfOfflineNode = second == null ? -1 : second.intValue();
      builder.addOpenInfo(buildRegionOpenInfo(regionOpenInfo.getFirst(), versionOfOfflineNode, 
        regionOpenInfo.getThird(), openForReplay));
+   }
+   if (server != null) {
+     builder.setServerStartCode(server.getStartcode());
    }
    return builder.build();
  }
