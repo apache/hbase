@@ -25,8 +25,10 @@ Example code.
         for f in `find . -name "libthrift-*.jar" -or -name "slf4j-*.jar" -or -name "log4j-*.jar"`; do
           HBASE_EXAMPLE_CLASSPATH=${HBASE_EXAMPLE_CLASSPATH}:$f;
         done
-      2. Execute:
+      2. If HBase server is not secure, or authentication is not enabled for the Thrift server, execute:
       {java -cp hbase-examples-[VERSION].jar:${HBASE_EXAMPLE_CLASSPATH} org.apache.hadoop.hbase.thrift.DemoClient <host> <port>}
+      3. If HBase server is secure, and authentication is enabled for the Thrift server, run kinit at first, then execute:
+      {java -cp hbase-examples-[VERSION].jar:${HBASE_EXAMPLE_CLASSPATH} org.apache.hadoop.hbase.thrift.DemoClient <host> <port> true}
 
     * Ruby: hbase-examples/src/main/ruby/DemoClient.rb
       1. Modify the import path in the file to point to {$THRIFT_HOME}/lib/rb/lib.
