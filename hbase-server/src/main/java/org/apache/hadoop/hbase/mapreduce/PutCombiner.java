@@ -80,15 +80,20 @@ public class PutCombiner<K> extends Reducer<K, Put, K, Put> {
         }
         if (cnt % 10 == 0) context.setStatus("Combine " + cnt);
         if (curSize > threshold) {
-          LOG.info(String.format("Combined %d Put(s) into %d.", cnt, 1));
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(String.format("Combined %d Put(s) into %d.", cnt, 1));
+          }
           context.write(row, put);
           put = null;
+          curSize = 0;
           cnt = 0;
         }
       }
     }
     if (put != null) {
-      LOG.info(String.format("Combined %d Put(s) into %d.", cnt, 1));
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(String.format("Combined %d Put(s) into %d.", cnt, 1));
+      }
       context.write(row, put);
     }
   }
