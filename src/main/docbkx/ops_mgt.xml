@@ -625,13 +625,29 @@ Options:
       <title><command>hbase pe</command></title>
       <para>The <command>hbase pe</command> command is a shortcut provided to run the
           <code>org.apache.hadoop.hbase.PerformanceEvaluation</code> tool, which is used for
-        testing. The <command>hbase pe</command> command was introduced in HBase 0.98.</para>
+        testing. The <command>hbase pe</command> command was introduced in HBase 0.98.4.</para>
+      <para>The PerformanceEvaluation tool accepts many different options and commands. For usage
+        instructions, run the command with no options.</para>
+      <para>To run PerformanceEvaluation prior to HBase 0.98.4, issue the command
+          <command>hbase org.apache.hadoop.hbase.PerformanceEvaluation</command>.</para>
+      <para>The PerformanceEvaluation tool has received many updates in recent HBase releases,
+        including support for namespaces, support for tags, cell-level ACLs and visibility labels,
+        multiget support for RPC calls, increased sampling sizes, an option to randomly sleep during
+        testing, and ability to "warm up" the cluster before testing starts.</para>
     </section>
     <section>
       <title><command>hbase ltt</command></title>
       <para>The <command>hbase ltt</command> command is a shortcut provided to run the
-        <code>rg.apache.hadoop.hbase.util.LoadTestTool</code> utility, which is used for
-        testing. The <command>hbase ltt</command> command was introduced in HBase 0.98.</para>
+        <code>org.apache.hadoop.hbase.util.LoadTestTool</code> utility, which is used for
+        testing. The <command>hbase ltt</command> command was introduced in HBase 0.98.4.</para>
+      <para>You must specify either <option>-write</option> or <option>-update-read</option> as the
+        first option. For general usage instructions, pass the <option>-h</option> option.</para>
+      <para>To run LoadTestTool prior to HBase 0.98.4, issue the command <command>hbase
+          org.apache.hadoop.hbase.util.LoadTestTool</command>.</para>
+      <para>The LoadTestTool has received many updates in recent HBase releases, including support
+        for namespaces, support for tags, cell-level ACLS and visibility labels, testing
+        security-related features, ability to specify the number of regions per server, tests for
+        multi-get RPC calls, and tests relating to replication.</para>
     </section>
   </section>
   <!--  tools -->
