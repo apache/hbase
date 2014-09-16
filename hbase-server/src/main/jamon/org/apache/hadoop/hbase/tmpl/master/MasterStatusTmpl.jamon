@@ -233,6 +233,11 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                     <td>When HBase version was compiled and by whom</td>
                 </tr>
                 <tr>
+                    <td>HBase Source Checksum</td>
+                    <td><% org.apache.hadoop.util.VersionInfo.getSrcChecksum() %></td>
+                    <td>HBase source MD5 checksum</td>
+                </tr>
+                <tr>
                     <td>Hadoop Version</td>
                     <td><% org.apache.hadoop.util.VersionInfo.getVersion() %>, r<% org.apache.hadoop.util.VersionInfo.getRevision() %></td>
                     <td>Hadoop version and revision</td>
