@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptor;
@@ -186,7 +187,7 @@ public class HBaseFsck extends Configured {
   private static final Log LOG = LogFactory.getLog(HBaseFsck.class.getName());
   private ClusterStatus status;
   private HConnection connection;
-  private Admin admin;
+  private HBaseAdmin admin;
   private Table meta;
   // threads to do ||izable tasks: retrieve data from regionservers, handle overlapping regions
   protected ExecutorService executor;

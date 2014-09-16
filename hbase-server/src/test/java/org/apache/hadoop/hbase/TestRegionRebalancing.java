@@ -98,7 +98,7 @@ public class TestRegionRebalancing {
   @Test (timeout=300000)
   public void testRebalanceOnRegionServerNumberChange()
   throws IOException, InterruptedException {
-    Admin admin = new HBaseAdmin(UTIL.getConfiguration());
+    HBaseAdmin admin = new HBaseAdmin(UTIL.getConfiguration());
     admin.createTable(this.desc, Arrays.copyOfRange(HBaseTestingUtility.KEYS,
         1, HBaseTestingUtility.KEYS.length));
     this.table = new HTable(UTIL.getConfiguration(), this.desc.getTableName());

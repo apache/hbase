@@ -88,7 +88,7 @@ public class TestClientTimeouts {
         // Ensure the HBaseAdmin uses a new connection by changing Configuration.
         Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
         conf.set(HConstants.HBASE_CLIENT_INSTANCE_ID, String.valueOf(-1));
-        Admin admin = null;
+        HBaseAdmin admin = null;
         try {
           admin = new HBaseAdmin(conf);
           HConnection connection = admin.getConnection();

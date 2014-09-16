@@ -93,7 +93,7 @@ public class RegionPlacementMaintainer {
   private Configuration conf;
   private final boolean enforceLocality;
   private final boolean enforceMinAssignmentMove;
-  private Admin admin;
+  private HBaseAdmin admin;
   private RackManager rackManager;
   private Set<TableName> targetTableSet;
 
@@ -128,7 +128,7 @@ public class RegionPlacementMaintainer {
    * @return the cached HBaseAdmin
    * @throws IOException
    */
-  private Admin getHBaseAdmin() throws IOException {
+  private HBaseAdmin getHBaseAdmin() throws IOException {
     if (this.admin == null) {
       this.admin = new HBaseAdmin(this.conf);
     }

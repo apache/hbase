@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -63,7 +64,7 @@ public class HBaseFsckRepair {
    * @param region Region to undeploy
    * @param servers list of Servers to undeploy from
    */
-  public static void fixMultiAssignment(Admin admin, HRegionInfo region,
+  public static void fixMultiAssignment(HBaseAdmin admin, HRegionInfo region,
       List<ServerName> servers)
   throws IOException, KeeperException, InterruptedException {
     HRegionInfo actualRegion = new HRegionInfo(region);
@@ -148,7 +149,7 @@ public class HBaseFsckRepair {
    * (default 120s) to close the region.  This bypasses the active hmaster.
    */
   @SuppressWarnings("deprecation")
-  public static void closeRegionSilentlyAndWait(Admin admin,
+  public static void closeRegionSilentlyAndWait(HBaseAdmin admin,
       ServerName server, HRegionInfo region) throws IOException, InterruptedException {
     HConnection connection = admin.getConnection();
     AdminService.BlockingInterface rs = connection.getAdmin(server);

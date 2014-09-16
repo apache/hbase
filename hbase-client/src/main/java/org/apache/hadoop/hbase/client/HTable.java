@@ -162,7 +162,10 @@ public class HTable implements HTableInterface, RegionLocator {
    * @param conf Configuration object to use.
    * @param tableName Name of the table.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Constructing HTable objects manually has been deprecated. Please use
+   * {@link Connection} to instantiate a {@link Table} instead.
    */
+  @Deprecated
   public HTable(Configuration conf, final String tableName)
   throws IOException {
     this(conf, TableName.valueOf(tableName));
@@ -177,7 +180,10 @@ public class HTable implements HTableInterface, RegionLocator {
    * @param conf Configuration object to use.
    * @param tableName Name of the table.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Constructing HTable objects manually has been deprecated. Please use
+   * {@link Connection} to instantiate a {@link Table} instead.
    */
+  @Deprecated
   public HTable(Configuration conf, final byte[] tableName)
   throws IOException {
     this(conf, TableName.valueOf(tableName));
@@ -194,7 +200,10 @@ public class HTable implements HTableInterface, RegionLocator {
    * @param conf Configuration object to use.
    * @param tableName table name pojo
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Constructing HTable objects manually has been deprecated. Please use
+   * {@link Connection} to instantiate a {@link Table} instead.
    */
+  @Deprecated
   public HTable(Configuration conf, final TableName tableName)
   throws IOException {
     this.tableName = tableName;
@@ -213,14 +222,14 @@ public class HTable implements HTableInterface, RegionLocator {
   /**
    * Creates an object to access a HBase table. Shares zookeeper connection and other resources with
    * other HTable instances created with the same <code>connection</code> instance. Use this
-   * constructor when the HConnection instance is externally managed.
+   * constructor when the Connection instance is externally managed.
    * @param tableName Name of the table.
    * @param connection HConnection to be used.
    * @throws IOException if a remote or network exception occurs
    * @deprecated Do not use.
    */
   @Deprecated
-  public HTable(TableName tableName, HConnection connection) throws IOException {
+  public HTable(TableName tableName, Connection connection) throws IOException {
     this.tableName = tableName;
     this.cleanupPoolOnClose = true;
     this.cleanupConnectionOnClose = false;
@@ -259,7 +268,10 @@ public class HTable implements HTableInterface, RegionLocator {
    * @param tableName Name of the table.
    * @param pool ExecutorService to be used.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Constructing HTable objects manually has been deprecated. Please use
+   * {@link Connection} to instantiate a {@link Table} instead.
    */
+  @Deprecated
   public HTable(Configuration conf, final byte[] tableName, final ExecutorService pool)
       throws IOException {
     this(conf, TableName.valueOf(tableName), pool);
@@ -276,7 +288,10 @@ public class HTable implements HTableInterface, RegionLocator {
    * @param tableName Name of the table.
    * @param pool ExecutorService to be used.
    * @throws IOException if a remote or network exception occurs
+   * @deprecated Constructing HTable objects manually has been deprecated. Please use
+   * {@link Connection} to instantiate a {@link Table} instead.
    */
+  @Deprecated
   public HTable(Configuration conf, final TableName tableName, final ExecutorService pool)
       throws IOException {
     this.connection = ConnectionManager.getConnectionInternal(conf);

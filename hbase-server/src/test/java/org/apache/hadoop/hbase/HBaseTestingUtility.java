@@ -2561,7 +2561,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return An Admin instance.
    * @throws IOException
    */
-  public synchronized Admin getHBaseAdmin()
+  public synchronized HBaseAdmin getHBaseAdmin()
   throws IOException {
     if (hbaseAdmin == null){
       hbaseAdmin = new HBaseAdminForTests(getConfiguration());
