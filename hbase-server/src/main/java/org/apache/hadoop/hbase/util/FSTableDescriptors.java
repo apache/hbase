@@ -596,15 +596,30 @@ public class FSTableDescriptors implements TableDescriptors {
     try {
       td = TableDescriptor.parseFrom(content);
     } catch (DeserializationException e) {
-      throw new IOException("content=" + Bytes.toShort(content), e);
+      // we have old HTableDescriptor here
+      try {
+        HTableDescriptor htd = HTableDescriptor.parseFrom(content);
+        LOG.warn("Found old table descriptor, converting to new format for table " +
+            htd.getTableName() + "; NOTE table will be in ENABLED state!");
+        td = new TableDescriptor(htd, TableState.State.ENABLED);
+        if (rewritePb) rewriteTableDescriptor(fs, status, td);
+      } catch (DeserializationException e1) {
+        throw new IOException("content=" + Bytes.toShort(content), e);
+      }
     }
     if (rewritePb && !ProtobufUtil.isPBMagicPrefix(content)) {
       // Convert the file over to be pb before leaving here.
-      Path tableInfoDir = status.getPath().getParent();
-      Path tableDir = tableInfoDir.getParent();
-      writeTableDescriptor(fs, td, tableDir, status);
+      rewriteTableDescriptor(fs, status, td);
     }
     return td;
+  }
+
+  private static void rewriteTableDescriptor(final FileSystem fs, final FileStatus status,
+      final TableDescriptor td)
+  throws IOException {
+    Path tableInfoDir = status.getPath().getParent();
+    Path tableDir = tableInfoDir.getParent();
+    writeTableDescriptor(fs, td, tableDir, status);
   }
 
   /**

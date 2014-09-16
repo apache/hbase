@@ -28,6 +28,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Comparator;
+
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -42,6 +45,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableExistsException;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.Test;
@@ -173,6 +177,30 @@ public class TestFSTableDescriptors {
     TableDescriptor td2 =
       FSTableDescriptors.getTableDescriptorFromFs(fs, rootdir, htd.getTableName());
     assertTrue(td.equals(td2));
+  }
+
+  @Test public void testReadingOldHTDFromFS() throws IOException, DeserializationException {
+    final String name = "testReadingOldHTDFromFS";
+    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+    Path rootdir = UTIL.getDataTestDir(name);
+    FSTableDescriptors fstd = new FSTableDescriptors(fs, rootdir);
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
+    TableDescriptor td = new TableDescriptor(htd, TableState.State.ENABLED);
+    Path descriptorFile = fstd.updateTableDescriptor(td);
+    try (FSDataOutputStream out = fs.create(descriptorFile, true)) {
+      out.write(htd.toByteArray());
+    }
+    FSTableDescriptors fstd2 = new FSTableDescriptors(fs, rootdir);
+    TableDescriptor td2 = fstd2.getDescriptor(htd.getTableName());
+    assertEquals(td, td2);
+    FileStatus descriptorFile2 =
+        FSTableDescriptors.getTableInfoPath(fs, fstd2.getTableDir(htd.getTableName()));
+    byte[] buffer = td.toByteArray();
+    try (FSDataInputStream in = fs.open(descriptorFile2.getPath())) {
+      in.readFully(buffer);
+    }
+    TableDescriptor td3 = TableDescriptor.parseFrom(buffer);
+    assertEquals(td, td3);
   }
 
   @Test public void testHTableDescriptors()
