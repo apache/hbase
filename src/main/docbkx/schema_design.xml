@@ -439,15 +439,18 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
       xml:id="schema.versions.max">
       <title>Maximum Number of Versions</title>
       <para>The maximum number of row versions to store is configured per column family via <link
-          xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link>.
-        The default for max versions is 1. This is an important parameter because as described in <xref
-          linkend="datamodel" /> section HBase does <emphasis>not</emphasis> overwrite row values,
+          xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html"
+          >HColumnDescriptor</link>. The default for max versions is 3 prior to HBase 0.96.x, and 1
+        in newer versions. This is an important parameter because as described in <xref
+          linkend="datamodel"/> section HBase does <emphasis>not</emphasis> overwrite row values,
         but rather stores different values per row by time (and qualifier). Excess versions are
         removed during major compactions. The number of max versions may need to be increased or
         decreased depending on application needs. </para>
       <para>It is not recommended setting the number of max versions to an exceedingly high level
         (e.g., hundreds or more) unless those old values are very dear to you because this will
         greatly increase StoreFile size. </para>
+      <para>See <xref linkend="specify.number.of.versions"/> for examples for setting the maximum
+        number of versions on a given column or globally.</para>
     </section>
     <section
       xml:id="schema.minversions">
@@ -462,6 +465,8 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
           around</emphasis>" (where M is the value for minimum number of row versions, M&lt;N). This
         parameter should only be set when time-to-live is enabled for a column family and must be
         less than the number of row versions. </para>
+      <para>See <xref linkend="specify.number.of.versions"/> for examples for setting the minimum
+        number of versions on a given column.</para>
     </section>
   </section>
   <section

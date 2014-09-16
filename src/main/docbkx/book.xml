@@ -652,6 +652,37 @@ try {
               <emphasis>Overwriting values at existing timestamps</emphasis> mentioned in the
             article no longer holds in HBase. This section is basically a synopsis of this article
             by Bruno Dumon.</para>
+      
+      <section xml:id="specify.number.of.versions">
+        <title>Specifying the Number of Versions to Store</title>
+        <para>The maximum number of versions to store for a given column is part of the column
+          schema and is specified at table creation, or via an <command>alter</command> command, via
+            <code>HColumnDescriptor.DEFAULT_VERSIONS</code>. Prior to HBase 0.96, the default number
+          of versions kept was <literal>3</literal>, but in 0.96 and newer has been changed to
+            <literal>1</literal>.</para>
+        <example>
+          <title>Modify the Maximum Number of Versions for a Column</title>
+          <para>This example uses HBase Shell to keep a maximum of 5 versions of column
+              <code>f1</code>. You could also use <link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html"
+              >HColumnDescriptor</link>.</para>
+          <screen><![CDATA[hbase> alter ‘t1′, NAME => ‘f1′, VERSIONS => 5]]></screen>
+        </example>
+        <example>
+          <title>Modify the Minimum Number of Versions for a Column</title>
+          <para>You can also specify the minimum number of versions to store. By default, this is
+            set to 0, which means the feature is disabled. The following example sets the minimum
+            number of versions on field <code>f1</code> to <literal>2</literal>, via HBase Shell.
+            You could also use <link
+              xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html"
+              >HColumnDescriptor</link>.</para>
+          <screen><![CDATA[hbase> alter ‘t1′, NAME => ‘f1′, MIN_VERSIONS => 2]]></screen>
+        </example>
+        <para>Starting with HBase 0.98.2, you can specify a global default for the maximum number of
+          versions kept for all newly-created columns, by setting
+            <option>hbase.column.max.version</option> in <filename>hbase-site.xml</filename>. See
+            <xref linkend="hbase.column.max.version"/>.</para>
+      </section>
 
       <section
         xml:id="versions.ops">
