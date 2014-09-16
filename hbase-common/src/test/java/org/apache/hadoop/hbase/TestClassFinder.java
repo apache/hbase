@@ -42,8 +42,6 @@ import java.util.jar.Manifest;
 import javax.tools.JavaCompiler;
 import javax.tools.ToolProvider;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.AfterClass;
@@ -53,7 +51,6 @@ import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestClassFinder {
-  private static final Log LOG = LogFactory.getLog(TestClassFinder.class);
   private static final HBaseCommonTestingUtility testUtil = new HBaseCommonTestingUtility();
   private static final String BASEPKG = "tfcpkg";
 
@@ -218,8 +215,9 @@ public class TestClassFinder {
     // Well, technically, we are not guaranteed that the classes will
     // be in dirs, but during normal build they would be.
     ClassFinder allClassesFinder = new ClassFinder();
-    Set<Class<?>> allClasses = allClassesFinder.findClasses(
-        this.getClass().getPackage().getName(), false);
+    String pkg = this.getClass().getPackage().getName();
+    Set<Class<?>> allClasses = allClassesFinder.findClasses(pkg, false);
+    assertTrue("Classes in " + pkg, allClasses.size() > 0);
     assertTrue(allClasses.contains(this.getClass()));
     assertTrue(allClasses.contains(ClassFinder.class));
   }
@@ -236,6 +234,7 @@ public class TestClassFinder {
     String thisPackage = this.getClass().getPackage().getName();
     ClassFinder allClassesFinder = new ClassFinder();
     Set<Class<?>> allClasses = allClassesFinder.findClasses(thisPackage, false);
+    assertTrue("Classes in " + thisPackage, allClasses.size() > 0);
     ClassFinder notThisClassFinder = new ClassFinder(null, notThisFilter, null);
     Set<Class<?>> notAllClasses = notThisClassFinder.findClasses(thisPackage, false);
     assertFalse(notAllClasses.contains(this.getClass()));
@@ -253,6 +252,7 @@ public class TestClassFinder {
     String thisPackage = this.getClass().getPackage().getName();
     ClassFinder allClassesFinder = new ClassFinder();
     Set<Class<?>> allClasses = allClassesFinder.findClasses(thisPackage, false);
+    assertTrue("Classes in " + thisPackage, allClasses.size() > 0);
     ClassFinder notThisClassFinder = new ClassFinder(null, null, notThisFilter);
     Set<Class<?>> notAllClasses = notThisClassFinder.findClasses(thisPackage, false);
     assertFalse(notAllClasses.contains(this.getClass()));
