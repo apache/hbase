@@ -62,7 +62,7 @@ import org.junit.experimental.categories.Category;
 public class TestMasterOperationsForRegionReplicas {
   final static Log LOG = LogFactory.getLog(TestRegionPlacement.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static Admin admin;
+  private static HBaseAdmin admin;
   private static int numSlaves = 2;
   private static Configuration conf;
 

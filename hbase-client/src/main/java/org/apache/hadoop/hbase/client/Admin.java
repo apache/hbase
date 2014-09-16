@@ -66,9 +66,9 @@ public interface Admin extends Abortable, Closeable {
   boolean isAborted();
 
   /**
-   * @return HConnection used by this object.
+   * @return Connection used by this object.
    */
-  HConnection getConnection();
+  Connection getConnection();
 
   /**
    * @return - true if the master server is running. Throws an exception otherwise.

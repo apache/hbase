@@ -26,7 +26,7 @@ import java.io.IOException;
 
 /**
  * Interface for client-side scanning.
- * Go to {@link HTable} to obtain instances.
+ * Go to {@link Table} to obtain instances.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -50,5 +50,6 @@ public interface ResultScanner extends Closeable, Iterable<Result> {
   /**
    * Closes the scanner and releases any resources it has allocated
    */
+  @Override
   void close();
 }

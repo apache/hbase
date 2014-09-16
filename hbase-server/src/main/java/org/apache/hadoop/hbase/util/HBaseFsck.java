@@ -185,7 +185,7 @@ public class HBaseFsck extends Configured {
   private static final Log LOG = LogFactory.getLog(HBaseFsck.class.getName());
   private ClusterStatus status;
   private HConnection connection;
-  private Admin admin;
+  private HBaseAdmin admin;
   private Table meta;
   // threads to do ||izable tasks: retrieve data from regionservers, handle overlapping regions
   protected ExecutorService executor;

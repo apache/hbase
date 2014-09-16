@@ -263,7 +263,7 @@ public class TestHBaseFsck {
    * This method is used to undeploy a region -- close it and attempt to
    * remove its state from the Master.
    */
-  private void undeployRegion(Admin admin, ServerName sn,
+  private void undeployRegion(HBaseAdmin admin, ServerName sn,
       HRegionInfo hri) throws IOException, InterruptedException {
     try {
       HBaseFsckRepair.closeRegionSilentlyAndWait(admin, sn, hri);
@@ -408,7 +408,7 @@ public class TestHBaseFsck {
    * @throws IOException
    */
   void deleteTable(TableName tablename) throws IOException {
-    Admin admin = new HBaseAdmin(conf);
+    HBaseAdmin admin = new HBaseAdmin(conf);
     admin.getConnection().clearRegionCache();
     if (admin.isTableEnabled(tablename)) {
       admin.disableTableAsync(tablename);
@@ -587,7 +587,7 @@ public class TestHBaseFsck {
   /**
    * Get region info from local cluster.
    */
-  Map<ServerName, List<String>> getDeployedHRIs(final Admin admin) throws IOException {
+  Map<ServerName, List<String>> getDeployedHRIs(final HBaseAdmin admin) throws IOException {
     ClusterStatus status = admin.getClusterStatus();
     Collection<ServerName> regionServers = status.getServers();
     Map<ServerName, List<String>> mm =
@@ -646,7 +646,7 @@ public class TestHBaseFsck {
       // different regions with the same start/endkeys since it doesn't
       // differentiate on ts/regionId!  We actually need to recheck
       // deployments!
-      Admin admin = TEST_UTIL.getHBaseAdmin();
+      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
       while (findDeployedHSI(getDeployedHRIs(admin), hriDupe) == null) {
         Thread.sleep(250);
       }
@@ -804,7 +804,7 @@ public class TestHBaseFsck {
             }
           }
 
-          Admin admin = TEST_UTIL.getHBaseAdmin();
+          HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
           HBaseFsckRepair.closeRegionSilentlyAndWait(admin,
             cluster.getRegionServer(k).getServerName(), hbi.getHdfsHRI());
           admin.offline(regionName);
@@ -1439,7 +1439,7 @@ public class TestHBaseFsck {
       HRegionInfo hri = location.getRegionInfo();
 
       // do a regular split
-      Admin admin = TEST_UTIL.getHBaseAdmin();
+      HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
       byte[] regionName = location.getRegionInfo().getRegionName();
       admin.splitRegion(location.getRegionInfo().getRegionName(), Bytes.toBytes("BM"));
       TestEndToEndSplitTransaction.blockUntilRegionSplit(
@@ -2213,7 +2213,7 @@ public class TestHBaseFsck {
     if (unassign) {
       LOG.info("Undeploying meta region " + hri + " from server " + hsa);
       HConnection unmanagedConnection = HConnectionManager.createConnection(conf);
-      Admin admin = unmanagedConnection.getAdmin();
+      HBaseAdmin admin = (HBaseAdmin) unmanagedConnection.getAdmin();
       try {
         undeployRegion(admin, hsa, hri);
       } finally {

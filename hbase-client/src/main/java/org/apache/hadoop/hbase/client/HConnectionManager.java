@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.security.User;
  * <pre>
  * {@code
  * HConnection connection = HConnectionManager.createConnection(config);
- * HTableInterface table = connection.getTable("table1");
+ * HTableInterface table = connection.getTable(TableName.valueOf("table1"));
  * try {
  *   // Use the table as needed, for a single operation and a single thread
  * } finally {
@@ -82,11 +82,12 @@ import org.apache.hadoop.hbase.security.User;
  * were problematic for clients of HConnection that wanted to register their
  * own shutdown hooks so we removed ours though this shifts the onus for
  * cleanup to the client.
+ * @deprecated Please use ConnectionFactory instead
  */
-@SuppressWarnings("serial")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class HConnectionManager {
+@Deprecated
+public class HConnectionManager extends ConnectionFactory {
 
   @Deprecated
   public static final String RETRIES_BY_SERVER_KEY =
@@ -112,6 +113,7 @@ public class HConnectionManager {
    * @return HConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
    */
+  @Deprecated
   public static HConnection getConnection(final Configuration conf) throws IOException {
     return ConnectionManager.getConnectionInternal(conf);
   }
@@ -126,16 +128,19 @@ public class HConnectionManager {
    * {@code
    * HConnection connection = HConnectionManager.createConnection(conf);
    * HTableInterface table = connection.getTable("mytable");
-   * table.get(...);
-   * ...
-   * table.close();
-   * connection.close();
+   * try {
+   *   table.get(...);
+   *   ...
+   * } finally {
+   *   table.close();
+   *   connection.close();
    * }
    *
    * @param conf configuration
    * @return HConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
    */
+  @Deprecated
   public static HConnection createConnection(Configuration conf) throws IOException {
     return ConnectionManager.createConnectionInternal(conf);
   }
@@ -161,6 +166,7 @@ public class HConnectionManager {
    * @return HConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
    */
+  @Deprecated
   public static HConnection createConnection(Configuration conf, ExecutorService pool)
       throws IOException {
     return ConnectionManager.createConnection(conf, pool);
@@ -186,6 +192,7 @@ public class HConnectionManager {
    * @return HConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
    */
+  @Deprecated
   public static HConnection createConnection(Configuration conf, User user)
   throws IOException {
     return ConnectionManager.createConnection(conf, user);
@@ -212,6 +219,7 @@ public class HConnectionManager {
    * @return HConnection object for <code>conf</code>
    * @throws ZooKeeperConnectionException
    */
+  @Deprecated
   public static HConnection createConnection(Configuration conf, ExecutorService pool, User user)
   throws IOException {
     return ConnectionManager.createConnection(conf, pool, user);

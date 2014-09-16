@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -26,7 +25,6 @@ import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -57,10 +55,12 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
  * HConnections awkward.  See {@link HConnectionManager} for cleanup discussion.
  *
  * @see HConnectionManager
+ * @deprecated in favor of {@link Connection} and {@link ConnectionFactory}
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public interface HConnection extends Abortable, Closeable {
+@Deprecated
+public interface HConnection extends Connection {
   /**
    * Key for configuration in Configuration whose value is the class we implement making a
    * new HConnection instance.
@@ -70,6 +70,7 @@ public interface HConnection extends Abortable, Closeable {
   /**
    * @return Configuration instance being used by this HConnection instance.
    */
+  @Override
   Configuration getConfiguration();
 
   /**
@@ -109,6 +110,7 @@ public interface HConnection extends Abortable, Closeable {
    * @param tableName
    * @return an HTable to use for interactions with this table
    */
+  @Override
   public HTableInterface getTable(TableName tableName) throws IOException;
 
   /**
@@ -151,6 +153,7 @@ public interface HConnection extends Abortable, Closeable {
    * @param pool The thread pool to use for batch operations, null to use a default pool.
    * @return an HTable to use for interactions with this table
    */
+  @Override
   public HTableInterface getTable(TableName tableName, ExecutorService pool)  throws IOException;
 
   /**
@@ -166,6 +169,7 @@ public interface HConnection extends Abortable, Closeable {
    * @param tableName Name of the table who's region is to be examined
    * @return A RegionLocator instance
    */
+  @Override
   public RegionLocator getRegionLocator(TableName tableName) throws IOException;
 
   /**
@@ -176,6 +180,7 @@ public interface HConnection extends Abortable, Closeable {
    *
    * @return an Admin instance for cluster administration
    */
+  @Override
   Admin getAdmin() throws IOException;
 
   /** @return - true if the master server is running
@@ -542,6 +547,7 @@ public interface HConnection extends Abortable, Closeable {
   /**
    * @return true if this connection is closed
    */
+  @Override
   boolean isClosed();
 
 
