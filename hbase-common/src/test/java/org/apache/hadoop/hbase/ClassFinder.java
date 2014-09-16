@@ -107,7 +107,7 @@ public class ClassFinder {
       resourcePath = isJar ? matcher.group(1) : resourcePath;
       if (null == this.resourcePathFilter
           || this.resourcePathFilter.isCandidatePath(resourcePath, isJar)) {
-        LOG.debug("Will look for classes in " + resourcePath);
+        LOG.debug("Looking in " + resourcePath + "; isJar=" + isJar);
         if (isJar) {
           jars.add(resourcePath);
         } else {
@@ -186,7 +186,7 @@ public class ClassFinder {
       boolean proceedOnExceptions) throws ClassNotFoundException, LinkageError {
     Set<Class<?>> classes = new HashSet<Class<?>>();
     if (!baseDirectory.exists()) {
-      LOG.warn("Failed to find " + baseDirectory.getAbsolutePath());
+      LOG.warn(baseDirectory.getAbsolutePath() + " does not exist");
       return classes;
     }
 
