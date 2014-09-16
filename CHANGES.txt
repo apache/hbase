@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 0.99.0 9/17/2014
+Release Notes - HBase - Version 0.99.0 9/19/2014
 
 ** Sub-task
     * [HBASE-2251] - PE defaults to 1k rows - uncommon use case, and easy to hit benchmarks
@@ -158,10 +158,13 @@ Release Notes - HBase - Version 0.99.0 9/17/2014
     * [HBASE-11752] - Document blockcache prefetch option
     * [HBASE-11753] - Document HBASE_SHELL_OPTS environment variable
     * [HBASE-11781] - Document new TableMapReduceUtil scanning options
+    * [HBASE-11784] - Document global configuration for maxVersion
     * [HBASE-11822] - Convert EnvironmentEdge#getCurrentTimeMillis to getCurrentTime
     * [HBASE-11919] - Remove the deprecated pre/postGet CP hook
     * [HBASE-11923] - Potential race condition in RecoverableZookeeper.checkZk()
     * [HBASE-11934] - Support KeyValueCodec to encode non KeyValue cells.
+    * [HBASE-11941] - Rebuild site because of major structural changes to HTML
+    * [HBASE-11963] - Synchronize peer cluster replication connection attempts
 
 
 ** Brainstorming
@@ -701,11 +704,22 @@ Release Notes - HBase - Version 0.99.0 9/17/2014
     * [HBASE-11882] - Row level consistency may not be maintained with bulk load and compaction
     * [HBASE-11886] - The creator of the table should have all permissions on the table
     * [HBASE-11887] - Memory retention in branch-1; millions of instances of LiteralByteString for column qualifier and value
+    * [HBASE-11892] - configs contain stale entries
+    * [HBASE-11893] - RowTooBigException should be in hbase-client module
     * [HBASE-11896] - LoadIncrementalHFiles fails in secure mode if the namespace is specified
     * [HBASE-11898] - CoprocessorHost.Environment should cache class loader instance
     * [HBASE-11905] - Add orca to server UIs and update logo.
     * [HBASE-11921] - Minor fixups that come of testing branch-1
     * [HBASE-11932] - Stop the html-single from building a html-single of every chapter and cluttering the docbkx directory
+    * [HBASE-11936] - IsolationLevel must be attribute of a Query not a Scan
+    * [HBASE-11946] - Get xref and API docs to build properly again
+    * [HBASE-11947] - NoSuchElementException in balancer for master regions
+    * [HBASE-11949] - Setting hfile.block.cache.size=0 doesn't actually disable blockcache
+    * [HBASE-11959] - TestAssignmentManagerOnCluster is flaky
+    * [HBASE-11972] - The "doAs user" used in the update to hbase:acl table RPC is incorrect
+    * [HBASE-11976] - Server startcode is not checked for bulk region assignment
+    * [HBASE-11984] - TestClassFinder failing on occasion
+    * [HBASE-11989] - IntegrationTestLoadAndVerify cannot be configured anymore on distributed mode
 
 
 
@@ -738,6 +752,7 @@ Release Notes - HBase - Version 0.99.0 9/17/2014
     * [HBASE-9426] - Make custom distributed barrier procedure pluggable 
     * [HBASE-9501] - Provide throttling for replication
     * [HBASE-9524] - Multi row get does not return any results even if any one of the rows specified in the query is missing and improve exception handling
+    * [HBASE-9542] - Have Get and MultiGet do cellblocks, currently they are pb all the time
     * [HBASE-9829] - make the compaction logging less confusing
     * [HBASE-9857] - Blockcache prefetch option
     * [HBASE-9866] - Support the mode where REST server authorizes proxy users
@@ -851,6 +866,7 @@ Release Notes - HBase - Version 0.99.0 9/17/2014
     * [HBASE-11126] - Add RegionObserver pre hooks that operate under row lock
     * [HBASE-11128] - Add -target option to ExportSnapshot to export with a different name
     * [HBASE-11134] - Add a -list-snapshots option to SnapshotInfo
+    * [HBASE-11136] - Add permission check to roll WAL writer 
     * [HBASE-11137] - Add mapred.TableSnapshotInputFormat
     * [HBASE-11151] - move tracing modules from hbase-server to hbase-common
     * [HBASE-11167] - Avoid usage of java.rmi package Exception in MemStore
@@ -923,12 +939,17 @@ Release Notes - HBase - Version 0.99.0 9/17/2014
     * [HBASE-11805] - KeyValue to Cell Convert in WALEdit APIs
     * [HBASE-11810] - Access SSL Passwords through Credential Provider API
     * [HBASE-11821] - [ImportTSV] Abstract labels tags creation into pluggable Interface
+    * [HBASE-11825] - Create Connection and ConnectionManager
     * [HBASE-11826] - Split each tableOrRegionName admin methods into two targetted methods
     * [HBASE-11828] - callers of SeverName.valueOf should use equals and not ==
+    * [HBASE-11845] - HFile tool should implement Tool, disable blockcache by default
     * [HBASE-11846] - HStore#assertBulkLoadHFileOk should log if a full HFile verification will be performed during a bulkload
+    * [HBASE-11847] - HFile tool should be able to print block headers
     * [HBASE-11865] - Result implements CellScannable; rather it should BE a CellScanner
+    * [HBASE-11873] - Hbase Version CLI enhancement
     * [HBASE-11877] - Make TableSplit more readable
     * [HBASE-11891] - Introduce HBaseInterfaceAudience level to denote class names that appear in configs.
+    * [HBASE-11897] - Add append and remove peer table-cfs cmds for replication
 
 ** New Feature
     * [HBASE-4089] - blockCache contents report
@@ -1002,6 +1023,7 @@ Release Notes - HBase - Version 0.99.0 9/17/2014
     * [HBASE-11317] - Expand unit testing to cover Mockito and MRUnit and give more examples
     * [HBASE-11364] - [BlockCache] Add a flag to cache data blocks in L1 if multi-tier cache
     * [HBASE-11600] - DataInputputStream and DoubleOutputStream are no longer being used 
+    * [HBASE-11604] - Disable co-locating meta/master by default
     * [HBASE-11621] - Make MiniDFSCluster run faster
     * [HBASE-11666] - Enforce JDK7 javac for builds on branch-1 and master
     * [HBASE-11682] - Explain hotspotting
@@ -1059,6 +1081,7 @@ Release Notes - HBase - Version 0.99.0 9/17/2014
     * [HBASE-11713] - Adding hbase shell unit test coverage for visibility labels.
     * [HBASE-11918] - TestVisibilityLabelsWithDistributedLogReplay#testAddVisibilityLabelsOnRSRestart sometimes fails due to VisibilityController initialization not being recognized
     * [HBASE-11942] - Fix TestHRegionBusyWait
+    * [HBASE-11966] - Minor error in TestHRegion.testCheckAndMutate_WithCorrectValue()
 
 ** Umbrella
     * [HBASE-7319] - Extend Cell usage through read path
