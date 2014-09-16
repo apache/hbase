@@ -61,30 +61,35 @@ public class RegionStates {
   /**
    * Regions currently in transition.
    */
-  final HashMap<String, RegionState> regionsInTransition;
+  final HashMap<String, RegionState> regionsInTransition =
+    new HashMap<String, RegionState>();
 
   /**
    * Region encoded name to state map.
    * All the regions should be in this map.
    */
-  private final Map<String, RegionState> regionStates;
+  private final Map<String, RegionState> regionStates =
+    new HashMap<String, RegionState>();
 
   /**
    * Server to regions assignment map.
    * Contains the set of regions currently assigned to a given server.
    */
-  private final Map<ServerName, Set<HRegionInfo>> serverHoldings;
+  private final Map<ServerName, Set<HRegionInfo>> serverHoldings =
+    new HashMap<ServerName, Set<HRegionInfo>>();
 
   /**
    * Maintains the mapping from the default region to the replica regions.
    */
-  private final Map<HRegionInfo, Set<HRegionInfo>> defaultReplicaToOtherReplicas;
+  private final Map<HRegionInfo, Set<HRegionInfo>> defaultReplicaToOtherReplicas =
+    new HashMap<HRegionInfo, Set<HRegionInfo>>();
 
   /**
    * Region to server assignment map.
    * Contains the server a given region is currently assigned to.
    */
-  private final TreeMap<HRegionInfo, ServerName> regionAssignments;
+  private final TreeMap<HRegionInfo, ServerName> regionAssignments =
+    new TreeMap<HRegionInfo, ServerName>();
 
   /**
    * Encoded region name to server assignment map for re-assignment
@@ -96,14 +101,28 @@ public class RegionStates {
    * is offline while the info in lastAssignments is cleared when
    * the region is closed or the server is dead and processed.
    */
-  private final HashMap<String, ServerName> lastAssignments;
+  private final HashMap<String, ServerName> lastAssignments =
+    new HashMap<String, ServerName>();
+
+  /**
+   * Encoded region name to server assignment map for the
+   * purpose to clean up serverHoldings when a region is online
+   * on a new server. When the region is offline from the previous
+   * server, we cleaned up regionAssignments so that it has the
+   * latest assignment map. But we didn't clean up serverHoldings
+   * to match the meta. We need this map to find out the old server
+   * whose serverHoldings needs cleanup, given a moved region.
+   */
+  private final HashMap<String, ServerName> oldAssignments =
+    new HashMap<String, ServerName>();
 
   /**
    * Map a host port pair string to the latest start code
    * of a region server which is known to be dead. It is dead
    * to us, but server manager may not know it yet.
    */
-  private final HashMap<String, Long> deadServers;
+  private final HashMap<String, Long> deadServers =
+    new HashMap<String, Long>();
 
   /**
    * Map a dead servers to the time when log split is done.
@@ -112,7 +131,8 @@ public class RegionStates {
    * on a configured time. By default, we assume a dead
    * server should be done with log splitting in two hours.
    */
-  private final HashMap<ServerName, Long> processedServers;
+  private final HashMap<ServerName, Long> processedServers =
+    new HashMap<ServerName, Long>();
   private long lastProcessedServerCleanTime;
 
   private final TableStateManager tableStateManager;
@@ -126,14 +146,6 @@ public class RegionStates {
 
   RegionStates(final Server master, final TableStateManager tableStateManager,
       final ServerManager serverManager, final RegionStateStore regionStateStore) {
-    regionStates = new HashMap<String, RegionState>();
-    regionsInTransition = new HashMap<String, RegionState>();
-    serverHoldings = new HashMap<ServerName, Set<HRegionInfo>>();
-    defaultReplicaToOtherReplicas = new HashMap<HRegionInfo, Set<HRegionInfo>>();
-    regionAssignments = new TreeMap<HRegionInfo, ServerName>();
-    lastAssignments = new HashMap<String, ServerName>();
-    processedServers = new HashMap<ServerName, Long>();
-    deadServers = new HashMap<String, Long>();
     this.tableStateManager = tableStateManager;
     this.regionStateStore = regionStateStore;
     this.serverManager = serverManager;
@@ -328,6 +340,9 @@ public class RegionStates {
       }
       if (lastHost != null && newState != State.SPLIT) {
         addToServerHoldings(lastHost, hri);
+        if (newState != State.OPEN) {
+          oldAssignments.put(encodedName, lastHost);
+        }
       }
     }
     return regionState;
@@ -363,24 +378,28 @@ public class RegionStates {
    */
   public void regionOnline(final HRegionInfo hri,
       final ServerName serverName, long openSeqNum) {
+    String encodedName = hri.getEncodedName();
     if (!serverManager.isServerOnline(serverName)) {
       // This is possible if the region server dies before master gets a
       // chance to handle ZK event in time. At this time, if the dead server
       // is already processed by SSH, we should ignore this event.
       // If not processed yet, ignore and let SSH deal with it.
-      LOG.warn("Ignored, " + hri.getEncodedName()
+      LOG.warn("Ignored, " + encodedName
         + " was opened on a dead server: " + serverName);
       return;
     }
     updateRegionState(hri, State.OPEN, serverName, openSeqNum);
 
     synchronized (this) {
-      regionsInTransition.remove(hri.getEncodedName());
+      regionsInTransition.remove(encodedName);
       ServerName oldServerName = regionAssignments.put(hri, serverName);
       if (!serverName.equals(oldServerName)) {
         LOG.info("Onlined " + hri.getShortNameToLog() + " on " + serverName);
         addToServerHoldings(serverName, hri);
         addToReplicaMapping(hri);
+        if (oldServerName == null) {
+          oldServerName = oldAssignments.remove(encodedName);
+        }
         if (oldServerName != null && serverHoldings.containsKey(oldServerName)) {
           LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
           removeFromServerHoldings(oldServerName, hri);
@@ -500,19 +519,24 @@ public class RegionStates {
     State newState =
       expectedState == null ? State.OFFLINE : expectedState;
     updateRegionState(hri, newState);
-
+    String encodedName = hri.getEncodedName();
     synchronized (this) {
-      regionsInTransition.remove(hri.getEncodedName());
+      regionsInTransition.remove(encodedName);
       ServerName oldServerName = regionAssignments.remove(hri);
-      if (oldServerName != null && serverHoldings.containsKey(oldServerName)
-          && (newState == State.MERGED || newState == State.SPLIT
+      if (oldServerName != null && serverHoldings.containsKey(oldServerName)) {
+        if (newState == State.MERGED || newState == State.SPLIT
             || hri.isMetaRegion() || tableStateManager.isTableState(hri.getTable(),
-              TableState.State.DISABLED, TableState.State.DISABLING))) {
-        // Offline the region only if it's merged/split, or the table is disabled/disabling.
-        // Otherwise, offline it from this server only when it is online on a different server.
-        LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
-        removeFromServerHoldings(oldServerName, hri);
-        removeFromReplicaMapping(hri);
+              TableState.State.DISABLED, TableState.State.DISABLING)) {
+          // Offline the region only if it's merged/split, or the table is disabled/disabling.
+          // Otherwise, offline it from this server only when it is online on a different server.
+          LOG.info("Offlined " + hri.getShortNameToLog() + " from " + oldServerName);
+          removeFromServerHoldings(oldServerName, hri);
+          removeFromReplicaMapping(hri);
+        } else {
+          // Need to remember it so that we can offline it from this
+          // server when it is online on a different server.
+          oldAssignments.put(encodedName, oldServerName);
+        }
       }
     }
   }
