@@ -74,7 +74,7 @@ public class TableNamespaceManager {
   private boolean initialized;
 
   static final String NS_INIT_TIMEOUT = "hbase.master.namespace.init.timeout";
-  static final int DEFAULT_NS_INIT_TIMEOUT = 60000;
+  static final int DEFAULT_NS_INIT_TIMEOUT = 300000;
 
   public TableNamespaceManager(MasterServices masterServices) {
     this.masterServices = masterServices;
@@ -83,7 +83,7 @@ public class TableNamespaceManager {
 
   public void start() throws IOException {
     if (!MetaTableAccessor.tableExists(masterServices.getShortCircuitConnection(),
-      TableName.NAMESPACE_TABLE_NAME)) {
+        TableName.NAMESPACE_TABLE_NAME)) {
       LOG.info("Namespace table not found. Creating...");
       createNamespaceTable(masterServices);
     }
@@ -94,10 +94,11 @@ public class TableNamespaceManager {
       // So that it should be initialized later on lazily.
       long startTime = EnvironmentEdgeManager.currentTime();
       int timeout = conf.getInt(NS_INIT_TIMEOUT, DEFAULT_NS_INIT_TIMEOUT);
-      while (!isTableAssigned()) {
+      while (!(isTableAssigned() && isTableEnabled())) {
         if (EnvironmentEdgeManager.currentTime() - startTime + 100 > timeout) {
-          LOG.warn("Timedout waiting for namespace table to be assigned.");
-          return;
+          // We can't do anything if ns is not online.
+          throw new IOException("Timedout " + timeout + "ms waiting for namespace table to " +
+            "be assigned and enabled: " + getTableState());
         }
         Thread.sleep(100);
       }
@@ -299,10 +300,12 @@ public class TableNamespaceManager {
     return false;
   }
 
+  private TableState.State getTableState() throws IOException {
+    return masterServices.getTableStateManager().getTableState(TableName.NAMESPACE_TABLE_NAME);
+  }
+
   private boolean isTableEnabled() throws IOException {
-    return masterServices.getTableStateManager().getTableState(
-            TableName.NAMESPACE_TABLE_NAME
-    ).equals(TableState.State.ENABLED);
+    return getTableState().equals(TableState.State.ENABLED);
   }
 
   private boolean isTableAssigned() {
