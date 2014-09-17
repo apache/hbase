@@ -73,22 +73,23 @@ import java.util.List;
  * security in HBase.
  *
  * This service addresses two issues:
- *
- * 1. Moving files in a secure filesystem wherein the HBase Client
- * and HBase Server are different filesystem users.
- * 2. Does moving in a secure manner. Assuming that the filesystem
- * is POSIX compliant.
+ * <ol>
+ * <li>Moving files in a secure filesystem wherein the HBase Client
+ * and HBase Server are different filesystem users.</li>
+ * <li>Does moving in a secure manner. Assuming that the filesystem
+ * is POSIX compliant.</li>
+ * </ol>
  *
  * The algorithm is as follows:
- *
- * 1. Create an hbase owned staging directory which is
- * world traversable (711): /hbase/staging
- * 2. A user writes out data to his secure output directory: /user/foo/data
- * 3. A call is made to hbase to create a secret staging directory
- * which globally rwx (777): /user/staging/averylongandrandomdirectoryname
- * 4. The user moves the data into the random staging directory,
- * then calls bulkLoadHFiles()
- *
+ * <ol>
+ * <li>Create an hbase owned staging directory which is
+ * world traversable (711): {@code /hbase/staging}</li>
+ * <li>A user writes out data to his secure output directory: {@code /user/foo/data}</li>
+ * <li>A call is made to hbase to create a secret staging directory
+ * which globally rwx (777): {@code /user/staging/averylongandrandomdirectoryname}</li>
+ * <li>The user moves the data into the random staging directory,
+ * then calls bulkLoadHFiles()</li>
+ * </ol>
  * Like delegation tokens the strength of the security lies in the length
  * and randomness of the secret directory.
  *
