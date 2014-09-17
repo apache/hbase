@@ -21,6 +21,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.InetAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -44,7 +45,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -52,10 +55,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -111,7 +116,10 @@ import org.apache.hadoop.hbase.util.hbck.TableLockChecker;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
+import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Tool;
@@ -180,6 +188,8 @@ public class HBaseFsck extends Configured {
   private static final int DEFAULT_OVERLAPS_TO_SIDELINE = 2;
   private static final int DEFAULT_MAX_MERGE = 5;
   private static final String TO_BE_LOADED = "to_be_loaded";
+  private static final String HBCK_LOCK_FILE = "hbase-hbck.lock";
+
 
   /**********************
    * Internal resources
@@ -194,6 +204,11 @@ public class HBaseFsck extends Configured {
   private long startMillis = System.currentTimeMillis();
   private HFileCorruptionChecker hfcc;
   private int retcode = 0;
+  private static Path HBCK_LOCK_PATH;
+  private FSDataOutputStream hbckOutFd;
+  // This lock is to prevent cleanup of balancer resources twice between
+  // ShutdownHook and the main code.
+  private static AtomicBoolean hbckLockCleanup = new AtomicBoolean(false);
 
   /***********
    * Options
@@ -303,10 +318,78 @@ public class HBaseFsck extends Configured {
   }
 
   /**
+   * This method maintains a lock using a file. If the creation fails we return null
+   *
+   * @return FSDataOutputStream object corresponding to the newly opened lock file
+   * @throws IOException
+   */
+  private FSDataOutputStream checkAndMarkRunningHbck() throws IOException {
+    try {
+      FileSystem fs = FSUtils.getCurrentFileSystem(getConf());
+      FsPermission defaultPerms = FSUtils.getFilePermissions(fs, getConf(),
+          HConstants.DATA_FILE_UMASK_KEY);
+      Path tmpDir = new Path(FSUtils.getRootDir(getConf()), HConstants.HBASE_TEMP_DIRECTORY);
+      fs.mkdirs(tmpDir);
+      HBCK_LOCK_PATH = new Path(tmpDir, HBCK_LOCK_FILE);
+      final FSDataOutputStream out = FSUtils.create(fs, HBCK_LOCK_PATH, defaultPerms, false);
+      out.writeBytes(InetAddress.getLocalHost().toString());
+      out.flush();
+      return out;
+    } catch(RemoteException e) {
+      if(AlreadyBeingCreatedException.class.getName().equals(e.getClassName())){
+        return null;
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  private void unlockHbck() throws IOException {
+    if(hbckLockCleanup.compareAndSet(false, true)){
+      IOUtils.closeStream(hbckOutFd);
+      try{
+        FSUtils.delete(FSUtils.getCurrentFileSystem(getConf()), HBCK_LOCK_PATH, true);
+        //Reset the hbckLockCleanup to false so that subsequent calls using the same
+        // Hbck object succeed. This is added for tests, which keep re-using the same
+        // objects
+        hbckLockCleanup.set(false);
+      } catch(IOException ioe) {
+        LOG.warn("Failed to delete " + HBCK_LOCK_PATH);
+        LOG.debug(ioe);
+      }
+    }
+  }
+
+  /**
    * To repair region consistency, one must call connect() in order to repair
    * online state.
    */
   public void connect() throws IOException {
+
+    // Check if another instance of balancer is running
+    hbckOutFd = checkAndMarkRunningHbck();
+    if (hbckOutFd == null) {
+      setRetCode(-1);
+      LOG.error("Another instance of hbck is running, exiting this instance.[If you are sure" +
+		      " no other instance is running, delete the lock file " +
+		      HBCK_LOCK_PATH + " and rerun the tool]");
+      throw new IOException("Duplicate hbck - Abort");
+    }
+
+    // Add a shutdown hook to this thread, incase user tries to
+    // kill the hbck with a ctrl-c, we want to cleanup the lock so that
+    // it is available for further calls
+    Runtime.getRuntime().addShutdownHook(new Thread() {
+      public void run() {
+        try{
+          unlockHbck();
+        } catch(Exception e){
+          LOG.debug("Error while removing hbck lock " + e.getMessage());
+        }
+      }
+    });
+    LOG.debug("Launching hbck");
+
     connection = HConnectionManager.createConnection(getConf());
     admin = new HBaseAdmin(connection);
     meta = new HTable(TableName.META_TABLE_NAME, connection);
@@ -500,6 +583,9 @@ public class HBaseFsck extends Configured {
     offlineReferenceFileRepair();
 
     checkAndFixTableLocks();
+
+    // Remove the hbck lock
+    unlockHbck();
 
     // Print table summary
     printTableSummary(tablesInfo);
@@ -3962,7 +4048,6 @@ public class HBaseFsck extends Configured {
     Path hbasedir = FSUtils.getRootDir(conf);
     URI defaultFs = hbasedir.getFileSystem(conf).getUri();
     FSUtils.setFsDefault(conf, new Path(defaultFs));
-
     int ret = ToolRunner.run(new HBaseFsckTool(conf), args);
     System.exit(ret);
   }
