@@ -160,6 +160,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         tablesOnMaster, rackManager);
     }
 
+    @SuppressWarnings("unchecked")
     protected Cluster(
         ServerName masterServerName,
         Collection<HRegionInfo> unassignedRegions,
@@ -847,27 +848,18 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   private static final Log LOG = LogFactory.getLog(BaseLoadBalancer.class);
 
-  // The weight means that each region on the active/backup master is
+  // The weight means that each region on the backup master is
   // equal to that many regions on a normal regionserver, in calculating
-  // the region load by the load balancer. So that the active/backup master
+  // the region load by the load balancer. So that the backup master
   // can host less (or equal if weight = 1) regions than normal regionservers.
   //
   // The weight can be used to control the number of regions on backup
   // masters, which shouldn't host as many regions as normal regionservers.
   // So that we don't need to move around too many regions when a
   // backup master becomes the active one.
-  //
-  // Currently, the active master weight is used only by StockasticLoadBalancer.
-  // Generally, we don't put any user regions on the active master, which
-  // only hosts regions of tables defined in TABLES_ON_MASTER.
-  // That's why the default activeMasterWeight is high.
   public static final String BACKUP_MASTER_WEIGHT_KEY =
     "hbase.balancer.backupMasterWeight";
   public static final int DEFAULT_BACKUP_MASTER_WEIGHT = 1;
-
-  private static final String ACTIVE_MASTER_WEIGHT_KEY =
-    "hbase.balancer.activeMasterWeight";
-  private static final int DEFAULT_ACTIVE_MASTER_WEIGHT = 200;
 
   // Regions of these tables are put on the master by default.
   private static final String[] DEFAULT_TABLES_ON_MASTER =
@@ -875,7 +867,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       TableName.NAMESPACE_TABLE_NAME.getNameAsString(),
       TableName.META_TABLE_NAME.getNameAsString()};
 
-  protected int activeMasterWeight;
   protected int backupMasterWeight;
 
   // a flag to indicate if assigning regions to backup masters
@@ -896,8 +887,6 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     else if (slop > 1) slop = 1;
 
     this.config = conf;
-    activeMasterWeight = conf.getInt(
-      ACTIVE_MASTER_WEIGHT_KEY, DEFAULT_ACTIVE_MASTER_WEIGHT);
     backupMasterWeight = conf.getInt(
       BACKUP_MASTER_WEIGHT_KEY, DEFAULT_BACKUP_MASTER_WEIGHT);
     if (backupMasterWeight < 1) {

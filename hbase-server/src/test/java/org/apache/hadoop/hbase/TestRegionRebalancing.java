@@ -29,7 +29,6 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -96,6 +95,7 @@ public class TestRegionRebalancing {
    * @throws InterruptedException
    */
   @Test (timeout=300000)
+  @SuppressWarnings("deprecation")
   public void testRebalanceOnRegionServerNumberChange()
   throws IOException, InterruptedException {
     HBaseAdmin admin = new HBaseAdmin(UTIL.getConfiguration());
@@ -149,15 +149,7 @@ public class TestRegionRebalancing {
     assert(UTIL.getHBaseCluster().getMaster().balance() == true);
     assertRegionsAreBalanced();
     table.close();
-  }
-
-  /** figure out how many regions are currently being served. */
-  private int getRegionCount() throws IOException {
-    int total = 0; // Regions on master are ignored since not counted for balancing
-    for (HRegionServer server : getOnlineRegionServers()) {
-      total += ProtobufUtil.getOnlineRegions(server.getRSRpcServices()).size();
-    }
-    return total;
+    admin.close();
   }
 
   /**
@@ -177,7 +169,7 @@ public class TestRegionRebalancing {
       // make sure all the regions are reassigned before we test balance
       waitForAllRegionsAssigned();
 
-      int regionCount = getRegionCount();
+      long regionCount = UTIL.getMiniHBaseCluster().countServedRegions();
       List<HRegionServer> servers = getOnlineRegionServers();
       double avg = UTIL.getHBaseCluster().getMaster().getAverageLoad();
       int avgLoadPlusSlop = (int)Math.ceil(avg * (1 + slop));
@@ -241,9 +233,10 @@ public class TestRegionRebalancing {
    */
   private void waitForAllRegionsAssigned() throws IOException {
     int totalRegions = HBaseTestingUtility.KEYS.length;
-    while (getRegionCount() < totalRegions) {
+    while (UTIL.getMiniHBaseCluster().countServedRegions() < totalRegions) {
     // while (!cluster.getMaster().allRegionsAssigned()) {
-      LOG.debug("Waiting for there to be "+ totalRegions +" regions, but there are " + getRegionCount() + " right now.");
+      LOG.debug("Waiting for there to be "+ totalRegions +" regions, but there are "
+        + UTIL.getMiniHBaseCluster().countServedRegions() + " right now.");
       try {
         Thread.sleep(200);
       } catch (InterruptedException e) {}

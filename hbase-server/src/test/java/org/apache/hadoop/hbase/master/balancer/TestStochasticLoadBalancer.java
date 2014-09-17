@@ -194,7 +194,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   public void testSkewCost() {
     Configuration conf = HBaseConfiguration.create();
     StochasticLoadBalancer.CostFunction
-        costFunction = new StochasticLoadBalancer.RegionCountSkewCostFunction(conf, 1, 1);
+        costFunction = new StochasticLoadBalancer.RegionCountSkewCostFunction(conf, 1);
     for (int[] mockCluster : clusterStateMocks) {
       costFunction.init(mockCluster(mockCluster));
       double cost = costFunction.cost();
@@ -240,6 +240,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     Configuration conf = HBaseConfiguration.create();
     StochasticLoadBalancer.CostFromRegionLoadFunction
         costFunction = new StochasticLoadBalancer.MemstoreSizeCostFunction(conf);
+    costFunction.init(mockCluster(new int[]{0, 0, 0, 0, 1}));
 
     double[] statOne = new double[100];
     for (int i =0; i < 100; i++) {
