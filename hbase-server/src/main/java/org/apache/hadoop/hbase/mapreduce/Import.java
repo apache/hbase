@@ -78,6 +78,8 @@ public class Import extends Configured implements Tool {
   public final static String TABLE_NAME = "import.table.name";
   public final static String WAL_DURABILITY = "import.wal.durability";
 
+  private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
+
   /**
    * A mapper that just writes out KeyValues.
    */
@@ -402,7 +404,7 @@ public class Import extends Configured implements Tool {
     String tableName = args[0];
     conf.set(TABLE_NAME, tableName);
     Path inputDir = new Path(args[1]);
-    Job job = Job.getInstance(conf, NAME + "_" + tableName);
+    Job job = Job.getInstance(conf, conf.get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
     job.setJarByClass(Importer.class);
     FileInputFormat.setInputPaths(job, inputDir);
     job.setInputFormatClass(SequenceFileInputFormat.class);
@@ -461,6 +463,8 @@ public class Import extends Configured implements Tool {
         + " Filter#filterKeyValue(KeyValue) method to determine if the KeyValue should be added;"
         + " Filter.ReturnCode#INCLUDE and #INCLUDE_AND_NEXT_COL will be considered as including"
         + " the KeyValue.");
+    System.err.println("   -D " + JOB_NAME_CONF_KEY
+        + "=jobName - use the specified mapreduce job name for the import");
     System.err.println("For performance consider the following options:\n"
         + "  -Dmapreduce.map.speculative=false\n"
         + "  -Dmapreduce.reduce.speculative=false\n"

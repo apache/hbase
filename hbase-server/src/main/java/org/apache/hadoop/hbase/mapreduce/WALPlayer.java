@@ -69,6 +69,8 @@ public class WALPlayer extends Configured implements Tool {
   final static String TABLES_KEY = "hlog.input.tables";
   final static String TABLE_MAP_KEY = "hlog.input.tablesmap";
 
+  private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
+
   /**
    * A mapper that just writes out KeyValues.
    * This one can be used together with {@link KeyValueSortReducer}
@@ -234,7 +236,7 @@ public class WALPlayer extends Configured implements Tool {
     }
     conf.setStrings(TABLES_KEY, tables);
     conf.setStrings(TABLE_MAP_KEY, tableMap);
-    Job job = Job.getInstance(conf, NAME + "_" + inputDir);
+    Job job = Job.getInstance(conf, conf.get(JOB_NAME_CONF_KEY, NAME + "_" + inputDir));
     job.setJarByClass(WALPlayer.class);
     FileInputFormat.setInputPaths(job, inputDir);
     job.setInputFormatClass(HLogInputFormat.class);
@@ -288,6 +290,8 @@ public class WALPlayer extends Configured implements Tool {
     System.err.println("Other options: (specify time range to WAL edit to consider)");
     System.err.println("  -D" + HLogInputFormat.START_TIME_KEY + "=[date|ms]");
     System.err.println("  -D" + HLogInputFormat.END_TIME_KEY + "=[date|ms]");
+    System.err.println("   -D " + JOB_NAME_CONF_KEY
+        + "=jobName - use the specified mapreduce job name for the wal player");
     System.err.println("For performance also consider the following options:\n"
         + "  -Dmapreduce.map.speculative=false\n"
         + "  -Dmapreduce.reduce.speculative=false");

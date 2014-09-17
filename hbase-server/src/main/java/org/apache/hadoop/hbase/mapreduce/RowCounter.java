@@ -51,6 +51,8 @@ public class RowCounter extends Configured implements Tool {
   /** Name of this 'program'. */
   static final String NAME = "rowcounter";
 
+  private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
+
   /**
    * Mapper that runs the count.
    */
@@ -115,7 +117,7 @@ public class RowCounter extends Configured implements Tool {
       }
     }
 
-    Job job = Job.getInstance(conf, NAME + "_" + tableName);
+    Job job = Job.getInstance(conf, conf.get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
     job.setJarByClass(RowCounter.class);
     Scan scan = new Scan();
     scan.setCacheBlocks(false);

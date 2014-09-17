@@ -75,6 +75,8 @@ public class VerifyReplication extends Configured implements Tool {
   static String families = null;
   static String peerId = null;
 
+  private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
+
   /**
    * Map-only comparator for 2 tables
    */
@@ -208,7 +210,7 @@ public class VerifyReplication extends Configured implements Tool {
     conf.set(NAME + ".peerQuorumAddress", peerQuorumAddress);
     LOG.info("Peer Quorum Address: " + peerQuorumAddress);
 
-    Job job = new Job(conf, NAME + "_" + tableName);
+    Job job = Job.getInstance(conf, conf.get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
     job.setJarByClass(VerifyReplication.class);
 
     Scan scan = new Scan();

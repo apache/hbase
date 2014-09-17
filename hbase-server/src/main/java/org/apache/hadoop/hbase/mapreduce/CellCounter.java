@@ -81,6 +81,8 @@ public class CellCounter extends Configured implements Tool {
    */
   static final String NAME = "CellCounter";
 
+  private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
+
   /**
    * Mapper that runs the count.
    */
@@ -188,7 +190,7 @@ public class CellCounter extends Configured implements Tool {
     Path outputDir = new Path(args[1]);
     String reportSeparatorString = (args.length > 2) ? args[2]: ":";
     conf.set("ReportSeparator", reportSeparatorString);
-    Job job = Job.getInstance(conf, NAME + "_" + tableName);
+    Job job = Job.getInstance(conf, conf.get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
     job.setJarByClass(CellCounter.class);
     Scan scan = getConfiguredScanForJob(conf, args);
     TableMapReduceUtil.initTableMapperJob(tableName, scan,

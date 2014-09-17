@@ -55,7 +55,9 @@ public class CopyTable extends Configured implements Tool {
   static String peerAddress = null;
   static String families = null;
   static boolean allCells = false;
-  
+
+  private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
+
   public CopyTable(Configuration conf) {
     super(conf);
   }
@@ -72,7 +74,7 @@ public class CopyTable extends Configured implements Tool {
     if (!doCommandLine(args)) {
       return null;
     }
-    Job job = Job.getInstance(conf, NAME + "_" + tableName);
+    Job job = Job.getInstance(conf, conf.get(JOB_NAME_CONF_KEY, NAME + "_" + tableName));
     job.setJarByClass(CopyTable.class);
     Scan scan = new Scan();
     scan.setCacheBlocks(false);
