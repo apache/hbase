@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceStability.Evolving
 public class MobConstants {
 
-  public static final byte[] IS_MOB = Bytes.toBytes("isMob");
-  public static final byte[] MOB_THRESHOLD = Bytes.toBytes("mobThreshold");
+  public static final byte[] IS_MOB = Bytes.toBytes("IS_MOB");
+  public static final byte[] MOB_THRESHOLD = Bytes.toBytes("MOB_THRESHOLD");
   public static final long DEFAULT_MOB_THRESHOLD = 100 * 1024; // 100k
 
   public static final String MOB_SCAN_RAW = "hbase.mob.scan.raw";
