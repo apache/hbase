@@ -260,4 +260,44 @@ public class MobUtils {
     reference.setSequenceId(kv.getSequenceId());
     return reference;
   }
+
+  /**
+   * Indicates whether the current mob ref cell has a valid value.
+   * A mob ref cell has a mob reference tag.
+   * The value of a mob ref cell consists of two parts, real mob value length and mob file name.
+   * The real mob value length takes 4 bytes.
+   * The remaining part is the mob file name.
+   * @param cell The mob ref cell.
+   * @return True if the cell has a valid value.
+   */
+  public static boolean isValidMobRefCellValue(Cell cell) {
+    return cell.getValueLength() > Bytes.SIZEOF_INT;
+  }
+
+  /**
+   * Gets the mob value length from the mob ref cell.
+   * A mob ref cell has a mob reference tag.
+   * The value of a mob ref cell consists of two parts, real mob value length and mob file name.
+   * The real mob value length takes 4 bytes.
+   * The remaining part is the mob file name.
+   * @param cell The mob ref cell.
+   * @return The real mob value length.
+   */
+  public static int getMobValueLength(Cell cell) {
+    return Bytes.toInt(cell.getValueArray(), cell.getValueOffset(), Bytes.SIZEOF_INT);
+  }
+
+  /**
+   * Gets the mob file name from the mob ref cell.
+   * A mob ref cell has a mob reference tag.
+   * The value of a mob ref cell consists of two parts, real mob value length and mob file name.
+   * The real mob value length takes 4 bytes.
+   * The remaining part is the mob file name.
+   * @param cell The mob ref cell.
+   * @return The mob file name.
+   */
+  public static String getMobFileName(Cell cell) {
+    return Bytes.toString(cell.getValueArray(), cell.getValueOffset() + Bytes.SIZEOF_INT,
+        cell.getValueLength() - Bytes.SIZEOF_INT);
+  }
 }

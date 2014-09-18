@@ -37,4 +37,12 @@ public class MobStoreEngine extends DefaultStoreEngine {
     // specific compactor and policy when that is implemented.
     storeFlusher = new DefaultMobStoreFlusher(conf, store);
   }
+
+  /**
+   * Creates the DefaultMobCompactor.
+   */
+  @Override
+  protected void createCompactor(Configuration conf, Store store) throws IOException {
+    compactor = new DefaultMobCompactor(conf, store);
+  }
 }

@@ -76,9 +76,9 @@ public class DefaultCompactor extends Compactor {
           smallestReadPoint = Math.min(fd.minSeqIdToKeep, smallestReadPoint);
           cleanSeqId = true;
         }
-        writer = store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true,
-            fd.maxMVCCReadpoint >= smallestReadPoint, fd.maxTagsLength > 0);
-        boolean finished = performCompaction(scanner, writer, smallestReadPoint, cleanSeqId);
+        writer = createTmpWriter(fd, smallestReadPoint);
+        boolean finished = performCompaction(fd, scanner, writer, smallestReadPoint, cleanSeqId,
+            request.isAllFiles());
         if (!finished) {
           writer.close();
           store.getFileSystem().delete(writer.getPath(), false);
@@ -94,12 +94,25 @@ public class DefaultCompactor extends Compactor {
       }
     } finally {
       if (writer != null) {
-        writer.appendMetadata(fd.maxSeqId, request.isAllFiles());
-        writer.close();
+        appendMetadataAndCloseWriter(writer, fd, request.isAllFiles());
         newFiles.add(writer.getPath());
       }
     }
     return newFiles;
+  }
+
+  /**
+   * Creates a writer for a new file in a temporary directory.
+   * @param fd The file details.
+   * @param smallestReadPoint The smallest mvcc readPoint across all the scanners in this region.
+   * @return Writer for a new StoreFile in the tmp dir.
+   * @throws IOException
+   */
+  protected StoreFile.Writer createTmpWriter(FileDetails fd, long smallestReadPoint)
+      throws IOException {
+    StoreFile.Writer writer = store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression,
+        true, fd.maxMVCCReadpoint >= smallestReadPoint, fd.maxTagsLength > 0);
+    return writer;
   }
 
   /**
