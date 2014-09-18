@@ -2119,7 +2119,8 @@ hbase> restore_snapshot 'myTableSnapshot-122112'
         <para>If you cannot estimate the size of your tables well, when starting off, it's probably
           best to stick to the default region size, perhaps going smaller for hot tables (or
           manually split hot regions to spread the load over the cluster), or go with larger region
-          sizes if your cell sizes tend to be largish (100k and up).</para>
+          sizes if your cell sizes tend to be largish (100k and up). See also the new feature <xref
+            linkend="mob"/>, introduced in HBase 2.0+.</para>
         <para>In HBase 0.98, experimental stripe compactions feature was added that would allow for
           larger regions, especially for log data. See <xref
             linkend="ops.stripe" />.</para>

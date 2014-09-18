@@ -464,6 +464,15 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
         less than the number of row versions. </para>
     </section>
   </section>
+  <section>
+    <title>Cell Size</title>
+    <para>HBase is optimized to handle cell sizes up to 100 KB very well, though it can technically
+      handle cell sizes from 1 kb to 10 MB. Objects between 1 MB and 64 MB are referred to as
+      Medium Objects (MOBs), and support for storing those objects directly in HBase is provided in
+      HBase 2.0+. See <xref linkend="mob"/>.</para>
+    <para>For storing objects larger than 64 MB or larger than 10 MB without MOB support, store the
+      objects directly in HDFS, and store a reference to the file path in HBase.</para>
+  </section>
   <section
     xml:id="supported.datatypes">
     <title> Supported Datatypes </title>
