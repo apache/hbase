@@ -31,7 +31,6 @@ import org.apache.hadoop.mapred.Reducer;
  * @param <K> key class
  * @param <V> value class
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 @SuppressWarnings("unchecked")

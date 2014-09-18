@@ -32,7 +32,6 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * Pass the given key and record as-is to reduce
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class IdentityTableMap

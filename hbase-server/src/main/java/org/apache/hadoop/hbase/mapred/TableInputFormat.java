@@ -36,7 +36,6 @@ import org.apache.hadoop.util.StringUtils;
 /**
  * Convert HBase tabular data into a format that is consumable by Map/Reduce.
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TableInputFormat extends TableInputFormatBase implements

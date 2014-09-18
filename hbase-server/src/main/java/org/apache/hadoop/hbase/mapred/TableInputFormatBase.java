@@ -65,7 +65,6 @@ import org.apache.hadoop.mapred.Reporter;
  * </pre>
  */
 
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class TableInputFormatBase

@@ -33,7 +33,6 @@ import org.apache.hadoop.mapred.RecordReader;
 /**
  * Iterate over an HBase table data, return (Text, RowResult) pairs
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TableRecordReader

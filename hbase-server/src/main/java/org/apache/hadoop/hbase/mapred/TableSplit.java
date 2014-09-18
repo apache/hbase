@@ -33,7 +33,6 @@ import org.apache.hadoop.mapred.InputSplit;
 /**
  * A table split corresponds to a key range [low, high)
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TableSplit implements InputSplit, Comparable<TableSplit> {
