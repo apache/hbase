@@ -429,63 +429,36 @@ $ rsync -av 0.96.0RC0 people.apache.org:public_html
           </para>
       </section>
     <section xml:id="hbase.org">
-    <title>Updating hbase.apache.org</title>
-      <section xml:id="hbase.org.site.contributing">
-      <title>Contributing to hbase.apache.org</title>
-      <para>The Apache HBase apache web site (including this reference guide) is maintained as part of the main
-          Apache HBase source tree, under <filename>/src/main/docbkx</filename> and <filename>/src/main/site</filename>
-          <footnote><para>Before 0.95.0, site and reference guide were at src/docbkx and src/site respectively</para></footnote>.
-          The former -- docbkx -- is this reference guide as a bunch of xml marked up using <link xlink:href="http://docbook.org">docbook</link>;
-          the latter is the hbase site (the navbars, the header, the layout, etc.),
-          and some of the documentation, legacy pages mostly that are in the process of being merged into the docbkx tree that is
-      converted to html by a maven plugin by the site build.</para>
-      <para>To contribute to the reference guide, edit these files under site or docbkx and submit them as a patch
-          (see <xref linkend="submitting.patches"/>). Your Jira should contain a summary of the changes in each
-          section (see <link xlink:href="https://issues.apache.org/jira/browse/HBASE-6081">HBASE-6081</link> for an example).</para>
-      <para>To generate the site locally while you're working on it, run:
-      <programlisting>mvn site</programlisting>
-      Then you can load up the generated HTML files in your browser (file are under <filename>/target/site</filename>).</para>
-      </section>
-      <section xml:id="hbase.org.site.publishing">
-      <title>Publishing hbase.apache.org</title>
-      <para>As of <link xlink:href="https://issues.apache.org/jira/browse/INFRA-5680">INFRA-5680 Migrate apache hbase website</link>,
-          to publish the website, build it, and then deploy it over a checkout of <filename>https://svn.apache.org/repos/asf/hbase/hbase.apache.org/trunk</filename>.
-          Finally, check it in.  For example, if trunk is checked out out at <filename>/Users/stack/checkouts/trunk</filename>
-          and the hbase website, hbase.apache.org, is checked out at <filename>/Users/stack/checkouts/hbase.apache.org/trunk</filename>, to update
-          the site, do the following:
-          <programlisting>
-              # Build the site and deploy it to the checked out directory
-              # Getting the javadoc into site is a little tricky.  You have to build it before you invoke 'site'.
-              $ MAVEN_OPTS=" -Xmx3g" mvn clean install -DskipTests javadoc:aggregate site  site:stage -DstagingDirectory=/Users/stack/checkouts/hbase.apache.org/trunk
-          </programlisting>
-          Now check the deployed site by viewing in a brower, browse to file:////Users/stack/checkouts/hbase.apache.org/trunk/index.html and check all is good.
-          If all checks out, commit it and your new build will show up immediately at http://hbase.apache.org
-          <programlisting>
-              $ cd /Users/stack/checkouts/hbase.apache.org/trunk
-              $ svn status
-              # Do an svn add of any new content...
-              $ svn add ....
-              $ svn commit -m 'Committing latest version of website...'
-          </programlisting>
-      </para>
-      </section>
-      <section xml:id="hbase.rc.voting">
-      <title>Voting on Release Candidates</title>
-      <para>
-      Everyone is encouraged to try and vote on HBase release candidates.
-      Only the votes of PMC members are binding.
-      PMC members, please read this WIP doc on policy voting for a release candidate,
-      <link xlink:href="https://github.com/rectang/asfrelease/blob/master/release.md">Release Policy</link>.
-      <quote>Before casting +1 binding votes, individuals are required to download the signed source code
-      package onto their own hardware, compile it as provided, and test the resulting executable on their
-      own platform, along with also validating cryptographic signatures and verifying that the package
-      meets the requirements of the ASF policy on releases.</quote>
-      Regards the latter, run <command>mvn apache-rat:check</command> to verify all files
-      are suitably licensed. See
-      <link xlink:href="http://search-hadoop.com/m/DHED4dhFaU">HBase, mail # dev - On recent discussion clarifying ASF release policy</link>.
-      for how we arrived at this process.
-      </para>
-      </section>
+        <title>Updating <link xlink:href="http://hbase.apache.org">hbase.apache.org</link></title>
+        <section xml:id="hbase.org.site.contributing">
+            <title>Contributing to hbase.apache.org</title>
+            <para>See <xref linkend="appendix_contributing_to_documentation"/> for more information
+                on contributing to the documentation or website.</para>
+        </section>
+        <section xml:id="hbase.org.site.publishing">
+            <title>Publishing <link xlink:href="http://hbase.apache.org"
+                >hbase.apache.org</link></title>
+            <para>As of <link xlink:href="https://issues.apache.org/jira/browse/INFRA-5680"
+                    >INFRA-5680 Migrate apache hbase website</link>, to publish the website, build
+                it using Maven, and then deploy it over a checkout of
+                    <filename>https://svn.apache.org/repos/asf/hbase/hbase.apache.org/trunk</filename>
+                and check in your changes. The script
+                    <filename>dev-scripts/publish_hbase_website.sh</filename> is provided to
+                automate this process and to be sure that stale files are removed from SVN. Review
+                the script even if you decide to publish the website manually. Use the script as
+                follows:</para>
+            <screen>$ <userinput>publish_hbase_website.sh -h</userinput>
+<![CDATA[Usage: publish_hbase_website.sh [-i | -a] [-g <dir>] [-s <dir>]]]>
+ -h          Show this message
+ -i          Prompts the user for input
+ -a          Does not prompt the user. Potentially dangerous.
+ -g          The local location of the HBase git repository
+ -s          The local location of the HBase svn checkout
+ Either --interactive or --silent is required.
+ Edit the script to set default Git and SVN directories.
+            </screen>
+            <note><para>The SVN commit takes a long time.</para></note>
+        </section>
     </section>
     <section xml:id="hbase.tests">
     <title>Tests</title>
