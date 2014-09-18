@@ -165,11 +165,11 @@ hcd.setValue(MobConstants.MOB_THRESHOLD, Bytes.toBytes(102400L);
     <description>Classpath for typical applications.</description>
     <name>yarn.application.classpath</name>
     <value>
-        $HADOOP_CONF_DIR
-        $HADOOP_COMMON_HOME/*,$HADOOP_COMMON_HOME/lib/*
+        $HADOOP_CONF_DIR,
+        $HADOOP_COMMON_HOME/*,$HADOOP_COMMON_HOME/lib/*,
         $HADOOP_HDFS_HOME/*,$HADOOP_HDFS_HOME/lib/*,
-        $HADOOP_MAPRED_HOME/*,$HADOOP_MAPRED_HOME/lib/*
-        $HADOOP_YARN_HOME/*,$HADOOP_YARN_HOME/lib/* 
+        $HADOOP_MAPRED_HOME/*,$HADOOP_MAPRED_HOME/lib/*,
+        $HADOOP_YARN_HOME/*,$HADOOP_YARN_HOME/lib/*,
         $HBASE_HOME/*, $HBASE_HOME/lib/*
     </value>
 </property>]]>
