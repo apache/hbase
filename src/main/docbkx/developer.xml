@@ -1441,7 +1441,43 @@ batch.restart.rs.ratio=0.4f
               releases, and important features and bug fixes are often back-ported.</para>
         </section>
 
-           <!--  unit tests  -->
+        <section>
+            <title>Release Managers</title>
+            <para>Each maintained release branch has a release manager, who volunteers to coordinate
+                new features and bug fixes are backported to that release. The release managers are
+                    <link xlink:href="https://hbase.apache.org/team-list.html">committers</link>. If
+                you would like your feature or bug fix to be included in a given release,
+                communicate with that release manager. If this list goes out of date or you can't
+                reach the listed person, reach out to someone else on the list.</para>
+            <note>
+                <para>End-of-life releases are not included in this list.</para>
+            </note>
+            <table>
+                <title>Release Managers</title>
+                <tgroup cols="2">
+                    <thead>
+                        <row>
+                            <entry>Release</entry>
+                            <entry>Release Manager</entry>
+                        </row>
+                    </thead>
+                    <tbody>
+                        <row>
+                            <entry><para>0.98</para></entry>
+                            <entry><para><link
+                                        xlink:href="https://issues.apache.org/jira/secure/ViewProfile.jspa?name=apurtell"
+                                        >Andrew Purtell</link></para></entry>
+                        </row>
+                        <row>
+                            <entry><para>1.0</para></entry>
+                            <entry><para><link
+                                        xlink:href="https://issues.apache.org/jira/secure/ViewProfile.jspa?name=enis"
+                                        >Enis Soztutar</link></para></entry>
+                        </row>
+                    </tbody>
+                </tgroup>
+            </table>
+        </section>
 
         <section
             xml:id="code.standards">
