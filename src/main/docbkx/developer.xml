@@ -808,30 +808,24 @@ $ rsync -av 0.96.0RC0 people.apache.org:public_html
                 >hbase.apache.org</link></title>
             <para>As of <link xlink:href="https://issues.apache.org/jira/browse/INFRA-5680"
                     >INFRA-5680 Migrate apache hbase website</link>, to publish the website, build
-                it, and then deploy it over a checkout of
-                    <filename>https://svn.apache.org/repos/asf/hbase/hbase.apache.org/trunk</filename>.
-                Finally, check it in. For example, if trunk is checked out out at
-                    <filename>/Users/stack/checkouts/trunk</filename> and the hbase website,
-                hbase.apache.org, is checked out at
-                    <filename>/Users/stack/checkouts/hbase.apache.org/trunk</filename>, to update
-                the site, do the following:</para>
-                <programlisting language="bourne">
-# Build the site and deploy it to the checked out directory
-# Getting the javadoc into site is a little tricky.  You have to build it before you invoke 'site'.
-$ mvn clean install -DskipTests javadoc:aggregate site  \
-  site:stage -DstagingDirectory=/Users/stack/checkouts/hbase.apache.org/trunk
-          </programlisting>
-                <para>Now check the deployed site by viewing in a brower, browse to
-                file:////Users/stack/checkouts/hbase.apache.org/trunk/index.html and check all is
-                good. If all checks out, commit it and your new build will show up immediately at
-                <link xlink:href="http://hbase.apache.org">http://hbase.apache.org</link>.</para>
-                <programlisting language="bourne">
-$ cd /Users/stack/checkouts/hbase.apache.org/trunk
-$ svn status
-# Do an svn add of any new content...
-$ svn add ....
-$ svn commit -m 'Committing latest version of website...'
-          </programlisting>
+                it using Maven, and then deploy it over a checkout of
+                    <filename>https://svn.apache.org/repos/asf/hbase/hbase.apache.org/trunk</filename>
+                and check in your changes. The script
+                    <filename>dev-scripts/publish_hbase_website.sh</filename> is provided to
+                automate this process and to be sure that stale files are removed from SVN. Review
+                the script even if you decide to publish the website manually. Use the script as
+                follows:</para>
+            <screen>$ <userinput>publish_hbase_website.sh -h</userinput>
+<![CDATA[Usage: publish_hbase_website.sh [-i | -a] [-g <dir>] [-s <dir>]]]>
+ -h          Show this message
+ -i          Prompts the user for input
+ -a          Does not prompt the user. Potentially dangerous.
+ -g          The local location of the HBase git repository
+ -s          The local location of the HBase svn checkout
+ Either --interactive or --silent is required.
+ Edit the script to set default Git and SVN directories.
+            </screen>
+            <note><para>The SVN commit takes a long time.</para></note>
         </section>
     </section>
     <section xml:id="hbase.tests">
