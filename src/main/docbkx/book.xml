@@ -4933,6 +4933,52 @@ if (result.isStale()) {
             </answer>
         </qandaentry>
     </qandadiv>
+      <qandadiv>
+        <title>Upgrading</title>
+        <qandaentry>
+          <question>
+            <para>How do I upgrade Maven-managed projects from HBase 0.94 to HBase 0.96+?</para>
+          </question>
+          <answer>
+            <para>In HBase 0.96, the project moved to a modular structure. Adjust your project's
+              dependencies to rely upon the <filename>hbase-client</filename> module or another
+              module as appropriate, rather than a single JAR. You can model your Maven depency
+              after one of the following, depending on your targeted version of HBase. See <xref
+                linkend="upgrade0.96"/> or <xref linkend="upgrade0.98"/> for more
+              information.</para>
+            <example>
+              <title>Maven Dependency for HBase 0.98</title>
+              <programlisting language="xml"><![CDATA[
+<dependency>
+	<groupId>org.apache.hbase</groupId>
+	<artifactId>hbase-client</artifactId>
+	<version>0.98.5-hadoop2</version>
+</dependency>                
+                ]]></programlisting>
+            </example>
+            <example>
+              <title>Maven Dependency for HBase 0.96</title>
+              <programlisting language="xml"><![CDATA[
+<dependency>
+	<groupId>org.apache.hbase</groupId>
+	<artifactId>hbase-client</artifactId>
+	<version>0.96.2-hadoop2</version>
+</dependency>             
+                ]]></programlisting>
+            </example>
+            <example>
+              <title>Maven Dependency for HBase 0.94</title>
+              <programlisting language="xml"><![CDATA[
+<dependency>
+	<groupId>org.apache.hbase</groupId>
+	<artifactId>hbase</artifactId>
+	<version>0.94.3</version>
+</dependency>            
+                ]]></programlisting>
+            </example>
+          </answer>
+        </qandaentry>
+      </qandadiv>
     <qandadiv xml:id="faq.arch"><title>Architecture</title>
         <qandaentry xml:id="faq.arch.regions">
             <question><para>How does HBase handle Region-RegionServer assignment and locality?</para></question>
