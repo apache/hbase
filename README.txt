@@ -24,11 +24,11 @@ The HBase distribution includes cryptographic software. See the export control
 notice here [9].
 
 1. http://hbase.apache.org
-2. http://labs.google.com/papers/bigtable.html
+2. http://research.google.com/archive/bigtable.html
 3. http://hadoop.apache.org
 4. http://www.apache.org/dyn/closer.cgi/hbase/
-5. http://hbase.apache.org/docs/current/source-repository.html
-6. http://hbase.apache.org/docs/current/issue-tracking.html
-7. http://hbase.apache.org/docs/current/license.html
-8. http://hbase.apache.org/docs/current/mail-lists.html
-9. http://hbase.apache.org/docs/current/export-notice.html
+5. https://hbase.apache.org/source-repository.html
+6. https://hbase.apache.org/issue-tracking.html
+7. http://hbase.apache.org/license.html
+8. http://hbase.apache.org/mail-lists.html
+9. https://hbase.apache.org/export_control.html
