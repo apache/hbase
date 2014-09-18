@@ -34,7 +34,6 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * Write to table each key, record pair
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class IdentityTableReduce

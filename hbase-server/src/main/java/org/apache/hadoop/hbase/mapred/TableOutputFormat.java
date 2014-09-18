@@ -41,7 +41,6 @@ import org.apache.hadoop.util.Progressable;
 /**
  * Convert Map/Reduce output and write it to an HBase table
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TableOutputFormat extends

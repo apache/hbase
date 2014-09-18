@@ -41,7 +41,6 @@ import org.apache.hadoop.mapred.Partitioner;
  * @param <K2>
  * @param <V2>
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class HRegionPartitioner<K2,V2>

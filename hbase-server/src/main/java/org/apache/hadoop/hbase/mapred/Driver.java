@@ -27,7 +27,6 @@ import com.google.common.annotations.VisibleForTesting;
  * Driver for hbase mapreduce jobs. Select which to run by passing name of job
  * to this main.
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class Driver {

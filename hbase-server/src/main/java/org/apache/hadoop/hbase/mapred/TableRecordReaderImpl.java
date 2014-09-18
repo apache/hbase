@@ -42,7 +42,6 @@ import static org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl.LOG_PER_RO
 /**
  * Iterate over an HBase table data, return (Text, RowResult) pairs
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TableRecordReaderImpl {

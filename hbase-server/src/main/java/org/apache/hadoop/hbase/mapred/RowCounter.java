@@ -41,7 +41,6 @@ import org.apache.hadoop.util.ToolRunner;
  * Map outputs table rows IF the input row has columns that have content.
  * Uses an {@link IdentityReducer}
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class RowCounter extends Configured implements Tool {

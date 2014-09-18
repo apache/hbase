@@ -38,7 +38,6 @@ import org.apache.hadoop.mapred.Reporter;
 /**
  * Extract grouping columns from input record
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class GroupingTableMap

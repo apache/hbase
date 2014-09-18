@@ -49,7 +49,6 @@ import org.apache.zookeeper.KeeperException;
 /**
  * Utility for {@link TableMap} and {@link TableReduce}
  */
-@Deprecated
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 @SuppressWarnings({ "rawtypes", "unchecked" })
