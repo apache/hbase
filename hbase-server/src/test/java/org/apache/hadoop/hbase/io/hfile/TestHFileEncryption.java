@@ -166,7 +166,8 @@ public class TestHFileEncryption {
       .withOutputStream(out)
       .withFileContext(fileContext)
       .create();
-    writer.append("foo".getBytes(), "value".getBytes());
+    KeyValue kv = new KeyValue("foo".getBytes(), "f1".getBytes(), null, "value".getBytes());
+    writer.append(kv);
     writer.close();
     out.close();
 

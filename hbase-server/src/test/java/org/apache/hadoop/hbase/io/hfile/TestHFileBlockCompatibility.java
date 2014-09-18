@@ -36,9 +36,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -471,7 +473,9 @@ public class TestHFileBlockCompatibility {
       return userDataStream;
     }
 
-    public void write(KeyValue kv) throws IOException{
+    @Override
+    public void write(Cell c) throws IOException {
+      KeyValue kv = KeyValueUtil.ensureKeyValue(c);
       expectState(State.WRITING);
       this.dataBlockEncoder.encode(kv, dataBlockEncodingCtx, this.userDataStream);
       this.unencodedDataSizeWritten += kv.getLength();

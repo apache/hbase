@@ -22,7 +22,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -31,9 +30,11 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
@@ -47,10 +48,9 @@ import org.apache.hadoop.io.Writable;
 @InterfaceAudience.Private
 public abstract class AbstractHFileWriter implements HFile.Writer {
 
-  /** Key previously appended. Becomes the last key in the file. */
-  protected byte[] lastKeyBuffer = null;
+  /** The Cell previously appended. Becomes the last cell in the file.*/
+  protected Cell lastCell = null;
 
-  protected int lastKeyOffset = -1;
   protected int lastKeyLength = -1;
 
   /** FileSystem stream to write into. */
@@ -131,11 +131,12 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
    * Add last bits of metadata to file info before it is written out.
    */
   protected void finishFileInfo() throws IOException {
-    if (lastKeyBuffer != null) {
+    if (lastCell != null) {
       // Make a copy. The copy is stuffed into our fileinfo map. Needs a clean
       // byte buffer. Won't take a tuple.
-      fileInfo.append(FileInfo.LASTKEY, Arrays.copyOfRange(lastKeyBuffer,
-          lastKeyOffset, lastKeyOffset + lastKeyLength), false);
+      byte[] lastKey = new byte[lastKeyLength];
+      KeyValueUtil.appendKeyTo(lastCell, lastKey, 0);
+      fileInfo.append(FileInfo.LASTKEY, lastKey, false);
     }
 
     // Average key length.
@@ -181,30 +182,24 @@ public abstract class AbstractHFileWriter implements HFile.Writer {
   }
 
   /**
-   * Checks that the given key does not violate the key order.
+   * Checks that the given Cell's key does not violate the key order.
    *
-   * @param key Key to check.
+   * @param cell Cell whose key to check.
    * @return true if the key is duplicate
    * @throws IOException if the key or the key order is wrong
    */
-  protected boolean checkKey(final byte[] key, final int offset,
-      final int length) throws IOException {
+  protected boolean checkKey(final Cell cell) throws IOException {
     boolean isDuplicateKey = false;
 
-    if (key == null || length <= 0) {
+    if (cell == null) {
       throw new IOException("Key cannot be null or empty");
     }
-    if (lastKeyBuffer != null) {
-      int keyComp = comparator.compareFlatKey(lastKeyBuffer, lastKeyOffset,
-          lastKeyLength, key, offset, length);
+    if (lastCell != null) {
+      int keyComp = comparator.compareOnlyKeyPortion(lastCell, cell);
 
       if (keyComp > 0) {
         throw new IOException("Added a key not lexically larger than"
-            + " previous key="
-            + Bytes.toStringBinary(key, offset, length)
-            + ", lastkey="
-            + Bytes.toStringBinary(lastKeyBuffer, lastKeyOffset,
-                lastKeyLength));
+            + " previous. Current cell = " + cell + ", lastCell = " + lastCell);
       } else if (keyComp == 0) {
         isDuplicateKey = true;
       }

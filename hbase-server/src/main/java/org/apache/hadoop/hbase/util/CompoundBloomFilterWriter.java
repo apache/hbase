@@ -155,7 +155,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
    * as defined by the comparator this compound Bloom filter is configured
    * with. For efficiency, key monotonicity is not checked here. See
    * {@link org.apache.hadoop.hbase.regionserver.StoreFile.Writer#append(
-   * org.apache.hadoop.hbase.KeyValue)} for the details of deduplication.
+   * org.apache.hadoop.hbase.Cell)} for the details of deduplication.
    */
   @Override
   public void add(byte[] bloomKey, int keyOffset, int keyLength) {

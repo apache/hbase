@@ -32,8 +32,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
@@ -207,7 +209,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     firstKeyInBlock = null;
     if (lastKeyLength > 0) {
       lastKeyOfPreviousBlock = new byte[lastKeyLength];
-      System.arraycopy(lastKeyBuffer, lastKeyOffset, lastKeyOfPreviousBlock, 0, lastKeyLength);
+      KeyValueUtil.appendKeyTo(lastCell, lastKeyOfPreviousBlock, 0);
     }
   }
 
@@ -242,19 +244,17 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    * Add key/value to file. Keys must be added in an order that agrees with the
    * Comparator passed on construction.
    *
-   * @param kv
-   *          KeyValue to add. Cannot be empty nor null.
+   * @param cell
+   *          Cell to add. Cannot be empty nor null.
    * @throws IOException
    */
   @Override
-  public void append(final KeyValue kv) throws IOException {
-    byte[] key = kv.getBuffer();
-    int koffset = kv.getKeyOffset();
-    int klength = kv.getKeyLength();
-    byte[] value = kv.getValueArray();
-    int voffset = kv.getValueOffset();
-    int vlength = kv.getValueLength();
-    boolean dupKey = checkKey(key, koffset, klength);
+  public void append(final Cell cell) throws IOException {
+    int klength = KeyValueUtil.keyLength(cell);
+    byte[] value = cell.getValueArray();
+    int voffset = cell.getValueOffset();
+    int vlength = cell.getValueLength();
+    boolean dupKey = checkKey(cell);
     checkValue(value, voffset, vlength);
     if (!dupKey) {
       checkBlockBoundary();
@@ -263,7 +263,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     if (!fsBlockWriter.isWriting())
       newBlock();
 
-    fsBlockWriter.write(kv);
+    fsBlockWriter.write(cell);
 
     totalKeyLength += klength;
     totalValueLength += vlength;
@@ -272,14 +272,13 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     if (firstKeyInBlock == null) {
       // Copy the key.
       firstKeyInBlock = new byte[klength];
-      System.arraycopy(key, koffset, firstKeyInBlock, 0, klength);
+      KeyValueUtil.appendKeyTo(cell, firstKeyInBlock, 0);
     }
 
-    lastKeyBuffer = key;
-    lastKeyOffset = koffset;
+    lastCell = cell;
     lastKeyLength = klength;
     entryCount++;
-    this.maxMemstoreTS = Math.max(this.maxMemstoreTS, kv.getMvccVersion());
+    this.maxMemstoreTS = Math.max(this.maxMemstoreTS, cell.getSequenceId());
   }
 
   /**

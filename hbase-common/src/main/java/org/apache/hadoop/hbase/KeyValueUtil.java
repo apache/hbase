@@ -44,6 +44,11 @@ public class KeyValueUtil {
 
   /**************** length *********************/
 
+  /**
+   * Returns number of bytes this cell would have been used if serialized as in {@link KeyValue}
+   * @param cell
+   * @return the length
+   */
   public static int length(final Cell cell) {
     return length(cell.getRowLength(), cell.getFamilyLength(), cell.getQualifierLength(),
         cell.getValueLength(), cell.getTagsLength(), true);
@@ -56,7 +61,13 @@ public class KeyValueUtil {
     return (int) (KeyValue.getKeyValueDataStructureSize(rlen, flen, qlen, vlen));
   }
 
-  protected static int keyLength(final Cell cell) {
+  /**
+   * Returns number of bytes this cell's key part would have been used if serialized as in
+   * {@link KeyValue}. Key includes rowkey, family, qualifier, timestamp and type.
+   * @param cell
+   * @return the key length
+   */
+  public static int keyLength(final Cell cell) {
     return keyLength(cell.getRowLength(), cell.getFamilyLength(), cell.getQualifierLength());
   }
 
@@ -93,7 +104,7 @@ public class KeyValueUtil {
 
   public static ByteBuffer copyKeyToNewByteBuffer(final Cell cell) {
     byte[] bytes = new byte[keyLength(cell)];
-    appendKeyToByteArrayWithoutValue(cell, bytes, 0);
+    appendKeyTo(cell, bytes, 0);
     ByteBuffer buffer = ByteBuffer.wrap(bytes);
     buffer.position(buffer.limit());//make it look as if each field were appended
     return buffer;
@@ -106,7 +117,7 @@ public class KeyValueUtil {
     return backingBytes;
   }
 
-  protected static int appendKeyToByteArrayWithoutValue(final Cell cell, final byte[] output,
+  public static int appendKeyTo(final Cell cell, final byte[] output,
       final int offset) {
     int nextOffset = offset;
     nextOffset = Bytes.putShort(output, nextOffset, cell.getRowLength());
@@ -126,7 +137,7 @@ public class KeyValueUtil {
     int pos = offset;
     pos = Bytes.putInt(output, pos, keyLength(cell));
     pos = Bytes.putInt(output, pos, cell.getValueLength());
-    pos = appendKeyToByteArrayWithoutValue(cell, output, pos);
+    pos = appendKeyTo(cell, output, pos);
     pos = CellUtil.copyValueTo(cell, output, pos);
     if ((cell.getTagsLength() > 0)) {
       pos = Bytes.putAsShort(output, pos, cell.getTagsLength());

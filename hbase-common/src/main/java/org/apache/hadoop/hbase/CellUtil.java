@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -29,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.io.HeapSize;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -559,5 +561,127 @@ public final class CellUtil {
     }
     return cell.getRowLength() + cell.getFamilyLength() + cell.getQualifierLength()
         + cell.getValueLength() + cell.getTagsLength() + KeyValue.TIMESTAMP_TYPE_SIZE;
+  }
+
+  /**
+   * Writes the Cell's key part as it would have serialized in a KeyValue. The format is &lt;2 bytes
+   * rk len&gt;&lt;rk&gt;&lt;1 byte cf len&gt;&lt;cf&gt;&lt;qualifier&gt;&lt;8 bytes
+   * timestamp&gt;&lt;1 byte type&gt;
+   * @param cell
+   * @param out
+   * @throws IOException
+   */
+  public static void writeFlatKey(Cell cell, DataOutputStream out) throws IOException {
+    short rowLen = cell.getRowLength();
+    out.writeShort(rowLen);
+    out.write(cell.getRowArray(), cell.getRowOffset(), rowLen);
+    byte fLen = cell.getFamilyLength();
+    out.writeByte(fLen);
+    out.write(cell.getFamilyArray(), cell.getFamilyOffset(), fLen);
+    out.write(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+    out.writeLong(cell.getTimestamp());
+    out.writeByte(cell.getTypeByte());
+  }
+
+  /**
+   * Write rowkey excluding the common part.
+   * @param cell
+   * @param rLen
+   * @param commonPrefix
+   * @param out
+   * @throws IOException
+   */
+  public static void writeRowKeyExcludingCommon(Cell cell, short rLen, int commonPrefix,
+      DataOutputStream out) throws IOException {
+    if (commonPrefix == 0) {
+      out.writeShort(rLen);
+    } else if (commonPrefix == 1) {
+      out.writeByte((byte) rLen);
+      commonPrefix--;
+    } else {
+      commonPrefix -= KeyValue.ROW_LENGTH_SIZE;
+    }
+    if (rLen > commonPrefix) {
+      out.write(cell.getRowArray(), cell.getRowOffset() + commonPrefix, rLen - commonPrefix);
+    }
+  }
+
+  /**
+   * Find length of common prefix in keys of the cells, considering key as byte[] if serialized in
+   * {@link KeyValue}. The key format is &lt;2 bytes rk len&gt;&lt;rk&gt;&lt;1 byte cf
+   * len&gt;&lt;cf&gt;&lt;qualifier&gt;&lt;8 bytes timestamp&gt;&lt;1 byte type&gt;
+   * @param c1
+   *          the cell
+   * @param c2
+   *          the cell
+   * @param bypassFamilyCheck
+   *          when true assume the family bytes same in both cells. Pass it as true when dealing
+   *          with Cells in same CF so as to avoid some checks
+   * @param withTsType
+   *          when true check timestamp and type bytes also.
+   * @return length of common prefix
+   */
+  public static int findCommonPrefixInFlatKey(Cell c1, Cell c2, boolean bypassFamilyCheck,
+      boolean withTsType) {
+    // Compare the 2 bytes in RK length part
+    short rLen1 = c1.getRowLength();
+    short rLen2 = c2.getRowLength();
+    int commonPrefix = KeyValue.ROW_LENGTH_SIZE;
+    if (rLen1 != rLen2) {
+      // early out when the RK length itself is not matching
+      return ByteBufferUtils.findCommonPrefix(Bytes.toBytes(rLen1), 0, KeyValue.ROW_LENGTH_SIZE,
+          Bytes.toBytes(rLen2), 0, KeyValue.ROW_LENGTH_SIZE);
+    }
+    // Compare the RKs
+    int rkCommonPrefix = ByteBufferUtils.findCommonPrefix(c1.getRowArray(), c1.getRowOffset(),
+        rLen1, c2.getRowArray(), c2.getRowOffset(), rLen2);
+    commonPrefix += rkCommonPrefix;
+    if (rkCommonPrefix != rLen1) {
+      // Early out when RK is not fully matching.
+      return commonPrefix;
+    }
+    // Compare 1 byte CF length part
+    byte fLen1 = c1.getFamilyLength();
+    if (bypassFamilyCheck) {
+      // This flag will be true when caller is sure that the family will be same for both the cells
+      // Just make commonPrefix to increment by the family part
+      commonPrefix += KeyValue.FAMILY_LENGTH_SIZE + fLen1;
+    } else {
+      byte fLen2 = c2.getFamilyLength();
+      if (fLen1 != fLen2) {
+        // early out when the CF length itself is not matching
+        return commonPrefix;
+      }
+      // CF lengths are same so there is one more byte common in key part
+      commonPrefix += KeyValue.FAMILY_LENGTH_SIZE;
+      // Compare the CF names
+      int fCommonPrefix = ByteBufferUtils.findCommonPrefix(c1.getFamilyArray(),
+          c1.getFamilyOffset(), fLen1, c2.getFamilyArray(), c2.getFamilyOffset(), fLen2);
+      commonPrefix += fCommonPrefix;
+      if (fCommonPrefix != fLen1) {
+        return commonPrefix;
+      }
+    }
+    // Compare the Qualifiers
+    int qLen1 = c1.getQualifierLength();
+    int qLen2 = c2.getQualifierLength();
+    int qCommon = ByteBufferUtils.findCommonPrefix(c1.getQualifierArray(), c1.getQualifierOffset(),
+        qLen1, c2.getQualifierArray(), c2.getQualifierOffset(), qLen2);
+    commonPrefix += qCommon;
+    if (!withTsType || Math.max(qLen1, qLen2) != qCommon) {
+      return commonPrefix;
+    }
+    // Compare the timestamp parts
+    int tsCommonPrefix = ByteBufferUtils.findCommonPrefix(Bytes.toBytes(c1.getTimestamp()), 0,
+        KeyValue.TIMESTAMP_SIZE, Bytes.toBytes(c2.getTimestamp()), 0, KeyValue.TIMESTAMP_SIZE);
+    commonPrefix += tsCommonPrefix;
+    if (tsCommonPrefix != KeyValue.TIMESTAMP_SIZE) {
+      return commonPrefix;
+    }
+    // Compare the type
+    if (c1.getTypeByte() == c2.getTypeByte()) {
+      commonPrefix += KeyValue.TYPE_SIZE;
+    }
+    return commonPrefix;
   }
 }

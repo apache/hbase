@@ -37,6 +37,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
@@ -698,9 +699,9 @@ public class StoreFile {
     private byte[] lastBloomKey;
     private int lastBloomKeyOffset, lastBloomKeyLen;
     private KVComparator kvComparator;
-    private KeyValue lastKv = null;
+    private Cell lastCell = null;
     private long earliestPutTs = HConstants.LATEST_TIMESTAMP;
-    private KeyValue lastDeleteFamilyKV = null;
+    private Cell lastDeleteFamilyCell = null;
     private long deleteFamilyCnt = 0;
 
     /** Bytes per Checksum */
@@ -810,28 +811,28 @@ public class StoreFile {
      *
      * If the timeRangeTracker is not set,
      * update TimeRangeTracker to include the timestamp of this key
-     * @param kv
+     * @param cell
      */
-    public void trackTimestamps(final KeyValue kv) {
-      if (KeyValue.Type.Put.getCode() == kv.getTypeByte()) {
-        earliestPutTs = Math.min(earliestPutTs, kv.getTimestamp());
+    public void trackTimestamps(final Cell cell) {
+      if (KeyValue.Type.Put.getCode() == cell.getTypeByte()) {
+        earliestPutTs = Math.min(earliestPutTs, cell.getTimestamp());
       }
       if (!isTimeRangeTrackerSet) {
-        timeRangeTracker.includeTimestamp(kv);
+        timeRangeTracker.includeTimestamp(cell);
       }
     }
 
-    private void appendGeneralBloomfilter(final KeyValue kv) throws IOException {
+    private void appendGeneralBloomfilter(final Cell cell) throws IOException {
       if (this.generalBloomFilterWriter != null) {
         // only add to the bloom filter on a new, unique key
         boolean newKey = true;
-        if (this.lastKv != null) {
+        if (this.lastCell != null) {
           switch(bloomType) {
           case ROW:
-            newKey = ! kvComparator.matchingRows(kv, lastKv);
+            newKey = ! kvComparator.matchingRows(cell, lastCell);
             break;
           case ROWCOL:
-            newKey = ! kvComparator.matchingRowColumn(kv, lastKv);
+            newKey = ! kvComparator.matchingRowColumn(cell, lastCell);
             break;
           case NONE:
             newKey = false;
@@ -855,17 +856,17 @@ public class StoreFile {
 
           switch (bloomType) {
           case ROW:
-            bloomKey = kv.getRowArray();
-            bloomKeyOffset = kv.getRowOffset();
-            bloomKeyLen = kv.getRowLength();
+            bloomKey = cell.getRowArray();
+            bloomKeyOffset = cell.getRowOffset();
+            bloomKeyLen = cell.getRowLength();
             break;
           case ROWCOL:
             // merge(row, qualifier)
             // TODO: could save one buffer copy in case of compound Bloom
             // filters when this involves creating a KeyValue
-            bloomKey = generalBloomFilterWriter.createBloomKey(kv.getRowArray(),
-                kv.getRowOffset(), kv.getRowLength(), kv.getQualifierArray(),
-                kv.getQualifierOffset(), kv.getQualifierLength());
+            bloomKey = generalBloomFilterWriter.createBloomKey(cell.getRowArray(),
+                cell.getRowOffset(), cell.getRowLength(), cell.getQualifierArray(),
+                cell.getQualifierOffset(), cell.getQualifierLength());
             bloomKeyOffset = 0;
             bloomKeyLen = bloomKey.length;
             break;
@@ -887,14 +888,14 @@ public class StoreFile {
           lastBloomKey = bloomKey;
           lastBloomKeyOffset = bloomKeyOffset;
           lastBloomKeyLen = bloomKeyLen;
-          this.lastKv = kv;
+          this.lastCell = cell;
         }
       }
     }
 
-    private void appendDeleteFamilyBloomFilter(final KeyValue kv)
+    private void appendDeleteFamilyBloomFilter(final Cell cell)
         throws IOException {
-      if (!CellUtil.isDeleteFamily(kv) && !CellUtil.isDeleteFamilyVersion(kv)) {
+      if (!CellUtil.isDeleteFamily(cell) && !CellUtil.isDeleteFamilyVersion(cell)) {
         return;
       }
 
@@ -902,22 +903,22 @@ public class StoreFile {
       deleteFamilyCnt++;
       if (null != this.deleteFamilyBloomFilterWriter) {
         boolean newKey = true;
-        if (lastDeleteFamilyKV != null) {
-          newKey = !kvComparator.matchingRows(kv, lastDeleteFamilyKV);
+        if (lastDeleteFamilyCell != null) {
+          newKey = !kvComparator.matchingRows(cell, lastDeleteFamilyCell);
         }
         if (newKey) {
-          this.deleteFamilyBloomFilterWriter.add(kv.getRowArray(),
-              kv.getRowOffset(), kv.getRowLength());
-          this.lastDeleteFamilyKV = kv;
+          this.deleteFamilyBloomFilterWriter.add(cell.getRowArray(),
+              cell.getRowOffset(), cell.getRowLength());
+          this.lastDeleteFamilyCell = cell;
         }
       }
     }
 
-    public void append(final KeyValue kv) throws IOException {
-      appendGeneralBloomfilter(kv);
-      appendDeleteFamilyBloomFilter(kv);
-      writer.append(kv);
-      trackTimestamps(kv);
+    public void append(final Cell cell) throws IOException {
+      appendGeneralBloomfilter(cell);
+      appendDeleteFamilyBloomFilter(cell);
+      writer.append(cell);
+      trackTimestamps(cell);
     }
 
     public Path getPath() {

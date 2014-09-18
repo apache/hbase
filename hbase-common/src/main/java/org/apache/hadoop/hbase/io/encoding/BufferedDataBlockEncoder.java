@@ -835,17 +835,17 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   }
 
   /**
-   * @param kv
+   * @param cell
    * @param out
    * @param encodingCtx
    * @return unencoded size added
    * @throws IOException
    */
-  protected final int afterEncodingKeyValue(KeyValue kv, DataOutputStream out,
+  protected final int afterEncodingKeyValue(Cell cell, DataOutputStream out,
       HFileBlockDefaultEncodingContext encodingCtx) throws IOException {
     int size = 0;
     if (encodingCtx.getHFileContext().isIncludesTags()) {
-      int tagsLength = kv.getTagsLength();
+      int tagsLength = cell.getTagsLength();
       ByteBufferUtils.putCompressedInt(out, tagsLength);
       // There are some tags to be written
       if (tagsLength > 0) {
@@ -854,16 +854,16 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         // the tags using Dictionary compression in such a case
         if (tagCompressionContext != null) {
           tagCompressionContext
-              .compressTags(out, kv.getTagsArray(), kv.getTagsOffset(), tagsLength);
+              .compressTags(out, cell.getTagsArray(), cell.getTagsOffset(), tagsLength);
         } else {
-          out.write(kv.getTagsArray(), kv.getTagsOffset(), tagsLength);
+          out.write(cell.getTagsArray(), cell.getTagsOffset(), tagsLength);
         }
       }
       size += tagsLength + KeyValue.TAGS_LENGTH_SIZE;
     }
     if (encodingCtx.getHFileContext().isIncludesMvcc()) {
       // Copy memstore timestamp from the byte buffer to the output stream.
-      long memstoreTS = kv.getMvccVersion();
+      long memstoreTS = cell.getSequenceId();
       WritableUtils.writeVLong(out, memstoreTS);
       // TODO use a writeVLong which returns the #bytes written so that 2 time parsing can be
       // avoided.
@@ -973,16 +973,16 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   }
 
   @Override
-  public int encode(KeyValue kv, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+  public int encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
       throws IOException {
     BufferedDataBlockEncodingState state = (BufferedDataBlockEncodingState) encodingCtx
         .getEncodingState();
-    int encodedKvSize = internalEncode(kv, (HFileBlockDefaultEncodingContext) encodingCtx, out);
+    int encodedKvSize = internalEncode(cell, (HFileBlockDefaultEncodingContext) encodingCtx, out);
     state.unencodedDataSizeWritten += encodedKvSize;
     return encodedKvSize;
   }
 
-  public abstract int internalEncode(KeyValue kv, HFileBlockDefaultEncodingContext encodingCtx,
+  public abstract int internalEncode(Cell cell, HFileBlockDefaultEncodingContext encodingCtx,
       DataOutputStream out) throws IOException;
 
   @Override

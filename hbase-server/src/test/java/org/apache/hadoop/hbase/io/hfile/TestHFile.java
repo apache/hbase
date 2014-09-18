@@ -370,7 +370,8 @@ public class TestHFile extends HBaseTestCase {
           .withOutputStream(fout)
           .withFileContext(meta)
           .create();
-      writer.append("foo".getBytes(), "value".getBytes());
+      KeyValue kv = new KeyValue("foo".getBytes(), "f1".getBytes(), null, "value".getBytes());
+      writer.append(kv);
       writer.close();
       fout.close();
       Reader reader = HFile.createReader(fs, mFile, cacheConf, conf);

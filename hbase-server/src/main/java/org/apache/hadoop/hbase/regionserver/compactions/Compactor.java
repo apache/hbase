@@ -75,11 +75,8 @@ public abstract class Compactor {
       HConstants.MIN_KEEP_SEQID_PERIOD), HConstants.MIN_KEEP_SEQID_PERIOD);
   }
 
-  /**
-   * TODO: Replace this with CellOutputStream when StoreFile.Writer uses cells.
-   */
   public interface CellSink {
-    void append(KeyValue kv) throws IOException;
+    void append(Cell cell) throws IOException;
   }
 
   public CompactionProgress getProgress() {

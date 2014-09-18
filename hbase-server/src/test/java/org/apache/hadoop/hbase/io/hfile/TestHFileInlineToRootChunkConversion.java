@@ -72,10 +72,23 @@ public class TestHFileInlineToRootChunkConversion {
       sb.setLength(0);
 
       byte[] k = Bytes.toBytes(keyStr);
-      System.out.println("Key: " + Bytes.toString(k));
-      keys.add(k);
+      System.out.println("RowKey: " + Bytes.toString(k));
+      byte[] f = "f1".getBytes();
+      byte[] q = "q1".getBytes();
+      int keySize = (int) KeyValue.getKeyDataStructureSize(k.length, f.length, q.length);
+      byte[] bytes = new byte[keySize];
+      int pos = 0;
+      pos = Bytes.putShort(bytes, pos, (short) (k.length & 0x0000ffff));
+      pos = Bytes.putBytes(bytes, pos, k, 0, k.length);
+      pos = Bytes.putByte(bytes, pos, (byte) f.length);
+      pos = Bytes.putBytes(bytes, pos, f, 0, f.length);
+      pos = Bytes.putBytes(bytes, pos, q, 0, q.length);
+      pos = Bytes.putLong(bytes, pos, System.currentTimeMillis());
+      pos = Bytes.putByte(bytes, pos, KeyValue.Type.Put.getCode());
+
+      keys.add(bytes);
       byte[] v = Bytes.toBytes("value" + i);
-      hfw.append(k, v);
+      hfw.append(bytes, v);
     }
     hfw.close();
 
