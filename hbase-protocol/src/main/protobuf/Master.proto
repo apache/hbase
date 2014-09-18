@@ -28,6 +28,7 @@ option optimize_for = SPEED;
 import "HBase.proto";
 import "Client.proto";
 import "ClusterStatus.proto";
+import "Quota.proto";
 
 /* Column-level protobufs */
 
@@ -366,6 +367,20 @@ message IsProcedureDoneResponse {
         optional ProcedureDescription snapshot = 2;
 }
 
+message SetQuotaRequest {
+  optional string user_name = 1;
+  optional string user_group = 2;
+  optional string namespace = 3;
+  optional TableName table_name = 4;
+
+  optional bool remove_all = 5;
+  optional bool bypass_globals = 6;
+  optional ThrottleRequest throttle = 7;
+}
+
+message SetQuotaResponse {
+}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -404,7 +419,7 @@ service MasterService {
 
  /** Master dispatch merging the regions */
   rpc DispatchMergingRegions(DispatchMergingRegionsRequest)
-    returns(DispatchMergingRegionsResponse);    
+    returns(DispatchMergingRegionsResponse);
 
   /** Assign a region to a server chosen at random. */
   rpc AssignRegion(AssignRegionRequest)
@@ -497,7 +512,7 @@ service MasterService {
   rpc ExecMasterService(CoprocessorServiceRequest)
     returns(CoprocessorServiceResponse);
 
-  /** 
+  /**
    * Create a snapshot for the given table.
    */
   rpc Snapshot(SnapshotRequest) returns(SnapshotResponse);
@@ -577,4 +592,7 @@ service MasterService {
   /** returns table state */
   rpc GetTableState(GetTableStateRequest)
     returns(GetTableStateResponse);
+
+  /** Apply the new quota settings */
+  rpc SetQuota(SetQuotaRequest) returns(SetQuotaResponse);
 }

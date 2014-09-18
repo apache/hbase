@@ -148,13 +148,15 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanReq
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionResponse;
@@ -2032,6 +2034,13 @@ class ConnectionManager {
             RpcController controller, GetClusterStatusRequest request)
             throws ServiceException {
           return stub.getClusterStatus(controller, request);
+        }
+
+        @Override
+        public SetQuotaResponse setQuota(
+            RpcController controller, SetQuotaRequest request)
+            throws ServiceException {
+          return stub.setQuota(controller, request);
         }
       };
     }

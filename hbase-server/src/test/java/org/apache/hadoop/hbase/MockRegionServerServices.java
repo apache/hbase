@@ -22,6 +22,7 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.NullTableLockManager;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import org.apache.hadoop.hbase.quotas.RegionServerQuotaManager;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -83,7 +85,13 @@ class MockRegionServerServices implements RegionServerServices {
     return this.regions.get(encodedRegionName);
   }
 
+  @Override
   public List<HRegion> getOnlineRegions(TableName tableName) throws IOException {
+    return null;
+  }
+
+  @Override
+  public Set<TableName> getOnlineTables() {
     return null;
   }
 
@@ -147,6 +155,7 @@ class MockRegionServerServices implements RegionServerServices {
     return null;
   }
 
+  @Override
   public RegionServerAccounting getRegionServerAccounting() {
     return null;
   }
@@ -154,6 +163,11 @@ class MockRegionServerServices implements RegionServerServices {
   @Override
   public TableLockManager getTableLockManager() {
     return new NullTableLockManager();
+  }
+
+  @Override
+  public RegionServerQuotaManager getRegionServerQuotaManager() {
+    return null;
   }
 
   @Override

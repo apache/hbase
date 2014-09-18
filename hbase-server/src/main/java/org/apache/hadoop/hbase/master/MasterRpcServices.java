@@ -127,6 +127,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanReq
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
@@ -1285,6 +1287,17 @@ public class MasterRpcServices extends RSRpcServices
       return rrtr.build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
+  public SetQuotaResponse setQuota(RpcController c, SetQuotaRequest req)
+      throws ServiceException {
+    try {
+      master.checkInitialized();
+      return master.getMasterQuotaManager().setQuota(req);
+    } catch (Exception e) {
+      throw new ServiceException(e);
     }
   }
 }

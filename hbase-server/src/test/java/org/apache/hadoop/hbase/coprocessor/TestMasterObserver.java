@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -657,11 +658,11 @@ public class TestMasterObserver {
         ObserverContext<MasterCoprocessorEnvironment> ctx) throws IOException {
       preMasterInitializationCalled = true;
     }
-    
+
     public boolean wasMasterInitializationCalled(){
       return preMasterInitializationCalled;
     }
-    
+
     @Override
     public void postStartMaster(ObserverContext<MasterCoprocessorEnvironment> ctx)
         throws IOException {
@@ -1008,6 +1009,56 @@ public class TestMasterObserver {
     @Override
     public void postTableFlush(ObserverContext<MasterCoprocessorEnvironment> ctx,
         TableName tableName) throws IOException {
+    }
+
+    @Override
+    public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final String userName, final Quotas quotas) throws IOException {
+    }
+
+    @Override
+    public void postSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final String userName, final Quotas quotas) throws IOException {
+    }
+
+    @Override
+    public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final String userName, final TableName tableName, final Quotas quotas) throws IOException {
+    }
+
+    @Override
+    public void postSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final String userName, final TableName tableName, final Quotas quotas) throws IOException {
+    }
+
+    @Override
+    public void preSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final String userName, final String namespace, final Quotas quotas) throws IOException {
+    }
+
+    @Override
+    public void postSetUserQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final String userName, final String namespace, final Quotas quotas) throws IOException {
+    }
+
+    @Override
+    public void preSetTableQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final TableName tableName, final Quotas quotas) throws IOException {
+    }
+
+    @Override
+    public void postSetTableQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final TableName tableName, final Quotas quotas) throws IOException {
+    }
+
+    @Override
+    public void preSetNamespaceQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final String namespace, final Quotas quotas) throws IOException {
+    }
+
+    @Override
+    public void postSetNamespaceQuota(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final String namespace, final Quotas quotas) throws IOException {
     }
   }
 

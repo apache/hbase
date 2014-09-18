@@ -65,6 +65,13 @@ public abstract class Chore extends HasThread {
   }
 
   /**
+   * @return the sleep period in milliseconds
+   */
+  public final int getPeriod() {
+    return sleeper.getPeriod();
+  }
+
+  /**
    * @see java.lang.Thread#run()
    */
   @Override

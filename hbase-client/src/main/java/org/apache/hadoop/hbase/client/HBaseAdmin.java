@@ -126,12 +126,16 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
+import org.apache.hadoop.hbase.quotas.QuotaFilter;
+import org.apache.hadoop.hbase.quotas.QuotaRetriever;
+import org.apache.hadoop.hbase.quotas.QuotaSettings;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
@@ -3549,6 +3553,33 @@ public class HBaseAdmin implements Admin {
         }
       });
     }
+  }
+
+  /**
+   * Apply the new quota settings.
+   *
+   * @param quota the quota settings
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void setQuota(final QuotaSettings quota) throws IOException {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
+      @Override
+      public Void call(int callTimeout) throws ServiceException {
+        this.master.setQuota(null, QuotaSettings.buildSetQuotaRequestProto(quota));
+        return null;
+      }
+    });
+  }
+
+  /**
+   * Return a Quota Scanner to list the quotas based on the filter.
+   *
+   * @param filter the quota settings filter
+   * @return the quota scanner
+   * @throws IOException if a remote or network exception occurs
+   */
+  public QuotaRetriever getQuotaRetriever(final QuotaFilter filter) throws IOException {
+    return QuotaRetriever.open(conf, filter);
   }
 
   /**
