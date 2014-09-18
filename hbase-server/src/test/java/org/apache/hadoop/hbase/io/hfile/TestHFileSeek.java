@@ -58,6 +58,8 @@ import org.junit.experimental.categories.Category;
  */
 @Category(MediumTests.class)
 public class TestHFileSeek extends TestCase {
+  private static final byte[] CF = "f1".getBytes();
+  private static final byte[] QUAL = "q1".getBytes();
   private static final boolean USE_PREAD = true;
   private MyOptions options;
   private Configuration conf;
@@ -69,8 +71,6 @@ public class TestHFileSeek extends TestCase {
   private KVGenerator kvGen;
 
   private static final Log LOG = LogFactory.getLog(TestHFileSeek.class);
-
-  private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Override
   public void setUp() throws IOException {
@@ -151,9 +151,10 @@ public class TestHFileSeek extends TestCase {
           System.arraycopy(key.getBytes(), 0, k, 0, key.getLength());
           byte [] v = new byte [val.getLength()];
           System.arraycopy(val.getBytes(), 0, v, 0, key.getLength());
-          writer.append(k, v);
-          totalBytes += key.getLength();
-          totalBytes += val.getLength();
+          KeyValue kv = new KeyValue(k, CF, QUAL, v);
+          writer.append(kv);
+          totalBytes += kv.getKeyLength();
+          totalBytes += kv.getValueLength();
         }
         timer.stop();
       }

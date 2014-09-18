@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
@@ -77,15 +78,15 @@ public class HFileWriterV3 extends HFileWriterV2 {
    * Add key/value to file. Keys must be added in an order that agrees with the
    * Comparator passed on construction.
    * 
-   * @param kv
-   *          KeyValue to add. Cannot be empty nor null.
+   * @param cell
+   *          Cell to add. Cannot be empty nor null.
    * @throws IOException
    */
   @Override
-  public void append(final KeyValue kv) throws IOException {
+  public void append(final Cell cell) throws IOException {
     // Currently get the complete arrays
-    super.append(kv);
-    int tagsLength = kv.getTagsLength();
+    super.append(cell);
+    int tagsLength = cell.getTagsLength();
     if (tagsLength > this.maxTagsLength) {
       this.maxTagsLength = tagsLength;
     }

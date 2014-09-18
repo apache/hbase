@@ -20,7 +20,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
@@ -49,13 +49,13 @@ public interface HFileDataBlockEncoder {
 
   /**
    * Encodes a KeyValue.
-   * @param kv
+   * @param cell
    * @param encodingCtx
    * @param out
    * @return unencoded kv size
    * @throws IOException
    */
-  int encode(KeyValue kv, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
+  int encode(Cell cell, HFileBlockEncodingContext encodingCtx, DataOutputStream out)
       throws IOException;
 
   /**

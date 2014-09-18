@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -818,13 +819,13 @@ public class HFileBlock implements Cacheable {
     }
 
     /**
-     * Writes the kv to this block
-     * @param kv
+     * Writes the Cell to this block
+     * @param cell
      * @throws IOException
      */
-    public void write(KeyValue kv) throws IOException{
+    public void write(Cell cell) throws IOException{
       expectState(State.WRITING);
-      this.unencodedDataSizeWritten += this.dataBlockEncoder.encode(kv, dataBlockEncodingCtx,
+      this.unencodedDataSizeWritten += this.dataBlockEncoder.encode(cell, dataBlockEncodingCtx,
           this.userDataStream);
     }
 
