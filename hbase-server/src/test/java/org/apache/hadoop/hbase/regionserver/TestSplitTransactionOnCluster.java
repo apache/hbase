@@ -30,6 +30,7 @@ import java.io.InterruptedIOException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -73,10 +74,14 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -98,6 +103,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -106,6 +112,7 @@ import com.google.protobuf.ServiceException;
  * is tests against a bare {@link HRegion}.
  */
 @Category({RegionServerTests.class, LargeTests.class})
+@SuppressWarnings("deprecation")
 public class TestSplitTransactionOnCluster {
   private static final Log LOG =
     LogFactory.getLog(TestSplitTransactionOnCluster.class);
@@ -120,7 +127,7 @@ public class TestSplitTransactionOnCluster {
 
   @BeforeClass public static void before() throws Exception {
     TESTING_UTIL.getConfiguration().setInt("hbase.balancer.period", 60000);
-    TESTING_UTIL.startMiniCluster(NB_SERVERS);
+    TESTING_UTIL.startMiniCluster(1, NB_SERVERS, null, MyMaster.class, null);
   }
 
   @AfterClass public static void after() throws Exception {
@@ -211,7 +218,6 @@ public class TestSplitTransactionOnCluster {
     }
   }
   @Test(timeout = 60000)
-  @SuppressWarnings("deprecation")
   public void testSplitFailedCompactionAndSplit() throws Exception {
     final byte[] tableName = Bytes.toBytes("testSplitFailedCompactionAndSplit");
     Configuration conf = TESTING_UTIL.getConfiguration();
@@ -573,7 +579,7 @@ public class TestSplitTransactionOnCluster {
       this.admin.split(hri.getRegionNameAsString());
       checkAndGetDaughters(tableName);
 
-      MockMasterWithoutCatalogJanitor master = abortAndWaitForMaster();
+      HMaster master = abortAndWaitForMaster();
 
       this.admin = new HBaseAdmin(TESTING_UTIL.getConfiguration());
 
@@ -826,6 +832,52 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
+  /**
+   * Not really restarting the master. Simulate it by clear of new region
+   * state since it is not persisted, will be lost after master restarts.
+   */
+  @Test(timeout = 180000)
+  public void testSplitAndRestartingMaster() throws Exception {
+    LOG.info("Starting testSplitAndRestartingMaster");
+    final TableName tableName = TableName.valueOf("testSplitAndRestartingMaster");
+    // Create table then get the single region for our new table.
+    createTableAndWait(tableName.getName(), HConstants.CATALOG_FAMILY);
+    List<HRegion> regions = cluster.getRegions(tableName);
+    HRegionInfo hri = getAndCheckSingleTableRegion(regions);
+    ensureTableRegionNotOnSameServerAsMeta(admin, hri);
+    int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
+    HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
+    // Turn off balancer so it doesn't cut in and mess up our placements.
+    this.admin.setBalancerRunning(false, true);
+    // Turn off the meta scanner so it don't remove parent on us.
+    cluster.getMaster().setCatalogJanitorEnabled(false);
+    try {
+      MyMasterRpcServices.enabled.set(true);
+      // find a splittable region.  Refresh the regions list
+      regions = cluster.getRegions(tableName);
+      final HRegion region = findSplittableRegion(regions);
+      assertTrue("not able to find a splittable region", region != null);
+
+      // Now split.
+      SplitTransaction st = new SplitTransaction(region, Bytes.toBytes("row2"));
+      try {
+        st.prepare();
+        st.execute(regionServer, regionServer);
+      } catch (IOException e) {
+        fail("Split execution should have succeeded with no exceptions thrown");
+      }
+
+      // Postcondition
+      List<HRegion> daughters = cluster.getRegions(tableName);
+      LOG.info("xxx " + regions.size() + AssignmentManager.TEST_SKIP_SPLIT_HANDLING);
+      assertTrue(daughters.size() == 2);
+    } finally {
+      MyMasterRpcServices.enabled.set(false);
+      admin.setBalancerRunning(true, false);
+      cluster.getMaster().setCatalogJanitorEnabled(true);
+    }
+  }
+
   @Test(timeout = 180000)
   public void testSplitHooksBeforeAndAfterPONR() throws Exception {
     String firstTable = "testSplitHooksBeforeAndAfterPONR_1";
@@ -962,14 +1014,11 @@ public class TestSplitTransactionOnCluster {
     return daughters;
   }
 
-  private MockMasterWithoutCatalogJanitor abortAndWaitForMaster()
+  private HMaster abortAndWaitForMaster()
   throws IOException, InterruptedException {
     cluster.abortMaster(0);
     cluster.waitOnMaster(0);
-    cluster.getConfiguration().setClass(HConstants.MASTER_IMPL,
-    		MockMasterWithoutCatalogJanitor.class, HMaster.class);
-    MockMasterWithoutCatalogJanitor master = null;
-    master = (MockMasterWithoutCatalogJanitor) cluster.startMaster().getMaster();
+    HMaster master = cluster.startMaster().getMaster();
     cluster.waitForActiveAndReadyMaster();
     return master;
   }
@@ -1107,20 +1156,52 @@ public class TestSplitTransactionOnCluster {
     return t;
   }
 
-  public static class MockMasterWithoutCatalogJanitor extends HMaster {
-
-    public MockMasterWithoutCatalogJanitor(Configuration conf, CoordinatedStateManager cp)
-      throws IOException, KeeperException,
-        InterruptedException {
-      super(conf, cp);
-    }
-  }
-
   private static class SplittingNodeCreationFailedException  extends IOException {
     private static final long serialVersionUID = 1652404976265623004L;
 
     public SplittingNodeCreationFailedException () {
       super();
+    }
+  }
+
+  // Make it public so that JVMClusterUtil can access it.
+  public static class MyMaster extends HMaster {
+    public MyMaster(Configuration conf, CoordinatedStateManager cp)
+      throws IOException, KeeperException,
+        InterruptedException {
+      super(conf, cp);
+    }
+
+    @Override
+    protected RSRpcServices createRpcServices() throws IOException {
+      return new MyMasterRpcServices(this);
+    }
+  }
+
+  static class MyMasterRpcServices extends MasterRpcServices {
+    static AtomicBoolean enabled = new AtomicBoolean(false);
+
+    private HMaster myMaster;
+    public MyMasterRpcServices(HMaster master) throws IOException {
+      super(master);
+      myMaster = master;
+    }
+
+    @Override
+    public ReportRegionStateTransitionResponse reportRegionStateTransition(RpcController c,
+        ReportRegionStateTransitionRequest req) throws ServiceException {
+      ReportRegionStateTransitionResponse resp = super.reportRegionStateTransition(c, req);
+      if (enabled.get() && req.getTransition(0).getTransitionCode().equals(
+          TransitionCode.READY_TO_SPLIT) && !resp.hasErrorMessage()) {
+        RegionStates regionStates = myMaster.getAssignmentManager().getRegionStates();
+        for (RegionState regionState: regionStates.getRegionsInTransition().values()) {
+          // Find the merging_new region and remove it
+          if (regionState.isSplittingNew()) {
+            regionStates.deleteRegion(regionState.getRegion());
+          }
+        }
+      }
+      return resp;
     }
   }
 
@@ -1177,7 +1258,6 @@ public class TestSplitTransactionOnCluster {
       HRegionServer rs = (HRegionServer) environment.getRegionServerServices();
       st.stepsAfterPONR(rs, rs, daughterRegions);
     }
-
   }
 }
 

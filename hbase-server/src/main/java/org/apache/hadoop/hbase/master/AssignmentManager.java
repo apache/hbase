@@ -2051,11 +2051,11 @@ public class AssignmentManager {
     // The region must be opening on this server.
     // If current state is failed_open on the same server,
     // it could be a reportRegionTransition RPC retry.
-    if (current == null || !current.isOnServer(serverName)
-        || !(current.isOpening() || current.isFailedOpen())) {
+    if (current == null || !current.isOpeningOrFailedOpenOnServer(serverName)) {
       return hri.getShortNameToLog() + " is not opening on " + serverName;
     }
 
+    // Just return in case of retrying
     if (current.isFailedOpen()) {
       return null;
     }
@@ -2106,11 +2106,11 @@ public class AssignmentManager {
     // The region must be opening on this server.
     // If current state is already opened on the same server,
     // it could be a reportRegionTransition RPC retry.
-    if (current == null || !current.isOnServer(serverName)
-        || !(current.isOpening() || current.isOpened())) {
+    if (current == null || !current.isOpeningOrOpenedOnServer(serverName)) {
       return hri.getShortNameToLog() + " is not opening on " + serverName;
     }
 
+    // Just return in case of retrying
     if (current.isOpened()) {
       return null;
     }
@@ -2140,7 +2140,7 @@ public class AssignmentManager {
     // already have moved away from closed state. 2. On the region server side, we
     // don't care much about the response for this transition. We only make sure
     // master has got and processed this report, either successfully or not.
-    if (current == null || !current.isOnServer(serverName) || !current.isClosing()) {
+    if (current == null || !current.isClosingOnServer(serverName)) {
       return hri.getShortNameToLog() + " is not closing on " + serverName;
     }
     if (getTableStateManager().isTableState(hri.getTable(), TableState.State.DISABLED,
@@ -2162,11 +2162,11 @@ public class AssignmentManager {
     // The region must be opened on this server.
     // If current state is already splitting on the same server,
     // it could be a reportRegionTransition RPC retry.
-    if (current == null || !current.isOnServer(serverName)
-        || !(current.isOpened() || current.isSplitting())) {
+    if (current == null || !current.isSplittingOrOpenedOnServer(serverName)) {
       return hri.getShortNameToLog() + " is not opening on " + serverName;
     }
 
+    // Just return in case of retrying
     if (current.isSplitting()) {
       return null;
     }
@@ -2194,7 +2194,7 @@ public class AssignmentManager {
       final ServerName serverName, final RegionStateTransition transition) {
     // The region must be splitting on this server, and the daughters must be in
     // splitting_new state. To check RPC retry, we use server holding info.
-    if (current == null || !current.isOnServer(serverName) || !current.isSplitting()) {
+    if (current == null || !current.isSplittingOnServer(serverName)) {
       return hri.getShortNameToLog() + " is not splitting on " + serverName;
     }
 
@@ -2202,13 +2202,23 @@ public class AssignmentManager {
     final HRegionInfo b = HRegionInfo.convert(transition.getRegionInfo(2));
     RegionState rs_a = regionStates.getRegionState(a);
     RegionState rs_b = regionStates.getRegionState(b);
-    if (rs_a == null || rs_b == null || !rs_a.isOnServer(serverName)
-        || !rs_b.isOnServer(serverName) || !rs_a.isSplittingNew()
-        || !rs_b.isSplittingNew()) {
+
+    // Master could have restarted and lost the new region
+    // states, if so, they must be lost together
+    if (rs_a == null && rs_b == null) {
+      rs_a = regionStates.createRegionState(
+        a, State.SPLITTING_NEW, serverName, null);
+      rs_b = regionStates.createRegionState(
+        b, State.SPLITTING_NEW, serverName, null);
+    }
+
+    if (rs_a == null || !rs_a.isSplittingNewOnServer(serverName)
+        || rs_b == null || !rs_b.isSplittingNewOnServer(serverName)) {
       return "Some daughter is not known to be splitting on " + serverName
         + ", a=" + rs_a + ", b=" + rs_b;
     }
 
+    // Just return in case of retrying
     if (!regionStates.isRegionOnServer(hri, serverName)) {
       return null;
     }
@@ -2228,11 +2238,11 @@ public class AssignmentManager {
     // splitting_new state.
     // If current state is already split on the same server,
     // it could be a reportRegionTransition RPC retry.
-    if (current == null || !current.isOnServer(serverName)
-        || !(current.isSplitting() || current.isSplit())) {
+    if (current == null || !current.isSplittingOrSplitOnServer(serverName)) {
       return hri.getShortNameToLog() + " is not splitting on " + serverName;
     }
 
+    // Just return in case of retrying
     if (current.isSplit()) {
       return null;
     }
@@ -2241,9 +2251,8 @@ public class AssignmentManager {
     final HRegionInfo b = HRegionInfo.convert(transition.getRegionInfo(2));
     RegionState rs_a = regionStates.getRegionState(a);
     RegionState rs_b = regionStates.getRegionState(b);
-    if (rs_a == null || rs_b == null || !rs_a.isOnServer(serverName)
-        || !rs_b.isOnServer(serverName) || !rs_a.isSplittingNew()
-        || !rs_b.isSplittingNew()) {
+    if (rs_a == null || !rs_a.isSplittingNewOnServer(serverName)
+        || rs_b == null || !rs_b.isSplittingNewOnServer(serverName)) {
       return "Some daughter is not known to be splitting on " + serverName
         + ", a=" + rs_a + ", b=" + rs_b;
     }
@@ -2278,11 +2287,11 @@ public class AssignmentManager {
     // The region must be splitting on this server, and the daughters must be in
     // splitting_new state.
     // If the region is in open state, it could be an RPC retry.
-    if (current == null || !current.isOnServer(serverName)
-        || !(current.isSplitting() || current.isOpened())) {
+    if (current == null || !current.isSplittingOrOpenedOnServer(serverName)) {
       return hri.getShortNameToLog() + " is not splitting on " + serverName;
     }
 
+    // Just return in case of retrying
     if (current.isOpened()) {
       return null;
     }
@@ -2291,9 +2300,8 @@ public class AssignmentManager {
     final HRegionInfo b = HRegionInfo.convert(transition.getRegionInfo(2));
     RegionState rs_a = regionStates.getRegionState(a);
     RegionState rs_b = regionStates.getRegionState(b);
-    if (rs_a == null || rs_b == null || !rs_a.isOnServer(serverName)
-        || !rs_b.isOnServer(serverName) || !rs_a.isSplittingNew()
-        || !rs_b.isSplittingNew()) {
+    if (rs_a == null || !rs_a.isSplittingNewOnServer(serverName)
+        || rs_b == null || !rs_b.isSplittingNewOnServer(serverName)) {
       return "Some daughter is not known to be splitting on " + serverName
         + ", a=" + rs_a + ", b=" + rs_b;
     }
@@ -2312,11 +2320,11 @@ public class AssignmentManager {
       final ServerName serverName, final RegionStateTransition transition) {
     // The region must be new, and the daughters must be open on this server.
     // If the region is in merge_new state, it could be an RPC retry.
-    if (current != null && (!current.isOnServer(serverName)
-        || !current.isMergingNew())) {
+    if (current != null && !current.isMergingNewOnServer(serverName)) {
       return "Merging daughter region already exists, p=" + current;
     }
 
+    // Just return in case of retrying
     if (current != null) {
       return null;
     }
@@ -2330,9 +2338,8 @@ public class AssignmentManager {
     try {
       RegionState rs_a = regionStates.getRegionState(a);
       RegionState rs_b = regionStates.getRegionState(b);
-      if (rs_a == null || rs_b == null || !rs_a.isOnServer(serverName)
-          || !rs_b.isOnServer(serverName) || !rs_a.isOpened()
-          || !rs_b.isOpened()) {
+      if (rs_a == null || !rs_a.isOpenedOnServer(serverName)
+          || rs_b == null || !rs_b.isOpenedOnServer(serverName)) {
         return "Some daughter is not in a state to merge on " + serverName
           + ", a=" + rs_a + ", b=" + rs_b;
       }
@@ -2353,7 +2360,7 @@ public class AssignmentManager {
       final ServerName serverName, final RegionStateTransition transition) {
     // The region must be in merging_new state, and the daughters must be
     // merging. To check RPC retry, we use server holding info.
-    if (current == null || !current.isOnServer(serverName) || !current.isMergingNew()) {
+    if (current != null && !current.isMergingNewOnServer(serverName)) {
       return hri.getShortNameToLog() + " is not merging on " + serverName;
     }
 
@@ -2361,13 +2368,19 @@ public class AssignmentManager {
     final HRegionInfo b = HRegionInfo.convert(transition.getRegionInfo(2));
     RegionState rs_a = regionStates.getRegionState(a);
     RegionState rs_b = regionStates.getRegionState(b);
-    if (rs_a == null || rs_b == null || !rs_a.isOnServer(serverName)
-        || !rs_b.isOnServer(serverName) || !rs_a.isMerging()
-        || !rs_b.isMerging()) {
+    if (rs_a == null || !rs_a.isMergingOnServer(serverName)
+        || rs_b == null || !rs_b.isMergingOnServer(serverName)) {
       return "Some daughter is not known to be merging on " + serverName
         + ", a=" + rs_a + ", b=" + rs_b;
     }
 
+    // Master could have restarted and lost the new region state
+    if (current == null) {
+      regionStates.createRegionState(
+        hri, State.MERGING_NEW, serverName, null);
+    }
+
+    // Just return in case of retrying
     if (regionStates.isRegionOnServer(hri, serverName)) {
       return null;
     }
@@ -2387,11 +2400,11 @@ public class AssignmentManager {
     // merging on this server.
     // If current state is already opened on the same server,
     // it could be a reportRegionTransition RPC retry.
-    if (current == null || !current.isOnServer(serverName)
-        || !(current.isMergingNew() || current.isOpened())) {
+    if (current == null || !current.isMergingNewOrOpenedOnServer(serverName)) {
       return hri.getShortNameToLog() + " is not merging on " + serverName;
     }
 
+    // Just return in case of retrying
     if (current.isOpened()) {
       return null;
     }
@@ -2400,9 +2413,8 @@ public class AssignmentManager {
     final HRegionInfo b = HRegionInfo.convert(transition.getRegionInfo(2));
     RegionState rs_a = regionStates.getRegionState(a);
     RegionState rs_b = regionStates.getRegionState(b);
-    if (rs_a == null || rs_b == null || !rs_a.isOnServer(serverName)
-        || !rs_b.isOnServer(serverName) || !rs_a.isMerging()
-        || !rs_b.isMerging()) {
+    if (rs_a == null || !rs_a.isMergingOnServer(serverName)
+        || rs_b == null || !rs_b.isMergingOnServer(serverName)) {
       return "Some daughter is not known to be merging on " + serverName
         + ", a=" + rs_a + ", b=" + rs_b;
     }
@@ -2433,11 +2445,11 @@ public class AssignmentManager {
     // The region must be in merging_new state, and the daughters must be
     // merging on this server.
     // If the region is in offline state, it could be an RPC retry.
-    if (current == null || !current.isOnServer(serverName)
-        || !(current.isMergingNew() || current.isOffline())) {
+    if (current == null || !current.isMergingNewOrOfflineOnServer(serverName)) {
       return hri.getShortNameToLog() + " is not merging on " + serverName;
     }
 
+    // Just return in case of retrying
     if (current.isOffline()) {
       return null;
     }
@@ -2446,9 +2458,8 @@ public class AssignmentManager {
     final HRegionInfo b = HRegionInfo.convert(transition.getRegionInfo(2));
     RegionState rs_a = regionStates.getRegionState(a);
     RegionState rs_b = regionStates.getRegionState(b);
-    if (rs_a == null || rs_b == null || !rs_a.isOnServer(serverName)
-        || !rs_b.isOnServer(serverName) || !rs_a.isMerging()
-        || !rs_b.isMerging()) {
+    if (rs_a == null || !rs_a.isMergingOnServer(serverName)
+        || rs_b == null || !rs_b.isMergingOnServer(serverName)) {
       return "Some daughter is not known to be merging on " + serverName
         + ", a=" + rs_a + ", b=" + rs_b;
     }

@@ -335,7 +335,7 @@ public class RegionStates {
         }
         lastAssignments.put(encodedName, lastHost);
         regionAssignments.put(hri, lastHost);
-      } else if (!regionState.isUnassignable()) {
+      } else if (!isOneOfStates(regionState, State.MERGED, State.SPLIT, State.OFFLINE)) {
         regionsInTransition.put(encodedName, regionState);
       }
       if (lastHost != null && newState != State.SPLIT) {

@@ -26,12 +26,15 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -51,8 +54,13 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterRpcServices;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionStates;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -60,12 +68,15 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
+import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.base.Joiner;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 
 /**
  * Like {@link TestRegionMergeTransaction} in that we're testing
@@ -97,7 +108,7 @@ public class TestRegionMergeTransactionOnCluster {
   @BeforeClass
   public static void beforeAllTests() throws Exception {
     // Start a cluster
-    TEST_UTIL.startMiniCluster(NB_SERVERS);
+    TEST_UTIL.startMiniCluster(1, NB_SERVERS, null, MyMaster.class, null);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     master = cluster.getMaster();
     master.balanceSwitch(false);
@@ -152,6 +163,31 @@ public class TestRegionMergeTransactionOnCluster {
     assertFalse("Merged region can't be unassigned",
       regionStates.isRegionInTransition(hri));
     assertTrue(regionStates.isRegionInState(hri, State.MERGED));
+
+    table.close();
+  }
+
+  /**
+   * Not really restarting the master. Simulate it by clear of new region
+   * state since it is not persisted, will be lost after master restarts.
+   */
+  @Test
+  public void testMergeAndRestartingMaster() throws Exception {
+    LOG.info("Starting testMergeAndRestartingMaster");
+    final TableName tableName = TableName.valueOf("testMergeAndRestartingMaster");
+
+    // Create table and load data.
+    Table table = createTableAndLoadData(master, tableName);
+
+    try {
+      MyMasterRpcServices.enabled.set(true);
+
+      // Merge 1st and 2nd region
+      mergeRegionsAndVerifyRegionNum(master, tableName, 0, 1,
+        INITIAL_REGION_NUM - 1);
+    } finally {
+      MyMasterRpcServices.enabled.set(false);
+    }
 
     table.close();
   }
@@ -432,5 +468,46 @@ public class TestRegionMergeTransactionOnCluster {
     }
     assertEquals(expectedRegionNum, rowCount);
     scanner.close();
+  }
+
+  // Make it public so that JVMClusterUtil can access it.
+  public static class MyMaster extends HMaster {
+    public MyMaster(Configuration conf, CoordinatedStateManager cp)
+      throws IOException, KeeperException,
+        InterruptedException {
+      super(conf, cp);
+    }
+
+    @Override
+    protected RSRpcServices createRpcServices() throws IOException {
+      return new MyMasterRpcServices(this);
+    }
+  }
+
+  static class MyMasterRpcServices extends MasterRpcServices {
+    static AtomicBoolean enabled = new AtomicBoolean(false);
+
+    private HMaster myMaster;
+    public MyMasterRpcServices(HMaster master) throws IOException {
+      super(master);
+      myMaster = master;
+    }
+
+    @Override
+    public ReportRegionStateTransitionResponse reportRegionStateTransition(RpcController c,
+        ReportRegionStateTransitionRequest req) throws ServiceException {
+      ReportRegionStateTransitionResponse resp = super.reportRegionStateTransition(c, req);
+      if (enabled.get() && req.getTransition(0).getTransitionCode()
+          == TransitionCode.READY_TO_MERGE && !resp.hasErrorMessage()) {
+        RegionStates regionStates = myMaster.getAssignmentManager().getRegionStates();
+        for (RegionState regionState: regionStates.getRegionsInTransition().values()) {
+          // Find the merging_new region and remove it
+          if (regionState.isMergingNew()) {
+            regionStates.deleteRegion(regionState.getRegion());
+          }
+        }
+      }
+      return resp;
+    }
   }
 }

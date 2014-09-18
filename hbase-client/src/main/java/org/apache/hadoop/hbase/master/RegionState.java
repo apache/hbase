@@ -272,6 +272,54 @@ public class RegionState {
     return serverName != null && serverName.equals(sn);
   }
 
+  public boolean isMergingOnServer(final ServerName sn) {
+    return isOnServer(sn) && isMerging();
+  }
+
+  public boolean isMergingNewOnServer(final ServerName sn) {
+    return isOnServer(sn) && isMergingNew();
+  }
+
+  public boolean isMergingNewOrOpenedOnServer(final ServerName sn) {
+    return isOnServer(sn) && (isMergingNew() || isOpened());
+  }
+
+  public boolean isMergingNewOrOfflineOnServer(final ServerName sn) {
+    return isOnServer(sn) && (isMergingNew() || isOffline());
+  }
+
+  public boolean isSplittingOnServer(final ServerName sn) {
+    return isOnServer(sn) && isSplitting();
+  }
+
+  public boolean isSplittingNewOnServer(final ServerName sn) {
+    return isOnServer(sn) && isSplittingNew();
+  }
+
+  public boolean isSplittingOrOpenedOnServer(final ServerName sn) {
+    return isOnServer(sn) && (isSplitting() || isOpened());
+  }
+
+  public boolean isSplittingOrSplitOnServer(final ServerName sn) {
+    return isOnServer(sn) && (isSplitting() || isSplit());
+  }
+
+  public boolean isClosingOnServer(final ServerName sn) {
+    return isOnServer(sn) && isClosing();
+  }
+
+  public boolean isOpeningOrFailedOpenOnServer(final ServerName sn) {
+    return isOnServer(sn) && (isOpening() || isFailedOpen());
+  }
+
+  public boolean isOpeningOrOpenedOnServer(final ServerName sn) {
+    return isOnServer(sn) && (isOpening() || isOpened());
+  }
+
+  public boolean isOpenedOnServer(final ServerName sn) {
+    return isOnServer(sn) && isOpened();
+  }
+
   /**
    * Check if a region state can transition to offline
    */
