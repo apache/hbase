@@ -340,7 +340,7 @@ public class HMobStore extends HStore {
       String compactionName = UUID.randomUUID().toString().replaceAll("-", "");
       MobZookeeper zk = null;
       try {
-        zk = MobZookeeper.newInstance(this.conf, compactionName);
+        zk = MobZookeeper.newInstance(region.getBaseConf(), compactionName);
       } catch (KeeperException e) {
         LOG.error("Cannot connect to the zookeeper, ready to perform the minor compaction instead",
             e);
