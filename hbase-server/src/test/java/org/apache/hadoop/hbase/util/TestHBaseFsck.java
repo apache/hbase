@@ -527,49 +527,6 @@ public class TestHBaseFsck {
   }
 
   /**
-   * This test makes sure that parallel instances of Hbck is disabled.
-   *
-   * @throws Exception
-   */
-  @Test
-  public void testParallelHbck() throws Exception {
-    final ExecutorService service;
-    final Future<HBaseFsck> hbck1,hbck2;
-
-    class RunHbck implements Callable<HBaseFsck>{
-      boolean fail = true;
-      public HBaseFsck call(){
-        try{
-          return doFsck(conf, false);
-        } catch(Exception e){
-          if (e.getMessage().contains("Duplicate hbck")) {
-            fail = false;
-          }
-        }
-        // If we reach here, then an exception was caught
-        if (fail) fail();
-        return null;
-      }
-    }
-    service = Executors.newFixedThreadPool(2);
-    hbck1 = service.submit(new RunHbck());
-    hbck2 = service.submit(new RunHbck());
-    service.shutdown();
-    //wait for 15 seconds, for both hbck calls finish
-    service.awaitTermination(15, TimeUnit.SECONDS);
-    HBaseFsck h1 = hbck1.get();
-    HBaseFsck h2 = hbck2.get();
-    // Make sure only one of the calls was successful
-    assert(h1 == null || h2 == null);
-    if (h1 != null) {
-      assert(h1.getRetCode() >= 0);
-    }
-    if (h2 != null) {
-      assert(h2.getRetCode() >= 0);
-    }
-  }
-
-  /**
    * This create and fixes a bad table with regions that have a duplicate
    * start key
    */
