@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
+import java.util.RandomAccess;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
@@ -3090,9 +3091,11 @@ public class HRegion implements HeapSize { // , Writable{
     for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
       byte[] family = e.getKey();
       List<Cell> cells = e.getValue();
-
+      assert cells instanceof RandomAccess;
       Store store = getStore(family);
-      for (Cell cell: cells) {
+      int listSize = cells.size();
+      for (int i=0; i < listSize; i++) {
+        Cell cell = cells.get(i);  
         CellUtil.setSequenceId(cell, mvccNum);
         Pair<Long, Cell> ret = store.add(cell);
         size += ret.getFirst();
