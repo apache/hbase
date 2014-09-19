@@ -21,10 +21,12 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.net.UnknownHostException;
 
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.CallSequenceOutOfOrderException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -63,6 +65,8 @@ public class ScannerCallable extends ServerCallable<Result[]> {
 
   // indicate if it is a remote server call
   private boolean isRegionServerRemote = true;
+  private long callSeq = 0;
+  private boolean useCallSeq = true;
 
   /**
    * @param connection which connection
@@ -129,7 +133,33 @@ public class ScannerCallable extends ServerCallable<Result[]> {
       try {
         incRPCcallsMetrics();
         long timestamp = System.currentTimeMillis();
-        rrs = server.next(scannerId, caching);
+        if (useCallSeq) {
+          try {
+            rrs = server.next(scannerId, caching, callSeq);
+            // increment the callSeq which will be getting used for the next time next() call to
+            // the RS.In case of a timeout this increment should not happen so that the next
+            // trial also will be done with the same callSeq.
+            callSeq++;
+          } catch (IOException ioe) {
+            // TODO This is an ugly way of checking. Any other ways?
+            if (ioe instanceof RemoteException
+                && ExceptionUtils.getStackTrace(ioe).contains("java.lang.NoSuchMethodException")) {
+              // This will happen when we use a latest version of the client but still running with
+              // old region server. At server side there is no implementation for the seq number
+              // based scanning. Set the useCallSeq to false.
+              LOG.warn("Seq number based scan API not present at RS side! Trying with API: "
+                  + "next(scannerId, caching). Consider upgrading version at RS "
+                  + location.getHostnamePort());
+              useCallSeq = false;
+              rrs = server.next(scannerId, caching);
+            } else {
+              // Throw it back so that will get handled by the below original catch blocks;
+              throw ioe;
+            }
+          }
+        } else {
+          rrs = server.next(scannerId, caching);
+        }
         if (logScannerActivity) {
           long now = System.currentTimeMillis();
           if (now - timestamp > logCutOffLatency) {
