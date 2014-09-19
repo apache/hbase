@@ -88,8 +88,8 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
     assertNotLive(server);
     server.start();
     assertAlive(server);
-    stop(server);
     Logger.getLogger(HttpServer.class.getName() + ".test").removeAppender(requestLogAppender);
+    stop(server);
   }
 
   /**
