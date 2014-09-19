@@ -160,7 +160,7 @@ public class TestHBaseFsck {
 
     // Now let's mess it up and change the assignment in hbase:meta to
     // point to a different region server
-    Table meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getTableName(),
+    Table meta = new HTable(conf, TableName.META_TABLE_NAME,
         executorService);
     Scan scan = new Scan();
     scan.setStartRow(Bytes.toBytes(table+",,"));
@@ -1310,7 +1310,7 @@ public class TestHBaseFsck {
         Bytes.toBytes("C"), true, true, false);
 
       // Create a new meta entry to fake it as a split parent.
-      meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getTableName(),
+      meta = new HTable(conf, TableName.META_TABLE_NAME,
           executorService);
       HRegionInfo hri = location.getRegionInfo();
 
@@ -1385,7 +1385,7 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseAdmin().flush(table);
       HRegionLocation location = tbl.getRegionLocation("B");
 
-      meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getTableName());
+      meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = location.getRegionInfo();
 
       // do a regular split
@@ -1435,7 +1435,7 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseAdmin().flush(table);
       HRegionLocation location = tbl.getRegionLocation("B");
 
-      meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getTableName());
+      meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = location.getRegionInfo();
 
       // do a regular split
@@ -1978,7 +1978,7 @@ public class TestHBaseFsck {
 
       // Mess it up by removing the RegionInfo for one region.
       final List<Delete> deletes = new LinkedList<Delete>();
-      Table meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getTableName());
+      Table meta = new HTable(conf, TableName.META_TABLE_NAME);
       MetaScanner.metaScan(conf, new MetaScanner.MetaScannerVisitor() {
 
         @Override

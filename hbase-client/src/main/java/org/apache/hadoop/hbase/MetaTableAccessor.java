@@ -328,7 +328,7 @@ public class MetaTableAccessor {
   public static boolean tableExists(HConnection hConnection,
       final TableName tableName)
   throws IOException {
-    if (tableName.equals(HTableDescriptor.META_TABLEDESC.getTableName())) {
+    if (tableName.equals(TableName.META_TABLE_NAME)) {
       // Catalog tables always exist.
       return true;
     }

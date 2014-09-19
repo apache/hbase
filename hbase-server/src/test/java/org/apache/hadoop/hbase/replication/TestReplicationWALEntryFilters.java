@@ -64,7 +64,7 @@ public class TestReplicationWALEntryFilters {
     assertNull(filter.filter(metaEntry));
 
     // ns table
-    HLogKey key2 = new HLogKey(new byte[] {}, HTableDescriptor.NAMESPACE_TABLEDESC.getTableName());
+    HLogKey key2 = new HLogKey(new byte[] {}, TableName.NAMESPACE_TABLE_NAME);
     HLog.Entry nsEntry = new Entry(key2, null);
     assertNull(filter.filter(nsEntry));
 
