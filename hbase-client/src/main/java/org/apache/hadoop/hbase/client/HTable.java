@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
@@ -36,7 +35,6 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -74,52 +72,28 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
 /**
- * <p>Used to communicate with a single HBase table.  An implementation of
- * {@link HTableInterface}.  Instances of this class can be constructed directly but it is
- * encouraged that users get instances via {@link HConnection} and {@link HConnectionManager}.
- * See {@link HConnectionManager} class comment for an example.
+ * An implementation of {@link Table}. Used to communicate with a single HBase table.
+ * Lightweight. Get as needed and just close when done.
+ * Instances of this class SHOULD NOT be constructed directly.
+ * Obtain an instance via {@link Connection}. See {@link ConnectionFactory}
+ * class comment for an example of how.
  *
- * <p>This class is not thread safe for reads nor write.
- *
- * <p>In case of writes (Put, Delete), the underlying write buffer can
+ * <p>This class is NOT thread safe for reads nor write.
+ * In the case of writes (Put, Delete), the underlying write buffer can
  * be corrupted if multiple threads contend over a single HTable instance.
+ * In the case of reads, some fields used by a Scan are shared among all threads.
  *
- * <p>In case of reads, some fields used by a Scan are shared among all threads.
- * The HTable implementation can either not contract to be safe in case of a Get
- *
- * <p>Instances of HTable passed the same {@link Configuration} instance will
- * share connections to servers out on the cluster and to the zookeeper ensemble
- * as well as caches of region locations.  This is usually a *good* thing and it
- * is recommended to reuse the same configuration object for all your tables.
- * This happens because they will all share the same underlying
- * {@link HConnection} instance. See {@link HConnectionManager} for more on
- * how this mechanism works.
- *
- * <p>{@link HConnection} will read most of the
- * configuration it needs from the passed {@link Configuration} on initial
- * construction.  Thereafter, for settings such as
- * <code>hbase.client.pause</code>, <code>hbase.client.retries.number</code>,
- * and <code>hbase.client.rpc.maxattempts</code> updating their values in the
- * passed {@link Configuration} subsequent to {@link HConnection} construction
- * will go unnoticed.  To run with changed values, make a new
- * {@link HTable} passing a new {@link Configuration} instance that has the
- * new configuration.
- *
- * <p>Note that this class implements the {@link Closeable} interface. When a
- * HTable instance is no longer required, it *should* be closed in order to ensure
- * that the underlying resources are promptly released. Please note that the close
- * method can throw java.io.IOException that must be handled.
- *
- * @see HBaseAdmin for create, drop, list, enable and disable of tables.
- * @see HConnection
- * @see HConnectionManager
+ * @see Admin for create, drop, list, enable and disable of tables.
+ * @see Connection
+ * @see ConnectionFactory
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -155,10 +129,6 @@ public class HTable implements HTableInterface, RegionLocator {
 
   /**
    * Creates an object to access a HBase table.
-   * Shares zookeeper connection and other resources with other HTable instances
-   * created with the same <code>conf</code> instance.  Uses already-populated
-   * region cache if one is available, populated by any other HTable instances
-   * sharing this <code>conf</code> instance.  Recommended.
    * @param conf Configuration object to use.
    * @param tableName Name of the table.
    * @throws IOException if a remote or network exception occurs
@@ -173,10 +143,6 @@ public class HTable implements HTableInterface, RegionLocator {
 
   /**
    * Creates an object to access a HBase table.
-   * Shares zookeeper connection and other resources with other HTable instances
-   * created with the same <code>conf</code> instance.  Uses already-populated
-   * region cache if one is available, populated by any other HTable instances
-   * sharing this <code>conf</code> instance.  Recommended.
    * @param conf Configuration object to use.
    * @param tableName Name of the table.
    * @throws IOException if a remote or network exception occurs
@@ -193,10 +159,6 @@ public class HTable implements HTableInterface, RegionLocator {
 
   /**
    * Creates an object to access a HBase table.
-   * Shares zookeeper connection and other resources with other HTable instances
-   * created with the same <code>conf</code> instance.  Uses already-populated
-   * region cache if one is available, populated by any other HTable instances
-   * sharing this <code>conf</code> instance.  Recommended.
    * @param conf Configuration object to use.
    * @param tableName table name pojo
    * @throws IOException if a remote or network exception occurs
@@ -220,9 +182,7 @@ public class HTable implements HTableInterface, RegionLocator {
   }
 
   /**
-   * Creates an object to access a HBase table. Shares zookeeper connection and other resources with
-   * other HTable instances created with the same <code>connection</code> instance. Use this
-   * constructor when the Connection instance is externally managed.
+   * Creates an object to access a HBase table.
    * @param tableName Name of the table.
    * @param connection HConnection to be used.
    * @throws IOException if a remote or network exception occurs
@@ -240,6 +200,8 @@ public class HTable implements HTableInterface, RegionLocator {
     this.finishSetup();
   }
 
+  // Marked Private @since 1.0
+  @InterfaceAudience.Private
   public static ThreadPoolExecutor getDefaultExecutor(Configuration conf) {
     int maxThreads = conf.getInt("hbase.htable.threads.max", Integer.MAX_VALUE);
     if (maxThreads == 0) {
@@ -259,11 +221,6 @@ public class HTable implements HTableInterface, RegionLocator {
 
   /**
    * Creates an object to access a HBase table.
-   * Shares zookeeper connection and other resources with other HTable instances
-   * created with the same <code>conf</code> instance.  Uses already-populated
-   * region cache if one is available, populated by any other HTable instances
-   * sharing this <code>conf</code> instance.
-   * Use this constructor when the ExecutorService is externally managed.
    * @param conf Configuration object to use.
    * @param tableName Name of the table.
    * @param pool ExecutorService to be used.
@@ -279,11 +236,6 @@ public class HTable implements HTableInterface, RegionLocator {
 
   /**
    * Creates an object to access a HBase table.
-   * Shares zookeeper connection and other resources with other HTable instances
-   * created with the same <code>conf</code> instance.  Uses already-populated
-   * region cache if one is available, populated by any other HTable instances
-   * sharing this <code>conf</code> instance.
-   * Use this constructor when the ExecutorService is externally managed.
    * @param conf Configuration object to use.
    * @param tableName Name of the table.
    * @param pool ExecutorService to be used.
@@ -310,10 +262,6 @@ public class HTable implements HTableInterface, RegionLocator {
 
   /**
    * Creates an object to access a HBase table.
-   * Shares zookeeper connection and other resources with other HTable instances
-   * created with the same <code>connection</code> instance.
-   * Use this constructor when the ExecutorService and HConnection instance are
-   * externally managed.
    * @param tableName Name of the table.
    * @param connection HConnection to be used.
    * @param pool ExecutorService to be used.
@@ -335,10 +283,6 @@ public class HTable implements HTableInterface, RegionLocator {
 
   /**
    * Creates an object to access a HBase table.
-   * Shares zookeeper connection and other resources with other HTable instances
-   * created with the same <code>connection</code> instance.
-   * Visible only for HTableWrapper which is in different package.
-   * Should not be used by exernal code.
    * @param tableName Name of the table.
    * @param connection HConnection to be used.
    * @param pool ExecutorService to be used.
@@ -368,6 +312,7 @@ public class HTable implements HTableInterface, RegionLocator {
   /**
    * For internal testing.
    */
+  @VisibleForTesting
   protected HTable() {
     tableName = null;
     cleanupPoolOnClose = false;
@@ -409,8 +354,6 @@ public class HTable implements HTableInterface, RegionLocator {
     this.closed = false;
   }
 
-
-
   /**
    * {@inheritDoc}
    */
@@ -426,7 +369,7 @@ public class HTable implements HTableInterface, RegionLocator {
    * @param tableName Name of table to check.
    * @return {@code true} if table is online.
    * @throws IOException if a remote or network exception occurs
-	* @deprecated use {@link HBaseAdmin#isTableEnabled(byte[])}
+   * @deprecated use {@link HBaseAdmin#isTableEnabled(byte[])}
    */
   @Deprecated
   public static boolean isTableEnabled(String tableName) throws IOException {
@@ -440,7 +383,7 @@ public class HTable implements HTableInterface, RegionLocator {
    * @param tableName Name of table to check.
    * @return {@code true} if table is online.
    * @throws IOException if a remote or network exception occurs
-	* @deprecated use {@link HBaseAdmin#isTableEnabled(byte[])}
+   * @deprecated use {@link HBaseAdmin#isTableEnabled(byte[])}
    */
   @Deprecated
   public static boolean isTableEnabled(byte[] tableName) throws IOException {
