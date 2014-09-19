@@ -156,7 +156,7 @@ public class FSTableDescriptors implements TableDescriptors {
   public TableDescriptor getDescriptor(final TableName tablename)
   throws IOException {
     invocations++;
-    if (HTableDescriptor.META_TABLEDESC.getTableName().equals(tablename)) {
+    if (TableName.META_TABLE_NAME.equals(tablename)) {
       cachehits++;
       return new TableDescriptor(HTableDescriptor.META_TABLEDESC, TableState.State.ENABLED);
     }
@@ -202,7 +202,7 @@ public class FSTableDescriptors implements TableDescriptors {
    */
   @Override
   public HTableDescriptor get(TableName tableName) throws IOException {
-    if (HTableDescriptor.META_TABLEDESC.getTableName().equals(tableName)) {
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
       cachehits++;
       return HTableDescriptor.META_TABLEDESC;
     }

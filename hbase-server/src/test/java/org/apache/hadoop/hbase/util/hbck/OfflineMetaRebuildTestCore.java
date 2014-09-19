@@ -279,7 +279,7 @@ public class OfflineMetaRebuildTestCore {
    */
   protected int scanMeta() throws IOException {
     int count = 0;
-    HTable meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getTableName());
+    HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
     ResultScanner scanner = meta.getScanner(new Scan());
     LOG.info("Table: " + Bytes.toString(meta.getTableName()));
     for (Result res : scanner) {

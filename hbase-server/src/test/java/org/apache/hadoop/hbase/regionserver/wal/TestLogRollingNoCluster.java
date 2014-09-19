@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -126,7 +127,7 @@ public class TestLogRollingNoCluster {
           byte[] bytes = Bytes.toBytes(i);
           edit.add(new KeyValue(bytes, bytes, bytes, now, EMPTY_1K_ARRAY));
           this.wal.append(HRegionInfo.FIRST_META_REGIONINFO,
-              HTableDescriptor.META_TABLEDESC.getTableName(),
+              TableName.META_TABLE_NAME,
               edit, now, HTableDescriptor.META_TABLEDESC, sequenceId);
         }
         String msg = getName() + " finished";

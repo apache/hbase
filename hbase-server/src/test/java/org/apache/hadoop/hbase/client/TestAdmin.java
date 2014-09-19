@@ -1157,7 +1157,7 @@ public class TestAdmin {
     }
     assertTrue("Unexcepted exception message " + msg, msg != null &&
       msg.startsWith(TableExistsException.class.getName()) &&
-      msg.contains(HTableDescriptor.META_TABLEDESC.getTableName().getNameAsString()));
+      msg.contains(TableName.META_TABLE_NAME.getNameAsString()));
 
     // Now try and do concurrent creation with a bunch of threads.
     final HTableDescriptor threadDesc =
