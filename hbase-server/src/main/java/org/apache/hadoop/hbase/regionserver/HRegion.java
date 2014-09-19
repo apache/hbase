@@ -2910,7 +2910,6 @@ public class HRegion implements HeapSize { // , Writable{
         List<Cell> cells = e.getValue();
         assert cells instanceof RandomAccess;
         Store store = getStore(family);
-        Store store = getStore(family);
         int listSize = cells.size();
         for (int i=0; i < listSize; i++) {
           Cell cell = cells.get(i);  
