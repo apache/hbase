@@ -52,6 +52,9 @@
 #   JRUBY_OPTS       Extra options (eg '--1.9') passed to the hbase shell.
 #                    Empty by default.
 #
+#   HBASE_SHELL_OPTS Extra options passed to the hbase shell.
+#                    Empty by default.
+#
 bin=`dirname "$0"`
 bin=`cd "$bin">/dev/null; pwd`
 

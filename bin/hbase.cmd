@@ -42,6 +42,8 @@
 @rem
 @rem   JRUBY_OPTS       Extra options (eg '--1.9') passed to the hbase shell.
 @rem                    Empty by default.
+@rem   HBASE_SHELL_OPTS Extra options passed to the hbase shell.
+@rem                    Empty by default.
 
 
 setlocal enabledelayedexpansion
@@ -302,6 +304,7 @@ goto :eof
   ) else (
     set HBASE_OPTS=%HBASE_OPTS% -Dhbase.ruby.sources="%HBASE_HOME%\hbase-shell\src\main\ruby"
   )
+  set HBASE_OPTS=%HBASE_OPTS% %HBASE_SHELL_OPTS%
 
   set CLASS=org.jruby.Main -X+O %JRUBY_OPTS% "%HBASE_HOME%\bin\hirb.rb"
   goto :eof
