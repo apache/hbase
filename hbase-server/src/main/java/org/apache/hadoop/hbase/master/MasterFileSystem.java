@@ -532,7 +532,7 @@ public class MasterFileSystem {
       HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
       setInfoFamilyCachingForMeta(false);
       HRegion meta = HRegion.createHRegion(metaHRI, rd, c,
-          HTableDescriptor.META_TABLEDESC);
+          HTableDescriptor.META_TABLEDESC, null, true, true);
       setInfoFamilyCachingForMeta(true);
       HRegion.closeHRegion(meta);
     } catch (IOException e) {
