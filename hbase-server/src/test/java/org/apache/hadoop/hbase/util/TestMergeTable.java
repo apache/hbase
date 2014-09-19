@@ -118,16 +118,14 @@ public class TestMergeTable {
       HConnection hConnection = HConnectionManager.getConnection(c);
 
       List<HRegionInfo> originalTableRegions =
-        MetaTableAccessor.getTableRegions(UTIL.getZooKeeperWatcher(), hConnection,
-          desc.getTableName());
+        MetaTableAccessor.getTableRegions(hConnection, desc.getTableName());
       LOG.info("originalTableRegions size=" + originalTableRegions.size() +
         "; " + originalTableRegions);
       Admin admin = new HBaseAdmin(c);
       admin.disableTable(desc.getTableName());
       HMerge.merge(c, FileSystem.get(c), desc.getTableName());
       List<HRegionInfo> postMergeTableRegions =
-        MetaTableAccessor.getTableRegions(UTIL.getZooKeeperWatcher(), hConnection,
-          desc.getTableName());
+        MetaTableAccessor.getTableRegions(hConnection, desc.getTableName());
       LOG.info("postMergeTableRegions size=" + postMergeTableRegions.size() +
         "; " + postMergeTableRegions);
       assertTrue("originalTableRegions=" + originalTableRegions.size() +

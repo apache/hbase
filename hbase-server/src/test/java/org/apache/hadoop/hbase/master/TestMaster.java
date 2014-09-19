@@ -86,8 +86,7 @@ public class TestMaster {
     TEST_UTIL.loadTable(ht, FAMILYNAME, false);
     ht.close();
 
-    List<Pair<HRegionInfo, ServerName>> tableRegions =
-      MetaTableAccessor.getTableRegionsAndLocations(m.getZooKeeper(),
+    List<Pair<HRegionInfo, ServerName>> tableRegions = MetaTableAccessor.getTableRegionsAndLocations(
         m.getShortCircuitConnection(), TABLENAME);
     LOG.info("Regions after load: " + Joiner.on(',').join(tableRegions));
     assertEquals(1, tableRegions.size());
@@ -105,8 +104,8 @@ public class TestMaster {
       Thread.sleep(100);
     }
     LOG.info("Making sure we can call getTableRegions while opening");
-    tableRegions = MetaTableAccessor.getTableRegionsAndLocations(m.getZooKeeper(),
-      m.getShortCircuitConnection(), TABLENAME, false);
+    tableRegions = MetaTableAccessor.getTableRegionsAndLocations(m.getShortCircuitConnection(),
+      TABLENAME, false);
 
     LOG.info("Regions: " + Joiner.on(',').join(tableRegions));
     // We have three regions because one is split-in-progress

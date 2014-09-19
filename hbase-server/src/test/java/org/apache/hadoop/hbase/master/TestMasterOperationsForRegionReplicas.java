@@ -95,7 +95,7 @@ public class TestMasterOperationsForRegionReplicas {
       admin.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), numRegions);
 
       validateNumberOfRowsInMeta(table, numRegions, admin.getConnection());
-      List<HRegionInfo> hris = MetaTableAccessor.getTableRegions(TEST_UTIL.getZooKeeperWatcher(),
+      List<HRegionInfo> hris = MetaTableAccessor.getTableRegions(
         admin.getConnection(), table);
       assert(hris.size() == numRegions * numReplica);
     } finally {
@@ -117,8 +117,7 @@ public class TestMasterOperationsForRegionReplicas {
       TEST_UTIL.waitTableEnabled(table.getName());
       validateNumberOfRowsInMeta(table, numRegions, admin.getConnection());
 
-      List<HRegionInfo> hris = MetaTableAccessor.getTableRegions(TEST_UTIL.getZooKeeperWatcher(),
-        admin.getConnection(), table);
+      List<HRegionInfo> hris = MetaTableAccessor.getTableRegions(admin.getConnection(), table);
       assert(hris.size() == numRegions * numReplica);
       // check that the master created expected number of RegionState objects
       for (int i = 0; i < numRegions; i++) {
@@ -211,8 +210,7 @@ public class TestMasterOperationsForRegionReplicas {
           .getAssignmentManager().getRegionStates().getRegionsOfTable(table);
       assert(regions.size() == numRegions * numReplica);
       //also make sure the meta table has the replica locations removed
-      hris = MetaTableAccessor.getTableRegions(TEST_UTIL.getZooKeeperWatcher(),
-        admin.getConnection(), table);
+      hris = MetaTableAccessor.getTableRegions(admin.getConnection(), table);
       assert(hris.size() == numRegions * numReplica);
       //just check that the number of default replica regions in the meta table are the same
       //as the number of regions the table was created with, and the count of the
@@ -247,8 +245,7 @@ public class TestMasterOperationsForRegionReplicas {
       admin.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), numRegions);
       TEST_UTIL.waitTableEnabled(table.getName());
       Set<byte[]> tableRows = new HashSet<byte[]>();
-      List<HRegionInfo> hris = MetaTableAccessor.getTableRegions(TEST_UTIL.getZooKeeperWatcher(),
-        admin.getConnection(), table);
+      List<HRegionInfo> hris = MetaTableAccessor.getTableRegions(admin.getConnection(), table);
       for (HRegionInfo hri : hris) {
         tableRows.add(hri.getRegionName());
       }

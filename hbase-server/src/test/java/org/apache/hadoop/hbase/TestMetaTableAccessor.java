@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -198,14 +199,13 @@ public class TestMetaTableAccessor {
     abstract void metaTask() throws Throwable;
   }
 
-  @Test public void testGetRegionsCatalogTables()
+  @Test public void testGetRegionsFromMetaTable()
   throws IOException, InterruptedException {
     List<HRegionInfo> regions =
-      MetaTableAccessor.getTableRegions(UTIL.getZooKeeperWatcher(),
-        hConnection, TableName.META_TABLE_NAME);
+      new MetaTableLocator().getMetaRegions(UTIL.getZooKeeperWatcher());
     assertTrue(regions.size() >= 1);
-    assertTrue(MetaTableAccessor.getTableRegionsAndLocations(UTIL.getZooKeeperWatcher(),
-      hConnection,TableName.META_TABLE_NAME).size() >= 1);
+    assertTrue(new MetaTableLocator().getMetaRegionsAndLocations(
+      UTIL.getZooKeeperWatcher()).size() >= 1);
   }
 
   @Test public void testTableExists() throws IOException {
@@ -252,17 +252,14 @@ public class TestMetaTableAccessor {
 
     // Now make sure we only get the regions from 1 of the tables at a time
 
-    assertEquals(1, MetaTableAccessor.getTableRegions(UTIL.getZooKeeperWatcher(),
-      hConnection, name).size());
-    assertEquals(1, MetaTableAccessor.getTableRegions(UTIL.getZooKeeperWatcher(),
-      hConnection, greaterName).size());
+    assertEquals(1, MetaTableAccessor.getTableRegions(hConnection, name).size());
+    assertEquals(1, MetaTableAccessor.getTableRegions(hConnection, greaterName).size());
   }
 
   private static List<HRegionInfo> testGettingTableRegions(final HConnection hConnection,
       final TableName name, final int regionCount)
   throws IOException, InterruptedException {
-    List<HRegionInfo> regions = MetaTableAccessor.getTableRegions(UTIL.getZooKeeperWatcher(),
-      hConnection, name);
+    List<HRegionInfo> regions = MetaTableAccessor.getTableRegions(hConnection, name);
     assertEquals(regionCount, regions.size());
     Pair<HRegionInfo, ServerName> pair =
       MetaTableAccessor.getRegion(hConnection, regions.get(0).getRegionName());

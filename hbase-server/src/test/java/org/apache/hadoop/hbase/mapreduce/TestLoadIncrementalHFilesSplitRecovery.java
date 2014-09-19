@@ -477,7 +477,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     // Mess it up by leaving a hole in the hbase:meta
     HConnection hConnection = HConnectionManager.getConnection(util.getConfiguration());
     List<HRegionInfo> regionInfos = MetaTableAccessor.getTableRegions(
-      util.getZooKeeperWatcher(), hConnection, TableName.valueOf(tableName));
+      hConnection, TableName.valueOf(tableName));
     for (HRegionInfo regionInfo : regionInfos) {
       if (Bytes.equals(regionInfo.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
         MetaTableAccessor.deleteRegion(hConnection, regionInfo);

@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.util.KeyLocker;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
@@ -335,9 +336,13 @@ public class AssignmentManager {
    */
   public Pair<Integer, Integer> getReopenStatus(TableName tableName)
       throws IOException {
-    List <HRegionInfo> hris = MetaTableAccessor.getTableRegions(
-      this.server.getZooKeeper(), this.server.getShortCircuitConnection(),
-      tableName, true);
+    List<HRegionInfo> hris;
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
+      hris = new MetaTableLocator().getMetaRegions(server.getZooKeeper());
+    } else {
+      hris = MetaTableAccessor.getTableRegions(server.getShortCircuitConnection(), tableName, true);
+    }
+
     Integer pending = 0;
     for (HRegionInfo hri : hris) {
       String name = hri.getEncodedName();

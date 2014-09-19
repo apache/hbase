@@ -44,8 +44,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -367,22 +365,21 @@ public class MetaTableAccessor {
   }
 
   /**
-   * Gets all of the regions of the specified table.
-   * @param zkw zookeeper connection to access meta table
+   * Gets all of the regions of the specified table. Do not use this method
+   * to get meta table regions, use methods in MetaTableLocator instead.
    * @param hConnection connection we're using
    * @param tableName table we're looking for
    * @return Ordered list of {@link HRegionInfo}.
    * @throws IOException
    */
-  public static List<HRegionInfo> getTableRegions(ZooKeeperWatcher zkw,
-      HConnection hConnection, TableName tableName)
+  public static List<HRegionInfo> getTableRegions(HConnection hConnection, TableName tableName)
   throws IOException {
-    return getTableRegions(zkw, hConnection, tableName, false);
+    return getTableRegions(hConnection, tableName, false);
   }
 
   /**
-   * Gets all of the regions of the specified table.
-   * @param zkw zookeeper connection to access meta table
+   * Gets all of the regions of the specified table. Do not use this method
+   * to get meta table regions, use methods in MetaTableLocator instead.
    * @param hConnection connection we're using
    * @param tableName table we're looking for
    * @param excludeOfflinedSplitParents If true, do not include offlined split
@@ -390,12 +387,12 @@ public class MetaTableAccessor {
    * @return Ordered list of {@link HRegionInfo}.
    * @throws IOException
    */
-  public static List<HRegionInfo> getTableRegions(ZooKeeperWatcher zkw,
-      HConnection hConnection, TableName tableName, final boolean excludeOfflinedSplitParents)
-        throws IOException {
-    List<Pair<HRegionInfo, ServerName>> result = null;
+  public static List<HRegionInfo> getTableRegions(HConnection hConnection,
+      TableName tableName, final boolean excludeOfflinedSplitParents)
+      throws IOException {
+    List<Pair<HRegionInfo, ServerName>> result;
     try {
-      result = getTableRegionsAndLocations(zkw, hConnection, tableName,
+      result = getTableRegionsAndLocations(hConnection, tableName,
         excludeOfflinedSplitParents);
     } catch (InterruptedException e) {
       throw (InterruptedIOException)new InterruptedIOException().initCause(e);
@@ -457,7 +454,7 @@ public class MetaTableAccessor {
   }
 
   /**
-   * @param zkw zookeeper connection to access meta table
+   * Do not use this method to get meta table regions, use methods in MetaTableLocator instead.
    * @param hConnection connection we're using
    * @param tableName table we're looking for
    * @return Return list of regioninfos and server.
@@ -465,14 +462,13 @@ public class MetaTableAccessor {
    * @throws InterruptedException
    */
   public static List<Pair<HRegionInfo, ServerName>>
-  getTableRegionsAndLocations(ZooKeeperWatcher zkw,
-                              HConnection hConnection, TableName tableName)
-  throws IOException, InterruptedException {
-    return getTableRegionsAndLocations(zkw, hConnection, tableName, true);
+    getTableRegionsAndLocations(HConnection hConnection, TableName tableName)
+      throws IOException, InterruptedException {
+    return getTableRegionsAndLocations(hConnection, tableName, true);
   }
 
   /**
-   * @param zkw ZooKeeperWatcher instance we're using to get hbase:meta location
+   * Do not use this method to get meta table regions, use methods in MetaTableLocator instead.
    * @param hConnection connection we're using
    * @param tableName table to work with
    * @return Return list of regioninfos and server addresses.
@@ -480,17 +476,11 @@ public class MetaTableAccessor {
    * @throws InterruptedException
    */
   public static List<Pair<HRegionInfo, ServerName>> getTableRegionsAndLocations(
-      ZooKeeperWatcher zkw, HConnection hConnection, final TableName tableName,
+        HConnection hConnection, final TableName tableName,
       final boolean excludeOfflinedSplitParents) throws IOException, InterruptedException {
-
     if (tableName.equals(TableName.META_TABLE_NAME)) {
-      // If meta, do a bit of special handling.
-      ServerName serverName = new MetaTableLocator().getMetaRegionLocation(zkw);
-      List<Pair<HRegionInfo, ServerName>> list =
-        new ArrayList<Pair<HRegionInfo, ServerName>>();
-      list.add(new Pair<HRegionInfo, ServerName>(HRegionInfo.FIRST_META_REGIONINFO,
-        serverName));
-      return list;
+      throw new IOException("This method can't be used to locate meta regions;"
+        + " use MetaTableLocator instead");
     }
     // Make a version of CollectingVisitor that collects HRegionInfo and ServerAddress
     CollectingVisitor<Pair<HRegionInfo, ServerName>> visitor =

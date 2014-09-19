@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.procedure.ProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.procedure.ZKProcedureCoordinatorRpcs;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.common.collect.Lists;
@@ -124,12 +125,15 @@ public class MasterFlushTableProcedureManager extends MasterProcedureManager {
     // It is possible that regions may move after we get the region server list.
     // Each region server will get its own online regions for the table.
     // We may still miss regions that need to be flushed.
-    List<Pair<HRegionInfo, ServerName>> regionsAndLocations = null;
+    List<Pair<HRegionInfo, ServerName>> regionsAndLocations;
     try {
-      regionsAndLocations =
-          MetaTableAccessor.getTableRegionsAndLocations(this.master.getZooKeeper(),
-            this.master.getShortCircuitConnection(),
-            TableName.valueOf(desc.getInstance()), false);
+      if (TableName.META_TABLE_NAME.equals(tableName)) {
+        regionsAndLocations = new MetaTableLocator().getMetaRegionsAndLocations(
+          master.getZooKeeper());
+      } else {
+        regionsAndLocations = MetaTableAccessor.getTableRegionsAndLocations(
+          master.getShortCircuitConnection(), tableName, false);
+      }
     } catch (InterruptedException e1) {
       String msg = "Failed to get regions for '" + desc.getInstance() + "'";
       LOG.error(msg);

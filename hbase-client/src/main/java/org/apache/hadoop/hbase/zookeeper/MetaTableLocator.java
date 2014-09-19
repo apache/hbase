@@ -24,6 +24,8 @@ import java.net.NoRouteToHostException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.rmi.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.annotation.Nullable;
 
@@ -48,6 +50,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
@@ -85,6 +88,37 @@ public class MetaTableLocator {
    */
   public boolean isLocationAvailable(ZooKeeperWatcher zkw) {
     return getMetaRegionLocation(zkw) != null;
+  }
+
+  /**
+   * @param zkw ZooKeeper watcher to be used
+   * @return meta table regions and their locations.
+   */
+  public List<Pair<HRegionInfo, ServerName>> getMetaRegionsAndLocations(ZooKeeperWatcher zkw) {
+    ServerName serverName = new MetaTableLocator().getMetaRegionLocation(zkw);
+    List<Pair<HRegionInfo, ServerName>> list = new ArrayList<>();
+    list.add(new Pair<>(HRegionInfo.FIRST_META_REGIONINFO, serverName));
+    return list;
+  }
+
+  /**
+   * @param zkw ZooKeeper watcher to be used
+   * @return List of meta regions
+   */
+  public List<HRegionInfo> getMetaRegions(ZooKeeperWatcher zkw) {
+    List<Pair<HRegionInfo, ServerName>> result;
+    result = getMetaRegionsAndLocations(zkw);
+    return getListOfHRegionInfos(result);
+  }
+
+  private List<HRegionInfo> getListOfHRegionInfos(
+      final List<Pair<HRegionInfo, ServerName>> pairs) {
+    if (pairs == null || pairs.isEmpty()) return null;
+    List<HRegionInfo> result = new ArrayList<>(pairs.size());
+    for (Pair<HRegionInfo, ServerName> pair: pairs) {
+      result.add(pair.getFirst());
+    }
+    return result;
   }
 
   /**

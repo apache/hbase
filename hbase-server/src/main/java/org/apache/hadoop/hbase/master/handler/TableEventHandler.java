@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 
 /**
  * Base class for performing operations against tables.
@@ -125,9 +126,12 @@ public abstract class TableEventHandler extends EventHandler {
       LOG.info("Handling table operation " + eventType + " on table " +
           tableName);
 
-      List<HRegionInfo> hris =
-        MetaTableAccessor.getTableRegions(this.server.getZooKeeper(),
-          this.server.getShortCircuitConnection(), tableName);
+      List<HRegionInfo> hris;
+      if (TableName.META_TABLE_NAME.equals(tableName)) {
+        hris = new MetaTableLocator().getMetaRegions(server.getZooKeeper());
+      } else {
+        hris = MetaTableAccessor.getTableRegions(server.getShortCircuitConnection(), tableName);
+      }
       handleTableOperation(hris);
       if (eventType.isOnlineSchemaChangeSupported() && this.masterServices.
           getAssignmentManager().getTableStateManager().isTableState(

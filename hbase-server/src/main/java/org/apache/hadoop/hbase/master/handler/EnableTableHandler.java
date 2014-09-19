@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 
 /**
  * Handler to run enable of a table.
@@ -170,9 +171,15 @@ public class EnableTableHandler extends EventHandler {
     ServerManager serverManager = ((HMaster)this.server).getServerManager();
     // Get the regions of this table. We're done when all listed
     // tables are onlined.
-    List<Pair<HRegionInfo, ServerName>> tableRegionsAndLocations = MetaTableAccessor
-      .getTableRegionsAndLocations(this.server.getZooKeeper(),
-           this.server.getShortCircuitConnection(), tableName, true);
+    List<Pair<HRegionInfo, ServerName>> tableRegionsAndLocations;
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
+      tableRegionsAndLocations = new MetaTableLocator().getMetaRegionsAndLocations(
+        server.getZooKeeper());
+    } else {
+      tableRegionsAndLocations = MetaTableAccessor.getTableRegionsAndLocations(
+        server.getShortCircuitConnection(), tableName, true);
+    }
+
     int countOfRegionsInTable = tableRegionsAndLocations.size();
     Map<HRegionInfo, ServerName> regionsToAssign =
         regionsToAssignWithServerName(tableRegionsAndLocations);
@@ -202,7 +209,7 @@ public class EnableTableHandler extends EventHandler {
         this.assignmentManager.getBalancer().retainAssignment(regionsToAssign, onlineServers);
     LOG.info("Bulk assigning " + regionsCount + " region(s) across " + bulkPlan.size()
       + " server(s), retainAssignment=true");
-    
+
     BulkAssigner ba = new GeneralBulkAssigner(this.server, bulkPlan, this.assignmentManager, true);
     try {
       if (ba.bulkAssign()) {

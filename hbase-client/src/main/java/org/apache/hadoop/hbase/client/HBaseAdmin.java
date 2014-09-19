@@ -146,6 +146,7 @@ import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
@@ -1724,8 +1725,12 @@ public class HBaseAdmin implements Admin {
       checkTableExists(tableName);
       zookeeper = new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
           new ThrowableAbortable());
-      List<Pair<HRegionInfo, ServerName>> pairs =
-        MetaTableAccessor.getTableRegionsAndLocations(zookeeper, connection, tableName);
+      List<Pair<HRegionInfo, ServerName>> pairs;
+      if (TableName.META_TABLE_NAME.equals(tableName)) {
+        pairs = new MetaTableLocator().getMetaRegionsAndLocations(zookeeper);
+      } else {
+        pairs = MetaTableAccessor.getTableRegionsAndLocations(connection, tableName);
+      }
       for (Pair<HRegionInfo, ServerName> pair: pairs) {
         if (pair.getFirst().isOffline()) continue;
         if (pair.getSecond() == null) continue;
@@ -2078,8 +2083,12 @@ public class HBaseAdmin implements Admin {
       checkTableExists(tableName);
       zookeeper = new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
         new ThrowableAbortable());
-      List<Pair<HRegionInfo, ServerName>> pairs =
-        MetaTableAccessor.getTableRegionsAndLocations(zookeeper, connection, tableName);
+      List<Pair<HRegionInfo, ServerName>> pairs;
+      if (TableName.META_TABLE_NAME.equals(tableName)) {
+        pairs = new MetaTableLocator().getMetaRegionsAndLocations(zookeeper);
+      } else {
+        pairs = MetaTableAccessor.getTableRegionsAndLocations(connection, tableName);
+      }
       for (Pair<HRegionInfo, ServerName> pair: pairs) {
         // May not be a server for a particular row
         if (pair.getSecond() == null) continue;
@@ -2559,13 +2568,17 @@ public class HBaseAdmin implements Admin {
     ZooKeeperWatcher zookeeper =
       new ZooKeeperWatcher(conf, ZK_IDENTIFIER_PREFIX + connection.toString(),
         new ThrowableAbortable());
-    List<HRegionInfo> Regions = null;
+    List<HRegionInfo> regions = null;
     try {
-      Regions = MetaTableAccessor.getTableRegions(zookeeper, connection, tableName, true);
+      if (TableName.META_TABLE_NAME.equals(tableName)) {
+        regions = new MetaTableLocator().getMetaRegions(zookeeper);
+      } else {
+        regions = MetaTableAccessor.getTableRegions(connection, tableName, true);
+      }
     } finally {
       zookeeper.close();
     }
-    return Regions;
+    return regions;
   }
 
   public List<HRegionInfo> getTableRegions(final byte[] tableName)
@@ -2664,8 +2677,12 @@ public class HBaseAdmin implements Admin {
         new ThrowableAbortable());
     try {
       checkTableExists(tableName);
-      List<Pair<HRegionInfo, ServerName>> pairs =
-        MetaTableAccessor.getTableRegionsAndLocations(zookeeper, connection, tableName);
+      List<Pair<HRegionInfo, ServerName>> pairs;
+      if (TableName.META_TABLE_NAME.equals(tableName)) {
+        pairs = new MetaTableLocator().getMetaRegionsAndLocations(zookeeper);
+      } else {
+        pairs = MetaTableAccessor.getTableRegionsAndLocations(connection, tableName);
+      }
       for (Pair<HRegionInfo, ServerName> pair: pairs) {
         if (pair.getFirst().isOffline()) continue;
         if (pair.getSecond() == null) continue;
