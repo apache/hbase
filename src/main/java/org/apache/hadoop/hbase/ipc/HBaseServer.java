@@ -1434,7 +1434,9 @@ public abstract class HBaseServer implements RpcServer {
             value = call(call.connection.protocol, call.param, call.timestamp, 
                 status);
           } catch (Throwable e) {
-            LOG.debug(getName()+", call "+call+": error: " + e, e);
+            if(LOG.isDebugEnabled()){
+              LOG.debug(getName()+", call "+call+": error: " + e, e);
+            }
             errorClass = e.getClass().getName();
             error = StringUtils.stringifyException(e);
           } finally {
