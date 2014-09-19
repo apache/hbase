@@ -30,24 +30,25 @@ import java.util.Map;
 
 /**
  * Utility class for HTable.
- * 
  *
+ * @deprecated since 1.0
  */
 @InterfaceAudience.Private
+@Deprecated
 public class HTableUtil {
 
   private static final int INITIAL_LIST_SIZE = 250;
-	
+
   /**
-   * Processes a List of Puts and writes them to an HTable instance in RegionServer buckets via the htable.put method. 
-   * This will utilize the writeBuffer, thus the writeBuffer flush frequency may be tuned accordingly via htable.setWriteBufferSize. 
+   * Processes a List of Puts and writes them to an HTable instance in RegionServer buckets via the htable.put method.
+   * This will utilize the writeBuffer, thus the writeBuffer flush frequency may be tuned accordingly via htable.setWriteBufferSize.
    * <br><br>
    * The benefit of submitting Puts in this manner is to minimize the number of RegionServer RPCs in each flush.
    * <br><br>
-   * Assumption #1:  Regions have been pre-created for the table.  If they haven't, then all of the Puts will go to the same region, 
+   * Assumption #1:  Regions have been pre-created for the table.  If they haven't, then all of the Puts will go to the same region,
    * defeating the purpose of this utility method. See the Apache HBase book for an explanation of how to do this.
    * <br>
-   * Assumption #2:  Row-keys are not monotonically increasing.  See the Apache HBase book for an explanation of this problem.  
+   * Assumption #2:  Row-keys are not monotonically increasing.  See the Apache HBase book for an explanation of this problem.
    * <br>
    * Assumption #3:  That the input list of Puts is big enough to be useful (in the thousands or more).  The intent of this
    * method is to process larger chunks of data.
@@ -57,7 +58,7 @@ public class HTableUtil {
    * @param htable HTable instance for target HBase table
    * @param puts List of Put instances
    * @throws IOException if a remote or network exception occurs
-   * 
+   *
    */
   public static void bucketRsPut(HTable htable, List<Put> puts) throws IOException {
 
@@ -67,17 +68,17 @@ public class HTableUtil {
     }
     htable.flushCommits();
   }
-	
+
   /**
-   * Processes a List of Rows (Put, Delete) and writes them to an HTable instance in RegionServer buckets via the htable.batch method. 
+   * Processes a List of Rows (Put, Delete) and writes them to an HTable instance in RegionServer buckets via the htable.batch method.
    * <br><br>
    * The benefit of submitting Puts in this manner is to minimize the number of RegionServer RPCs, thus this will
    * produce one RPC of Puts per RegionServer.
    * <br><br>
-   * Assumption #1:  Regions have been pre-created for the table.  If they haven't, then all of the Puts will go to the same region, 
+   * Assumption #1:  Regions have been pre-created for the table.  If they haven't, then all of the Puts will go to the same region,
    * defeating the purpose of this utility method. See the Apache HBase book for an explanation of how to do this.
    * <br>
-   * Assumption #2:  Row-keys are not monotonically increasing.  See the Apache HBase book for an explanation of this problem.  
+   * Assumption #2:  Row-keys are not monotonically increasing.  See the Apache HBase book for an explanation of this problem.
    * <br>
    * Assumption #3:  That the input list of Rows is big enough to be useful (in the thousands or more).  The intent of this
    * method is to process larger chunks of data.
@@ -98,7 +99,7 @@ public class HTableUtil {
     } catch (InterruptedException e) {
       throw (InterruptedIOException)new InterruptedIOException().initCause(e);
     }
-		
+
   }
 
   private static Map<String,List<Put>> createRsPutMap(RegionLocator htable, List<Put> puts) throws IOException {
@@ -132,5 +133,5 @@ public class HTableUtil {
     }
     return rowMap;
   }
-		
+
 }
