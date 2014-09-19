@@ -38,6 +38,7 @@ public class MobConstants {
 
   public static final String MOB_SCAN_RAW = "hbase.mob.scan.raw";
   public static final String MOB_CACHE_BLOCKS = "hbase.mob.cache.blocks";
+  public static final String MOB_SCAN_REF_ONLY = "hbase.mob.scan.ref.only";
 
   public static final String MOB_FILE_CACHE_SIZE_KEY = "hbase.mob.file.cache.size";
   public static final int DEFAULT_MOB_FILE_CACHE_SIZE = 1000;
@@ -45,6 +46,26 @@ public class MobConstants {
   public static final String MOB_DIR_NAME = "mobdir";
   public static final String MOB_REGION_NAME = ".mob";
   public static final byte[] MOB_REGION_NAME_BYTES = Bytes.toBytes(MOB_REGION_NAME);
+
+  public static final String MOB_CLEANER_PERIOD = "hbase.master.mob.ttl.cleaner.period";
+  public static final int DEFAULT_MOB_CLEANER_PERIOD = 24 * 60 * 60 * 1000; // one day
+
+  public static final String MOB_SWEEP_TOOL_COMPACTION_START_DATE =
+      "hbase.mob.sweep.tool.compaction.start.date";
+  public static final String MOB_SWEEP_TOOL_COMPACTION_RATIO =
+      "hbase.mob.sweep.tool.compaction.ratio";
+  public static final String MOB_SWEEP_TOOL_COMPACTION_MERGEABLE_SIZE =
+      "hbase.mob.sweep.tool.compaction.mergeable.size";
+
+  public static final float DEFAULT_SWEEP_TOOL_MOB_COMPACTION_RATIO = 0.5f;
+  public static final long DEFAULT_SWEEP_TOOL_MOB_COMPACTION_MERGEABLE_SIZE = 128 * 1024 * 1024;
+
+  public static final String MOB_SWEEP_TOOL_COMPACTION_TEMP_DIR_NAME = "mobcompaction";
+
+  public static final String MOB_SWEEP_TOOL_COMPACTION_MEMSTORE_FLUSH_SIZE =
+      "hbase.mob.sweep.tool.compaction.memstore.flush.size";
+  public static final long DEFAULT_MOB_SWEEP_TOOL_COMPACTION_MEMSTORE_FLUSH_SIZE =
+      1024 * 1024 * 128; // 128M
 
   public static final String MOB_CACHE_EVICT_PERIOD = "hbase.mob.cache.evict.period";
   public static final String MOB_CACHE_EVICT_REMAIN_RATIO = "hbase.mob.cache.evict.remain.ratio";
@@ -55,6 +76,7 @@ public class MobConstants {
   public static final long DEFAULT_MOB_CACHE_EVICT_PERIOD = 3600l;
 
   public final static String TEMP_DIR_NAME = ".tmp";
+  public final static String EMPTY_STRING = "";
   private MobConstants() {
 
   }

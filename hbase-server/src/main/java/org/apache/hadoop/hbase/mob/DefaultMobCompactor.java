@@ -152,7 +152,7 @@ public class DefaultMobCompactor extends DefaultCompactor {
             // to the store file.
             writer.append(kv);
           } else if (MobUtils.isMobReferenceCell(kv)) {
-            if (MobUtils.isValidMobRefCellValue(kv)) {
+            if (MobUtils.hasValidMobRefCellValue(kv)) {
               int size = MobUtils.getMobValueLength(kv);
               if (size > mobSizeThreshold) {
                 // If the value size is larger than the threshold, it's regarded as a mob. Since

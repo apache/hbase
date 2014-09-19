@@ -22,12 +22,14 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
@@ -40,6 +42,8 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -120,6 +124,7 @@ public class TestMobStoreScanner {
 	  testGetFromMemStore(false);
     testGetReferences(false);
     testMobThreshold(false);
+    testGetFromArchive(false);
   }
 
   @Test
@@ -128,6 +133,7 @@ public class TestMobStoreScanner {
 	  testGetFromMemStore(true);
     testGetReferences(true);
     testMobThreshold(true);
+    testGetFromArchive(true);
   }
 
   public void testGetFromFiles(boolean reversed) throws Exception {
@@ -280,6 +286,72 @@ public class TestMobStoreScanner {
     assertNotMobReference(cellEqual, row1, family, valueEqual);
     assertIsMobReference(cellGreater, row1, family, valueGreater, TN);
     results.close();
+  }
+
+  public void testGetFromArchive(boolean reversed) throws Exception {
+    String TN = "testGetFromArchive" + reversed;
+    setUp(defaultThreshold, TN);
+    long ts1 = System.currentTimeMillis();
+    long ts2 = ts1 + 1;
+    long ts3 = ts1 + 2;
+    byte [] value = generateMobValue((int)defaultThreshold+1);;
+    // Put some data
+    Put put1 = new Put(row1);
+    put1.add(family, qf1, ts3, value);
+    put1.add(family, qf2, ts2, value);
+    put1.add(family, qf3, ts1, value);
+    table.put(put1);
+
+    table.flushCommits();
+    admin.flush(TN);
+
+    // Get the files in the mob path
+    Path mobFamilyPath;
+    mobFamilyPath = new Path(MobUtils.getMobRegionPath(TEST_UTIL.getConfiguration(),
+        TableName.valueOf(TN)), hcd.getNameAsString());
+    FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
+    FileStatus[] files = fs.listStatus(mobFamilyPath);
+
+    // Get the archive path
+    Path rootDir = FSUtils.getRootDir(TEST_UTIL.getConfiguration());
+    Path tableDir = FSUtils.getTableDir(rootDir, TableName.valueOf(TN));
+    HRegionInfo regionInfo = MobUtils.getMobRegionInfo(TableName.valueOf(TN));
+    Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(TEST_UTIL.getConfiguration(),
+        regionInfo, tableDir, family);
+
+    // Move the files from mob path to archive path
+    fs.mkdirs(storeArchiveDir);
+    int fileCount = 0;
+    for(FileStatus file : files) {
+      fileCount++;
+      Path filePath = file.getPath();
+      Path src = new Path(mobFamilyPath, filePath.getName());
+      Path dst = new Path(storeArchiveDir, filePath.getName());
+      fs.rename(src, dst);
+    }
+
+    // Verify the moving success
+    FileStatus[] files1 = fs.listStatus(mobFamilyPath);
+    Assert.assertEquals(0, files1.length);
+    FileStatus[] files2 = fs.listStatus(storeArchiveDir);
+    Assert.assertEquals(fileCount, files2.length);
+
+    // Scan from archive
+    Scan scan = new Scan();
+    setScan(scan, reversed, false);
+    ResultScanner results = table.getScanner(scan);
+    int count = 0;
+    for (Result res : results) {
+      List<Cell> cells = res.listCells();
+      for(Cell cell : cells) {
+        // Verify the value
+        Assert.assertEquals(Bytes.toString(value),
+            Bytes.toString(CellUtil.cloneValue(cell)));
+        count++;
+      }
+    }
+    results.close();
+    Assert.assertEquals(3, count);
   }
 
   /**

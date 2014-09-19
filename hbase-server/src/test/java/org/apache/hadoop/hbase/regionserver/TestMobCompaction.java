@@ -53,10 +53,13 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.mob.MobZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -70,7 +73,7 @@ public class TestMobCompaction {
   @Rule
   public TestName name = new TestName();
   static final Log LOG = LogFactory.getLog(TestMobCompaction.class.getName());
-  private HBaseTestingUtility UTIL = null;
+  private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private Configuration conf = null;
 
   private HRegion region = null;
@@ -84,14 +87,22 @@ public class TestMobCompaction {
   private final byte[] STARTROW = Bytes.toBytes(START_KEY);
   private int compactionThreshold;
 
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    UTIL.getConfiguration().setInt("hbase.master.info.port", 0);
+    UTIL.getConfiguration().setBoolean("hbase.regionserver.info.port.auto", true);
+    UTIL.startMiniCluster(1);
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    UTIL.shutdownMiniCluster();
+  }
+
   private void init(long mobThreshold) throws Exception {
     this.mobCellThreshold = mobThreshold;
-
-    UTIL = HBaseTestingUtility.createLocalHTU();
-
     conf = UTIL.getConfiguration();
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
-
     htd = UTIL.createTableDescriptor(name.getMethodName());
     hcd = new HColumnDescriptor(COLUMN_FAMILY);
     hcd.setValue(MobConstants.IS_MOB, Bytes.toBytes(Boolean.TRUE));
@@ -158,7 +169,8 @@ public class TestMobCompaction {
     region.getTableDesc().getFamily(COLUMN_FAMILY).setValue(
         MobConstants.MOB_THRESHOLD, Bytes.toBytes(500L));
     region.initialize();
-    region.compactStores(true);
+    region.compactStores();
+
     assertEquals("After compaction: store files", 1, countStoreFiles());
     assertEquals("After compaction: mob file count", compactionThreshold, countMobFiles());
     assertEquals("After compaction: referenced mob file count", 0, countReferencedMobFiles());
@@ -307,7 +319,7 @@ public class TestMobCompaction {
         if (!MobUtils.isMobReferenceCell(kv)) {
           continue;
         }
-        if (!MobUtils.isValidMobRefCellValue(kv)) {
+        if (!MobUtils.hasValidMobRefCellValue(kv)) {
           continue;
         }
         int size = MobUtils.getMobValueLength(kv);
