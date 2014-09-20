@@ -145,8 +145,10 @@ import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.zookeeper.KeeperException;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -761,7 +763,8 @@ public class HRegion implements HeapSize { // , Writable{
       // In distributedLogReplay mode, we don't know the last change sequence number because region
       // is opened before recovery completes. So we add a safety bumper to avoid new sequence number
       // overlaps used sequence numbers
-      nextSeqid += this.flushPerChanges + 10000000; // add another extra 10million
+      nextSeqid = HLogUtil.writeRegionOpenSequenceIdFile(this.fs.getFileSystem(), 
+            this.fs.getRegionDir(), nextSeqid, (this.flushPerChanges + 10000000));
     }
 
     LOG.info("Onlined " + this.getRegionInfo().getShortNameToLog() +
