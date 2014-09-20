@@ -173,13 +173,15 @@ public abstract class User {
    */
   @SuppressWarnings({ "rawtypes", "unchecked" })
   public static <T> T runAsLoginUser(PrivilegedExceptionAction<T> action) throws IOException {
+    return doAsUser(UserGroupInformation.getCurrentUser(), action);
+  }
+
+  private static <T> T doAsUser(UserGroupInformation ugi,
+      PrivilegedExceptionAction<T> action) throws IOException {
     try {
-      Class c = Class.forName("org.apache.hadoop.security.SecurityUtil");
-      Class [] types = new Class[]{PrivilegedExceptionAction.class};
-      Object[] args = new Object[]{action};
-      return (T) Methods.call(c, null, "doAsLoginUser", types, args);
-    } catch (Throwable e) {
-      throw new IOException(e);
+      return ugi.doAs(action);
+    } catch (InterruptedException ie) {
+      throw new IOException(ie);
     }
   }
 
