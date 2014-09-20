@@ -73,7 +73,7 @@ public class TableNamespaceManager {
   private boolean initialized;
 
   static final String NS_INIT_TIMEOUT = "hbase.master.namespace.init.timeout";
-  static final int DEFAULT_NS_INIT_TIMEOUT = 60000;
+  static final int DEFAULT_NS_INIT_TIMEOUT = 300000;
 
   public TableNamespaceManager(MasterServices masterServices) {
     this.masterServices = masterServices;
@@ -82,7 +82,7 @@ public class TableNamespaceManager {
 
   public void start() throws IOException {
     if (!MetaTableAccessor.tableExists(masterServices.getShortCircuitConnection(),
-      TableName.NAMESPACE_TABLE_NAME)) {
+        TableName.NAMESPACE_TABLE_NAME)) {
       LOG.info("Namespace table not found. Creating...");
       createNamespaceTable(masterServices);
     }
@@ -95,8 +95,9 @@ public class TableNamespaceManager {
       int timeout = conf.getInt(NS_INIT_TIMEOUT, DEFAULT_NS_INIT_TIMEOUT);
       while (!isTableAssigned()) {
         if (EnvironmentEdgeManager.currentTime() - startTime + 100 > timeout) {
-          LOG.warn("Timedout waiting for namespace table to be assigned.");
-          return;
+          // We can't do anything if ns is not online.
+          throw new IOException("Timedout " + timeout + "ms waiting for namespace table to " +
+            "be assigned");
         }
         Thread.sleep(100);
       }
@@ -299,7 +300,7 @@ public class TableNamespaceManager {
   }
 
   private boolean isTableAssigned() {
-    return !masterServices.getAssignmentManager()
-        .getRegionStates().getRegionsOfTable(TableName.NAMESPACE_TABLE_NAME).isEmpty();
+    return !masterServices.getAssignmentManager().getRegionStates().
+      getRegionsOfTable(TableName.NAMESPACE_TABLE_NAME).isEmpty();
   }
 }
