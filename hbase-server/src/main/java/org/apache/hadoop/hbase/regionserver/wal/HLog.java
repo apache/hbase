@@ -72,6 +72,7 @@ public interface HLog {
   // TODO: Implementation detail.  Why in here?
   Pattern EDITFILES_NAME_PATTERN = Pattern.compile("-?[0-9]+");
   String RECOVERED_LOG_TMPFILE_SUFFIX = ".temp";
+  String SEQUENCE_ID_FILE_SUFFIX = "_seqid";
 
   /**
    * WAL Reader Interface

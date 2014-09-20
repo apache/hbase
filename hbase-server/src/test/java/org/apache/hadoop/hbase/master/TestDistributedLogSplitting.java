@@ -53,6 +53,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -1367,6 +1368,41 @@ public class TestDistributedLogSplitting {
     ht.close();
   }
 
+  @Test(timeout = 300000)
+  public void testReadWriteSeqIdFiles() throws Exception {
+    LOG.info("testReadWriteSeqIdFiles");
+    startCluster(2);
+    final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
+    HTable ht = installTable(zkw, "table", "family", 10);
+    FileSystem fs = master.getMasterFileSystem().getFileSystem();
+    Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), TableName.valueOf("table"));
+    List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
+    HLogUtil.writeRegionOpenSequenceIdFile(fs, regionDirs.get(0) , 1L, 1000L);
+    // current SeqId file has seqid=1001
+    HLogUtil.writeRegionOpenSequenceIdFile(fs, regionDirs.get(0) , 1L, 1000L);
+    // current SeqId file has seqid=2001
+    assertEquals(3001, HLogUtil.writeRegionOpenSequenceIdFile(fs, regionDirs.get(0) , 3L, 1000L));
+    
+    Path editsdir = HLogUtil.getRegionDirRecoveredEditsDir(regionDirs.get(0));
+    FileStatus[] files = FSUtils.listStatus(fs, editsdir, new PathFilter() {
+      @Override
+      public boolean accept(Path p) {
+        if (p.getName().endsWith(HLog.SEQUENCE_ID_FILE_SUFFIX)) {
+          return true;
+        }
+        return false;
+      }
+    });
+    // only one seqid file should exist
+    assertEquals(1, files.length);
+    
+    // verify all seqId files aren't treated as recovered.edits files
+    NavigableSet<Path> recoveredEdits = HLogUtil.getSplitEditFilesSorted(fs, regionDirs.get(0));
+    assertEquals(0, recoveredEdits.size());
+    
+    ht.close();
+  } 
+  
   HTable installTable(ZooKeeperWatcher zkw, String tname, String fname, int nrs) throws Exception {
     return installTable(zkw, tname, fname, nrs, 0);
   }

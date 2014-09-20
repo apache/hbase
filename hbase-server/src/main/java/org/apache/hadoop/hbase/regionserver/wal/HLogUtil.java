@@ -20,6 +20,8 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
@@ -92,7 +94,7 @@ public class HLogUtil {
   public static Path getRegionDirRecoveredEditsDir(final Path regiondir) {
     return new Path(regiondir, HConstants.RECOVERED_EDITS_DIR);
   }
-
+  
   /**
    * Move aside a bad edits file.
    *
@@ -303,4 +305,63 @@ public class HLogUtil {
     }
     return trx;
   }
+  
+  /**
+   * Create a file with name as region open sequence id
+   * 
+   * @param fs
+   * @param regiondir
+   * @param newSeqId
+   * @param saftyBumper
+   * @return long new sequence Id value
+   * @throws IOException
+   */
+  public static long writeRegionOpenSequenceIdFile(final FileSystem fs, final Path regiondir,
+      long newSeqId, long saftyBumper) throws IOException {
+
+    Path editsdir = HLogUtil.getRegionDirRecoveredEditsDir(regiondir);
+    long maxSeqId = 0;
+    FileStatus[] files = null;
+    if (fs.exists(editsdir)) {
+      files = FSUtils.listStatus(fs, editsdir, new PathFilter() {
+        @Override
+        public boolean accept(Path p) {
+          if (p.getName().endsWith(HLog.SEQUENCE_ID_FILE_SUFFIX)) {
+            return true;
+          }
+          return false;
+        }
+      });
+      if (files != null) {
+        for (FileStatus status : files) {
+          String fileName = status.getPath().getName();
+          try {
+            Long tmpSeqId = Long.parseLong(fileName.substring(0, fileName.length()
+                    - HLog.SEQUENCE_ID_FILE_SUFFIX.length()));
+            maxSeqId = Math.max(tmpSeqId, maxSeqId);
+          } catch (NumberFormatException ex) {
+            LOG.warn("Invalid SeqId File Name=" + fileName);
+          }
+        }
+      }
+    }
+    if (maxSeqId > newSeqId) {
+      newSeqId = maxSeqId;
+    }
+    newSeqId += saftyBumper; // bump up SeqId
+    
+    // write a new seqId file
+    Path newSeqIdFile = new Path(editsdir, newSeqId + HLog.SEQUENCE_ID_FILE_SUFFIX);
+    if (!fs.createNewFile(newSeqIdFile)) {
+      throw new IOException("Failed to create SeqId file:" + newSeqIdFile);
+    }
+    // remove old ones
+    if(files != null) {
+      for (FileStatus status : files) {
+        fs.delete(status.getPath(), false);
+      }
+    }
+    return newSeqId;
+  }
+  
 }
