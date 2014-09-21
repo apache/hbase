@@ -1061,21 +1061,23 @@ class ConnectionManager {
     @Override
     public HRegionLocation relocateRegion(final TableName tableName,
         final byte [] row) throws IOException{
-      return relocateRegion(tableName, row, RegionReplicaUtil.DEFAULT_REPLICA_ID);
+      RegionLocations locations =  relocateRegion(tableName, row,
+        RegionReplicaUtil.DEFAULT_REPLICA_ID);
+      return locations == null ? null :
+        locations.getRegionLocation(RegionReplicaUtil.DEFAULT_REPLICA_ID);
     }
 
     @Override
-    public HRegionLocation relocateRegion(final TableName tableName,
+    public RegionLocations relocateRegion(final TableName tableName,
         final byte [] row, int replicaId) throws IOException{
       // Since this is an explicit request not to use any caching, finding
       // disabled tables should not be desirable.  This will ensure that an exception is thrown when
       // the first time a disabled table is interacted with.
-      if (isTableDisabled(tableName)) {
+      if (!tableName.equals(TableName.META_TABLE_NAME) && isTableDisabled(tableName)) {
         throw new TableNotEnabledException(tableName.getNameAsString() + " is disabled.");
       }
 
-      RegionLocations locations = locateRegion(tableName, row, false, true, replicaId);
-      return locations == null ? null : locations.getRegionLocation(replicaId);
+      return locateRegion(tableName, row, false, true, replicaId);
     }
 
     @Override

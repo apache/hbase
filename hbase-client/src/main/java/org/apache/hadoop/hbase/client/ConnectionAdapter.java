@@ -300,7 +300,7 @@ class ConnectionAdapter implements ClusterConnection {
   }
 
   @Override
-  public HRegionLocation relocateRegion(TableName tableName, byte[] row, int replicaId)
+  public RegionLocations relocateRegion(TableName tableName, byte[] row, int replicaId)
       throws IOException {
     return wrappedConnection.relocateRegion(tableName, row, replicaId);
   }
