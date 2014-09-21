@@ -115,6 +115,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescripto
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
@@ -177,8 +179,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-
-import static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.*;
 
 /**
  * An internal, A non-instantiable class that manages creation of {@link HConnection}s.
@@ -1065,21 +1065,23 @@ class ConnectionManager {
     @Override
     public HRegionLocation relocateRegion(final TableName tableName,
         final byte [] row) throws IOException{
-      return relocateRegion(tableName, row, RegionReplicaUtil.DEFAULT_REPLICA_ID);
+      RegionLocations locations =  relocateRegion(tableName, row,
+        RegionReplicaUtil.DEFAULT_REPLICA_ID);
+      return locations == null ? null :
+        locations.getRegionLocation(RegionReplicaUtil.DEFAULT_REPLICA_ID);
     }
 
     @Override
-    public HRegionLocation relocateRegion(final TableName tableName,
+    public RegionLocations relocateRegion(final TableName tableName,
         final byte [] row, int replicaId) throws IOException{
       // Since this is an explicit request not to use any caching, finding
       // disabled tables should not be desirable.  This will ensure that an exception is thrown when
       // the first time a disabled table is interacted with.
-      if (isTableDisabled(tableName)) {
+      if (!tableName.equals(TableName.META_TABLE_NAME) && isTableDisabled(tableName)) {
         throw new TableNotEnabledException(tableName.getNameAsString() + " is disabled.");
       }
 
-      RegionLocations locations = locateRegion(tableName, row, false, true, replicaId);
-      return locations == null ? null : locations.getRegionLocation(replicaId);
+      return locateRegion(tableName, row, false, true, replicaId);
     }
 
     @Override

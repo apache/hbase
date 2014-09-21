@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -56,6 +57,7 @@ import org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.log4j.Level;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -73,6 +75,10 @@ import org.junit.experimental.categories.Category;
 @SuppressWarnings("deprecation")
 public class TestReplicasClient {
   private static final Log LOG = LogFactory.getLog(TestReplicasClient.class);
+
+  static {
+    ((Log4JLogger)RpcRetryingCaller.LOG).getLogger().setLevel(Level.ALL);
+  }
 
   private static final int NB_SERVERS = 1;
   private static HTable table = null;
@@ -161,6 +167,7 @@ public class TestReplicasClient {
     HTU.getConfiguration().setInt(
         StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, REFRESH_PERIOD);
     HTU.getConfiguration().setBoolean("hbase.client.log.scanner.activity", true);
+    ConnectionUtils.setupMasterlessConnection(HTU.getConfiguration());
     HTU.startMiniCluster(NB_SERVERS);
 
     // Create table then get the single region for our new table.

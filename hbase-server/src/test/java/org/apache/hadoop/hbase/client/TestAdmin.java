@@ -264,7 +264,19 @@ public class TestAdmin {
     boolean ok = false;
     try {
       ht.get(get);
-    } catch (org.apache.hadoop.hbase.DoNotRetryIOException e) {
+    } catch (TableNotEnabledException e) {
+      ok = true;
+    }
+    ok = false;
+    // verify that scan encounters correct exception
+    Scan scan = new Scan();
+    try {
+      ResultScanner scanner = ht.getScanner(scan);
+      Result res = null;
+      do {
+        res = scanner.next();
+      } while (res != null);
+    } catch (TableNotEnabledException e) {
       ok = true;
     }
     assertTrue(ok);
