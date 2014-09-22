@@ -256,8 +256,9 @@ public class BucketCache implements BlockCache, HeapSize {
       writerThreads[i] = new WriterThread(writerQueues.get(i), i);
       writerThreads[i].setName(threadName + "-BucketCacheWriter-" + i);
       writerThreads[i].setDaemon(true);
-      writerThreads[i].start();
     }
+    startWriterThreads();
+
     // Run the statistics thread periodically to print the cache statistics log
     // TODO: Add means of turning this off.  Bit obnoxious running thread just to make a log
     // every five minutes.
@@ -268,6 +269,17 @@ public class BucketCache implements BlockCache, HeapSize {
       ", blockSize=" + StringUtils.byteDesc(blockSize) + ", writerThreadNum=" +
         writerThreadNum + ", writerQLen=" + writerQLen + ", persistencePath=" +
       persistencePath + ", bucketAllocator=" + this.bucketAllocator);
+  }
+
+  /**
+   * Called by the constructor to start the writer threads. Used by tests that need to override
+   * starting the threads.
+   */
+  @VisibleForTesting
+  protected void startWriterThreads() {
+    for (WriterThread thread : writerThreads) {
+      thread.start();
+    }
   }
 
   @VisibleForTesting
