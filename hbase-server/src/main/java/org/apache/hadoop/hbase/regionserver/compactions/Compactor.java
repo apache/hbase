@@ -30,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -232,7 +231,7 @@ public abstract class Compactor {
     int bytesWritten = 0;
     // Since scanner.next() can return 'false' but still be delivering data,
     // we have to use a do/while loop.
-    List<Cell> kvs = new ArrayList<Cell>();
+    List<Cell> cells = new ArrayList<Cell>();
     int closeCheckInterval = HStore.getCloseCheckInterval();
     long lastMillis;
     if (LOG.isDebugEnabled()) {
@@ -242,20 +241,19 @@ public abstract class Compactor {
     }
     boolean hasMore;
     do {
-      hasMore = scanner.next(kvs, compactionKVMax);
+      hasMore = scanner.next(cells, compactionKVMax);
       // output to writer:
-      for (Cell c : kvs) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(c);
-        if (cleanSeqId && kv.getSequenceId() <= smallestReadPoint) {
-          CellUtil.setSequenceId(kv, 0);
+      for (Cell c : cells) {
+        if (cleanSeqId && c.getSequenceId() <= smallestReadPoint) {
+          CellUtil.setSequenceId(c, 0);
         }
-        writer.append(kv);
+        writer.append(c);
         ++progress.currentCompactedKVs;
-        progress.totalCompactedSize += kv.getLength();
+        progress.totalCompactedSize += KeyValueUtil.length(c);
 
         // check periodically to see if a system stop is requested
         if (closeCheckInterval > 0) {
-          bytesWritten += kv.getLength();
+          bytesWritten += KeyValueUtil.length(c);
           if (bytesWritten > closeCheckInterval) {
             // Log the progress of long running compactions every minute if
             // logging at DEBUG level
@@ -275,7 +273,7 @@ public abstract class Compactor {
           }
         }
       }
-      kvs.clear();
+      cells.clear();
     } while (hasMore);
     progress.complete();
     return true;
