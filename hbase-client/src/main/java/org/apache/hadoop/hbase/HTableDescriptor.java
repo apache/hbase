@@ -254,6 +254,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * <em> INTERNAL </em> Private constructor used internally creating table descriptors for
    * catalog tables, <code>hbase:meta</code> and <code>-ROOT-</code>.
    */
+  @InterfaceAudience.Private
   protected HTableDescriptor(final TableName name, HColumnDescriptor[] families) {
     setName(name);
     for(HColumnDescriptor descriptor : families) {
@@ -475,17 +476,19 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * @param value The value.
    * @see #values
    */
-  public void setValue(byte[] key, byte[] value) {
+  public HTableDescriptor setValue(byte[] key, byte[] value) {
     setValue(new Bytes(key), new Bytes(value));
+    return this;
   }
 
   /*
    * @param key The key.
    * @param value The value.
    */
-  private void setValue(final Bytes key,
+  private HTableDescriptor setValue(final Bytes key,
       final String value) {
     setValue(key, new Bytes(Bytes.toBytes(value)));
+    return this;
   }
 
   /*
@@ -494,16 +497,17 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * @param key The key.
    * @param value The value.
    */
-  public void setValue(final Bytes key,
+  public HTableDescriptor setValue(final Bytes key,
       final Bytes value) {
     if (key.compareTo(DEFERRED_LOG_FLUSH_KEY) == 0) {
       boolean isDeferredFlush = Boolean.valueOf(Bytes.toString(value.get()));
       LOG.warn("HTableDescriptor property:" + DEFERRED_LOG_FLUSH + " is deprecated, " +
           "use " + DURABILITY + " instead");
       setDurability(isDeferredFlush ? Durability.ASYNC_WAL : DEFAULT_DURABLITY);
-      return;
+      return this;
     }
     values.put(key, value);
+    return this;
   }
 
   /**
@@ -513,12 +517,13 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * @param value The value.
    * @see #values
    */
-  public void setValue(String key, String value) {
+  public HTableDescriptor setValue(String key, String value) {
     if (value == null) {
       remove(key);
     } else {
       setValue(Bytes.toBytes(key), Bytes.toBytes(value));
     }
+    return this;
   }
 
   /**
@@ -569,8 +574,8 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * @param readOnly True if all of the columns in the table should be read
    * only.
    */
-  public void setReadOnly(final boolean readOnly) {
-    setValue(READONLY_KEY, readOnly? TRUE: FALSE);
+  public HTableDescriptor setReadOnly(final boolean readOnly) {
+    return setValue(READONLY_KEY, readOnly? TRUE: FALSE);
   }
 
   /**
@@ -588,17 +593,19 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    *
    * @param isEnable True if enable compaction.
    */
-  public void setCompactionEnabled(final boolean isEnable) {
+  public HTableDescriptor setCompactionEnabled(final boolean isEnable) {
     setValue(COMPACTION_ENABLED_KEY, isEnable ? TRUE : FALSE);
+    return this;
   }
 
   /**
    * Sets the {@link Durability} setting for the table. This defaults to Durability.USE_DEFAULT.
    * @param durability enum value
    */
-  public void setDurability(Durability durability) {
+  public HTableDescriptor setDurability(Durability durability) {
     this.durability = durability;
     setValue(DURABILITY_KEY, durability.name());
+    return this;
   }
 
   /**
@@ -636,7 +643,9 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * Get the name of the table as a byte array.
    *
    * @return name of table
+   * @deprecated Use {@link #getTableName()} instead
    */
+  @Deprecated
   public byte[] getName() {
     return name.getName();
   }
@@ -656,8 +665,9 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * default is defined in {@link org.apache.hadoop.hbase.regionserver.RegionSplitPolicy}
    * @param clazz the class name
    */
-  public void setRegionSplitPolicyClassName(String clazz) {
+  public HTableDescriptor setRegionSplitPolicyClassName(String clazz) {
     setValue(SPLIT_POLICY, clazz);
+    return this;
   }
 
   /**
@@ -678,14 +688,16 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * @param name name of table
    */
   @Deprecated
-  public void setName(byte[] name) {
+  public HTableDescriptor setName(byte[] name) {
     setName(TableName.valueOf(name));
+    return this;
   }
 
   @Deprecated
-  public void setName(TableName name) {
+  public HTableDescriptor setName(TableName name) {
     this.name = name;
     setMetaFlags(this.name);
+    return this;
   }
 
   /**
@@ -720,8 +732,9 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * @param maxFileSize The maximum file size that a store file can grow to
    * before a split is triggered.
    */
-  public void setMaxFileSize(long maxFileSize) {
+  public HTableDescriptor setMaxFileSize(long maxFileSize) {
     setValue(MAX_FILESIZE_KEY, Long.toString(maxFileSize));
+    return this;
   }
 
   /**
@@ -745,19 +758,21 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    *
    * @param memstoreFlushSize memory cache flush size for each hregion
    */
-  public void setMemStoreFlushSize(long memstoreFlushSize) {
+  public HTableDescriptor setMemStoreFlushSize(long memstoreFlushSize) {
     setValue(MEMSTORE_FLUSHSIZE_KEY, Long.toString(memstoreFlushSize));
+    return this;
   }
 
   /**
    * Adds a column family.
    * @param family HColumnDescriptor of family to add.
    */
-  public void addFamily(final HColumnDescriptor family) {
+  public HTableDescriptor addFamily(final HColumnDescriptor family) {
     if (family.getName() == null || family.getName().length <= 0) {
       throw new NullPointerException("Family name cannot be null or empty");
     }
     this.families.put(family.getName(), family);
+    return this;
   }
 
   /**
@@ -999,9 +1014,10 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * Sets the number of replicas per region.
    * @param regionReplication the replication factor per region
    */
-  public void setRegionReplication(int regionReplication) {
+  public HTableDescriptor setRegionReplication(int regionReplication) {
     setValue(REGION_REPLICATION_KEY,
         new Bytes(Bytes.toBytes(Integer.toString(regionReplication))));
+    return this;
   }
 
   /**
@@ -1066,8 +1082,9 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * @param className Full class name.
    * @throws IOException
    */
-  public void addCoprocessor(String className) throws IOException {
+  public HTableDescriptor addCoprocessor(String className) throws IOException {
     addCoprocessor(className, null, Coprocessor.PRIORITY_USER, null);
+    return this;
   }
 
 
@@ -1085,7 +1102,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * @param kvs Arbitrary key-value parameter pairs passed into the coprocessor.
    * @throws IOException
    */
-  public void addCoprocessor(String className, Path jarFilePath,
+  public HTableDescriptor addCoprocessor(String className, Path jarFilePath,
                              int priority, final Map<String, String> kvs)
   throws IOException {
     if (hasCoprocessor(className)) {
@@ -1132,6 +1149,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
         "|" + className + "|" + Integer.toString(priority) + "|" +
         kvString.toString();
     setValue(key, value);
+    return this;
   }
 
 
@@ -1291,18 +1309,19 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
       });
 
   @Deprecated
-  public void setOwner(User owner) {
-    setOwnerString(owner != null ? owner.getShortName() : null);
+  public HTableDescriptor setOwner(User owner) {
+    return setOwnerString(owner != null ? owner.getShortName() : null);
   }
 
   // used by admin.rb:alter(table_name,*args) to update owner.
   @Deprecated
-  public void setOwnerString(String ownerString) {
+  public HTableDescriptor setOwnerString(String ownerString) {
     if (ownerString != null) {
       setValue(OWNER_KEY, ownerString);
     } else {
       remove(OWNER_KEY);
     }
+    return this;
   }
 
   @Deprecated
@@ -1414,12 +1433,13 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * @param key Config key. Same as XML config key e.g. hbase.something.or.other.
    * @param value String value. If null, removes the setting.
    */
-  public void setConfiguration(String key, String value) {
+  public HTableDescriptor setConfiguration(String key, String value) {
     if (value == null) {
       removeConfiguration(key);
     } else {
       configuration.put(key, value);
     }
+    return this;
   }
 
   /**

@@ -27,8 +27,8 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.BuilderStyleTest;
 import org.junit.experimental.categories.Category;
-
 import org.junit.Test;
 
 /** Tests the HColumnDescriptor with appropriate arguments */
@@ -95,5 +95,22 @@ public class TestHColumnDescriptor {
     assertEquals(value, desc.getConfigurationValue(key));
     desc.removeConfiguration(key);
     assertEquals(null, desc.getConfigurationValue(key));
+  }
+
+  @Test
+  public void testClassMethodsAreBuilderStyle() {
+    /* HColumnDescriptor should have a builder style setup where setXXX/addXXX methods
+     * can be chainable together:
+     * . For example:
+     * HColumnDescriptor hcd
+     *   = new HColumnDescriptor()
+     *     .setFoo(foo)
+     *     .setBar(bar)
+     *     .setBuz(buz)
+     *
+     * This test ensures that all methods starting with "set" returns the declaring object
+     */
+
+    BuilderStyleTest.assertClassesAreBuilderStyle(HColumnDescriptor.class);
   }
 }

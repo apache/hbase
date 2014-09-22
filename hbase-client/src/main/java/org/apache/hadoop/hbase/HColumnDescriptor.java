@@ -610,11 +610,11 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
       // TODO: Allow maxVersion of 0 to be the way you say "Keep all versions".
       // Until there is support, consider 0 or < 0 -- a configuration error.
       throw new IllegalArgumentException("Maximum versions must be positive");
-    }    
-    if (maxVersions < this.getMinVersions()) {      
+    }
+    if (maxVersions < this.getMinVersions()) {
         throw new IllegalArgumentException("Set MaxVersion to " + maxVersions
             + " while minVersion is " + this.getMinVersions()
-            + ". Maximum versions must be >= minimum versions ");      
+            + ". Maximum versions must be >= minimum versions ");
     }
     setValue(HConstants.VERSIONS, Integer.toString(maxVersions));
     cachedMaxVersions = maxVersions;
@@ -709,7 +709,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   /**
    * Set whether the tags should be compressed along with DataBlockEncoding. When no
    * DataBlockEncoding is been used, this is having no effect.
-   * 
+   *
    * @param compressTags
    * @return this (for chained invocation)
    */
@@ -751,7 +751,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   }
 
   /**
-   * @return True if we are to favor keeping all values for this column family in the 
+   * @return True if we are to favor keeping all values for this column family in the
    * HRegionServer cache.
    */
   public boolean isInMemory() {
@@ -1118,6 +1118,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   }
 
   // Comparable
+  @Override
   public int compareTo(HColumnDescriptor o) {
     int result = Bytes.compareTo(this.name, o.getName());
     if (result == 0) {
@@ -1225,12 +1226,13 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    * @param key Config key. Same as XML config key e.g. hbase.something.or.other.
    * @param value String value. If null, removes the configuration.
    */
-  public void setConfiguration(String key, String value) {
+  public HColumnDescriptor setConfiguration(String key, String value) {
     if (value == null) {
       removeConfiguration(key);
     } else {
       configuration.put(key, value);
     }
+    return this;
   }
 
   /**
