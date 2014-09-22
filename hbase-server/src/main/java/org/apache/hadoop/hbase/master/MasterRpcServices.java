@@ -170,6 +170,7 @@ import com.google.protobuf.ServiceException;
  * Implements the master RPC services.
  */
 @InterfaceAudience.Private
+@SuppressWarnings("deprecation")
 public class MasterRpcServices extends RSRpcServices
     implements MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface {
   protected static final Log LOG = LogFactory.getLog(MasterRpcServices.class.getName());
@@ -1097,7 +1098,6 @@ public class MasterRpcServices extends RSRpcServices
    *
    */
   @Override
-  @SuppressWarnings("deprecation")
   public OfflineRegionResponse offlineRegion(RpcController controller,
       OfflineRegionRequest request) throws ServiceException {
     final byte [] regionName = request.getRegion().getValue().toByteArray();
@@ -1227,7 +1227,6 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
-  @SuppressWarnings("deprecation")
   public UnassignRegionResponse unassignRegion(RpcController controller,
       UnassignRegionRequest req) throws ServiceException {
     try {

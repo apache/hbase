@@ -561,15 +561,6 @@ possible configurations would overwhelm and obscure the important.
     <description>Period at which the region balancer runs in the Master.</description>
   </property>
   <property>
-    <name>hbase.balancer.backupMasterWeight</name>
-    <value>1</value>
-    <description>Used to control how many regions the region balancer can assign to
-    backup Masters, compared to normal region servers. The default value 1 means a
-    backup Master can host as many regions as a normal region server. The bigger the
-    weight, the less the regions a backup Master will host. If the weight is less than 1,
-    the balancer will not assign any region to any backup Master</description>
-  </property>
-  <property>
     <name>hbase.regions.slop</name>
     <value>0.2</value>
     <description>Rebalance if any regionserver has average + (average * slop) regions.</description>

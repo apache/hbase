@@ -348,22 +348,13 @@ $
           <title>Configure HBase.</title>
           <para>
             Edit the <filename>hbase-site.xml</filename> configuration. First, add the following
-            properties. Property <code>hbase.cluster.distributed</code> is set to <code>true</code>
-            (Its default is <code>false</code>), which directs HBase to run in distributed mode,
-            with one JVM instance per daemon. Since HBase version 1.0.0, a HMaster is also a
-            RegionServer. So in pseudo-distributed mode, just one HMaster (also a RegionServer)
-            instance is started by default. Because there is just one RegionServer (the HMaster),
-            property <code>hbase.master.wait.on.regionservers.mintostart</code> should be set to
-            <code>1</code> (Its default is changed to <code>2</code> since version 1.0.0).
+            property. which directs HBase to run in distributed mode, with one JVM instance per
+            daemon.
           </para>
           <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.cluster.distributed</name>
   <value>true</value>
-</property>
-<property>
-  <name>hbase.master.wait.on.regionservers.mintostart</name>
-  <value>1</value>
 </property>
             ]]></programlisting>
           <para>Next, change the <code>hbase.rootdir</code> from the local filesystem to the address

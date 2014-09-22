@@ -151,7 +151,7 @@ public class TestMasterFailover {
     assertEquals(2, masterThreads.size());
     int rsCount = masterThreads.get(activeIndex).getMaster().getClusterStatus().getServersSize();
     LOG.info("Active master " + active.getServerName() + " managing " + rsCount +  " regions servers");
-    assertEquals(5, rsCount);
+    assertEquals(4, rsCount);
 
     // Check that ClusterStatus reports the correct active and backup masters
     assertNotNull(active);

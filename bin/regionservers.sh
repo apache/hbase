@@ -59,17 +59,22 @@ if [ "$HOSTLIST" = "" ]; then
   fi
 fi
 
-for regionserver in `cat "$HOSTLIST"`; do
-  if ${HBASE_SLAVE_PARALLEL:-true}; then 
-    ssh $HBASE_SSH_OPTS $regionserver $"${@// /\\ }" \
-      2>&1 | sed "s/^/$regionserver: /" &
-  else # run each command serially 
-    ssh $HBASE_SSH_OPTS $regionserver $"${@// /\\ }" \
-      2>&1 | sed "s/^/$regionserver: /"
-  fi
-  if [ "$HBASE_SLAVE_SLEEP" != "" ]; then
-    sleep $HBASE_SLAVE_SLEEP
-  fi
-done
+regionservers=`cat "$HOSTLIST"`
+if [ "$regionservers" = "localhost" ]; then
+  "$bin"/local-regionservers.sh start 1
+else
+  for regionserver in `cat "$HOSTLIST"`; do
+    if ${HBASE_SLAVE_PARALLEL:-true}; then
+      ssh $HBASE_SSH_OPTS $regionserver $"${@// /\\ }" \
+        2>&1 | sed "s/^/$regionserver: /" &
+    else # run each command serially
+      ssh $HBASE_SSH_OPTS $regionserver $"${@// /\\ }" \
+        2>&1 | sed "s/^/$regionserver: /"
+    fi
+    if [ "$HBASE_SLAVE_SLEEP" != "" ]; then
+      sleep $HBASE_SLAVE_SLEEP
+    fi
+  done
+fi
 
 wait

@@ -40,8 +40,8 @@ org.apache.hadoop.util.StringUtils;
 com.yammer.metrics.stats.Snapshot;
 </%import>
 <%java>
-  BlockCache bc = cacheConfig.getBlockCache();
-  BlockCache [] bcs = bc.getBlockCaches();
+  BlockCache bc = cacheConfig == null ? null : cacheConfig.getBlockCache();
+  BlockCache [] bcs = bc == null ? null : bc.getBlockCaches();
   if (bcn.equals("L1")) {
     bc = bcs == null || bcs.length == 0? bc: bcs[0];
   } else {
@@ -50,6 +50,10 @@ com.yammer.metrics.stats.Snapshot;
       return;
     }
     bc = bcs[1];
+  }
+  if (bc == null) {
+    System.out.println("There is no block cache");
+    return;
   }
   CachedBlocksByFile cbsbf = BlockCacheUtil.getLoadedCachedBlocksByFile(conf, bc);
 </%java>

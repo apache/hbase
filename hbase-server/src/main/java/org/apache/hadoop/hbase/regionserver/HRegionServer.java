@@ -52,7 +52,6 @@ import javax.servlet.http.HttpServlet;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -72,6 +71,7 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZNodeClearer;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -325,7 +325,7 @@ public class HRegionServer extends HasThread implements
   LogRoller metaHLogRoller;
 
   // flag set after we're done setting up server threads
-  protected AtomicBoolean online;
+  final AtomicBoolean online = new AtomicBoolean(false);
 
   // zookeeper connection and watcher
   protected ZooKeeperWatcher zooKeeper;
@@ -347,7 +347,7 @@ public class HRegionServer extends HasThread implements
   private final RegionServerAccounting regionServerAccounting;
 
   // Cache configuration and block cache reference
-  final CacheConfig cacheConfig;
+  protected CacheConfig cacheConfig;
 
   /** The health check chore. */
   private HealthCheckChore healthCheckChore;
@@ -441,7 +441,6 @@ public class HRegionServer extends HasThread implements
     this.fsOk = true;
     this.conf = conf;
     checkCodecs(this.conf);
-    this.online = new AtomicBoolean(false);
     this.userProvider = UserProvider.instantiate(conf);
     FSUtils.setupShortCircuitRead(this.conf);
 
@@ -478,7 +477,6 @@ public class HRegionServer extends HasThread implements
     login(userProvider, hostName);
 
     regionServerAccounting = new RegionServerAccounting();
-    cacheConfig = new CacheConfig(conf);
     uncaughtExceptionHandler = new UncaughtExceptionHandler() {
       @Override
       public void uncaughtException(Thread t, Throwable e) {
@@ -528,6 +526,9 @@ public class HRegionServer extends HasThread implements
   protected void login(UserProvider user, String host) throws IOException {
     user.login("hbase.regionserver.keytab.file",
       "hbase.regionserver.kerberos.principal", host);
+  }
+
+  protected void waitForMasterActive(){
   }
 
   protected String getProcessName() {
@@ -597,8 +598,26 @@ public class HRegionServer extends HasThread implements
    */
   private void preRegistrationInitialization(){
     try {
+      synchronized (this) {
+        if (shortCircuitConnection == null) {
+          shortCircuitConnection = createShortCircuitConnection();
+          metaTableLocator = new MetaTableLocator();
+        }
+      }
+
+      // Health checker thread.
+      if (isHealthCheckerConfigured()) {
+        int sleepTime = this.conf.getInt(HConstants.HEALTH_CHORE_WAKE_FREQ,
+          HConstants.DEFAULT_THREAD_WAKE_FREQUENCY);
+        healthCheckChore = new HealthCheckChore(sleepTime, this, getConfiguration());
+      }
+      this.pauseMonitor = new JvmPauseMonitor(conf);
+      pauseMonitor.start();
+
       initializeZooKeeper();
-      initializeThreads();
+      if (!isStopped() && !isAborted()) {
+        initializeThreads();
+      }
     } catch (Throwable t) {
       // Call stop if error or process will stick around for ever since server
       // puts up non-daemon threads.
@@ -619,8 +638,6 @@ public class HRegionServer extends HasThread implements
     // Create the master address tracker, register with zk, and start it.  Then
     // block until a master is available.  No point in starting up if no master
     // running.
-    this.masterAddressTracker = new MasterAddressTracker(this.zooKeeper, this);
-    this.masterAddressTracker.start();
     blockAndCheckIfStopped(this.masterAddressTracker);
 
     // Wait on cluster being up.  Master will set this flag up in zookeeper
@@ -640,11 +657,13 @@ public class HRegionServer extends HasThread implements
       this.abort("Failed to retrieve Cluster ID",e);
     }
 
-    synchronized (this) {
-      if (shortCircuitConnection == null) {
-        shortCircuitConnection = createShortCircuitConnection();
-        metaTableLocator = new MetaTableLocator();
-      }
+    // In case colocated master, wait here till it's active.
+    // So backup masters won't start as regionservers.
+    // This is to avoid showing backup masters as regionservers
+    // in master web UI, or assigning any region to them.
+    waitForMasterActive();
+    if (isStopped() || isAborted()) {
+      return; // No need for further initialization
     }
 
     // watch for snapshots and other procedures
@@ -693,13 +712,6 @@ public class HRegionServer extends HasThread implements
     // in a while. It will take care of not checking too frequently on store-by-store basis.
     this.compactionChecker = new CompactionChecker(this, this.threadWakeFrequency, this);
     this.periodicFlusher = new PeriodicMemstoreFlusher(this.threadWakeFrequency, this);
-    // Health checker thread.
-    int sleepTime = this.conf.getInt(HConstants.HEALTH_CHORE_WAKE_FREQ,
-      HConstants.DEFAULT_THREAD_WAKE_FREQUENCY);
-    if (isHealthCheckerConfigured()) {
-      healthCheckChore = new HealthCheckChore(sleepTime, this, getConfiguration());
-    }
-
     this.leases = new Leases(this.threadWakeFrequency);
 
     // Create the thread to clean the moved regions list
@@ -716,8 +728,6 @@ public class HRegionServer extends HasThread implements
     // Setup RPC client for master communication
     rpcClient = new RpcClient(conf, clusterId, new InetSocketAddress(
       rpcServices.isa.getAddress(), 0));
-    this.pauseMonitor = new JvmPauseMonitor(conf);
-    pauseMonitor.start();
 
     int storefileRefreshPeriod = conf.getInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD
       , StorefileRefresherChore.DEFAULT_REGIONSERVER_STOREFILE_REFRESH_PERIOD);
@@ -836,7 +846,7 @@ public class HRegionServer extends HasThread implements
       }
     }
     // Send cache a shutdown.
-    if (cacheConfig.isBlockCacheEnabled()) {
+    if (cacheConfig != null && cacheConfig.isBlockCacheEnabled()) {
       cacheConfig.getBlockCache().shutdown();
     }
 
@@ -941,6 +951,7 @@ public class HRegionServer extends HasThread implements
 
     try {
       deleteMyEphemeralNode();
+    } catch (KeeperException.NoNodeException nn) {
     } catch (KeeperException e) {
       LOG.warn("Failed deleting my ephemeral node", e);
     }
@@ -1188,6 +1199,7 @@ public class HRegionServer extends HasThread implements
       // Save it in a file, this will allow to see if we crash
       ZNodeClearer.writeMyEphemeralNodeOnDisk(getMyEphemeralNodePath());
 
+      this.cacheConfig = new CacheConfig(conf);
       this.hlog = setupWALAndReplication();
       // Init in here rather than in constructor after thread name has been set
       this.metricsRegionServer = new MetricsRegionServer(new MetricsRegionServerWrapperImpl(this));
@@ -1198,6 +1210,8 @@ public class HRegionServer extends HasThread implements
         ", RpcServer on " + rpcServices.isa +
         ", sessionid=0x" +
         Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()));
+
+      // Wake up anyone waiting for this server to online
       synchronized (online) {
         online.set(true);
         online.notifyAll();
@@ -1582,10 +1596,6 @@ public class HRegionServer extends HasThread implements
       }
     }
 
-    // Start Server.  This service is like leases in that it internally runs
-    // a thread.
-    rpcServices.rpcServer.start();
-
     // Create the log splitting worker and start it
     // set a smaller retries to fast fail otherwise splitlogworker could be blocked for
     // quite a while inside HConnection layer. The worker won't be available for other
@@ -1713,8 +1723,15 @@ public class HRegionServer extends HasThread implements
   }
 
   public void waitForServerOnline(){
-    while (!isOnline() && !isStopped()){
-       sleeper.sleep();
+    while (!isStopped() && !isOnline()) {
+      synchronized (online) {
+        try {
+          online.wait(msgInterval);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
     }
   }
 
@@ -1976,12 +1993,11 @@ public class HRegionServer extends HasThread implements
     }
     ServerName sn = null;
     long previousLogTime = 0;
-    RegionServerStatusService.BlockingInterface master = null;
     boolean refresh = false; // for the first time, use cached data
     RegionServerStatusService.BlockingInterface intf = null;
     boolean interrupted = false;
     try {
-      while (keepLooping() && master == null) {
+      while (keepLooping()) {
         sn = this.masterAddressTracker.getMasterAddress(refresh);
         if (sn == null) {
           if (!keepLooping()) {

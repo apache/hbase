@@ -32,10 +32,10 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
-import org.apache.hadoop.hbase.MasterNotRunningException;
-import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
+import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -154,7 +154,6 @@ public class HMasterCommandLine extends ServerCommandLine {
       // and regionserver both in the one JVM.
       if (LocalHBaseCluster.isLocal(conf)) {
         DefaultMetricsSystem.setMiniClusterMode(true);
-        conf.setInt(ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
         final MiniZooKeeperCluster zooKeeperCluster = new MiniZooKeeperCluster(conf);
         File zkDataPath = new File(conf.get(HConstants.ZOOKEEPER_DATA_DIR));
         int zkClientPort = conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 0);
@@ -183,7 +182,7 @@ public class HMasterCommandLine extends ServerCommandLine {
         // Need to have the zk cluster shutdown when master is shutdown.
         // Run a subclass that does the zk cluster shutdown on its way out.
         LocalHBaseCluster cluster = new LocalHBaseCluster(conf, conf.getInt("hbase.masters", 1),
-          conf.getInt("hbase.regionservers", 0), LocalHMaster.class, HRegionServer.class);
+          conf.getInt("hbase.regionservers", 1), LocalHMaster.class, HRegionServer.class);
         ((LocalHMaster)cluster.getMaster(0)).setZKCluster(zooKeeperCluster);
         cluster.startup();
         waitOnMasterThreads(cluster);
@@ -208,6 +207,7 @@ public class HMasterCommandLine extends ServerCommandLine {
     return 0;
   }
 
+  @SuppressWarnings("resource")
   private int stopMaster() {
     Admin adm = null;
     try {
