@@ -245,7 +245,8 @@ public class TestBlockReorder {
 
     MiniHBaseCluster hbm = htu.startMiniHBaseCluster(1, 1);
     hbm.waitForActiveAndReadyMaster();
-    HRegionServer targetRs = hbm.getMaster();
+    hbm.getRegionServer(0).waitForServerOnline();
+    HRegionServer targetRs = hbm.getRegionServer(0);
 
     // We want to have a datanode with the same name as the region server, so
     //  we're going to get the regionservername, and start a new datanode with this name.

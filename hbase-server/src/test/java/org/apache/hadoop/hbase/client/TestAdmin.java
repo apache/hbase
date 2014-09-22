@@ -602,11 +602,6 @@ public class TestAdmin {
       }
       regs.add(entry.getKey());
     }
-    if (numRS >= 2) {
-      // Ignore the master region server,
-      // which contains less regions by intention.
-      numRS--;
-    }
     float average = (float) expectedRegions/numRS;
     int min = (int)Math.floor(average);
     int max = (int)Math.ceil(average);

@@ -41,11 +41,11 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.CoordinatedStateException;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -53,6 +53,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
+import org.apache.hadoop.hbase.MetaMigrationConvertingToPB;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.PleaseHoldException;
@@ -64,13 +66,11 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
-import org.apache.hadoop.hbase.MetaMigrationConvertingToPB;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
@@ -80,6 +80,7 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.MasterRpcServices.BalanceSwitchMode;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.BalancerChore;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
@@ -101,8 +102,8 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
@@ -225,6 +226,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   // monitor for distributed procedures
   MasterProcedureManagerHost mpmHost;
 
+  // A flag to indicate if any table is configured to put on the active master
+  protected final boolean tablesOnMaster;
+
   /** flag used in test cases in order to simulate RS failures during master initialization */
   private volatile boolean initializationBeforeMetaAssignment = false;
 
@@ -282,6 +286,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.masterCheckCompression = conf.getBoolean("hbase.master.check.compression", true);
 
     this.metricsMaster = new MetricsMaster( new MetricsMasterWrapperImpl(this));
+    String[] tablesOnMaster = BaseLoadBalancer.getTablesOnMaster(conf);
+    this.tablesOnMaster = tablesOnMaster != null && tablesOnMaster.length > 0;
 
     // Do we publish the status?
     boolean shouldPublish = conf.getBoolean(HConstants.STATUS_PUBLISHED,
@@ -344,6 +350,18 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
   }
 
+  /**
+   * If configured to put regions on active master,
+   * wait till a backup master becomes active.
+   * Otherwise, loop till the server is stopped or aborted.
+   */
+  protected void waitForMasterActive(){
+    while (!(tablesOnMaster && isActiveMaster)
+        && !isStopped() && !isAborted()) {
+      sleeper.sleep();
+    }
+  }
+
   @VisibleForTesting
   public MasterRpcServices getMasterRpcServices() {
     return (MasterRpcServices)rpcServices;
@@ -372,7 +390,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   protected void configureInfoServer() {
     infoServer.addServlet("master-status", "/master-status", MasterStatusServlet.class);
     infoServer.setAttribute(MASTER, this);
-    super.configureInfoServer();
+    if (tablesOnMaster) {
+      super.configureInfoServer();
+    }
   }
 
   protected Class<? extends HttpServlet> getDumpServlet() {
@@ -548,10 +568,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.initializationBeforeMetaAssignment = true;
 
     // Wait for regionserver to finish initialization.
-    synchronized (online) {
-      while (!isStopped() && !isOnline()) {
-        online.wait(100);
-      }
+    if (tablesOnMaster) {
+      waitForServerOnline();
     }
 
     //initialize load balancer
@@ -1590,6 +1608,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   @Override
   public void abort(final String msg, final Throwable t) {
+    if (isAborted() || isStopped()) {
+      return;
+    }
     if (cpHost != null) {
       // HBASE-4014: dump a list of loaded coprocessors.
       LOG.fatal("Master server abort: loaded coprocessors are: " +

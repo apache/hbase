@@ -91,11 +91,11 @@ public class TestRSKilledWhenInitializing {
       Thread.sleep(10000);
       List<ServerName> onlineServersList =
           master.getMaster().getServerManager().getOnlineServersList();
-      while (onlineServersList.size() > 2) {
+      while (onlineServersList.size() > 1) {
         Thread.sleep(100);
         onlineServersList = master.getMaster().getServerManager().getOnlineServersList();
       }
-      assertEquals(onlineServersList.size(), 2);
+      assertEquals(onlineServersList.size(), 1);
       cluster.shutdown();
     } finally {
       masterActive = false;

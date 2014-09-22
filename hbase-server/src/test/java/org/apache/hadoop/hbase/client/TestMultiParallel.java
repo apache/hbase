@@ -26,6 +26,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -36,7 +37,9 @@ import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
@@ -150,10 +153,15 @@ public class TestMultiParallel {
     Table table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
     List<Row> puts = constructPutRequests(); // creates a Put for every region
     table.batch(puts);
+    HashSet<ServerName> regionservers = new HashSet<ServerName>();
+    for (byte[] k : KEYS) {
+      HRegionLocation location = ((HTable)table).getRegionLocation(k);
+      regionservers.add(location.getServerName());
+    }
     Field poolField = table.getClass().getDeclaredField("pool");
     poolField.setAccessible(true);
     ThreadPoolExecutor tExecutor = (ThreadPoolExecutor) poolField.get(table);
-    assertEquals(slaves, tExecutor.getLargestPoolSize());
+    assertEquals(regionservers.size(), tExecutor.getLargestPoolSize());
     table.close();
   }
 
@@ -306,9 +314,8 @@ public class TestMultiParallel {
       UTIL.waitFor(15 * 1000, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
-          // Master is also a regionserver, so the count is liveRScount
           return UTIL.getMiniHBaseCluster().getMaster()
-              .getClusterStatus().getServersSize() == liveRScount;
+              .getClusterStatus().getServersSize() == (liveRScount - 1);
         }
       });
       UTIL.waitFor(15 * 1000, UTIL.predicateNoRegionsInTransition());

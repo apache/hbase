@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -69,8 +68,8 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.coordination.ZKSplitTransactionCoordination;
 import org.apache.hadoop.hbase.coordination.ZkCloseRegionCoordination;
+import org.apache.hadoop.hbase.coordination.ZkOpenRegionCoordination;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TestReplicasClient.SlowMeCopro;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -113,6 +112,7 @@ import com.google.protobuf.ServiceException;
  * is tests against a bare {@link HRegion}.
  */
 @Category(LargeTests.class)
+@SuppressWarnings("deprecation")
 public class TestSplitTransactionOnCluster {
   private static final Log LOG =
     LogFactory.getLog(TestSplitTransactionOnCluster.class);
@@ -182,7 +182,6 @@ public class TestSplitTransactionOnCluster {
     return hri;
   }
 
-  @SuppressWarnings("deprecation")
   @Test(timeout = 60000)
   public void testShouldFailSplitIfZNodeDoesNotExistDueToPrevRollBack() throws Exception {
     final TableName tableName =
@@ -323,7 +322,6 @@ public class TestSplitTransactionOnCluster {
     }
   }
   @Test(timeout = 60000)
-  @SuppressWarnings("deprecation")
   public void testSplitFailedCompactionAndSplit() throws Exception {
     final byte[] tableName = Bytes.toBytes("testSplitFailedCompactionAndSplit");
     Configuration conf = TESTING_UTIL.getConfiguration();
@@ -1135,6 +1133,7 @@ public class TestSplitTransactionOnCluster {
           this.watcher = server.getZooKeeper();
           splitTransactionCoordination = new MockedSplitTransactionCoordination(this, watcher, region);
           closeRegionCoordination = new ZkCloseRegionCoordination(this, watcher);
+          openRegionCoordination = new ZkOpenRegionCoordination(this, watcher);
         }
       }
 
@@ -1285,12 +1284,12 @@ public class TestSplitTransactionOnCluster {
       admin.move(hri.getEncodedNameAsBytes(), Bytes.toBytes(hrs.getServerName().toString()));
     }
     // Wait till table region is up on the server that is NOT carrying hbase:meta.
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 20; i++) {
       tableRegionIndex = cluster.getServerWith(hri.getRegionName());
       if (tableRegionIndex != -1 && tableRegionIndex != metaServerIndex) break;
       LOG.debug("Waiting on region move off the hbase:meta server; current index " +
         tableRegionIndex + " and metaServerIndex=" + metaServerIndex);
-      Thread.sleep(100);
+      Thread.sleep(1000);
     }
     assertTrue("Region not moved off hbase:meta server", tableRegionIndex != -1
         && tableRegionIndex != metaServerIndex);

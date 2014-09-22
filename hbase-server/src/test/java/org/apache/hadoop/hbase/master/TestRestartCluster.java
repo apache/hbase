@@ -167,14 +167,13 @@ public class TestRestartCluster {
     MiniHBaseCluster cluster = UTIL.getHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> threads = cluster.getLiveRegionServerThreads();
     assertEquals(2, threads.size());
-    int[] rsPorts = new int[3];
+    int[] rsPorts = new int[2];
     for (int i = 0; i < 2; i++) {
       rsPorts[i] = threads.get(i).getRegionServer().getServerName().getPort();
     }
-    rsPorts[2] = cluster.getMaster().getServerName().getPort();
     for (ServerName serverName: regionToRegionServerMap.values()) {
       boolean found = false; // Test only, no need to optimize
-      for (int k = 0; k < 3 && !found; k++) {
+      for (int k = 0; k < 2 && !found; k++) {
         found = serverName.getPort() == rsPorts[k];
       }
       assertTrue(found);
@@ -190,9 +189,9 @@ public class TestRestartCluster {
     LOG.info("\n\nStarting cluster the second time with the same ports");
     try {
       cluster.getConf().setInt(
-        ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 4);
+        ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 2);
       master = cluster.startMaster().getMaster();
-      for (int i = 0; i < 3; i++) {
+      for (int i = 0; i < 2; i++) {
         cluster.getConf().setInt(HConstants.REGIONSERVER_PORT, rsPorts[i]);
         cluster.startRegionServer();
       }
@@ -200,13 +199,13 @@ public class TestRestartCluster {
       // Reset region server port so as not to conflict with other tests
       cluster.getConf().setInt(HConstants.REGIONSERVER_PORT, 0);
       cluster.getConf().setInt(
-        ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 2);
+        ServerManager.WAIT_ON_REGIONSERVERS_MINTOSTART, 1);
     }
 
     // Make sure live regionservers are on the same host/port
     List<ServerName> localServers = master.getServerManager().getOnlineServersList();
-    assertEquals(4, localServers.size());
-    for (int i = 0; i < 3; i++) {
+    assertEquals(2, localServers.size());
+    for (int i = 0; i < 2; i++) {
       boolean found = false;
       for (ServerName serverName: localServers) {
         if (serverName.getPort() == rsPorts[i]) {

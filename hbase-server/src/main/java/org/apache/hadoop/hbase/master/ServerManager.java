@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
-import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -95,6 +94,7 @@ import com.google.protobuf.ServiceException;
  * and has completed the handling.
  */
 @InterfaceAudience.Private
+@SuppressWarnings("deprecation")
 public class ServerManager {
   public static final String WAIT_ON_REGIONSERVERS_MAXTOSTART =
       "hbase.master.wait.on.regionservers.maxtostart";
@@ -142,8 +142,6 @@ public class ServerManager {
 
   private final long maxSkew;
   private final long warningSkew;
-  private final boolean checkingBackupMaster;
-  private BaseLoadBalancer balancer;
 
   /**
    * Set of region servers which are dead but not processed immediately. If one
@@ -203,18 +201,6 @@ public class ServerManager {
     maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
     warningSkew = c.getLong("hbase.master.warningclockskew", 10000);
     this.connection = connect ? HConnectionManager.getConnection(c) : null;
-
-    // Put this in constructor so we don't cast it every time
-    //
-    // We need to check if a newly added server is a backup master
-    // only if we are configured not to assign any region to it.
-    checkingBackupMaster = (master instanceof HMaster)
-      && ((HMaster)master).balancer instanceof BaseLoadBalancer
-      && (c.getInt(BaseLoadBalancer.BACKUP_MASTER_WEIGHT_KEY,
-        BaseLoadBalancer.DEFAULT_BACKUP_MASTER_WEIGHT) < 1);
-    if (checkingBackupMaster) {
-      balancer = (BaseLoadBalancer)((HMaster)master).balancer;
-    }
   }
 
   /**
@@ -419,18 +405,6 @@ public class ServerManager {
   @VisibleForTesting
   void recordNewServerWithLock(final ServerName serverName, final ServerLoad sl) {
     LOG.info("Registering server=" + serverName);
-    if (checkingBackupMaster) {
-      ZooKeeperWatcher zooKeeper = master.getZooKeeper();
-      String backupZNode = ZKUtil.joinZNode(
-        zooKeeper.backupMasterAddressesZNode, serverName.toString());
-      try {
-        if (ZKUtil.checkExists(zooKeeper, backupZNode) != -1) {
-          balancer.excludeServer(serverName);
-        }
-      } catch (KeeperException e) {
-        master.abort("Failed to check if a new server a backup master", e);
-      }
-    }
     this.onlineServers.put(serverName, sl);
     this.rsAdmins.remove(serverName);
   }
@@ -468,19 +442,10 @@ public class ServerManager {
       (double)totalLoad / (double)numServers;
   }
 
-  /**
-   * Get the count of active regionservers that are not backup
-   * masters. This count may not be accurate depending on timing.
-   * @return the count of active regionservers
-   */
+  /** @return the count of active regionservers */
   private int countOfRegionServers() {
     // Presumes onlineServers is a concurrent map
-    int count = this.onlineServers.size();
-    if (balancer != null) {
-      count -= balancer.getExcludedServers().size();
-      if (count < 0) count = 0;
-    }
-    return count;
+    return this.onlineServers.size();
   }
 
   /**
@@ -535,7 +500,7 @@ public class ServerManager {
 
       try {
         List<String> servers = ZKUtil.listChildrenNoWatch(zkw, zkw.rsZNode);
-        if (servers == null || (servers.size() == 1
+        if (servers == null || servers.size() == 0 || (servers.size() == 1
             && servers.contains(sn.toString()))) {
           LOG.info("ZK shows there is only the master self online, exiting now");
           // Master could have lost some ZK events, no need to wait more.
@@ -862,7 +827,6 @@ public class ServerManager {
     * @throws IOException
     * @throws RetriesExhaustedException wrapping a ConnectException if failed
     */
-  @SuppressWarnings("deprecation")
   private AdminService.BlockingInterface getRsAdmin(final ServerName sn)
   throws IOException {
     AdminService.BlockingInterface admin = this.rsAdmins.get(sn);
@@ -898,14 +862,12 @@ public class ServerManager {
       getLong(WAIT_ON_REGIONSERVERS_INTERVAL, 1500);
     final long timeout = this.master.getConfiguration().
       getLong(WAIT_ON_REGIONSERVERS_TIMEOUT, 4500);
-    String[] tablesOnMaster = this.master.getConfiguration().
-      getStrings("hbase.balancer.tablesOnMaster");
     int defaultMinToStart = 1;
-    if (tablesOnMaster != null && tablesOnMaster.length > 0) {
+    if (((HMaster)services).tablesOnMaster) {
       // If we assign regions to master, we'd like to start
       // at least another region server so that we don't
-      // assign all regions to master if that region server
-      // doesn't come up in time.
+      // assign all regions to master if other region servers
+      // don't come up in time.
       defaultMinToStart = 2;
     }
     int minToStart = this.master.getConfiguration().
@@ -933,10 +895,8 @@ public class ServerManager {
     long lastCountChange = startTime;
     int count = countOfRegionServers();
     int oldCount = 0;
-    ServerName masterSn = master.getServerName();
-    boolean selfCheckedIn = isServerOnline(masterSn);
-    while (!this.master.isStopped() && (!selfCheckedIn || (count < maxToStart
-        && (lastCountChange+interval > now || timeout > slept || count < minToStart)))) {
+    while (!this.master.isStopped() && count < maxToStart
+        && (lastCountChange+interval > now || timeout > slept || count < minToStart)) {
       // Log some info at every interval time or if there is a change
       if (oldCount != count || lastLogTime+interval < now){
         lastLogTime = now;
@@ -944,8 +904,7 @@ public class ServerManager {
           "Waiting for region servers count to settle; currently"+
             " checked in " + count + ", slept for " + slept + " ms," +
             " expecting minimum of " + minToStart + ", maximum of "+ maxToStart+
-            ", timeout of "+timeout+" ms, interval of "+interval+" ms," +
-            " selfCheckedIn " + selfCheckedIn;
+            ", timeout of "+timeout+" ms, interval of "+interval+" ms.";
         LOG.info(msg);
         status.setStatus(msg);
       }
@@ -955,8 +914,6 @@ public class ServerManager {
       Thread.sleep(sleepTime);
       now =  System.currentTimeMillis();
       slept = now - startTime;
-
-      selfCheckedIn = isServerOnline(masterSn);
 
       oldCount = count;
       count = countOfRegionServers();
@@ -968,8 +925,7 @@ public class ServerManager {
     LOG.info("Finished waiting for region servers count to settle;" +
       " checked in " + count + ", slept for " + slept + " ms," +
       " expecting minimum of " + minToStart + ", maximum of "+ maxToStart+","+
-      " master is "+ (this.master.isStopped() ? "stopped.": "running," +
-      " selfCheckedIn " + selfCheckedIn)
+      " master is "+ (this.master.isStopped() ? "stopped.": "running")
     );
   }
 

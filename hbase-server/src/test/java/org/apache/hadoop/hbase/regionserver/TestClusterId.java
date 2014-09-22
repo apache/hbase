@@ -81,7 +81,7 @@ public class TestClusterId {
     //Make sure RS is in blocking state
     Thread.sleep(10000);
 
-    TEST_UTIL.startMiniHBaseCluster(1, 0);
+    TEST_UTIL.startMiniHBaseCluster(1, 1);
 
     rst.waitForServerOnline();
 
@@ -110,7 +110,7 @@ public class TestClusterId {
     }
     TEST_UTIL.startMiniHBaseCluster(1, 1);
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
-    assertEquals(2, master.getServerManager().getOnlineServersList().size());
+    assertEquals(1, master.getServerManager().getOnlineServersList().size());
   }
   
 }

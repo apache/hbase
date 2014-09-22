@@ -24,6 +24,7 @@ java.util.*;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.ClusterStatus;
 org.apache.hadoop.hbase.master.HMaster;
+org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 </%import>
 <%java>
 Collection<ServerName> masters = null;
@@ -32,7 +33,9 @@ if (master.isActiveMaster()) {
   ClusterStatus status = master.getClusterStatus();
   masters = status.getBackupMasters();
 } else{
-  ServerName sn = master.getMasterAddressTracker().getMasterAddress();
+  MasterAddressTracker masterAddressTracker = master.getMasterAddressTracker();
+  ServerName sn = masterAddressTracker == null ? null
+    : masterAddressTracker.getMasterAddress();
   assert sn != null : "Failed to retreive master's ServerName!";
   masters = Collections.singletonList(sn);
 }

@@ -80,7 +80,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
-import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.exceptions.RegionInRecoveryException;
@@ -1455,21 +1454,6 @@ public class TestDistributedLogSplitting {
           continue;
         }
         LOG.debug("adding data to rs = " + rst.getName() +
-            " region = "+ hri.getRegionNameAsString());
-        HRegion region = hrs.getOnlineRegion(hri.getRegionName());
-        assertTrue(region != null);
-        putData(region, hri.getStartKey(), nrows, Bytes.toBytes("q"), family);
-      }
-    }
-
-    for (MasterThread mt : cluster.getLiveMasterThreads()) {
-      HRegionServer hrs = mt.getMaster();
-      List<HRegionInfo> hris = ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices());
-      for (HRegionInfo hri : hris) {
-        if (hri.getTable().isSystemTable()) {
-          continue;
-        }
-        LOG.debug("adding data to rs = " + mt.getName() +
             " region = "+ hri.getRegionNameAsString());
         HRegion region = hrs.getOnlineRegion(hri.getRegionName());
         assertTrue(region != null);

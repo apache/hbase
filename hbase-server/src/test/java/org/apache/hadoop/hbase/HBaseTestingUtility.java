@@ -48,12 +48,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Jdk14Logger;
 import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Waiter.Predicate;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionStates;
@@ -1473,6 +1474,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Modify a table, synchronous. Waiting logic similar to that of {@code admin.rb#alter_status}.
    */
+  @SuppressWarnings("serial")
   public static void modifyTableSync(Admin admin, HTableDescriptor desc)
       throws IOException, InterruptedException {
     admin.modifyTable(desc.getTableName(), desc);
@@ -2831,6 +2833,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           online.add(region.getRegionNameAsString());
         }
       } catch (RegionServerStoppedException e) {
+        // That's fine.
+      } catch (ServerNotRunningYetException e) {
         // That's fine.
       }
     }

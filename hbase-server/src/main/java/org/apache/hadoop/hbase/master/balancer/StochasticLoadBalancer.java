@@ -157,7 +157,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     regionReplicaRackCostFunction = new RegionReplicaRackCostFunction(conf);
 
     costFunctions = new CostFunction[]{
-      new RegionCountSkewCostFunction(conf, backupMasterWeight),
+      new RegionCountSkewCostFunction(conf),
       new MoveCostFunction(conf),
       localityCost,
       new TableSkewCostFunction(conf),
@@ -211,12 +211,11 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     if (plans != null) {
       return plans;
     }
-    filterExcludedServers(clusterState);
     //The clusterState that is given to this method contains the state
     //of all the regions in the table(s) (that's true today)
     // Keep track of servers to iterate through them.
     Cluster cluster = new Cluster(masterServerName,
-      clusterState, loads, regionFinder, getBackupMasters(), tablesOnMaster, rackManager);
+      clusterState, loads, regionFinder, tablesOnMaster, rackManager);
     if (!needsBalance(cluster)) {
       return null;
     }
@@ -329,7 +328,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     loads = new HashMap<String, Deque<RegionLoad>>();
 
     for (ServerName sn : clusterStatus.getServers()) {
-      if (excludedServers.contains(sn)) continue;
       ServerLoad sl = clusterStatus.getLoad(sn);
       if (sl == null) {
         continue;
@@ -438,7 +436,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     }
 
     protected int pickOtherRandomServer(Cluster cluster, int serverIndex) {
-      if (cluster.numServers <= 2) {
+      if (cluster.numServers < 2) {
+        return -1;
+      }
+      if (cluster.activeMasterIndex != -1 && cluster.numServers == 2) {
         return -1;
       }
       while (true) {
@@ -528,10 +529,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     private int pickLeastLoadedServer(final Cluster cluster, int thisServer) {
       Integer[] servers = cluster.serverIndicesSortedByRegionCount;
 
-      if (servers.length <= 2) {
-        return -1;
-      }
-
       int index = 0;
       while (servers[index] == null || servers[index] == thisServer
           || cluster.isActiveMaster(index)) {
@@ -583,6 +580,10 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
       // Pick the server with the highest locality
       int otherServer = pickHighestLocalityServer(cluster, thisServer, thisRegion);
+
+      if (otherServer == -1) {
+        return Cluster.NullAction;
+      }
 
       // pick an region on the other server to potentially swap
       int otherRegion = this.pickRandomRegion(cluster, otherServer, 0.5f);
@@ -800,7 +801,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       double total = getSum(stats);
 
       double count = stats.length;
-      if (stats.length > 1 && cluster.masterServerName != null) {
+      if (stats.length > 1 && cluster.activeMasterIndex != -1) {
         count--; // Exclude the active master
       }
       double mean = total/count;
@@ -901,14 +902,12 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         "hbase.master.balancer.stochastic.regionCountCost";
     private static final float DEFAULT_REGION_COUNT_SKEW_COST = 500;
 
-    private double backupMasterWeight;
     private double[] stats = null;
 
-    RegionCountSkewCostFunction(Configuration conf, double backupMasterWeight) {
+    RegionCountSkewCostFunction(Configuration conf) {
       super(conf);
       // Load multiplier should be the greatest as it is the most general way to balance data.
       this.setMultiplier(conf.getFloat(REGION_COUNT_SKEW_COST_KEY, DEFAULT_REGION_COUNT_SKEW_COST));
-      this.backupMasterWeight = backupMasterWeight;
     }
 
     @Override
@@ -919,11 +918,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
       for (int i =0; i < cluster.numServers; i++) {
         stats[i] = cluster.regionsPerServer[i].length;
-        // Use some weight on regions assigned to active/backup masters,
-        // so that they won't carry as many regions as normal regionservers.
-        if (cluster.isBackupMaster(i)) {
-          stats[i] *= backupMasterWeight;
-        }
       }
       return costFromArray(stats);
     }

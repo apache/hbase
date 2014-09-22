@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
@@ -1134,7 +1133,7 @@ public class TestMasterFailover {
     assertEquals(2, masterThreads.size());
     int rsCount = masterThreads.get(activeIndex).getMaster().getClusterStatus().getServersSize();
     LOG.info("Active master " + active.getServerName() + " managing " + rsCount +  " regions servers");
-    assertEquals(5, rsCount);
+    assertEquals(3, rsCount);
 
     // Check that ClusterStatus reports the correct active and backup masters
     assertNotNull(active);
@@ -1167,7 +1166,7 @@ public class TestMasterFailover {
     int rss = status.getServersSize();
     LOG.info("Active master " + mastername.getServerName() + " managing " +
       rss +  " region servers");
-    assertEquals(4, rss);
+    assertEquals(3, rss);
 
     // Stop the cluster
     TEST_UTIL.shutdownMiniCluster();
@@ -1177,6 +1176,7 @@ public class TestMasterFailover {
    * Test region in pending_open/close when master failover
    */
   @Test (timeout=180000)
+  @SuppressWarnings("deprecation")
   public void testPendingOpenOrCloseWhenMasterFailover() throws Exception {
     final int NUM_MASTERS = 1;
     final int NUM_RS = 1;
