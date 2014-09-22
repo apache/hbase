@@ -28,9 +28,8 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
-import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.util.BuilderStyleTest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -67,7 +66,7 @@ public class TestHTableDescriptor {
   public void testGetSetRemoveCP() throws Exception {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("table"));
     // simple CP
-    String className = BaseRegionObserver.class.getName();
+    String className = "org.apache.hadoop.hbase.coprocessor.BaseRegionObserver";
     // add and check that it is present
     desc.addCoprocessor(className);
     assertTrue(desc.hasCoprocessor(className));
@@ -84,8 +83,8 @@ public class TestHTableDescriptor {
   public void testSetListRemoveCP() throws Exception {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("testGetSetRemoveCP"));
     // simple CP
-    String className1 = BaseRegionObserver.class.getName();
-    String className2 = SampleRegionWALObserver.class.getName();
+    String className1 = "org.apache.hadoop.hbase.coprocessor.BaseRegionObserver";
+    String className2 = "org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver";
     // Check that any coprocessor is present.
     assertTrue(desc.getCoprocessors().size() == 0);
 
@@ -206,5 +205,22 @@ public class TestHTableDescriptor {
     assertEquals(value, desc.getConfigurationValue(key));
     desc.removeConfiguration(key);
     assertEquals(null, desc.getConfigurationValue(key));
+  }
+
+  @Test
+  public void testClassMethodsAreBuilderStyle() {
+    /* HTableDescriptor should have a builder style setup where setXXX/addXXX methods
+     * can be chainable together:
+     * . For example:
+     * HTableDescriptor htd
+     *   = new HTableDescriptor()
+     *     .setFoo(foo)
+     *     .setBar(bar)
+     *     .setBuz(buz)
+     *
+     * This test ensures that all methods starting with "set" returns the declaring object
+     */
+
+    BuilderStyleTest.assertClassesAreBuilderStyle(HTableDescriptor.class);
   }
 }

@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -31,7 +29,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -63,8 +60,8 @@ import org.apache.hadoop.hbase.filter.SkipFilter;
 import org.apache.hadoop.hbase.filter.TimestampsFilter;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.util.BuilderStyleTest;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.experimental.categories.Category;
 
@@ -432,7 +429,7 @@ public class TestOperation {
      *     .setBar(bar)
      *     .setBuz(buz)
      *
-     * This test ensures that all methods starting with "set" returns an Operation object
+     * This test ensures that all methods starting with "set" returns the declaring object
      */
 
     // TODO: We should ensure all subclasses of Operation is checked.
@@ -448,22 +445,7 @@ public class TestOperation {
         Get.class,
         Scan.class};
 
-    for (Class clazz : classes) {
-      System.out.println("Checking " + clazz);
-      Method[] methods = clazz.getDeclaredMethods();
-      for (Method method : methods) {
-        Class<?> ret = method.getReturnType();
-        if (method.getName().startsWith("set") || method.getName().startsWith("add")) {
-          System.out.println("  " + clazz.getSimpleName() + "." + method.getName() + "() : "
-            + ret.getSimpleName());
-          String errorMsg = "All setXXX() methods in " + clazz.getSimpleName() + " should return a "
-              + clazz.getSimpleName() + " object in builder style. Offending method:"
-              + method.getName();
-          assertTrue(errorMsg, Operation.class.isAssignableFrom(ret)
-            || Attributes.class.isAssignableFrom(ret)); // for setAttributes()
-        }
-      }
-    }
+    BuilderStyleTest.assertClassesAreBuilderStyle(classes);
   }
 
 }

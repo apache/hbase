@@ -61,9 +61,10 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   /**
    * Does NOT add a column family. This object is immutable
    * @param family HColumnDescriptor of familyto add.
+   * @return
    */
   @Override
-  public void addFamily(final HColumnDescriptor family) {
+  public HTableDescriptor addFamily(final HColumnDescriptor family) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
@@ -78,42 +79,47 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   }
 
   /**
+   * @return
    * @see org.apache.hadoop.hbase.HTableDescriptor#setReadOnly(boolean)
    */
   @Override
-  public void setReadOnly(boolean readOnly) {
+  public HTableDescriptor setReadOnly(boolean readOnly) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
   /**
+   * @return
    * @see org.apache.hadoop.hbase.HTableDescriptor#setValue(byte[], byte[])
    */
   @Override
-  public void setValue(byte[] key, byte[] value) {
+  public HTableDescriptor setValue(byte[] key, byte[] value) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
   /**
+   * @return
    * @see org.apache.hadoop.hbase.HTableDescriptor#setValue(java.lang.String, java.lang.String)
    */
   @Override
-  public void setValue(String key, String value) {
+  public HTableDescriptor setValue(String key, String value) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
   /**
+   * @return
    * @see org.apache.hadoop.hbase.HTableDescriptor#setMaxFileSize(long)
    */
   @Override
-  public void setMaxFileSize(long maxFileSize) {
+  public HTableDescriptor setMaxFileSize(long maxFileSize) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
   /**
+   * @return
    * @see org.apache.hadoop.hbase.HTableDescriptor#setMemStoreFlushSize(long)
    */
   @Override
-  public void setMemStoreFlushSize(long memstoreFlushSize) {
+  public HTableDescriptor setMemStoreFlushSize(long memstoreFlushSize) {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
