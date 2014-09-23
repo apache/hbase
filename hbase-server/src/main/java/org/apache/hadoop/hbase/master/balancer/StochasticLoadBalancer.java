@@ -1174,11 +1174,8 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       }
       // max cost is the case where every region replica is hosted together regardless of host
       int[] primariesOfRegions = new int[cluster.numRegions];
-      for (int i = 0; i < cluster.regions.length; i++) {
-        // assume all regions are hosted by only one server
-        int primaryIndex = cluster.regionIndexToPrimaryIndex[i];
-        primariesOfRegions[i] = primaryIndex;
-      }
+      System.arraycopy(cluster.regionIndexToPrimaryIndex, 0, primariesOfRegions, 0,
+          cluster.regions.length);
 
       Arrays.sort(primariesOfRegions);
 

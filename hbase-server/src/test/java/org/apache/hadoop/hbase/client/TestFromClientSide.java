@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -4073,9 +4074,7 @@ public class TestFromClientSide {
     Admin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     HTableDescriptor[] ts = admin.listTables();
     HashSet<HTableDescriptor> result = new HashSet<HTableDescriptor>(ts.length);
-    for (int i = 0; i < ts.length; i++) {
-      result.add(ts[i]);
-    }
+    Collections.addAll(result, ts);
     int size = result.size();
     assertTrue(size >= tables.length);
     for (int i = 0; i < tables.length && i < size; i++) {

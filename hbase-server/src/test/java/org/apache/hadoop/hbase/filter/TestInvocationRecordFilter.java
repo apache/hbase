@@ -87,33 +87,33 @@ public class TestInvocationRecordFilter {
     List<Integer> expectedQualifiers = new ArrayList<Integer>();
 
     selectQualifiers.add(-1);
-    verifyInvocationResults(selectQualifiers.toArray(new Integer[0]),
-        expectedQualifiers.toArray(new Integer[0]));
+    verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
+        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
 
     selectQualifiers.clear();
 
     selectQualifiers.add(0);
     expectedQualifiers.add(0);
-    verifyInvocationResults(selectQualifiers.toArray(new Integer[0]),
-        expectedQualifiers.toArray(new Integer[0]));
+    verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
+        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
 
     selectQualifiers.add(3);
-    verifyInvocationResults(selectQualifiers.toArray(new Integer[0]),
-        expectedQualifiers.toArray(new Integer[0]));
+    verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
+        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
 
     selectQualifiers.add(4);
     expectedQualifiers.add(4);
-    verifyInvocationResults(selectQualifiers.toArray(new Integer[0]),
-        expectedQualifiers.toArray(new Integer[0]));
+    verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
+        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
 
     selectQualifiers.add(5);
-    verifyInvocationResults(selectQualifiers.toArray(new Integer[0]),
-        expectedQualifiers.toArray(new Integer[0]));
+    verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
+        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
 
     selectQualifiers.add(8);
     expectedQualifiers.add(8);
-    verifyInvocationResults(selectQualifiers.toArray(new Integer[0]),
-        expectedQualifiers.toArray(new Integer[0]));
+    verifyInvocationResults(selectQualifiers.toArray(new Integer[selectQualifiers.size()]),
+        expectedQualifiers.toArray(new Integer[expectedQualifiers.size()]));
   }
 
   public void verifyInvocationResults(Integer[] selectQualifiers,

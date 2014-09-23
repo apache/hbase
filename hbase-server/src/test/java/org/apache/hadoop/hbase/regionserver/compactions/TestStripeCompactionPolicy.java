@@ -655,9 +655,7 @@ public class TestStripeCompactionPolicy {
     byte[][] keys = new byte[][] { KEY_A, KEY_B, KEY_C, KEY_D, KEY_E };
     assert stripeCount <= keys.length + 1;
     List<byte[]> boundaries = new ArrayList<byte[]>();
-    for (int i = 0; i < stripeCount - 1; ++i) {
-      boundaries.add(keys[i]);
-    }
+    boundaries.addAll(Arrays.asList(keys).subList(0, stripeCount - 1));
     return boundaries;
   }
 

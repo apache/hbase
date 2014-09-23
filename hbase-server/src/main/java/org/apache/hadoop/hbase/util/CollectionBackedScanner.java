@@ -68,9 +68,7 @@ public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
     this.comparator = comparator;
 
     List<KeyValue> tmp = new ArrayList<KeyValue>(array.length);
-    for( int i = 0; i < array.length ; ++i) {
-      tmp.add(array[i]);
-    }
+    Collections.addAll(tmp, array);
     Collections.sort(tmp, comparator);
     data = tmp;
     init();

@@ -757,9 +757,7 @@ public class LoadTestTool extends AbstractHBaseTool {
       newArgs = new String[cmdLineArgs.length + 2];
       newArgs[0] = "-" + LoadTestTool.OPT_TABLE_NAME;
       newArgs[1] = LoadTestTool.DEFAULT_TABLE_NAME;
-      for (int i = 0; i < cmdLineArgs.length; i++) {
-        newArgs[i + 2] = cmdLineArgs[i];
-      }
+      System.arraycopy(cmdLineArgs, 0, newArgs, 2, cmdLineArgs.length);
     } else {
       newArgs = cmdLineArgs;
     }

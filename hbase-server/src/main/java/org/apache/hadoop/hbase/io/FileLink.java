@@ -413,9 +413,7 @@ public class FileLink {
     assert this.locations == null : "Link locations already set";
     this.locations = new Path[1 + alternativePaths.length];
     this.locations[0] = originPath;
-    for (int i = 0; i < alternativePaths.length; i++) {
-      this.locations[i + 1] = alternativePaths[i];
-    }
+    System.arraycopy(alternativePaths, 0, this.locations, 1, alternativePaths.length);
   }
 
   /**
