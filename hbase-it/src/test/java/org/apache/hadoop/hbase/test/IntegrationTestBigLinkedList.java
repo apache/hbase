@@ -399,8 +399,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
       private static <T> void circularLeftShift(T[] first) {
         T ez = first[0];
-        for (int i = 0; i < first.length - 1; i++)
-          first[i] = first[i + 1];
+        System.arraycopy(first, 1, first, 0, first.length - 1);
         first[first.length - 1] = ez;
       }
 

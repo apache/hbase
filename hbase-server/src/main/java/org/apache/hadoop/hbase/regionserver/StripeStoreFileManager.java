@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -913,9 +914,7 @@ public class StripeStoreFileManager
     if (this.state.stripeFiles.isEmpty()) return new ArrayList<byte[]>();
     ArrayList<byte[]> result = new ArrayList<byte[]>(this.state.stripeEndRows.length + 2);
     result.add(OPEN_KEY);
-    for (int i = 0; i < this.state.stripeEndRows.length; ++i) {
-      result.add(this.state.stripeEndRows[i]);
-    }
+    Collections.addAll(result, this.state.stripeEndRows);
     result.add(OPEN_KEY);
     return result;
   }

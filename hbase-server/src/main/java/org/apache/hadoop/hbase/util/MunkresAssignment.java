@@ -129,9 +129,7 @@ public class MunkresAssignment {
       }
     } else {
       for (int r = 0; r < rows; r++) {
-        for (int c = 0; c < cols; c++) {
-          cost[r][c] = costMatrix[r][c];
-        }
+        System.arraycopy(costMatrix[r], 0, cost[r], 0, cols);
       }
     }
 

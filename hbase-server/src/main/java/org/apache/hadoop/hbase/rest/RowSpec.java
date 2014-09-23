@@ -23,6 +23,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.TreeSet;
 
@@ -270,9 +271,7 @@ public class RowSpec {
     this.row = startRow;
     this.endRow = endRow;
     if (columns != null) {
-      for (byte[] col: columns) {
-        this.columns.add(col);
-      }
+      Collections.addAll(this.columns, columns);
     }
     this.startTime = startTime;
     this.endTime = endTime;

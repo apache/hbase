@@ -253,8 +253,7 @@ public class SplitLogManager extends ZooKeeperListener {
       if (logfiles == null || logfiles.length == 0) {
         LOG.info(hLogDir + " is empty dir, no logs to split");
       } else {
-        for (FileStatus status : logfiles)
-          fileStatus.add(status);
+        Collections.addAll(fileStatus, logfiles);
       }
     }
     FileStatus[] a = new FileStatus[fileStatus.size()];

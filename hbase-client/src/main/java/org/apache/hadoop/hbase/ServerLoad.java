@@ -235,7 +235,7 @@ public class ServerLoad {
     for (Coprocessor coprocessor : obtainServerLoadPB().getCoprocessorsList()) {
       coprocessSet.add(coprocessor.getName());
     }
-    return coprocessSet.toArray(new String[0]);
+    return coprocessSet.toArray(new String[coprocessSet.size()]);
   }
 
   /**

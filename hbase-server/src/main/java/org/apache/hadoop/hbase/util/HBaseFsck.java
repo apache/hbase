@@ -1209,7 +1209,7 @@ public class HBaseFsck extends Configured {
         "You may need to restore the previously sidelined hbase:meta");
       return false;
     }
-    meta.batchMutate(puts.toArray(new Put[0]));
+    meta.batchMutate(puts.toArray(new Put[puts.size()]));
     HRegion.closeHRegion(meta);
     LOG.info("Success! hbase:meta table rebuilt.");
     LOG.info("Old hbase:meta is moved into " + backupDir);

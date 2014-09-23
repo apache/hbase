@@ -1944,9 +1944,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     byte [] endKey = Bytes.toBytes("zzzzz");
     byte [][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
     byte [][] regionStartKeys = new byte[splitKeys.length+1][];
-    for (int i=0;i<splitKeys.length;i++) {
-      regionStartKeys[i+1] = splitKeys[i];
-    }
+    System.arraycopy(splitKeys, 0, regionStartKeys, 1, splitKeys.length);
     regionStartKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
     return createMultiRegions(c, table, family, regionStartKeys);
   }
@@ -2887,9 +2885,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     assertTrue(numRegions>3);
     byte [][] tmpSplitKeys = Bytes.split(startKey, endKey, numRegions - 3);
     byte [][] result = new byte[tmpSplitKeys.length+1][];
-    for (int i=0;i<tmpSplitKeys.length;i++) {
-      result[i+1] = tmpSplitKeys[i];
-    }
+    System.arraycopy(tmpSplitKeys, 0, result, 1, tmpSplitKeys.length);
     result[0] = HConstants.EMPTY_BYTE_ARRAY;
     return result;
   }
@@ -3387,6 +3383,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         // this algo is not available
       }
     }
-    return supportedAlgos.toArray(new Compression.Algorithm[0]);
+    return supportedAlgos.toArray(new Algorithm[supportedAlgos.size()]);
   }
 }
