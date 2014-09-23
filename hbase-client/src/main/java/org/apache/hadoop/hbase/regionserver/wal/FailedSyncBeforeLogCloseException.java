@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Thrown when we fail close of the write-ahead-log file.

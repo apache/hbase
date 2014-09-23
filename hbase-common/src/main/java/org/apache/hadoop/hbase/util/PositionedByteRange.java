@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.util;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * <p>

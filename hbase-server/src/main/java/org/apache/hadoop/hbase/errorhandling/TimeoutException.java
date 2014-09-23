@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.errorhandling;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Exception for timeout of a task.
