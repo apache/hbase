@@ -28,7 +28,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
@@ -220,25 +219,6 @@ final public class FilterList extends Filter {
     return this.transformedCell;
   }
 
-  /**
-   * WARNING: please to not override this method.  Instead override {@link #transformCell(Cell)}.
-   *
-   * When removing this, its body should be placed in transformCell.
-   *
-   * This is for transition from 0.94 -> 0.96
-   */
-  @Deprecated
-  @Override
-  public KeyValue transform(KeyValue v) throws IOException {
-    // transform() is expected to follow an inclusive filterKeyValue() immediately:
-    if (!v.equals(this.referenceCell)) {
-      throw new IllegalStateException(
-          "Reference Cell: " + this.referenceCell + " does not match: " + v);
-     }
-    return KeyValueUtil.ensureKeyValue(this.transformedCell);
-  }
-
-  
   @Override
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="SF_SWITCH_FALLTHROUGH",
     justification="Intentional")
@@ -397,12 +377,6 @@ final public class FilterList extends Filter {
     return this.getOperator().equals(o.getOperator()) &&
       ((this.getFilters() == o.getFilters())
       || this.getFilters().equals(o.getFilters()));
-  }
-
-  @Override
-  @Deprecated
-  public KeyValue getNextKeyHint(KeyValue currentKV) throws IOException {
-    return KeyValueUtil.ensureKeyValue(getNextCellHint((Cell)currentKV));
   }
 
   @Override
