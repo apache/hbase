@@ -46,7 +46,7 @@ public class KeyValueUtil {
         cell.getTagsLengthUnsigned()));
   }
 
-  protected static int keyLength(final Cell cell) {
+  public static int keyLength(final Cell cell) {
     return (int)KeyValue.getKeyDataStructureSize(cell.getRowLength(), cell.getFamilyLength(),
       cell.getQualifierLength());
   }
