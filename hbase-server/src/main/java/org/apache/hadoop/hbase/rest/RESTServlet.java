@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.ConnectionCache;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.log4j.Logger;
 
 /**
@@ -44,6 +45,7 @@ public class RESTServlet implements Constants {
 
   static final String CLEANUP_INTERVAL = "hbase.rest.connection.cleanup-interval";
   static final String MAX_IDLETIME = "hbase.rest.connection.max-idletime";
+  static final String HBASE_REST_SUPPORT_PROXYUSER = "hbase.rest.support.proxyuser";
 
   UserGroupInformation getRealUser() {
     return realUser;
@@ -91,6 +93,9 @@ public class RESTServlet implements Constants {
     int maxIdleTime = conf.getInt(MAX_IDLETIME, 10 * 60 * 1000);
     connectionCache = new ConnectionCache(
       conf, userProvider, cleanInterval, maxIdleTime);
+    if (supportsProxyuser()) {
+      ProxyUsers.refreshSuperUserGroupsConfiguration(conf);
+    }
   }
 
   HBaseAdmin getAdmin() throws IOException {
@@ -123,6 +128,10 @@ public class RESTServlet implements Constants {
 
   void setEffectiveUser(String effectiveUser) {
     connectionCache.setEffectiveUser(effectiveUser);
+  }
+
+  boolean supportsProxyuser() {
+    return conf.getBoolean(HBASE_REST_SUPPORT_PROXYUSER, false);
   }
 
   private void registerCustomFilter(Configuration conf) {

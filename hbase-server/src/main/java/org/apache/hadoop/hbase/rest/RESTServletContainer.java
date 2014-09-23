@@ -53,7 +53,7 @@ public class RESTServletContainer extends ServletContainer {
     RESTServlet servlet = RESTServlet.getInstance();
     if (doAsUserFromQuery != null) {
       Configuration conf = servlet.getConfiguration();
-      if (!conf.getBoolean("hbase.rest.support.proxyuser", false)) {
+      if (!servlet.supportsProxyuser()) {
         throw new ServletException("Support for proxyuser is not configured");
       }
       UserGroupInformation ugi = servlet.getRealUser();
