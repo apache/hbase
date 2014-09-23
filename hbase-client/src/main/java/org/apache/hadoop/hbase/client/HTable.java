@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
@@ -1449,9 +1448,7 @@ public class HTable implements HTableInterface, RegionLocator {
     if (maxKeyValueSize > 0) {
       for (List<Cell> list : put.getFamilyCellMap().values()) {
         for (Cell cell : list) {
-          // KeyValue v1 expectation.  Cast for now.
-          KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-          if (kv.getLength() > maxKeyValueSize) {
+          if (KeyValueUtil.length(cell) > maxKeyValueSize) {
             throw new IllegalArgumentException("KeyValue size too large");
           }
         }

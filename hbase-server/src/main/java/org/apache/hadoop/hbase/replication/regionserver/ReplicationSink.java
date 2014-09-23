@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HConnection;
@@ -149,9 +148,9 @@ public class ReplicationSink {
             addToHashMultiMap(rowMap, table, clusterIds, m);
           }
           if (CellUtil.isDelete(cell)) {
-            ((Delete)m).addDeleteMarker(KeyValueUtil.ensureKeyValue(cell));
+            ((Delete)m).addDeleteMarker(cell);
           } else {
-            ((Put)m).add(KeyValueUtil.ensureKeyValue(cell));
+            ((Put)m).add(cell);
           }
           previousCell = cell;
         }

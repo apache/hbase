@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -84,9 +85,8 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
     Result result = Result.create(values);
     if (this.scanMetrics != null) {
       long resultSize = 0;
-      for (Cell kv : values) {
-        // TODO add getLength to Cell/use CellUtil#estimatedSizeOf
-        resultSize += KeyValueUtil.ensureKeyValue(kv).getLength();
+      for (Cell cell : values) {
+        resultSize += CellUtil.estimatedLengthOf(cell);
       }
       this.scanMetrics.countOfBytesInResults.addAndGet(resultSize);
     }

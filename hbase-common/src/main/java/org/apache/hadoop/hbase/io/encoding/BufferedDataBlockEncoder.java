@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SettableSequenceId;
@@ -475,34 +476,31 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     @Override
     @Deprecated
     public byte[] getValue() {
-      throw new UnsupportedOperationException("getValue() not supported");
+      return CellUtil.cloneValue(this);
     }
 
     @Override
     @Deprecated
     public byte[] getFamily() {
-      throw new UnsupportedOperationException("getFamily() not supported");
+      return CellUtil.cloneFamily(this);
     }
 
     @Override
     @Deprecated
     public byte[] getQualifier() {
-      throw new UnsupportedOperationException("getQualifier() not supported");
+      return CellUtil.cloneQualifier(this);
     }
 
     @Override
     @Deprecated
     public byte[] getRow() {
-      throw new UnsupportedOperationException("getRow() not supported");
+      return CellUtil.cloneRow(this);
     }
 
     @Override
     public String toString() {
-      KeyValue kv = KeyValueUtil.copyToNewKeyValue(this);
-      if (kv == null) {
-        return "null";
-      }
-      return kv.toString();
+      return KeyValue.keyToString(this.keyOnlyBuffer, 0, KeyValueUtil.keyLength(this)) + "/vlen="
+          + getValueLength() + "/seqid=" + seqId;
     }
 
     @Override

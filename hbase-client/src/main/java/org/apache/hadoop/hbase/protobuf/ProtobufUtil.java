@@ -653,7 +653,7 @@ public final class ProtobufUtil {
           delete =
             new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), timestamp);
         }
-        delete.addDeleteMarker(KeyValueUtil.ensureKeyValue(cell));
+        delete.addDeleteMarker(cell);
       }
     } else {
       delete = new Delete(row, timestamp);
@@ -717,7 +717,7 @@ public final class ProtobufUtil {
         if (append == null) {
           append = new Append(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
         }
-        append.add(KeyValueUtil.ensureKeyValue(cell));
+        append.add(cell);
       }
     } else {
       append = new Append(row);
@@ -796,7 +796,7 @@ public final class ProtobufUtil {
         if (increment == null) {
           increment = new Increment(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
         }
-        increment.add(KeyValueUtil.ensureKeyValue(cell));
+        increment.add(cell);
       }
     } else {
       increment = new Increment(row);
@@ -1106,14 +1106,13 @@ public final class ProtobufUtil {
       List<Cell> values = family.getValue();
       if (values != null && values.size() > 0) {
         for (Cell cell: values) {
-          KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
           valueBuilder.setQualifier(ByteStringer.wrap(
-              kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
+              cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()));
           valueBuilder.setValue(ByteStringer.wrap(
-              kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
-          if (kv.getTagsLength() > 0) {
-            valueBuilder.setTags(ByteStringer.wrap(kv.getTagsArray(),
-                kv.getTagsOffset(), kv.getTagsLength()));
+              cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+          if (cell.getTagsLength() > 0) {
+            valueBuilder.setTags(ByteStringer.wrap(cell.getTagsArray(),
+                cell.getTagsOffset(), cell.getTagsLength()));
           }
           columnBuilder.addQualifierValue(valueBuilder.build());
         }
@@ -1168,18 +1167,17 @@ public final class ProtobufUtil {
       columnBuilder.clear();
       columnBuilder.setFamily(ByteStringer.wrap(family.getKey()));
       for (Cell cell: family.getValue()) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         valueBuilder.setQualifier(ByteStringer.wrap(
-            kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
+            cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()));
         valueBuilder.setValue(ByteStringer.wrap(
-            kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
-        valueBuilder.setTimestamp(kv.getTimestamp());
+            cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
+        valueBuilder.setTimestamp(cell.getTimestamp());
         if(cell.getTagsLength() > 0) {
-          valueBuilder.setTags(ByteStringer.wrap(kv.getTagsArray(), kv.getTagsOffset(),
-              kv.getTagsLength()));
+          valueBuilder.setTags(ByteStringer.wrap(cell.getTagsArray(), cell.getTagsOffset(),
+              cell.getTagsLength()));
         }
-        if (type == MutationType.DELETE || (type == MutationType.PUT && CellUtil.isDelete(kv))) {
-          KeyValue.Type keyValueType = KeyValue.Type.codeToType(kv.getType());
+        if (type == MutationType.DELETE || (type == MutationType.PUT && CellUtil.isDelete(cell))) {
+          KeyValue.Type keyValueType = KeyValue.Type.codeToType(cell.getTypeByte());
           valueBuilder.setDeleteType(toDeleteType(keyValueType));
         }
         columnBuilder.addQualifierValue(valueBuilder.build());

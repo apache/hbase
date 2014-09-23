@@ -28,11 +28,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
@@ -293,9 +293,8 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     }
     long resultSize = 0;
     for (Result rr : rrs) {
-      for (Cell kv : rr.rawCells()) {
-        // TODO add getLength to Cell/use CellUtil#estimatedSizeOf
-        resultSize += KeyValueUtil.ensureKeyValue(kv).getLength();
+      for (Cell cell : rr.rawCells()) {
+        resultSize += CellUtil.estimatedLengthOf(cell);
       }
     }
     this.scanMetrics.countOfBytesInResults.addAndGet(resultSize);
