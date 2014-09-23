@@ -2181,9 +2181,12 @@ public class HRegion implements HeapSize { // , Writable{
 
       byte[] family = e.getKey();
       List<Cell> cells = e.getValue();
-      Map<byte[], Integer> kvCount = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+      assert cells instanceof RandomAccess;
 
-      for (Cell cell: cells) {
+      Map<byte[], Integer> kvCount = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+      int listSize = cells.size();
+      for (int i=0; i < listSize; i++) {
+        Cell cell = cells.get(i);
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         //  Check if time is LATEST, change to time of most recent addition if so
         //  This is expensive.
@@ -3005,7 +3008,10 @@ public class HRegion implements HeapSize { // , Writable{
   void updateKVTimestamps(final Iterable<List<Cell>> keyLists, final byte[] now) {
     for (List<Cell> cells: keyLists) {
       if (cells == null) continue;
-      for (Cell cell : cells) {
+      assert cells instanceof RandomAccess;
+      int listSize = cells.size();
+      for (int i=0; i < listSize; i++) {
+        Cell cell = cells.get(i);
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         kv.updateLatestStamp(now);
       }
@@ -3166,7 +3172,10 @@ public class HRegion implements HeapSize { // , Writable{
     }
     long maxTs = now + timestampSlop;
     for (List<Cell> kvs : familyMap.values()) {
-      for (Cell cell : kvs) {
+      assert kvs instanceof RandomAccess;
+      int listSize  = kvs.size();
+      for (int i=0; i < listSize; i++) {
+        Cell cell = kvs.get(i);
         // see if the user-side TS is out of range. latest = server-side
         long ts = cell.getTimestamp();
         if (ts != HConstants.LATEST_TIMESTAMP && ts > maxTs) {
@@ -3186,7 +3195,10 @@ public class HRegion implements HeapSize { // , Writable{
   private void addFamilyMapToWALEdit(Map<byte[], List<Cell>> familyMap,
       WALEdit walEdit) {
     for (List<Cell> edits : familyMap.values()) {
-      for (Cell cell : edits) {
+      assert edits instanceof RandomAccess;
+      int listSize = edits.size();
+      for (int i=0; i < listSize; i++) {
+        Cell cell = edits.get(i);
         walEdit.add(cell);
       }
     }
@@ -6060,7 +6072,10 @@ public class HRegion implements HeapSize { // , Writable{
 
     long mutationSize = 0;
     for (List<Cell> cells: familyMap.values()) {
-      for (Cell cell : cells) {
+      assert cells instanceof RandomAccess;
+      int listSize = cells.size();
+      for (int i=0; i < listSize; i++) {
+        Cell cell = cells.get(i);
         // TODO we need include tags length also here.
         mutationSize += KeyValueUtil.keyLength(cell) + cell.getValueLength();
       }
