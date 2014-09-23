@@ -338,7 +338,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         if (rLoads == null) {
           // There was nothing there
           rLoads = new ArrayDeque<RegionLoad>();
-        } else if (rLoads.size() >= 15) {
+        } else if (rLoads.size() >= numRegionLoadsToRemember) {
           rLoads.remove();
         }
         rLoads.add(entry.getValue());
