@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -68,7 +67,6 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
-import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
@@ -232,11 +230,10 @@ public class AccessController extends BaseMasterAndRegionObserver
     for (Map.Entry<byte[], List<Cell>> f : familyMap.entrySet()) {
       List<Cell> cells = f.getValue();
       for (Cell cell: cells) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        if (Bytes.equals(kv.getFamilyArray(), kv.getFamilyOffset(),
-            kv.getFamilyLength(), AccessControlLists.ACL_LIST_FAMILY, 0,
+        if (Bytes.equals(cell.getFamilyArray(), cell.getFamilyOffset(),
+            cell.getFamilyLength(), AccessControlLists.ACL_LIST_FAMILY, 0,
             AccessControlLists.ACL_LIST_FAMILY.length)) {
-          entries.add(kv.getRow());
+          entries.add(CellUtil.cloneRow(cell));
         }
       }
     }
@@ -771,15 +768,12 @@ public class AccessController extends BaseMasterAndRegionObserver
             tags.add(tagIterator.next());
           }
         }
-        // Ensure KeyValue so we can do a scatter gather copy. This is only a win if the
-        // incoming cell type is actually KeyValue.
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         newCells.add(
-          new KeyValue(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
-            kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
-            kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength(),
-            kv.getTimestamp(), KeyValue.Type.codeToType(kv.getTypeByte()),
-            kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(),
+          new KeyValue(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+            cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
+            cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(),
+            cell.getTimestamp(), KeyValue.Type.codeToType(cell.getTypeByte()),
+            cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(),
             tags));
       }
       // This is supposed to be safe, won't CME
@@ -1769,15 +1763,14 @@ public class AccessController extends BaseMasterAndRegionObserver
 
     // We need to create another KV, unfortunately, because the current new KV
     // has no space for tags
-    KeyValue newKv = KeyValueUtil.ensureKeyValue(newCell);
-    KeyValue rewriteKv = new KeyValue(newKv.getRowArray(), newKv.getRowOffset(), newKv.getRowLength(),
-      newKv.getFamilyArray(), newKv.getFamilyOffset(), newKv.getFamilyLength(),
-      newKv.getQualifierArray(), newKv.getQualifierOffset(), newKv.getQualifierLength(),
-      newKv.getTimestamp(), KeyValue.Type.codeToType(newKv.getTypeByte()),
-      newKv.getValueArray(), newKv.getValueOffset(), newKv.getValueLength(),
-      tags);
+    KeyValue rewriteKv = new KeyValue(newCell.getRowArray(), newCell.getRowOffset(),
+        newCell.getRowLength(), newCell.getFamilyArray(), newCell.getFamilyOffset(),
+        newCell.getFamilyLength(), newCell.getQualifierArray(), newCell.getQualifierOffset(),
+        newCell.getQualifierLength(), newCell.getTimestamp(), KeyValue.Type.codeToType(newCell
+            .getTypeByte()), newCell.getValueArray(), newCell.getValueOffset(),
+        newCell.getValueLength(), tags);
     // Preserve mvcc data
-    rewriteKv.setSequenceId(newKv.getMvccVersion());
+    rewriteKv.setSequenceId(newCell.getSequenceId());
     return rewriteKv;
   }
 

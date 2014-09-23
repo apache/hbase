@@ -35,11 +35,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
@@ -198,10 +198,9 @@ public class RemoteHTable implements HTableInterface {
     long ts = put.getTimeStamp();
     for (List<Cell> cells: put.getFamilyCellMap().values()) {
       for (Cell cell: cells) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        row.addCell(new CellModel(kv.getFamily(), kv.getQualifier(),
-          ts != HConstants.LATEST_TIMESTAMP ? ts : kv.getTimestamp(),
-          kv.getValue()));
+        row.addCell(new CellModel(CellUtil.cloneFamily(cell), CellUtil.cloneQualifier(cell),
+          ts != HConstants.LATEST_TIMESTAMP ? ts : cell.getTimestamp(),
+          CellUtil.cloneValue(cell)));
       }
     }
     CellSetModel model = new CellSetModel();
@@ -442,8 +441,7 @@ public class RemoteHTable implements HTableInterface {
     for (Map.Entry<byte[], List<Cell>> e: map.entrySet()) {
       RowModel row = new RowModel(e.getKey());
       for (Cell cell: e.getValue()) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        row.addCell(new CellModel(kv));
+        row.addCell(new CellModel(cell));
       }
       model.addRow(row);
     }

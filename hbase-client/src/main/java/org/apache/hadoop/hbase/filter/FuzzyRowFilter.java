@@ -119,7 +119,7 @@ public class FuzzyRowFilter extends FilterBase {
       // TODO: is there a better way than throw exception? (stop the scanner?)
       throw new IllegalStateException("No next row key that satisfies fuzzy exists when"
           + " getNextKeyHint() is invoked." + " Filter: " + this.toString() + " currentKV: "
-          + KeyValueUtil.ensureKeyValue(currentCell).toString());
+          + currentCell);
     }
 
     return KeyValueUtil.createFirstOnRow(nextRowKey);

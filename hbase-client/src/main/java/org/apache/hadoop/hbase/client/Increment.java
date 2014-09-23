@@ -28,6 +28,7 @@ import java.util.UUID;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -97,17 +98,16 @@ public class Increment extends Mutation implements Comparable<Row> {
    */
   @SuppressWarnings("unchecked")
   public Increment add(Cell cell) throws IOException{
-    KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-    byte [] family = kv.getFamily();
+    byte [] family = CellUtil.cloneFamily(cell);
     List<Cell> list = getCellList(family);
     //Checking that the row of the kv is the same as the put
     int res = Bytes.compareTo(this.row, 0, row.length,
-        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength());
+        cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
     if (res != 0) {
-      throw new WrongRowIOException("The row in " + kv.toString() +
+      throw new WrongRowIOException("The row in " + cell +
         " doesn't match the original one " +  Bytes.toStringBinary(this.row));
     }
-    list.add(kv);
+    list.add(cell);
     familyMap.put(family, list);
     return this;
   }
@@ -133,7 +133,7 @@ public class Increment extends Mutation implements Comparable<Row> {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, Bytes.toBytes(amount));
     list.add(kv);
-    familyMap.put(kv.getFamily(), list);
+    familyMap.put(CellUtil.cloneFamily(kv), list);
     return this;
   }
 
@@ -197,9 +197,8 @@ public class Increment extends Mutation implements Comparable<Row> {
     for (Map.Entry<byte [], List<Cell>> entry: map.entrySet()) {
       NavigableMap<byte [], Long> longs = new TreeMap<byte [], Long>(Bytes.BYTES_COMPARATOR);
       for (Cell cell: entry.getValue()) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        longs.put(kv.getQualifier(),
-            Bytes.toLong(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
+        longs.put(CellUtil.cloneQualifier(cell),
+            Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
       }
       results.put(entry.getKey(), longs);
     }

@@ -26,8 +26,8 @@ import java.util.UUID;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -121,14 +121,13 @@ public class Append extends Mutation {
   @SuppressWarnings("unchecked")
   public Append add(final Cell cell) {
     // Presume it is KeyValue for now.
-    KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-    byte [] family = kv.getFamily();
+    byte [] family = CellUtil.cloneFamily(cell);
     List<Cell> list = this.familyMap.get(family);
     if (list == null) {
       list  = new ArrayList<Cell>();
     }
     // find where the new entry should be placed in the List
-    list.add(kv);
+    list.add(cell);
     this.familyMap.put(family, list);
     return this;
   }

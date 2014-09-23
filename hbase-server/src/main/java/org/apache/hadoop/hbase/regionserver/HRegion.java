@@ -145,10 +145,8 @@ import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.zookeeper.KeeperException;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -3102,7 +3100,7 @@ public class HRegion implements HeapSize { // , Writable{
         CellUtil.setSequenceId(cell, mvccNum);
         Pair<Long, Cell> ret = store.add(cell);
         size += ret.getFirst();
-        memstoreCells.add(KeyValueUtil.ensureKeyValue(ret.getSecond()));
+        memstoreCells.add(ret.getSecond());
       }
     }
 
@@ -3118,7 +3116,7 @@ public class HRegion implements HeapSize { // , Writable{
     int kvsRolledback = 0;
 
     for (Cell cell : memstoreCells) {
-      byte[] family = cell.getFamily();
+      byte[] family = CellUtil.cloneFamily(cell);
       Store store = getStore(family);
       store.rollback(cell);
       kvsRolledback++;
@@ -3170,8 +3168,8 @@ public class HRegion implements HeapSize { // , Writable{
     for (List<Cell> kvs : familyMap.values()) {
       for (Cell cell : kvs) {
         // see if the user-side TS is out of range. latest = server-side
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        if (!kv.isLatestTimestamp() && kv.getTimestamp() > maxTs) {
+        long ts = cell.getTimestamp();
+        if (ts != HConstants.LATEST_TIMESTAMP && ts > maxTs) {
           throw new FailedSanityCheckException("Timestamp for KV out of range "
               + cell + " (too.new=" + timestampSlop + ")");
         }
@@ -4935,8 +4933,8 @@ public class HRegion implements HeapSize { // , Writable{
     // do after lock
     if (this.metricsRegion != null) {
       long totalSize = 0l;
-      for (Cell kv : results) {
-        totalSize += KeyValueUtil.ensureKeyValue(kv).getLength();
+      for (Cell cell : results) {
+        totalSize += CellUtil.estimatedLengthOf(cell);
       }
       this.metricsRegion.updateGet(totalSize);
     }
@@ -5123,8 +5121,8 @@ public class HRegion implements HeapSize { // , Writable{
               processor.getRowsToLock().iterator().next()) + "...");
           for (Mutation m : mutations) {
             for (CellScanner cellScanner = m.cellScanner(); cellScanner.advance();) {
-              KeyValue kv = KeyValueUtil.ensureKeyValue(cellScanner.current());
-              getStore(kv).rollback(kv);
+              Cell cell = cellScanner.current();
+              getStore(cell).rollback(cell);
             }
           }
         }
@@ -5283,60 +5281,61 @@ public class HRegion implements HeapSize { // , Writable{
             // Would be nice if KeyValue had scatter/gather logic
             int idx = 0;
             for (Cell cell : family.getValue()) {
-              KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-              KeyValue newKV;
-              KeyValue oldKv = null;
+              Cell newCell;
+              Cell oldCell = null;
               if (idx < results.size()
-                  && CellUtil.matchingQualifier(results.get(idx),kv)) {
-                oldKv = KeyValueUtil.ensureKeyValue(results.get(idx));
+                  && CellUtil.matchingQualifier(results.get(idx), cell)) {
+                oldCell = results.get(idx);
                 // allocate an empty kv once
-                newKV = new KeyValue(row.length, kv.getFamilyLength(),
-                    kv.getQualifierLength(), now, KeyValue.Type.Put,
-                    oldKv.getValueLength() + kv.getValueLength(),
-                    oldKv.getTagsLength() + kv.getTagsLength());
+                newCell = new KeyValue(row.length, cell.getFamilyLength(),
+                    cell.getQualifierLength(), now, KeyValue.Type.Put,
+                    oldCell.getValueLength() + cell.getValueLength(),
+                    oldCell.getTagsLength() + cell.getTagsLength());
                 // copy in the value
-                System.arraycopy(oldKv.getValueArray(), oldKv.getValueOffset(),
-                    newKV.getValueArray(), newKV.getValueOffset(),
-                    oldKv.getValueLength());
-                System.arraycopy(kv.getValueArray(), kv.getValueOffset(),
-                    newKV.getValueArray(),
-                    newKV.getValueOffset() + oldKv.getValueLength(),
-                    kv.getValueLength());
+                System.arraycopy(oldCell.getValueArray(), oldCell.getValueOffset(),
+                    newCell.getValueArray(), newCell.getValueOffset(),
+                    oldCell.getValueLength());
+                System.arraycopy(cell.getValueArray(), cell.getValueOffset(),
+                    newCell.getValueArray(),
+                    newCell.getValueOffset() + oldCell.getValueLength(),
+                    cell.getValueLength());
                 // copy in the tags
-                System.arraycopy(oldKv.getTagsArray(), oldKv.getTagsOffset(), newKV.getTagsArray(),
-                    newKV.getTagsOffset(), oldKv.getTagsLength());
-                System.arraycopy(kv.getTagsArray(), kv.getTagsOffset(), newKV.getTagsArray(),
-                    newKV.getTagsOffset() + oldKv.getTagsLength(), kv.getTagsLength());
+                System.arraycopy(oldCell.getTagsArray(), oldCell.getTagsOffset(),
+                    newCell.getTagsArray(), newCell.getTagsOffset(), oldCell.getTagsLength());
+                System.arraycopy(cell.getTagsArray(), cell.getTagsOffset(), newCell.getTagsArray(),
+                    newCell.getTagsOffset() + oldCell.getTagsLength(), cell.getTagsLength());
                 // copy in row, family, and qualifier
-                System.arraycopy(kv.getRowArray(), kv.getRowOffset(),
-                    newKV.getRowArray(), newKV.getRowOffset(), kv.getRowLength());
-                System.arraycopy(kv.getFamilyArray(), kv.getFamilyOffset(),
-                    newKV.getFamilyArray(), newKV.getFamilyOffset(),
-                    kv.getFamilyLength());
-                System.arraycopy(kv.getQualifierArray(), kv.getQualifierOffset(),
-                    newKV.getQualifierArray(), newKV.getQualifierOffset(),
-                    kv.getQualifierLength());
+                System.arraycopy(cell.getRowArray(), cell.getRowOffset(),
+                    newCell.getRowArray(), newCell.getRowOffset(), cell.getRowLength());
+                System.arraycopy(cell.getFamilyArray(), cell.getFamilyOffset(),
+                    newCell.getFamilyArray(), newCell.getFamilyOffset(),
+                    cell.getFamilyLength());
+                System.arraycopy(cell.getQualifierArray(), cell.getQualifierOffset(),
+                    newCell.getQualifierArray(), newCell.getQualifierOffset(),
+                    cell.getQualifierLength());
                 idx++;
               } else {
-                newKV = kv;
                 // Append's KeyValue.Type==Put and ts==HConstants.LATEST_TIMESTAMP,
                 // so only need to update the timestamp to 'now'
+                // TODO get rid of KeyValueUtil.ensureKeyValue
+                KeyValue newKV = KeyValueUtil.ensureKeyValue(cell);
                 newKV.updateLatestStamp(Bytes.toBytes(now));
+                newCell = newKV;
              }
-              newKV.setSequenceId(mvccNum);
+              CellUtil.setSequenceId(newCell, mvccNum);
               // Give coprocessors a chance to update the new cell
               if (coprocessorHost != null) {
-                newKV = KeyValueUtil.ensureKeyValue(coprocessorHost.postMutationBeforeWAL(
-                    RegionObserver.MutationType.APPEND, append, oldKv, newKV));
+                newCell = coprocessorHost.postMutationBeforeWAL(RegionObserver.MutationType.APPEND,
+                    append, oldCell, newCell);
               }
-              kvs.add(newKV);
+              kvs.add(newCell);
 
               // Append update to WAL
               if (writeToWAL) {
                 if (walEdits == null) {
                   walEdits = new WALEdit();
                 }
-                walEdits.add(newKV);
+                walEdits.add(newCell);
               }
             }
 
@@ -5354,8 +5353,7 @@ public class HRegion implements HeapSize { // , Writable{
             } else {
               // otherwise keep older versions around
               for (Cell cell: entry.getValue()) {
-                KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-                Pair<Long, Cell> ret = store.add(kv);
+                Pair<Long, Cell> ret = store.add(cell);
                 size += ret.getFirst();
                 memstoreCells.add(ret.getSecond());
                 doRollBackMemstore = true;
@@ -5520,7 +5518,7 @@ public class HRegion implements HeapSize { // , Writable{
               byte[] val = Bytes.toBytes(amount);
               int oldCellTagsLen = (c == null) ? 0 : c.getTagsLength();
               int incCellTagsLen = kv.getTagsLength();
-              KeyValue newKV = new KeyValue(row.length, family.getKey().length, q.length, now,
+              Cell newKV = new KeyValue(row.length, family.getKey().length, q.length, now,
                   KeyValue.Type.Put, val.length, oldCellTagsLen + incCellTagsLen);
               System.arraycopy(row, 0, newKV.getRowArray(), newKV.getRowOffset(), row.length);
               System.arraycopy(family.getKey(), 0, newKV.getFamilyArray(), newKV.getFamilyOffset(),
@@ -5537,11 +5535,11 @@ public class HRegion implements HeapSize { // , Writable{
                 System.arraycopy(kv.getTagsArray(), kv.getTagsOffset(), newKV.getTagsArray(),
                     newKV.getTagsOffset() + oldCellTagsLen, incCellTagsLen);
               }
-              newKV.setSequenceId(mvccNum);
+              CellUtil.setSequenceId(newKV, mvccNum);
               // Give coprocessors a chance to update the new cell
               if (coprocessorHost != null) {
-                newKV = KeyValueUtil.ensureKeyValue(coprocessorHost.postMutationBeforeWAL(
-                    RegionObserver.MutationType.INCREMENT, increment, c, newKV));
+                newKV = coprocessorHost.postMutationBeforeWAL(
+                    RegionObserver.MutationType.INCREMENT, increment, c, newKV);
               }
               allKVs.add(newKV);
 
@@ -5575,8 +5573,7 @@ public class HRegion implements HeapSize { // , Writable{
               } else {
                 // otherwise keep older versions around
                 for (Cell cell : entry.getValue()) {
-                  KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-                  Pair<Long, Cell> ret = store.add(kv);
+                  Pair<Long, Cell> ret = store.add(cell);
                   size += ret.getFirst();
                   memstoreCells.add(ret.getSecond());
                   doRollBackMemstore = true;
@@ -6064,8 +6061,8 @@ public class HRegion implements HeapSize { // , Writable{
     long mutationSize = 0;
     for (List<Cell> cells: familyMap.values()) {
       for (Cell cell : cells) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        mutationSize += kv.getKeyLength() + kv.getValueLength();
+        // TODO we need include tags length also here.
+        mutationSize += KeyValueUtil.keyLength(cell) + cell.getValueLength();
       }
     }
 
