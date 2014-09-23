@@ -50,8 +50,11 @@ public class ResourceBase implements Constants {
       //some access denied exceptions are buried
       while (curr != null) {
         if(accessDeniedClazz.isAssignableFrom(curr.getClass())) {
-          throw new SecurityException("Unauthorized" + CRLF +
-              StringUtils.stringifyException(exp) + CRLF);
+          throw new WebApplicationException(
+              Response.status(Response.Status.FORBIDDEN)
+                .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF +
+                   StringUtils.stringifyException(exp) + CRLF)
+                .build());
         }
         curr = curr.getCause();
       }
