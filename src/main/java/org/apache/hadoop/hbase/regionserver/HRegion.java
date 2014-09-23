@@ -2068,9 +2068,11 @@ public class HRegion implements HeapSize { // , Writable{
 
       byte[] family = e.getKey();
       List<KeyValue> kvs = e.getValue();
+      assert kvs instanceof RandomAccess;
       Map<byte[], Integer> kvCount = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
-
-      for (KeyValue kv: kvs) {
+      int listSize = kvs.size();
+      for (int i=0; i < listSize; i++) {
+        KeyValue kv = kvs.get(i);
         //  Check if time is LATEST, change to time of most recent addition if so
         //  This is expensive.
         if (kv.isLatestTimestamp() && kv.isDeleteType()) {
@@ -2920,7 +2922,10 @@ public class HRegion implements HeapSize { // , Writable{
       final Iterable<List<KeyValue>> keyLists, final byte[] now) {
     for (List<KeyValue> keys: keyLists) {
       if (keys == null) continue;
-      for (KeyValue key : keys) {
+      assert keys instanceof RandomAccess;
+      int listSize = keys.size();
+      for (int i=0; i < listSize; i++) {
+        KeyValue key = keys.get(i);
         key.updateLatestStamp(now);
       }
     }
@@ -3181,7 +3186,10 @@ public class HRegion implements HeapSize { // , Writable{
     }
     long maxTs = now + timestampSlop;
     for (List<KeyValue> kvs : familyMap.values()) {
-      for (KeyValue kv : kvs) {
+      assert kvs instanceof RandomAccess;
+      int listSize = kvs.size();
+      for (int i=0; i < listSize; i++) {
+        KeyValue kv = kvs.get(i);
         // see if the user-side TS is out of range. latest = server-side
         if (!kv.isLatestTimestamp() && kv.getTimestamp() > maxTs) {
           throw new DoNotRetryIOException("Timestamp for KV out of range "
@@ -3200,7 +3208,10 @@ public class HRegion implements HeapSize { // , Writable{
   private void addFamilyMapToWALEdit(Map<byte[], List<KeyValue>> familyMap,
       WALEdit walEdit) {
     for (List<KeyValue> edits : familyMap.values()) {
-      for (KeyValue kv : edits) {
+      assert edits instanceof RandomAccess;
+      int listSize = edits.size();
+      for (int i=0; i < listSize; i++) {
+        KeyValue kv = edits.get(i);
         walEdit.add(kv);
       }
     }
@@ -6069,7 +6080,10 @@ public class HRegion implements HeapSize { // , Writable{
 
     long putSize = 0;
     for (List<KeyValue> edits : familyMap.values()) {
-      for (KeyValue kv : edits) {
+      assert edits instanceof RandomAccess;
+      int listSize = edits.size();
+      for (int i=0; i < listSize; i++) {
+        KeyValue kv = edits.get(i);
         putSize += kv.getKeyLength() + kv.getValueLength();
       }
     }
