@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.security.access;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving

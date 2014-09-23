@@ -22,7 +22,7 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * An InputStream that wraps a DataInput.

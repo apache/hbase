@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Some configuration related utilities
  */
 @InterfaceAudience.Private
-public class ConfigUtil {
+public class  ConfigUtil {
 
   public static boolean useZKForAssignment(Configuration conf) {
     // To change the default, please also update ZooKeeperWatcher.java

@@ -204,3 +204,4 @@ public class CombinedBlockCache implements BlockCache, HeapSize {
     return new BlockCache [] {this.lruCache, this.bucketCache};
   }
 }
+

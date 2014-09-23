@@ -837,4 +837,5 @@ public class Result implements CellScannable, CellScanner {
   public void setExists(Boolean exists) {
     this.exists = exists;
   }
+
 }

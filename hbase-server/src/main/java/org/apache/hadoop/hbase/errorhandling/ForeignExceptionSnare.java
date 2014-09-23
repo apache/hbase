@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.errorhandling;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * This is an interface for a cooperative exception throwing mechanism.  Implementations are
