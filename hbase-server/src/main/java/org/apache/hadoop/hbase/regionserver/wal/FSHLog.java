@@ -1213,7 +1213,7 @@ class FSHLog implements HLog, Syncable {
     void offer(final long sequence, final SyncFuture [] syncFutures, final int syncFutureCount) {
       // Set sequence first because the add to the queue will wake the thread if sleeping.
       this.sequence = sequence;
-      for (int i = 0; i < syncFutureCount; i++) this.syncFutures.add(syncFutures[i]);
+      this.syncFutures.addAll(Arrays.asList(syncFutures).subList(0, syncFutureCount));
     }
 
     /**

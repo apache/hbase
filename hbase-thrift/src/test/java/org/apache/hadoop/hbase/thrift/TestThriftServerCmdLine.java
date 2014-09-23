@@ -172,7 +172,7 @@ public class TestThriftServerCmdLine {
     args.add("start");
 
     thriftServer = new ThriftServer(TEST_UTIL.getConfiguration());
-    startCmdLineThread(args.toArray(new String[0]));
+    startCmdLineThread(args.toArray(new String[args.size()]));
 
     // wait up to 10s for the server to start
     for (int i = 0; i < 100

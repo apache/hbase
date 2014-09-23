@@ -681,7 +681,7 @@ public class RegionSplitter {
         LinkedList<HRegionInfo> check = Lists.newLinkedList();
         check.add(table.getRegionLocation(start).getRegionInfo());
         check.add(table.getRegionLocation(split).getRegionInfo());
-        for (HRegionInfo hri : check.toArray(new HRegionInfo[] {})) {
+        for (HRegionInfo hri : check.toArray(new HRegionInfo[check.size()])) {
           byte[] sk = hri.getStartKey();
           if (sk.length == 0)
             sk = splitAlgo.firstRow();

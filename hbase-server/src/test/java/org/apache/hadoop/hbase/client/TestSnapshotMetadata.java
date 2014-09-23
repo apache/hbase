@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -192,9 +193,7 @@ public class TestSnapshotMetadata {
 
     // restore the snapshot into a cloned table and examine the output
     List<byte[]> familiesList = new ArrayList<byte[]>();
-    for (byte[] family : families) {
-      familiesList.add(family);
-    }
+    Collections.addAll(familiesList, families);
 
     // Create a snapshot in which all families are empty
     SnapshotTestingUtils.createSnapshotAndValidate(admin, originalTableName, null,
@@ -276,9 +275,7 @@ public class TestSnapshotMetadata {
       }
       familiesWithDataList.add(familyForUpdate);
     } else {
-      for (byte[] family : families) {
-        emptyFamiliesList.add(family);
-      }
+      Collections.addAll(emptyFamiliesList, families);
     }
 
     // take a "disabled" snapshot

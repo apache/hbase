@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -43,9 +44,7 @@ public class ChainWALEntryFilter implements WALEntryFilter {
     // flatten the chains
     for (WALEntryFilter filter : filters) {
       if (filter instanceof ChainWALEntryFilter) {
-        for (WALEntryFilter f : ((ChainWALEntryFilter) filter).filters) {
-          rawFilters.add(f);
-        }
+        Collections.addAll(rawFilters, ((ChainWALEntryFilter) filter).filters);
       } else {
         rawFilters.add(filter);
       }

@@ -161,7 +161,7 @@ public class MetricsMBeanBase extends MetricsDynamicMBeanBase {
 
     LOG.info("new MBeanInfo");
     this.extendedInfo = new MBeanInfo( this.getClass().getName(),
-        this.description, attributes.toArray( new MBeanAttributeInfo[0] ),
+        this.description, attributes.toArray(new MBeanAttributeInfo[attributes.size()]),
         parentInfo.getConstructors(), parentInfo.getOperations(),
         parentInfo.getNotifications() );
   }

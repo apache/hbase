@@ -889,9 +889,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
     String[] tables = conf.getStrings("hbase.balancer.tablesOnMaster");
     if (tables != null) {
-      for (String table: tables) {
-        tablesOnMaster.add(table);
-      }
+      Collections.addAll(tablesOnMaster, tables);
     }
     this.rackManager = new RackManager(getConf());
     regionFinder.setConf(conf);
