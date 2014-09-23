@@ -88,7 +88,7 @@ if [ $INTERACTIVE ]; then
     read -p "Build the site? (y/n)" yn
     case $yn in
         [Yy]* ) 
-    			mvn clean javadoc:aggregate site site:stage -DskipTests
+    			mvn clean package javadoc:aggregate site site:stage -DskipTests
     			;;
         [Nn]* ) 
           echo "Not building the site."
@@ -96,7 +96,7 @@ if [ $INTERACTIVE ]; then
     esac
 else
   echo "Building the site in auto mode."
-  mvn clean javadoc:aggregate site site:stage -DskipTests
+  mvn clean package javadoc:aggregate site site:stage -DskipTests
 fi
 
 

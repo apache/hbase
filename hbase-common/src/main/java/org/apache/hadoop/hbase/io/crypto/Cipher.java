@@ -22,7 +22,7 @@ import java.io.OutputStream;
 import java.security.Key;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * A common interface for a cryptographic algorithm.

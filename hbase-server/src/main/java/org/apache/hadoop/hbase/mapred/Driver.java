@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.mapred;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.util.ProgramDriver;
 import com.google.common.annotations.VisibleForTesting;
 
