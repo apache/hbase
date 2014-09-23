@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.security.User;
  * From this {@link HConnection} {@link HTableInterface} implementations are retrieved
  * with {@link HConnection#getTable(byte[])}. Example:
  * <pre>
- * {@code
  * HConnection connection = HConnectionManager.createConnection(config);
  * HTableInterface table = connection.getTable(TableName.valueOf("table1"));
  * try {
@@ -43,7 +42,7 @@ import org.apache.hadoop.hbase.security.User;
  *   table.close();
  *   connection.close();
  * }
- * }</pre>
+ * </pre>
  * <p>This class has a static Map of {@link HConnection} instances keyed by
  * {@link HConnectionKey}; A {@link HConnectionKey} is identified by a set of
  * {@link Configuration} properties. Invocations of {@link #getConnection(Configuration)}
@@ -125,7 +124,7 @@ public class HConnectionManager extends ConnectionFactory {
    * calling {@link HConnection#close()} on the returned connection instance.
    *
    * This is the recommended way to create HConnections.
-   * {@code
+   * <pre>
    * HConnection connection = HConnectionManager.createConnection(conf);
    * HTableInterface table = connection.getTable("mytable");
    * try {
@@ -135,6 +134,7 @@ public class HConnectionManager extends ConnectionFactory {
    *   table.close();
    *   connection.close();
    * }
+   * </pre>
    *
    * @param conf configuration
    * @return HConnection object for <code>conf</code>
@@ -152,7 +152,7 @@ public class HConnectionManager extends ConnectionFactory {
    * {@link #getConnection(Configuration)}. The caller is responsible for
    * calling {@link HConnection#close()} on the returned connection instance.
    * This is the recommended way to create HConnections.
-   * {@code
+   * <pre>
    * ExecutorService pool = ...;
    * HConnection connection = HConnectionManager.createConnection(conf, pool);
    * HTableInterface table = connection.getTable("mytable");
@@ -160,7 +160,7 @@ public class HConnectionManager extends ConnectionFactory {
    * ...
    * table.close();
    * connection.close();
-   * }
+   * </pre>
    * @param conf configuration
    * @param pool the thread pool to use for batch operation in HTables used via this HConnection
    * @return HConnection object for <code>conf</code>
@@ -178,7 +178,7 @@ public class HConnectionManager extends ConnectionFactory {
    * {@link #getConnection(Configuration)}. The caller is responsible for
    * calling {@link HConnection#close()} on the returned connection instance.
    * This is the recommended way to create HConnections.
-   * {@code
+   * <pre>
    * ExecutorService pool = ...;
    * HConnection connection = HConnectionManager.createConnection(conf, pool);
    * HTableInterface table = connection.getTable("mytable");
@@ -186,7 +186,7 @@ public class HConnectionManager extends ConnectionFactory {
    * ...
    * table.close();
    * connection.close();
-   * }
+   * </pre>
    * @param conf configuration
    * @param user the user the connection is for
    * @return HConnection object for <code>conf</code>
@@ -204,7 +204,7 @@ public class HConnectionManager extends ConnectionFactory {
    * {@link #getConnection(Configuration)}. The caller is responsible for
    * calling {@link HConnection#close()} on the returned connection instance.
    * This is the recommended way to create HConnections.
-   * {@code
+   * <pre>
    * ExecutorService pool = ...;
    * HConnection connection = HConnectionManager.createConnection(conf, pool);
    * HTableInterface table = connection.getTable("mytable");
@@ -212,7 +212,7 @@ public class HConnectionManager extends ConnectionFactory {
    * ...
    * table.close();
    * connection.close();
-   * }
+   * </pre>
    * @param conf configuration
    * @param pool the thread pool to use for batch operation in HTables used via this HConnection
    * @param user the user the connection is for

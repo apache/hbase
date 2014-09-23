@@ -24,8 +24,6 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Methods;
@@ -50,8 +48,6 @@ import org.apache.hadoop.security.token.Token;
 public abstract class User {
   public static final String HBASE_SECURITY_CONF_KEY =
       "hbase.security.authentication";
-
-  private static Log LOG = LogFactory.getLog(User.class);
 
   protected UserGroupInformation ugi;
 
@@ -167,7 +163,7 @@ public abstract class User {
   /**
    * Executes the given action as the login user
    * @param action
-   * @return
+   * @return the result of the action
    * @throws IOException
    * @throws InterruptedException
    */

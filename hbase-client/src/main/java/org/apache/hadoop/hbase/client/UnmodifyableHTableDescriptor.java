@@ -61,7 +61,6 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   /**
    * Does NOT add a column family. This object is immutable
    * @param family HColumnDescriptor of familyto add.
-   * @return
    */
   @Override
   public HTableDescriptor addFamily(final HColumnDescriptor family) {
@@ -79,7 +78,6 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   }
 
   /**
-   * @return
    * @see org.apache.hadoop.hbase.HTableDescriptor#setReadOnly(boolean)
    */
   @Override
@@ -88,7 +86,6 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   }
 
   /**
-   * @return
    * @see org.apache.hadoop.hbase.HTableDescriptor#setValue(byte[], byte[])
    */
   @Override
@@ -97,7 +94,6 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   }
 
   /**
-   * @return
    * @see org.apache.hadoop.hbase.HTableDescriptor#setValue(java.lang.String, java.lang.String)
    */
   @Override
@@ -106,7 +102,6 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   }
 
   /**
-   * @return
    * @see org.apache.hadoop.hbase.HTableDescriptor#setMaxFileSize(long)
    */
   @Override
@@ -115,7 +110,6 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
   }
 
   /**
-   * @return
    * @see org.apache.hadoop.hbase.HTableDescriptor#setMemStoreFlushSize(long)
    */
   @Override

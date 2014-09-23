@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.security.UserProvider;
  * From this {@link Connection} {@link Table} implementations are retrieved
  * with {@link Connection#getTable(TableName)}. Example:
  * <pre>
- * {@code
  * Connection connection = ConnectionFactory.createConnection(config);
  * Table table = connection.getTable(TableName.valueOf("table1"));
  * try {
