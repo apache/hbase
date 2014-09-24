@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.hbase.executor;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * List of all HBase event handler types.  Event types are named by a

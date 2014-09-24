@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 import java.util.Map;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Get, remove and modify table descriptors.

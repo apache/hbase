@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.visibility.expression;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class LeafExpressionNode implements ExpressionNode {

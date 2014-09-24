@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.util.HashMap;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class MetricsHBaseServerSourceFactoryImpl extends MetricsHBaseServerSourceFactory {

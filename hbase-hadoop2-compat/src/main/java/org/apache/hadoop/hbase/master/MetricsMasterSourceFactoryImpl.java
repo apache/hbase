@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Factory to create MetricsMasterSource when given a  MetricsMasterWrapper

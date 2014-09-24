@@ -22,7 +22,7 @@ package org.apache.hadoop.hbase.util;
 import java.util.Iterator;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**

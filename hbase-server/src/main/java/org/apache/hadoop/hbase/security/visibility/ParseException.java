@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.visibility;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class ParseException extends Exception {

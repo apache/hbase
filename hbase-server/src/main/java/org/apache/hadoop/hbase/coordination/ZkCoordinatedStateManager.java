@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.coordination;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;

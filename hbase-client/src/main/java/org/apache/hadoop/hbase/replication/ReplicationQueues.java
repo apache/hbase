@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.SortedMap;
 import java.util.SortedSet;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * This provides an interface for maintaining a region server's replication queues. These queues

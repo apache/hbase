@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.security.visibility;
 
 import java.util.regex.Pattern;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * A simple validator that validates the labels passed

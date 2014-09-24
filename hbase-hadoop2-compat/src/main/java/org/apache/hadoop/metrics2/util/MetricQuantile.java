@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.metrics2.util;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Specifies a quantile (with error bounds) to be watched by a

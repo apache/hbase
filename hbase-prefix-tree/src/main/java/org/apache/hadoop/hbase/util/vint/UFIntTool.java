@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.util.vint;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * UFInt is an abbreviation for Unsigned Fixed-width Integer.
