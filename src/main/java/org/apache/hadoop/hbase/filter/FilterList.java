@@ -180,8 +180,9 @@ public class FilterList implements Filter {
 
   @Override
   public void reset() {
-    for (Filter filter : filters) {
-      filter.reset();
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      filters.get(i).reset();
     }
     seekHintFilter = null;
   }
@@ -189,7 +190,9 @@ public class FilterList implements Filter {
   @Override
   public boolean filterRowKey(byte[] rowKey, int offset, int length) {
     boolean flag = (this.operator == Operator.MUST_PASS_ONE) ? true : false;
-    for (Filter filter : filters) {
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      Filter filter = filters.get(i);
       if (this.operator == Operator.MUST_PASS_ALL) {
         if (filter.filterAllRemaining() ||
             filter.filterRowKey(rowKey, offset, length)) {
@@ -207,7 +210,9 @@ public class FilterList implements Filter {
 
   @Override
   public boolean filterAllRemaining() {
-    for (Filter filter : filters) {
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      Filter filter = filters.get(i);
       if (filter.filterAllRemaining()) {
         if (operator == Operator.MUST_PASS_ALL) {
           return true;
@@ -240,7 +245,9 @@ public class FilterList implements Filter {
 
     ReturnCode rc = operator == Operator.MUST_PASS_ONE?
         ReturnCode.SKIP: ReturnCode.INCLUDE;
-    for (Filter filter : filters) {
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      Filter filter = filters.get(i);
       if (operator == Operator.MUST_PASS_ALL) {
         if (filter.filterAllRemaining()) {
           return ReturnCode.NEXT_ROW;
@@ -299,15 +306,19 @@ public class FilterList implements Filter {
 
   @Override
   public void filterRow(List<KeyValue> kvs) {
-    for (Filter filter : filters) {
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      Filter filter = filters.get(i);
       filter.filterRow(kvs);
     }
   }
 
   @Override
   public boolean hasFilterRow() {
-    for (Filter filter : filters) {
-      if(filter.hasFilterRow()) {
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      Filter filter = filters.get(i);
+      if (filter.hasFilterRow()) {
     	return true;
       }
     }
@@ -316,7 +327,9 @@ public class FilterList implements Filter {
 
   @Override
   public boolean filterRow() {
-    for (Filter filter : filters) {
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      Filter filter = filters.get(i);
       if (operator == Operator.MUST_PASS_ALL) {
         if (filter.filterRow()) {
           return true;
@@ -346,7 +359,9 @@ public class FilterList implements Filter {
   public void write(final DataOutput out) throws IOException {
     out.writeByte(operator.ordinal());
     out.writeInt(filters.size());
-    for (Filter filter : filters) {
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      Filter filter = filters.get(i);
       HbaseObjectWritable.writeObject(out, filter, Writable.class, CONF);
     }
   }
@@ -359,7 +374,9 @@ public class FilterList implements Filter {
       return keyHint;
     }
 
-    for (Filter filter : filters) {
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      Filter filter = filters.get(i);
       KeyValue curKeyHint = filter.getNextKeyHint(currentKV);
       if (curKeyHint == null) {
         // If we ever don't have a hint and this is must-pass-one, then no hint
@@ -381,7 +398,9 @@ public class FilterList implements Filter {
   }
 
   public boolean isFamilyEssential(byte[] name) {
-    for (Filter filter : filters) {
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      Filter filter = filters.get(i);
       if (FilterBase.isFamilyEssential(filter, name)) {
         return true;
       }
