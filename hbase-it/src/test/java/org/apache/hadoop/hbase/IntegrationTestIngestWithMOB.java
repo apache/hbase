@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestDataGeneratorWithMOB;
 import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.util.ToolRunner;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -43,9 +44,10 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
   public static final String THRESHOLD = "threshold";
   public static final String MIN_MOB_DATA_SIZE = "minMobDataSize";
   public static final String MAX_MOB_DATA_SIZE = "maxMobDataSize";
-  private int threshold = 100 * 1024; //100KB
-  private int minMobDataSize = threshold * 4 / 5; //80KB
-  private int maxMobDataSize = threshold * 50; // 5MB
+  private int threshold = 1024; // 1KB
+  private int minMobDataSize = 512; // 512B
+  private int maxMobDataSize = threshold * 5; // 5KB
+  private static final long JUNIT_RUN_TIME = 2 * 60 * 1000; // 2 minutes
 
   //similar to LOAD_TEST_TOOL_INIT_ARGS except OPT_IN_MEMORY is removed
   protected String[] LOAD_TEST_TOOL_MOB_INIT_ARGS = {
@@ -99,6 +101,11 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
           "The minMobDataSize should not be larger than minMobDataSize");
     }
   }
+
+  @Test
+  public void testIngest() throws Exception {
+    runIngestTest(JUNIT_RUN_TIME, 100, 10, 1024, 10, 20);
+  };
 
   @Override
   protected void initTable() throws IOException {
