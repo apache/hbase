@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.encode;
 
 import java.io.OutputStream;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Retrieve PrefixTreeEncoders from this factory which handles pooling them and preparing the

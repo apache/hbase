@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * An environment edge that uses a manually set value. This is useful for testing events that are supposed to

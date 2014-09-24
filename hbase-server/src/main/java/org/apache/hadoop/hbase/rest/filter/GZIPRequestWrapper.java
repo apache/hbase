@@ -27,7 +27,7 @@ import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class GZIPRequestWrapper extends HttpServletRequestWrapper {

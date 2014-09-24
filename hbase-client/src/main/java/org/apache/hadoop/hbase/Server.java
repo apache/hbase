@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;

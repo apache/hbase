@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.util;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * A set of array utility functions that return reasonable values in cases where an array is

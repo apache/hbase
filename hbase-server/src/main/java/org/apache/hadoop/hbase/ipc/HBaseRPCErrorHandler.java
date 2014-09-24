@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * An interface for calling out of RPC for error conditions.

@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.net.InetSocketAddress;
 import java.util.List; 
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName;
 
 /**

@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Similar interface as {@link org.apache.hadoop.util.Progressable} but returns

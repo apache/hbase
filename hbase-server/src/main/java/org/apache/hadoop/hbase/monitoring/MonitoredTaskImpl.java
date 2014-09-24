@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.monitoring;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import java.io.IOException;

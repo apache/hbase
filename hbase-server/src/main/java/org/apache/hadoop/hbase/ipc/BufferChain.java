@@ -23,7 +23,7 @@ import java.nio.channels.GatheringByteChannel;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Chain of ByteBuffers.

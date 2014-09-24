@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.util.Random;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 
 /**

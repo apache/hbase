@@ -28,7 +28,7 @@ import java.nio.channels.FileChannel;
 import java.util.Enumeration;
 import java.util.Set;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.log4j.Appender;
 import org.apache.log4j.FileAppender;

@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.hbase.rest;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 import com.sun.jersey.api.core.PackagesResourceConfig;
 

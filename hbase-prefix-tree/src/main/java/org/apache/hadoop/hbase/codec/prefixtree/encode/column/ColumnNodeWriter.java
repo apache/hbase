@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.encode.column;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.other.ColumnNodeType;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.TokenizerNode;

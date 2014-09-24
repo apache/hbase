@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * A way to write "inline" blocks into an {@link HFile}. Inline blocks are

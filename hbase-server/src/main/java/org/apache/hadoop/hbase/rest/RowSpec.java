@@ -27,7 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.TreeSet;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 

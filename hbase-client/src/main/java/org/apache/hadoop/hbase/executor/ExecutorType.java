@@ -19,7 +19,7 @@
 
 package org.apache.hadoop.hbase.executor;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * The following is a list of all executor types, both those that run in the
