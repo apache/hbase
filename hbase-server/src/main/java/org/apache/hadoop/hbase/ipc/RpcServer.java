@@ -555,6 +555,7 @@ public class RpcServer implements RpcServerInterface {
       Reader() throws IOException {
         this.readSelector = Selector.open();
       }
+      @Override
       public void run() {
         try {
           doRunLoop();
@@ -1252,8 +1253,8 @@ public class RpcServer implements RpcServerInterface {
     private void saslReadAndProcess(byte[] saslToken) throws IOException,
         InterruptedException {
       if (saslContextEstablished) {
-        if (LOG.isDebugEnabled())
-          LOG.debug("Have read input token of size " + saslToken.length
+        if (LOG.isTraceEnabled())
+          LOG.trace("Have read input token of size " + saslToken.length
               + " for processing by saslServer.unwrap()");
 
         if (!useWrap) {
@@ -2004,6 +2005,7 @@ public class RpcServer implements RpcServerInterface {
    * the return response has protobuf response payload. On failure, the
    * exception name and the stack trace are returned in the protobuf response.
    */
+  @Override
   public Pair<Message, CellScanner> call(BlockingService service, MethodDescriptor md,
       Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status)
   throws IOException {
@@ -2158,6 +2160,7 @@ public class RpcServer implements RpcServerInterface {
   /**
    * Returns the metrics instance for reporting RPC call statistics
    */
+  @Override
   public MetricsHBaseServer getMetrics() {
     return metrics;
   }
