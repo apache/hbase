@@ -358,7 +358,7 @@ public class HTable implements HTableInterface, RegionLocator {
     this.retries = configuration.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
             HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
 
-    this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(configuration);
+    this.rpcCallerFactory = connection.getNewRpcRetryingCallerFactory(configuration);
     this.rpcControllerFactory = RpcControllerFactory.instantiate(configuration);
     // puts need to track errors globally due to how the APIs currently work.
     ap = new AsyncProcess(connection, configuration, pool, rpcCallerFactory, true, rpcControllerFactory);

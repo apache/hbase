@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.exceptions.PreemptiveFastFailException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.ipc.RemoteException;
@@ -61,10 +62,19 @@ public class RpcRetryingCaller<T> {
   private final long pause;
   private final int retries;
   private final AtomicBoolean cancelled = new AtomicBoolean(false);
+  private final RetryingCallerInterceptor interceptor;
+  private final RetryingCallerInterceptorContext context;
 
   public RpcRetryingCaller(long pause, int retries) {
+    this(pause, retries, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR);
+  }
+
+  public RpcRetryingCaller(long pause, int retries,
+      RetryingCallerInterceptor interceptor) {
     this.pause = pause;
     this.retries = retries;
+    this.interceptor = interceptor;
+    context = interceptor.createEmptyContext();
   }
 
   private int getRemainingTime(int callTimeout) {
@@ -104,11 +114,15 @@ public class RpcRetryingCaller<T> {
     List<RetriesExhaustedException.ThrowableWithExtraContext> exceptions =
       new ArrayList<RetriesExhaustedException.ThrowableWithExtraContext>();
     this.globalStartTime = EnvironmentEdgeManager.currentTime();
+    context.clear();
     for (int tries = 0;; tries++) {
       long expectedSleep;
       try {
         callable.prepare(tries != 0); // if called with false, check table status on ZK
+        interceptor.intercept(context.prepare(callable, tries));
         return callable.call(getRemainingTime(callTimeout));
+      } catch (PreemptiveFastFailException e) {
+        throw e;
       } catch (Throwable t) {
         ExceptionUtil.rethrowIfInterrupt(t);
         if (LOG.isTraceEnabled()) {
@@ -118,6 +132,7 @@ public class RpcRetryingCaller<T> {
         }
 
         // translateException throws exception when should not retry: i.e. when request is bad.
+        interceptor.handleFailure(context, t);
         t = translateException(t);
         callable.throwable(t, retries != 1);
         RetriesExhaustedException.ThrowableWithExtraContext qt =
@@ -139,6 +154,8 @@ public class RpcRetryingCaller<T> {
               ": " + callable.getExceptionMessageAdditionalDetail();
           throw (SocketTimeoutException)(new SocketTimeoutException(msg).initCause(t));
         }
+      } finally {
+        interceptor.updateFailureInfo(context);
       }
       try {
         if (expectedSleep > 0) {
