@@ -319,6 +319,13 @@ public class HTable implements HTableInterface, RegionLocator {
   }
 
   /**
+   * @return maxKeyValueSize from configuration.
+   */
+  public static int getMaxKeyValueSize(Configuration conf) {
+    return conf.getInt("hbase.client.keyvalue.maxsize", -1);
+  }
+
+  /**
    * setup this HTable's parameter based on the passed configuration
    */
   private void finishSetup() throws IOException {
@@ -348,8 +355,7 @@ public class HTable implements HTableInterface, RegionLocator {
     ap = new AsyncProcess(connection, configuration, pool, rpcCallerFactory, true, rpcControllerFactory);
     multiAp = this.connection.getAsyncProcess();
 
-    this.maxKeyValueSize = this.configuration.getInt(
-        "hbase.client.keyvalue.maxsize", -1);
+    this.maxKeyValueSize = getMaxKeyValueSize(this.configuration);
     this.closed = false;
   }
 
@@ -1470,7 +1476,12 @@ public class HTable implements HTableInterface, RegionLocator {
   }
 
   // validate for well-formedness
-  public void validatePut(final Put put) throws IllegalArgumentException{
+  public void validatePut(final Put put) throws IllegalArgumentException {
+    validatePut(put, maxKeyValueSize);
+  }
+
+  // validate for well-formedness
+  public static void validatePut(Put put, int maxKeyValueSize) throws IllegalArgumentException {
     if (put.isEmpty()) {
       throw new IllegalArgumentException("No columns to insert");
     }
