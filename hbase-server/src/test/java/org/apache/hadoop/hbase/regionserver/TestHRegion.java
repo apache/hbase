@@ -1510,7 +1510,7 @@ public class TestHRegion {
       Delete delete = new Delete(row1);
       delete.deleteFamily(fam1);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(val2),
-          delete, true);
+          put, true);
       assertEquals(false, res);
     } finally {
       HRegion.closeHRegion(this.region);

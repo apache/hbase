@@ -18,6 +18,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.Service;
@@ -31,10 +36,10 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.Service;
+import com.google.protobuf.ServiceException;
 
 /**
  * Used to communicate with a single HBase table.
@@ -598,4 +603,21 @@ public interface Table extends Closeable {
   <R extends Message> void batchCoprocessorService(Descriptors.MethodDescriptor methodDescriptor,
     Message request, byte[] startKey, byte[] endKey, R responsePrototype,
     Batch.Callback<R> callback) throws ServiceException, Throwable;
+
+  /**
+   * Atomically checks if a row/family/qualifier value matches the expected value.
+   * If it does, it performs the row mutations.  If the passed value is null, the check
+   * is for the lack of column (ie: non-existence)
+   *
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param compareOp the comparison operator
+   * @param value the expected value
+   * @param mutation  mutations to perform if check succeeds
+   * @throws IOException e
+   * @return true if the new put was executed, false otherwise
+   */
+  boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
+      CompareFilter.CompareOp compareOp, byte[] value, RowMutations mutation) throws IOException;
 }

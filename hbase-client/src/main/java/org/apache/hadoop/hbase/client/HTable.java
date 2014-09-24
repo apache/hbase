@@ -1325,6 +1325,35 @@ public class HTable implements HTableInterface, RegionLocator {
    * {@inheritDoc}
    */
   @Override
+  public boolean checkAndMutate(final byte [] row, final byte [] family, final byte [] qualifier,
+      final CompareOp compareOp, final byte [] value, final RowMutations rm)
+  throws IOException {
+    RegionServerCallable<Boolean> callable =
+        new RegionServerCallable<Boolean>(connection, getName(), row) {
+          @Override
+          public Boolean call(int callTimeout) throws IOException {
+            PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+            controller.setPriority(tableName);
+            controller.setCallTimeout(callTimeout);
+            try {
+              CompareType compareType = CompareType.valueOf(compareOp.name());
+              MultiRequest request = RequestConverter.buildMutateRequest(
+                  getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
+                  new BinaryComparator(value), compareType, rm);
+              ClientProtos.MultiResponse response = getStub().multi(controller, request);
+              return Boolean.valueOf(response.getProcessed());
+            } catch (ServiceException se) {
+              throw ProtobufUtil.getRemoteException(se);
+            }
+          }
+        };
+    return rpcCallerFactory.<Boolean> newCaller().callWithRetries(callable, this.operationTimeout);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
   public boolean exists(final Get get) throws IOException {
     get.setCheckExistenceOnly(true);
     Result r = get(get);
