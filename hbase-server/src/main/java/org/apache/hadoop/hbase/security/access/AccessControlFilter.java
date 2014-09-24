@@ -138,6 +138,13 @@ class AccessControlFilter extends FilterBase {
     return ReturnCode.SKIP;
   }
 
+  // Override here explicitly as the method in super class FilterBase might do a KeyValue recreate.
+  // See HBASE-12068
+  @Override
+  public Cell transformCell(Cell v) {
+    return v;
+  }
+
   @Override
   public void reset() throws IOException {
     this.prevFam.unset();

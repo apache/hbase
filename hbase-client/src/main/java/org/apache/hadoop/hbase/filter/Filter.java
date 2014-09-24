@@ -208,7 +208,14 @@ public abstract class Filter {
    */
   abstract public boolean filterRow() throws IOException;
 
-  @Deprecated // use Cell GetNextKeyHint(final Cell)
+  /**
+   * @param currentKV
+   * @return KeyValue which must be next seeked. return null if the filter is not sure which key to
+   *         seek to next.
+   * @throws IOException
+   * @Deprecated Use {@link #getNextCellHint(Cell)} instead.
+   */
+  @Deprecated
   abstract public KeyValue getNextKeyHint(final KeyValue currentKV) throws IOException;
 
   /**

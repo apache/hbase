@@ -99,6 +99,13 @@ public class TimestampsFilter extends FilterBase {
     return ReturnCode.SKIP;
   }
 
+  // Override here explicitly as the method in super class FilterBase might do a KeyValue recreate.
+  // See HBASE-12068
+  @Override
+  public Cell transformCell(Cell v) {
+    return v;
+  }
+
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
     ArrayList<Long> timestamps = new ArrayList<Long>();
     for (int i = 0; i<filterArguments.size(); i++) {

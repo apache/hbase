@@ -212,7 +212,12 @@ final public class FilterList extends Filter {
 
   @Override
   public Cell transformCell(Cell v) throws IOException {
-    return transform(KeyValueUtil.ensureKeyValue(v));
+    // transformCell() is expected to follow an inclusive filterKeyValue() immediately:
+    if (!v.equals(this.referenceKV)) {
+      throw new IllegalStateException("Reference Cell: " + this.referenceKV + " does not match: "
+          + v);
+    }
+    return this.transformedKV;
   }
 
   /**

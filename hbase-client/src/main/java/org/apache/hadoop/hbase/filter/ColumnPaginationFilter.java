@@ -143,6 +143,13 @@ public class ColumnPaginationFilter extends FilterBase
     }
   }
 
+  // Override here explicitly as the method in super class FilterBase might do a KeyValue recreate.
+  // See HBASE-12068
+  @Override
+  public Cell transformCell(Cell v) {
+    return v;
+  }
+
   @Override
   public Cell getNextCellHint(Cell kv) {
     return KeyValueUtil.createFirstOnRow(

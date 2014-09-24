@@ -151,6 +151,13 @@ public class ColumnRangeFilter extends FilterBase {
     return ReturnCode.NEXT_ROW;
   }
 
+  // Override here explicitly as the method in super class FilterBase might do a KeyValue recreate.
+  // See HBASE-12068
+  @Override
+  public Cell transformCell(Cell v) {
+    return v;
+  }
+
   public static Filter createFilterFromArguments(ArrayList<byte []> filterArguments) {
     Preconditions.checkArgument(filterArguments.size() == 4,
                                 "Expected 4 but got: %s", filterArguments.size());

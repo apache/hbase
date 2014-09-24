@@ -97,6 +97,13 @@ public class FuzzyRowFilter extends FilterBase {
     return ReturnCode.NEXT_ROW;
   }
 
+  // Override here explicitly as the method in super class FilterBase might do a KeyValue recreate.
+  // See HBASE-12068
+  @Override
+  public Cell transformCell(Cell v) {
+    return v;
+  }
+
   @Override
   public Cell getNextCellHint(Cell curCell) {
     byte[] nextRowKey = null;

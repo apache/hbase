@@ -30,8 +30,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
@@ -137,20 +135,18 @@ public class DependentColumnFilter extends CompareFilter {
 
   @Override
   public ReturnCode filterKeyValue(Cell c) {
-    // TODO make matching Column a cell method or CellUtil method.
-    KeyValue v = KeyValueUtil.ensureKeyValue(c);
     // Check if the column and qualifier match
-  	if (!CellUtil.matchingColumn(v, this.columnFamily, this.columnQualifier)) {
+  	if (!CellUtil.matchingColumn(c, this.columnFamily, this.columnQualifier)) {
         // include non-matches for the time being, they'll be discarded afterwards
         return ReturnCode.INCLUDE;
   	}
     // If it doesn't pass the op, skip it
     if (comparator != null
-        && doCompare(compareOp, comparator, v.getValueArray(), v.getValueOffset(),
-            v.getValueLength()))
+        && doCompare(compareOp, comparator, c.getValueArray(), c.getValueOffset(),
+            c.getValueLength()))
       return ReturnCode.SKIP;
 	
-    stampSet.add(v.getTimestamp());
+    stampSet.add(c.getTimestamp());
     if(dropDependentColumn) {
     	return ReturnCode.SKIP;
     }

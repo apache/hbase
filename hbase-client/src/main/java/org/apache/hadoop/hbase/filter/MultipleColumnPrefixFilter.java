@@ -71,6 +71,13 @@ public class MultipleColumnPrefixFilter extends FilterBase {
     }
   }
 
+  // Override here explicitly as the method in super class FilterBase might do a KeyValue recreate.
+  // See HBASE-12068
+  @Override
+  public Cell transformCell(Cell v) {
+    return v;
+  }
+
   public ReturnCode filterColumn(byte[] buffer, int qualifierOffset, int qualifierLength) {
     byte [] qualifier = Arrays.copyOfRange(buffer, qualifierOffset,
                                            qualifierLength + qualifierOffset);

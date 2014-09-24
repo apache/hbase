@@ -58,6 +58,13 @@ public class InclusiveStopFilter extends FilterBase {
     return ReturnCode.INCLUDE;
   }
 
+  // Override here explicitly as the method in super class FilterBase might do a KeyValue recreate.
+  // See HBASE-12068
+  @Override
+  public Cell transformCell(Cell v) {
+    return v;
+  }
+
   public boolean filterRowKey(byte[] buffer, int offset, int length) {
     if (buffer == null) {
       //noinspection RedundantIfStatement

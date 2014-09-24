@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.filter;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
@@ -120,6 +121,13 @@ public abstract class CompareFilter extends FilterBase {
         throw new RuntimeException("Unknown Compare op " +
           compareOp.name());
     }
+  }
+
+  // Override here explicitly as the method in super class FilterBase might do a KeyValue recreate.
+  // See HBASE-12068
+  @Override
+  public Cell transformCell(Cell v) {
+    return v;
   }
 
   // returns an array of heterogeneous objects

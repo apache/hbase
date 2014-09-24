@@ -62,6 +62,13 @@ public class ColumnCountGetFilter extends FilterBase {
     return filterAllRemaining() ? ReturnCode.NEXT_COL : ReturnCode.INCLUDE_AND_NEXT_COL;
   }
 
+  // Override here explicitly as the method in super class FilterBase might do a KeyValue recreate.
+  // See HBASE-12068
+  @Override
+  public Cell transformCell(Cell v) {
+    return v;
+  }
+
   @Override
   public void reset() {
     this.count = 0;

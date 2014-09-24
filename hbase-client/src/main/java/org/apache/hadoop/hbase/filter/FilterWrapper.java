@@ -20,11 +20,9 @@
 package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -105,17 +103,13 @@ final public class FilterWrapper extends Filter {
   @Override
   @Deprecated
   public KeyValue getNextKeyHint(KeyValue currentKV) throws IOException {
+    // This will never get called.
     return KeyValueUtil.ensureKeyValue(this.filter.getNextCellHint((Cell)currentKV));
   }
 
-  /**
-   * Old filter wrapper descendants will implement KV getNextKeyHint(KV) so we should call it.
-   */
   @Override
   public Cell getNextCellHint(Cell currentKV) throws IOException {
-    // Old filters based off of this class will override KeyValue getNextKeyHint(KeyValue).
-    // Thus to maintain compatibility we need to call the old version.
-    return this.getNextKeyHint(KeyValueUtil.ensureKeyValue(currentKV));
+    return this.filter.getNextCellHint(currentKV);
   }
 
   @Override
@@ -130,9 +124,7 @@ final public class FilterWrapper extends Filter {
 
   @Override
   public Cell transformCell(Cell v) throws IOException {
-    // Old filters based off of this class will override KeyValue transform(KeyValue).
-    // Thus to maintain compatibility we need to call the old version.
-    return transform(KeyValueUtil.ensureKeyValue(v));
+    return this.filter.transformCell(v);
   }
 
   /**
@@ -143,6 +135,7 @@ final public class FilterWrapper extends Filter {
   @Override
   @Deprecated
   public KeyValue transform(KeyValue currentKV) throws IOException {
+    // This will never get called.
     return KeyValueUtil.ensureKeyValue(this.filter.transformCell(currentKV));
   }
 

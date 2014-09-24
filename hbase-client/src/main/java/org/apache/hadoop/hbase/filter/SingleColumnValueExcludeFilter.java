@@ -28,8 +28,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -108,10 +106,10 @@ public class SingleColumnValueExcludeFilter extends SingleColumnValueFilter {
   public void filterRowCells(List<Cell> kvs) {
     Iterator<? extends Cell> it = kvs.iterator();
     while (it.hasNext()) {
-      KeyValue kv = KeyValueUtil.ensureKeyValue(it.next());
+      Cell cell = it.next();
       // If the current column is actually the tested column,
       // we will skip it instead.
-      if (CellUtil.matchingColumn(kv, this.columnFamily, this.columnQualifier)) {
+      if (CellUtil.matchingColumn(cell, this.columnFamily, this.columnQualifier)) {
         it.remove();
       }
     }
