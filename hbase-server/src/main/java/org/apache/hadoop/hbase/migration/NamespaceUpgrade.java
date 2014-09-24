@@ -253,6 +253,7 @@ public class NamespaceUpgrade implements Tool {
         // Make the new directory under the ns to which we will move the table.
         Path nsDir = new Path(this.defNsDir,
           TableName.valueOf(oldTableDir.getName()).getQualifierAsString());
+        LOG.info("Moving " + oldTableDir + " to " + nsDir);
         if (!fs.exists(nsDir.getParent())) {
           if (!fs.mkdirs(nsDir.getParent())) {
             throw new IOException("Failed to create namespace dir "+nsDir.getParent());
