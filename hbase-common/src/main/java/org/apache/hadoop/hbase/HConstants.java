@@ -925,10 +925,9 @@ public final class HConstants {
   public static final long DEFAULT_REGIONSERVER_METRICS_PERIOD = 5000;
   /** Directories that are not HBase table directories */
   public static final List<String> HBASE_NON_TABLE_DIRS =
-    Collections.unmodifiableList(Arrays.asList(new String[] { HREGION_LOGDIR_NAME,
-      HREGION_OLDLOGDIR_NAME, CORRUPT_DIR_NAME, SPLIT_LOGDIR_NAME,
-      HBCK_SIDELINEDIR_NAME, HFILE_ARCHIVE_DIRECTORY, SNAPSHOT_DIR_NAME, HBASE_TEMP_DIRECTORY,
-      OLD_SNAPSHOT_DIR_NAME, BASE_NAMESPACE_DIR, MIGRATION_NAME, LIB_DIR}));
+    Collections.unmodifiableList(Arrays.asList(new String[] {
+      HBCK_SIDELINEDIR_NAME, HBASE_TEMP_DIRECTORY, MIGRATION_NAME
+    }));
 
   /** Directories that are not HBase user table directories */
   public static final List<String> HBASE_NON_USER_TABLE_DIRS =

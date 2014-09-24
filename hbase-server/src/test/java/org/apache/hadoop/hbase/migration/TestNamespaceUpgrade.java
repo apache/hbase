@@ -94,7 +94,8 @@ public class TestNamespaceUpgrade {
   private final static String currentKeys[] =
       {"1","2","3","4","5","6","7","8","9","A"};
   private final static TableName tables[] =
-    {TableName.valueOf("foo"), TableName.valueOf("ns1.foo"), TableName.valueOf("ns.two.foo")};
+    {TableName.valueOf("data"), TableName.valueOf("foo"),
+     TableName.valueOf("ns1.foo"), TableName.valueOf("ns.two.foo")};
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
