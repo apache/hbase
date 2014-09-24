@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
-import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -665,6 +664,13 @@ public class HTablePool implements Closeable {
         throws ServiceException, Throwable {
       checkState();
       table.batchCoprocessorService(method, request, startKey, endKey, responsePrototype, callback);
+    }
+
+    @Override
+    public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOp compareOp,
+        byte[] value, RowMutations mutation) throws IOException {
+      checkState();
+      return table.checkAndMutate(row, family, qualifier, compareOp, value, mutation);
     }
   }
 }

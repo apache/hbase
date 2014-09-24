@@ -18,23 +18,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.Set;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-
+import com.google.protobuf.ByteString;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
+import com.google.protobuf.TextFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -163,11 +151,22 @@ import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
-import com.google.protobuf.TextFormat;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Implements the regionserver RPC services.
@@ -381,6 +380,48 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
     }
     region.mutateRow(rm);
+  }
+
+  /**
+   * Mutate a list of rows atomically.
+   *
+   * @param region
+   * @param actions
+   * @param cellScanner if non-null, the mutation data -- the Cell content.
+   * @param row
+   * @param family
+   * @param qualifier
+   * @param compareOp
+   * @param comparator @throws IOException
+   */
+  private boolean checkAndRowMutate(final HRegion region, final List<ClientProtos.Action> actions,
+      final CellScanner cellScanner, byte[] row, byte[] family, byte[] qualifier,
+      CompareOp compareOp, ByteArrayComparable comparator) throws IOException {
+    if (!region.getRegionInfo().isMetaTable()) {
+      regionServer.cacheFlusher.reclaimMemStoreMemory();
+    }
+    RowMutations rm = null;
+    for (ClientProtos.Action action: actions) {
+      if (action.hasGet()) {
+        throw new DoNotRetryIOException("Atomic put and/or delete only, not a Get=" +
+            action.getGet());
+      }
+      MutationType type = action.getMutation().getMutateType();
+      if (rm == null) {
+        rm = new RowMutations(action.getMutation().getRow().toByteArray());
+      }
+      switch (type) {
+      case PUT:
+        rm.add(ProtobufUtil.toPut(action.getMutation(), cellScanner));
+        break;
+      case DELETE:
+        rm.add(ProtobufUtil.toDelete(action.getMutation(), cellScanner));
+        break;
+      default:
+        throw new DoNotRetryIOException("Atomic put and/or delete only, not " + type.name());
+      }
+    }
+    return region.checkAndRowMutate(row, family, qualifier, compareOp, comparator, rm, Boolean.TRUE);
   }
 
   /**
@@ -1705,6 +1746,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     List<CellScannable> cellsToReturn = null;
     MultiResponse.Builder responseBuilder = MultiResponse.newBuilder();
     RegionActionResult.Builder regionActionResultBuilder = RegionActionResult.newBuilder();
+    Boolean processed = null;
 
     for (RegionAction regionAction : request.getRegionActionList()) {
       this.requestCount.add(regionAction.getActionCount());
@@ -1722,7 +1764,20 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // How does this call happen?  It may need some work to play well w/ the surroundings.
         // Need to return an item per Action along w/ Action index.  TODO.
         try {
-          mutateRows(region, regionAction.getActionList(), cellScanner);
+          if (request.hasCondition()) {
+            Condition condition = request.getCondition();
+            byte[] row = condition.getRow().toByteArray();
+            byte[] family = condition.getFamily().toByteArray();
+            byte[] qualifier = condition.getQualifier().toByteArray();
+            CompareOp compareOp = CompareOp.valueOf(condition.getCompareType().name());
+            ByteArrayComparable comparator =
+                ProtobufUtil.toComparator(condition.getComparator());
+            processed = checkAndRowMutate(region, regionAction.getActionList(),
+                  cellScanner, row, family, qualifier, compareOp, comparator);
+          } else {
+            mutateRows(region, regionAction.getActionList(), cellScanner);
+            processed = Boolean.TRUE;
+          }
         } catch (IOException e) {
           // As it's atomic, we may expect it's a global failure.
           regionActionResultBuilder.setException(ResponseConverter.buildException(e));
@@ -1738,6 +1793,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     if (cellsToReturn != null && !cellsToReturn.isEmpty() && controller != null) {
       controller.setCellScanner(CellUtil.createCellScanner(cellsToReturn));
     }
+    if (processed != null) responseBuilder.setProcessed(processed);
     return responseBuilder.build();
   }
 
