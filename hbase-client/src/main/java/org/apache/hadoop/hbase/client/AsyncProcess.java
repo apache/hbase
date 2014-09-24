@@ -22,7 +22,6 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -53,6 +52,7 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.htrace.Trace;
+
 import com.google.common.annotations.VisibleForTesting;
 
 /**
@@ -288,6 +288,10 @@ class AsyncProcess {
     this.rpcFactory = rpcFactory;
   }
 
+  /**
+   * @return pool if non null, otherwise returns this.pool if non null, otherwise throws
+   *         RuntimeException
+   */
   private ExecutorService getPool(ExecutorService pool) {
     if (pool != null) return pool;
     if (this.pool != null) return this.pool;
@@ -352,8 +356,8 @@ class AsyncProcess {
           RegionLocations locs = hConnection.locateRegion(
               tableName, r.getRow(), true, true, RegionReplicaUtil.DEFAULT_REPLICA_ID);
           if (locs == null || locs.isEmpty() || locs.getDefaultRegionLocation() == null) {
-            throw new IOException("#" + id + ", no location found, aborting submit for" +
-                " tableName=" + tableName + " rowkey=" + Arrays.toString(r.getRow()));
+            throw new IOException("#" + id + ", no location found, aborting submit for"
+                + " tableName=" + tableName + " rowkey=" + Bytes.toStringBinary(r.getRow()));
           }
           loc = locs.getDefaultRegionLocation();
         } catch (IOException ex) {
@@ -383,15 +387,24 @@ class AsyncProcess {
 
     if (retainedActions.isEmpty()) return NO_REQS_RESULT;
 
+    return submitMultiActions(tableName, retainedActions, nonceGroup, callback, null, needResults,
+      locationErrors, locationErrorRows, actionsByServer, pool);
+  }
+
+  <CResult> AsyncRequestFuture submitMultiActions(TableName tableName,
+      List<Action<Row>> retainedActions, long nonceGroup, Batch.Callback<CResult> callback,
+      Object[] results, boolean needResults, List<Exception> locationErrors,
+      List<Integer> locationErrorRows, Map<ServerName, MultiAction<Row>> actionsByServer,
+      ExecutorService pool) {
     AsyncRequestFutureImpl<CResult> ars = createAsyncRequestFuture(
-        tableName, retainedActions, nonceGroup, pool, callback, null, needResults);
+      tableName, retainedActions, nonceGroup, pool, callback, results, needResults);
     // Add location errors if any
     if (locationErrors != null) {
       for (int i = 0; i < locationErrors.size(); ++i) {
         int originalIndex = locationErrorRows.get(i);
         Row row = retainedActions.get(originalIndex).getAction();
         ars.manageError(originalIndex, row,
-            Retry.NO_LOCATION_PROBLEM, locationErrors.get(i), null);
+          Retry.NO_LOCATION_PROBLEM, locationErrors.get(i), null);
       }
     }
     ars.sendMultiAction(actionsByServer, 1, null, false);
@@ -406,7 +419,7 @@ class AsyncProcess {
    * @param actionsByServer the multiaction per server
    * @param nonceGroup Nonce group.
    */
-  private void addAction(ServerName server, byte[] regionName, Action<Row> action,
+  private static void addAction(ServerName server, byte[] regionName, Action<Row> action,
       Map<ServerName, MultiAction<Row>> actionsByServer, long nonceGroup) {
     MultiAction<Row> multiAction = actionsByServer.get(server);
     if (multiAction == null) {
@@ -531,7 +544,7 @@ class AsyncProcess {
     return ars;
   }
 
-  private void setNonce(NonceGenerator ng, Row r, Action<Row> action) {
+  private static void setNonce(NonceGenerator ng, Row r, Action<Row> action) {
     if (!(r instanceof Append) && !(r instanceof Increment)) return;
     action.setNonce(ng.newNonce()); // Action handles NO_NONCE, so it's ok if ng is disabled.
   }
