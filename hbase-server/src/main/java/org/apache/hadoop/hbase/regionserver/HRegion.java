@@ -2786,6 +2786,89 @@ public class HRegion implements HeapSize { // , Writable{
     }
   }
 
+  //TODO, Think that gets/puts and deletes should be refactored a bit so that
+  //the getting of the lock happens before, so that you would just pass it into
+  //the methods. So in the case of checkAndMutate you could just do lockRow,
+  //get, put, unlockRow or something
+  /**
+   *
+   * @throws IOException
+   * @return true if the new put was executed, false otherwise
+   */
+  public boolean checkAndRowMutate(byte [] row, byte [] family, byte [] qualifier,
+      CompareOp compareOp, ByteArrayComparable comparator, RowMutations rm,
+      boolean writeToWAL)
+      throws IOException{
+    checkReadOnly();
+    //TODO, add check for value length or maybe even better move this to the
+    //client if this becomes a global setting
+    checkResources();
+
+    startRegionOperation();
+    try {
+      Get get = new Get(row);
+      checkFamily(family);
+      get.addColumn(family, qualifier);
+
+      // Lock row - note that doBatchMutate will relock this row if called
+      RowLock rowLock = getRowLock(get.getRow());
+      // wait for all previous transactions to complete (with lock held)
+      mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
+      try {
+        List<Cell> result = get(get, false);
+
+        boolean valueIsNull = comparator.getValue() == null ||
+            comparator.getValue().length == 0;
+        boolean matches = false;
+        if (result.size() == 0 && valueIsNull) {
+          matches = true;
+        } else if (result.size() > 0 && result.get(0).getValueLength() == 0 &&
+            valueIsNull) {
+          matches = true;
+        } else if (result.size() == 1 && !valueIsNull) {
+          Cell kv = result.get(0);
+          int compareResult = comparator.compareTo(kv.getValueArray(),
+              kv.getValueOffset(), kv.getValueLength());
+          switch (compareOp) {
+          case LESS:
+            matches = compareResult < 0;
+            break;
+          case LESS_OR_EQUAL:
+            matches = compareResult <= 0;
+            break;
+          case EQUAL:
+            matches = compareResult == 0;
+            break;
+          case NOT_EQUAL:
+            matches = compareResult != 0;
+            break;
+          case GREATER_OR_EQUAL:
+            matches = compareResult >= 0;
+            break;
+          case GREATER:
+            matches = compareResult > 0;
+            break;
+          default:
+            throw new RuntimeException("Unknown Compare op " + compareOp.name());
+          }
+        }
+        //If matches put the new put or delete the new delete
+        if (matches) {
+          // All edits for the given row (across all column families) must
+          // happen atomically.
+          mutateRow(rm);
+          this.checkAndMutateChecksPassed.increment();
+          return true;
+        }
+        this.checkAndMutateChecksFailed.increment();
+        return false;
+      } finally {
+        rowLock.release();
+      }
+    } finally {
+      closeRegionOperation();
+    }
+  }
   private void doBatchMutate(Mutation mutation) throws IOException, DoNotRetryIOException {
     // Currently this is only called for puts and deletes, so no nonces.
     OperationStatus[] batchMutate = this.batchMutate(new Mutation[] { mutation },

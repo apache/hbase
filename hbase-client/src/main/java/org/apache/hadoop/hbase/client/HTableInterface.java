@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 
 import java.io.Closeable;
@@ -647,4 +648,21 @@ public interface HTableInterface extends Closeable {
   <R extends Message> void batchCoprocessorService(Descriptors.MethodDescriptor methodDescriptor,
       Message request, byte[] startKey, byte[] endKey, R responsePrototype,
       Batch.Callback<R> callback) throws ServiceException, Throwable;
+
+  /**
+   * Atomically checks if a row/family/qualifier value matches the expected val
+   * If it does, it performs the row mutations.  If the passed value is null, t
+   * is for the lack of column (ie: non-existence)
+   *
+   * @param row to check
+   * @param family column family to check
+   * @param qualifier column qualifier to check
+   * @param compareOp the comparison operator
+   * @param value the expected value
+   * @param mutation  mutations to perform if check succeeds
+   * @throws IOException e
+   * @return true if the new put was executed, false otherwise
+   */
+  boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier, CompareOp compareOp,
+      byte[] value, RowMutations mutation) throws IOException;
 }
