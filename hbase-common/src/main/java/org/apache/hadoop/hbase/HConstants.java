@@ -1069,6 +1069,33 @@ public final class HConstants {
    */
   public static final String BUCKET_CACHE_SIZE_KEY = "hbase.bucketcache.size";
 
+  /**
+   * HConstants for fast fail on the client side follow
+   */
+  /**
+   * Config for enabling/disabling the fast fail mode.
+   */
+  public static final String HBASE_CLIENT_FAST_FAIL_MODE_ENABLED =
+      "hbase.client.fast.fail.mode.enabled";
+
+  public static final boolean HBASE_CLIENT_ENABLE_FAST_FAIL_MODE_DEFAULT =
+      false;
+
+  public static final String HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS =
+      "hbase.client.fastfail.threshold";
+  
+  public static final long HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS_DEFAULT =
+      60000;
+
+  public static final String HBASE_CLIENT_FAST_FAIL_CLEANUP_MS_DURATION_MS =
+      "hbase.client.fast.fail.cleanup.duration";
+
+  public static final long HBASE_CLIENT_FAST_FAIL_CLEANUP_DURATION_MS_DEFAULT =
+      600000;
+
+  public static final String HBASE_CLIENT_FAST_FAIL_INTERCEPTOR_IMPL =
+      "hbase.client.fast.fail.interceptor.impl"; 
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

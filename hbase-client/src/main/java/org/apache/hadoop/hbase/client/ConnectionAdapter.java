@@ -440,4 +440,9 @@ class ConnectionAdapter implements ClusterConnection {
   public AsyncProcess getAsyncProcess() {
     return wrappedConnection.getAsyncProcess();
   }
+
+  @Override
+  public RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf) {
+    return wrappedConnection.getNewRpcRetryingCallerFactory(conf);
+  }
 }

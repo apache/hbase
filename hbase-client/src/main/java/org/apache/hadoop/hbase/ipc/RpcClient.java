@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.codec.KeyValueCodec;
+import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta;
@@ -106,7 +107,6 @@ import com.google.protobuf.Message.Builder;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-
 
 /**
  * Does RPC against a cluster.  Manages connections per regionserver in the cluster.
@@ -502,7 +502,7 @@ public class RpcClient {
       private void cleanup() {
         assert shouldCloseConnection.get();
 
-        IOException ie = new IOException("Connection to " + server + " is closing.");
+        IOException ie = new ConnectionClosingException("Connection to " + server + " is closing.");
         while (true) {
           CallFuture cts = callsToWrite.poll();
           if (cts == null) {
@@ -717,7 +717,7 @@ public class RpcClient {
      */
     private void checkIsOpen() throws IOException {
       if (shouldCloseConnection.get()) {
-        throw new IOException(getName() + " is closing");
+        throw new ConnectionClosingException(getName() + " is closing");
       }
     }
 
@@ -907,7 +907,7 @@ public class RpcClient {
       }
 
       if (shouldCloseConnection.get()){
-        throw new IOException("This connection is closing");
+        throw new ConnectionClosingException("This connection is closing");
       }
 
       if (failedServers.isFailedServer(remoteId.getAddress())) {
@@ -1254,7 +1254,7 @@ public class RpcClient {
           itor.remove();
         } else if (allCalls) {
           long waitTime = EnvironmentEdgeManager.currentTime() - c.getStartTime();
-          IOException ie = new IOException("Connection to " + getRemoteAddress()
+          IOException ie = new ConnectionClosingException("Connection to " + getRemoteAddress()
               + " is closing. Call id=" + c.id + ", waitTime=" + waitTime);
           c.setException(ie);
           itor.remove();
@@ -1510,8 +1510,8 @@ public class RpcClient {
         break;
       }
       if (connection.shouldCloseConnection.get()) {
-        throw new IOException("Call id=" + call.id + " on server "
-            + addr + " aborted: connection is closing");
+        throw new ConnectionClosingException("Call id=" + call.id +
+            " on server " + addr + " aborted: connection is closing");
       }
       try {
         synchronized (call) {
@@ -1559,6 +1559,9 @@ public class RpcClient {
     } else if (exception instanceof SocketTimeoutException) {
       return (SocketTimeoutException)new SocketTimeoutException("Call to " + addr +
         " failed because " + exception).initCause(exception);
+    } else if (exception instanceof ConnectionClosingException){
+      return (ConnectionClosingException) new ConnectionClosingException(
+          "Call to " + addr + " failed on local exception: " + exception).initCause(exception);
     } else {
       return (IOException)new IOException("Call to " + addr + " failed on local exception: " +
         exception).initCause(exception);

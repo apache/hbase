@@ -131,6 +131,9 @@ public class HConnectionTestingUtility {
           RpcControllerFactory.instantiate(conf)));
     Mockito.doNothing().when(c).incCount();
     Mockito.doNothing().when(c).decCount();
+    Mockito.when(c.getNewRpcRetryingCallerFactory(conf)).thenReturn(
+        RpcRetryingCallerFactory.instantiate(conf,
+            RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR));
     return c;
   }
 
