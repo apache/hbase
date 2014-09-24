@@ -260,11 +260,12 @@ public class TestFSTableDescriptors {
   }
 
   @Test
-  public void testReadingArchiveDirectoryFromFS() throws IOException {
+  public void testReadingInvalidDirectoryFromFS() throws IOException {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     try {
+      // .tmp dir is an invalid table name
       new FSTableDescriptors(fs, FSUtils.getRootDir(UTIL.getConfiguration()))
-          .get(TableName.valueOf(HConstants.HFILE_ARCHIVE_DIRECTORY));
+          .get(TableName.valueOf(HConstants.HBASE_TEMP_DIRECTORY));
       fail("Shouldn't be able to read a table descriptor for the archive directory.");
     } catch (Exception e) {
       LOG.debug("Correctly got error when reading a table descriptor from the archive directory: "

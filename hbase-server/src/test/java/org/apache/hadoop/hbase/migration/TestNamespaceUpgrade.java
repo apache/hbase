@@ -93,7 +93,7 @@ public class TestNamespaceUpgrade {
       {"1","2","3","4","5","6","7","8","9"};
   private final static String currentKeys[] =
       {"1","2","3","4","5","6","7","8","9","A"};
-  private final static String tables[] = {"foo", "ns1.foo","ns.two.foo"};
+  private final static String tables[] = {"data", "foo", "ns1.foo","ns.two.foo"};
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
