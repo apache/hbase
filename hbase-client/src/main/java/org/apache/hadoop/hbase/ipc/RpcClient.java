@@ -27,7 +27,6 @@ import com.google.protobuf.Message.Builder;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
-import com.google.protobuf.TextFormat;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -114,8 +113,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
 @InterfaceAudience.Private
 public class RpcClient {
-  // The LOG key is intentionally not from this package to avoid ipc logging at DEBUG (all under
-  // o.a.h.hbase is set to DEBUG as default).
   public static final Log LOG = LogFactory.getLog(RpcClient.class);
   protected final PoolMap<ConnectionId, Connection> connections;
 
@@ -436,6 +433,7 @@ public class RpcClient {
         return cts;
       }
 
+      @Override
       public void close(){
         assert shouldCloseConnection.get();
         callsToWrite.offer(CallFuture.DEATH_PILL);
@@ -769,8 +767,8 @@ public class RpcClient {
 
     @Override
     public void run() {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(getName() + ": starting, connections " + connections.size());
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(getName() + ": starting, connections " + connections.size());
       }
 
       try {
@@ -778,17 +776,21 @@ public class RpcClient {
           readResponse();
         }
       } catch (InterruptedException t) {
-        LOG.debug(getName() + ": interrupted while waiting for call responses");
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(getName() + ": interrupted while waiting for call responses");
+        }
         markClosed(ExceptionUtil.asInterrupt(t));
       } catch (Throwable t) {
-        LOG.debug(getName() + ": unexpected throwable while waiting for call responses", t);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(getName() + ": unexpected throwable while waiting for call responses", t);
+        }
         markClosed(new IOException("Unexpected throwable while waiting call responses", t));
       }
 
       close();
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(getName() + ": stopped, connections " + connections.size());
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(getName() + ": stopped, connections " + connections.size());
       }
     }
 
@@ -849,12 +851,15 @@ public class RpcClient {
         final UserGroupInformation user)
     throws IOException, InterruptedException{
       user.doAs(new PrivilegedExceptionAction<Object>() {
+        @Override
         public Object run() throws IOException, InterruptedException {
           closeConnection();
           if (shouldAuthenticateOverKrb()) {
             if (currRetries < maxRetries) {
-              LOG.debug("Exception encountered while connecting to " +
-                  "the server : " + ex);
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("Exception encountered while connecting to " +
+                    "the server : " + ex);
+              }
               //try re-login
               if (UserGroupInformation.isLoginKeytabBased()) {
                 UserGroupInformation.getLoginUser().reloginFromKeytab();
@@ -1048,14 +1053,14 @@ public class RpcClient {
       disposeSasl();
 
       // log the info
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(getName() + ": closing ipc connection to " + server);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(getName() + ": closing ipc connection to " + server);
       }
 
       cleanupCalls(true);
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(getName() + ": ipc connection to " + server + " closed");
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(getName() + ": ipc connection to " + server + " closed");
       }
     }
 
@@ -1222,8 +1227,8 @@ public class RpcClient {
       if (e == null) throw new NullPointerException();
 
       if (shouldCloseConnection.compareAndSet(false, true)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(getName() + ": marking at should close, reason: " + e.getMessage());
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(getName() + ": marking at should close, reason: " + e.getMessage());
         }
         if (callSender != null) {
           callSender.close();
