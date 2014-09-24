@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.constraint;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configured;
 
 /**

@@ -25,8 +25,8 @@ import com.sun.tools.doclets.standard.Standard;
 /**
  * A <a href="http://java.sun.com/javase/6/docs/jdk/api/javadoc/doclet/">Doclet</a>
  * for excluding elements that are annotated with
- * {@link org.apache.hadoop.classification.InterfaceAudience.Private} or
- * {@link org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate}.
+ * {@link org.apache.hadoop.hbase.classification.InterfaceAudience.Private} or
+ * {@link org.apache.hadoop.hbase.classification.InterfaceAudience.LimitedPrivate}.
  * It delegates to the Standard Doclet, and takes the same options.
  */
 public class ExcludePrivateAnnotationsStandardDoclet {

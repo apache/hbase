@@ -28,7 +28,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.ArrayUtils;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
 

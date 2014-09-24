@@ -24,7 +24,7 @@ import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.HashSet;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ArrayUtils;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 import org.apache.hadoop.hbase.util.vint.UFIntTool;

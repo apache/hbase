@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.Iterator;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Iterator over an array of BlockCache CachedBlocks.

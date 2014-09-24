@@ -18,7 +18,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Uses an incrementing algorithm instead of the default.

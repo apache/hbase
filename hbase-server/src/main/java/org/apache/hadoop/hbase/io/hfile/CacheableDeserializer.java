@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Interface for a deserializer. Throws an IOException if the serialized data is

@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.util;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Defines the general behavior of a bloom filter.

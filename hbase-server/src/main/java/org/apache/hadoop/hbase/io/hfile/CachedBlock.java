@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
 public interface CachedBlock extends Comparable<CachedBlock> {

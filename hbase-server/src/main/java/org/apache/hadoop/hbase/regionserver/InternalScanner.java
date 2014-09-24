@@ -22,7 +22,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 
 /**

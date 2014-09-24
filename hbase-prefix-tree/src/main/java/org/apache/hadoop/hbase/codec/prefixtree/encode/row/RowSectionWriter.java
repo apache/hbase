@@ -23,7 +23,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.PrefixTreeEncoder;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize.TokenizerNode;
