@@ -107,23 +107,6 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * @deprecated Use {@link #create(List)} instead.
-   */
-  @Deprecated
-  public Result(KeyValue [] cells) {
-    this.cells = cells;
-  }
-
-  /**
-   * @deprecated Use {@link #create(List)} instead.
-   */
-  @Deprecated
-  public Result(List<KeyValue> kvs) {
-    // TODO: Here we presume the passed in Cells are KVs.  One day this won't always be so.
-    this(kvs.toArray(new Cell[kvs.size()]), null, false);
-  }
-
-  /**
    * Instantiate a Result with the specified List of KeyValues.
    * <br><strong>Note:</strong> You must ensure that the keyvalues are already sorted.
    * @param cells List of cells
@@ -203,25 +186,6 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * Return an cells of a Result as an array of KeyValues
-   *
-   * WARNING do not use, expensive.  This does an arraycopy of the cell[]'s value.
-   *
-   * Added to ease transition from  0.94 -> 0.96.
-   *
-   * @deprecated as of 0.96, use {@link #rawCells()}
-   * @return array of KeyValues, empty array if nothing in result.
-   */
-  @Deprecated
-  public KeyValue[] raw() {
-    KeyValue[] kvs = new KeyValue[cells.length];
-    for (int i = 0 ; i < kvs.length; i++) {
-      kvs[i] = KeyValueUtil.ensureKeyValue(cells[i]);
-    }
-    return kvs;
-  }
-
-  /**
    * Create a sorted list of the Cell's in this result.
    *
    * Since HBase 0.20.5 this is equivalent to raw().
@@ -230,29 +194,6 @@ public class Result implements CellScannable, CellScanner {
    */
   public List<Cell> listCells() {
     return isEmpty()? null: Arrays.asList(rawCells());
-  }
-
-  /**
-   * Return an cells of a Result as an array of KeyValues
-   *
-   * WARNING do not use, expensive.  This does  an arraycopy of the cell[]'s value.
-   *
-   * Added to ease transition from  0.94 -> 0.96.
-   *
-   * @deprecated as of 0.96, use {@link #listCells()}
-   * @return all sorted List of KeyValues; can be null if no cells in the result
-   */
-  @Deprecated
-  public List<KeyValue> list() {
-    return isEmpty() ? null : Arrays.asList(raw());
-  }
-
-  /**
-   * @deprecated Use {@link #getColumnCells(byte[], byte[])} instead.
-   */
-  @Deprecated
-  public List<KeyValue> getColumn(byte [] family, byte [] qualifier) {
-    return KeyValueUtil.ensureKeyValues(getColumnCells(family, qualifier));
   }
 
   /**
@@ -358,14 +299,6 @@ public class Result implements CellScannable, CellScanner {
   }
 
   /**
-   * @deprecated Use {@link #getColumnLatestCell(byte[], byte[])} instead.
-   */
-  @Deprecated
-  public KeyValue getColumnLatest(byte [] family, byte [] qualifier) {
-    return KeyValueUtil.ensureKeyValue(getColumnLatestCell(family, qualifier));
-  }
-
-  /**
    * The Cell for the most recent timestamp for a given column.
    *
    * @param family
@@ -387,16 +320,6 @@ public class Result implements CellScannable, CellScanner {
       return kvs[pos];
     }
     return null;
-  }
-
-  /**
-   * @deprecated Use {@link #getColumnLatestCell(byte[], int, int, byte[], int, int)} instead.
-   */
-  @Deprecated
-  public KeyValue getColumnLatest(byte [] family, int foffset, int flength,
-      byte [] qualifier, int qoffset, int qlength) {
-    return KeyValueUtil.ensureKeyValue(
-        getColumnLatestCell(family, foffset, flength, qualifier, qoffset, qlength));
   }
 
   /**

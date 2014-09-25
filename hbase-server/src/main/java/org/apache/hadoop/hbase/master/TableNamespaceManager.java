@@ -276,7 +276,7 @@ public class TableNamespaceManager {
         ResultScanner scanner = nsTable.getScanner(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES);
         try {
           for (Result result : scanner) {
-            byte[] val =  CellUtil.cloneValue(result.getColumnLatest(
+            byte[] val =  CellUtil.cloneValue(result.getColumnLatestCell(
                 HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES,
                 HTableDescriptor.NAMESPACE_COL_DESC_BYTES));
             NamespaceDescriptor ns =

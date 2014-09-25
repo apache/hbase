@@ -798,7 +798,7 @@ public class AggregationClient {
           for (int i = 0; i < results.length; i++) {
             Result r = results[i];
             // retrieve weight
-            Cell kv = r.getColumnLatest(colFamily, weightQualifier);
+            Cell kv = r.getColumnLatestCell(colFamily, weightQualifier);
             R newValue = ci.getValue(colFamily, weightQualifier, kv);
             S s = ci.castToReturnType(newValue);
             double newSumVal = movingSumVal + ci.divideForAvg(s, 1L);
@@ -807,7 +807,7 @@ public class AggregationClient {
               return value;
             }
             movingSumVal = newSumVal;
-            kv = r.getColumnLatest(colFamily, qualifier);
+            kv = r.getColumnLatestCell(colFamily, qualifier);
             value = ci.getValue(colFamily, qualifier, kv);
             }
           }

@@ -4427,8 +4427,8 @@ public class TestFromClientSide {
     assertEquals(0, Bytes.compareTo(Bytes.add(v2,v1), r.getValue(FAMILY, QUALIFIERS[1])));
     // QUALIFIERS[2] previously not exist, verify both value and timestamp are correct
     assertEquals(0, Bytes.compareTo(v2, r.getValue(FAMILY, QUALIFIERS[2])));
-    assertEquals(r.getColumnLatest(FAMILY, QUALIFIERS[0]).getTimestamp(),
-        r.getColumnLatest(FAMILY, QUALIFIERS[2]).getTimestamp());
+    assertEquals(r.getColumnLatestCell(FAMILY, QUALIFIERS[0]).getTimestamp(),
+        r.getColumnLatestCell(FAMILY, QUALIFIERS[2]).getTimestamp());
   }
 
   @Test
@@ -5656,8 +5656,8 @@ public class TestFromClientSide {
     int expectedIndex = 5;
     for (Result result : scanner) {
       assertEquals(result.size(), 1);
-      assertTrue(Bytes.equals(result.raw()[0].getRow(), ROWS[expectedIndex]));
-      assertTrue(Bytes.equals(result.raw()[0].getQualifier(),
+      assertTrue(Bytes.equals(result.rawCells()[0].getRow(), ROWS[expectedIndex]));
+      assertTrue(Bytes.equals(result.rawCells()[0].getQualifier(),
           QUALIFIERS[expectedIndex]));
       expectedIndex--;
     }
@@ -5695,8 +5695,8 @@ public class TestFromClientSide {
     int count = 0;
     for (Result result : ht.getScanner(scan)) {
       assertEquals(result.size(), 1);
-      assertEquals(result.raw()[0].getValueLength(), Bytes.SIZEOF_INT);
-      assertEquals(Bytes.toInt(result.raw()[0].getValue()), VALUE.length);
+      assertEquals(result.rawCells()[0].getValueLength(), Bytes.SIZEOF_INT);
+      assertEquals(Bytes.toInt(result.rawCells()[0].getValue()), VALUE.length);
       count++;
     }
     assertEquals(count, 10);
@@ -5979,15 +5979,15 @@ public class TestFromClientSide {
     result = scanner.next();
     assertTrue("Expected 2 keys but received " + result.size(),
         result.size() == 2);
-    assertTrue(Bytes.equals(result.raw()[0].getRow(), ROWS[4]));
-    assertTrue(Bytes.equals(result.raw()[1].getRow(), ROWS[4]));
-    assertTrue(Bytes.equals(result.raw()[0].getValue(), VALUES[1]));
-    assertTrue(Bytes.equals(result.raw()[1].getValue(), VALUES[2]));
+    assertTrue(Bytes.equals(result.rawCells()[0].getRow(), ROWS[4]));
+    assertTrue(Bytes.equals(result.rawCells()[1].getRow(), ROWS[4]));
+    assertTrue(Bytes.equals(result.rawCells()[0].getValue(), VALUES[1]));
+    assertTrue(Bytes.equals(result.rawCells()[1].getValue(), VALUES[2]));
     result = scanner.next();
     assertTrue("Expected 1 key but received " + result.size(),
         result.size() == 1);
-    assertTrue(Bytes.equals(result.raw()[0].getRow(), ROWS[3]));
-    assertTrue(Bytes.equals(result.raw()[0].getValue(), VALUES[0]));
+    assertTrue(Bytes.equals(result.rawCells()[0].getRow(), ROWS[3]));
+    assertTrue(Bytes.equals(result.rawCells()[0].getValue(), VALUES[0]));
     scanner.close();
     ht.close();
   }

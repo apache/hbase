@@ -26,6 +26,7 @@ import junit.framework.Assert;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -93,13 +94,13 @@ public class TestScannerWithBulkload {
     scanner = table.getScanner(scan);
     result = scanner.next();
     while (result != null) {
-      List<KeyValue> kvs = result.getColumn(Bytes.toBytes("col"), Bytes.toBytes("q"));
-      for (KeyValue _kv : kvs) {
-        if (Bytes.toString(_kv.getRow()).equals("row1")) {
-          System.out.println(Bytes.toString(_kv.getRow()));
-          System.out.println(Bytes.toString(_kv.getQualifier()));
-          System.out.println(Bytes.toString(_kv.getValue()));
-          Assert.assertEquals("version3", Bytes.toString(_kv.getValue()));
+      List<Cell> cells = result.getColumnCells(Bytes.toBytes("col"), Bytes.toBytes("q"));
+      for (Cell _c : cells) {
+        if (Bytes.toString(_c.getRow()).equals("row1")) {
+          System.out.println(Bytes.toString(_c.getRow()));
+          System.out.println(Bytes.toString(_c.getQualifier()));
+          System.out.println(Bytes.toString(_c.getValue()));
+          Assert.assertEquals("version3", Bytes.toString(_c.getValue()));
         }
       }
       result = scanner.next();
@@ -111,13 +112,13 @@ public class TestScannerWithBulkload {
   private Result scanAfterBulkLoad(ResultScanner scanner, Result result, String expctedVal)
       throws IOException {
     while (result != null) {
-      List<KeyValue> kvs = result.getColumn(Bytes.toBytes("col"), Bytes.toBytes("q"));
-      for (KeyValue _kv : kvs) {
-        if (Bytes.toString(_kv.getRow()).equals("row1")) {
-          System.out.println(Bytes.toString(_kv.getRow()));
-          System.out.println(Bytes.toString(_kv.getQualifier()));
-          System.out.println(Bytes.toString(_kv.getValue()));
-          Assert.assertEquals(expctedVal, Bytes.toString(_kv.getValue()));
+      List<Cell> cells = result.getColumnCells(Bytes.toBytes("col"), Bytes.toBytes("q"));
+      for (Cell _c : cells) {
+        if (Bytes.toString(_c.getRow()).equals("row1")) {
+          System.out.println(Bytes.toString(_c.getRow()));
+          System.out.println(Bytes.toString(_c.getQualifier()));
+          System.out.println(Bytes.toString(_c.getValue()));
+          Assert.assertEquals(expctedVal, Bytes.toString(_c.getValue()));
         }
       }
       result = scanner.next();
@@ -188,9 +189,9 @@ public class TestScannerWithBulkload {
 
     ResultScanner scanner = table.getScanner(scan);
     Result result = scanner.next();
-    List<KeyValue> kvs = result.getColumn(Bytes.toBytes("col"), Bytes.toBytes("q"));
-    Assert.assertEquals(1, kvs.size());
-    Assert.assertEquals("version1", Bytes.toString(kvs.get(0).getValue()));
+    List<Cell> cells = result.getColumnCells(Bytes.toBytes("col"), Bytes.toBytes("q"));
+    Assert.assertEquals(1, cells.size());
+    Assert.assertEquals("version1", Bytes.toString(cells.get(0).getValue()));
     scanner.close();
     return table;
   }
@@ -266,13 +267,13 @@ public class TestScannerWithBulkload {
     scanner = table.getScanner(scan);
     result = scanner.next();
     while (result != null) {
-      List<KeyValue> kvs = result.getColumn(Bytes.toBytes("col"), Bytes.toBytes("q"));
-      for (KeyValue _kv : kvs) {
-        if (Bytes.toString(_kv.getRow()).equals("row1")) {
-          System.out.println(Bytes.toString(_kv.getRow()));
-          System.out.println(Bytes.toString(_kv.getQualifier()));
-          System.out.println(Bytes.toString(_kv.getValue()));
-          Assert.assertEquals("version3", Bytes.toString(_kv.getValue()));
+      List<Cell> cells = result.getColumnCells(Bytes.toBytes("col"), Bytes.toBytes("q"));
+      for (Cell _c : cells) {
+        if (Bytes.toString(_c.getRow()).equals("row1")) {
+          System.out.println(Bytes.toString(_c.getRow()));
+          System.out.println(Bytes.toString(_c.getQualifier()));
+          System.out.println(Bytes.toString(_c.getValue()));
+          Assert.assertEquals("version3", Bytes.toString(_c.getValue()));
         }
       }
       result = scanner.next();
