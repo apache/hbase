@@ -2188,10 +2188,10 @@ public class TestHRegion {
       // This is kinda hacky, but better than nothing...
       long now = System.currentTimeMillis();
       DefaultMemStore memstore = (DefaultMemStore) ((HStore) region.getStore(fam1)).memstore;
-      KeyValue firstKv = memstore.kvset.first();
-      assertTrue(firstKv.getTimestamp() <= now);
-      now = firstKv.getTimestamp();
-      for (Cell cell : memstore.kvset) {
+      Cell firstCell = memstore.cellSet.first();
+      assertTrue(firstCell.getTimestamp() <= now);
+      now = firstCell.getTimestamp();
+      for (Cell cell : memstore.cellSet) {
         assertTrue(cell.getTimestamp() <= now);
         now = cell.getTimestamp();
       }

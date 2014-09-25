@@ -78,8 +78,8 @@ public class TestDefaultMemStore extends TestCase {
     byte [] other = Bytes.toBytes("somethingelse");
     KeyValue samekey = new KeyValue(bytes, bytes, bytes, other);
     this.memstore.add(samekey);
-    KeyValue found = this.memstore.kvset.first();
-    assertEquals(1, this.memstore.kvset.size());
+    Cell found = this.memstore.cellSet.first();
+    assertEquals(1, this.memstore.cellSet.size());
     assertTrue(Bytes.toString(found.getValue()), CellUtil.matchingValue(samekey, found));
   }
 
@@ -482,7 +482,7 @@ public class TestDefaultMemStore extends TestCase {
     m.add(key2);
 
     assertTrue("Expected memstore to hold 3 values, actually has " +
-        m.kvset.size(), m.kvset.size() == 3);
+        m.cellSet.size(), m.cellSet.size() == 3);
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -497,11 +497,11 @@ public class TestDefaultMemStore extends TestCase {
     // Add more versions to make it a little more interesting.
     Thread.sleep(1);
     addRows(this.memstore);
-    KeyValue closestToEmpty = this.memstore.getNextRow(KeyValue.LOWESTKEY);
+    Cell closestToEmpty = this.memstore.getNextRow(KeyValue.LOWESTKEY);
     assertTrue(KeyValue.COMPARATOR.compareRows(closestToEmpty,
       new KeyValue(Bytes.toBytes(0), System.currentTimeMillis())) == 0);
     for (int i = 0; i < ROW_COUNT; i++) {
-      KeyValue nr = this.memstore.getNextRow(new KeyValue(Bytes.toBytes(i),
+      Cell nr = this.memstore.getNextRow(new KeyValue(Bytes.toBytes(i),
         System.currentTimeMillis()));
       if (i + 1 == ROW_COUNT) {
         assertEquals(nr, null);
@@ -557,10 +557,10 @@ public class TestDefaultMemStore extends TestCase {
     memstore.snapshot();
     assertEquals(3, memstore.snapshot.size());
     //Adding value to "new" memstore
-    assertEquals(0, memstore.kvset.size());
+    assertEquals(0, memstore.cellSet.size());
     memstore.add(new KeyValue(row, fam ,qf4, val));
     memstore.add(new KeyValue(row, fam ,qf5, val));
-    assertEquals(2, memstore.kvset.size());
+    assertEquals(2, memstore.cellSet.size());
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -582,7 +582,7 @@ public class TestDefaultMemStore extends TestCase {
     memstore.add(put2);
     memstore.add(put3);
 
-    assertEquals(3, memstore.kvset.size());
+    assertEquals(3, memstore.cellSet.size());
 
     KeyValue del2 = new KeyValue(row, fam, qf1, ts2, KeyValue.Type.Delete, val);
     memstore.delete(del2);
@@ -593,10 +593,10 @@ public class TestDefaultMemStore extends TestCase {
     expected.add(put2);
     expected.add(put1);
 
-    assertEquals(4, memstore.kvset.size());
+    assertEquals(4, memstore.cellSet.size());
     int i = 0;
-    for(KeyValue kv : memstore.kvset) {
-      assertEquals(expected.get(i++), kv);
+    for(Cell cell : memstore.cellSet) {
+      assertEquals(expected.get(i++), cell);
     }
   }
 
@@ -616,7 +616,7 @@ public class TestDefaultMemStore extends TestCase {
     memstore.add(put2);
     memstore.add(put3);
 
-    assertEquals(3, memstore.kvset.size());
+    assertEquals(3, memstore.cellSet.size());
 
     KeyValue del2 =
       new KeyValue(row, fam, qf1, ts2, KeyValue.Type.DeleteColumn, val);
@@ -629,10 +629,10 @@ public class TestDefaultMemStore extends TestCase {
     expected.add(put1);
 
 
-    assertEquals(4, memstore.kvset.size());
+    assertEquals(4, memstore.cellSet.size());
     int i = 0;
-    for (KeyValue kv: memstore.kvset) {
-      assertEquals(expected.get(i++), kv);
+    for (Cell cell: memstore.cellSet) {
+      assertEquals(expected.get(i++), cell);
     }
   }
 
@@ -669,10 +669,10 @@ public class TestDefaultMemStore extends TestCase {
 
 
 
-    assertEquals(5, memstore.kvset.size());
+    assertEquals(5, memstore.cellSet.size());
     int i = 0;
-    for (KeyValue kv: memstore.kvset) {
-      assertEquals(expected.get(i++), kv);
+    for (Cell cell: memstore.cellSet) {
+      assertEquals(expected.get(i++), cell);
     }
   }
 
@@ -685,8 +685,8 @@ public class TestDefaultMemStore extends TestCase {
     memstore.add(new KeyValue(row, fam, qf, ts, val));
     KeyValue delete = new KeyValue(row, fam, qf, ts, KeyValue.Type.Delete, val);
     memstore.delete(delete);
-    assertEquals(2, memstore.kvset.size());
-    assertEquals(delete, memstore.kvset.first());
+    assertEquals(2, memstore.cellSet.size());
+    assertEquals(delete, memstore.cellSet.first());
   }
 
   public void testRetainsDeleteVersion() throws IOException {
@@ -698,8 +698,8 @@ public class TestDefaultMemStore extends TestCase {
         "row1", "fam", "a", 100, KeyValue.Type.Delete, "dont-care");
     memstore.delete(delete);
 
-    assertEquals(2, memstore.kvset.size());
-    assertEquals(delete, memstore.kvset.first());
+    assertEquals(2, memstore.cellSet.size());
+    assertEquals(delete, memstore.cellSet.first());
   }
   public void testRetainsDeleteColumn() throws IOException {
     // add a put to memstore
@@ -710,8 +710,8 @@ public class TestDefaultMemStore extends TestCase {
         KeyValue.Type.DeleteColumn, "dont-care");
     memstore.delete(delete);
 
-    assertEquals(2, memstore.kvset.size());
-    assertEquals(delete, memstore.kvset.first());
+    assertEquals(2, memstore.cellSet.size());
+    assertEquals(delete, memstore.cellSet.first());
   }
   public void testRetainsDeleteFamily() throws IOException {
     // add a put to memstore
@@ -722,8 +722,8 @@ public class TestDefaultMemStore extends TestCase {
         KeyValue.Type.DeleteFamily, "dont-care");
     memstore.delete(delete);
 
-    assertEquals(2, memstore.kvset.size());
-    assertEquals(delete, memstore.kvset.first());
+    assertEquals(2, memstore.cellSet.size());
+    assertEquals(delete, memstore.cellSet.first());
   }
 
   ////////////////////////////////////

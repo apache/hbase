@@ -134,6 +134,8 @@ public class KeyValueUtil {
   /**************** copy key and value *********************/
 
   public static int appendToByteArray(final Cell cell, final byte[] output, final int offset) {
+    // TODO when cell instance of KV we can bypass all steps and just do backing single array
+    // copy(?)
     int pos = offset;
     pos = Bytes.putInt(output, pos, keyLength(cell));
     pos = Bytes.putInt(output, pos, cell.getValueLength());

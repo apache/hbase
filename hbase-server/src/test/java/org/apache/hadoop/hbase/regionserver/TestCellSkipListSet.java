@@ -21,38 +21,39 @@ package org.apache.hadoop.hbase.regionserver;
 import java.util.Iterator;
 import java.util.SortedSet;
 
+import junit.framework.TestCase;
+
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import junit.framework.TestCase;
 import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
-public class TestKeyValueSkipListSet extends TestCase {
-  private final KeyValueSkipListSet kvsls =
-    new KeyValueSkipListSet(KeyValue.COMPARATOR);
+public class TestCellSkipListSet extends TestCase {
+  private final CellSkipListSet csls =
+    new CellSkipListSet(KeyValue.COMPARATOR);
 
   protected void setUp() throws Exception {
     super.setUp();
-    this.kvsls.clear();
+    this.csls.clear();
   }
 
   public void testAdd() throws Exception {
     byte [] bytes = Bytes.toBytes(getName());
     KeyValue kv = new KeyValue(bytes, bytes, bytes, bytes);
-    this.kvsls.add(kv);
-    assertTrue(this.kvsls.contains(kv));
-    assertEquals(1, this.kvsls.size());
-    KeyValue first = this.kvsls.first();
+    this.csls.add(kv);
+    assertTrue(this.csls.contains(kv));
+    assertEquals(1, this.csls.size());
+    Cell first = this.csls.first();
     assertTrue(kv.equals(first));
     assertTrue(Bytes.equals(kv.getValue(), first.getValue()));
     // Now try overwritting
     byte [] overwriteValue = Bytes.toBytes("overwrite");
     KeyValue overwrite = new KeyValue(bytes, bytes, bytes, overwriteValue);
-    this.kvsls.add(overwrite);
-    assertEquals(1, this.kvsls.size());
-    first = this.kvsls.first();
+    this.csls.add(overwrite);
+    assertEquals(1, this.csls.size());
+    first = this.csls.first();
     assertTrue(Bytes.equals(overwrite.getValue(), first.getValue()));
     assertFalse(Bytes.equals(overwrite.getValue(), kv.getValue()));
   }
@@ -63,11 +64,11 @@ public class TestKeyValueSkipListSet extends TestCase {
     byte [] value2 = Bytes.toBytes("2");
     final int total = 3;
     for (int i = 0; i < total; i++) {
-      this.kvsls.add(new KeyValue(bytes, bytes, Bytes.toBytes("" + i), value1));
+      this.csls.add(new KeyValue(bytes, bytes, Bytes.toBytes("" + i), value1));
     }
     // Assert that we added 'total' values and that they are in order
     int count = 0;
-    for (KeyValue kv: this.kvsls) {
+    for (Cell kv: this.csls) {
       assertEquals("" + count, Bytes.toString(kv.getQualifier()));
       assertTrue(Bytes.equals(kv.getValue(), value1));
       count++;
@@ -75,12 +76,12 @@ public class TestKeyValueSkipListSet extends TestCase {
     assertEquals(total, count);
     // Now overwrite with a new value.
     for (int i = 0; i < total; i++) {
-      this.kvsls.add(new KeyValue(bytes, bytes, Bytes.toBytes("" + i), value2));
+      this.csls.add(new KeyValue(bytes, bytes, Bytes.toBytes("" + i), value2));
     }
     // Assert that we added 'total' values and that they are in order and that
     // we are getting back value2
     count = 0;
-    for (KeyValue kv: this.kvsls) {
+    for (Cell kv: this.csls) {
       assertEquals("" + count, Bytes.toString(kv.getQualifier()));
       assertTrue(Bytes.equals(kv.getValue(), value2));
       count++;
@@ -94,12 +95,12 @@ public class TestKeyValueSkipListSet extends TestCase {
     byte [] value2 = Bytes.toBytes("2");
     final int total = 3;
     for (int i = 0; i < total; i++) {
-      this.kvsls.add(new KeyValue(bytes, bytes, Bytes.toBytes("" + i), value1));
+      this.csls.add(new KeyValue(bytes, bytes, Bytes.toBytes("" + i), value1));
     }
     // Assert that we added 'total' values and that they are in order
     int count = 0;
-    for (Iterator<KeyValue> i = this.kvsls.descendingIterator(); i.hasNext();) {
-      KeyValue kv = i.next();
+    for (Iterator<Cell> i = this.csls.descendingIterator(); i.hasNext();) {
+      Cell kv = i.next();
       assertEquals("" + (total - (count + 1)), Bytes.toString(kv.getQualifier()));
       assertTrue(Bytes.equals(kv.getValue(), value1));
       count++;
@@ -107,13 +108,13 @@ public class TestKeyValueSkipListSet extends TestCase {
     assertEquals(total, count);
     // Now overwrite with a new value.
     for (int i = 0; i < total; i++) {
-      this.kvsls.add(new KeyValue(bytes, bytes, Bytes.toBytes("" + i), value2));
+      this.csls.add(new KeyValue(bytes, bytes, Bytes.toBytes("" + i), value2));
     }
     // Assert that we added 'total' values and that they are in order and that
     // we are getting back value2
     count = 0;
-    for (Iterator<KeyValue> i = this.kvsls.descendingIterator(); i.hasNext();) {
-      KeyValue kv = i.next();
+    for (Iterator<Cell> i = this.csls.descendingIterator(); i.hasNext();) {
+      Cell kv = i.next();
       assertEquals("" + (total - (count + 1)), Bytes.toString(kv.getQualifier()));
       assertTrue(Bytes.equals(kv.getValue(), value2));
       count++;
@@ -130,22 +131,20 @@ public class TestKeyValueSkipListSet extends TestCase {
     for (int i = 0; i < total; i++) {
       KeyValue kv = new KeyValue(bytes, bytes, Bytes.toBytes("" + i), value1);
       if (i == 1) splitter = kv;
-      this.kvsls.add(kv);
+      this.csls.add(kv);
     }
-    SortedSet<KeyValue> tail = this.kvsls.tailSet(splitter);
+    SortedSet<Cell> tail = this.csls.tailSet(splitter);
     assertEquals(2, tail.size());
-    SortedSet<KeyValue> head = this.kvsls.headSet(splitter);
+    SortedSet<Cell> head = this.csls.headSet(splitter);
     assertEquals(1, head.size());
     // Now ensure that we get back right answer even when we do tail or head.
     // Now overwrite with a new value.
     for (int i = 0; i < total; i++) {
-      this.kvsls.add(new KeyValue(bytes, bytes, Bytes.toBytes("" + i), value2));
+      this.csls.add(new KeyValue(bytes, bytes, Bytes.toBytes("" + i), value2));
     }
-    tail = this.kvsls.tailSet(splitter);
+    tail = this.csls.tailSet(splitter);
     assertTrue(Bytes.equals(tail.first().getValue(), value2));
-    head = this.kvsls.headSet(splitter);
+    head = this.csls.headSet(splitter);
     assertTrue(Bytes.equals(head.first().getValue(), value2));
   }
-
 }
-
