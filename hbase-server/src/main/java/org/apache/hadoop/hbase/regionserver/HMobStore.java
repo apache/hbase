@@ -322,19 +322,19 @@ public class HMobStore extends HStore {
    * In order to avoid this, we need mutually exclude the running of the major compaction and
    * sweeping in mob files.
    * The minor compaction is not affected.
-   * The major compaction is converted to a minor one when a sweeping is in progress.
+   * The major compaction is marked as retainDeleteMarkers when a sweeping is in progress.
    */
   @Override
   public List<StoreFile> compact(CompactionContext compaction) throws IOException {
     // If it's major compaction, try to find whether there's a sweeper is running
-    // If yes, change the major compaction to a minor one.
-    if (compaction.getRequest().isMajor()) {
+    // If yes, mark the major compaction as retainDeleteMarkers
+    if (compaction.getRequest().isAllFiles()) {
       // Use the Zookeeper to coordinate.
       // 1. Acquire a operation lock.
-      //   1.1. If no, convert the major compaction to a minor one and continue the compaction.
+      //   1.1. If no, mark the major compaction as retainDeleteMarkers and continue the compaction.
       //   1.2. If the lock is obtained, search the node of sweeping.
-      //      1.2.1. If the node is there, the sweeping is in progress, convert the major
-      //             compaction to a minor one and continue the compaction.
+      //      1.2.1. If the node is there, the sweeping is in progress, mark the major
+      //             compaction as retainDeleteMarkers and continue the compaction.
       //      1.2.2. If the node is not there, add a child to the major compaction node, and
       //             run the compaction directly.
       String compactionName = UUID.randomUUID().toString().replaceAll("-", "");
@@ -342,26 +342,27 @@ public class HMobStore extends HStore {
       try {
         zk = MobZookeeper.newInstance(region.getBaseConf(), compactionName);
       } catch (KeeperException e) {
-        LOG.error("Cannot connect to the zookeeper, ready to perform the minor compaction instead",
-            e);
-        // change the major compaction into a minor one
-        compaction.getRequest().setIsMajor(false, false);
+        LOG.error("Cannot connect to the zookeeper, forcing the delete markers to be retained", e);
+        compaction.getRequest().forceRetainDeleteMarkers();
         return super.compact(compaction);
       }
-      boolean major = false;
+      boolean keepDeleteMarkers = true;
+      boolean majorCompactNodeAdded = false;
       try {
         // try to acquire the operation lock.
         if (zk.lockColumnFamily(getTableName().getNameAsString(), getFamily().getNameAsString())) {
           try {
             LOG.info("Obtain the lock for the store[" + this
-                + "], ready to perform the major compaction");
+                + "], forcing the delete markers to be retained");
             // check the sweeping node to find out whether the sweeping is in progress.
             boolean hasSweeper = zk.isSweeperZNodeExist(getTableName().getNameAsString(),
                 getFamily().getNameAsString());
             if (!hasSweeper) {
               // if not, add a child to the major compaction node of this store.
-              major = zk.addMajorCompactionZNode(getTableName().getNameAsString(), getFamily()
-                  .getNameAsString(), compactionName);
+              majorCompactNodeAdded = zk.addMajorCompactionZNode(getTableName().getNameAsString(),
+                  getFamily().getNameAsString(), compactionName);
+              // If we failed to add the major compact node, go with keep delete markers mode.
+              keepDeleteMarkers = !majorCompactNodeAdded;
             }
           } catch (Exception e) {
             LOG.error("Fail to handle the Zookeeper", e);
@@ -371,17 +372,14 @@ public class HMobStore extends HStore {
           }
         }
         try {
-          if (major) {
-            return super.compact(compaction);
-          } else {
-            LOG.warn("Cannot obtain the lock or a sweep tool is running on this store["
-                + this + "], ready to perform the minor compaction instead");
-            // change the major compaction into a minor one
-            compaction.getRequest().setIsMajor(false, false);
-            return super.compact(compaction);
+          if (keepDeleteMarkers) {
+            LOG.warn("Cannot obtain the lock or a sweep tool is running on this store[" + this
+                + "], forcing the delete markers to be retained");
+            compaction.getRequest().forceRetainDeleteMarkers();
           }
+          return super.compact(compaction);
         } finally {
-          if (major) {
+          if (majorCompactNodeAdded) {
             try {
               zk.deleteMajorCompactionZNode(getTableName().getNameAsString(), getFamily()
                   .getNameAsString(), compactionName);

@@ -59,8 +59,8 @@ public class DefaultCompactor extends Compactor {
       InternalScanner scanner = null;
       try {
         /* Include deletes, unless we are doing a compaction of all files */
-        ScanType scanType =
-            request.isAllFiles() ? ScanType.COMPACT_DROP_DELETES : ScanType.COMPACT_RETAIN_DELETES;
+        ScanType scanType = request.isRetainDeleteMarkers() ? ScanType.COMPACT_RETAIN_DELETES
+            : ScanType.COMPACT_DROP_DELETES;
         scanner = preCreateCoprocScanner(request, scanType, fd.earliestPutTs, scanners);
         if (scanner == null) {
           scanner = createScanner(store, scanners, scanType, smallestReadPoint, fd.earliestPutTs);

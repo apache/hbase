@@ -37,13 +37,16 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestCase.HRegionIncommon;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
@@ -53,7 +56,6 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.mob.MobZookeeper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -99,9 +101,11 @@ public class TestMobCompaction {
     UTIL.shutdownMiniCluster();
   }
 
-  private void init(long mobThreshold) throws Exception {
+  private void init(Configuration conf, long mobThreshold) throws Exception {
+    this.conf = conf;
     this.mobCellThreshold = mobThreshold;
-    conf = UTIL.getConfiguration();
+    HBaseTestingUtility UTIL = new HBaseTestingUtility(conf);
+
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
     htd = UTIL.createTableDescriptor(name.getMethodName());
     hcd = new HColumnDescriptor(COLUMN_FAMILY);
@@ -125,7 +129,7 @@ public class TestMobCompaction {
    */
   @Test
   public void testSmallerValue() throws Exception {
-    init(500);
+    init(UTIL.getConfiguration(), 500);
     byte[] dummyData = makeDummyData(300); // smaller than mob threshold
     HRegionIncommon loader = new HRegionIncommon(region);
     // one hfile per row
@@ -153,7 +157,7 @@ public class TestMobCompaction {
    */
   @Test
   public void testLargerValue() throws Exception {
-    init(200);
+    init(UTIL.getConfiguration(), 200);
     byte[] dummyData = makeDummyData(300); // larger than mob threshold
     HRegionIncommon loader = new HRegionIncommon(region);
     for (int i = 0; i < compactionThreshold; i++) {
@@ -185,7 +189,7 @@ public class TestMobCompaction {
   @Test
   public void testMobCompactionWithBulkload() throws Exception {
     // The following will produce store files of 600.
-    init(300);
+    init(UTIL.getConfiguration(), 300);
     byte[] dummyData = makeDummyData(600);
 
     Path hbaseRootDir = FSUtils.getRootDir(conf);
@@ -214,6 +218,62 @@ public class TestMobCompaction {
     assertEquals("After compaction: rows", compactionThreshold, countRows());
     assertEquals("After compaction: mob rows", compactionThreshold, countMobRows());
     assertEquals("After compaction: referenced mob file count", 1, countReferencedMobFiles());
+  }
+
+  /**
+   * Tests the major compaction when the zk is not connected.
+   * After that the major compaction will be marked as retainDeleteMarkers, the delete marks
+   * will be retained.
+   * @throws Exception
+   */
+  @Test
+  public void testMajorCompactionWithZKError() throws Exception {
+    Configuration conf = new Configuration(UTIL.getConfiguration());
+    // use the wrong zk settings
+    conf.setInt("zookeeper.recovery.retry", 0);
+    conf.setInt(HConstants.ZK_SESSION_TIMEOUT, 100);
+    conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT,
+        conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 2181) - 1);
+    init(conf, 200);
+    byte[] dummyData = makeDummyData(300); // larger than mob threshold
+    HRegionIncommon loader = new HRegionIncommon(region);
+    byte[] deleteRow = Bytes.toBytes(0);
+    for (int i = 0; i < compactionThreshold - 1 ; i++) {
+      Put p = new Put(Bytes.toBytes(i));
+      p.setDurability(Durability.SKIP_WAL);
+      p.add(COLUMN_FAMILY, Bytes.toBytes("colX"), dummyData);
+      loader.put(p);
+      loader.flushcache();
+    }
+    Delete delete = new Delete(deleteRow);
+    delete.deleteFamily(COLUMN_FAMILY);
+    region.delete(delete);
+    loader.flushcache();
+
+    assertEquals("Before compaction: store files", compactionThreshold, countStoreFiles());
+    region.compactStores(true);
+    assertEquals("After compaction: store files", 1, countStoreFiles());
+
+    Scan scan = new Scan();
+    scan.setRaw(true);
+    InternalScanner scanner = region.getScanner(scan);
+    List<Cell> results = new ArrayList<Cell>();
+    scanner.next(results);
+    int deleteCount = 0;
+    while (!results.isEmpty()) {
+      for (Cell c : results) {
+        if (c.getTypeByte() == KeyValue.Type.DeleteFamily.getCode()) {
+          deleteCount++;
+          assertTrue(Bytes.equals(CellUtil.cloneRow(c), deleteRow));
+        }
+      }
+      results.clear();
+      scanner.next(results);
+    }
+    // assert the delete mark is retained, the major compaction is marked as
+    // retainDeleteMarkers.
+    assertEquals(1, deleteCount);
+    scanner.close();
   }
 
   private int countStoreFiles() throws IOException {
