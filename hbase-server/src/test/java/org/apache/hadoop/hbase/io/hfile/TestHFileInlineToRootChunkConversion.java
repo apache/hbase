@@ -22,8 +22,8 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -72,30 +72,17 @@ public class TestHFileInlineToRootChunkConversion {
       sb.setLength(0);
 
       byte[] k = Bytes.toBytes(keyStr);
-      System.out.println("RowKey: " + Bytes.toString(k));
-      byte[] f = "f1".getBytes();
-      byte[] q = "q1".getBytes();
-      int keySize = (int) KeyValue.getKeyDataStructureSize(k.length, f.length, q.length);
-      byte[] bytes = new byte[keySize];
-      int pos = 0;
-      pos = Bytes.putShort(bytes, pos, (short) (k.length & 0x0000ffff));
-      pos = Bytes.putBytes(bytes, pos, k, 0, k.length);
-      pos = Bytes.putByte(bytes, pos, (byte) f.length);
-      pos = Bytes.putBytes(bytes, pos, f, 0, f.length);
-      pos = Bytes.putBytes(bytes, pos, q, 0, q.length);
-      pos = Bytes.putLong(bytes, pos, System.currentTimeMillis());
-      pos = Bytes.putByte(bytes, pos, KeyValue.Type.Put.getCode());
-
-      keys.add(bytes);
+      keys.add(k);
       byte[] v = Bytes.toBytes("value" + i);
-      hfw.append(bytes, v);
+      hfw.append(CellUtil.createCell(k, v));
     }
     hfw.close();
 
     HFileReaderV2 reader = (HFileReaderV2) HFile.createReader(fs, hfPath, cacheConf, conf);
+    // Scanner doesn't do Cells yet.  Fix.
     HFileScanner scanner = reader.getScanner(true, true);
     for (int i = 0; i < keys.size(); ++i) {
-      scanner.seekTo(KeyValue.createKeyValueFromKey(keys.get(i)));
+      scanner.seekTo(CellUtil.createCell(keys.get(i)));
     }
     reader.close();
   }

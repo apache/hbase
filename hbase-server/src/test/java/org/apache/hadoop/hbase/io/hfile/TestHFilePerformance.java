@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -196,7 +197,7 @@ public class TestHFilePerformance extends AbstractHBaseTool {
         for (long l=0; l<rows; l++ ) {
           generator.getKey(key);
           generator.getValue(value);
-          writer.append(key, value);
+          writer.append(CellUtil.createCell(key, value));
           totalBytesWritten += key.length;
           totalBytesWritten += value.length;
          }
