@@ -5846,6 +5846,17 @@ DESCRIPTION                                          ENABLED
     </section>
   </appendix>
 
+  <appendix xml:id="sql">
+    <title>SQL over HBase</title>
+    <section xml:id="phoenix">
+      <title>Apache Phoenix</title>
+      <para><link xlink:href="http://phoenix.apache.org">Apache Phoenix</link></para>
+    </section>
+    <section xml:id="trafodion">
+      <title>Trafodion</title>
+      <para><link xlink:href="https://wiki.trafodion.org/">Trafodion: Transactional SQL-on-HBase</link></para>
+    </section>
+  </appendix>
 
   <appendix>
       <title xml:id="ycsb"><link xlink:href="https://github.com/brianfrankcooper/YCSB/">YCSB: The Yahoo! Cloud Serving Benchmark</link> and HBase</title>
@@ -5959,7 +5970,6 @@ DESCRIPTION                                          ENABLED
       We changed the logo by stripping the colored background, inverting
       it and then rotating it some.
     </para>
-    
   </appendix>
 
   <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="tracing.xml" />
