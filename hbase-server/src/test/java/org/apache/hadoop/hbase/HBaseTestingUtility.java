@@ -27,6 +27,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -48,8 +49,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Jdk14Logger;
 import org.apache.commons.logging.impl.Log4JLogger;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -103,6 +104,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TaskLog;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.WatchedEvent;
@@ -259,6 +261,18 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     htu.getConfiguration().set(HConstants.HBASE_DIR, dataTestDir);
     LOG.debug("Setting " + HConstants.HBASE_DIR + " to " + dataTestDir);
     return htu;
+  }
+
+  /**
+   * Controls how many attempts we will make in the face of failures in HDFS.
+   * @deprecated to be removed with Hadoop 1.x support
+   */
+  @Deprecated
+  public void setHDFSClientRetry(final int retries) {
+    this.conf.setInt("hdfs.client.retries.number", retries);
+    if (0 == retries) {
+      makeDFSClientNonRetrying();
+    }
   }
 
   /**
@@ -1927,6 +1941,50 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return createMultiRegions(c, table, columnFamily, KEYS);
   }
 
+  void makeDFSClientNonRetrying() {
+    if (null == this.dfsCluster) {
+      LOG.debug("dfsCluster has not started, can't make client non-retrying.");
+      return;
+    }
+    try {
+      final FileSystem filesystem = this.dfsCluster.getFileSystem();
+      if (!(filesystem instanceof DistributedFileSystem)) {
+        LOG.debug("dfsCluster is not backed by a DistributedFileSystem, can't make client non-retrying.");
+        return;
+      }
+      // rely on FileSystem.CACHE to alter how we talk via DFSClient
+      final DistributedFileSystem fs = (DistributedFileSystem)filesystem;
+      // retrieve the backing DFSClient instance
+      final Field dfsField = fs.getClass().getDeclaredField("dfs");
+      dfsField.setAccessible(true);
+      final Class<?> dfsClazz = dfsField.getType();
+      final DFSClient dfs = DFSClient.class.cast(dfsField.get(fs));
+
+      // expose the method for creating direct RPC connections.
+      final Method createRPCNamenode = dfsClazz.getDeclaredMethod("createRPCNamenode", InetSocketAddress.class, Configuration.class, UserGroupInformation.class);
+      createRPCNamenode.setAccessible(true);
+
+      // grab the DFSClient instance's backing connection information
+      final Field nnField = dfsClazz.getDeclaredField("nnAddress");
+      nnField.setAccessible(true);
+      final InetSocketAddress nnAddress = InetSocketAddress.class.cast(nnField.get(dfs));
+      final Field confField = dfsClazz.getDeclaredField("conf");
+      confField.setAccessible(true);
+      final Configuration conf = Configuration.class.cast(confField.get(dfs));
+      final Field ugiField = dfsClazz.getDeclaredField("ugi");
+      ugiField.setAccessible(true);
+      final UserGroupInformation ugi = UserGroupInformation.class.cast(ugiField.get(dfs));
+
+      // replace the proxy for the namenode rpc with a direct instance
+      final Field namenodeField = dfsClazz.getDeclaredField("namenode");
+      namenodeField.setAccessible(true);
+      namenodeField.set(dfs, createRPCNamenode.invoke(null, nnAddress, conf, ugi));
+      LOG.debug("Set DSFClient namenode to bare RPC");
+    } catch (Exception exception) {
+      LOG.info("Could not alter DFSClient to be non-retrying.", exception);
+    }
+  }
+
   /**
    * Creates the specified number of regions in the specified table.
    * @param c
@@ -1944,9 +2002,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     byte [] endKey = Bytes.toBytes("zzzzz");
     byte [][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
     byte [][] regionStartKeys = new byte[splitKeys.length+1][];
-    for (int i=0;i<splitKeys.length;i++) {
-      regionStartKeys[i+1] = splitKeys[i];
-    }
+    System.arraycopy(splitKeys, 0, regionStartKeys, 1, splitKeys.length);
     regionStartKeys[0] = HConstants.EMPTY_BYTE_ARRAY;
     return createMultiRegions(c, table, family, regionStartKeys);
   }
@@ -2887,9 +2943,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     assertTrue(numRegions>3);
     byte [][] tmpSplitKeys = Bytes.split(startKey, endKey, numRegions - 3);
     byte [][] result = new byte[tmpSplitKeys.length+1][];
-    for (int i=0;i<tmpSplitKeys.length;i++) {
-      result[i+1] = tmpSplitKeys[i];
-    }
+    System.arraycopy(tmpSplitKeys, 0, result, 1, tmpSplitKeys.length);
     result[0] = HConstants.EMPTY_BYTE_ARRAY;
     return result;
   }
@@ -3387,6 +3441,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         // this algo is not available
       }
     }
-    return supportedAlgos.toArray(new Compression.Algorithm[0]);
+    return supportedAlgos.toArray(new Algorithm[supportedAlgos.size()]);
   }
 }

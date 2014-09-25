@@ -118,7 +118,7 @@ public class TestConcatenatedLists {
     assertEquals((last == -1), c.isEmpty());
     assertEquals(last + 1, c.size());
     assertTrue(c.containsAll(c));
-    Long[] array = c.toArray(new Long[0]);
+    Long[] array = c.toArray(new Long[c.size()]);
     List<Long> all = new ArrayList<Long>();
     Iterator<Long> iter = c.iterator();
     for (Long i = 0L; i <= last; ++i) {

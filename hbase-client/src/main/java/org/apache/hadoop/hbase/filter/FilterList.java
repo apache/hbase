@@ -23,8 +23,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -169,8 +169,9 @@ final public class FilterList extends Filter {
 
   @Override
   public void reset() throws IOException {
-    for (Filter filter : filters) {
-      filter.reset();
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      filters.get(i).reset();
     }
     seekHintFilter = null;
   }
@@ -178,7 +179,9 @@ final public class FilterList extends Filter {
   @Override
   public boolean filterRowKey(byte[] rowKey, int offset, int length) throws IOException {
     boolean flag = (this.operator == Operator.MUST_PASS_ONE) ? true : false;
-    for (Filter filter : filters) {
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      Filter filter = filters.get(i);
       if (this.operator == Operator.MUST_PASS_ALL) {
         if (filter.filterAllRemaining() ||
             filter.filterRowKey(rowKey, offset, length)) {
@@ -196,7 +199,9 @@ final public class FilterList extends Filter {
 
   @Override
   public boolean filterAllRemaining() throws IOException {
-    for (Filter filter : filters) {
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      Filter filter = filters.get(i);
       if (filter.filterAllRemaining()) {
         if (operator == Operator.MUST_PASS_ALL) {
           return true;
@@ -243,7 +248,9 @@ final public class FilterList extends Filter {
 
     ReturnCode rc = operator == Operator.MUST_PASS_ONE?
         ReturnCode.SKIP: ReturnCode.INCLUDE;
-    for (Filter filter : filters) {
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      Filter filter = filters.get(i);
       if (operator == Operator.MUST_PASS_ALL) {
         if (filter.filterAllRemaining()) {
           return ReturnCode.NEXT_ROW;
@@ -310,8 +317,9 @@ final public class FilterList extends Filter {
     // Old filters based off of this class will override KeyValue transform(KeyValue).
     // Thus to maintain compatibility we need to call the old version.
     List<KeyValue> kvs = new ArrayList<KeyValue>(ignored.size());
-    for (Cell c : ignored) {
-      kvs.add(KeyValueUtil.ensureKeyValue(c));
+    int listSize = ignored.size();
+    for (int i=0; i < listSize; i++) {
+      kvs.add(KeyValueUtil.ensureKeyValue(ignored.get(i)));
     }
     filterRow(kvs);
     ignored.clear();
@@ -332,22 +340,25 @@ final public class FilterList extends Filter {
     // #filterRowCells(List<Cell>) which may delegate to legacy #filterRow(List<KV>) 
     List<Cell> cells = new ArrayList<Cell>(kvs.size());
     cells.addAll(kvs);
-    for (Filter filter : filters) {
-      filter.filterRowCells(cells); 
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      filters.get(i).filterRowCells(cells); 
     }
 
     // convert results into kvs
     kvs.clear();
-    for (Cell c : cells) {
-      kvs.add(KeyValueUtil.ensureKeyValue(c));
+    listSize = cells.size();
+    for (int i=0; i < listSize; i++) {
+      kvs.add(KeyValueUtil.ensureKeyValue(cells.get(i)));
     }
   }
   
   @Override
   public boolean hasFilterRow() {
-    for (Filter filter : filters) {
-      if(filter.hasFilterRow()) {
-    	return true;
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      if(filters.get(i).hasFilterRow()) {
+        return true;
       }
     }
     return false;
@@ -355,7 +366,9 @@ final public class FilterList extends Filter {
 
   @Override
   public boolean filterRow() throws IOException {
-    for (Filter filter : filters) {
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      Filter filter = filters.get(i);
       if (operator == Operator.MUST_PASS_ALL) {
         if (filter.filterRow()) {
           return true;
@@ -438,8 +451,9 @@ final public class FilterList extends Filter {
     }
 
     // If any condition can pass, we need to keep the min hint
-    for (Filter filter : filters) {
-      Cell curKeyHint = filter.getNextCellHint(currentKV);
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      Cell curKeyHint = filters.get(i).getNextCellHint(currentKV);
       if (curKeyHint == null) {
         // If we ever don't have a hint and this is must-pass-one, then no hint
         return null;
@@ -460,8 +474,9 @@ final public class FilterList extends Filter {
 
   @Override
   public boolean isFamilyEssential(byte[] name) throws IOException {
-    for (Filter filter : filters) {
-      if (filter.isFamilyEssential(name)) {
+    int listSize = filters.size();
+    for (int i=0; i < listSize; i++) {
+      if (filters.get(i).isFamilyEssential(name)) {
         return true;
       }
     }

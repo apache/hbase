@@ -22,8 +22,8 @@ package org.apache.hadoop.hbase.rest.client;
 import java.io.InputStream;
 
 import org.apache.commons.httpclient.Header;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * The HTTP result code, response headers, and body of a HTTP response.

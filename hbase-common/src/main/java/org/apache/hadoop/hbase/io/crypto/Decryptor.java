@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.io.crypto;
 import java.io.InputStream;
 import java.security.Key;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Decryptors apply a cipher to an InputStream to recover plaintext.

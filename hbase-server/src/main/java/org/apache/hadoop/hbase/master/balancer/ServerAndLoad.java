@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.io.Serializable;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 
 /**

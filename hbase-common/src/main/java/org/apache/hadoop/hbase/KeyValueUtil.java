@@ -22,7 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IterableUtils;
@@ -46,7 +46,7 @@ public class KeyValueUtil {
         cell.getTagsLengthUnsigned()));
   }
 
-  protected static int keyLength(final Cell cell) {
+  public static int keyLength(final Cell cell) {
     return (int)KeyValue.getKeyDataStructureSize(cell.getRowLength(), cell.getFamilyLength(),
       cell.getQualifierLength());
   }

@@ -61,6 +61,7 @@
     <module>hbase-prefix-tree</module>
     <module>hbase-assembly</module>
     <module>hbase-testing-util</module>
+    <module>hbase-annotations</module>
   </modules>
   <scm>
     <connection>scm:svn:http://svn.apache.org/repos/asf/hbase/trunk</connection>
@@ -965,6 +966,11 @@
       <!-- Intra-module dependencies -->
       <dependency>
         <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-annotations</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-common</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -1709,11 +1715,6 @@
             <artifactId>hadoop-client</artifactId>
             <version>${hadoop-two.version}</version>
           </dependency>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-annotations</artifactId>
-            <version>${hadoop-two.version}</version>
-          </dependency>
           <!-- This was marked as test dep in earlier pom, but was scoped compile.
             Where do we actually need it? -->
           <dependency>
@@ -1757,11 +1758,6 @@
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-annotations</artifactId>
           <version>${hadoop.version}</version>
         </dependency>
         <!-- test deps for hadoop-0.24 profile -->
@@ -2004,40 +2000,55 @@
       </plugin>
 
       <plugin>
-	<groupId>org.apache.maven.plugins</groupId>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
         <version>2.9.1</version>
         <configuration>
           <maxmemory>2048m</maxmemory>
         </configuration>
-	<reportSets>
-	  <reportSet>
-	    <id>devapi</id> <!-- full internal hbase api -->
-	    <reports> <report>aggregate</report></reports>
-	    <configuration>
-	      <destDir>devapidocs</destDir>
-	    </configuration>
-	  </reportSet>
+        <reportSets>
+          <reportSet>
+            <id>devapi</id>
+            <!-- full internal hbase api -->
+            <reports>
+              <report>aggregate</report>
+            </reports>
+            <configuration>
+              <destDir>devapidocs</destDir>
+            </configuration>
+          </reportSet>
 
-	  <reportSet>
-	    <id>userapi</id> <!-- public user hbase api; limited but has stronger compat/deprecation guarantees -->
-	    <reports> <report>aggregate</report></reports>
-	    <configuration>
-	      <doclet>org.apache.hadoop.classification.tools.IncludePublicAnnotationsStandardDoclet</doclet>
-	      <docletArtifact>
-		<groupId>org.apache.hadoop</groupId>
-		<!-- doclet lives in hadoop 2's hadoop-common module -->
-		<artifactId>hadoop-common</artifactId>
-		<version>${hadoop-two.version}</version>
-	      </docletArtifact>
-	      <destDir>apidocs</destDir>
-	      <name>User API</name>
-	      <description>The HBase Application Programmer's API</description>
-	      <!-- exclude all the packages that are empty after the public annotation only filter -->
-	      <excludePackageNames>org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:org.apache.hadoop.hbase.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.hbase.zookeeper.lock:org.apache.hadoop.metrics2*</excludePackageNames>
-	    </configuration>
-	  </reportSet>
-	</reportSets>
+          <reportSet>
+            <id>userapi</id>
+            <reports>
+              <report>aggregate</report>
+            </reports>
+            <configuration>
+              <doclet>
+                org.apache.hadoop.hbase.classification.tools.IncludePublicAnnotationsStandardDoclet
+              </doclet>
+              <docletArtifact>
+                <groupId>org.apache.hbase</groupId>
+                <artifactId>hbase-annotations</artifactId>
+                <version>${project.version}</version>
+              </docletArtifact>
+              <destDir>apidocs</destDir>
+              <name>User API</name>
+              <description>The HBase Application Programmer's API</description>
+              <excludePackageNames>
+                org.apache.hadoop.hbase.backup*:org.apache.hadoop.hbase.catalog:org.apache.hadoop.hbase.client.coprocessor:org.apache.hadoop.hbase.client.metrics:org.apache.hadoop.hbase.codec*:org.apache.hadoop.hbase.constraint:org.apache.hadoop.hbase.coprocessor.*:org.apache.hadoop.hbase.executor:org.apache.hadoop.hbase.fs:org.apache.hadoop.hbase.generated.*:org.apache.hadoop.hbase.io.hfile.*:org.apache.hadoop.hbase.mapreduce.hadoopbackport:org.apache.hadoop.hbase.mapreduce.replication:org.apache.hadoop.hbase.master.*:org.apache.hadoop.hbase.metrics*:org.apache.hadoop.hbase.migration:org.apache.hadoop.hbase.monitoring:org.apache.hadoop.hbase.p*:org.apache.hadoop.hbase.regionserver.compactions:org.apache.hadoop.hbase.regionserver.handler:org.apache.hadoop.hbase.regionserver.snapshot:org.apache.hadoop.hbase.replication.*:org.apache.hadoop.hbase.rest.filter:org.apache.hadoop.hbase.rest.model:org.apache.hadoop.hbase.rest.p*:org.apache.hadoop.hbase.security.*:org.apache.hadoop.hbase.thrift*:org.apache.hadoop.hbase.tmpl.*:org.apache.hadoop.hbase.tool:org.apache.hadoop.hbase.trace:org.apache.hadoop.hbase.util.byterange*:org.apache.hadoop.hbase.util.test:org.apache.hadoop.hbase.util.vint:org.apache.hadoop.hbase.zookeeper.lock:org.apache.hadoop.metrics2*
+              </excludePackageNames>
+              <!-- switch on dependency-driven aggregation -->
+              <includeDependencySources>false</includeDependencySources>
+
+              <dependencySourceIncludes>
+                <!-- include ONLY dependencies I control -->
+                <dependencySourceInclude>org.apache.hbase:hbase-annotations
+                </dependencySourceInclude>
+              </dependencySourceIncludes>
+            </configuration>
+          </reportSet>
+        </reportSets>
       </plugin>
 
     </plugins>

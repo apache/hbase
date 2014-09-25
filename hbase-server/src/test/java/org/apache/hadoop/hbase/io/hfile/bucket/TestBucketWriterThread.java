@@ -18,8 +18,16 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BucketEntry;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMQueueEntry;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -28,17 +36,10 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.hbase.SmallTests;
-import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
-import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BucketEntry;
-import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMQueueEntry;
-import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 @Category(SmallTests.class)
 public class TestBucketWriterThread {
@@ -47,6 +48,22 @@ public class TestBucketWriterThread {
   private BlockingQueue<RAMQueueEntry> q;
   private Cacheable plainCacheable;
   private BlockCacheKey plainKey;
+
+  /** A BucketCache that does not start its writer threads. */
+  private static class MockBucketCache extends BucketCache {
+
+    public MockBucketCache(String ioEngineName, long capacity, int blockSize, int[] bucketSizes,
+      int writerThreadNum, int writerQLen, String persistencePath, int ioErrorsTolerationDuration)
+      throws FileNotFoundException, IOException {
+      super(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
+        persistencePath, ioErrorsTolerationDuration);
+    }
+
+    @Override
+    protected void startWriterThreads() {
+      // intentional noop
+    }
+  }
 
   /**
    * Set up variables and get BucketCache and WriterThread into state where tests can  manually
@@ -60,24 +77,20 @@ public class TestBucketWriterThread {
     // Run with one writer thread only. Means there will be one writer queue only too.  We depend
     // on this in below.
     final int writerThreadsCount = 1;
-    this.bc = new BucketCache("heap", capacity, 1, new int [] {1}, writerThreadsCount,
+    this.bc = new MockBucketCache("heap", capacity, 1, new int [] {1}, writerThreadsCount,
       capacity, null, 100/*Tolerate ioerrors for 100ms*/);
     assertEquals(writerThreadsCount, bc.writerThreads.length);
     assertEquals(writerThreadsCount, bc.writerQueues.size());
     // Get reference to our single WriterThread instance.
     this.wt = bc.writerThreads[0];
     this.q = bc.writerQueues.get(0);
-    // On construction bucketcache WriterThread is blocked on the writer queue so it will not
-    // notice the disabling of the writer until after it has processed an entry.  Lets pass one
-    // through after setting disable flag on the writer. We want to disable the WriterThread so
-    // we can run the doDrain manually so we can watch it working and assert it doing right thing.
+
     wt.disableWriter();
     this.plainKey = new BlockCacheKey("f", 0);
     this.plainCacheable = Mockito.mock(Cacheable.class);
-    bc.cacheBlock(this.plainKey, plainCacheable);
-    while(!bc.ramCache.isEmpty()) Threads.sleep(1);
+
+    assertThat(bc.ramCache.isEmpty(), is(true));
     assertTrue(q.isEmpty());
-    // Now writer thread should be disabled.
   }
 
   @After
@@ -92,8 +105,7 @@ public class TestBucketWriterThread {
    * @throws InterruptedException
    */
   @Test (timeout=30000)
-  public void testNonErrorCase()
-  throws FileNotFoundException, IOException, InterruptedException {
+  public void testNonErrorCase() throws IOException, InterruptedException {
     bc.cacheBlock(this.plainKey, this.plainCacheable);
     doDrainOfOneEntry(this.bc, this.wt, this.q);
   }
@@ -101,7 +113,7 @@ public class TestBucketWriterThread {
   /**
    * Pass through a too big entry and ensure it is cleared from queues and ramCache.
    * Manually run the WriterThread.
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   @Test
   public void testTooBigEntry() throws InterruptedException {
@@ -114,15 +126,12 @@ public class TestBucketWriterThread {
   /**
    * Do IOE. Take the RAMQueueEntry that was on the queue, doctor it to throw exception, then
    * put it back and process it.
-   * @throws IOException 
-   * @throws BucketAllocatorException 
-   * @throws CacheFullException 
-   * @throws InterruptedException 
+   * @throws IOException
+   * @throws InterruptedException
    */
   @SuppressWarnings("unchecked")
   @Test (timeout=30000)
-  public void testIOE()
-  throws CacheFullException, BucketAllocatorException, IOException, InterruptedException {
+  public void testIOE() throws IOException, InterruptedException {
     this.bc.cacheBlock(this.plainKey, plainCacheable);
     RAMQueueEntry rqe = q.remove();
     RAMQueueEntry spiedRqe = Mockito.spy(rqe);
@@ -137,14 +146,12 @@ public class TestBucketWriterThread {
 
   /**
    * Do Cache full exception
-   * @throws IOException 
-   * @throws BucketAllocatorException 
-   * @throws CacheFullException 
-   * @throws InterruptedException 
+   * @throws IOException
+   * @throws InterruptedException
    */
   @Test (timeout=30000)
   public void testCacheFullException()
-  throws CacheFullException, BucketAllocatorException, IOException, InterruptedException {
+      throws IOException, InterruptedException {
     this.bc.cacheBlock(this.plainKey, plainCacheable);
     RAMQueueEntry rqe = q.remove();
     RAMQueueEntry spiedRqe = Mockito.spy(rqe);

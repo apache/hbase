@@ -22,7 +22,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -100,6 +100,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanReq
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Triple;
@@ -259,6 +260,52 @@ public final class RequestConverter {
       MutationProto.newBuilder()));
     builder.setCondition(condition);
     return builder.build();
+  }
+
+  /**
+   * Create a protocol buffer MutateRequest for conditioned row mutations
+   *
+   * @param regionName
+   * @param row
+   * @param family
+   * @param qualifier
+   * @param comparator
+   * @param compareType
+   * @param rowMutations
+   * @return a mutate request
+   * @throws IOException
+   */
+  public static ClientProtos.MultiRequest buildMutateRequest(
+      final byte[] regionName, final byte[] row, final byte[] family,
+      final byte [] qualifier, final ByteArrayComparable comparator,
+      final CompareType compareType, final RowMutations rowMutations) throws IOException {
+    RegionAction.Builder builder =
+        getRegionActionBuilderWithRegion(RegionAction.newBuilder(), regionName);
+    builder.setAtomic(true);
+    ClientProtos.Action.Builder actionBuilder = ClientProtos.Action.newBuilder();
+    MutationProto.Builder mutationBuilder = MutationProto.newBuilder();
+    Condition condition = buildCondition(
+        row, family, qualifier, comparator, compareType);
+    for (Mutation mutation: rowMutations.getMutations()) {
+      MutationType mutateType = null;
+      if (mutation instanceof Put) {
+        mutateType = MutationType.PUT;
+      } else if (mutation instanceof Delete) {
+        mutateType = MutationType.DELETE;
+      } else {
+        throw new DoNotRetryIOException("RowMutations supports only put and delete, not " +
+            mutation.getClass().getName());
+      }
+      mutationBuilder.clear();
+      MutationProto mp = ProtobufUtil.toMutation(mutateType, mutation, mutationBuilder);
+      actionBuilder.clear();
+      actionBuilder.setMutation(mp);
+      builder.addAction(actionBuilder.build());
+    }
+    ClientProtos.MultiRequest request =
+        ClientProtos.MultiRequest.newBuilder().addRegionAction(builder.build())
+            .setCondition(condition).build();
+    return request;
   }
 
   /**

@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.hbase.codec.prefixtree.encode.other;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Detect if every KV has the same KeyValue.Type, in which case we don't need to store it for each

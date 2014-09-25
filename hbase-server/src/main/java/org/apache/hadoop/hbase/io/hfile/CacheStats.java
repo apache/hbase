@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Class that implements cache metrics.

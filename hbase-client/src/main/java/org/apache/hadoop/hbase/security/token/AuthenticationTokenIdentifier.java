@@ -19,7 +19,7 @@
 package org.apache.hadoop.hbase.security.token;
 
 import com.google.protobuf.ByteString;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;

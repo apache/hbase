@@ -32,7 +32,7 @@ import javax.management.ReflectionException;
 import com.yammer.metrics.stats.Snapshot;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.histogram.MetricsHistogram;
 import org.apache.hadoop.metrics.util.MetricsBase;
 import org.apache.hadoop.metrics.util.MetricsDynamicMBeanBase;
@@ -161,7 +161,7 @@ public class MetricsMBeanBase extends MetricsDynamicMBeanBase {
 
     LOG.info("new MBeanInfo");
     this.extendedInfo = new MBeanInfo( this.getClass().getName(),
-        this.description, attributes.toArray( new MBeanAttributeInfo[0] ),
+        this.description, attributes.toArray(new MBeanAttributeInfo[attributes.size()]),
         parentInfo.getConstructors(), parentInfo.getOperations(),
         parentInfo.getNotifications() );
   }

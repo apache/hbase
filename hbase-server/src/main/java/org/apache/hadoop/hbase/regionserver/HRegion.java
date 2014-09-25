@@ -61,7 +61,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -2024,9 +2024,12 @@ public class HRegion implements HeapSize { // , Writable{
 
       byte[] family = e.getKey();
       List<Cell> cells = e.getValue();
-      Map<byte[], Integer> kvCount = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+      assert cells instanceof RandomAccess;
 
-      for (Cell cell: cells) {
+      Map<byte[], Integer> kvCount = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
+      int listSize = cells.size();
+      for (int i=0; i < listSize; i++) {
+        Cell cell = cells.get(i);
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         //  Check if time is LATEST, change to time of most recent addition if so
         //  This is expensive.
@@ -2783,6 +2786,89 @@ public class HRegion implements HeapSize { // , Writable{
     }
   }
 
+  //TODO, Think that gets/puts and deletes should be refactored a bit so that
+  //the getting of the lock happens before, so that you would just pass it into
+  //the methods. So in the case of checkAndMutate you could just do lockRow,
+  //get, put, unlockRow or something
+  /**
+   *
+   * @throws IOException
+   * @return true if the new put was executed, false otherwise
+   */
+  public boolean checkAndRowMutate(byte [] row, byte [] family, byte [] qualifier,
+      CompareOp compareOp, ByteArrayComparable comparator, RowMutations rm,
+      boolean writeToWAL)
+      throws IOException{
+    checkReadOnly();
+    //TODO, add check for value length or maybe even better move this to the
+    //client if this becomes a global setting
+    checkResources();
+
+    startRegionOperation();
+    try {
+      Get get = new Get(row);
+      checkFamily(family);
+      get.addColumn(family, qualifier);
+
+      // Lock row - note that doBatchMutate will relock this row if called
+      RowLock rowLock = getRowLock(get.getRow());
+      // wait for all previous transactions to complete (with lock held)
+      mvcc.completeMemstoreInsert(mvcc.beginMemstoreInsert());
+      try {
+        List<Cell> result = get(get, false);
+
+        boolean valueIsNull = comparator.getValue() == null ||
+            comparator.getValue().length == 0;
+        boolean matches = false;
+        if (result.size() == 0 && valueIsNull) {
+          matches = true;
+        } else if (result.size() > 0 && result.get(0).getValueLength() == 0 &&
+            valueIsNull) {
+          matches = true;
+        } else if (result.size() == 1 && !valueIsNull) {
+          Cell kv = result.get(0);
+          int compareResult = comparator.compareTo(kv.getValueArray(),
+              kv.getValueOffset(), kv.getValueLength());
+          switch (compareOp) {
+          case LESS:
+            matches = compareResult < 0;
+            break;
+          case LESS_OR_EQUAL:
+            matches = compareResult <= 0;
+            break;
+          case EQUAL:
+            matches = compareResult == 0;
+            break;
+          case NOT_EQUAL:
+            matches = compareResult != 0;
+            break;
+          case GREATER_OR_EQUAL:
+            matches = compareResult >= 0;
+            break;
+          case GREATER:
+            matches = compareResult > 0;
+            break;
+          default:
+            throw new RuntimeException("Unknown Compare op " + compareOp.name());
+          }
+        }
+        //If matches put the new put or delete the new delete
+        if (matches) {
+          // All edits for the given row (across all column families) must
+          // happen atomically.
+          mutateRow(rm);
+          this.checkAndMutateChecksPassed.increment();
+          return true;
+        }
+        this.checkAndMutateChecksFailed.increment();
+        return false;
+      } finally {
+        rowLock.release();
+      }
+    } finally {
+      closeRegionOperation();
+    }
+  }
   private void doBatchMutate(Mutation mutation) throws IOException, DoNotRetryIOException {
     // Currently this is only called for puts and deletes, so no nonces.
     OperationStatus[] batchMutate = this.batchMutate(new Mutation[] { mutation },
@@ -2824,7 +2910,10 @@ public class HRegion implements HeapSize { // , Writable{
   void updateKVTimestamps(final Iterable<List<Cell>> keyLists, final byte[] now) {
     for (List<Cell> cells: keyLists) {
       if (cells == null) continue;
-      for (Cell cell : cells) {
+      assert cells instanceof RandomAccess;
+      int listSize = cells.size();
+      for (int i=0; i < listSize; i++) {
+        Cell cell = cells.get(i);
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         kv.updateLatestStamp(now);
       }
@@ -3005,7 +3094,10 @@ public class HRegion implements HeapSize { // , Writable{
     }
     long maxTs = now + timestampSlop;
     for (List<Cell> kvs : familyMap.values()) {
-      for (Cell cell : kvs) {
+      assert kvs instanceof RandomAccess;
+      int listSize  = kvs.size();
+      for (int i=0; i < listSize; i++) {
+        Cell cell = kvs.get(i);
         // see if the user-side TS is out of range. latest = server-side
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         if (!kv.isLatestTimestamp() && kv.getTimestamp() > maxTs) {
@@ -3025,7 +3117,10 @@ public class HRegion implements HeapSize { // , Writable{
   private void addFamilyMapToWALEdit(Map<byte[], List<Cell>> familyMap,
       WALEdit walEdit) {
     for (List<Cell> edits : familyMap.values()) {
-      for (Cell cell : edits) {
+      assert edits instanceof RandomAccess;
+      int listSize = edits.size();
+      for (int i=0; i < listSize; i++) {
+        Cell cell = edits.get(i);
         walEdit.add(KeyValueUtil.ensureKeyValue(cell));
       }
     }
@@ -5885,9 +5980,12 @@ public class HRegion implements HeapSize { // , Writable{
 
     long mutationSize = 0;
     for (List<Cell> cells: familyMap.values()) {
-      for (Cell cell : cells) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        mutationSize += kv.getKeyLength() + kv.getValueLength();
+      assert cells instanceof RandomAccess;
+      int listSize = cells.size();
+      for (int i=0; i < listSize; i++) {
+        Cell cell = cells.get(i);
+        // TODO we need include tags length also here.
+        mutationSize += KeyValueUtil.keyLength(cell) + cell.getValueLength();
       }
     }
 

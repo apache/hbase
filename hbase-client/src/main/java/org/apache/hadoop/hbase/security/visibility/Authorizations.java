@@ -21,8 +21,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * This class contains visibility labels associated with a Scan/Get deciding which all labeled data
@@ -35,9 +35,7 @@ public class Authorizations {
   private List<String> labels;
   public Authorizations(String... labels) {
     this.labels = new ArrayList<String>(labels.length);
-    for (String label : labels) {
-      this.labels.add(label);
-    }
+    Collections.addAll(this.labels, labels);
   }
 
   public Authorizations(List<String> labels) {

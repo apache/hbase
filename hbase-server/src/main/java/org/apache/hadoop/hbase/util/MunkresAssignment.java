@@ -22,7 +22,7 @@ import java.util.Arrays;
 import java.util.Deque;
 import java.util.LinkedList;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Computes the optimal (minimal cost) assignment of jobs to workers (or other
@@ -129,9 +129,7 @@ public class MunkresAssignment {
       }
     } else {
       for (int r = 0; r < rows; r++) {
-        for (int c = 0; c < cols; c++) {
-          cost[r][c] = costMatrix[r][c];
-        }
+        System.arraycopy(costMatrix[r], 0, cost[r], 0, cols);
       }
     }
 

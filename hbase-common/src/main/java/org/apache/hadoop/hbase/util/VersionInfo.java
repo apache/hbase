@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.util;
 import org.apache.commons.logging.LogFactory;
 import java.io.PrintWriter;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.VersionAnnotation;
 import org.apache.commons.logging.Log;
 

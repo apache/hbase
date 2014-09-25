@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase;
 
 import java.lang.annotation.*;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * A package attribute that captures the version of hbase that was compiled.

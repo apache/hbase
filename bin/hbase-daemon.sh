@@ -172,7 +172,7 @@ if [ "$HBASE_NICENESS" = "" ]; then
     export HBASE_NICENESS=0
 fi
 
-thiscmd=$0
+thiscmd="$bin/$(basename ${BASH_SOURCE-$0})"
 args=$@
 
 case $startStop in

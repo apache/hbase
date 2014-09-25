@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.master.handler;
 
 import java.beans.EventHandler;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 
 /**

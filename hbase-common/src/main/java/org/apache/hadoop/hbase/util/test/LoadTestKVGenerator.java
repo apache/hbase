@@ -18,7 +18,7 @@ package org.apache.hadoop.hbase.util.test;
 
 import java.util.Random;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.MD5Hash;
 

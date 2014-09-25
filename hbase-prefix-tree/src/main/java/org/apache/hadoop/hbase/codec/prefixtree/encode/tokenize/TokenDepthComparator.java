@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.encode.tokenize;
 
 import java.util.Comparator;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Determines order of nodes in the output array.  Maybe possible to optimize further.

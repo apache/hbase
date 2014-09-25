@@ -39,7 +39,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -681,7 +681,7 @@ public class RegionSplitter {
         LinkedList<HRegionInfo> check = Lists.newLinkedList();
         check.add(table.getRegionLocation(start).getRegionInfo());
         check.add(table.getRegionLocation(split).getRegionInfo());
-        for (HRegionInfo hri : check.toArray(new HRegionInfo[] {})) {
+        for (HRegionInfo hri : check.toArray(new HRegionInfo[check.size()])) {
           byte[] sk = hri.getStartKey();
           if (sk.length == 0)
             sk = splitAlgo.firstRow();

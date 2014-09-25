@@ -27932,6 +27932,20 @@ public final class ClientProtos {
      * <code>optional uint64 nonceGroup = 2;</code>
      */
     long getNonceGroup();
+
+    // optional .Condition condition = 3;
+    /**
+     * <code>optional .Condition condition = 3;</code>
+     */
+    boolean hasCondition();
+    /**
+     * <code>optional .Condition condition = 3;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition getCondition();
+    /**
+     * <code>optional .Condition condition = 3;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ConditionOrBuilder getConditionOrBuilder();
   }
   /**
    * Protobuf type {@code MultiRequest}
@@ -28004,6 +28018,19 @@ public final class ClientProtos {
             case 16: {
               bitField0_ |= 0x00000001;
               nonceGroup_ = input.readUInt64();
+              break;
+            }
+            case 26: {
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000002) == 0x00000002)) {
+                subBuilder = condition_.toBuilder();
+              }
+              condition_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(condition_);
+                condition_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000002;
               break;
             }
           }
@@ -28101,9 +28128,32 @@ public final class ClientProtos {
       return nonceGroup_;
     }
 
+    // optional .Condition condition = 3;
+    public static final int CONDITION_FIELD_NUMBER = 3;
+    private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition condition_;
+    /**
+     * <code>optional .Condition condition = 3;</code>
+     */
+    public boolean hasCondition() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional .Condition condition = 3;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition getCondition() {
+      return condition_;
+    }
+    /**
+     * <code>optional .Condition condition = 3;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ConditionOrBuilder getConditionOrBuilder() {
+      return condition_;
+    }
+
     private void initFields() {
       regionAction_ = java.util.Collections.emptyList();
       nonceGroup_ = 0L;
+      condition_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -28112,6 +28162,12 @@ public final class ClientProtos {
 
       for (int i = 0; i < getRegionActionCount(); i++) {
         if (!getRegionAction(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      if (hasCondition()) {
+        if (!getCondition().isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -28129,6 +28185,9 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeUInt64(2, nonceGroup_);
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeMessage(3, condition_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -28145,6 +28204,10 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt64Size(2, nonceGroup_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(3, condition_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -28176,6 +28239,11 @@ public final class ClientProtos {
         result = result && (getNonceGroup()
             == other.getNonceGroup());
       }
+      result = result && (hasCondition() == other.hasCondition());
+      if (hasCondition()) {
+        result = result && getCondition()
+            .equals(other.getCondition());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -28196,6 +28264,10 @@ public final class ClientProtos {
       if (hasNonceGroup()) {
         hash = (37 * hash) + NONCEGROUP_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getNonceGroup());
+      }
+      if (hasCondition()) {
+        hash = (37 * hash) + CONDITION_FIELD_NUMBER;
+        hash = (53 * hash) + getCondition().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -28308,6 +28380,7 @@ public final class ClientProtos {
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getRegionActionFieldBuilder();
+          getConditionFieldBuilder();
         }
       }
       private static Builder create() {
@@ -28324,6 +28397,12 @@ public final class ClientProtos {
         }
         nonceGroup_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000002);
+        if (conditionBuilder_ == null) {
+          condition_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.getDefaultInstance();
+        } else {
+          conditionBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
 
@@ -28365,6 +28444,14 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00000001;
         }
         result.nonceGroup_ = nonceGroup_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        if (conditionBuilder_ == null) {
+          result.condition_ = condition_;
+        } else {
+          result.condition_ = conditionBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -28410,6 +28497,9 @@ public final class ClientProtos {
         if (other.hasNonceGroup()) {
           setNonceGroup(other.getNonceGroup());
         }
+        if (other.hasCondition()) {
+          mergeCondition(other.getCondition());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -28417,6 +28507,12 @@ public final class ClientProtos {
       public final boolean isInitialized() {
         for (int i = 0; i < getRegionActionCount(); i++) {
           if (!getRegionAction(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        if (hasCondition()) {
+          if (!getCondition().isInitialized()) {
             
             return false;
           }
@@ -28716,6 +28812,123 @@ public final class ClientProtos {
         return this;
       }
 
+      // optional .Condition condition = 3;
+      private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition condition_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ConditionOrBuilder> conditionBuilder_;
+      /**
+       * <code>optional .Condition condition = 3;</code>
+       */
+      public boolean hasCondition() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional .Condition condition = 3;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition getCondition() {
+        if (conditionBuilder_ == null) {
+          return condition_;
+        } else {
+          return conditionBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .Condition condition = 3;</code>
+       */
+      public Builder setCondition(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition value) {
+        if (conditionBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          condition_ = value;
+          onChanged();
+        } else {
+          conditionBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000004;
+        return this;
+      }
+      /**
+       * <code>optional .Condition condition = 3;</code>
+       */
+      public Builder setCondition(
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.Builder builderForValue) {
+        if (conditionBuilder_ == null) {
+          condition_ = builderForValue.build();
+          onChanged();
+        } else {
+          conditionBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000004;
+        return this;
+      }
+      /**
+       * <code>optional .Condition condition = 3;</code>
+       */
+      public Builder mergeCondition(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition value) {
+        if (conditionBuilder_ == null) {
+          if (((bitField0_ & 0x00000004) == 0x00000004) &&
+              condition_ != org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.getDefaultInstance()) {
+            condition_ =
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.newBuilder(condition_).mergeFrom(value).buildPartial();
+          } else {
+            condition_ = value;
+          }
+          onChanged();
+        } else {
+          conditionBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000004;
+        return this;
+      }
+      /**
+       * <code>optional .Condition condition = 3;</code>
+       */
+      public Builder clearCondition() {
+        if (conditionBuilder_ == null) {
+          condition_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.getDefaultInstance();
+          onChanged();
+        } else {
+          conditionBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000004);
+        return this;
+      }
+      /**
+       * <code>optional .Condition condition = 3;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.Builder getConditionBuilder() {
+        bitField0_ |= 0x00000004;
+        onChanged();
+        return getConditionFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .Condition condition = 3;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ConditionOrBuilder getConditionOrBuilder() {
+        if (conditionBuilder_ != null) {
+          return conditionBuilder_.getMessageOrBuilder();
+        } else {
+          return condition_;
+        }
+      }
+      /**
+       * <code>optional .Condition condition = 3;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ConditionOrBuilder> 
+          getConditionFieldBuilder() {
+        if (conditionBuilder_ == null) {
+          conditionBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ConditionOrBuilder>(
+                  condition_,
+                  getParentForChildren(),
+                  isClean());
+          condition_ = null;
+        }
+        return conditionBuilder_;
+      }
+
       // @@protoc_insertion_point(builder_scope:MultiRequest)
     }
 
@@ -28754,6 +28967,24 @@ public final class ClientProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResultOrBuilder getRegionActionResultOrBuilder(
         int index);
+
+    // optional bool processed = 2;
+    /**
+     * <code>optional bool processed = 2;</code>
+     *
+     * <pre>
+     * used for mutate to indicate processed only
+     * </pre>
+     */
+    boolean hasProcessed();
+    /**
+     * <code>optional bool processed = 2;</code>
+     *
+     * <pre>
+     * used for mutate to indicate processed only
+     * </pre>
+     */
+    boolean getProcessed();
   }
   /**
    * Protobuf type {@code MultiResponse}
@@ -28814,6 +29045,11 @@ public final class ClientProtos {
               regionActionResult_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.PARSER, extensionRegistry));
               break;
             }
+            case 16: {
+              bitField0_ |= 0x00000001;
+              processed_ = input.readBool();
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -28856,6 +29092,7 @@ public final class ClientProtos {
       return PARSER;
     }
 
+    private int bitField0_;
     // repeated .RegionActionResult regionActionResult = 1;
     public static final int REGIONACTIONRESULT_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult> regionActionResult_;
@@ -28892,8 +29129,33 @@ public final class ClientProtos {
       return regionActionResult_.get(index);
     }
 
+    // optional bool processed = 2;
+    public static final int PROCESSED_FIELD_NUMBER = 2;
+    private boolean processed_;
+    /**
+     * <code>optional bool processed = 2;</code>
+     *
+     * <pre>
+     * used for mutate to indicate processed only
+     * </pre>
+     */
+    public boolean hasProcessed() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional bool processed = 2;</code>
+     *
+     * <pre>
+     * used for mutate to indicate processed only
+     * </pre>
+     */
+    public boolean getProcessed() {
+      return processed_;
+    }
+
     private void initFields() {
       regionActionResult_ = java.util.Collections.emptyList();
+      processed_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -28916,6 +29178,9 @@ public final class ClientProtos {
       for (int i = 0; i < regionActionResult_.size(); i++) {
         output.writeMessage(1, regionActionResult_.get(i));
       }
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBool(2, processed_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -28928,6 +29193,10 @@ public final class ClientProtos {
       for (int i = 0; i < regionActionResult_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(1, regionActionResult_.get(i));
+      }
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(2, processed_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -28954,6 +29223,11 @@ public final class ClientProtos {
       boolean result = true;
       result = result && getRegionActionResultList()
           .equals(other.getRegionActionResultList());
+      result = result && (hasProcessed() == other.hasProcessed());
+      if (hasProcessed()) {
+        result = result && (getProcessed()
+            == other.getProcessed());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -28970,6 +29244,10 @@ public final class ClientProtos {
       if (getRegionActionResultCount() > 0) {
         hash = (37 * hash) + REGIONACTIONRESULT_FIELD_NUMBER;
         hash = (53 * hash) + getRegionActionResultList().hashCode();
+      }
+      if (hasProcessed()) {
+        hash = (37 * hash) + PROCESSED_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getProcessed());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -29087,6 +29365,8 @@ public final class ClientProtos {
         } else {
           regionActionResultBuilder_.clear();
         }
+        processed_ = false;
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
 
@@ -29114,6 +29394,7 @@ public final class ClientProtos {
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse buildPartial() {
         org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse result = new org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse(this);
         int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
         if (regionActionResultBuilder_ == null) {
           if (((bitField0_ & 0x00000001) == 0x00000001)) {
             regionActionResult_ = java.util.Collections.unmodifiableList(regionActionResult_);
@@ -29123,6 +29404,11 @@ public final class ClientProtos {
         } else {
           result.regionActionResult_ = regionActionResultBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.processed_ = processed_;
+        result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
       }
@@ -29163,6 +29449,9 @@ public final class ClientProtos {
               regionActionResultBuilder_.addAllMessages(other.regionActionResult_);
             }
           }
+        }
+        if (other.hasProcessed()) {
+          setProcessed(other.getProcessed());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -29435,6 +29724,55 @@ public final class ClientProtos {
           regionActionResult_ = null;
         }
         return regionActionResultBuilder_;
+      }
+
+      // optional bool processed = 2;
+      private boolean processed_ ;
+      /**
+       * <code>optional bool processed = 2;</code>
+       *
+       * <pre>
+       * used for mutate to indicate processed only
+       * </pre>
+       */
+      public boolean hasProcessed() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional bool processed = 2;</code>
+       *
+       * <pre>
+       * used for mutate to indicate processed only
+       * </pre>
+       */
+      public boolean getProcessed() {
+        return processed_;
+      }
+      /**
+       * <code>optional bool processed = 2;</code>
+       *
+       * <pre>
+       * used for mutate to indicate processed only
+       * </pre>
+       */
+      public Builder setProcessed(boolean value) {
+        bitField0_ |= 0x00000002;
+        processed_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool processed = 2;</code>
+       *
+       * <pre>
+       * used for mutate to indicate processed only
+       * </pre>
+       */
+      public Builder clearProcessed() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        processed_ = false;
+        onChanged();
+        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:MultiResponse)
@@ -30277,20 +30615,22 @@ public final class ClientProtos {
       "air\0221\n\016service_result\030\004 \001(\0132\031.Coprocesso" +
       "rServiceResult\"f\n\022RegionActionResult\022-\n\021" +
       "resultOrException\030\001 \003(\0132\022.ResultOrExcept" +
-      "ion\022!\n\texception\030\002 \001(\0132\016.NameBytesPair\"G" +
+      "ion\022!\n\texception\030\002 \001(\0132\016.NameBytesPair\"f" +
       "\n\014MultiRequest\022#\n\014regionAction\030\001 \003(\0132\r.R",
-      "egionAction\022\022\n\nnonceGroup\030\002 \001(\004\"@\n\rMulti" +
-      "Response\022/\n\022regionActionResult\030\001 \003(\0132\023.R" +
-      "egionActionResult2\261\002\n\rClientService\022 \n\003G" +
-      "et\022\013.GetRequest\032\014.GetResponse\022)\n\006Mutate\022" +
-      "\016.MutateRequest\032\017.MutateResponse\022#\n\004Scan" +
-      "\022\014.ScanRequest\032\r.ScanResponse\022>\n\rBulkLoa" +
-      "dHFile\022\025.BulkLoadHFileRequest\032\026.BulkLoad" +
-      "HFileResponse\022F\n\013ExecService\022\032.Coprocess" +
-      "orServiceRequest\032\033.CoprocessorServiceRes" +
-      "ponse\022&\n\005Multi\022\r.MultiRequest\032\016.MultiRes",
-      "ponseBB\n*org.apache.hadoop.hbase.protobu" +
-      "f.generatedB\014ClientProtosH\001\210\001\001\240\001\001"
+      "egionAction\022\022\n\nnonceGroup\030\002 \001(\004\022\035\n\tcondi" +
+      "tion\030\003 \001(\0132\n.Condition\"S\n\rMultiResponse\022" +
+      "/\n\022regionActionResult\030\001 \003(\0132\023.RegionActi" +
+      "onResult\022\021\n\tprocessed\030\002 \001(\0102\261\002\n\rClientSe" +
+      "rvice\022 \n\003Get\022\013.GetRequest\032\014.GetResponse\022" +
+      ")\n\006Mutate\022\016.MutateRequest\032\017.MutateRespon" +
+      "se\022#\n\004Scan\022\014.ScanRequest\032\r.ScanResponse\022" +
+      ">\n\rBulkLoadHFile\022\025.BulkLoadHFileRequest\032" +
+      "\026.BulkLoadHFileResponse\022F\n\013ExecService\022\032" +
+      ".CoprocessorServiceRequest\032\033.Coprocessor",
+      "ServiceResponse\022&\n\005Multi\022\r.MultiRequest\032" +
+      "\016.MultiResponseBB\n*org.apache.hadoop.hba" +
+      "se.protobuf.generatedB\014ClientProtosH\001\210\001\001" +
+      "\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -30464,13 +30804,13 @@ public final class ClientProtos {
           internal_static_MultiRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MultiRequest_descriptor,
-              new java.lang.String[] { "RegionAction", "NonceGroup", });
+              new java.lang.String[] { "RegionAction", "NonceGroup", "Condition", });
           internal_static_MultiResponse_descriptor =
             getDescriptor().getMessageTypes().get(25);
           internal_static_MultiResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MultiResponse_descriptor,
-              new java.lang.String[] { "RegionActionResult", });
+              new java.lang.String[] { "RegionActionResult", "Processed", });
           return null;
         }
       };

@@ -26,7 +26,7 @@ import java.io.FileNotFoundException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
@@ -413,9 +413,7 @@ public class FileLink {
     assert this.locations == null : "Link locations already set";
     this.locations = new Path[1 + alternativePaths.length];
     this.locations[0] = originPath;
-    for (int i = 0; i < alternativePaths.length; i++) {
-      this.locations[i + 1] = alternativePaths[i];
-    }
+    System.arraycopy(alternativePaths, 0, this.locations, 1, alternativePaths.length);
   }
 
   /**

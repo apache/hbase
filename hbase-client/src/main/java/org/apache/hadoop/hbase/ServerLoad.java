@@ -20,8 +20,8 @@
 
 package org.apache.hadoop.hbase;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor;
@@ -235,7 +235,7 @@ public class ServerLoad {
     for (Coprocessor coprocessor : obtainServerLoadPB().getCoprocessorsList()) {
       coprocessSet.add(coprocessor.getName());
     }
-    return coprocessSet.toArray(new String[0]);
+    return coprocessSet.toArray(new String[coprocessSet.size()]);
   }
 
   /**

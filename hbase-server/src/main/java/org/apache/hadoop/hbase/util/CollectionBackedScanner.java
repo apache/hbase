@@ -24,7 +24,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.SortedSet;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.NonReversedNonLazyKeyValueScanner;
 
@@ -67,9 +67,7 @@ public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
     this.comparator = comparator;
 
     List<KeyValue> tmp = new ArrayList<KeyValue>(array.length);
-    for( int i = 0; i < array.length ; ++i) {
-      tmp.add(array[i]);
-    }
+    Collections.addAll(tmp, array);
     Collections.sort(tmp, comparator);
     data = tmp;
     init();

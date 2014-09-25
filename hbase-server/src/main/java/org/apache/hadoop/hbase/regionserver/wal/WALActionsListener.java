@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -91,5 +91,4 @@ public interface WALActionsListener {
   void visitLogEntryBeforeWrite(
     HTableDescriptor htd, HLogKey logKey, WALEdit logEdit
   );
-
 }

@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.procedure;
 
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.zookeeper.KeeperException;
 

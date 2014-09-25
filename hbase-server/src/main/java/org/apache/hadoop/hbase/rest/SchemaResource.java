@@ -37,11 +37,12 @@ import javax.xml.namespace.QName;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTableInterface;
@@ -231,16 +232,9 @@ public class SchemaResource extends ResourceBase {
     }
     try {
       HBaseAdmin admin = servlet.getAdmin();
-      boolean success = false;
-      for (int i = 0; i < 10; i++) try {
+      try {
         admin.disableTable(tableResource.getName());
-        success = true;
-        break;
-      } catch (IOException e) {
-      }
-      if (!success) {
-        throw new IOException("could not disable table");
-      }
+      } catch (TableNotEnabledException e) { /* this is what we want anyway */ }
       admin.deleteTable(tableResource.getName());
       servlet.getMetrics().incrementSucessfulDeleteRequests(1);
       return Response.ok().build();

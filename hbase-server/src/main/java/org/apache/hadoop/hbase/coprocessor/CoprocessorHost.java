@@ -34,10 +34,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.protobuf.Descriptors;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
@@ -64,6 +65,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
+import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
@@ -71,7 +73,6 @@ import org.apache.hadoop.hbase.util.SortedCopyOnWriteSet;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.io.MultipleIOException;
 
-import com.google.protobuf.Descriptors.ServiceDescriptor;
 import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
@@ -632,6 +633,12 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
           Callback<R> callback) throws ServiceException, Throwable {
         table.batchCoprocessorService(method, request, startKey, endKey, responsePrototype,
             callback);
+      }
+
+      @Override
+      public boolean checkAndMutate(byte[] row, byte[] family, byte[] qualifier,
+          CompareOp compareOp, byte[] value, RowMutations mutation) throws IOException {
+        return table.checkAndMutate(row, family, qualifier, compareOp, value, mutation);
       }
     }
 

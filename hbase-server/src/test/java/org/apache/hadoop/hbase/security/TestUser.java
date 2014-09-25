@@ -133,11 +133,13 @@ public class TestUser {
     final String username = "testuser";
     final ImmutableSet<String> singleGroups = ImmutableSet.of("group");
     final Configuration conf = HBaseConfiguration.create();
-    User user = User.createUserForTesting(conf, username, singleGroups.toArray(new String[]{}));
+    User user = User.createUserForTesting(conf, username,
+        singleGroups.toArray(new String[singleGroups.size()]));
     assertUserGroup(user, singleGroups);
 
     final ImmutableSet<String> multiGroups = ImmutableSet.of("group", "group1", "group2");
-    user = User.createUserForTesting(conf, username, multiGroups.toArray(new String[]{}));
+    user = User.createUserForTesting(conf, username,
+        multiGroups.toArray(new String[multiGroups.size()]));
     assertUserGroup(user, multiGroups);
   }
 

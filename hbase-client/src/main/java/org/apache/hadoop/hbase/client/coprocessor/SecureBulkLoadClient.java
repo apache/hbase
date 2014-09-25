@@ -23,7 +23,7 @@ import static org.apache.hadoop.hbase.HConstants.LAST_ROW;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;

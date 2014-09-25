@@ -24,7 +24,7 @@ import java.io.IOException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
@@ -50,8 +50,11 @@ public class ResourceBase implements Constants {
       //some access denied exceptions are buried
       while (curr != null) {
         if(accessDeniedClazz.isAssignableFrom(curr.getClass())) {
-          throw new SecurityException("Unauthorized" + CRLF +
-              StringUtils.stringifyException(exp) + CRLF);
+          throw new WebApplicationException(
+              Response.status(Response.Status.FORBIDDEN)
+                .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF +
+                   StringUtils.stringifyException(exp) + CRLF)
+                .build());
         }
         curr = curr.getCause();
       }

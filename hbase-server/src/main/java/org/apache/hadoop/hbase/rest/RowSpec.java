@@ -23,10 +23,11 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.TreeSet;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -270,9 +271,7 @@ public class RowSpec {
     this.row = startRow;
     this.endRow = endRow;
     if (columns != null) {
-      for (byte[] col: columns) {
-        this.columns.add(col);
-      }
+      Collections.addAll(this.columns, columns);
     }
     this.startTime = startTime;
     this.endTime = endTime;
