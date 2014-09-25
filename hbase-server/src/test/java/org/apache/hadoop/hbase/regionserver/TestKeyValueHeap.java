@@ -71,18 +71,18 @@ public class TestKeyValueHeap extends HBaseTestCase {
     //1. The "smallest" KeyValue is in the same scanners as current
     //2. Current scanner gets empty
 
-    List<KeyValue> l1 = new ArrayList<KeyValue>();
+    List<Cell> l1 = new ArrayList<Cell>();
     l1.add(new KeyValue(row1, fam1, col5, data));
     l1.add(new KeyValue(row2, fam1, col1, data));
     l1.add(new KeyValue(row2, fam1, col2, data));
     scanners.add(new Scanner(l1));
 
-    List<KeyValue> l2 = new ArrayList<KeyValue>();
+    List<Cell> l2 = new ArrayList<Cell>();
     l2.add(new KeyValue(row1, fam1, col1, data));
     l2.add(new KeyValue(row1, fam1, col2, data));
     scanners.add(new Scanner(l2));
 
-    List<KeyValue> l3 = new ArrayList<KeyValue>();
+    List<Cell> l3 = new ArrayList<Cell>();
     l3.add(new KeyValue(row1, fam1, col3, data));
     l3.add(new KeyValue(row1, fam1, col4, data));
     l3.add(new KeyValue(row1, fam2, col1, data));
@@ -133,18 +133,18 @@ public class TestKeyValueHeap extends HBaseTestCase {
     //1. Seek KeyValue that is not in scanner
     //2. Check that smallest that is returned from a seek is correct
 
-    List<KeyValue> l1 = new ArrayList<KeyValue>();
+    List<Cell> l1 = new ArrayList<Cell>();
     l1.add(new KeyValue(row1, fam1, col5, data));
     l1.add(new KeyValue(row2, fam1, col1, data));
     l1.add(new KeyValue(row2, fam1, col2, data));
     scanners.add(new Scanner(l1));
 
-    List<KeyValue> l2 = new ArrayList<KeyValue>();
+    List<Cell> l2 = new ArrayList<Cell>();
     l2.add(new KeyValue(row1, fam1, col1, data));
     l2.add(new KeyValue(row1, fam1, col2, data));
     scanners.add(new Scanner(l2));
 
-    List<KeyValue> l3 = new ArrayList<KeyValue>();
+    List<Cell> l3 = new ArrayList<Cell>();
     l3.add(new KeyValue(row1, fam1, col3, data));
     l3.add(new KeyValue(row1, fam1, col4, data));
     l3.add(new KeyValue(row1, fam2, col1, data));
@@ -179,18 +179,18 @@ public class TestKeyValueHeap extends HBaseTestCase {
   public void testScannerLeak() throws IOException {
     // Test for unclosed scanners (HBASE-1927)
 
-    List<KeyValue> l1 = new ArrayList<KeyValue>();
+    List<Cell> l1 = new ArrayList<Cell>();
     l1.add(new KeyValue(row1, fam1, col5, data));
     l1.add(new KeyValue(row2, fam1, col1, data));
     l1.add(new KeyValue(row2, fam1, col2, data));
     scanners.add(new Scanner(l1));
 
-    List<KeyValue> l2 = new ArrayList<KeyValue>();
+    List<Cell> l2 = new ArrayList<Cell>();
     l2.add(new KeyValue(row1, fam1, col1, data));
     l2.add(new KeyValue(row1, fam1, col2, data));
     scanners.add(new Scanner(l2));
 
-    List<KeyValue> l3 = new ArrayList<KeyValue>();
+    List<Cell> l3 = new ArrayList<Cell>();
     l3.add(new KeyValue(row1, fam1, col3, data));
     l3.add(new KeyValue(row1, fam1, col4, data));
     l3.add(new KeyValue(row1, fam2, col1, data));
@@ -198,7 +198,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
     l3.add(new KeyValue(row2, fam1, col3, data));
     scanners.add(new Scanner(l3));
 
-    List<KeyValue> l4 = new ArrayList<KeyValue>();
+    List<Cell> l4 = new ArrayList<Cell>();
     scanners.add(new Scanner(l4));
 
     //Creating KeyValueHeap
@@ -213,10 +213,10 @@ public class TestKeyValueHeap extends HBaseTestCase {
 
   private static class Scanner extends CollectionBackedScanner {
     private Iterator<Cell> iter;
-    private KeyValue current;
+    private Cell current;
     private boolean closed = false;
 
-    public Scanner(List<KeyValue> list) {
+    public Scanner(List<Cell> list) {
       super(list);
     }
 

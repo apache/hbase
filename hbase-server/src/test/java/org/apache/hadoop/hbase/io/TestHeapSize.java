@@ -43,10 +43,10 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.LruCachedBlock;
 import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.regionserver.CellSkipListSet;
 import org.apache.hadoop.hbase.regionserver.DefaultMemStore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.KeyValueSkipListSet;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -236,10 +236,10 @@ public class TestHeapSize  {
       assertEquals(expected, actual);
     }
 
-    // KeyValueSkipListSet
-    cl = KeyValueSkipListSet.class;
+    // CellSkipListSet
+    cl = CellSkipListSet.class;
     expected = ClassSize.estimateBase(cl, false);
-    actual = ClassSize.KEYVALUE_SKIPLIST_SET;
+    actual = ClassSize.CELL_SKIPLIST_SET;
     if (expected != actual) {
       ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
@@ -305,14 +305,14 @@ public class TestHeapSize  {
     actual = DefaultMemStore.DEEP_OVERHEAD;
     expected = ClassSize.estimateBase(cl, false);
     expected += ClassSize.estimateBase(AtomicLong.class, false);
-    expected += (2 * ClassSize.estimateBase(KeyValueSkipListSet.class, false));
+    expected += (2 * ClassSize.estimateBase(CellSkipListSet.class, false));
     expected += (2 * ClassSize.estimateBase(ConcurrentSkipListMap.class, false));
     expected += (2 * ClassSize.estimateBase(TimeRangeTracker.class, false));
     if(expected != actual) {
       ClassSize.estimateBase(cl, true);
       ClassSize.estimateBase(AtomicLong.class, true);
-      ClassSize.estimateBase(KeyValueSkipListSet.class, true);
-      ClassSize.estimateBase(KeyValueSkipListSet.class, true);
+      ClassSize.estimateBase(CellSkipListSet.class, true);
+      ClassSize.estimateBase(CellSkipListSet.class, true);
       ClassSize.estimateBase(ConcurrentSkipListMap.class, true);
       ClassSize.estimateBase(ConcurrentSkipListMap.class, true);
       ClassSize.estimateBase(TimeRangeTracker.class, true);

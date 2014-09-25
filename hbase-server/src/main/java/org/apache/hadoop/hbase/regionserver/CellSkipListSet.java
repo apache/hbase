@@ -18,9 +18,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
-
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -29,8 +26,12 @@ import java.util.SortedSet;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
 /**
- * A {@link java.util.Set} of {@link KeyValue}s implemented on top of a
+ * A {@link java.util.Set} of {@link Cell}s implemented on top of a
  * {@link java.util.concurrent.ConcurrentSkipListMap}.  Works like a
  * {@link java.util.concurrent.ConcurrentSkipListSet} in all but one regard:
  * An add will overwrite if already an entry for the added key.  In other words,
@@ -44,96 +45,96 @@ import java.util.concurrent.ConcurrentSkipListMap;
  * get and set and won't throw ConcurrentModificationException when iterating.
  */
 @InterfaceAudience.Private
-public class KeyValueSkipListSet implements NavigableSet<KeyValue> {
-  private final ConcurrentNavigableMap<KeyValue, KeyValue> delegatee;
+public class CellSkipListSet implements NavigableSet<Cell> {
+  private final ConcurrentNavigableMap<Cell, Cell> delegatee;
 
-  KeyValueSkipListSet(final KeyValue.KVComparator c) {
-    this.delegatee = new ConcurrentSkipListMap<KeyValue, KeyValue>(c);
+  CellSkipListSet(final KeyValue.KVComparator c) {
+    this.delegatee = new ConcurrentSkipListMap<Cell, Cell>(c);
   }
 
-  KeyValueSkipListSet(final ConcurrentNavigableMap<KeyValue, KeyValue> m) {
+  CellSkipListSet(final ConcurrentNavigableMap<Cell, Cell> m) {
     this.delegatee = m;
   }
 
-  public KeyValue ceiling(KeyValue e) {
+  public Cell ceiling(Cell e) {
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  public Iterator<KeyValue> descendingIterator() {
+  public Iterator<Cell> descendingIterator() {
     return this.delegatee.descendingMap().values().iterator();
   }
 
-  public NavigableSet<KeyValue> descendingSet() {
+  public NavigableSet<Cell> descendingSet() {
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  public KeyValue floor(KeyValue e) {
+  public Cell floor(Cell e) {
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  public SortedSet<KeyValue> headSet(final KeyValue toElement) {
+  public SortedSet<Cell> headSet(final Cell toElement) {
     return headSet(toElement, false);
   }
 
-  public NavigableSet<KeyValue> headSet(final KeyValue toElement,
+  public NavigableSet<Cell> headSet(final Cell toElement,
       boolean inclusive) {
-    return new KeyValueSkipListSet(this.delegatee.headMap(toElement, inclusive));
+    return new CellSkipListSet(this.delegatee.headMap(toElement, inclusive));
   }
 
-  public KeyValue higher(KeyValue e) {
+  public Cell higher(Cell e) {
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  public Iterator<KeyValue> iterator() {
+  public Iterator<Cell> iterator() {
     return this.delegatee.values().iterator();
   }
 
-  public KeyValue lower(KeyValue e) {
+  public Cell lower(Cell e) {
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  public KeyValue pollFirst() {
+  public Cell pollFirst() {
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  public KeyValue pollLast() {
+  public Cell pollLast() {
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  public SortedSet<KeyValue> subSet(KeyValue fromElement, KeyValue toElement) {
+  public SortedSet<Cell> subSet(Cell fromElement, Cell toElement) {
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  public NavigableSet<KeyValue> subSet(KeyValue fromElement,
-      boolean fromInclusive, KeyValue toElement, boolean toInclusive) {
+  public NavigableSet<Cell> subSet(Cell fromElement,
+      boolean fromInclusive, Cell toElement, boolean toInclusive) {
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  public SortedSet<KeyValue> tailSet(KeyValue fromElement) {
+  public SortedSet<Cell> tailSet(Cell fromElement) {
     return tailSet(fromElement, true);
   }
 
-  public NavigableSet<KeyValue> tailSet(KeyValue fromElement, boolean inclusive) {
-    return new KeyValueSkipListSet(this.delegatee.tailMap(fromElement, inclusive));
+  public NavigableSet<Cell> tailSet(Cell fromElement, boolean inclusive) {
+    return new CellSkipListSet(this.delegatee.tailMap(fromElement, inclusive));
   }
 
-  public Comparator<? super KeyValue> comparator() {
+  public Comparator<? super Cell> comparator() {
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  public KeyValue first() {
+  public Cell first() {
     return this.delegatee.get(this.delegatee.firstKey());
   }
 
-  public KeyValue last() {
+  public Cell last() {
     return this.delegatee.get(this.delegatee.lastKey());
   }
 
-  public boolean add(KeyValue e) {
+  public boolean add(Cell e) {
     return this.delegatee.put(e, e) == null;
   }
 
-  public boolean addAll(Collection<? extends KeyValue> c) {
+  public boolean addAll(Collection<? extends Cell> c) {
     throw new UnsupportedOperationException("Not implemented");
   }
 
@@ -166,7 +167,7 @@ public class KeyValueSkipListSet implements NavigableSet<KeyValue> {
     throw new UnsupportedOperationException("Not implemented");
   }
 
-  public KeyValue get(KeyValue kv) {
+  public Cell get(Cell kv) {
     return this.delegatee.get(kv);
   }
 

@@ -69,7 +69,7 @@ public class TestPrefixTreeEncoding {
   private static final int NUM_COLS_PER_ROW = 20;
 
   private int numBatchesWritten = 0;
-  private ConcurrentSkipListSet<KeyValue> kvset = new ConcurrentSkipListSet<KeyValue>(
+  private ConcurrentSkipListSet<Cell> kvset = new ConcurrentSkipListSet<Cell>(
       KeyValue.COMPARATOR);
 
   private static boolean formatRowNum = false;
@@ -257,18 +257,18 @@ public class TestPrefixTreeEncoding {
 
   private void dumpInputKVSet() {
     LOG.info("Dumping input keyvalue set in error case:");
-    for (KeyValue kv : kvset) {
+    for (Cell kv : kvset) {
       System.out.println(kv);
     }
   }
 
-  private static void generateFixedTestData(ConcurrentSkipListSet<KeyValue> kvset, int batchId,
+  private static void generateFixedTestData(ConcurrentSkipListSet<Cell> kvset, int batchId,
       boolean useTags, PrefixTreeCodec encoder, HFileBlockEncodingContext blkEncodingCtx,
       DataOutputStream userDataStream) throws Exception {
     generateFixedTestData(kvset, batchId, true, useTags, encoder, blkEncodingCtx, userDataStream);
   }
 
-  private static void generateFixedTestData(ConcurrentSkipListSet<KeyValue> kvset,
+  private static void generateFixedTestData(ConcurrentSkipListSet<Cell> kvset,
       int batchId, boolean partial, boolean useTags, PrefixTreeCodec encoder,
       HFileBlockEncodingContext blkEncodingCtx, DataOutputStream userDataStream) throws Exception {
     for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
@@ -287,13 +287,13 @@ public class TestPrefixTreeEncoding {
       }
     }
     encoder.startBlockEncoding(blkEncodingCtx, userDataStream);
-    for (KeyValue kv : kvset) {
+    for (Cell kv : kvset) {
       encoder.encode(kv, blkEncodingCtx, userDataStream);
     }
     encoder.endBlockEncoding(blkEncodingCtx, userDataStream, null);
   }
 
-  private static void generateRandomTestData(ConcurrentSkipListSet<KeyValue> kvset,
+  private static void generateRandomTestData(ConcurrentSkipListSet<Cell> kvset,
       int batchId, boolean useTags, PrefixTreeCodec encoder,
       HFileBlockEncodingContext blkEncodingCtx, DataOutputStream userDataStream) throws Exception {
     Random random = new Random();
@@ -315,7 +315,7 @@ public class TestPrefixTreeEncoding {
       }
     }
     encoder.startBlockEncoding(blkEncodingCtx, userDataStream);
-    for (KeyValue kv : kvset) {
+    for (Cell kv : kvset) {
       encoder.encode(kv, blkEncodingCtx, userDataStream);
     }
     encoder.endBlockEncoding(blkEncodingCtx, userDataStream, null);
