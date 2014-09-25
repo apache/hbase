@@ -43,7 +43,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MediumTests;
@@ -541,15 +540,12 @@ public class TestHFileBlockIndex {
           byte[] row = TestHFileWriterV2.randomOrderedKey(rand, i);
 
           // Key will be interpreted by KeyValue.KEY_COMPARATOR
-          byte[] k = KeyValueUtil.createFirstOnRow(row, 0, row.length, row, 0, 0,
-              row, 0, 0).getKey();
-
-          byte[] v = TestHFileWriterV2.randomValue(rand);
-          writer.append(k, v, HConstants.EMPTY_BYTE_ARRAY);
+          KeyValue kv = KeyValueUtil.createFirstOnRow(row, 0, row.length, row, 0, 0,
+              row, 0, 0);
+          byte[] k = kv.getKey();
+          writer.append(kv);
           keys[i] = k;
-          values[i] = v;
           keyStrSet.add(Bytes.toStringBinary(k));
-
           if (i > 0) {
             assertTrue(KeyValue.COMPARATOR.compareFlatKey(keys[i - 1],
                 keys[i]) < 0);

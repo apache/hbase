@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
@@ -244,8 +243,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
    * Add key/value to file. Keys must be added in an order that agrees with the
    * Comparator passed on construction.
    *
-   * @param cell
-   *          Cell to add. Cannot be empty nor null.
+   * @param cell Cell to add. Cannot be empty nor null.
    * @throws IOException
    */
   @Override
@@ -254,6 +252,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     byte[] value = cell.getValueArray();
     int voffset = cell.getValueOffset();
     int vlength = cell.getValueLength();
+    // checkKey uses comparator to check we are writing in order.
     boolean dupKey = checkKey(cell);
     checkValue(value, voffset, vlength);
     if (!dupKey) {
@@ -270,7 +269,7 @@ public class HFileWriterV2 extends AbstractHFileWriter {
 
     // Are we the first key in this block?
     if (firstKeyInBlock == null) {
-      // Copy the key.
+      // Copy the key for use as first key in block. It is put into file index.
       firstKeyInBlock = new byte[klength];
       KeyValueUtil.appendKeyTo(cell, firstKeyInBlock, 0);
     }
@@ -279,28 +278,6 @@ public class HFileWriterV2 extends AbstractHFileWriter {
     lastKeyLength = klength;
     entryCount++;
     this.maxMemstoreTS = Math.max(this.maxMemstoreTS, cell.getSequenceId());
-  }
-
-  /**
-   * Add key/value to file. Keys must be added in an order that agrees with the
-   * Comparator passed on construction.
-   *
-   * @param key
-   *          Key to add. Cannot be empty nor null.
-   * @param value
-   *          Value to add. Cannot be empty nor null.
-   * @throws IOException
-   */
-  @Override
-  public void append(final byte[] key, final byte[] value) throws IOException {
-    int kvlen = (int) KeyValue.getKeyValueDataStructureSize(key.length, value.length, 0);
-    byte[] b = new byte[kvlen];
-    int pos = 0;
-    pos = Bytes.putInt(b, pos, key.length);
-    pos = Bytes.putInt(b, pos, value.length);
-    pos = Bytes.putBytes(b, pos, key, 0, key.length);
-    Bytes.putBytes(b, pos, value, 0, value.length);
-    append(new KeyValue(b, 0, kvlen));
   }
 
   @Override
@@ -424,11 +401,6 @@ public class HFileWriterV2 extends AbstractHFileWriter {
           dataWriter.write(out);
       }
     });
-  }
-
-  @Override
-  public void append(byte[] key, byte[] value, byte[] tag) throws IOException {
-    throw new UnsupportedOperationException("KV tags are supported only from HFile V3");
   }
 
   protected int getMajorVersion() {

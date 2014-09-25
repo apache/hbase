@@ -28,13 +28,18 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.AbstractHFileWriter;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.io.compress.Compressor;
 
 /**
@@ -119,19 +124,25 @@ public class CompressionTest {
         .withPath(fs, path)
         .withFileContext(context)
         .create();
-    writer.append(Bytes.toBytes("testkey"), Bytes.toBytes("testval"));
-    writer.appendFileInfo(Bytes.toBytes("infokey"), Bytes.toBytes("infoval"));
+    // Write any-old Cell...
+    final byte [] rowKey = Bytes.toBytes("compressiontestkey");
+    Cell c = CellUtil.createCell(rowKey, Bytes.toBytes("compressiontestval"));
+    writer.append(c);;
+    writer.appendFileInfo(Bytes.toBytes("compressioninfokey"), Bytes.toBytes("compressioninfoval"));
     writer.close();
-
+    Cell cc = null;
     HFile.Reader reader = HFile.createReader(fs, path, new CacheConfig(conf), conf);
-    reader.loadFileInfo();
-    byte[] key = reader.getFirstKey();
-    boolean rc = Bytes.toString(key).equals("testkey");
-    reader.close();
-
-    if (!rc) {
-      throw new Exception("Read back incorrect result: " +
-                          Bytes.toStringBinary(key));
+    try {
+      reader.loadFileInfo();
+      HFileScanner scanner = reader.getScanner(false, true);
+      scanner.next();
+      // Scanner does not do Cells yet. Do below for now till fixed.
+      cc = scanner.getKeyValue();
+      if (CellComparator.compareRows(c, cc) != 0) {
+        throw new Exception("Read back incorrect result: " + c.toString() + " vs " + cc.toString());
+      }
+    } finally {
+      reader.close();
     }
   }
 

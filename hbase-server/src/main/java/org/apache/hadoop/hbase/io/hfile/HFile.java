@@ -202,10 +202,6 @@ public class HFile {
 
     void append(Cell cell) throws IOException;
 
-    void append(byte[] key, byte[] value) throws IOException;
-
-    void append (byte[] key, byte[] value, byte[] tag) throws IOException;
-
     /** @return the path to this {@link HFile} */
     Path getPath();
 

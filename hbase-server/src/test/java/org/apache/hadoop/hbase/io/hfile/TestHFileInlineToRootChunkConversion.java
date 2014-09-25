@@ -22,8 +22,8 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
@@ -38,13 +38,13 @@ import org.junit.experimental.categories.Category;
  * the configured chunk size, and split it into a number of intermediate index blocks that should
  * really be leaf-level blocks. If more keys were added, we would flush the leaf-level block, add
  * another entry to the root-level block, and that would prevent us from upgrading the leaf-level
- * chunk to the root chunk, thus not triggering the bug. 
+ * chunk to the root chunk, thus not triggering the bug.
  */
 @Category(SmallTests.class)
 public class TestHFileInlineToRootChunkConversion {
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
   private final Configuration conf = testUtil.getConfiguration();
-  
+
   @Test
   public void testWriteHFile() throws Exception {
     Path hfPath = new Path(testUtil.getDataTestDir(),
@@ -52,7 +52,7 @@ public class TestHFileInlineToRootChunkConversion {
     int maxChunkSize = 1024;
     FileSystem fs = FileSystem.get(conf);
     CacheConfig cacheConf = new CacheConfig(conf);
-    conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, maxChunkSize); 
+    conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, maxChunkSize);
     HFileContext context = new HFileContextBuilder().withBlockSize(16).build();
     HFileWriterV2 hfw =
         (HFileWriterV2) new HFileWriterV2.WriterFactoryV2(conf, cacheConf)
@@ -71,30 +71,17 @@ public class TestHFileInlineToRootChunkConversion {
       sb.setLength(0);
 
       byte[] k = Bytes.toBytes(keyStr);
-      System.out.println("RowKey: " + Bytes.toString(k));
-      byte[] f = "f1".getBytes();
-      byte[] q = "q1".getBytes();
-      int keySize = (int) KeyValue.getKeyDataStructureSize(k.length, f.length, q.length);
-      byte[] bytes = new byte[keySize];
-      int pos = 0;
-      pos = Bytes.putShort(bytes, pos, (short) (k.length & 0x0000ffff));
-      pos = Bytes.putBytes(bytes, pos, k, 0, k.length);
-      pos = Bytes.putByte(bytes, pos, (byte) f.length);
-      pos = Bytes.putBytes(bytes, pos, f, 0, f.length);
-      pos = Bytes.putBytes(bytes, pos, q, 0, q.length);
-      pos = Bytes.putLong(bytes, pos, System.currentTimeMillis());
-      pos = Bytes.putByte(bytes, pos, KeyValue.Type.Put.getCode());
-
-      keys.add(bytes);
+      keys.add(k);
       byte[] v = Bytes.toBytes("value" + i);
-      hfw.append(bytes, v);
+      hfw.append(CellUtil.createCell(k, v));
     }
     hfw.close();
 
     HFileReaderV2 reader = (HFileReaderV2) HFile.createReader(fs, hfPath, cacheConf, conf);
+    // Scanner doesn't do Cells yet.  Fix.
     HFileScanner scanner = reader.getScanner(true, true);
     for (int i = 0; i < keys.size(); ++i) {
-      scanner.seekTo(KeyValue.createKeyValueFromKey(keys.get(i)));
+      scanner.seekTo(CellUtil.createCell(keys.get(i)));
     }
     reader.close();
   }

@@ -189,6 +189,26 @@ public final class CellUtil {
   }
 
   /**
+   * Create a Cell with specific row.  Other fields are arbitrary choices.
+   * @param row
+   * @return Cell with passed row but all other fields are arbitrary
+   */
+  public static Cell createCell(final byte [] row) {
+    return createCell(row, HConstants.EMPTY_BYTE_ARRAY);
+  }
+
+  /**
+   * Create a Cell with specific row and value.  Other fields are arbitrary choices.
+   * @param row
+   * @param value
+   * @return Cell with passed row and value but all other fields are arbitrary
+   */
+  public static Cell createCell(final byte [] row, final byte [] value) {
+    return createCell(row, HConstants.CATALOG_FAMILY, HConstants.SERVERNAME_QUALIFIER,
+      HConstants.LATEST_TIMESTAMP, (byte)0, value);
+  }
+
+  /**
    * @param cellScannerables
    * @return CellScanner interface over <code>cellIterables</code>
    */

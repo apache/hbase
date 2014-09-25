@@ -60,7 +60,7 @@ public interface HFileScanner {
   @Deprecated
   int seekTo(byte[] key, int offset, int length) throws IOException;
 
-  int seekTo(Cell kv) throws IOException;
+  int seekTo(Cell c) throws IOException;
   /**
    * Reseek to or just before the passed <code>key</code>. Similar to seekTo
    * except that this can be called even if the scanner is not at the beginning
@@ -86,7 +86,7 @@ public interface HFileScanner {
   @Deprecated
   int reseekTo(byte[] key, int offset, int length) throws IOException;
 
-  int reseekTo(Cell kv) throws IOException;
+  int reseekTo(Cell c) throws IOException;
   /**
    * Consider the key stream of all the keys in the file,
    * <code>k[0] .. k[n]</code>, where there are n keys in the file.

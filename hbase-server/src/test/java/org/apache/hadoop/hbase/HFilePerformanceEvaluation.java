@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -38,12 +37,9 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * <p>
  * This class runs performance benchmarks for {@link HFile}.
- * </p>
  */
 public class HFilePerformanceEvaluation {
-
   private static final int ROW_LENGTH = 10;
   private static final int ROW_COUNT = 1000000;
   private static final int RFILE_BLOCKSIZE = 8 * 1024;
@@ -59,6 +55,29 @@ public class HFilePerformanceEvaluation {
   static ImmutableBytesWritable format(final int i, ImmutableBytesWritable w) {
     w.set(format(i));
     return w;
+  }
+
+  static Cell createCell(final int i) {
+    return createCell(i, HConstants.EMPTY_BYTE_ARRAY);
+  }
+
+  /**
+   * HFile is Cell-based. It used to be byte arrays.  Doing this test, pass Cells. All Cells
+   * intentionally have same coordinates in all fields but row.
+   * @param i Integer to format as a row Key.
+   * @param value Value to use
+   * @return Created Cell.
+   */
+  static Cell createCell(final int i, final byte [] value) {
+    return createCell(format(i), value);
+  }
+
+  static Cell createCell(final byte [] keyRow) {
+    return createCell(keyRow);
+  }
+
+  static Cell createCell(final byte [] keyRow, final byte [] value) {
+    return CellUtil.createCell(keyRow, value);
   }
 
   private void runBenchmarks() throws Exception {
@@ -200,7 +219,7 @@ public class HFilePerformanceEvaluation {
 
     @Override
     void doRow(int i) throws Exception {
-      writer.append(format(i), generateValue());
+      writer.append(createCell(i, generateValue()));
     }
 
     private byte[] generateValue() {
@@ -260,10 +279,10 @@ public class HFilePerformanceEvaluation {
     @Override
     void doRow(int i) throws Exception {
       if (this.scanner.next()) {
-        ByteBuffer k = this.scanner.getKey();
-        PerformanceEvaluationCommons.assertKey(format(i + 1), k);
-        ByteBuffer v = scanner.getValue();
-        PerformanceEvaluationCommons.assertValueSize(v.limit(), ROW_LENGTH);
+        // TODO: Fix. Make Scanner do Cells.
+        Cell c = this.scanner.getKeyValue();
+        PerformanceEvaluationCommons.assertKey(format(i + 1), c);
+        PerformanceEvaluationCommons.assertValueSize(c.getValueLength(), ROW_LENGTH);
       }
     }
 
@@ -287,14 +306,14 @@ public class HFilePerformanceEvaluation {
     void doRow(int i) throws Exception {
       HFileScanner scanner = this.reader.getScanner(false, true);
       byte [] b = getRandomRow();
-      if (scanner.seekTo(b) < 0) {
+      if (scanner.seekTo(createCell(b)) < 0) {
         LOG.info("Not able to seekTo " + new String(b));
         return;
       }
-      ByteBuffer k = scanner.getKey();
-      PerformanceEvaluationCommons.assertKey(b, k);
-      ByteBuffer v = scanner.getValue();
-      PerformanceEvaluationCommons.assertValueSize(v.limit(), ROW_LENGTH);
+      // TODO: Fix scanner so it does Cells
+      Cell c = scanner.getKeyValue();
+      PerformanceEvaluationCommons.assertKey(b, c);
+      PerformanceEvaluationCommons.assertValueSize(c.getValueLength(), ROW_LENGTH);
     }
 
     private byte [] getRandomRow() {
@@ -314,20 +333,24 @@ public class HFilePerformanceEvaluation {
     void doRow(int i) throws Exception {
       HFileScanner scanner = this.reader.getScanner(false, false);
       byte [] b = getRandomRow();
-      if (scanner.seekTo(b) != 0) {
+      // System.out.println("Random row: " + new String(b));
+      Cell c = createCell(b);
+      if (scanner.seekTo(c) != 0) {
         LOG.info("Nonexistent row: " + new String(b));
         return;
       }
-      ByteBuffer k = scanner.getKey();
-      PerformanceEvaluationCommons.assertKey(b, k);
-      // System.out.println("Found row: " + new String(b));
+      // TODO: HFileScanner doesn't do Cells yet. Temporary fix.
+      c = scanner.getKeyValue();
+      // System.out.println("Found row: " +
+      //  new String(c.getRowArray(), c.getRowOffset(), c.getRowLength()));
+      PerformanceEvaluationCommons.assertKey(b, c);
       for (int ii = 0; ii < 30; ii++) {
         if (!scanner.next()) {
           LOG.info("NOTHING FOLLOWS");
           return;
         }
-        ByteBuffer v = scanner.getValue();
-        PerformanceEvaluationCommons.assertValueSize(v.limit(), ROW_LENGTH);
+        c = scanner.getKeyValue();
+        PerformanceEvaluationCommons.assertValueSize(c.getValueLength(), ROW_LENGTH);
       }
     }
 
@@ -349,14 +372,14 @@ public class HFilePerformanceEvaluation {
     void doRow(int i) throws Exception {
       HFileScanner scanner = this.reader.getScanner(false, true);
       byte[] gaussianRandomRowBytes = getGaussianRandomRowBytes();
-      scanner.seekTo(gaussianRandomRowBytes);
+      scanner.seekTo(createCell(gaussianRandomRowBytes));
       for (int ii = 0; ii < 30; ii++) {
         if (!scanner.next()) {
           LOG.info("NOTHING FOLLOWS");
           return;
         }
-        scanner.getKey();
-        scanner.getValue();
+        // TODO: Fix. Make scanner do Cells.
+        scanner.getKeyValue();
       }
     }
 
