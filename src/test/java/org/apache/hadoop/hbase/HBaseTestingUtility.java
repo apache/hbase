@@ -25,7 +25,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -88,6 +90,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.WatchedEvent;
@@ -199,12 +202,18 @@ public class HBaseTestingUtility {
 
     // a hbase checksum verification failure will cause unit tests to fail
     ChecksumUtil.generateExceptionForChecksumFailureForTest(true);
-    setHDFSClientRetryProperty();
+    setHDFSClientRetry(1);
   }
 
-  private void setHDFSClientRetryProperty() {
-    this.conf.setInt("hdfs.client.retries.number", 1);
+  /**
+   * Controls how many attempts we will make in the face of failures in HDFS.
+   */
+  public void setHDFSClientRetry(final int retries) {
+    this.conf.setInt("hdfs.client.retries.number", retries);
     HBaseFileSystem.setRetryCounts(conf);
+    if (0 == retries) {
+      makeDFSClientNonRetrying();
+    }
   }
 
   /**
@@ -1921,6 +1930,50 @@ public class HBaseTestingUtility {
       }
     } catch (Exception e) {
       LOG.info("Could not set max recovery field", e);
+    }
+  }
+
+  void makeDFSClientNonRetrying() {
+    if (null == this.dfsCluster) {
+      LOG.debug("dfsCluster has not started, can't make client non-retrying.");
+      return;
+    }
+    try {
+      final FileSystem filesystem = this.dfsCluster.getFileSystem();
+      if (!(filesystem instanceof DistributedFileSystem)) {
+        LOG.debug("dfsCluster is not backed by a DistributedFileSystem, can't make client non-retrying.");
+        return;
+      }
+      // rely on FileSystem.CACHE to alter how we talk via DFSClient
+      final DistributedFileSystem fs = (DistributedFileSystem)filesystem;
+      // retrieve the backing DFSClient instance
+      final Field dfsField = fs.getClass().getDeclaredField("dfs");
+      dfsField.setAccessible(true);
+      final Class<?> dfsClazz = dfsField.getType();
+      final DFSClient dfs = DFSClient.class.cast(dfsField.get(fs));
+
+      // expose the method for creating direct RPC connections.
+      final Method createRPCNamenode = dfsClazz.getDeclaredMethod("createRPCNamenode", InetSocketAddress.class, Configuration.class, UserGroupInformation.class);
+      createRPCNamenode.setAccessible(true);
+
+      // grab the DFSClient instance's backing connection information
+      final Field nnField = dfsClazz.getDeclaredField("nnAddress");
+      nnField.setAccessible(true);
+      final InetSocketAddress nnAddress = InetSocketAddress.class.cast(nnField.get(dfs));
+      final Field confField = dfsClazz.getDeclaredField("conf");
+      confField.setAccessible(true);
+      final Configuration conf = Configuration.class.cast(confField.get(dfs));
+      final Field ugiField = dfsClazz.getDeclaredField("ugi");
+      ugiField.setAccessible(true);
+      final UserGroupInformation ugi = UserGroupInformation.class.cast(ugiField.get(dfs));
+
+      // replace the proxy for the namenode rpc with a direct instance
+      final Field namenodeField = dfsClazz.getDeclaredField("namenode");
+      namenodeField.setAccessible(true);
+      namenodeField.set(dfs, createRPCNamenode.invoke(null, nnAddress, conf, ugi));
+      LOG.debug("Set DSFClient namenode to bare RPC");
+    } catch (Exception exception) {
+      LOG.info("Could not alter DFSClient to be non-retrying.", exception);
     }
   }
 

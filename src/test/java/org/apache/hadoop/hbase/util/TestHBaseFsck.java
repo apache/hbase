@@ -35,8 +35,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
@@ -116,6 +120,7 @@ public class TestHBaseFsck {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean("hbase.master.distributed.log.splitting", false);
     TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.setHDFSClientRetry(0);
   }
 
   @AfterClass
@@ -536,6 +541,51 @@ public class TestHBaseFsck {
       }
     }
     return null;
+  }
+
+  /**
+   * This test makes sure that parallel instances of Hbck is disabled.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testParallelHbck() throws Exception {
+    final ExecutorService service;
+    final Future<HBaseFsck> hbck1,hbck2;
+
+    class RunHbck implements Callable<HBaseFsck>{
+      boolean fail = true;
+      public HBaseFsck call(){
+        try{
+          return doFsck(conf, false);
+        } catch(Exception e){
+          if (e.getMessage().contains("Duplicate hbck")) {
+            fail = false;
+          } else {
+            LOG.fatal("hbck failed.", e);
+          }
+        }
+        // If we reach here, then an exception was caught
+        if (fail) fail();
+        return null;
+      }
+    }
+    service = Executors.newFixedThreadPool(2);
+    hbck1 = service.submit(new RunHbck());
+    hbck2 = service.submit(new RunHbck());
+    service.shutdown();
+    //wait for 15 seconds, for both hbck calls finish
+    service.awaitTermination(15, TimeUnit.SECONDS);
+    HBaseFsck h1 = hbck1.get();
+    HBaseFsck h2 = hbck2.get();
+    // Make sure only one of the calls was successful
+    assert(h1 == null || h2 == null);
+    if (h1 != null) {
+      assert(h1.getRetCode() >= 0);
+    }
+    if (h2 != null) {
+      assert(h2.getRetCode() >= 0);
+    }
   }
 
   /**
