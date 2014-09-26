@@ -108,7 +108,6 @@ COMMAND=$1
 shift
 
 JAVA=$JAVA_HOME/bin/java
-JAVA_HEAP_MAX=-Xmx1000m 
 
 # override default settings for this command, if applicable
 if [ -f "$HBASE_HOME/conf/hbase-env-$COMMAND.sh" ]; then
