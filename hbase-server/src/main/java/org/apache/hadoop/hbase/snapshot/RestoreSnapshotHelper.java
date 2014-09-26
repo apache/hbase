@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
@@ -313,13 +313,13 @@ public class RestoreSnapshotHelper {
       regionsToRestore.add(hri);
     }
 
-    public void updateMetaParentRegions(HConnection hConnection,
+    public void updateMetaParentRegions(Connection connection,
         final List<HRegionInfo> regionInfos) throws IOException {
       if (regionInfos == null || parentsMap.isEmpty()) return;
 
       // Extract region names and offlined regions
       Map<String, HRegionInfo> regionsByName = new HashMap<String, HRegionInfo>(regionInfos.size());
-      List<HRegionInfo> parentRegions = new LinkedList();
+      List<HRegionInfo> parentRegions = new LinkedList<>();
       for (HRegionInfo regionInfo: regionInfos) {
         if (regionInfo.isSplitParent()) {
           parentRegions.add(regionInfo);
@@ -344,7 +344,7 @@ public class RestoreSnapshotHelper {
         }
 
         LOG.debug("Update splits parent " + regionInfo.getEncodedName() + " -> " + daughters);
-        MetaTableAccessor.addRegionToMeta(hConnection, regionInfo,
+        MetaTableAccessor.addRegionToMeta(connection, regionInfo,
           regionsByName.get(daughters.getFirst()),
           regionsByName.get(daughters.getSecond()));
       }

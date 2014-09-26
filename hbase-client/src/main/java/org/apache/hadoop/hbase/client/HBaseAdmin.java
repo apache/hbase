@@ -214,7 +214,7 @@ public class HBaseAdmin implements Admin {
    * @deprecated Do not use this internal ctor.
    */
   @Deprecated
-  public HBaseAdmin(HConnection connection)
+  public HBaseAdmin(Connection connection)
       throws MasterNotRunningException, ZooKeeperConnectionException {
     this((ClusterConnection)connection);
   }

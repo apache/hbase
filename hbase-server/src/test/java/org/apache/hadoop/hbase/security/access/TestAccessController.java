@@ -51,10 +51,10 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
@@ -2013,7 +2013,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction deleteTableAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        HConnection unmanagedConnection = HConnectionManager.createConnection(TEST_UTIL.getConfiguration());
+        Connection unmanagedConnection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
         Admin admin = unmanagedConnection.getAdmin();
         try {
           admin.disableTable(TEST_TABLE.getTableName());

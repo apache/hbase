@@ -29,10 +29,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Durability;
@@ -113,10 +112,10 @@ public class TestMergeTable {
       LOG.info("Starting mini hbase cluster");
       UTIL.startMiniHBaseCluster(1, 1);
       Configuration c = new Configuration(UTIL.getConfiguration());
-      HConnection hConnection = HConnectionManager.getConnection(c);
+      Connection connection = HConnectionManager.getConnection(c);
 
       List<HRegionInfo> originalTableRegions =
-        MetaTableAccessor.getTableRegions(UTIL.getZooKeeperWatcher(), hConnection,
+        MetaTableAccessor.getTableRegions(UTIL.getZooKeeperWatcher(), connection,
           desc.getTableName());
       LOG.info("originalTableRegions size=" + originalTableRegions.size() +
         "; " + originalTableRegions);
@@ -124,7 +123,7 @@ public class TestMergeTable {
       admin.disableTable(desc.getTableName());
       HMerge.merge(c, FileSystem.get(c), desc.getTableName());
       List<HRegionInfo> postMergeTableRegions =
-        MetaTableAccessor.getTableRegions(UTIL.getZooKeeperWatcher(), hConnection,
+        MetaTableAccessor.getTableRegions(UTIL.getZooKeeperWatcher(), connection,
           desc.getTableName());
       LOG.info("postMergeTableRegions size=" + postMergeTableRegions.size() +
         "; " + postMergeTableRegions);

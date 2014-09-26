@@ -4126,7 +4126,7 @@ public class TestFromClientSide {
   public void testUnmanagedHConnectionReconnect() throws Exception {
     final byte[] tableName = Bytes.toBytes("testUnmanagedHConnectionReconnect");
     HTable t = createUnmangedHConnectionHTable(tableName);
-    HConnection conn = t.getConnection();
+    Connection conn = t.getConnection();
     HBaseAdmin ha = new HBaseAdmin(conn);
     assertTrue(ha.tableExists(tableName));
     assertTrue(t.get(new Get(ROW)).isEmpty());

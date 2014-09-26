@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -87,12 +87,12 @@ public class FavoredNodeAssignmentHelper {
   /**
    * Update meta table with favored nodes info
    * @param regionToFavoredNodes map of HRegionInfo's to their favored nodes
-   * @param hConnection HConnection to be used
+   * @param connection connection to be used
    * @throws IOException
    */
   public static void updateMetaWithFavoredNodesInfo(
       Map<HRegionInfo, List<ServerName>> regionToFavoredNodes,
-      HConnection hConnection) throws IOException {
+      Connection connection) throws IOException {
     List<Put> puts = new ArrayList<Put>();
     for (Map.Entry<HRegionInfo, List<ServerName>> entry : regionToFavoredNodes.entrySet()) {
       Put put = makePutFromRegionInfo(entry.getKey(), entry.getValue());
@@ -100,7 +100,7 @@ public class FavoredNodeAssignmentHelper {
         puts.add(put);
       }
     }
-    MetaTableAccessor.putsToMetaTable(hConnection, puts);
+    MetaTableAccessor.putsToMetaTable(connection, puts);
     LOG.info("Added " + puts.size() + " regions in META");
   }
 

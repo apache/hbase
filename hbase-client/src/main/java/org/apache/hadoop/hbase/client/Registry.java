@@ -30,7 +30,7 @@ interface Registry {
   /**
    * @param connection
    */
-  void init(HConnection connection);
+  void init(Connection connection);
 
   /**
    * @return Meta region location

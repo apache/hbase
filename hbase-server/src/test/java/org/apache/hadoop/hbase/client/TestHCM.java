@@ -211,7 +211,7 @@ public class TestHCM {
    */
   @Test
   public void testAdminFactory() throws IOException {
-    HConnection con1 = HConnectionManager.createConnection(TEST_UTIL.getConfiguration());
+    Connection con1 = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     Admin admin = con1.getAdmin();
     assertTrue(admin.getConnection() == con1);
     assertTrue(admin.getConfiguration() == TEST_UTIL.getConfiguration());
@@ -778,16 +778,16 @@ public class TestHCM {
   @Test
   public void testConnectionManagement() throws Exception{
     Table table0 = TEST_UTIL.createTable(TABLE_NAME1, FAM_NAM);
-    HConnection conn = HConnectionManager.createConnection(TEST_UTIL.getConfiguration());
-    Table table = conn.getTable(TABLE_NAME1.getName());
+    Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+    HTable table = (HTable) conn.getTable(TABLE_NAME1);
     table.close();
     assertFalse(conn.isClosed());
-    assertFalse(((HTable)table).getPool().isShutdown());
-    table = conn.getTable(TABLE_NAME1.getName());
+    assertFalse(table.getPool().isShutdown());
+    table = (HTable) conn.getTable(TABLE_NAME1);
     table.close();
-    assertFalse(((HTable)table).getPool().isShutdown());
+    assertFalse(table.getPool().isShutdown());
     conn.close();
-    assertTrue(((HTable)table).getPool().isShutdown());
+    assertTrue(table.getPool().isShutdown());
     table0.close();
   }
 
@@ -845,14 +845,14 @@ public class TestHCM {
    */
   @Test
   public void testConnectionSameness() throws Exception {
-    HConnection previousConnection = null;
+    Connection previousConnection = null;
     for (int i = 0; i < 2; i++) {
       // set random key to differentiate the connection from previous ones
       Configuration configuration = TEST_UTIL.getConfiguration();
       configuration.set("some_key", String.valueOf(_randy.nextInt()));
       LOG.info("The hash code of the current configuration is: "
           + configuration.hashCode());
-      HConnection currentConnection = HConnectionManager
+      Connection currentConnection = HConnectionManager
           .getConnection(configuration);
       if (previousConnection != null) {
         assertTrue(
@@ -883,7 +883,7 @@ public class TestHCM {
     // to set up a session and test runs for a long time.
     int maxConnections = Math.min(zkmaxconnections - 1, 20);
     List<HConnection> connections = new ArrayList<HConnection>(maxConnections);
-    HConnection previousConnection = null;
+    Connection previousConnection = null;
     try {
       for (int i = 0; i < maxConnections; i++) {
         // set random key to differentiate the connection from previous ones
@@ -912,7 +912,7 @@ public class TestHCM {
         connections.add(currentConnection);
       }
     } finally {
-      for (HConnection c: connections) {
+      for (Connection c: connections) {
         // Clean up connections made so we don't interfere w/ subsequent tests.
         HConnectionManager.deleteConnection(c.getConfiguration());
       }
@@ -926,12 +926,12 @@ public class TestHCM {
     configuration.set(HConstants.HBASE_CLIENT_INSTANCE_ID,
         String.valueOf(_randy.nextInt()));
 
-    HConnection c1 = HConnectionManager.createConnection(configuration);
+    Connection c1 = ConnectionFactory.createConnection(configuration);
     // We create two connections with the same key.
-    HConnection c2 = HConnectionManager.createConnection(configuration);
+    Connection c2 = ConnectionFactory.createConnection(configuration);
 
-    HConnection c3 = HConnectionManager.getConnection(configuration);
-    HConnection c4 = HConnectionManager.getConnection(configuration);
+    Connection c3 = HConnectionManager.getConnection(configuration);
+    Connection c4 = HConnectionManager.getConnection(configuration);
     assertTrue(c3 == c4);
 
     c1.close();
@@ -945,7 +945,7 @@ public class TestHCM {
     c3.close();
     assertTrue(c3.isClosed());
     // c3 was removed from the cache
-    HConnection c5 = HConnectionManager.getConnection(configuration);
+    Connection c5 = HConnectionManager.getConnection(configuration);
     assertTrue(c5 != c3);
 
     assertFalse(c2.isClosed());
@@ -962,13 +962,13 @@ public class TestHCM {
   @Test
   public void testCreateConnection() throws Exception {
     Configuration configuration = TEST_UTIL.getConfiguration();
-    HConnection c1 = HConnectionManager.createConnection(configuration);
-    HConnection c2 = HConnectionManager.createConnection(configuration);
+    Connection c1 = ConnectionFactory.createConnection(configuration);
+    Connection c2 = ConnectionFactory.createConnection(configuration);
     // created from the same configuration, yet they are different
     assertTrue(c1 != c2);
     assertTrue(c1.getConfiguration() == c2.getConfiguration());
     // make sure these were not cached
-    HConnection c3 = HConnectionManager.getConnection(configuration);
+    Connection c3 = HConnectionManager.getConnection(configuration);
     assertTrue(c1 != c3);
     assertTrue(c2 != c3);
   }
@@ -1229,7 +1229,7 @@ public class TestHCM {
 
     // Use connection multiple times.
     for (int i = 0; i < 30; i++) {
-      HConnection c1 = null;
+      Connection c1 = null;
       try {
         c1 = ConnectionManager.getConnectionInternal(config);
         LOG.info("HTable connection " + i + " " + c1);
@@ -1272,7 +1272,7 @@ public class TestHCM {
     TableName tableName = TableName.valueOf("testConnectionRideOverClusterRestart");
     TEST_UTIL.createTable(tableName.getName(), new byte[][] {FAM_NAM}, config).close();
 
-    HConnection connection = HConnectionManager.createConnection(config);
+    Connection connection = ConnectionFactory.createConnection(config);
     Table table = connection.getTable(tableName);
 
     // this will cache the meta location and table's region location

@@ -114,7 +114,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     final ServerName META_HOST = META_SERVERNAME;
 
     @Override
-    public void init(HConnection connection) {
+    public void init(Connection connection) {
     }
 
     @Override
@@ -699,8 +699,8 @@ public class TestClientNoCluster extends Configured implements Tool {
    * @param sharedConnection
    * @throws IOException
    */
-  static void cycle(int id, final Configuration c, final HConnection sharedConnection) throws IOException {
-    Table table = sharedConnection.getTable(BIG_USER_TABLE);
+  static void cycle(int id, final Configuration c, final Connection sharedConnection) throws IOException {
+    Table table = sharedConnection.getTable(TableName.valueOf(BIG_USER_TABLE));
     table.setAutoFlushTo(false);
     long namespaceSpan = c.getLong("hbase.test.namespace.span", 1000000);
     long startTime = System.currentTimeMillis();
@@ -777,7 +777,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     final ExecutorService pool = Executors.newCachedThreadPool(Threads.getNamedThreadFactory("p"));
       // Executors.newFixedThreadPool(servers * 10, Threads.getNamedThreadFactory("p"));
     // Share a connection so I can keep counts in the 'server' on concurrency.
-    final HConnection sharedConnection = HConnectionManager.createConnection(getConf()/*, pool*/);
+    final Connection sharedConnection = ConnectionFactory.createConnection(getConf()/*, pool*/);
     try {
       Thread [] ts = new Thread[clients];
       for (int j = 0; j < ts.length; j++) {

@@ -42,9 +42,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Row;
@@ -71,7 +71,7 @@ public class ReplicationSink {
 
   private static final Log LOG = LogFactory.getLog(ReplicationSink.class);
   private final Configuration conf;
-  private final HConnection sharedHtableCon;
+  private final Connection sharedHtableCon;
   private final MetricsSink metrics;
   private final AtomicLong totalReplicatedEdits = new AtomicLong();
 
@@ -87,7 +87,7 @@ public class ReplicationSink {
     this.conf = HBaseConfiguration.create(conf);
     decorateConf();
     this.metrics = new MetricsSink();
-    this.sharedHtableCon = HConnectionManager.createConnection(this.conf);
+    this.sharedHtableCon = ConnectionFactory.createConnection(this.conf);
   }
 
   /**
