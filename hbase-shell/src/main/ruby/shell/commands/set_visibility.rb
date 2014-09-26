@@ -57,7 +57,7 @@ EOF
         iter = scanner.iterator
         while iter.hasNext
           row = iter.next
-          row.list.each do |cell|
+          row.listCells.each do |cell|
             put = org.apache.hadoop.hbase.client.Put.new(row.getRow)
             put.add(cell)
             t.set_cell_visibility(put, visibility)

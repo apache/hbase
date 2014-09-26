@@ -355,12 +355,12 @@ EOF
 
       # Print out results.  Result can be Cell or RowResult.
       res = {}
-      result.list.each do |kv|
-        family = String.from_java_bytes(kv.getFamily)
-        qualifier = org.apache.hadoop.hbase.util.Bytes::toStringBinary(kv.getQualifier)
+      result.listCells.each do |c|
+        family = String.from_java_bytes(c.getFamily)
+        qualifier = org.apache.hadoop.hbase.util.Bytes::toStringBinary(c.getQualifier)
 
         column = "#{family}:#{qualifier}"
-        value = to_string(column, kv, maxlength)
+        value = to_string(column, c, maxlength)
 
         if block_given?
           yield(column, value)
@@ -387,7 +387,7 @@ EOF
       return nil if result.isEmpty
 
       # Fetch cell value
-      cell = result.list[0]
+      cell = result.listCells[0]
       org.apache.hadoop.hbase.util.Bytes::toLong(cell.getValue)
     end
 
@@ -481,12 +481,12 @@ EOF
         row = iter.next
         key = org.apache.hadoop.hbase.util.Bytes::toStringBinary(row.getRow)
 
-        row.list.each do |kv|
-          family = String.from_java_bytes(kv.getFamily)
-          qualifier = org.apache.hadoop.hbase.util.Bytes::toStringBinary(kv.getQualifier)
+        row.listCells.each do |c|
+          family = String.from_java_bytes(c.getFamily)
+          qualifier = org.apache.hadoop.hbase.util.Bytes::toStringBinary(c.getQualifier)
 
           column = "#{family}:#{qualifier}"
-          cell = to_string(column, kv, maxlength)
+          cell = to_string(column, c, maxlength)
 
           if block_given?
             yield(key, "column=#{column}, #{cell}")
