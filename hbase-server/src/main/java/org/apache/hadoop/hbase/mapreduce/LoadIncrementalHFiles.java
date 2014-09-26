@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.SecureBulkLoadClient;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
@@ -288,10 +289,9 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
       //If using secure bulk load, get source delegation token, and
       //prepare staging directory and token
-      if (userProvider.isHBaseSecurityEnabled()) {
-        // fs is the source filesystem
-        fsDelegationToken.acquireDelegationToken(fs);
-
+      // fs is the source filesystem
+      fsDelegationToken.acquireDelegationToken(fs);
+      if(isSecureBulkLoadEndpointAvailable()) {
         bulkToken = new SecureBulkLoadClient(table).prepareBulkLoad(table.getName());
       }
 
@@ -329,12 +329,9 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       }
 
     } finally {
-      if (userProvider.isHBaseSecurityEnabled()) {
-        fsDelegationToken.releaseDelegationToken();
-
-        if(bulkToken != null) {
-          new SecureBulkLoadClient(table).cleanupBulkLoad(bulkToken);
-        }
+      fsDelegationToken.releaseDelegationToken();
+      if(bulkToken != null) {
+        new SecureBulkLoadClient(table).cleanupBulkLoad(bulkToken);
       }
       pool.shutdown();
       if (queue != null && !queue.isEmpty()) {
@@ -644,7 +641,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           LOG.debug("Going to connect to server " + getLocation() + " for row "
               + Bytes.toStringBinary(getRow()) + " with hfile group " + famPaths);
           byte[] regionName = getLocation().getRegionInfo().getRegionName();
-          if(!userProvider.isHBaseSecurityEnabled()) {
+          if (!isSecureBulkLoadEndpointAvailable()) {
             success = ProtobufUtil.bulkLoadHFile(getStub(), famPaths, regionName, assignSeqIds);
           } else {
             Table table = new HTable(conn.getConfiguration(), getTableName());
@@ -706,6 +703,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           + svrCallable.getExceptionMessageAdditionalDetail(), e);
       throw e;
     }
+  }
+  
+  private boolean isSecureBulkLoadEndpointAvailable() {
+    String classes = getConf().get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
+    return classes.contains("org.apache.hadoop.hbase.security.access.SecureBulkLoadEndpoint");
   }
 
   /**
