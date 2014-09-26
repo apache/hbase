@@ -864,6 +864,12 @@ public class AccessController extends BaseMasterAndRegionObserver
     } else {
       throw new RuntimeException("Error obtaining TableAuthManager, zk found null.");
     }
+
+    if(!compatibleEarlyTermination && !cellFeaturesEnabled) {
+      LOG.warn("A minimum HFile version of " + HFile.MIN_FORMAT_VERSION_WITH_TAGS
+          + " is required for " + AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT
+          + " to have an effect");
+    }
   }
 
   public void stop(CoprocessorEnvironment env) {
