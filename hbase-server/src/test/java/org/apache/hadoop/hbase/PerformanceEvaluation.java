@@ -48,12 +48,12 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -255,7 +255,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
       ObjectMapper mapper = new ObjectMapper();
       TestOptions opts = mapper.readValue(value.toString(), TestOptions.class);
       Configuration conf = HBaseConfiguration.create(context.getConfiguration());
-      final HConnection con = HConnectionManager.createConnection(conf);
+      final Connection con = ConnectionFactory.createConnection(conf);
 
       // Evaluation task
       long elapsedTime = runOneClient(this.cmd, conf, con, opts, status);
@@ -379,7 +379,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     long[] timings = new long[opts.numClientThreads];
     ExecutorService pool = Executors.newFixedThreadPool(opts.numClientThreads,
       new ThreadFactoryBuilder().setNameFormat("TestClient-%s").build());
-    final HConnection con = HConnectionManager.createConnection(conf);
+    final Connection con = ConnectionFactory.createConnection(conf);
     for (int i = 0; i < threads.length; i++) {
       final int index = i;
       threads[i] = pool.submit(new Callable<Long>() {
@@ -922,7 +922,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private final Status status;
     private final Sampler<?> traceSampler;
     private final SpanReceiverHost receiverHost;
-    protected HConnection connection;
+    protected Connection connection;
     protected Table table;
 
     private String testName;
@@ -934,7 +934,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
      * Note that all subclasses of this class must provide a public constructor
      * that has the exact same list of arguments.
      */
-    Test(final HConnection con, final TestOptions options, final Status status) {
+    Test(final Connection con, final TestOptions options, final Status status) {
       this.connection = con;
       this.conf = con ==  null? null: this.connection.getConfiguration();
       this.receiverHost = this.conf == null? null: SpanReceiverHost.getInstance(conf);
@@ -995,7 +995,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
 
     void testSetup() throws IOException {
       if (!opts.oneCon) {
-        this.connection = HConnectionManager.createConnection(conf);
+        this.connection = ConnectionFactory.createConnection(conf);
       }
       this.table = new HTable(TableName.valueOf(opts.tableName), connection);
       this.table.setAutoFlushTo(opts.autoFlush);
@@ -1135,7 +1135,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class RandomSeekScanTest extends Test {
-    RandomSeekScanTest(HConnection con, TestOptions options, Status status) {
+    RandomSeekScanTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1165,7 +1165,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static abstract class RandomScanWithRangeTest extends Test {
-    RandomScanWithRangeTest(HConnection con, TestOptions options, Status status) {
+    RandomScanWithRangeTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1209,7 +1209,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class RandomScanWithRange10Test extends RandomScanWithRangeTest {
-    RandomScanWithRange10Test(HConnection con, TestOptions options, Status status) {
+    RandomScanWithRange10Test(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1220,7 +1220,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class RandomScanWithRange100Test extends RandomScanWithRangeTest {
-    RandomScanWithRange100Test(HConnection con, TestOptions options, Status status) {
+    RandomScanWithRange100Test(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1231,7 +1231,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class RandomScanWithRange1000Test extends RandomScanWithRangeTest {
-    RandomScanWithRange1000Test(HConnection con, TestOptions options, Status status) {
+    RandomScanWithRange1000Test(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1242,7 +1242,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class RandomScanWithRange10000Test extends RandomScanWithRangeTest {
-    RandomScanWithRange10000Test(HConnection con, TestOptions options, Status status) {
+    RandomScanWithRange10000Test(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1257,7 +1257,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     private ArrayList<Get> gets;
     private Random rd = new Random();
 
-    RandomReadTest(HConnection con, TestOptions options, Status status) {
+    RandomReadTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
       consistency = options.replicas == DEFAULT_OPTS.replicas ? null : Consistency.TIMELINE;
       if (opts.multiGet > 0) {
@@ -1307,7 +1307,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class RandomWriteTest extends Test {
-    RandomWriteTest(HConnection con, TestOptions options, Status status) {
+    RandomWriteTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1339,7 +1339,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   static class ScanTest extends Test {
     private ResultScanner testScanner;
 
-    ScanTest(HConnection con, TestOptions options, Status status) {
+    ScanTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1370,7 +1370,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class SequentialReadTest extends Test {
-    SequentialReadTest(HConnection con, TestOptions options, Status status) {
+    SequentialReadTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1386,7 +1386,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   }
 
   static class SequentialWriteTest extends Test {
-    SequentialWriteTest(HConnection con, TestOptions options, Status status) {
+    SequentialWriteTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1418,7 +1418,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
   static class FilteredScanTest extends Test {
     protected static final Log LOG = LogFactory.getLog(FilteredScanTest.class.getName());
 
-    FilteredScanTest(HConnection con, TestOptions options, Status status) {
+    FilteredScanTest(Connection con, TestOptions options, Status status) {
       super(con, options, status);
     }
 
@@ -1528,7 +1528,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     return format(random.nextInt(Integer.MAX_VALUE) % totalRows);
   }
 
-  static long runOneClient(final Class<? extends Test> cmd, Configuration conf, HConnection con,
+  static long runOneClient(final Class<? extends Test> cmd, Configuration conf, Connection con,
                            TestOptions opts, final Status status)
       throws IOException, InterruptedException {
     status.setStatus("Start " + cmd + " at offset " + opts.startRow + " for " +
@@ -1538,7 +1538,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
     final Test t;
     try {
       Constructor<? extends Test> constructor =
-        cmd.getDeclaredConstructor(HConnection.class, TestOptions.class, Status.class);
+        cmd.getDeclaredConstructor(Connection.class, TestOptions.class, Status.class);
       t = constructor.newInstance(con, opts, status);
     } catch (NoSuchMethodException e) {
       throw new IllegalArgumentException("Invalid command class: " +

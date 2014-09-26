@@ -41,7 +41,7 @@ class ZooKeeperRegistry implements Registry {
   ConnectionManager.HConnectionImplementation hci;
 
   @Override
-  public void init(HConnection connection) {
+  public void init(Connection connection) {
     if (!(connection instanceof ConnectionManager.HConnectionImplementation)) {
       throw new RuntimeException("This registry depends on HConnectionImplementation");
     }

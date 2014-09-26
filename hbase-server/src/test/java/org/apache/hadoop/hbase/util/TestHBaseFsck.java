@@ -69,6 +69,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -2423,7 +2425,7 @@ public class TestHBaseFsck {
     HRegionInfo hri = metaLocation.getRegionInfo();
     if (unassign) {
       LOG.info("Undeploying meta region " + hri + " from server " + hsa);
-      HConnection unmanagedConnection = HConnectionManager.createConnection(conf);
+      Connection unmanagedConnection = ConnectionFactory.createConnection(conf);
       HBaseAdmin admin = (HBaseAdmin) unmanagedConnection.getAdmin();
       try {
         undeployRegion(admin, hsa, hri);

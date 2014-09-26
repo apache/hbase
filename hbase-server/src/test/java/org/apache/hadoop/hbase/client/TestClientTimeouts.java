@@ -78,7 +78,7 @@ public class TestClientTimeouts {
    */
   @Test
   public void testAdminTimeout() throws Exception {
-    HConnection lastConnection = null;
+    Connection lastConnection = null;
     boolean lastFailed = false;
     int initialInvocations = RandomTimeoutBlockingRpcChannel.invokations.get();
     RpcClient rpcClient = newRandomTimeoutRpcClient();
@@ -91,7 +91,7 @@ public class TestClientTimeouts {
         HBaseAdmin admin = null;
         try {
           admin = new HBaseAdmin(conf);
-          HConnection connection = admin.getConnection();
+          Connection connection = admin.getConnection();
           assertFalse(connection == lastConnection);
           lastConnection = connection;
           // Override the connection's rpc client for timeout testing

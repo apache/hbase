@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.coprocessor.BaseWALObserver;
@@ -162,7 +162,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // tests replaying the edits to a secondary region replica using the Callable directly
     openRegion(HTU, rs0, hriSecondary);
     ClusterConnection connection =
-        (ClusterConnection) HConnectionManager.createConnection(HTU.getConfiguration());
+        (ClusterConnection) ConnectionFactory.createConnection(HTU.getConfiguration());
 
     //load some data to primary
     HTU.loadNumericRows(table, f, 0, 1000);
@@ -203,7 +203,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // the region is moved to another location.It tests handling of RME.
     openRegion(HTU, rs0, hriSecondary);
     ClusterConnection connection =
-        (ClusterConnection) HConnectionManager.createConnection(HTU.getConfiguration());
+        (ClusterConnection) ConnectionFactory.createConnection(HTU.getConfiguration());
     //load some data to primary
     HTU.loadNumericRows(table, f, 0, 1000);
 
@@ -237,7 +237,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // tests replaying the edits to a secondary region replica using the RRRE.replicate()
     openRegion(HTU, rs0, hriSecondary);
     ClusterConnection connection =
-        (ClusterConnection) HConnectionManager.createConnection(HTU.getConfiguration());
+        (ClusterConnection) ConnectionFactory.createConnection(HTU.getConfiguration());
     RegionReplicaReplicationEndpoint replicator = new RegionReplicaReplicationEndpoint();
 
     ReplicationEndpoint.Context context = mock(ReplicationEndpoint.Context.class);

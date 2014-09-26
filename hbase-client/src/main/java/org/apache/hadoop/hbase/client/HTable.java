@@ -268,14 +268,14 @@ public class HTable implements HTableInterface, RegionLocator {
    * @deprecated Do not use, internal ctor.
    */
   @Deprecated
-  public HTable(final byte[] tableName, final HConnection connection,
+  public HTable(final byte[] tableName, final Connection connection,
       final ExecutorService pool) throws IOException {
     this(TableName.valueOf(tableName), connection, pool);
   }
 
   /** @deprecated Do not use, internal ctor. */
   @Deprecated
-  public HTable(TableName tableName, final HConnection connection,
+  public HTable(TableName tableName, final Connection connection,
       final ExecutorService pool) throws IOException {
     this(tableName, (ClusterConnection)connection, pool);
   }

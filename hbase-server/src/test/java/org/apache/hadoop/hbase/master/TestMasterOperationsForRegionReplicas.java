@@ -43,10 +43,9 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MetaTableAccessor.Visitor;
-import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
@@ -286,7 +285,7 @@ public class TestMasterOperationsForRegionReplicas {
   }
 
   private void validateNumberOfRowsInMeta(final TableName table, int numRegions,
-      HConnection hConnection) throws IOException {
+      Connection connection) throws IOException {
     assert(admin.tableExists(table));
     final AtomicInteger count = new AtomicInteger();
     Visitor visitor = new Visitor() {
@@ -296,14 +295,14 @@ public class TestMasterOperationsForRegionReplicas {
         return true;
       }
     };
-    MetaTableAccessor.fullScan(hConnection, visitor);
+    MetaTableAccessor.fullScan(connection, visitor);
     assert(count.get() == numRegions);
   }
 
   private void validateFromSnapshotFromMeta(HBaseTestingUtility util, TableName table,
-      int numRegions, int numReplica, HConnection hConnection) throws IOException {
+      int numRegions, int numReplica, Connection connection) throws IOException {
     SnapshotOfRegionAssignmentFromMeta snapshot = new SnapshotOfRegionAssignmentFromMeta(
-      hConnection);
+      connection);
     snapshot.initialize();
     Map<HRegionInfo, ServerName> regionToServerMap = snapshot.getRegionToRegionServerMap();
     assert(regionToServerMap.size() == numRegions * numReplica + 1); //'1' for the namespace
@@ -327,10 +326,10 @@ public class TestMasterOperationsForRegionReplicas {
     }
   }
 
-  private void validateSingleRegionServerAssignment(HConnection hConnection, int numRegions,
+  private void validateSingleRegionServerAssignment(Connection connection, int numRegions,
       int numReplica) throws IOException {
     SnapshotOfRegionAssignmentFromMeta snapshot = new SnapshotOfRegionAssignmentFromMeta(
-      hConnection);
+      connection);
     snapshot.initialize();
     Map<HRegionInfo, ServerName>  regionToServerMap = snapshot.getRegionToRegionServerMap();
     assertEquals(regionToServerMap.size(), numRegions * numReplica + 1); //'1' for the namespace

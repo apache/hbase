@@ -54,7 +54,7 @@ class ConnectionAdapter implements ClusterConnection {
 
   private final ClusterConnection wrappedConnection;
 
-  public ConnectionAdapter(HConnection c) {
+  public ConnectionAdapter(Connection c) {
     wrappedConnection = (ClusterConnection)c;
   }
 

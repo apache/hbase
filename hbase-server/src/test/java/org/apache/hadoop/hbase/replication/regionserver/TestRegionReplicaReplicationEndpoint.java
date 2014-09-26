@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RpcRetryingCaller;
@@ -148,7 +150,7 @@ public class TestRegionReplicaReplicationEndpoint {
     HTU.deleteTableIfAny(tableNameNoReplicas);
     HTU.createTable(tableNameNoReplicas, HBaseTestingUtility.fam1);
 
-    HConnection connection = HConnectionManager.createConnection(HTU.getConfiguration());
+    Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
     Table table = connection.getTable(tableName);
     Table tableNoReplicas = connection.getTable(tableNameNoReplicas);
 
@@ -235,7 +237,7 @@ public class TestRegionReplicaReplicationEndpoint {
     HTU.getHBaseAdmin().createTable(htd);
 
 
-    HConnection connection = HConnectionManager.createConnection(HTU.getConfiguration());
+    Connection connection = ConnectionFactory.createConnection(HTU.getConfiguration());
     Table table = connection.getTable(tableName);
 
     try {
