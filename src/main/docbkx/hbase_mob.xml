@@ -64,19 +64,18 @@
         <example>
             <title>Configure a Column for MOB Using HBase Shell</title>
             <screen>
-hbase> create 't1', 'f1', {IS_MOB => true, MOB_THRESHOLD => 102400}
-hbase> alter ‘t1′, {NAME => ‘f1', IS_MOB => true, MOB_THRESHOLD => 102400}
+hbase> create 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400}
+hbase> alter 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400}
             </screen>
         </example>
         <example>
             <title>Configure a Column for MOB Using the API</title>
             <programlisting language="java">
 ...
-HColumnDescriptor hcd = new HColumnDescriptor(“f”);
-hcd.setValue(MobConstants.IS_MOB, Bytes.toBytes(Boolean.TRUE));
+HColumnDescriptor hcd = new HColumnDescriptor("f");
+hcd.setMobEnabled(true);
 ...
-HColumnDescriptor hcd;
-hcd.setValue(MobConstants.MOB_THRESHOLD, Bytes.toBytes(102400L);
+hcd.setMobThreshold(102400L);
 ...
             </programlisting>
         </example>
@@ -93,15 +92,15 @@ hcd.setValue(MobConstants.MOB_THRESHOLD, Bytes.toBytes(102400L);
         <itemizedlist>
             <listitem>
                 <para><literal>threshold</literal> is the threshold at which cells are considered to
-                    be MOBs. The default is 100 kb.</para>
+                    be MOBs. The default is 1 kB.</para>
             </listitem>
             <listitem>
                 <para><literal>minMobDataSize</literal> is the minimum value for the size of MOB
-                    data. The default is 80 kb.</para>
+                    data. The default is 512 B.</para>
             </listitem>
             <listitem>
                 <para><literal>maxMobDataSize</literal> is the maximum value for the size of MOB
-                    data. The default is 5 MB.</para>
+                    data. The default is 5 kB.</para>
             </listitem>
         </itemizedlist>
     </section>

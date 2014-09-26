@@ -160,7 +160,7 @@ public class DeleteTableHandler extends TableEventHandler {
     HColumnDescriptor[] hcds = hTableDescriptor.getColumnFamilies();
     boolean hasMob = false;
     for (HColumnDescriptor hcd : hcds) {
-      if (MobUtils.isMobFamily(hcd)) {
+      if (hcd.isMobEnabled()) {
         hasMob = true;
         break;
       }

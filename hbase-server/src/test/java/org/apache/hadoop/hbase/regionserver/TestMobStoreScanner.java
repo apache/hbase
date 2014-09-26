@@ -82,8 +82,8 @@ public class TestMobStoreScanner {
   public void setUp(long threshold, String TN) throws Exception {
     desc = new HTableDescriptor(TableName.valueOf(TN));
     hcd = new HColumnDescriptor(family);
-    hcd.setValue(MobConstants.IS_MOB, Bytes.toBytes(Boolean.TRUE));
-    hcd.setValue(MobConstants.MOB_THRESHOLD, Bytes.toBytes(threshold));
+    hcd.setMobEnabled(true);
+    hcd.setMobThreshold(threshold);
     hcd.setMaxVersions(4);
     desc.addFamily(hcd);
     admin = new HBaseAdmin(TEST_UTIL.getConfiguration());

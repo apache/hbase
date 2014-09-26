@@ -99,7 +99,7 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
     try {
       HTableDescriptor htd = admin.getTableDescriptor(tn);
       HColumnDescriptor family = htd.getFamily(Bytes.toBytes(familyName));
-      if (family == null || !MobUtils.isMobFamily(family)) {
+      if (family == null || !family.isMobEnabled()) {
         throw new IOException("Column family " + familyName + " is not a MOB column family");
       }
       if (family.getMinVersions() > 0) {

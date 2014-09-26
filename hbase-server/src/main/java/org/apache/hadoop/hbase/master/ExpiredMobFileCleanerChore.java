@@ -29,8 +29,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.mob.ExpiredMobFileCleaner;
 import org.apache.hadoop.hbase.mob.MobConstants;
-import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * The Class ExpiredMobFileCleanerChore for running cleaner regularly to remove the expired
@@ -57,7 +55,7 @@ public class ExpiredMobFileCleanerChore extends Chore {
       Map<String, HTableDescriptor> map = htds.getAll();
       for (HTableDescriptor htd : map.values()) {
         for (HColumnDescriptor hcd : htd.getColumnFamilies()) {
-          if (MobUtils.isMobFamily(hcd) && hcd.getMinVersions() == 0) {
+          if (hcd.isMobEnabled() && hcd.getMinVersions() == 0) {
             cleaner.cleanExpiredMobFiles(htd.getTableName().getNameAsString(), hcd);
           }
         }

@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.mob.ExpiredMobFileCleaner;
-import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
@@ -87,8 +86,8 @@ public class TestExpiredMobFileCleaner {
   private void init() throws Exception {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setValue(MobConstants.IS_MOB, Bytes.toBytes(Boolean.TRUE));
-    hcd.setValue(MobConstants.MOB_THRESHOLD, Bytes.toBytes(3L));
+    hcd.setMobEnabled(true);
+    hcd.setMobThreshold(3L);
     hcd.setMaxVersions(4);
     desc.addFamily(hcd);
 
@@ -100,8 +99,8 @@ public class TestExpiredMobFileCleaner {
 
   private void modifyColumnExpiryDays(int expireDays) throws Exception {
     HColumnDescriptor hcd = new HColumnDescriptor(family);
-    hcd.setValue(MobConstants.IS_MOB, Bytes.toBytes(Boolean.TRUE));
-    hcd.setValue(MobConstants.MOB_THRESHOLD, Bytes.toBytes(3L));
+    hcd.setMobEnabled(true);
+    hcd.setMobThreshold(3L);
     // change ttl as expire days to make some row expired
     int timeToLive = expireDays * secondsOfDay();
     hcd.setTimeToLive(timeToLive);

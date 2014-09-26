@@ -74,29 +74,6 @@ public class MobUtils {
   };
 
   /**
-   * Indicates whether the column family is a mob one.
-   * @param hcd The descriptor of a column family.
-   * @return True if this column family is a mob one, false if it's not.
-   */
-  public static boolean isMobFamily(HColumnDescriptor hcd) {
-    byte[] isMob = hcd.getValue(MobConstants.IS_MOB);
-    return isMob != null && isMob.length == 1 && Bytes.toBoolean(isMob);
-  }
-
-  /**
-   * Gets the mob threshold.
-   * If the size of a cell value is larger than this threshold, it's regarded as a mob.
-   * The default threshold is 1024*100(100K)B.
-   * @param hcd The descriptor of a column family.
-   * @return The threshold.
-   */
-  public static long getMobThreshold(HColumnDescriptor hcd) {
-    byte[] threshold = hcd.getValue(MobConstants.MOB_THRESHOLD);
-    return threshold != null && threshold.length == Bytes.SIZEOF_LONG ? Bytes.toLong(threshold)
-        : MobConstants.DEFAULT_MOB_THRESHOLD;
-  }
-
-  /**
    * Formats a date to a string.
    * @param date The date.
    * @return The string format of the date, it's yyyymmdd.

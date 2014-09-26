@@ -60,7 +60,7 @@ public class DefaultMobCompactor extends DefaultCompactor {
       throw new IllegalArgumentException("The store " + store + " is not a HMobStore");
     }
     mobStore = (HMobStore) store;
-    mobSizeThreshold = MobUtils.getMobThreshold(store.getFamily());
+    mobSizeThreshold = store.getFamily().getMobThreshold();
   }
 
   /**

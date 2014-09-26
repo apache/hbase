@@ -25,7 +25,6 @@ import java.util.List;
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestDataGeneratorWithMOB;
 import org.apache.hadoop.hbase.util.LoadTestTool;
@@ -118,8 +117,8 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
     admin.disableTable(tableName);
     for (HColumnDescriptor columnDescriptor : tableDesc.getFamilies()) {
       if(Arrays.equals(columnDescriptor.getName(), mobColumnFamily)) {
-        columnDescriptor.setValue(MobConstants.IS_MOB, Bytes.toBytes(Boolean.TRUE));
-        columnDescriptor.setValue(MobConstants.MOB_THRESHOLD, Bytes.toBytes((long) threshold));
+        columnDescriptor.setMobEnabled(true);
+        columnDescriptor.setMobThreshold((long) threshold);
         admin.modifyColumn(tableName, columnDescriptor);
       }
     }

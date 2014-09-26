@@ -113,7 +113,6 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CallerDisconnectedException;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
-import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -3554,7 +3553,7 @@ public class HRegion implements HeapSize { // , Writable{
   }
 
   protected HStore instantiateHStore(final HColumnDescriptor family) throws IOException {
-    if (MobUtils.isMobFamily(family)) {
+    if (family.isMobEnabled()) {
       if (HFile.getFormatVersion(this.conf) < HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
         throw new IOException("A minimum HFile version of "
             + HFile.MIN_FORMAT_VERSION_WITH_TAGS

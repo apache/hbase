@@ -69,7 +69,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
 
   public DefaultMobStoreFlusher(Configuration conf, Store store) throws IOException {
     super(conf, store);
-    mobCellValueSizeThreshold = MobUtils.getMobThreshold(store.getFamily());
+    mobCellValueSizeThreshold = store.getFamily().getMobThreshold();
     this.targetPath = MobUtils.getMobFamilyPath(conf, store.getTableName(),
         store.getColumnFamilyName());
     if (!this.store.getFileSystem().exists(targetPath)) {

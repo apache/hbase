@@ -109,8 +109,8 @@ public class TestMobCompaction {
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
     htd = UTIL.createTableDescriptor(name.getMethodName());
     hcd = new HColumnDescriptor(COLUMN_FAMILY);
-    hcd.setValue(MobConstants.IS_MOB, Bytes.toBytes(Boolean.TRUE));
-    hcd.setValue(MobConstants.MOB_THRESHOLD, Bytes.toBytes(mobThreshold));
+    hcd.setMobEnabled(true);
+    hcd.setMobThreshold(mobThreshold);
     hcd.setMaxVersions(1);
     htd.addFamily(hcd);
 
@@ -170,8 +170,7 @@ public class TestMobCompaction {
     assertEquals("Before compaction: rows", compactionThreshold, countRows());
     assertEquals("Before compaction: mob rows", compactionThreshold, countMobRows());
     // Change the threshold larger than the data size
-    region.getTableDesc().getFamily(COLUMN_FAMILY).setValue(
-        MobConstants.MOB_THRESHOLD, Bytes.toBytes(500L));
+    region.getTableDesc().getFamily(COLUMN_FAMILY).setMobThreshold(500);
     region.initialize();
     region.compactStores();
 

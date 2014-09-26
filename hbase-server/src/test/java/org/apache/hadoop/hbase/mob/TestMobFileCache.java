@@ -79,14 +79,14 @@ public class TestMobFileCache extends TestCase {
     conf = UTIL.getConfiguration();
     HTableDescriptor htd = UTIL.createTableDescriptor("testMobFileCache");
     HColumnDescriptor hcd1 = new HColumnDescriptor(FAMILY1);
-    hcd1.setValue(MobConstants.IS_MOB, Bytes.toBytes(Boolean.TRUE));
-    hcd1.setValue(MobConstants.MOB_THRESHOLD, Bytes.toBytes(0L));
+    hcd1.setMobEnabled(true);
+    hcd1.setMobThreshold(0);
     HColumnDescriptor hcd2 = new HColumnDescriptor(FAMILY2);
-    hcd2.setValue(MobConstants.IS_MOB, Bytes.toBytes(Boolean.TRUE));
-    hcd2.setValue(MobConstants.MOB_THRESHOLD, Bytes.toBytes(0L));
+    hcd2.setMobEnabled(true);
+    hcd2.setMobThreshold(0);
     HColumnDescriptor hcd3 = new HColumnDescriptor(FAMILY3);
-    hcd3.setValue(MobConstants.IS_MOB, Bytes.toBytes(Boolean.TRUE));
-    hcd3.setValue(MobConstants.MOB_THRESHOLD, Bytes.toBytes(0L));
+    hcd3.setMobEnabled(true);
+    hcd3.setMobThreshold(0);
     htd.addFamily(hcd1);
     htd.addFamily(hcd2);
     htd.addFamily(hcd3);
@@ -115,7 +115,7 @@ public class TestMobFileCache extends TestCase {
   private Path createMobStoreFile(Configuration conf, String family) throws IOException {
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     hcd.setMaxVersions(4);
-    hcd.setValue(MobConstants.IS_MOB, Bytes.toBytes(Boolean.TRUE));
+    hcd.setMobEnabled(true);
     mobCacheConf = new MobCacheConfig(conf, hcd);
     return createMobStoreFile(conf, hcd);
   }

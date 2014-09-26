@@ -115,8 +115,8 @@ public class TestHMobStore {
   private void init(String methodName, Configuration conf, boolean testStore)
   throws IOException {
     hcd = new HColumnDescriptor(family);
-    hcd.setValue(MobConstants.IS_MOB, Bytes.toBytes(Boolean.TRUE));
-    hcd.setValue(MobConstants.MOB_THRESHOLD, Bytes.toBytes(3L));
+    hcd.setMobEnabled(true);
+    hcd.setMobThreshold(3L);
     hcd.setMaxVersions(4);
     init(methodName, conf, hcd, testStore);
   }
@@ -365,8 +365,8 @@ public class TestHMobStore {
 
     HColumnDescriptor hcd;
     hcd = new HColumnDescriptor(family);
-    hcd.setValue(MobConstants.IS_MOB, Bytes.toBytes(Boolean.TRUE));
-    hcd.setValue(MobConstants.MOB_THRESHOLD, Bytes.toBytes(100L));
+    hcd.setMobEnabled(true);
+    hcd.setMobThreshold(100);
     hcd.setMaxVersions(4);
     init(name.getMethodName(), conf, hcd, false);
 
@@ -406,7 +406,7 @@ public class TestHMobStore {
       //this is not mob reference cell.
       Assert.assertFalse(MobUtils.isMobReferenceCell(cell));
       Assert.assertEquals(expected.get(i), results.get(i));
-      Assert.assertEquals(100, MobUtils.getMobThreshold(store.getFamily()));
+      Assert.assertEquals(100, store.getFamily().getMobThreshold());
     }
   }
 

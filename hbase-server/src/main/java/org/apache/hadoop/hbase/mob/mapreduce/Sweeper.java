@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -68,7 +67,7 @@ public class Sweeper extends Configured implements Tool {
       TableName tn = TableName.valueOf(tableName);
       HTableDescriptor htd = admin.getTableDescriptor(tn);
       HColumnDescriptor family = htd.getFamily(Bytes.toBytes(familyName));
-      if (family == null || !MobUtils.isMobFamily(family)) {
+      if (family == null || !family.isMobEnabled()) {
         throw new IOException("Column family " + familyName + " is not a MOB column family");
       }
       SweepJob job = new SweepJob(conf, fs);
