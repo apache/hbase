@@ -85,7 +85,7 @@ public class FsDelegationToken {
    * Releases a previously acquired delegation token.
    */
   public void releaseDelegationToken() {
-    if (userProvider.isHBaseSecurityEnabled()) {
+    if (userProvider.isHadoopSecurityEnabled()) {
       if (userToken != null && !hasForwardedToken) {
         try {
           userToken.cancel(this.fs.getConf());
