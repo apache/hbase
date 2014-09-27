@@ -330,6 +330,13 @@ public class HTable implements HTableInterface {
   }
 
   /**
+   * @return maxKeyValueSize from configuration.
+   */
+  public static int getMaxKeyValueSize(Configuration conf) {
+    return conf.getInt("hbase.client.keyvalue.maxsize", -1);
+  }
+
+  /**
    * setup this HTable's parameter based on the passed configuration
    */
   private void finishSetup() throws IOException {
@@ -352,8 +359,7 @@ public class HTable implements HTableInterface {
     ap = new AsyncProcess<Object>(connection, tableName, pool, null,
         configuration, rpcCallerFactory, rpcControllerFactory);
 
-    this.maxKeyValueSize = this.configuration.getInt(
-        "hbase.client.keyvalue.maxsize", -1);
+    this.maxKeyValueSize = getMaxKeyValueSize(this.configuration);
     this.closed = false;
   }
 
@@ -1328,7 +1334,12 @@ public class HTable implements HTableInterface {
   }
 
   // validate for well-formedness
-  public void validatePut(final Put put) throws IllegalArgumentException{
+  public void validatePut(final Put put) throws IllegalArgumentException {
+    validatePut(put, maxKeyValueSize);
+  }
+
+  // validate for well-formedness
+  public static void validatePut(Put put, int maxKeyValueSize) throws IllegalArgumentException {
     if (put.isEmpty()) {
       throw new IllegalArgumentException("No columns to insert");
     }

@@ -156,7 +156,9 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
                                                  PrepareBulkLoadRequest request,
                                                  RpcCallback<PrepareBulkLoadResponse> done){
     try {
-      getAccessController().prePrepareBulkLoad(env);
+      if(userProvider.isHBaseSecurityEnabled()) {
+        getAccessController().prePrepareBulkLoad(env);
+      }
       String bulkToken = createStagingDir(baseStagingDir,
           getActiveUser(), ProtobufUtil.toTableName(request.getTableName())).toString();
       done.run(PrepareBulkLoadResponse.newBuilder().setBulkToken(bulkToken).build());
@@ -171,7 +173,9 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
                               CleanupBulkLoadRequest request,
                               RpcCallback<CleanupBulkLoadResponse> done) {
     try {
-      getAccessController().preCleanupBulkLoad(env);
+      if (userProvider.isHBaseSecurityEnabled()) {
+        getAccessController().preCleanupBulkLoad(env);
+      }
       fs.delete(createStagingDir(baseStagingDir,
           getActiveUser(),
           new Path(request.getBulkToken()).getName()),
@@ -191,11 +195,13 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     for(ClientProtos.BulkLoadHFileRequest.FamilyPath el : request.getFamilyPathList()) {
       familyPaths.add(new Pair(el.getFamily().toByteArray(),el.getPath()));
     }
-    final Token userToken =
-        new Token(request.getFsToken().getIdentifier().toByteArray(),
-                  request.getFsToken().getPassword().toByteArray(),
-                  new Text(request.getFsToken().getKind()),
-                  new Text(request.getFsToken().getService()));
+    
+    Token userToken = null;
+    if (request.getFsToken().hasIdentifier() && request.getFsToken().hasPassword()) {
+      userToken = new Token(request.getFsToken().getIdentifier().toByteArray(), request.getFsToken()
+              .getPassword().toByteArray(), new Text(request.getFsToken().getKind()), new Text(
+              request.getFsToken().getService()));
+    }
     final String bulkToken = request.getBulkToken();
     User user = getActiveUser();
     final UserGroupInformation ugi = user.getUGI();
@@ -227,18 +233,20 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
       // the 'request user' necessary token to operate on the target fs.
       // After this point the 'doAs' user will hold two tokens, one for the source fs
       // ('request user'), another for the target fs (HBase region server principal).
-      FsDelegationToken targetfsDelegationToken = new FsDelegationToken(userProvider, "renewer");
-      try {
-        targetfsDelegationToken.acquireDelegationToken(fs);
-      } catch (IOException e) {
-        ResponseConverter.setControllerException(controller, e);
-        done.run(null);
-        return;
-      }
-      Token<?> targetFsToken = targetfsDelegationToken.getUserToken();
-      if (targetFsToken != null && (userToken == null
-          || !targetFsToken.getService().equals(userToken.getService()))) {
-        ugi.addToken(targetFsToken);
+      if (userProvider.isHadoopSecurityEnabled()) {
+        FsDelegationToken targetfsDelegationToken = new FsDelegationToken(userProvider, "renewer");
+        try {
+          targetfsDelegationToken.acquireDelegationToken(fs);
+        } catch (IOException e) {
+          ResponseConverter.setControllerException(controller, e);
+          done.run(null);
+          return;
+        }
+        Token<?> targetFsToken = targetfsDelegationToken.getUserToken();
+        if (targetFsToken != null
+            && (userToken == null || !targetFsToken.getService().equals(userToken.getService()))) {
+          ugi.addToken(targetFsToken);
+        }
       }
 
       loaded = ugi.doAs(new PrivilegedAction<Boolean>() {
@@ -252,7 +260,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
               Path p = new Path(el.getSecond());
               LOG.trace("Setting permission for: " + p);
               fs.setPermission(p, PERM_ALL_ACCESS);
-
+              
               Path stageFamily = new Path(bulkToken, Bytes.toString(el.getFirst()));
               if(!fs.exists(stageFamily)) {
                 fs.mkdirs(stageFamily);
@@ -312,7 +320,8 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     }
 
     //this is for testing
-    if("simple".equalsIgnoreCase(conf.get(User.HBASE_SECURITY_CONF_KEY))) {
+    if (userProvider.isHadoopSecurityEnabled()
+        && "simple".equalsIgnoreCase(conf.get(User.HBASE_SECURITY_CONF_KEY))) {
       return User.createUserForTesting(conf, user.getShortName(), new String[]{});
     }
 

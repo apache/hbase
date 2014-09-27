@@ -38,8 +38,8 @@ public interface AccessControlConstants {
    * if table or CF permissions grant access. Pre-0.98 compatible behavior
    */
   public static final String CF_ATTRIBUTE_EARLY_OUT = "hbase.security.access.early_out";
-  /** Default setting for hbase.security.access.early_out; false in 0.98 */
-  public static final boolean DEFAULT_ATTRIBUTE_EARLY_OUT = false;
+  /** Default setting for hbase.security.access.early_out; true*/
+  public static final boolean DEFAULT_ATTRIBUTE_EARLY_OUT = true;
 
   // Operation attributes for cell level security
 
