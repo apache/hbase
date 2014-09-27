@@ -125,7 +125,7 @@ public class TestMetaReaderEditorNoCluster {
         HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
         Bytes.toBytes(sn.getStartcode())));
       final Result [] result = new Result [] {new Result(kvs)};
-      Mockito.when(implementation.next(Mockito.anyLong(), Mockito.anyInt())).
+      Mockito.when(implementation.next(Mockito.anyLong(), Mockito.anyInt(), Mockito.anyInt())).
         thenReturn(result).
         thenReturn(null);
 
