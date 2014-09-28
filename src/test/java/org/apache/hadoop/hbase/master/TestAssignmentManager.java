@@ -597,7 +597,7 @@ public class TestAssignmentManager {
     Mockito.when(implementation.openScanner((byte [])Mockito.any(), (Scan)Mockito.any())).
       thenReturn(System.currentTimeMillis());
     // Return a good result first and then return null to indicate end of scan
-    Mockito.when(implementation.next(Mockito.anyLong(), Mockito.anyInt())).
+    Mockito.when(implementation.next(Mockito.anyLong(), Mockito.anyInt(), Mockito.anyInt())).
       thenReturn(new Result [] {r}, (Result [])null);
 
     // Get a connection w/ mocked up common methods.
@@ -835,14 +835,14 @@ public class TestAssignmentManager {
     Mockito.when(ri .openScanner((byte[]) Mockito.any(), (Scan) Mockito.any())).
       thenReturn(System.currentTimeMillis());
    if (enabling) {
-      Mockito.when(ri.next(Mockito.anyLong(), Mockito.anyInt())).thenReturn(result, result, result,
+      Mockito.when(ri.next(Mockito.anyLong(), Mockito.anyInt(), Mockito.anyInt())).thenReturn(result, result, result,
           (Result[]) null);
       // If a get, return the above result too for REGIONINFO_2
       Mockito.when(ri.get((byte[]) Mockito.any(), (Get) Mockito.any())).thenReturn(
           getMetaTableRowResult(REGIONINFO_2, SERVERNAME_A));
     } else {
       // Return good result 'r' first and then return null to indicate end of scan
-      Mockito.when(ri.next(Mockito.anyLong(), Mockito.anyInt())).thenReturn(new Result[] { r });
+      Mockito.when(ri.next(Mockito.anyLong(), Mockito.anyInt(), Mockito.anyInt())).thenReturn(new Result[] { r });
       // If a get, return the above result too for REGIONINFO
       Mockito.when(ri.get((byte[]) Mockito.any(), (Get) Mockito.any())).thenReturn(r);
     }
