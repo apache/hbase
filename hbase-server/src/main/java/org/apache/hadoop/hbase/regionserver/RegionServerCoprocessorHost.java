@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
+import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
@@ -156,6 +157,27 @@ public class RegionServerCoprocessorHost extends
     });
   }
 
+  public ReplicationEndpoint postCreateReplicationEndPoint(final ReplicationEndpoint endpoint)
+      throws IOException {
+    return execOperationWithResult(endpoint, coprocessors.isEmpty() ? null
+        : new CoprocessOperationWithResult<ReplicationEndpoint>() {
+          @Override
+          public void call(RegionServerObserver oserver,
+              ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException {
+            setResult(oserver.postCreateReplicationEndPoint(ctx, getResult()));
+          }
+        });
+  }
+
+  private <T> T execOperationWithResult(final T defaultValue,
+      final CoprocessOperationWithResult<T> ctx) throws IOException {
+    if (ctx == null)
+      return defaultValue;
+    ctx.setResult(defaultValue);
+    execOperation(ctx);
+    return ctx.getResult();
+  }
+
   private static abstract class CoprocessorOperation
       extends ObserverContext<RegionServerCoprocessorEnvironment> {
     public CoprocessorOperation() {
@@ -165,6 +187,18 @@ public class RegionServerCoprocessorHost extends
         ObserverContext<RegionServerCoprocessorEnvironment> ctx) throws IOException;
 
     public void postEnvCall(RegionServerEnvironment env) {
+    }
+  }
+
+  private static abstract class CoprocessOperationWithResult<T> extends CoprocessorOperation {
+    private T result = null;
+
+    public void setResult(final T result) {
+      this.result = result;
+    }
+
+    public T getResult() {
+      return this.result;
     }
   }
 
