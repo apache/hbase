@@ -1,4 +1,30 @@
 HBase Change Log
+Release 0.94.24 - 09/28/2014
+Sub-task
+
+    [HBASE-11923] - Potential race condition in RecoverableZookeeper.checkZk()
+    [HBASE-11963] - Synchronize peer cluster replication connection attempts
+    [HBASE-12023] - HRegion.applyFamilyMapToMemstore creates too many iterator objects.
+    [HBASE-12077] - FilterLists create many ArrayList$Itr objects per row.
+
+Bug
+
+    [HBASE-11405] - Multiple invocations of hbck in parallel disables balancer permanently
+    [HBASE-11957] - Backport to 0.94 HBASE-5974 Scanner retry behavior with RPC timeout on next() seems incorrect
+    [HBASE-12019] - hbase-daemon.sh overwrite HBASE_ROOT_LOGGER and HBASE_SECURITY_LOGGER variables
+    [HBASE-12020] - String formatting on each RPC Invoke
+    [HBASE-12022] - Payloads on Failure attempt to serialize the byte[] into strings.
+
+Improvement
+
+    [HBASE-12090] - Bytes: more Unsafe, more Faster
+
+Task
+
+    [HBASE-12103] - Backport HFileV1Detector to 0.94
+    [HBASE-12113] - Backport to 0.94: HBASE-5525 Truncate and preserve region boundaries option
+
+
 Release 0.94.23 - 08/26/2014
 Bug
 
