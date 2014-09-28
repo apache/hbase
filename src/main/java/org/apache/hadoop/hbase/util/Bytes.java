@@ -41,9 +41,10 @@ import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
 import org.apache.hadoop.io.WritableUtils;
 
-import sun.misc.Unsafe;
-
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hbase.util.Bytes.LexicographicalComparerHolder.UnsafeComparer;
+
+import sun.misc.Unsafe;
 
 /**
  * Utility class that handles byte arrays, conversions to/from other types,
@@ -520,12 +521,16 @@ public class Bytes {
     if (length != SIZEOF_LONG || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_LONG);
     }
-    long l = 0;
-    for(int i = offset; i < offset + length; i++) {
-      l <<= 8;
-      l ^= bytes[i] & 0xFF;
+    if (UnsafeComparer.isAvailable()) {
+      return toLongUnsafe(bytes, offset);
+    } else {
+      long l = 0;
+      for(int i = offset; i < offset + length; i++) {
+        l <<= 8;
+        l ^= bytes[i] & 0xFF;
+      }
+      return l;
     }
-    return l;
   }
 
   private static IllegalArgumentException
@@ -557,11 +562,32 @@ public class Bytes {
       throw new IllegalArgumentException("Not enough room to put a long at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    for(int i = offset + 7; i > offset; i--) {
-      bytes[i] = (byte) val;
-      val >>>= 8;
+    if (UnsafeComparer.isAvailable()) {
+      return putLongUnsafe(bytes, offset, val);
+    } else {
+      for(int i = offset + 7; i > offset; i--) {
+        bytes[i] = (byte) val;
+        val >>>= 8;
+      }
+      bytes[offset] = (byte) val;
+      return offset + SIZEOF_LONG;
     }
-    bytes[offset] = (byte) val;
+  }
+
+  /**
+   * Put a long value out to the specified byte array position (Unsafe).
+   * @param bytes the byte array
+   * @param offset position in the array
+   * @param val long to write out
+   * @return incremented offset
+   */
+  public static int putLongUnsafe(byte[] bytes, int offset, long val)
+  {
+    if (UnsafeComparer.littleEndian) {
+      val = Long.reverseBytes(val);
+    }
+    UnsafeComparer.theUnsafe.putLong(bytes, (long) offset +
+      UnsafeComparer.BYTE_ARRAY_BASE_OFFSET , val);
     return offset + SIZEOF_LONG;
   }
 
@@ -689,12 +715,64 @@ public class Bytes {
     if (length != SIZEOF_INT || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_INT);
     }
-    int n = 0;
-    for(int i = offset; i < (offset + length); i++) {
-      n <<= 8;
-      n ^= bytes[i] & 0xFF;
+    if (UnsafeComparer.isAvailable()) {
+      return toIntUnsafe(bytes, offset);
+    } else {
+      int n = 0;
+      for(int i = offset; i < (offset + length); i++) {
+        n <<= 8;
+        n ^= bytes[i] & 0xFF;
+      }
+      return n;
     }
-    return n;
+  }
+
+  /**
+   * Converts a byte array to an int value (Unsafe version)
+   * @param bytes byte array
+   * @param offset offset into array
+   * @return the int value
+   */
+  public static int toIntUnsafe(byte[] bytes, int offset) {
+    if (UnsafeComparer.littleEndian) {
+      return Integer.reverseBytes(UnsafeComparer.theUnsafe.getInt(bytes,
+        (long) offset + UnsafeComparer.BYTE_ARRAY_BASE_OFFSET));
+    } else {
+      return UnsafeComparer.theUnsafe.getInt(bytes,
+        (long) offset + UnsafeComparer.BYTE_ARRAY_BASE_OFFSET);
+    }
+  }
+
+  /**
+   * Converts a byte array to an short value (Unsafe version)
+   * @param bytes byte array
+   * @param offset offset into array
+   * @return the short value
+   */
+  public static short toShortUnsafe(byte[] bytes, int offset) {
+    if (UnsafeComparer.littleEndian) {
+      return Short.reverseBytes(UnsafeComparer.theUnsafe.getShort(bytes,
+        (long) offset + UnsafeComparer.BYTE_ARRAY_BASE_OFFSET));
+    } else {
+      return UnsafeComparer.theUnsafe.getShort(bytes,
+        (long) offset + UnsafeComparer.BYTE_ARRAY_BASE_OFFSET);
+    }
+  }
+
+  /**
+   * Converts a byte array to an long value (Unsafe version)
+   * @param bytes byte array
+   * @param offset offset into array
+   * @return the long value
+   */
+  public static long toLongUnsafe(byte[] bytes, int offset) {
+    if (UnsafeComparer.littleEndian) {
+      return Long.reverseBytes(UnsafeComparer.theUnsafe.getLong(bytes,
+        (long) offset + UnsafeComparer.BYTE_ARRAY_BASE_OFFSET));
+    } else {
+      return UnsafeComparer.theUnsafe.getLong(bytes,
+        (long) offset + UnsafeComparer.BYTE_ARRAY_BASE_OFFSET);
+    }
   }
 
   /**
@@ -711,11 +789,32 @@ public class Bytes {
       throw new IllegalArgumentException("Not enough room to put an int at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    for(int i= offset + 3; i > offset; i--) {
-      bytes[i] = (byte) val;
-      val >>>= 8;
+    if (UnsafeComparer.isAvailable()) {
+      return putIntUnsafe(bytes, offset, val);
+    } else {
+      for(int i= offset + 3; i > offset; i--) {
+        bytes[i] = (byte) val;
+        val >>>= 8;
+      }
+      bytes[offset] = (byte) val;
+      return offset + SIZEOF_INT;
     }
-    bytes[offset] = (byte) val;
+  }
+
+  /**
+   * Put an int value out to the specified byte array position (Unsafe).
+   * @param bytes the byte array
+   * @param offset position in the array
+   * @param val int to write out
+   * @return incremented offset
+   */
+  public static int putIntUnsafe(byte[] bytes, int offset, int val)
+  {
+    if (UnsafeComparer.littleEndian) {
+      val = Integer.reverseBytes(val);
+    }
+    UnsafeComparer.theUnsafe.putInt(bytes, (long) offset +
+      UnsafeComparer.BYTE_ARRAY_BASE_OFFSET , val);
     return offset + SIZEOF_INT;
   }
 
@@ -738,7 +837,7 @@ public class Bytes {
    * @return the short value
    */
   public static short toShort(byte[] bytes) {
-    return toShort(bytes, 0, SIZEOF_SHORT);
+    return toShortUnsafe(bytes, 0);
   }
 
   /**
@@ -764,11 +863,15 @@ public class Bytes {
     if (length != SIZEOF_SHORT || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_SHORT);
     }
-    short n = 0;
-    n ^= bytes[offset] & 0xFF;
-    n <<= 8;
-    n ^= bytes[offset+1] & 0xFF;
-    return n;
+    if (UnsafeComparer.isAvailable()) {
+      return toShortUnsafe(bytes, offset);
+    } else {
+      short n = 0;
+      n ^= bytes[offset] & 0xFF;
+      n <<= 8;
+      n ^= bytes[offset+1] & 0xFF;
+      return n;
+   }
   }
 
   /**
@@ -799,9 +902,30 @@ public class Bytes {
       throw new IllegalArgumentException("Not enough room to put a short at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    bytes[offset+1] = (byte) val;
-    val >>= 8;
-    bytes[offset] = (byte) val;
+    if (UnsafeComparer.isAvailable()) {
+      return putShortUnsafe(bytes, offset, val);
+    } else {
+      bytes[offset+1] = (byte) val;
+      val >>= 8;
+      bytes[offset] = (byte) val;
+      return offset + SIZEOF_SHORT;
+    }
+  }
+
+  /**
+   * Put a short value out to the specified byte array position (Unsafe).
+   * @param bytes the byte array
+   * @param offset position in the array
+   * @param val short to write out
+   * @return incremented offset
+   */
+  public static int putShortUnsafe(byte[] bytes, int offset, short val)
+  {
+    if (UnsafeComparer.littleEndian) {
+      val = Short.reverseBytes(val);
+    }
+    UnsafeComparer.theUnsafe.putShort(bytes, (long) offset +
+      UnsafeComparer.BYTE_ARRAY_BASE_OFFSET , val);
     return offset + SIZEOF_SHORT;
   }
 
@@ -1085,10 +1209,35 @@ public class Bytes {
 
       /**
        * Returns true if x1 is less than x2, when both values are treated as
-       * unsigned.
+       * unsigned long.
        */
-      static boolean lessThanUnsigned(long x1, long x2) {
+      static boolean lessThanUnsignedLong(long x1, long x2) {
         return (x1 + Long.MIN_VALUE) < (x2 + Long.MIN_VALUE);
+      }
+
+      /**
+       * Returns true if x1 is less than x2, when both values are treated as
+       * unsigned int.
+       */
+      static boolean lessThanUnsignedInt(int x1, int x2) {
+        return (x1 & 0xffffffffL) < (x2 & 0xffffffffL);
+      }
+
+      /**
+       * Returns true if x1 is less than x2, when both values are treated as
+       * unsigned short.
+       */
+      static boolean lessThanUnsignedShort(short x1, short x2) {
+        return (x1 & 0xffff) < (x2 & 0xffff);
+      }
+
+      /**
+       * Checks if Unsafe is available
+       * @return true, if available, false - otherwise
+       */
+      public static boolean isAvailable()
+      {
+        return theUnsafe != null;
       }
 
       /**
@@ -1105,16 +1254,17 @@ public class Bytes {
       @Override
       public int compareTo(byte[] buffer1, int offset1, int length1,
           byte[] buffer2, int offset2, int length2) {
+
         // Short circuit equal case
         if (buffer1 == buffer2 &&
             offset1 == offset2 &&
             length1 == length2) {
           return 0;
         }
-        int minLength = Math.min(length1, length2);
-        int minWords = minLength / SIZEOF_LONG;
-        int offset1Adj = offset1 + BYTE_ARRAY_BASE_OFFSET;
-        int offset2Adj = offset2 + BYTE_ARRAY_BASE_OFFSET;
+        final int minLength = Math.min(length1, length2);
+        final int minWords = minLength / SIZEOF_LONG;
+        final long offset1Adj = offset1 + BYTE_ARRAY_BASE_OFFSET;
+        final long offset2Adj = offset2 + BYTE_ARRAY_BASE_OFFSET;
 
         /*
          * Compare 8 bytes at a time. Benchmarking shows comparing 8 bytes at a
@@ -1125,40 +1275,43 @@ public class Bytes {
           long lw = theUnsafe.getLong(buffer1, offset1Adj + (long) i);
           long rw = theUnsafe.getLong(buffer2, offset2Adj + (long) i);
           long diff = lw ^ rw;
-
+          if(littleEndian){
+            lw = Long.reverseBytes(lw);
+            rw = Long.reverseBytes(rw);
+          }
           if (diff != 0) {
-            if (!littleEndian) {
-              return lessThanUnsigned(lw, rw) ? -1 : 1;
-            }
-
-            // Use binary search
-            int n = 0;
-            int y;
-            int x = (int) diff;
-            if (x == 0) {
-              x = (int) (diff >>> 32);
-              n = 32;
-            }
-
-            y = x << 16;
-            if (y == 0) {
-              n += 16;
-            } else {
-              x = y;
-            }
-
-            y = x << 8;
-            if (y == 0) {
-              n += 8;
-            }
-            return (int) (((lw >>> n) & 0xFFL) - ((rw >>> n) & 0xFFL));
+              return lessThanUnsignedLong(lw, rw) ? -1 : 1;
           }
         }
+        int offset = minWords * SIZEOF_LONG;
 
-        // The epilogue to cover the last (minLength % 8) elements.
-        for (int i = minWords * SIZEOF_LONG; i < minLength; i++) {
-          int a = (buffer1[offset1 + i] & 0xff);
-          int b = (buffer2[offset2 + i] & 0xff);
+        if (minLength - offset >= SIZEOF_INT) {
+          int il = theUnsafe.getInt(buffer1, offset1Adj + offset);
+          int ir = theUnsafe.getInt(buffer2, offset2Adj + offset);
+          if(littleEndian){
+            il = Integer.reverseBytes(il);
+            ir = Integer.reverseBytes(ir);
+          }
+          if(il != ir){
+            return lessThanUnsignedInt(il, ir) ? -1: 1;
+          }
+           offset += SIZEOF_INT;
+        }
+        if (minLength - offset >= SIZEOF_SHORT) {
+          short sl = theUnsafe.getShort(buffer1, offset1Adj + offset);
+          short sr = theUnsafe.getShort(buffer2, offset2Adj + offset);
+          if(littleEndian){
+            sl = Short.reverseBytes(sl);
+            sr = Short.reverseBytes(sr);
+          }
+          if(sl != sr){
+            return lessThanUnsignedShort(sl, sr) ? -1: 1;
+          }
+          offset += SIZEOF_SHORT;
+        }
+        if (minLength - offset == 1) {
+          int a = (buffer1[(int)(offset1 + offset)] & 0xff);
+          int b = (buffer2[(int)(offset2 + offset)] & 0xff);
           if (a != b) {
             return a - b;
           }
