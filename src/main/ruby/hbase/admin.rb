@@ -21,6 +21,7 @@
 include Java
 java_import org.apache.hadoop.hbase.util.Pair
 java_import org.apache.hadoop.hbase.util.RegionSplitter
+java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos::SnapshotDescription
 
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
@@ -325,6 +326,24 @@ module Hbase
       @admin.createTable(table_description)
     end
 
+    #----------------------------------------------------------------------------------------------
+    # Truncates table while maintaing region boundaries (deletes all records by recreating the table)
+    def truncate_preserve(table_name, conf = @conf)
+      h_table = org.apache.hadoop.hbase.client.HTable.new(conf, table_name)
+      splits = h_table.getRegionLocations().keys().map{|i| Bytes.toString(i.getStartKey)}.delete_if{|k| k == ""}.to_java :String
+      splits = org.apache.hadoop.hbase.util.Bytes.toByteArrays(splits)
+      table_description = h_table.getTableDescriptor()
+      yield 'Disabling table...' if block_given?
+      disable(table_name)
+
+      yield 'Dropping table...' if block_given?
+      drop(table_name)
+
+      yield 'Creating table with region boundaries...' if block_given?
+      @admin.createTable(table_description, splits)
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Check the status of alter command (number of regions reopened)
     def alter_status(table_name)
       # Table name should be a string
