@@ -918,7 +918,7 @@ public class Bytes {
    * @return the short value
    */
   public static short toShort(byte[] bytes) {
-    return toShortUnsafe(bytes, 0);
+    return toShort(bytes, 0, SIZEOF_SHORT);
   }
 
   /**
