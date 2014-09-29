@@ -75,6 +75,7 @@ import org.apache.hadoop.hbase.ipc.HRegionInterface;
 import org.apache.hadoop.hbase.ipc.RpcEngine;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HashedBytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.SoftValueSortedMap;
 import org.apache.hadoop.hbase.util.Threads;
@@ -584,12 +585,11 @@ public class HConnectionManager {
       new ConcurrentHashMap<String, String>();
 
     /**
-     * Map of table to table {@link HRegionLocation}s.  The table key is made
-     * by doing a {@link Bytes#mapKey(byte[])} of the table's name.
+     * Map of table to table {@link HRegionLocation}s.
      */
-    private final Map<Integer, SoftValueSortedMap<byte [], HRegionLocation>>
+    private final Map<HashedBytes, SoftValueSortedMap<byte [], HRegionLocation>>
       cachedRegionLocations =
-        new HashMap<Integer, SoftValueSortedMap<byte [], HRegionLocation>>();
+        new HashMap<HashedBytes, SoftValueSortedMap<byte [], HRegionLocation>>();
 
     // The presence of a server in the map implies it's likely that there is an
     // entry in cachedRegionLocations that map to this server; but the absence
@@ -600,8 +600,8 @@ public class HConnectionManager {
 
     // region cache prefetch is enabled by default. this set contains all
     // tables whose region cache prefetch are disabled.
-    private final Set<Integer> regionCachePrefetchDisabledTables =
-      new CopyOnWriteArraySet<Integer>();
+    private final Set<HashedBytes> regionCachePrefetchDisabledTables =
+      new CopyOnWriteArraySet<HashedBytes>();
 
     private int refCount;
 
@@ -1358,7 +1358,7 @@ public class HConnectionManager {
     private SoftValueSortedMap<byte [], HRegionLocation> getTableLocations(
         final byte [] tableName) {
       // find the map of cached locations for this table
-      Integer key = Bytes.mapKey(tableName);
+      HashedBytes key = new HashedBytes(tableName);
       SoftValueSortedMap<byte [], HRegionLocation> result;
       synchronized (this.cachedRegionLocations) {
         result = this.cachedRegionLocations.get(key);
@@ -1383,7 +1383,7 @@ public class HConnectionManager {
     @Override
     public void clearRegionCache(final byte [] tableName) {
       synchronized (this.cachedRegionLocations) {
-        this.cachedRegionLocations.remove(Bytes.mapKey(tableName));
+        this.cachedRegionLocations.remove(new HashedBytes(tableName));
       }
     }
 
@@ -1792,10 +1792,9 @@ public class HConnectionManager {
      * from a unit test.
      */
     int getNumberOfCachedRegionLocations(final byte[] tableName) {
-      Integer key = Bytes.mapKey(tableName);
       synchronized (this.cachedRegionLocations) {
         Map<byte[], HRegionLocation> tableLocs =
-          this.cachedRegionLocations.get(key);
+          this.cachedRegionLocations.get(new HashedBytes(tableName));
 
         if (tableLocs == null) {
           return 0;
@@ -1819,15 +1818,15 @@ public class HConnectionManager {
     public void setRegionCachePrefetch(final byte[] tableName,
         final boolean enable) {
       if (!enable) {
-        regionCachePrefetchDisabledTables.add(Bytes.mapKey(tableName));
+        regionCachePrefetchDisabledTables.add(new HashedBytes(tableName));
       }
       else {
-        regionCachePrefetchDisabledTables.remove(Bytes.mapKey(tableName));
+        regionCachePrefetchDisabledTables.remove(new HashedBytes(tableName));
       }
     }
 
     public boolean getRegionCachePrefetch(final byte[] tableName) {
-      return !regionCachePrefetchDisabledTables.contains(Bytes.mapKey(tableName));
+      return !regionCachePrefetchDisabledTables.contains(new HashedBytes(tableName));
     }
 
     @Override
