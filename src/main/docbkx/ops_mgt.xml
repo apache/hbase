@@ -704,6 +704,19 @@ Options:
           RegionServer. Avoid any problems by disabling the balancer first. See <xref
             linkend="lb" /> below. </para>
       </note>
+      <note>
+        <title xml:id="considerAsDead.sh">Kill Node Tool</title>
+        <para>In hbase-2.0, in the bin directory, we added a script named
+          <filename>considerAsDead.sh</filename> that can be used to kill a regionserver.
+          Hardware issues could be detected by specialized monitoring tools before the 
+          zookeeper timeout has expired. <filename>considerAsDead.sh</filename> is a
+          simple function to mark a RegionServer as dead.  It deletes all the znodes
+          of the server, starting the recovery process.  Plug in the script into
+          your monitoring/fault detection tools to initiate faster failover. Be
+          careful how you use this disruptive tool. Copy the script if you need to
+          make use of it in a version of hbase previous to hbase-2.0.
+        </para>
+      </note>
       <para> A downside to the above stop of a RegionServer is that regions could be offline for a
         good period of time. Regions are closed in order. If many regions on the server, the first
         region to close may not be back online until all regions close and after the master notices
