@@ -293,12 +293,6 @@ public class Increment extends Mutation implements Comparable<Row> {
   }
 
   @Override
-  @Deprecated
-  public Increment setWriteToWAL(boolean write) {
-    return (Increment) super.setWriteToWAL(write);
-  }
-
-  @Override
   public Increment setDurability(Durability d) {
     return (Increment) super.setDurability(d);
   }
@@ -306,12 +300,6 @@ public class Increment extends Mutation implements Comparable<Row> {
   @Override
   public Increment setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
     return (Increment) super.setFamilyCellMap(map);
-  }
-
-  @Override
-  @Deprecated
-  public Increment setFamilyMap(NavigableMap<byte[], List<KeyValue>> map) {
-    return (Increment) super.setFamilyMap(map);
   }
 
   @Override

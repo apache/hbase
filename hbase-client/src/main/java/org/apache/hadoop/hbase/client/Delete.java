@@ -340,12 +340,6 @@ public class Delete extends Mutation implements Comparable<Row> {
   }
 
   @Override
-  @Deprecated
-  public Delete setWriteToWAL(boolean write) {
-    return (Delete) super.setWriteToWAL(write);
-  }
-
-  @Override
   public Delete setDurability(Durability d) {
     return (Delete) super.setDurability(d);
   }
@@ -353,12 +347,6 @@ public class Delete extends Mutation implements Comparable<Row> {
   @Override
   public Delete setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
     return (Delete) super.setFamilyCellMap(map);
-  }
-
-  @Override
-  @Deprecated
-  public Delete setFamilyMap(NavigableMap<byte[], List<KeyValue>> map) {
-    return (Delete) super.setFamilyMap(map);
   }
 
   @Override

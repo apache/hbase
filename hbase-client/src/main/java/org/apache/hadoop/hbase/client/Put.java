@@ -432,12 +432,6 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
   }
 
   @Override
-  @Deprecated
-  public Put setWriteToWAL(boolean write) {
-    return (Put) super.setWriteToWAL(write);
-  }
-
-  @Override
   public Put setDurability(Durability d) {
     return (Put) super.setDurability(d);
   }
@@ -445,12 +439,6 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
   @Override
   public Put setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
     return (Put) super.setFamilyCellMap(map);
-  }
-
-  @Override
-  @Deprecated
-  public Put setFamilyMap(NavigableMap<byte[], List<KeyValue>> map) {
-    return (Put) super.setFamilyMap(map);
   }
 
   @Override

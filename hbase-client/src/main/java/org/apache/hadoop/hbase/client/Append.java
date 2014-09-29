@@ -143,12 +143,6 @@ public class Append extends Mutation {
   }
 
   @Override
-  @Deprecated
-  public Append setWriteToWAL(boolean write) {
-    return (Append) super.setWriteToWAL(write);
-  }
-
-  @Override
   public Append setDurability(Durability d) {
     return (Append) super.setDurability(d);
   }
@@ -156,12 +150,6 @@ public class Append extends Mutation {
   @Override
   public Append setFamilyCellMap(NavigableMap<byte[], List<Cell>> map) {
     return (Append) super.setFamilyCellMap(map);
-  }
-
-  @Override
-  @Deprecated
-  public Append setFamilyMap(NavigableMap<byte[], List<KeyValue>> map) {
-    return (Append) super.setFamilyMap(map);
   }
 
   @Override

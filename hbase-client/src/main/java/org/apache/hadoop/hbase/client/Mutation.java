@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.util.ClassSize;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
 import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
@@ -210,28 +209,6 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
   }
 
   /**
-   * @deprecated Use {@link #getDurability()} instead.
-   * @return true if edits should be applied to WAL, false if not
-   */
-  @Deprecated
-  public boolean getWriteToWAL() {
-    return this.durability == Durability.SKIP_WAL;
-  }
-
-  /**
-   * Set whether this Delete should be written to the WAL or not.
-   * Not writing the WAL means you may lose edits on server crash.
-   * This method will reset any changes made via {@link #setDurability(Durability)}
-   * @param write true if edits should be written to WAL, false if not
-   * @deprecated Use {@link #setDurability(Durability)} instead.
-   */
-  @Deprecated
-  public Mutation setWriteToWAL(boolean write) {
-    setDurability(write ? Durability.USE_DEFAULT : Durability.SKIP_WAL);
-    return this;
-  }
-
-  /**
    * Set the durability for this mutation
    * @param d
    */
@@ -260,39 +237,6 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
     // TODO: Shut this down or move it up to be a Constructor.  Get new object rather than change
     // this internal data member.
     this.familyMap = map;
-    return this;
-  }
-
-  /**
-   * Method for retrieving the put's familyMap that is deprecated and inefficient.
-   * @return the map
-   * @deprecated use {@link #getFamilyCellMap()} instead.
-   */
-  @Deprecated
-  public NavigableMap<byte [], List<KeyValue>> getFamilyMap() {
-    TreeMap<byte[], List<KeyValue>> fm =
-        new TreeMap<byte[], List<KeyValue>>(Bytes.BYTES_COMPARATOR);
-    for (Map.Entry<byte[], List<Cell>> e : familyMap.entrySet()) {
-      List<KeyValue> kvl = new ArrayList<KeyValue>(e.getValue().size());
-      for (Cell c : e.getValue()) {
-        kvl.add(KeyValueUtil.ensureKeyValue(c));
-      }
-      fm.put(e.getKey(), kvl);
-    }
-    return fm;
-  }
-
-  /**
-   * Method for setting the put's familyMap that is deprecated and inefficient.
-   * @deprecated use {@link #setFamilyCellMap(NavigableMap)} instead.
-   */
-  @Deprecated
-  public Mutation setFamilyMap(NavigableMap<byte [], List<KeyValue>> map) {
-    TreeMap<byte[], List<Cell>> fm = new TreeMap<byte[], List<Cell>>(Bytes.BYTES_COMPARATOR);
-    for (Map.Entry<byte[], List<KeyValue>> e : map.entrySet()) {
-      fm.put(e.getKey(), Lists.<Cell>newArrayList(e.getValue()));
-    }
-    this.familyMap = fm;
     return this;
   }
 
