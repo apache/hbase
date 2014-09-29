@@ -79,7 +79,7 @@ import com.google.common.annotations.VisibleForTesting;
  * and actual tag bytes length.
  */
 @InterfaceAudience.Private
-public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId {
+public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, SettableTimestamp {
   private static final ArrayList<Tag> EMPTY_ARRAY_LIST = new ArrayList<Tag>();
 
   static final Log LOG = LogFactory.getLog(KeyValue.class);
@@ -1424,6 +1424,16 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId {
       return true;
     }
     return false;
+  }
+
+  @Override
+  public void setTimestamp(long ts) {
+    Bytes.putBytes(this.bytes, this.getTimestampOffset(), Bytes.toBytes(ts), 0, Bytes.SIZEOF_LONG);
+  }
+
+  @Override
+  public void setTimestamp(byte[] ts, int tsOffset) {
+    Bytes.putBytes(this.bytes, this.getTimestampOffset(), ts, tsOffset, Bytes.SIZEOF_LONG);
   }
 
   //---------------------------------------------------------------------------
