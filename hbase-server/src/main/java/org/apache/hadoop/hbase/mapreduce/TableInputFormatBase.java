@@ -23,6 +23,7 @@ import java.io.InterruptedIOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.text.MessageFormat;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -222,11 +223,20 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     return splits;
   }
   
-  private String reverseDNS(InetAddress ipAddress) throws NamingException {
+  public String reverseDNS(InetAddress ipAddress) throws NamingException, UnknownHostException {
     String hostName = this.reverseDNSCacheMap.get(ipAddress);
     if (hostName == null) {
-      hostName = Strings.domainNamePointerToHostName(
-        DNS.reverseDns(ipAddress, this.nameServer));
+      String ipAddressString = null;
+      try {
+        ipAddressString = DNS.reverseDns(ipAddress, null);
+      } catch (Exception e) {
+        // We can use InetAddress in case the jndi failed to pull up the reverse DNS entry from the
+        // name service. Also, in case of ipv6, we need to use the InetAddress since resolving
+        // reverse DNS using jndi doesn't work well with ipv6 addresses.
+        ipAddressString = InetAddress.getByName(ipAddress.getHostAddress()).getHostName();
+      }
+      if (ipAddressString == null) throw new UnknownHostException("No host found for " + ipAddress);
+      hostName = Strings.domainNamePointerToHostName(ipAddressString);
       this.reverseDNSCacheMap.put(ipAddress, hostName);
     }
     return hostName;
