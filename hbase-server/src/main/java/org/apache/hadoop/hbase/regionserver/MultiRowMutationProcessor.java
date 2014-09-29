@@ -80,7 +80,7 @@ MultiRowMutationProcessorResponse> {
         Map<byte[], List<Cell>> familyMap = m.getFamilyCellMap();
         region.checkFamilies(familyMap.keySet());
         region.checkTimestamps(familyMap, now);
-        region.updateKVTimestamps(familyMap.values(), byteNow);
+        region.updateCellTimestamps(familyMap.values(), byteNow);
       } else if (m instanceof Delete) {
         Delete d = (Delete) m;
         region.prepareDelete(d);

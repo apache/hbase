@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -346,7 +345,6 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
   public void prePrepareTimeStampForDeleteVersion(
       ObserverContext<RegionCoprocessorEnvironment> ctx, Mutation delete, Cell cell,
       byte[] byteNow, Get get) throws IOException {
-    KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
     CellVisibility cellVisibility = null;
     try {
       cellVisibility = delete.getCellVisibility();
@@ -371,16 +369,16 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
 
     if (result.size() < get.getMaxVersions()) {
       // Nothing to delete
-      kv.updateLatestStamp(Bytes.toBytes(Long.MIN_VALUE));
+      CellUtil.updateLatestStamp(cell, Long.MIN_VALUE);
       return;
     }
     if (result.size() > get.getMaxVersions()) {
       throw new RuntimeException("Unexpected size: " + result.size()
           + ". Results more than the max versions obtained.");
     }
-    KeyValue getkv = KeyValueUtil.ensureKeyValue(result.get(get.getMaxVersions() - 1));
-    Bytes.putBytes(kv.getBuffer(), kv.getTimestampOffset(), getkv.getBuffer(),
-        getkv.getTimestampOffset(), Bytes.SIZEOF_LONG);
+    Cell getCell = result.get(get.getMaxVersions() - 1);
+    CellUtil.setTimestamp(cell, getCell.getTimestamp());
+
     // We are bypassing here because in the HRegion.updateDeleteLatestVersionTimeStamp we would
     // update with the current timestamp after again doing a get. As the hook as already determined
     // the needed timestamp we need to bypass here.

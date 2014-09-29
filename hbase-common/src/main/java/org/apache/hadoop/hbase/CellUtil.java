@@ -570,6 +570,70 @@ public final class CellUtil {
   }
 
   /**
+   * Sets the given timestamp to the cell.
+   * @param cell
+   * @param ts
+   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   */
+  public static void setTimestamp(Cell cell, long ts) throws IOException {
+    if (cell instanceof SettableTimestamp) {
+      ((SettableTimestamp) cell).setTimestamp(ts);
+    } else {
+      throw new IOException(new UnsupportedOperationException("Cell is not of type "
+          + SettableTimestamp.class.getName()));
+    }
+  }
+
+  /**
+   * Sets the given timestamp to the cell.
+   * @param cell
+   * @param ts buffer containing the timestamp value
+   * @param tsOffset offset to the new timestamp
+   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   */
+  public static void setTimestamp(Cell cell, byte[] ts, int tsOffset) throws IOException {
+    if (cell instanceof SettableTimestamp) {
+      ((SettableTimestamp) cell).setTimestamp(ts, tsOffset);
+    } else {
+      throw new IOException(new UnsupportedOperationException("Cell is not of type "
+          + SettableTimestamp.class.getName()));
+    }
+  }
+
+  /**
+   * Sets the given timestamp to the cell iff current timestamp is
+   * {@link HConstants#LATEST_TIMESTAMP}.
+   * @param cell
+   * @param ts
+   * @return True if cell timestamp is modified.
+   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   */
+  public static boolean updateLatestStamp(Cell cell, long ts) throws IOException {
+    if (cell.getTimestamp() == HConstants.LATEST_TIMESTAMP) {
+      setTimestamp(cell, ts);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Sets the given timestamp to the cell iff current timestamp is
+   * {@link HConstants#LATEST_TIMESTAMP}.
+   * @param cell
+   * @param ts buffer containing the timestamp value
+   * @param tsOffset offset to the new timestamp
+   * @return True if cell timestamp is modified.
+   * @throws IOException when the passed cell is not of type {@link SettableTimestamp}
+   */
+  public static boolean updateLatestStamp(Cell cell, byte[] ts, int tsOffset) throws IOException {
+    if (cell.getTimestamp() == HConstants.LATEST_TIMESTAMP) {
+      setTimestamp(cell, ts, tsOffset);
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Estimation of total number of bytes used by the cell to store its key, value and tags. When the
    * cell is a {@link KeyValue} we include the extra infrastructure size used by it.
    * @param cell

@@ -2193,11 +2193,10 @@ public class HRegion implements HeapSize { // , Writable{
       int listSize = cells.size();
       for (int i=0; i < listSize; i++) {
         Cell cell = cells.get(i);
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
         //  Check if time is LATEST, change to time of most recent addition if so
         //  This is expensive.
-        if (kv.isLatestTimestamp() && CellUtil.isDeleteType(kv)) {
-          byte[] qual = CellUtil.cloneQualifier(kv);
+        if (cell.getTimestamp() == HConstants.LATEST_TIMESTAMP && CellUtil.isDeleteType(cell)) {
+          byte[] qual = CellUtil.cloneQualifier(cell);
           if (qual == null) qual = HConstants.EMPTY_BYTE_ARRAY;
 
           Integer count = kvCount.get(qual);
@@ -2208,39 +2207,38 @@ public class HRegion implements HeapSize { // , Writable{
           }
           count = kvCount.get(qual);
 
-          Get get = new Get(CellUtil.cloneRow(kv));
+          Get get = new Get(CellUtil.cloneRow(cell));
           get.setMaxVersions(count);
           get.addColumn(family, qual);
           if (coprocessorHost != null) {
             if (!coprocessorHost.prePrepareTimeStampForDeleteVersion(mutation, cell,
                 byteNow, get)) {
-              updateDeleteLatestVersionTimeStamp(kv, get, count, byteNow);
+              updateDeleteLatestVersionTimeStamp(cell, get, count, byteNow);
             }
           } else {
-            updateDeleteLatestVersionTimeStamp(kv, get, count, byteNow);
+            updateDeleteLatestVersionTimeStamp(cell, get, count, byteNow);
           }
         } else {
-          kv.updateLatestStamp(byteNow);
+          CellUtil.updateLatestStamp(cell, byteNow, 0);
         }
       }
     }
   }
 
-  void updateDeleteLatestVersionTimeStamp(KeyValue kv, Get get, int count, byte[] byteNow)
+  void updateDeleteLatestVersionTimeStamp(Cell cell, Get get, int count, byte[] byteNow)
       throws IOException {
     List<Cell> result = get(get, false);
 
     if (result.size() < count) {
       // Nothing to delete
-      kv.updateLatestStamp(byteNow);
+      CellUtil.updateLatestStamp(cell, byteNow, 0);
       return;
     }
     if (result.size() > count) {
       throw new RuntimeException("Unexpected size: " + result.size());
     }
-    KeyValue getkv = KeyValueUtil.ensureKeyValue(result.get(count - 1));
-    Bytes.putBytes(kv.getBuffer(), kv.getTimestampOffset(), getkv.getBuffer(),
-        getkv.getTimestampOffset(), Bytes.SIZEOF_LONG);
+    Cell getCell = result.get(count - 1);
+    CellUtil.setTimestamp(cell, getCell.getTimestamp());
   }
 
   /**
@@ -2629,7 +2627,7 @@ public class HRegion implements HeapSize { // , Writable{
 
         Mutation mutation = batchOp.getMutation(i);
         if (mutation instanceof Put) {
-          updateKVTimestamps(familyMaps[i].values(), byteNow);
+          updateCellTimestamps(familyMaps[i].values(), byteNow);
           noOfPuts++;
         } else {
           prepareDeleteTimestamps(mutation, familyMaps[i], byteNow);
@@ -3093,16 +3091,16 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * Replaces any KV timestamps set to {@link HConstants#LATEST_TIMESTAMP} with the
    * provided current timestamp.
+   * @throws IOException
    */
-  void updateKVTimestamps(final Iterable<List<Cell>> keyLists, final byte[] now) {
-    for (List<Cell> cells: keyLists) {
+  void updateCellTimestamps(final Iterable<List<Cell>> cellItr, final byte[] now)
+      throws IOException {
+    for (List<Cell> cells: cellItr) {
       if (cells == null) continue;
       assert cells instanceof RandomAccess;
       int listSize = cells.size();
-      for (int i=0; i < listSize; i++) {
-        Cell cell = cells.get(i);
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        kv.updateLatestStamp(now);
+      for (int i = 0; i < listSize; i++) {
+        CellUtil.updateLatestStamp(cells.get(i), now, 0);
       }
     }
   }
@@ -5419,10 +5417,8 @@ public class HRegion implements HeapSize { // , Writable{
               } else {
                 // Append's KeyValue.Type==Put and ts==HConstants.LATEST_TIMESTAMP,
                 // so only need to update the timestamp to 'now'
-                // TODO get rid of KeyValueUtil.ensureKeyValue
-                KeyValue newKV = KeyValueUtil.ensureKeyValue(cell);
-                newKV.updateLatestStamp(Bytes.toBytes(now));
-                newCell = newKV;
+                CellUtil.updateLatestStamp(cell, now);
+                newCell = cell;
              }
               CellUtil.setSequenceId(newCell, mvccNum);
               // Give coprocessors a chance to update the new cell
