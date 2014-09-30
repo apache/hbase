@@ -44,7 +44,7 @@ public class TestScannerModel extends TestModelBase<ScannerModel> {
         + "endTime=\"1245393318192\" maxVersions=\"2147483647\" startRow=\"YWJyYWNhZGFicmE=\" "
         + "startTime=\"1245219839331\">"
         + "<column>Y29sdW1uMQ==</column><column>Y29sdW1uMjpmb28=</column>"
-        + "<label>private</label><label>public</label>"
+        + "<labels>private</labels><labels>public</labels>"
         + "</Scanner>";
 
     AS_JSON = "{\"batch\":100,\"caching\":1000,\"cacheBlocks\":false,\"endRow\":\"enp5eng=\","

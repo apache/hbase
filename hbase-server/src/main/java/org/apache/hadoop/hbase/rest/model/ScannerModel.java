@@ -640,7 +640,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
     return columns;
   }
   
-  @XmlElement(name="label")
+  @XmlElement(name="labels")
   public List<String> getLabels() {
     return labels;
   }
