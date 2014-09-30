@@ -1236,11 +1236,13 @@ public class BucketCache implements BlockCache, HeapSize {
       bucketEntry.setDeserialiserReference(data.getDeserializer(), deserialiserMap);
       try {
         if (data instanceof HFileBlock) {
-          ByteBuffer sliceBuf = ((HFileBlock) data).getBufferReadOnlyWithHeader();
+          HFileBlock block = (HFileBlock) data;
+          ByteBuffer sliceBuf = block.getBufferReadOnlyWithHeader();
           sliceBuf.rewind();
-          assert len == sliceBuf.limit() + HFileBlock.EXTRA_SERIALIZATION_SPACE;
+          assert len == sliceBuf.limit() + HFileBlock.EXTRA_SERIALIZATION_SPACE ||
+            len == sliceBuf.limit() + block.headerSize() + HFileBlock.EXTRA_SERIALIZATION_SPACE;
           ByteBuffer extraInfoBuffer = ByteBuffer.allocate(HFileBlock.EXTRA_SERIALIZATION_SPACE);
-          ((HFileBlock) data).serializeExtraInfo(extraInfoBuffer);
+          block.serializeExtraInfo(extraInfoBuffer);
           ioEngine.write(sliceBuf, offset);
           ioEngine.write(extraInfoBuffer, offset + len - HFileBlock.EXTRA_SERIALIZATION_SPACE);
         } else {
