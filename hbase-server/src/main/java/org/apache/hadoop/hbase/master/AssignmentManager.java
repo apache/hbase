@@ -2918,6 +2918,9 @@ public class AssignmentManager extends ZooKeeperListener {
         State state = regionState.getState();
         LOG.info("Processing " + regionState);
         switch (state) {
+        case CLOSED:
+          invokeAssign(regionState.getRegion());
+          break;
         case PENDING_OPEN:
           retrySendRegionOpen(regionState);
           break;
