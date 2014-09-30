@@ -22,14 +22,17 @@ module Shell
       def help
         return <<-EOF
 Grant users specific rights.
-Syntax : grant <user> <permissions> [<table> [<column family> [<column qualifier>]]
+Syntax : grant <user> <permissions> [<@namespace> [<table> [<column family> [<column qualifier>]]]
 
 permissions is either zero or more letters from the set "RWXCA".
 READ('R'), WRITE('W'), EXEC('X'), CREATE('C'), ADMIN('A')
 
+Note: A namespace must always precede with '@' character.
+
 For example:
 
     hbase> grant 'bobsmith', 'RWXCA'
+    hbase> grant 'bobsmith', 'RWXCA', '@ns1'
     hbase> grant 'bobsmith', 'RW', 't1', 'f1', 'col1'
     hbase> grant 'bobsmith', 'RW', 'ns1:t1', 'f1', 'col1'
 EOF
