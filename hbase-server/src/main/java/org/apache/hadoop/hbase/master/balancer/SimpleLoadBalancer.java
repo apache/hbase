@@ -183,19 +183,26 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
   public List<RegionPlan> balanceCluster(
       Map<ServerName, List<HRegionInfo>> clusterMap) {
     List<RegionPlan> regionsToReturn = balanceMasterRegions(clusterMap);
-    if (regionsToReturn != null) {
+    if (regionsToReturn != null || clusterMap == null || clusterMap.size() <= 1) {
       return regionsToReturn;
     }
+    if (masterServerName != null && clusterMap.containsKey(masterServerName)) {
+      if (clusterMap.size() <= 2) {
+        return null;
+      }
+      clusterMap = new HashMap<ServerName, List<HRegionInfo>>(clusterMap);
+      clusterMap.remove(masterServerName);
+    }
+
     boolean emptyRegionServerPresent = false;
     long startTime = System.currentTimeMillis();
 
-    ClusterLoadState cs = new ClusterLoadState(masterServerName, clusterMap);
     // construct a Cluster object with clusterMap and rest of the
     // argument as defaults
-    Cluster c = new Cluster(masterServerName, clusterMap, null, this.regionFinder,
-      tablesOnMaster, this.rackManager);
+    Cluster c = new Cluster(clusterMap, null, this.regionFinder, this.rackManager);
     if (!this.needsBalance(c)) return null;
 
+    ClusterLoadState cs = new ClusterLoadState(clusterMap);
     int numServers = cs.getNumServers();
     NavigableMap<ServerAndLoad, List<HRegionInfo>> serversByLoad = cs.getServersByLoad();
     int numRegions = cs.getNumRegions();

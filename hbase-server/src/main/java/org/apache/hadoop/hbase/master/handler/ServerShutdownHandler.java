@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 
 /**
@@ -130,9 +131,10 @@ public class ServerShutdownHandler extends EventHandler {
       // we are not ready to assign dead regions either. So we re-queue up
       // the dead server for further processing too.
       AssignmentManager am = services.getAssignmentManager();
+      ServerManager serverManager = services.getServerManager();
       if (isCarryingMeta() // hbase:meta
           || !am.isFailoverCleanupDone()) {
-        this.services.getServerManager().processDeadServer(serverName, this.shouldSplitHlog);
+        serverManager.processDeadServer(serverName, this.shouldSplitHlog);
         return;
       }
 
@@ -152,15 +154,21 @@ public class ServerShutdownHandler extends EventHandler {
       // {@link SplitTransaction}.  We'd also have to be figure another way for
       // doing the below hbase:meta daughters fixup.
       Set<HRegionInfo> hris = null;
-      while (!this.server.isStopped()) {
-        try {
-          server.getMetaTableLocator().waitMetaRegionLocation(server.getZooKeeper());
-          hris = am.getRegionStates().getServerRegions(serverName);
-          break;
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+      try {
+        server.getMetaTableLocator().waitMetaRegionLocation(server.getZooKeeper());
+        if (BaseLoadBalancer.tablesOnMaster(server.getConfiguration())) {
+          while (!this.server.isStopped() && serverManager.countOfRegionServers() < 2) {
+            // Wait till at least another regionserver is up besides the active master
+            // so that we don't assign all regions to the active master.
+            // This is best of efforts, because newly joined regionserver
+            // could crash right after that.
+            Thread.sleep(100);
+          }
         }
+        hris = am.getRegionStates().getServerRegions(serverName);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw (InterruptedIOException)new InterruptedIOException().initCause(e);
       }
       if (this.server.isStopped()) {
         throw new IOException("Server is stopped");

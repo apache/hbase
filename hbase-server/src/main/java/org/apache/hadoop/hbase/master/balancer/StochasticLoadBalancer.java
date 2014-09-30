@@ -208,14 +208,21 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
   @Override
   public List<RegionPlan> balanceCluster(Map<ServerName, List<HRegionInfo>> clusterState) {
     List<RegionPlan> plans = balanceMasterRegions(clusterState);
-    if (plans != null) {
+    if (plans != null || clusterState == null || clusterState.size() <= 1) {
       return plans;
     }
+    if (masterServerName != null && clusterState.containsKey(masterServerName)) {
+      if (clusterState.size() <= 2) {
+        return null;
+      }
+      clusterState = new HashMap<ServerName, List<HRegionInfo>>(clusterState);
+      clusterState.remove(masterServerName);
+    }
+
     //The clusterState that is given to this method contains the state
     //of all the regions in the table(s) (that's true today)
     // Keep track of servers to iterate through them.
-    Cluster cluster = new Cluster(masterServerName,
-      clusterState, loads, regionFinder, tablesOnMaster, rackManager);
+    Cluster cluster = new Cluster(clusterState, loads, regionFinder, rackManager);
     if (!needsBalance(cluster)) {
       return null;
     }
@@ -420,11 +427,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         return -1;
       }
 
-      int n = RANDOM.nextInt(cluster.numServers);
-      if (cluster.numServers > 1 && cluster.isActiveMaster(n)) {
-        n = (n + 1) % cluster.numServers;
-      }
-      return n;
+      return RANDOM.nextInt(cluster.numServers);
     }
 
     protected int pickRandomRack(Cluster cluster) {
@@ -437,9 +440,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     protected int pickOtherRandomServer(Cluster cluster, int serverIndex) {
       if (cluster.numServers < 2) {
-        return -1;
-      }
-      if (cluster.activeMasterIndex != -1 && cluster.numServers == 2) {
         return -1;
       }
       while (true) {
@@ -530,8 +530,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       Integer[] servers = cluster.serverIndicesSortedByRegionCount;
 
       int index = 0;
-      while (servers[index] == null || servers[index] == thisServer
-          || cluster.isActiveMaster(index)) {
+      while (servers[index] == null || servers[index] == thisServer) {
         index++;
         if (index == servers.length) {
           return -1;
@@ -544,8 +543,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       Integer[] servers = cluster.serverIndicesSortedByRegionCount;
 
       int index = servers.length - 1;
-      while (servers[index] == null || servers[index] == thisServer
-          || cluster.isActiveMaster(index)) {
+      while (servers[index] == null || servers[index] == thisServer) {
         index--;
         if (index < 0) {
           return -1;
@@ -801,9 +799,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       double total = getSum(stats);
 
       double count = stats.length;
-      if (stats.length > 1 && cluster.activeMasterIndex != -1) {
-        count--; // Exclude the active master
-      }
       double mean = total/count;
 
       // Compute max as if all region servers had 0 and one had the sum of all costs.  This must be
@@ -824,12 +819,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       }
       min = Math.max(0, min);
       for (int i=0; i<stats.length; i++) {
-
-
-        if (stats.length > 1 && cluster.isActiveMaster(i)) {
-          // Not count the active master load
-          continue;
-        }
         double n = stats[i];
         double diff = Math.abs(mean - n);
         totalCost += diff;
@@ -897,11 +886,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
       double moveCost = cluster.numMovedRegions;
 
-      // Don't let this single balance move more than the max moves,
-      // or move a region that should be on master away from the master.
-      // It is ok to move any master hosted region back to the master.
+      // Don't let this single balance move more than the max moves.
       // This allows better scaling to accurately represent the actual cost of a move.
-      if (moveCost > maxMoves || cluster.numMovedMasterHostedRegions > 0) {
+      if (moveCost > maxMoves) {
         return 1000000;   // return a number much greater than any of the other cost
       }
 
