@@ -99,17 +99,16 @@ public class TestInfoServers {
 
   @Test
   public void testMasterServerReadOnly() throws Exception {
-    String sTableName = "testMasterServerReadOnly";
-    byte[] tableName = Bytes.toBytes(sTableName);
+    TableName tableName = TableName.valueOf("testMasterServerReadOnly");
     byte[] cf = Bytes.toBytes("d");
     UTIL.createTable(tableName, cf);
     new HTable(UTIL.getConfiguration(), tableName).close();
     int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
     assertDoesNotContainContent(
-      new URL("http://localhost:" + port + "/table.jsp?name=" + sTableName + "&action=split&key="),
+      new URL("http://localhost:" + port + "/table.jsp?name=" + tableName + "&action=split&key="),
       "Table action request accepted");
     assertDoesNotContainContent(
-      new URL("http://localhost:" + port + "/table.jsp?name=" + sTableName),
+      new URL("http://localhost:" + port + "/table.jsp?name=" + tableName),
       "Actions:");
   }
 

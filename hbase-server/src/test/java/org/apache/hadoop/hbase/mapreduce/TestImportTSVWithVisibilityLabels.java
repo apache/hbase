@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
@@ -161,20 +162,20 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
         "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
         "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName };
     String data = "KEY\u001bVALUE1\u001bVALUE2\u001bsecret&private\n";
-    util.createTable(tableName, FAMILY);
+    util.createTable(TableName.valueOf(tableName), FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1);
     util.deleteTable(tableName);
   }
 
   @Test
   public void testMROnTableWithDeletes() throws Exception {
-    String tableName = "test-" + UUID.randomUUID();
+    TableName tableName = TableName.valueOf("test-" + UUID.randomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
         "-D" + ImportTsv.MAPPER_CONF_KEY + "=org.apache.hadoop.hbase.mapreduce.TsvImporterMapper",
         "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
-        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName };
+        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
     String data = "KEY\u001bVALUE1\u001bVALUE2\u001bsecret&private\n";
     util.createTable(tableName, FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1);
@@ -182,7 +183,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     util.deleteTable(tableName);
   }
 
-  private void issueDeleteAndVerifyData(String tableName) throws IOException {
+  private void issueDeleteAndVerifyData(TableName tableName) throws IOException {
     LOG.debug("Validating table after delete.");
     Table table = new HTable(conf, tableName);
     boolean verified = false;
@@ -229,7 +230,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
             + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
         "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName };
     String data = "KEY\u001bVALUE1\u001bVALUE2\u001bsecret&private\n";
-    util.createTable(tableName, FAMILY);
+    util.createTable(TableName.valueOf(tableName), FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1);
     util.deleteTable(tableName);
   }
@@ -266,7 +267,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
         "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
         "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName };
     String data = "KEY\u001bVALUE4\u001bVALUE8\u001bsecret&private\n";
-    util.createTable(tableName, FAMILY);
+    util.createTable(TableName.valueOf(tableName), FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1);
     util.deleteTable(tableName);
   }
@@ -283,12 +284,13 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
    */
   protected static Tool doMROnTableTest(HBaseTestingUtility util, String family, String data,
       String[] args, int valueMultiplier) throws Exception {
-    String table = args[args.length - 1];
+    TableName table = TableName.valueOf(args[args.length - 1]);
     Configuration conf = new Configuration(util.getConfiguration());
 
     // populate input file
     FileSystem fs = FileSystem.get(conf);
-    Path inputPath = fs.makeQualified(new Path(util.getDataTestDirOnTestFS(table), "input.dat"));
+    Path inputPath = fs.makeQualified(new Path(util
+        .getDataTestDirOnTestFS(table.getNameAsString()), "input.dat"));
     FSDataOutputStream op = fs.create(inputPath, true);
     if (data == null) {
       data = "KEY\u001bVALUE1\u001bVALUE2\n";
@@ -330,7 +332,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
     if (conf.getBoolean(DELETE_AFTER_LOAD_CONF, true)) {
       LOG.debug("Deleting test subdirectory");
-      util.cleanupDataTestDirOnTestFS(table);
+      util.cleanupDataTestDirOnTestFS(table.getNameAsString());
     }
     return tool;
   }
@@ -364,7 +366,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   /**
    * Confirm ImportTsv via data in online table.
    */
-  private static void validateTable(Configuration conf, String tableName, String family,
+  private static void validateTable(Configuration conf, TableName tableName, String family,
       int valueMultiplier) throws IOException {
 
     LOG.debug("Validating table.");

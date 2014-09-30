@@ -338,8 +338,8 @@ public class TestFromClientSide3 {
   public void testHTableExistsMethodMultipleRegionsSingleGet() throws Exception {
 
     Table table = TEST_UTIL.createTable(
-      Bytes.toBytes("testHTableExistsMethodMultipleRegionsSingleGet"), new byte[][] { FAMILY }, 1,
-      new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
+      TableName.valueOf("testHTableExistsMethodMultipleRegionsSingleGet"), new byte[][] { FAMILY },
+      1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, VALUE);
 
@@ -357,8 +357,8 @@ public class TestFromClientSide3 {
   @Test
   public void testHTableExistsMethodMultipleRegionsMultipleGets() throws Exception {
     HTable table = TEST_UTIL.createTable(
-      Bytes.toBytes("testHTableExistsMethodMultipleRegionsMultipleGets"), new byte[][] { FAMILY },
-      1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
+      TableName.valueOf("testHTableExistsMethodMultipleRegionsMultipleGets"), 
+      new byte[][] { FAMILY }, 1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, VALUE);
     table.put (put);
@@ -410,7 +410,7 @@ public class TestFromClientSide3 {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes.toBytes("test")));
     desc.addFamily(new HColumnDescriptor(FAMILY));
     admin.createTable(desc);
-    Table table = new HTable(TEST_UTIL.getConfiguration(), "test");
+    Table table = new HTable(TEST_UTIL.getConfiguration(), desc.getTableName());
 
     Put put = new Put(ROW_BYTES);
     put.add(FAMILY, COL_QUAL, VAL_BYTES);

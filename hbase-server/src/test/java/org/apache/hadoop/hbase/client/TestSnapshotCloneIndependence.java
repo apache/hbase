@@ -58,7 +58,7 @@ public class TestSnapshotCloneIndependence {
   private static final String STRING_TABLE_NAME = "test";
   private static final String TEST_FAM_STR = "fam";
   private static final byte[] TEST_FAM = Bytes.toBytes(TEST_FAM_STR);
-  private static final byte[] TABLE_NAME = Bytes.toBytes(STRING_TABLE_NAME);
+  private static final TableName TABLE_NAME = TableName.valueOf(STRING_TABLE_NAME);
 
   /**
    * Setup the config for the cluster and start it

@@ -77,7 +77,7 @@ public class TestRegionReplicas {
   @BeforeClass
   public static void before() throws Exception {
     HTU.startMiniCluster(NB_SERVERS);
-    final byte[] tableName = Bytes.toBytes(TestRegionReplicas.class.getSimpleName());
+    final TableName tableName = TableName.valueOf(TestRegionReplicas.class.getSimpleName());
 
     // Create table then get the single region for our new table.
     table = HTU.createTable(tableName, f);

@@ -261,7 +261,7 @@ public class TestZooKeeper {
     }
 
     Table table =
-      new HTable(new Configuration(TEST_UTIL.getConfiguration()), tableName);
+      new HTable(new Configuration(TEST_UTIL.getConfiguration()), desc.getTableName());
     Put put = new Put(Bytes.toBytes("testrow"));
     put.add(Bytes.toBytes("fam"),
         Bytes.toBytes("col"), Bytes.toBytes("testdata"));
@@ -543,7 +543,7 @@ public class TestZooKeeper {
       htd.addFamily(hcd);
       admin.createTable(htd, SPLIT_KEYS);
       TEST_UTIL.waitUntilNoRegionsInTransition(60000);
-      table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      table = new HTable(TEST_UTIL.getConfiguration(), htd.getTableName());
       Put p;
       int numberOfPuts;
       for (numberOfPuts = 0; numberOfPuts < 6; numberOfPuts++) {

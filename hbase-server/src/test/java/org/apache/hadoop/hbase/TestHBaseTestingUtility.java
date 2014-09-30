@@ -83,7 +83,7 @@ public class TestHBaseTestingUtility {
       htu2.startMiniCluster();
       htu3.startMiniCluster();
 
-      final byte[] TABLE_NAME = Bytes.toBytes("test");
+      final TableName TABLE_NAME = TableName.valueOf("test");
       final byte[] FAM_NAME = Bytes.toBytes("fam");
       final byte[] ROW = Bytes.toBytes("row");
       final byte[] QUAL_NAME = Bytes.toBytes("qual");

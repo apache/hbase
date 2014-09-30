@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -48,7 +49,7 @@ public class TestScannerTimeout {
 
   final Log LOG = LogFactory.getLog(getClass());
   private final static byte[] SOME_BYTES = Bytes.toBytes("f");
-  private final static byte[] TABLE_NAME = Bytes.toBytes("t");
+  private final static TableName TABLE_NAME = TableName.valueOf("t");
   private final static int NB_ROWS = 10;
   // Be careful w/ what you set this timer to... it can get in the way of
   // the mini cluster coming up -- the verification in particular.

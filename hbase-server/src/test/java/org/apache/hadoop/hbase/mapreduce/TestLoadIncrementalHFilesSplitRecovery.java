@@ -121,10 +121,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * Creates a table with given table name and specified number of column
    * families if the table does not already exist.
    */
-  private void setupTable(String table, int cfs) throws IOException {
+  private void setupTable(TableName table, int cfs) throws IOException {
     try {
       LOG.info("Creating table " + table);
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
+      HTableDescriptor htd = new HTableDescriptor(table);
       for (int i = 0; i < cfs; i++) {
         htd.addFamily(new HColumnDescriptor(family(i)));
       }
@@ -142,11 +142,11 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * @param cfs
    * @param SPLIT_KEYS
    */
-  private void setupTableWithSplitkeys(String table, int cfs, byte[][] SPLIT_KEYS)
+  private void setupTableWithSplitkeys(TableName table, int cfs, byte[][] SPLIT_KEYS)
       throws IOException {
     try {
       LOG.info("Creating table " + table);
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
+      HTableDescriptor htd = new HTableDescriptor(table);
       for (int i = 0; i < cfs; i++) {
         htd.addFamily(new HColumnDescriptor(family(i)));
       }
@@ -157,9 +157,9 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     }
   }
 
-  private Path buildBulkFiles(String table, int value) throws Exception {
-    Path dir = util.getDataTestDirOnTestFS(table);
-    Path bulk1 = new Path(dir, table+value);
+  private Path buildBulkFiles(TableName table, int value) throws Exception {
+    Path dir = util.getDataTestDirOnTestFS(table.getNameAsString());
+    Path bulk1 = new Path(dir, table.getNameAsString() + value);
     FileSystem fs = util.getTestFileSystem();
     buildHFiles(fs, bulk1, value);
     return bulk1;
@@ -168,26 +168,25 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   /**
    * Populate table with known values.
    */
-  private void populateTable(String table, int value) throws Exception {
+  private void populateTable(TableName table, int value) throws Exception {
     // create HFiles for different column families
     LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration());
     Path bulk1 = buildBulkFiles(table, value);
-    HTable t = new HTable(util.getConfiguration(), Bytes.toBytes(table));
+    HTable t = new HTable(util.getConfiguration(), table);
     lih.doBulkLoad(bulk1, t);
   }
 
   /**
    * Split the known table in half.  (this is hard coded for this test suite)
    */
-  private void forceSplit(String table) {
+  private void forceSplit(TableName table) {
     try {
       // need to call regions server to by synchronous but isn't visible.
-      HRegionServer hrs = util.getRSForFirstRegionInTable(Bytes
-          .toBytes(table));
+      HRegionServer hrs = util.getRSForFirstRegionInTable(table);
 
       for (HRegionInfo hri :
           ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices())) {
-        if (Bytes.equals(hri.getTable().getName(), Bytes.toBytes(table))) {
+        if (hri.getTable().equals(table)) {
           // splitRegion doesn't work if startkey/endkey are null
           ProtobufUtil.split(hrs.getRSRpcServices(), hri, rowkey(ROWCOUNT / 2)); // hard code split
         }
@@ -199,7 +198,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
         regions = 0;
         for (HRegionInfo hri :
             ProtobufUtil.getOnlineRegions(hrs.getRSRpcServices())) {
-          if (Bytes.equals(hri.getTable().getName(), Bytes.toBytes(table))) {
+          if (hri.getTable().equals(table)) {
             regions++;
           }
         }
@@ -232,10 +231,11 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * expected number of rows.
    * @throws IOException 
    */
-  void assertExpectedTable(String table, int count, int value) throws IOException {
+  void assertExpectedTable(TableName table, int count, int value) throws IOException {
     Table t = null;
     try {
-      assertEquals(util.getHBaseAdmin().listTables(table).length, 1);
+      assertEquals(
+          util.getHBaseAdmin().listTables(table.getNameAsString()).length, 1);
       t = new HTable(util.getConfiguration(), table);
       Scan s = new Scan();
       ResultScanner sr = t.getScanner(s);
@@ -262,7 +262,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    */
   @Test(expected=IOException.class)
   public void testBulkLoadPhaseFailure() throws Exception {
-    String table = "bulkLoadPhaseFailure";
+    TableName table = TableName.valueOf("bulkLoadPhaseFailure");
     setupTable(table, 10);
 
     final AtomicInteger attmptedCalls = new AtomicInteger();
@@ -293,7 +293,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
       // create HFiles for different column families
       Path dir = buildBulkFiles(table, 1);
-      HTable t = new HTable(util.getConfiguration(), Bytes.toBytes(table));
+      HTable t = new HTable(util.getConfiguration(), table);
       lih.doBulkLoad(dir, t);
     } finally {
       util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
@@ -334,7 +334,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    */
   @Test
   public void testSplitWhileBulkLoadPhase() throws Exception {
-    final String table = "splitWhileBulkloadPhase";
+    final TableName table = TableName.valueOf("splitWhileBulkloadPhase");
     setupTable(table, 10);
     populateTable(table,1);
     assertExpectedTable(table, ROWCOUNT, 1);
@@ -359,7 +359,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     };
 
     // create HFiles for different column families
-    HTable t = new HTable(util.getConfiguration(), Bytes.toBytes(table));
+    HTable t = new HTable(util.getConfiguration(), table);
     Path bulk = buildBulkFiles(table, 2);
     lih2.doBulkLoad(bulk, t);
 
@@ -376,7 +376,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    */
   @Test
   public void testGroupOrSplitPresplit() throws Exception {
-    final String table = "groupOrSplitPresplit";
+    final TableName table = TableName.valueOf("groupOrSplitPresplit");
     setupTable(table, 10);
     populateTable(table, 1);
     assertExpectedTable(table, ROWCOUNT, 1);
@@ -399,7 +399,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
     // create HFiles for different column families
     Path bulk = buildBulkFiles(table, 2);
-    HTable ht = new HTable(util.getConfiguration(), Bytes.toBytes(table));
+    HTable ht = new HTable(util.getConfiguration(), table);
     lih.doBulkLoad(bulk, ht);
 
     assertExpectedTable(table, ROWCOUNT, 2);
@@ -412,7 +412,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    */
   @Test(expected = IOException.class)
   public void testGroupOrSplitFailure() throws Exception {
-    String table = "groupOrSplitFailure";
+    TableName table = TableName.valueOf("groupOrSplitFailure");
     setupTable(table, 10);
 
     LoadIncrementalHFiles lih = new LoadIncrementalHFiles(
@@ -434,7 +434,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
     // create HFiles for different column families
     Path dir = buildBulkFiles(table,1);
-    HTable t = new HTable(util.getConfiguration(), Bytes.toBytes(table));
+    HTable t = new HTable(util.getConfiguration(), table);
     lih.doBulkLoad(dir, t);
 
     fail("doBulkLoad should have thrown an exception");
@@ -442,9 +442,9 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
   @Test
   public void testGroupOrSplitWhenRegionHoleExistsInMeta() throws Exception {
-    String tableName = "testGroupOrSplitWhenRegionHoleExistsInMeta";
+    TableName tableName = TableName.valueOf("testGroupOrSplitWhenRegionHoleExistsInMeta");
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000100") };
-    HTable table = new HTable(util.getConfiguration(), Bytes.toBytes(tableName));
+    HTable table = new HTable(util.getConfiguration(), tableName);
 
     setupTableWithSplitkeys(tableName, 10, SPLIT_KEYS);
     Path dir = buildBulkFiles(tableName, 2);
@@ -479,7 +479,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     // Mess it up by leaving a hole in the hbase:meta
     HConnection hConnection = HConnectionManager.getConnection(util.getConfiguration());
     List<HRegionInfo> regionInfos = MetaTableAccessor.getTableRegions(
-      hConnection, TableName.valueOf(tableName));
+        hConnection, tableName);
     for (HRegionInfo regionInfo : regionInfos) {
       if (Bytes.equals(regionInfo.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
         MetaTableAccessor.deleteRegion(hConnection, regionInfo);

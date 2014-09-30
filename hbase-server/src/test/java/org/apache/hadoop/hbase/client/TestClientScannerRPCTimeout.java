@@ -84,7 +84,7 @@ public class TestClientScannerRPCTimeout {
 
   @Test
   public void testScannerNextRPCTimesout() throws Exception {
-    final byte[] TABLE_NAME = Bytes.toBytes("testScannerNextRPCTimesout");
+    final TableName TABLE_NAME = TableName.valueOf("testScannerNextRPCTimesout");
     Table ht = TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     byte[] r1 = Bytes.toBytes("row-1");
     byte[] r2 = Bytes.toBytes("row-2");

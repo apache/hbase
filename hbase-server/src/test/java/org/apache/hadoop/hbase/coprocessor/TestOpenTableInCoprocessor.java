@@ -162,7 +162,7 @@ public class TestOpenTableInCoprocessor {
     admin.createTable(primary);
     admin.createTable(other);
 
-    Table table = new HTable(UTIL.getConfiguration(), "primary");
+    Table table = new HTable(UTIL.getConfiguration(), TableName.valueOf("primary"));
     Put p = new Put(new byte[] { 'a' });
     p.add(family, null, new byte[] { 'a' });
     table.put(p);

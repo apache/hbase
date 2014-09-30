@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -204,7 +205,7 @@ implements Configurable {
       if (zkClientPort != 0) {
         this.conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, zkClientPort);
       }
-      this.table = new HTable(this.conf, tableName);
+      this.table = new HTable(this.conf, TableName.valueOf(tableName));
       this.table.setAutoFlush(false, true);
       LOG.info("Created table instance for "  + tableName);
     } catch(IOException e) {

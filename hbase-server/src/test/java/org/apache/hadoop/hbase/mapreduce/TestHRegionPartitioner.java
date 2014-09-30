@@ -17,6 +17,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -52,8 +53,8 @@ public class TestHRegionPartitioner {
 
     byte[][] families = { Bytes.toBytes("familyA"), Bytes.toBytes("familyB") };
 
-    UTIL.createTable(Bytes.toBytes("out_table"), families, 1, Bytes.toBytes("aa"),
-        Bytes.toBytes("cc"), 3);
+    UTIL.createTable(TableName.valueOf("out_table"), families, 1,
+    Bytes.toBytes("aa"), Bytes.toBytes("cc"), 3);
 
     HRegionPartitioner<Long, Long> partitioner = new HRegionPartitioner<Long, Long>();
     Configuration configuration = UTIL.getConfiguration();

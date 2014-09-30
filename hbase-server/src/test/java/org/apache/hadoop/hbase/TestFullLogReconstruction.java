@@ -39,7 +39,7 @@ public class TestFullLogReconstruction {
   private final static HBaseTestingUtility
       TEST_UTIL = new HBaseTestingUtility();
 
-  private final static byte[] TABLE_NAME = Bytes.toBytes("tabletest");
+  private final static TableName TABLE_NAME = TableName.valueOf("tabletest");
   private final static byte[] FAMILY = Bytes.toBytes("family");
 
   /**

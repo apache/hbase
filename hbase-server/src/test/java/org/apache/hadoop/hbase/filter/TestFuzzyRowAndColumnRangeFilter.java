@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -89,7 +90,7 @@ public class TestFuzzyRowAndColumnRangeFilter {
   public void Test() throws Exception {
     String cf = "f";
     String table = "TestFuzzyAndColumnRangeFilterClient";
-    Table ht = TEST_UTIL.createTable(Bytes.toBytes(table),
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(table),
             Bytes.toBytes(cf), Integer.MAX_VALUE);
 
     // 10 byte row key - (2 bytes 4 bytes 4 bytes)

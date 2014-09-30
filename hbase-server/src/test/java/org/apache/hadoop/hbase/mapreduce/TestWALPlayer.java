@@ -87,8 +87,8 @@ public class TestWALPlayer {
    */
   @Test
   public void testWALPlayer() throws Exception {
-    final byte[] TABLENAME1 = Bytes.toBytes("testWALPlayer1");
-    final byte[] TABLENAME2 = Bytes.toBytes("testWALPlayer2");
+    final TableName TABLENAME1 = TableName.valueOf("testWALPlayer1");
+    final TableName TABLENAME2 = TableName.valueOf("testWALPlayer2");
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] COLUMN1 = Bytes.toBytes("c1");
     final byte[] COLUMN2 = Bytes.toBytes("c2");
@@ -118,8 +118,8 @@ public class TestWALPlayer {
     configuration.set(optionName, "1000");
     player.setupTime(configuration, optionName);
     assertEquals(1000,configuration.getLong(optionName,0));
-    assertEquals(0, player.run(new String[] { walInputDir, Bytes.toString(TABLENAME1),
-        Bytes.toString(TABLENAME2) }));
+    assertEquals(0, player.run(new String[] {walInputDir, TABLENAME1.getNameAsString(),
+        TABLENAME2.getNameAsString() }));
 
     
     // verify the WAL was player into table 2

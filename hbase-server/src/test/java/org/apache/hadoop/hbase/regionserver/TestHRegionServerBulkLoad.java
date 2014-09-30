@@ -133,9 +133,9 @@ public class TestHRegionServerBulkLoad {
   public static class AtomicHFileLoader extends RepeatingTestThread {
     final AtomicLong numBulkLoads = new AtomicLong();
     final AtomicLong numCompactions = new AtomicLong();
-    private String tableName;
+    private TableName tableName;
 
-    public AtomicHFileLoader(String tableName, TestContext ctx,
+    public AtomicHFileLoader(TableName tableName, TestContext ctx,
         byte targetFamilies[][]) throws IOException {
       super(ctx);
       this.tableName = tableName;
@@ -160,9 +160,8 @@ public class TestHRegionServerBulkLoad {
 
       // bulk load HFiles
       final HConnection conn = UTIL.getHBaseAdmin().getConnection();
-      TableName tbl = TableName.valueOf(tableName);
       RegionServerCallable<Void> callable =
-          new RegionServerCallable<Void>(conn, tbl, Bytes.toBytes("aaa")) {
+          new RegionServerCallable<Void>(conn, tableName, Bytes.toBytes("aaa")) {
         @Override
         public Void call(int callTimeout) throws Exception {
           LOG.debug("Going to connect to server " + getLocation() + " for row "
@@ -181,7 +180,7 @@ public class TestHRegionServerBulkLoad {
       // Periodically do compaction to reduce the number of open file handles.
       if (numBulkLoads.get() % 10 == 0) {
         // 10 * 50 = 500 open file handles!
-        callable = new RegionServerCallable<Void>(conn, tbl, Bytes.toBytes("aaa")) {
+        callable = new RegionServerCallable<Void>(conn, tableName, Bytes.toBytes("aaa")) {
           @Override
           public Void call(int callTimeout) throws Exception {
             LOG.debug("compacting " + getLocation() + " for row "
@@ -210,9 +209,9 @@ public class TestHRegionServerBulkLoad {
     HTable table;
     AtomicLong numScans = new AtomicLong();
     AtomicLong numRowsScanned = new AtomicLong();
-    String TABLE_NAME;
+    TableName TABLE_NAME;
 
-    public AtomicScanReader(String TABLE_NAME, TestContext ctx,
+    public AtomicScanReader(TableName TABLE_NAME, TestContext ctx,
         byte targetFamilies[][]) throws IOException {
       super(ctx);
       this.TABLE_NAME = TABLE_NAME;
@@ -264,10 +263,10 @@ public class TestHRegionServerBulkLoad {
    * Creates a table with given table name and specified number of column
    * families if the table does not already exist.
    */
-  private void setupTable(String table, int cfs) throws IOException {
+  private void setupTable(TableName table, int cfs) throws IOException {
     try {
       LOG.info("Creating table " + table);
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(table));
+      HTableDescriptor htd = new HTableDescriptor(table);
       for (int i = 0; i < 10; i++) {
         htd.addFamily(new HColumnDescriptor(family(i)));
       }
@@ -283,7 +282,7 @@ public class TestHRegionServerBulkLoad {
    */
   @Test
   public void testAtomicBulkLoad() throws Exception {
-    String TABLE_NAME = "atomicBulkLoad";
+    TableName TABLE_NAME = TableName.valueOf("atomicBulkLoad");
 
     int millisToRun = 30000;
     int numScanners = 50;
@@ -296,7 +295,7 @@ public class TestHRegionServerBulkLoad {
     }
   }
 
-  void runAtomicBulkloadTest(String tableName, int millisToRun, int numScanners)
+  void runAtomicBulkloadTest(TableName tableName, int millisToRun, int numScanners)
       throws Exception {
     setupTable(tableName, 10);
 
@@ -336,7 +335,7 @@ public class TestHRegionServerBulkLoad {
       Configuration c = HBaseConfiguration.create();
       TestHRegionServerBulkLoad test = new TestHRegionServerBulkLoad();
       test.setConf(c);
-      test.runAtomicBulkloadTest("atomicTableTest", 5 * 60 * 1000, 50);
+      test.runAtomicBulkloadTest(TableName.valueOf("atomicTableTest"), 5 * 60 * 1000, 50);
     } finally {
       System.exit(0); // something hangs (believe it is lru threadpool)
     }

@@ -160,7 +160,7 @@ public class TestColumnRangeFilter {
   public void TestColumnRangeFilterClient() throws Exception {
     String family = "Family";
     String table = "TestColumnRangeFilterClient";
-    Table ht = TEST_UTIL.createTable(Bytes.toBytes(table),
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(table),
         Bytes.toBytes(family), Integer.MAX_VALUE);
 
     List<String> rows = generateRandomWords(10, 8);

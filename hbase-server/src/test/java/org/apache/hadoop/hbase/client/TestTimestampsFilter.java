@@ -98,7 +98,7 @@ public class TestTimestampsFilter {
     Cell kvs[];
 
     // create table; set versions to max...
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(TABLE), FAMILIES, Integer.MAX_VALUE);
 
     for (int rowIdx = 0; rowIdx < 5; rowIdx++) {
       for (int colIdx = 0; colIdx < 5; colIdx++) {
@@ -173,7 +173,7 @@ public class TestTimestampsFilter {
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
     // create table; set versions to max...
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(TABLE), FAMILIES, Integer.MAX_VALUE);
 
     Put p = new Put(Bytes.toBytes("row"));
     p.add(FAMILY, Bytes.toBytes("column0"), 3, Bytes.toBytes("value0-3"));
@@ -233,7 +233,7 @@ public class TestTimestampsFilter {
     byte [][] FAMILIES = new byte[][] { FAMILY };
 
     // create table; set versions to max...
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(TABLE), FAMILIES, Integer.MAX_VALUE);
 
     // For row:0, col:0: insert versions 1 through 5.
     putNVersions(ht, FAMILY, 0, 0, 1, 5);

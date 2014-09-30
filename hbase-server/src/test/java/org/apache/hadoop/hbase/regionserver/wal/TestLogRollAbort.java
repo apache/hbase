@@ -126,15 +126,15 @@ public class TestLogRollAbort {
       TableName.META_TABLE_NAME).close();
 
     // Create the test table and open it
-    String tableName = this.getClass().getSimpleName();
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    TableName tableName = TableName.valueOf(this.getClass().getSimpleName());
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
 
     admin.createTable(desc);
-    Table table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table table = new HTable(TEST_UTIL.getConfiguration(), desc.getTableName());
     try {
 
-      HRegionServer server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
+      HRegionServer server = TEST_UTIL.getRSForFirstRegionInTable(tableName);
       HLog log = server.getWAL();
 
       assertTrue("Need HDFS-826 for this test", ((FSHLog) log).canGetCurReplicas());

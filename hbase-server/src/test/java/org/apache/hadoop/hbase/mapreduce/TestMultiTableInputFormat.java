@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -76,8 +77,7 @@ public class TestMultiTableInputFormat {
     // create and fill table
     for (int i = 0; i < 3; i++) {
       HTable table =
-          TEST_UTIL.createTable(Bytes.toBytes(TABLE_NAME + String.valueOf(i)),
-              INPUT_FAMILY);
+          TEST_UTIL.createTable(TableName.valueOf(TABLE_NAME + String.valueOf(i)), INPUT_FAMILY);
       TEST_UTIL.createMultiRegions(TEST_UTIL.getConfiguration(), table, INPUT_FAMILY, 4);
       TEST_UTIL.loadTable(table, INPUT_FAMILY, false);
     }

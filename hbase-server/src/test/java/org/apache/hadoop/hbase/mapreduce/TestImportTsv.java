@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -111,7 +112,7 @@ public class TestImportTsv implements Configurable {
         table
     };
 
-    util.createTable(table, FAMILY);
+    util.createTable(TableName.valueOf(table), FAMILY);
     doMROnTableTest(util, FAMILY, null, args, 1);
     util.deleteTable(table);
   }
@@ -129,7 +130,7 @@ public class TestImportTsv implements Configurable {
     };
     String data = "KEY,1234,VALUE1,VALUE2\n";
 
-    util.createTable(table, FAMILY);
+    util.createTable(TableName.valueOf(table), FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1);
     util.deleteTable(table);
   }
@@ -146,7 +147,7 @@ public class TestImportTsv implements Configurable {
         table
     };
 
-    util.createTable(table, FAMILY);
+    util.createTable(TableName.valueOf(table), FAMILY);
     doMROnTableTest(util, FAMILY, null, args, 3);
     util.deleteTable(table);
   }
@@ -181,7 +182,7 @@ public class TestImportTsv implements Configurable {
         table
     };
 
-    util.createTable(table, FAMILY);
+    util.createTable(TableName.valueOf(table), FAMILY);
     doMROnTableTest(util, FAMILY, null, args, 3);
     util.deleteTable(table);
   }
@@ -288,7 +289,7 @@ public class TestImportTsv implements Configurable {
     if (createdHFiles)
       validateHFiles(fs, outputPath, family);
     else
-      validateTable(conf, table, family, valueMultiplier);
+      validateTable(conf, TableName.valueOf(table), family, valueMultiplier);
 
     if (conf.getBoolean(DELETE_AFTER_LOAD_CONF, true)) {
       LOG.debug("Deleting test subdirectory");
@@ -300,7 +301,7 @@ public class TestImportTsv implements Configurable {
   /**
    * Confirm ImportTsv via data in online table.
    */
-  private static void validateTable(Configuration conf, String tableName,
+  private static void validateTable(Configuration conf, TableName tableName,
       String family, int valueMultiplier) throws IOException {
 
     LOG.debug("Validating table.");

@@ -247,7 +247,7 @@ public class WALPlayer extends Configured implements Tool {
       if (tables.length != 1) {
         throw new IOException("Exactly one table must be specified for the bulk export option");
       }
-      HTable table = new HTable(conf, tables[0]);
+      HTable table = new HTable(conf, TableName.valueOf(tables[0]));
       job.setMapperClass(HLogKeyValueMapper.class);
       job.setReducerClass(KeyValueSortReducer.class);
       Path outputDir = new Path(hfileOutPath);

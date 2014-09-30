@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -129,10 +130,10 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
    * Verify the data described by <code>simple_tsv</code> matches
    * <code>simple_expected</code>.
    */
-  protected void doLoadIncrementalHFiles(Path hfiles, String tableName)
+  protected void doLoadIncrementalHFiles(Path hfiles, TableName tableName)
       throws Exception {
 
-    String[] args = { hfiles.toString(), tableName };
+    String[] args = { hfiles.toString(), tableName.getNameAsString() };
     LOG.info(format("Running LoadIncrememntalHFiles with args: %s", Arrays.asList(args)));
     assertEquals("Loading HFiles failed.",
       0, ToolRunner.run(new LoadIncrementalHFiles(new Configuration(getConf())), args));
@@ -181,9 +182,10 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
   @Test
   public void testGenerateAndLoad() throws Exception {
     LOG.info("Running test testGenerateAndLoad.");
-    String table = NAME + "-" + UUID.randomUUID();
+    TableName table = TableName.valueOf(NAME + "-" + UUID.randomUUID());
     String cf = "d";
-    Path hfiles = new Path(util.getDataTestDirOnTestFS(table), "hfiles");
+    Path hfiles = new Path(
+        util.getDataTestDirOnTestFS(table.getNameAsString()), "hfiles");
 
     String[] args = {
         format("-D%s=%s", ImportTsv.BULK_OUTPUT_CONF_KEY, hfiles),
@@ -192,11 +194,11 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
         // configure the test harness to NOT delete the HFiles after they're
         // generated. We need those for doLoadIncrementalHFiles
         format("-D%s=false", TestImportTsv.DELETE_AFTER_LOAD_CONF),
-        table
+        table.getNameAsString()
     };
 
     // run the job, complete the load.
-    util.createTable(table, cf);
+    util.createTable(table, new String[]{cf});
     Tool t = TestImportTsv.doMROnTableTest(util, cf, simple_tsv, args);
     doLoadIncrementalHFiles(hfiles, table);
 
@@ -205,7 +207,7 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
 
     // clean up after ourselves.
     util.deleteTable(table);
-    util.cleanupDataTestDirOnTestFS(table);
+    util.cleanupDataTestDirOnTestFS(table.getNameAsString());
     LOG.info("testGenerateAndLoad completed successfully.");
   }
 

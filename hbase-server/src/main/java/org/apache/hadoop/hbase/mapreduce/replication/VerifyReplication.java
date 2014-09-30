@@ -123,7 +123,8 @@ public class VerifyReplication extends Configured implements Tool {
             Configuration peerConf = HBaseConfiguration.create(conf);
             ZKUtil.applyClusterKeyToConf(peerConf, zkClusterKey);
 
-            Table replicatedTable = new HTable(peerConf, conf.get(NAME + ".tableName"));
+            TableName tableName = TableName.valueOf(conf.get(NAME + ".tableName"));
+            Table replicatedTable = new HTable(peerConf, tableName);
             scan.setStartRow(value.getRow());
             replicatedScanner = replicatedTable.getScanner(scan);
             return null;

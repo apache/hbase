@@ -73,7 +73,7 @@ public class TestGlobalMemStoreSize {
     byte [] table = Bytes.toBytes("TestGlobalMemStoreSize");
     byte [] family = Bytes.toBytes("family");
     LOG.info("Creating table with " + regionNum + " regions");
-    HTable ht = TEST_UTIL.createTable(table, family);
+    HTable ht = TEST_UTIL.createTable(TableName.valueOf(table), family);
     int numRegions = TEST_UTIL.createMultiRegions(conf, ht, family,
         regionNum);
     assertEquals(regionNum,numRegions);

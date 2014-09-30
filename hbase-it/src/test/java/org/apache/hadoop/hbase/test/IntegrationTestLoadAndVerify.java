@@ -179,7 +179,7 @@ public void cleanUpCluster() throws Exception {
       recordsToWrite = conf.getLong(NUM_TO_WRITE_KEY, NUM_TO_WRITE_DEFAULT);
       String tableName = conf.get(TABLE_NAME_KEY, TABLE_NAME_DEFAULT);
       numBackReferencesPerRow = conf.getInt(NUM_BACKREFS_KEY, NUM_BACKREFS_DEFAULT);
-      table = new HTable(conf, tableName);
+      table = new HTable(conf, TableName.valueOf(tableName));
       table.setWriteBufferSize(4*1024*1024);
       table.setAutoFlush(false, true);
 

@@ -30,6 +30,7 @@ import java.io.PrintStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -80,8 +81,8 @@ public class TestCopyTable {
    */
   @Test
   public void testCopyTable() throws Exception {
-    final byte[] TABLENAME1 = Bytes.toBytes("testCopyTable1");
-    final byte[] TABLENAME2 = Bytes.toBytes("testCopyTable2");
+    final TableName TABLENAME1 = TableName.valueOf("testCopyTable1");
+    final TableName TABLENAME2 = TableName.valueOf("testCopyTable2");
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] COLUMN1 = Bytes.toBytes("c1");
 
@@ -99,8 +100,8 @@ public class TestCopyTable {
 
     assertEquals(
       0,
-      copy.run(new String[] { "--new.name=" + Bytes.toString(TABLENAME2),
-          Bytes.toString(TABLENAME1) }));
+      copy.run(new String[] { "--new.name=" + TABLENAME2.getNameAsString(),
+          TABLENAME1.getNameAsString() }));
 
     // verify the data was copied into table 2
     for (int i = 0; i < 10; i++) {
@@ -118,8 +119,8 @@ public class TestCopyTable {
 
   @Test
   public void testStartStopRow() throws Exception {
-    final byte[] TABLENAME1 = Bytes.toBytes("testStartStopRow1");
-    final byte[] TABLENAME2 = Bytes.toBytes("testStartStopRow2");
+    final TableName TABLENAME1 = TableName.valueOf("testStartStopRow1");
+    final TableName TABLENAME2 = TableName.valueOf("testStartStopRow2");
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] COLUMN1 = Bytes.toBytes("c1");
     final byte[] ROW0 = Bytes.toBytes("row0");
@@ -143,8 +144,8 @@ public class TestCopyTable {
     CopyTable copy = new CopyTable(TEST_UTIL.getConfiguration());
     assertEquals(
       0,
-      copy.run(new String[] { "--new.name=" + Bytes.toString(TABLENAME2), "--startrow=row1",
-          "--stoprow=row2", Bytes.toString(TABLENAME1) }));
+      copy.run(new String[] { "--new.name=" + TABLENAME2, "--startrow=row1",
+          "--stoprow=row2", TABLENAME1.getNameAsString() }));
 
     // verify the data was copied into table 2
     // row1 exist, row0, row2 do not exist

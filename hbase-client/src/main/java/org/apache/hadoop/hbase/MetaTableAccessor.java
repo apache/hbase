@@ -872,7 +872,20 @@ public class MetaTableAccessor {
    * @return Count or regions in table <code>tableName</code>
    * @throws IOException
    */
+  @Deprecated
   public static int getRegionCount(final Configuration c, final String tableName)
+      throws IOException {
+    return getRegionCount(c, TableName.valueOf(tableName));
+  }
+
+  /**
+   * Count regions in <code>hbase:meta</code> for passed table.
+   * @param c Configuration object
+   * @param tableName table name to count regions for
+   * @return Count or regions in table <code>tableName</code>
+   * @throws IOException
+   */
+  public static int getRegionCount(final Configuration c, final TableName tableName)
       throws IOException {
     HTable t = new HTable(c, tableName);
     try {

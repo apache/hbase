@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.Collection;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -67,7 +68,7 @@ public class TestHTraceHooks {
     Table table;
     try {
 
-      table = TEST_UTIL.createTable("table".getBytes(),
+      table = TEST_UTIL.createTable(TableName.valueOf("table"),
         FAMILY_BYTES);
     } finally {
       tableCreationSpan.close();

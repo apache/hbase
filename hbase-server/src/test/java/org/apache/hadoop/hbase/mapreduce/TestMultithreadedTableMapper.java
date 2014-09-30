@@ -59,7 +59,7 @@ public class TestMultithreadedTableMapper {
   private static final Log LOG = LogFactory.getLog(TestMultithreadedTableMapper.class);
   private static final HBaseTestingUtility UTIL =
       new HBaseTestingUtility();
-  static final byte[] MULTI_REGION_TABLE_NAME = Bytes.toBytes("mrtest");
+  static final TableName MULTI_REGION_TABLE_NAME = TableName.valueOf("mrtest");
   static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
   static final byte[] OUTPUT_FAMILY = Bytes.toBytes("text");
   static final int    NUMBER_OF_THREADS = 10;
@@ -139,7 +139,7 @@ public class TestMultithreadedTableMapper {
       Scan scan = new Scan();
       scan.addFamily(INPUT_FAMILY);
       TableMapReduceUtil.initTableMapperJob(
-          Bytes.toString(table.getTableName()), scan,
+          table.getTableName(), scan,
           MultithreadedTableMapper.class, ImmutableBytesWritable.class,
           Put.class, job);
       MultithreadedTableMapper.setMapperClass(job, ProcessContentsMapper.class);
@@ -148,11 +148,11 @@ public class TestMultithreadedTableMapper {
           Bytes.toString(table.getTableName()),
           IdentityTableReducer.class, job);
       FileOutputFormat.setOutputPath(job, new Path("test"));
-      LOG.info("Started " + Bytes.toString(table.getTableName()));
+      LOG.info("Started " + table.getTableName());
       assertTrue(job.waitForCompletion(true));
       LOG.info("After map/reduce completion");
       // verify map-reduce results
-      verify(Bytes.toString(table.getTableName()));
+      verify(table.getName());
     } finally {
       table.close();
       if (job != null) {
@@ -162,7 +162,7 @@ public class TestMultithreadedTableMapper {
     }
   }
 
-  private void verify(String tableName) throws IOException {
+  private void verify(TableName tableName) throws IOException {
     Table table = new HTable(new Configuration(UTIL.getConfiguration()), tableName);
     boolean verified = false;
     long pause = UTIL.getConfiguration().getLong("hbase.client.pause", 5 * 1000);

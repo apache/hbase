@@ -163,8 +163,8 @@ public class TestHBaseFsck {
   @Test
   public void testHBaseFsck() throws Exception {
     assertNoErrors(doFsck(conf, false));
-    String table = "tableBadMetaAssign";
-    TEST_UTIL.createTable(Bytes.toBytes(table), FAM);
+    TableName table = TableName.valueOf("tableBadMetaAssign");
+    TEST_UTIL.createTable(table, FAM);
 
     // We created 1 table, should be fine
     assertNoErrors(doFsck(conf, false));
@@ -216,7 +216,7 @@ public class TestHBaseFsck {
     assertNoErrors(doFsck(conf, false));
 
     // comment needed - what is the purpose of this line
-    Table t = new HTable(conf, Bytes.toBytes(table), executorService);
+    Table t = new HTable(conf, table, executorService);
     ResultScanner s = t.getScanner(new Scan());
     s.close();
     t.close();

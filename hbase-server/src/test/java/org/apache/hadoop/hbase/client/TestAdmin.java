@@ -300,8 +300,8 @@ public class TestAdmin {
     final byte [] row = Bytes.toBytes("row");
     final byte [] qualifier = Bytes.toBytes("qualifier");
     final byte [] value = Bytes.toBytes("value");
-    final byte [] table1 = Bytes.toBytes("testDisableAndEnableTable1");
-    final byte [] table2 = Bytes.toBytes("testDisableAndEnableTable2");
+    final TableName table1 = TableName.valueOf("testDisableAndEnableTable1");
+    final TableName table2 = TableName.valueOf("testDisableAndEnableTable2");
     Table ht1 = TEST_UTIL.createTable(table1, HConstants.CATALOG_FAMILY);
     Table ht2 = TEST_UTIL.createTable(table2, HConstants.CATALOG_FAMILY);
     Put put = new Put(row);
@@ -350,8 +350,7 @@ public class TestAdmin {
   public void testCreateTable() throws IOException {
     HTableDescriptor [] tables = admin.listTables();
     int numTables = tables.length;
-    TEST_UTIL.createTable(Bytes.toBytes("testCreateTable"),
-      HConstants.CATALOG_FAMILY).close();
+    TEST_UTIL.createTable(TableName.valueOf("testCreateTable"), HConstants.CATALOG_FAMILY).close();
     tables = this.admin.listTables();
     assertEquals(numTables + 1, tables.length);
     assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster()
@@ -411,7 +410,7 @@ public class TestAdmin {
     htd.addFamily(fam2);
     htd.addFamily(fam3);
     this.admin.createTable(htd);
-    Table table = new HTable(TEST_UTIL.getConfiguration(), "myTestTable");
+    Table table = new HTable(TEST_UTIL.getConfiguration(), htd.getTableName());
     HTableDescriptor confirmedHtd = table.getTableDescriptor();
     assertEquals(htd.compareTo(confirmedHtd), 0);
     table.close();
@@ -1227,7 +1226,7 @@ public class TestAdmin {
     admin.createTable(htd1);
     admin.createTable(htd2);
     // Before fix, below would fail throwing a NoServerForRegionException.
-    new HTable(TEST_UTIL.getConfiguration(), name).close();
+    new HTable(TEST_UTIL.getConfiguration(), htd2.getTableName()).close();
   }
 
   /***
@@ -1264,7 +1263,7 @@ public class TestAdmin {
    */
   @Test (timeout=300000)
   public void testReadOnlyTable() throws Exception {
-    byte [] name = Bytes.toBytes("testReadOnlyTable");
+    TableName name = TableName.valueOf("testReadOnlyTable");
     Table table = TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
     byte[] value = Bytes.toBytes("somedata");
     // This used to use an empty row... That must have been a bug
@@ -1310,7 +1309,7 @@ public class TestAdmin {
    */
   @Test (expected=TableExistsException.class, timeout=300000)
   public void testTableExistsExceptionWithATable() throws IOException {
-    final byte [] name = Bytes.toBytes("testTableExistsExceptionWithATable");
+    final TableName name = TableName.valueOf("testTableExistsExceptionWithATable");
     TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY).close();
     TEST_UTIL.createTable(name, HConstants.CATALOG_FAMILY);
   }
@@ -1348,8 +1347,9 @@ public class TestAdmin {
    */
   @Test (expected=TableNotFoundException.class, timeout=300000)
   public void testTableNotFoundExceptionWithoutAnyTables() throws IOException {
-    Table ht =
-        new HTable(TEST_UTIL.getConfiguration(),"testTableNotFoundExceptionWithoutAnyTables");
+    TableName tableName = TableName
+        .valueOf("testTableNotFoundExceptionWithoutAnyTables");
+    Table ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
     ht.get(new Get("e".getBytes()));
   }
 
@@ -1390,7 +1390,7 @@ public class TestAdmin {
     createTableWithDefaultConf(TABLENAME);
 
     HRegionInfo info = null;
-    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TableName.valueOf(TABLENAME));
     List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     for (HRegionInfo regionInfo : onlineRegions) {
       if (!regionInfo.isMetaTable()) {
@@ -1448,7 +1448,7 @@ public class TestAdmin {
     byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegion3");
     createTableWithDefaultConf(TABLENAME);
 
-    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TableName.valueOf(TABLENAME));
 
     try {
       List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
@@ -1472,7 +1472,7 @@ public class TestAdmin {
     byte[] TABLENAME = Bytes.toBytes("TestHBACloseRegionWhenServerNameIsEmpty");
     createTableWithDefaultConf(TABLENAME);
 
-    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TableName.valueOf(TABLENAME));
 
     try {
       List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
@@ -1496,7 +1496,7 @@ public class TestAdmin {
     createTableWithDefaultConf(TABLENAME);
 
     HRegionInfo info = null;
-    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TABLENAME);
+    HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(TableName.valueOf(TABLENAME));
 
     List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(rs.getRSRpcServices());
     for (HRegionInfo regionInfo : onlineRegions) {
@@ -1579,7 +1579,7 @@ public class TestAdmin {
       v.append(className);
     }
     byte[] value = Bytes.toBytes(v.toString());
-    HRegionServer regionServer = startAndWriteData("TestLogRolling", value);
+    HRegionServer regionServer = startAndWriteData(TableName.valueOf("TestLogRolling"), value);
     LOG.info("after writing there are "
         + HLogUtilsForTests.getNumRolledLogFiles(regionServer.getWAL()) + " log files");
 
@@ -1659,19 +1659,19 @@ public class TestAdmin {
         "hbase.regionserver.hlog.lowreplication.rolllimit", 3);
   }
 
-  private HRegionServer startAndWriteData(String tableName, byte[] value)
+  private HRegionServer startAndWriteData(TableName tableName, byte[] value)
   throws IOException, InterruptedException {
     // When the hbase:meta table can be opened, the region servers are running
     new HTable(
       TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME).close();
 
     // Create the test table and open it
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc);
     Table table = new HTable(TEST_UTIL.getConfiguration(), tableName);
 
-    HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
+    HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(tableName);
     for (int i = 1; i <= 256; i++) { // 256 writes should cause 8 log rolls
       Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", i)));
       put.add(HConstants.CATALOG_FAMILY, null, value);
@@ -1772,10 +1772,9 @@ public class TestAdmin {
     // here because makes use of an internal HBA method (TODO: Fix.).
     HBaseAdmin rawAdmin = new HBaseAdmin(TEST_UTIL.getConfiguration());
 
-    final String name = "testGetRegion";
-    LOG.info("Started " + name);
-    final byte [] nameBytes = Bytes.toBytes(name);
-    HTable t = TEST_UTIL.createTable(nameBytes, HConstants.CATALOG_FAMILY);
+    final TableName tableName = TableName.valueOf("testGetRegion");
+    LOG.info("Started " + tableName);
+    HTable t = TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
     TEST_UTIL.createMultiRegions(t, HConstants.CATALOG_FAMILY);
 
     HRegionLocation regionLocation = t.getRegionLocation("mmm");

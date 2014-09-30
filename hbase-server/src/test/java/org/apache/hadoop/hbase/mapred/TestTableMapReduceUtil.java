@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.client.Put;
@@ -88,7 +89,7 @@ public class TestTableMapReduceUtil {
   @BeforeClass
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();
-    presidentsTable = createAndFillTable(Bytes.toBytes(TABLE_NAME));
+    presidentsTable = createAndFillTable(TableName.valueOf(TABLE_NAME));
     UTIL.startMiniMapReduceCluster();
   }
 
@@ -105,7 +106,7 @@ public class TestTableMapReduceUtil {
     LOG.info("before done");
   }
 
-  public static Table createAndFillTable(byte[] tableName) throws IOException {
+  public static Table createAndFillTable(TableName tableName) throws IOException {
     Table table = UTIL.createTable(tableName, COLUMN_FAMILY);
     createPutCommand(table);
     return table;

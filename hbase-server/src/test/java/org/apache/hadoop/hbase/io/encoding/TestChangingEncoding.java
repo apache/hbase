@@ -74,7 +74,7 @@ public class TestChangingEncoding {
   private HBaseAdmin admin;
   private HColumnDescriptor hcd;
 
-  private String tableName;
+  private TableName tableName;
   private static final List<DataBlockEncoding> ENCODINGS_TO_ITERATE =
       createEncodingsToIterate();
 
@@ -89,8 +89,8 @@ public class TestChangingEncoding {
   private int numBatchesWritten;
 
   private void prepareTest(String testId) throws IOException {
-    tableName = "test_table_" + testId;
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+    tableName = TableName.valueOf("test_table_" + testId);
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     hcd = new HColumnDescriptor(CF);
     htd.addFamily(hcd);
     admin.createTable(htd);
@@ -135,7 +135,7 @@ public class TestChangingEncoding {
         + "_col" + j);
   }
 
-  static void writeTestDataBatch(Configuration conf, String tableName,
+  static void writeTestDataBatch(Configuration conf, TableName tableName,
       int batchId) throws Exception {
     LOG.debug("Writing test data batch " + batchId);
     Table table = new HTable(conf, tableName);
@@ -153,7 +153,7 @@ public class TestChangingEncoding {
     table.close();
   }
 
-  static void verifyTestDataBatch(Configuration conf, String tableName,
+  static void verifyTestDataBatch(Configuration conf, TableName tableName,
       int batchId) throws Exception {
     LOG.debug("Verifying test data batch " + batchId);
     Table table = new HTable(conf, tableName);

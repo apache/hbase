@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.coprocessor.example;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -60,7 +61,7 @@ public class TestRowCountEndpoint {
         RowCountEndpoint.class.getName());
 
     TEST_UTIL.startMiniCluster();
-    TEST_UTIL.createTable(TEST_TABLE, TEST_FAMILY);
+    TEST_UTIL.createTable(TableName.valueOf(TEST_TABLE), new byte[][]{TEST_FAMILY});
   }
 
   // @Ignore @AfterClass

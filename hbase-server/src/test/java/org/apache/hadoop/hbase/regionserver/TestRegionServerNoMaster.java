@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -37,7 +38,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -70,10 +70,10 @@ public class TestRegionServerNoMaster {
   @BeforeClass
   public static void before() throws Exception {
     HTU.startMiniCluster(NB_SERVERS);
-    final byte[] tableName = Bytes.toBytes(TestRegionServerNoMaster.class.getSimpleName());
+    final TableName tableName = TableName.valueOf(TestRegionServerNoMaster.class.getSimpleName());
 
     // Create table then get the single region for our new table.
-    table = HTU.createTable(tableName, HConstants.CATALOG_FAMILY);
+    table = HTU.createTable(tableName,HConstants.CATALOG_FAMILY);
     Put p = new Put(row);
     p.add(HConstants.CATALOG_FAMILY, row, row);
     table.put(p);

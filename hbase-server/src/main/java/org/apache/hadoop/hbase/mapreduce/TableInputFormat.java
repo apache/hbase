@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -96,7 +97,7 @@ implements Configurable {
   @Override
   public void setConf(Configuration configuration) {
     this.conf = configuration;
-    String tableName = conf.get(INPUT_TABLE);
+    TableName tableName = TableName.valueOf(conf.get(INPUT_TABLE));
     try {
       setHTable(new HTable(new Configuration(conf), tableName));
     } catch (Exception e) {

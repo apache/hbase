@@ -606,7 +606,7 @@ public final class Canary implements Tool {
 
     private void monitorRegionServers(Map<String, List<HRegionInfo>> rsAndRMap) {
       String serverName = null;
-      String tableName = null;
+      TableName tableName = null;
       HRegionInfo region = null;
       Table table = null;
       Get get = null;
@@ -620,7 +620,7 @@ public final class Canary implements Tool {
         // always get the first region
         region = entry.getValue().get(0);
         try {
-          tableName = region.getTable().getNameAsString();
+          tableName = region.getTable();
           table = new HTable(this.admin.getConfiguration(), tableName);
           startKey = region.getStartKey();
           // Can't do a get on empty start row so do a Scan of first element if any instead.
@@ -638,17 +638,18 @@ public final class Canary implements Tool {
             s.close();
             stopWatch.stop();
           }
-          this.getSink().publishReadTiming(tableName, serverName, stopWatch.getTime());
+          this.getSink().publishReadTiming(tableName.getNameAsString(),
+              serverName, stopWatch.getTime());
         } catch (TableNotFoundException tnfe) {
           // This is ignored because it doesn't imply that the regionserver is dead
         } catch (TableNotEnabledException tnee) {
           // This is considered a success since we got a response.
           LOG.debug("The targeted table was disabled.  Assuming success.");
         } catch (DoNotRetryIOException dnrioe) {
-            this.getSink().publishReadFailure(tableName, serverName);
+            this.getSink().publishReadFailure(tableName.getNameAsString(), serverName);
             LOG.error(dnrioe);
         } catch (IOException e) {
-          this.getSink().publishReadFailure(tableName, serverName);
+          this.getSink().publishReadFailure(tableName.getNameAsString(), serverName);
           LOG.error(e);
           this.errorCode = ERROR_EXIT_CODE;
         } finally {
