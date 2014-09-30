@@ -226,9 +226,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   // monitor for distributed procedures
   MasterProcedureManagerHost mpmHost;
 
-  // A flag to indicate if any table is configured to put on the active master
-  protected final boolean tablesOnMaster;
-
   /** flag used in test cases in order to simulate RS failures during master initialization */
   private volatile boolean initializationBeforeMetaAssignment = false;
 
@@ -286,8 +283,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.masterCheckCompression = conf.getBoolean("hbase.master.check.compression", true);
 
     this.metricsMaster = new MetricsMaster( new MetricsMasterWrapperImpl(this));
-    String[] tablesOnMaster = BaseLoadBalancer.getTablesOnMaster(conf);
-    this.tablesOnMaster = tablesOnMaster != null && tablesOnMaster.length > 0;
 
     // Do we publish the status?
     boolean shouldPublish = conf.getBoolean(HConstants.STATUS_PUBLISHED,
@@ -356,6 +351,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * Otherwise, loop till the server is stopped or aborted.
    */
   protected void waitForMasterActive(){
+    boolean tablesOnMaster = BaseLoadBalancer.tablesOnMaster(conf);
     while (!(tablesOnMaster && isActiveMaster)
         && !isStopped() && !isAborted()) {
       sleeper.sleep();
@@ -390,7 +386,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   protected void configureInfoServer() {
     infoServer.addServlet("master-status", "/master-status", MasterStatusServlet.class);
     infoServer.setAttribute(MASTER, this);
-    if (tablesOnMaster) {
+    if (BaseLoadBalancer.tablesOnMaster(conf)) {
       super.configureInfoServer();
     }
   }
@@ -568,7 +564,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.initializationBeforeMetaAssignment = true;
 
     // Wait for regionserver to finish initialization.
-    if (tablesOnMaster) {
+    if (BaseLoadBalancer.tablesOnMaster(conf)) {
       waitForServerOnline();
     }
 

@@ -832,7 +832,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
   protected ServerName masterServerName;
   protected MasterServices services;
 
-  public static String[] getTablesOnMaster(Configuration conf) {
+  protected static String[] getTablesOnMaster(Configuration conf) {
     String valueString = conf.get(TABLES_ON_MASTER);
     if (valueString != null) {
       valueString = valueString.trim();
@@ -841,6 +841,14 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       return null;
     }
     return StringUtils.getStrings(valueString);
+  }
+
+  /**
+   * Check if configured to put any tables on the active master
+   */
+  public static boolean tablesOnMaster(Configuration conf) {
+    String[] tables = getTablesOnMaster(conf);
+    return tables != null && tables.length > 0;
   }
 
   @Override
