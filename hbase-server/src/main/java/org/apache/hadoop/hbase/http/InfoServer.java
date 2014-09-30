@@ -37,8 +37,9 @@ import org.apache.hadoop.conf.Configuration;
  */
 @InterfaceAudience.Private
 public class InfoServer {
+  
   private static final String HBASE_APP_DIR = "hbase-webapps";
-  private final HttpServer httpServer;
+  private final org.apache.hadoop.hbase.http.HttpServer httpServer;
 
   /**
    * Create a status server on the given port.
@@ -53,7 +54,8 @@ public class InfoServer {
   public InfoServer(String name, String bindAddress, int port, boolean findPort,
       final Configuration c)
   throws IOException {
-    HttpServer.Builder builder = new HttpServer.Builder();
+    HttpServer.Builder builder =
+      new org.apache.hadoop.hbase.http.HttpServer.Builder();
     builder
       .setName(name)
       .addEndpoint(URI.create("http://" + bindAddress + ":" + port))

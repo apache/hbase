@@ -163,8 +163,8 @@ public class ProtobufLogWriter extends WriterBase {
   @Override
   public void sync() throws IOException {
     try {
-      this.output.flush();
-      this.output.sync();
+      this.output.hflush();
+      this.output.hsync();
     } catch (NullPointerException npe) {
       // Concurrent close...
       throw new IOException(npe);

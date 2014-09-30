@@ -903,6 +903,7 @@
     <compileSource>1.7</compileSource>
     <!-- Dependencies -->
     <hadoop-two.version>2.4.0</hadoop-two.version>
+    <hadoop-three.version>3.0.0-SNAPSHOT</hadoop-three.version>
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.7</commons-codec.version>
     <!-- pretty outdated -->
@@ -1681,24 +1682,159 @@
           <value>3.0</value>
         </property>
       </activation>
+      <modules>
+        <!--For now, use hadoop2 compat module-->
+        <module>hbase-hadoop2-compat</module>
+      </modules>
       <properties>
-        <hadoop.version>3.0.0-SNAPSHOT</hadoop.version>
+        <hadoop.version>${hadoop-three.version}</hadoop.version>
+        <!--Use this compat module for now. TODO: Make h3 one if we need one-->
+        <compat.module>hbase-hadoop2-compat</compat.module>
+        <assembly.file>src/main/assembly/hadoop-three-compat.xml</assembly.file>
       </properties>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-        <!-- test deps for hadoop-0.24 profile -->
-        <!-- Says test, but scoped for compile. Which is correct? -->
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-minicluster</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>compile</scope>
-        </dependency>
-      </dependencies>
+     <dependencyManagement>
+       <dependencies>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-mapreduce-client-core</artifactId>
+           <version>${hadoop-three.version}</version>
+           <exclusions>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty</artifactId>
+             </exclusion>
+           </exclusions>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+           <version>${hadoop-three.version}</version>
+           <exclusions>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty</artifactId>
+             </exclusion>
+           </exclusions>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+           <version>${hadoop-three.version}</version>
+           <type>test-jar</type>
+           <scope>test</scope>
+           <exclusions>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty</artifactId>
+             </exclusion>
+           </exclusions>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-hdfs</artifactId>
+           <exclusions>
+             <exclusion>
+               <groupId>javax.servlet.jsp</groupId>
+               <artifactId>jsp-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>javax.servlet</groupId>
+               <artifactId>servlet-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>stax</groupId>
+               <artifactId>stax-api</artifactId>
+             </exclusion>
+           </exclusions>
+           <version>${hadoop-three.version}</version>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-hdfs</artifactId>
+           <version>${hadoop-three.version}</version>
+           <type>test-jar</type>
+           <scope>test</scope>
+           <exclusions>
+             <exclusion>
+               <groupId>javax.servlet.jsp</groupId>
+               <artifactId>jsp-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>javax.servlet</groupId>
+               <artifactId>servlet-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>stax</groupId>
+               <artifactId>stax-api</artifactId>
+             </exclusion>
+           </exclusions>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-auth</artifactId>
+           <version>${hadoop-three.version}</version>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-common</artifactId>
+           <version>${hadoop-three.version}</version>
+           <exclusions>
+             <exclusion>
+               <groupId>javax.servlet.jsp</groupId>
+               <artifactId>jsp-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>javax.servlet</groupId>
+               <artifactId>servlet-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>stax</groupId>
+               <artifactId>stax-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty</artifactId>
+             </exclusion>
+           </exclusions>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-client</artifactId>
+           <version>${hadoop-three.version}</version>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-annotations</artifactId>
+           <version>${hadoop-three.version}</version>
+         </dependency>
+         <!-- This was marked as test dep in earlier pom, but was scoped compile.
+           Where do we actually need it? -->
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-minicluster</artifactId>
+           <version>${hadoop-three.version}</version>
+           <exclusions>
+             <exclusion>
+               <groupId>javax.servlet.jsp</groupId>
+               <artifactId>jsp-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>javax.servlet</groupId>
+               <artifactId>servlet-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>stax</groupId>
+               <artifactId>stax-api</artifactId>
+             </exclusion>
+             <exclusion>
+               <groupId>io.netty</groupId>
+               <artifactId>netty</artifactId>
+             </exclusion>
+           </exclusions>
+         </dependency>
+       </dependencies>
+     </dependencyManagement>
+
     </profile>
     <!-- profiles for the tests
          See as well the properties of the project for the values
