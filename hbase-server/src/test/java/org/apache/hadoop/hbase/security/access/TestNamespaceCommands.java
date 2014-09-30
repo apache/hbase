@@ -22,10 +22,16 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
+import com.google.common.collect.ListMultimap;
+import com.google.protobuf.BlockingRpcChannel;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
@@ -39,14 +45,15 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.ListMultimap;
-import com.google.protobuf.BlockingRpcChannel;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @Category({SecurityTests.class, MediumTests.class})
 public class TestNamespaceCommands extends SecureTestUtil {
@@ -64,6 +71,9 @@ public class TestNamespaceCommands extends SecureTestUtil {
   private static User USER_CREATE;
   // user with permission on namespace for testing all operations.
   private static User USER_NSP_WRITE;
+
+  private static String TEST_TABLE = TestNamespace + ":testtable";
+  private static byte[] TEST_FAMILY = Bytes.toBytes("f1");
   
   @BeforeClass
   public static void beforeClass() throws Exception {
@@ -86,7 +96,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     UTIL.getHBaseAdmin().createNamespace(NamespaceDescriptor.create(TestNamespace).build());
 
     grantOnNamespace(UTIL, USER_NSP_WRITE.getShortName(),
-      TestNamespace, Permission.Action.WRITE);
+      TestNamespace, Permission.Action.WRITE, Permission.Action.CREATE);
   }
   
   @AfterClass
@@ -189,5 +199,24 @@ public class TestNamespaceCommands extends SecureTestUtil {
     verifyDenied(grantAction, USER_CREATE, USER_RW);
     verifyAllowed(revokeAction, SUPERUSER);
     verifyDenied(revokeAction, USER_CREATE, USER_RW);    
+  }
+
+  @Test
+  public void testCreateTableWithNamespace() throws Exception {
+    AccessTestAction createTable = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TEST_TABLE));
+        htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
+        ACCESS_CONTROLLER.preCreateTable(ObserverContext.createAndPrepare(CP_ENV, null), htd, null);
+        return null;
+      }
+    };
+
+    // Only users with create permissions on namespace should be able to create a new table
+    verifyAllowed(createTable, SUPERUSER, USER_NSP_WRITE);
+
+    // all others should be denied
+    verifyDenied(createTable, USER_CREATE, USER_RW);
   }
 }
