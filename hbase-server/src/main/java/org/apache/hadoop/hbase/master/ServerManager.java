@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -855,7 +856,7 @@ public class ServerManager {
     final long timeout = this.master.getConfiguration().
       getLong(WAIT_ON_REGIONSERVERS_TIMEOUT, 4500);
     int defaultMinToStart = 1;
-    if (((HMaster)services).tablesOnMaster) {
+    if (BaseLoadBalancer.tablesOnMaster(master.getConfiguration())) {
       // If we assign regions to master, we'd like to start
       // at least another region server so that we don't
       // assign all regions to master if other region servers
