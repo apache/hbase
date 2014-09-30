@@ -532,7 +532,7 @@ public class TestClassLoading {
 
   private void waitForTable(TableName name) throws InterruptedException, IOException {
     // First wait until all regions are online
-    TEST_UTIL.waitTableEnabled(name.getName());
+    TEST_UTIL.waitTableEnabled(name);
     // Now wait a bit longer for the coprocessor hosts to load the CPs
     Thread.sleep(1000);
   }

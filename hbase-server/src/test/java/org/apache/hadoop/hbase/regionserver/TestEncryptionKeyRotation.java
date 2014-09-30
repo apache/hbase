@@ -207,7 +207,7 @@ public class TestEncryptionKeyRotation {
     TEST_UTIL.getHBaseAdmin().createTable(htd);
     TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
     // Create a store file
-    Table table = new HTable(conf, htd.getName());
+    Table table = new HTable(conf, htd.getTableName());
     try {
       table.put(new Put(Bytes.toBytes("testrow"))
         .add(hcd.getName(), Bytes.toBytes("q"), Bytes.toBytes("value")));

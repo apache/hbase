@@ -103,17 +103,17 @@ public class SecureTestUtil {
     }
   }
 
-  public static void checkTablePerms(Configuration conf, byte[] table, byte[] family, byte[] column,
+  public static void checkTablePerms(Configuration conf, TableName table, byte[] family, byte[] column,
       Permission.Action... actions) throws IOException {
     Permission[] perms = new Permission[actions.length];
     for (int i = 0; i < actions.length; i++) {
-      perms[i] = new TablePermission(TableName.valueOf(table), family, column, actions[i]);
+      perms[i] = new TablePermission(table, family, column, actions[i]);
     }
 
     checkTablePerms(conf, table, perms);
   }
 
-  public static void checkTablePerms(Configuration conf, byte[] table, Permission... perms) throws IOException {
+  public static void checkTablePerms(Configuration conf, TableName table, Permission... perms) throws IOException {
     CheckPermissionsRequest.Builder request = CheckPermissionsRequest.newBuilder();
     for (Permission p : perms) {
       request.addPermission(ProtobufUtil.toPermission(p));

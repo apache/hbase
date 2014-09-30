@@ -57,7 +57,7 @@ public class TestSecureLoadIncrementalHFilesSplitRecovery extends TestLoadIncrem
     util.startMiniCluster();
 
     // Wait for the ACL table to become available
-    util.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
+    util.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
   }
 
   //Disabling this test as it does not work in secure mode

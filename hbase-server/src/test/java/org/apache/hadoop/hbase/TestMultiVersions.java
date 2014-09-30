@@ -195,8 +195,8 @@ public class TestMultiVersions {
    */
   @Test
   public void testScanMultipleVersions() throws Exception {
-    final byte [] tableName = Bytes.toBytes("testScanMultipleVersions");
-    final HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    final TableName tableName = TableName.valueOf("testScanMultipleVersions");
+    final HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     final byte [][] rows = new byte[][] {
       Bytes.toBytes("row_0200"),

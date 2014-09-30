@@ -445,7 +445,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     // identical since it does the check
     testSmallBatch();
 
-    String[] args = new String[] {"2", Bytes.toString(tableName)};
+    String[] args = new String[] {"2", tableName.getNameAsString()};
     Job job = VerifyReplication.createSubmittableJob(CONF_WITH_LOCALFS, args);
     if (job == null) {
       fail("Job wasn't created, see the log");

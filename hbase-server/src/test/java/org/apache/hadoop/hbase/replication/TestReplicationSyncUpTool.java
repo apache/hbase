@@ -43,8 +43,8 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
 
   private static final Log LOG = LogFactory.getLog(TestReplicationSyncUpTool.class);
 
-  private static final byte[] t1_su = Bytes.toBytes("t1_syncup");
-  private static final byte[] t2_su = Bytes.toBytes("t2_syncup");
+  private static final TableName t1_su = TableName.valueOf("t1_syncup");
+  private static final TableName t2_su = TableName.valueOf("t2_syncup");
 
   private static final byte[] famName = Bytes.toBytes("cf1");
   private static final byte[] qualName = Bytes.toBytes("q1");
@@ -61,27 +61,27 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
 
     HColumnDescriptor fam;
 
-    t1_syncupSource = new HTableDescriptor(TableName.valueOf(t1_su));
+    t1_syncupSource = new HTableDescriptor(t1_su);
     fam = new HColumnDescriptor(famName);
     fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     t1_syncupSource.addFamily(fam);
     fam = new HColumnDescriptor(noRepfamName);
     t1_syncupSource.addFamily(fam);
 
-    t1_syncupTarget = new HTableDescriptor(TableName.valueOf(t1_su));
+    t1_syncupTarget = new HTableDescriptor(t1_su);
     fam = new HColumnDescriptor(famName);
     t1_syncupTarget.addFamily(fam);
     fam = new HColumnDescriptor(noRepfamName);
     t1_syncupTarget.addFamily(fam);
 
-    t2_syncupSource = new HTableDescriptor(TableName.valueOf(t2_su));
+    t2_syncupSource = new HTableDescriptor(t2_su);
     fam = new HColumnDescriptor(famName);
     fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     t2_syncupSource.addFamily(fam);
     fam = new HColumnDescriptor(noRepfamName);
     t2_syncupSource.addFamily(fam);
 
-    t2_syncupTarget = new HTableDescriptor(TableName.valueOf(t2_su));
+    t2_syncupTarget = new HTableDescriptor(t2_su);
     fam = new HColumnDescriptor(famName);
     t2_syncupTarget.addFamily(fam);
     fam = new HColumnDescriptor(noRepfamName);

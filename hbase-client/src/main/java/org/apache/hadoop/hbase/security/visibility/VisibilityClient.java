@@ -75,7 +75,7 @@ public class VisibilityClient {
       throws Throwable {
     Table ht = null;
     try {
-      ht = new HTable(conf, LABELS_TABLE_NAME.getName());
+      ht = new HTable(conf, LABELS_TABLE_NAME);
       Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse> callable = 
           new Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse>() {
         ServerRpcController controller = new ServerRpcController();
@@ -129,7 +129,7 @@ public class VisibilityClient {
   public static GetAuthsResponse getAuths(Configuration conf, final String user) throws Throwable {
     Table ht = null;
     try {
-      ht = new HTable(conf, LABELS_TABLE_NAME.getName());
+      ht = new HTable(conf, LABELS_TABLE_NAME);
       Batch.Call<VisibilityLabelsService, GetAuthsResponse> callable = 
           new Batch.Call<VisibilityLabelsService, GetAuthsResponse>() {
         ServerRpcController controller = new ServerRpcController();
@@ -171,7 +171,7 @@ public class VisibilityClient {
       final String user, final boolean setOrClear) throws IOException, ServiceException, Throwable {
     Table ht = null;
     try {
-      ht = new HTable(conf, LABELS_TABLE_NAME.getName());
+      ht = new HTable(conf, LABELS_TABLE_NAME);
       Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse> callable = 
           new Batch.Call<VisibilityLabelsService, VisibilityLabelsResponse>() {
         ServerRpcController controller = new ServerRpcController();

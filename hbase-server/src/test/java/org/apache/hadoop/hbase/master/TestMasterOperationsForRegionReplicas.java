@@ -112,7 +112,7 @@ public class TestMasterOperationsForRegionReplicas {
       desc.setRegionReplication(numReplica);
       desc.addFamily(new HColumnDescriptor("family"));
       admin.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), numRegions);
-      TEST_UTIL.waitTableEnabled(table.getName());
+      TEST_UTIL.waitTableEnabled(table);
       validateNumberOfRowsInMeta(table, numRegions, admin.getConnection());
 
       List<HRegionInfo> hris = MetaTableAccessor.getTableRegions(TEST_UTIL.getZooKeeperWatcher(),
@@ -169,7 +169,7 @@ public class TestMasterOperationsForRegionReplicas {
       TEST_UTIL.getConfiguration().setBoolean("hbase.master.startup.retainassign", true);
       TEST_UTIL.shutdownMiniHBaseCluster();
       TEST_UTIL.startMiniHBaseCluster(1, numSlaves);
-      TEST_UTIL.waitTableEnabled(table.getName());
+      TEST_UTIL.waitTableEnabled(table);
       admin.close();
       admin = new HBaseAdmin(conf); 
       validateFromSnapshotFromMeta(TEST_UTIL, table, numRegions, numReplica,
@@ -179,7 +179,7 @@ public class TestMasterOperationsForRegionReplicas {
       // one server running
       TEST_UTIL.shutdownMiniHBaseCluster();
       TEST_UTIL.startMiniHBaseCluster(1, 1);
-      TEST_UTIL.waitTableEnabled(table.getName());
+      TEST_UTIL.waitTableEnabled(table);
       admin.close();
       admin = new HBaseAdmin(conf);
       validateSingleRegionServerAssignment(admin.getConnection(), numRegions, numReplica);
@@ -243,7 +243,7 @@ public class TestMasterOperationsForRegionReplicas {
       desc.setRegionReplication(numReplica);
       desc.addFamily(new HColumnDescriptor("family"));
       admin.createTable(desc, Bytes.toBytes("A"), Bytes.toBytes("Z"), numRegions);
-      TEST_UTIL.waitTableEnabled(table.getName());
+      TEST_UTIL.waitTableEnabled(table);
       Set<byte[]> tableRows = new HashSet<byte[]>();
       List<HRegionInfo> hris = MetaTableAccessor.getTableRegions(TEST_UTIL.getZooKeeperWatcher(),
         admin.getConnection(), table);

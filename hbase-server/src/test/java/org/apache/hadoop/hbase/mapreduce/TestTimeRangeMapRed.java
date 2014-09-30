@@ -76,7 +76,7 @@ public class TestTimeRangeMapRed {
   static final long MINSTAMP = 1245620005;
   static final long MAXSTAMP = 1245620100 + 1; // maxStamp itself is excluded. so increment it.
 
-  static final byte[] TABLE_NAME = Bytes.toBytes("table123");
+  static final TableName TABLE_NAME = TableName.valueOf("table123");
   static final byte[] FAMILY_NAME = Bytes.toBytes("text");
   static final byte[] COLUMN_NAME = Bytes.toBytes("input");
 
@@ -144,7 +144,7 @@ public class TestTimeRangeMapRed {
   @Test
   public void testTimeRangeMapRed()
   throws IOException, InterruptedException, ClassNotFoundException {
-    final HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
+    final HTableDescriptor desc = new HTableDescriptor(TABLE_NAME);
     final HColumnDescriptor col = new HColumnDescriptor(FAMILY_NAME);
     col.setMaxVersions(Integer.MAX_VALUE);
     desc.addFamily(col);
@@ -177,7 +177,7 @@ public class TestTimeRangeMapRed {
       scan.addColumn(FAMILY_NAME, COLUMN_NAME);
       scan.setTimeRange(MINSTAMP, MAXSTAMP);
       scan.setMaxVersions();
-      TableMapReduceUtil.initTableMapperJob(Bytes.toString(TABLE_NAME),
+      TableMapReduceUtil.initTableMapperJob(TABLE_NAME,
         scan, ProcessTimeRangeMapper.class, Text.class, Text.class, job);
       job.waitForCompletion(true);
     } catch (IOException e) {

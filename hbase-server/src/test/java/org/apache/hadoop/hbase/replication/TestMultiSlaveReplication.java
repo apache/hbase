@@ -60,7 +60,7 @@ public class TestMultiSlaveReplication {
   private static final long SLEEP_TIME = 500;
   private static final int NB_RETRIES = 100;
 
-  private static final byte[] tableName = Bytes.toBytes("test");
+  private static final TableName tableName = TableName.valueOf("test");
   private static final byte[] famName = Bytes.toBytes("f");
   private static final byte[] row = Bytes.toBytes("row");
   private static final byte[] row1 = Bytes.toBytes("row1");
@@ -106,7 +106,7 @@ public class TestMultiSlaveReplication {
     utility3.setZkCluster(miniZK);
     new ZooKeeperWatcher(conf3, "cluster3", null, true);
 
-    table = new HTableDescriptor(TableName.valueOf(tableName));
+    table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
     fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     table.addFamily(fam);

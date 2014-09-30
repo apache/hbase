@@ -98,7 +98,7 @@ public class TestTablePermissions {
     UTIL.startMiniCluster();
 
     // Wait for the ACL table to become available
-    UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
+    UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
 
     ZKW = new ZooKeeperWatcher(UTIL.getConfiguration(),
       "TestTablePermissions", ABORTABLE);

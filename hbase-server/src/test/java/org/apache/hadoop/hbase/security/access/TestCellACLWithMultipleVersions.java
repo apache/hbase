@@ -108,7 +108,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     rsHost.createEnvironment(AccessController.class, ac, Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
-    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
+    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
 
     // create a set of test users
     USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
@@ -135,7 +135,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
     htd.setOwner(USER_OWNER);
     htd.addFamily(hcd);
     admin.createTable(htd, new byte[][] { Bytes.toBytes("s") });
-    TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName().getName());
+    TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName());
   }
 
   @Test

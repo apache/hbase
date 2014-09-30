@@ -339,7 +339,7 @@ public class RegionSplitter {
 		  "UniformSplit treats keys as arbitrary bytes.", opt);
       return;
     }
-    String tableName = cmd.getArgs()[0];
+    TableName tableName = TableName.valueOf(cmd.getArgs()[0]);
     String splitClass = cmd.getArgs()[1];
     SplitAlgorithm splitAlgo = newSplitAlgoInstance(conf, splitClass);
 
@@ -363,7 +363,7 @@ public class RegionSplitter {
     }
   }
 
-  static void createPresplitTable(String tableName, SplitAlgorithm splitAlgo,
+  static void createPresplitTable(TableName tableName, SplitAlgorithm splitAlgo,
           String[] columnFamilies, Configuration conf) throws IOException,
           InterruptedException {
     final int splitCount = conf.getInt("split.count", 0);
@@ -374,7 +374,7 @@ public class RegionSplitter {
     LOG.debug("Creating table " + tableName + " with " + columnFamilies.length
         + " column families.  Presplitting to " + splitCount + " regions");
 
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     for (String cf : columnFamilies) {
       desc.addFamily(new HColumnDescriptor(Bytes.toBytes(cf)));
     }
@@ -399,7 +399,7 @@ public class RegionSplitter {
     LOG.debug("Finished creating table with " + splitCount + " regions");
   }
 
-  static void rollingSplit(String tableName, SplitAlgorithm splitAlgo,
+  static void rollingSplit(TableName tableName, SplitAlgorithm splitAlgo,
           Configuration conf) throws IOException, InterruptedException {
     final int minOS = conf.getInt("split.outstanding", 2);
 

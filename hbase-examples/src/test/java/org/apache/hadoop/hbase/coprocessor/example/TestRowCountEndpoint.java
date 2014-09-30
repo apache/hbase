@@ -45,7 +45,7 @@ import static junit.framework.Assert.*;
  */
 @Category(MediumTests.class)
 public class TestRowCountEndpoint {
-  private static final byte[] TEST_TABLE = Bytes.toBytes("testrowcounter");
+  private static final TableName TEST_TABLE = TableName.valueOf("testrowcounter");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f");
   private static final byte[] TEST_COLUMN = Bytes.toBytes("col");
 
@@ -60,7 +60,7 @@ public class TestRowCountEndpoint {
         RowCountEndpoint.class.getName());
 
     TEST_UTIL.startMiniCluster();
-    TEST_UTIL.createTable(TableName.valueOf(TEST_TABLE), new byte[][]{TEST_FAMILY});
+    TEST_UTIL.createTable(TEST_TABLE, new byte[][]{TEST_FAMILY});
   }
 
   // @Ignore @AfterClass

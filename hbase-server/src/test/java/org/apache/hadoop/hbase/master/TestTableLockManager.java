@@ -392,6 +392,7 @@ public class TestTableLockManager {
 
     alterThread.start();
     splitThread.start();
+    TEST_UTIL.waitTableEnabled(tableName);
     while (true) {
       List<HRegionInfo> regions = admin.getTableRegions(tableName);
       LOG.info(String.format("Table #regions: %d regions: %s:", regions.size(), regions));

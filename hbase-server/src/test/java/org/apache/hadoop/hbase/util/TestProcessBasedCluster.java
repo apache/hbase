@@ -61,7 +61,7 @@ public class TestProcessBasedCluster {
           HTestConst.DEFAULT_CF_STR_SET,
           HColumnDescriptor.DEFAULT_VERSIONS, COLS_PER_ROW, FLUSHES, NUM_REGIONS,
           ROWS_PER_FLUSH);
-      Table table = new HTable(TEST_UTIL.getConfiguration(), HTestConst.DEFAULT_TABLE_BYTES);
+      Table table = new HTable(TEST_UTIL.getConfiguration(), HTestConst.DEFAULT_TABLE);
       ResultScanner scanner = table.getScanner(HTestConst.DEFAULT_CF_BYTES);
       Result result;
       int rows = 0;

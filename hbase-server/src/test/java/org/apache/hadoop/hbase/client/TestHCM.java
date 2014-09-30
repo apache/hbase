@@ -235,7 +235,7 @@ public class TestHCM {
     final ServerName sn = rs.getRegionServer().getServerName();
 
     HTable t = TEST_UTIL.createTable(tn, cf);
-    TEST_UTIL.waitTableAvailable(tn.getName());
+    TEST_UTIL.waitTableAvailable(tn);
 
     while(TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
         getRegionStates().isRegionsInTransition()){
@@ -332,8 +332,8 @@ public class TestHCM {
 
 
   private void testConnectionClose(boolean allowsInterrupt) throws Exception {
-    String tableName = "HCM-testConnectionClose" + allowsInterrupt;
-    TEST_UTIL.createTable(tableName.getBytes(), FAM_NAM).close();
+    TableName tableName = TableName.valueOf("HCM-testConnectionClose" + allowsInterrupt);
+    TEST_UTIL.createTable(tableName, FAM_NAM).close();
 
     boolean previousBalance = TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, true);
 
@@ -345,7 +345,7 @@ public class TestHCM {
     c2.setInt(RpcClient.FAILED_SERVER_EXPIRY_KEY, 0); // Server do not really expire
     c2.setBoolean(RpcClient.SPECIFIC_WRITE_THREAD, allowsInterrupt);
 
-    final HTable table = new HTable(c2, tableName.getBytes());
+    final HTable table = new HTable(c2, tableName);
 
     Put put = new Put(ROW);
     put.add(FAM_NAM, ROW, ROW);
@@ -414,8 +414,8 @@ public class TestHCM {
    */
   @Test
   public void testConnectionIdle() throws Exception {
-    String tableName = "HCM-testConnectionIdle";
-    TEST_UTIL.createTable(tableName.getBytes(), FAM_NAM).close();
+    TableName tableName = TableName.valueOf("HCM-testConnectionIdle");
+    TEST_UTIL.createTable(tableName, FAM_NAM).close();
     int idleTime =  20000;
     boolean previousBalance = TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, true);
 
@@ -425,7 +425,7 @@ public class TestHCM {
     c2.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1); // Don't retry: retry = test failed
     c2.setInt(RpcClient.IDLE_TIME, idleTime);
 
-    final Table table = new HTable(c2, tableName.getBytes());
+    final Table table = new HTable(c2, tableName);
 
     Put put = new Put(ROW);
     put.add(FAM_NAM, ROW, ROW);
@@ -477,9 +477,9 @@ public class TestHCM {
       return;
     }
 
-    String tableName = "HCM-testConnectionCut";
+    TableName tableName = TableName.valueOf("HCM-testConnectionCut");
 
-    TEST_UTIL.createTable(tableName.getBytes(), FAM_NAM).close();
+    TEST_UTIL.createTable(tableName, FAM_NAM).close();
     boolean previousBalance = TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, true);
 
     Configuration c2 = new Configuration(TEST_UTIL.getConfiguration());

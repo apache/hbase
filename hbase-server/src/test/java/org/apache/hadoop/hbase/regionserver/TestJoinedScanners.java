@@ -93,8 +93,8 @@ public class TestJoinedScanners {
       cluster = htu.startMiniCluster(1, regionServersCount, dataNodeHosts);
       byte [][] families = {cf_essential, cf_joined};
 
-      byte[] tableName = Bytes.toBytes(this.getClass().getSimpleName());
-      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+      TableName tableName = TableName.valueOf(this.getClass().getSimpleName());
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       for(byte[] family : families) {
         HColumnDescriptor hcd = new HColumnDescriptor(family);
         hcd.setDataBlockEncoding(blockEncoding);

@@ -447,7 +447,7 @@ public class TestHFileOutputFormat2  {
         LOG.info("Waiting for table to disable");
       }
       admin.enableTable(TABLE_NAME);
-      util.waitTableAvailable(TABLE_NAME.getName());
+      util.waitTableAvailable(TABLE_NAME);
       assertEquals("Data should remain after reopening of regions",
           tableDigestBefore, util.checksumRows(table));
     } finally {
@@ -1056,7 +1056,7 @@ public class TestHFileOutputFormat2  {
       util.createMultiRegions(conf, table, FAMILIES[0], startKeys);
       admin.enableTable(tname);
     } else if ("incremental".equals(args[0])) {
-      byte[] tname = args[1].getBytes();
+      TableName tname = TableName.valueOf(args[1]);
       HTable table = new HTable(conf, tname);
       Path outDir = new Path("incremental-out");
       runIncrementalPELoad(conf, table, outDir);

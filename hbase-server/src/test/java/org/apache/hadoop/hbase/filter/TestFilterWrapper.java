@@ -64,7 +64,7 @@ public class TestFilterWrapper {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf = null;
   private static HBaseAdmin admin = null;
-  private static byte[] name = Bytes.toBytes("test");
+  private static TableName name = TableName.valueOf("test");
 
   @Test
   public void testFilterWrapper() {
@@ -143,7 +143,7 @@ public class TestFilterWrapper {
     assertNotNull("HBaseAdmin is not initialized successfully.", admin);
     if (admin != null) {
 
-      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(name));
+      HTableDescriptor desc = new HTableDescriptor(name);
       HColumnDescriptor coldef = new HColumnDescriptor(Bytes.toBytes("f1"));
       desc.addFamily(coldef);
 

@@ -1231,7 +1231,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc);
-    return new HTable(c, tableName);
+    return new HTable(c, desc.getTableName());
   }
 
   /**
@@ -1277,7 +1277,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc);
-    return new HTable(c, tableName);
+    return new HTable(c, desc.getTableName());
   }
 
   /**
@@ -1467,8 +1467,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
     getHBaseAdmin().createTable(desc, splitRows);
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
-    waitUntilAllRegionsAssigned(TableName.valueOf(tableName));
-    return new HTable(getConfiguration(), tableName);
+    waitUntilAllRegionsAssigned(desc.getTableName());
+    return new HTable(getConfiguration(), desc.getTableName());
   }
 
   /**
@@ -2634,9 +2634,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws InterruptedException
    * @throws IOException
    */
-  public void waitTableAvailable(byte[] table)
+  public void waitTableAvailable(TableName table)
       throws InterruptedException, IOException {
-    waitTableAvailable(getHBaseAdmin(), table, 30000);
+    waitTableAvailable(getHBaseAdmin(), table.getName(), 30000);
   }
 
   public void waitTableAvailable(Admin admin, byte[] table)
@@ -2676,9 +2676,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @throws InterruptedException
    * @throws IOException
    */
-  public void waitTableEnabled(byte[] table)
+  public void waitTableEnabled(TableName table)
       throws InterruptedException, IOException {
-    waitTableEnabled(getHBaseAdmin(), table, 30000);
+    waitTableEnabled(getHBaseAdmin(), table.getName(), 30000);
   }
 
   public void waitTableEnabled(Admin admin, byte[] table)

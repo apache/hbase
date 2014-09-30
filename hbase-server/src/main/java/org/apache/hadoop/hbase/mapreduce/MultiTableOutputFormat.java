@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -102,7 +103,7 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
     HTable getTable(ImmutableBytesWritable tableName) throws IOException {
       if (!tables.containsKey(tableName)) {
         LOG.debug("Opening HTable \"" + Bytes.toString(tableName.get())+ "\" for writing");
-        HTable table = new HTable(conf, tableName.get());
+        HTable table = new HTable(conf, TableName.valueOf(tableName.get()));
         table.setAutoFlush(false, true);
         tables.put(tableName, table);
       }

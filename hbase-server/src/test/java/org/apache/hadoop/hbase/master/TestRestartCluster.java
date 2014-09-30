@@ -99,7 +99,7 @@ public class TestRestartCluster {
       UTIL.createTable(TABLE, FAMILY);
     }
     for(TableName TABLE : TABLES) {
-      UTIL.waitTableEnabled(TABLE.getName());
+      UTIL.waitTableEnabled(TABLE);
     }
 
     List<HRegionInfo> allRegions =
@@ -128,7 +128,7 @@ public class TestRestartCluster {
       } catch(TableExistsException tee) {
         LOG.info("Table already exists as expected");
       }
-      UTIL.waitTableAvailable(TABLE.getName());
+      UTIL.waitTableAvailable(TABLE);
     }
   }
 
@@ -149,7 +149,7 @@ public class TestRestartCluster {
       UTIL.createTable(TABLE, FAMILY);
     }
     for(TableName TABLE : TABLES) {
-      UTIL.waitTableEnabled(TABLE.getName());
+      UTIL.waitTableEnabled(TABLE);
     }
 
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
