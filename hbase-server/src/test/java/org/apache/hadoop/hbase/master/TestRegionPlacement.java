@@ -212,7 +212,7 @@ public class TestRegionPlacement {
   @Test
   public void testRegionPlacement() throws Exception {
     String tableStr = "testRegionAssignment";
-    byte[] table = Bytes.toBytes(tableStr);
+    TableName table = TableName.valueOf(tableStr);
     // Create a table with REGION_NUM regions.
     createTable(table, REGION_NUM);
 
@@ -667,7 +667,7 @@ public class TestRegionPlacement {
    * @return
    * @throws IOException
    */
-  private static void createTable(byte[] tableName, int regionNum)
+  private static void createTable(TableName tableName, int regionNum)
       throws IOException {
     int expectedRegions = regionNum;
     byte[][] splitKeys = new byte[expectedRegions - 1][];
@@ -676,7 +676,7 @@ public class TestRegionPlacement {
       splitKeys[i - 1] = new byte[] { splitKey, splitKey, splitKey };
     }
 
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, splitKeys);
 

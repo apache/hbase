@@ -82,7 +82,7 @@ public class TestMultiParallel {
     UTIL.startMiniCluster(slaves);
     HTable t = UTIL.createTable(TEST_TABLE, Bytes.toBytes(FAMILY));
     UTIL.createMultiRegions(t, Bytes.toBytes(FAMILY));
-    UTIL.waitTableEnabled(TEST_TABLE.getName());
+    UTIL.waitTableEnabled(TEST_TABLE);
     t.close();
   }
 

@@ -81,7 +81,7 @@ public class TestReplicationWithTags {
   private static final long SLEEP_TIME = 500;
   private static final int NB_RETRIES = 10;
 
-  private static final byte[] TABLE_NAME = Bytes.toBytes("TestReplicationWithTags");
+  private static final TableName TABLE_NAME = TableName.valueOf("TestReplicationWithTags");
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] ROW = Bytes.toBytes("row");
 
@@ -132,7 +132,7 @@ public class TestReplicationWithTags {
     utility1.startMiniCluster(2);
     utility2.startMiniCluster(2);
 
-    HTableDescriptor table = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
+    HTableDescriptor table = new HTableDescriptor(TABLE_NAME);
     HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
     fam.setMaxVersions(3);
     fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);

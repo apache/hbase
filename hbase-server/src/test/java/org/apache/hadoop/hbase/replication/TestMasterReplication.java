@@ -75,7 +75,7 @@ public class TestMasterReplication {
   private static final long SLEEP_TIME = 500;
   private static final int NB_RETRIES = 10;
 
-  private static final byte[] tableName = Bytes.toBytes("test");
+  private static final TableName tableName = TableName.valueOf("test");
   private static final byte[] famName = Bytes.toBytes("f");
   private static final byte[] row = Bytes.toBytes("row");
   private static final byte[] row1 = Bytes.toBytes("row1");
@@ -108,7 +108,7 @@ public class TestMasterReplication {
         CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
         CoprocessorCounter.class.getName());
 
-    table = new HTableDescriptor(TableName.valueOf(tableName));
+    table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
     fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     table.addFamily(fam);
@@ -346,7 +346,7 @@ public class TestMasterReplication {
   }
 
   @SuppressWarnings("resource")
-  private Table[] getHTablesOnClusters(byte[] tableName) throws Exception {
+  private Table[] getHTablesOnClusters(TableName tableName) throws Exception {
     int numClusters = utilities.length;
     Table[] htables = new Table[numClusters];
     for (int i = 0; i < numClusters; i++) {

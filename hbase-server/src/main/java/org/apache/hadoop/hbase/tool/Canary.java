@@ -480,7 +480,7 @@ public final class Canary implements Tool {
     Table table = null;
 
     try {
-      table = new HTable(admin.getConfiguration(), tableDesc.getName());
+      table = new HTable(admin.getConfiguration(), tableDesc.getTableName());
     } catch (TableNotFoundException e) {
       return;
     }
@@ -679,7 +679,7 @@ public final class Canary implements Tool {
         HTableDescriptor[] tableDescs = this.admin.listTables();
         List<HRegionInfo> regions = null;
         for (HTableDescriptor tableDesc : tableDescs) {
-          table = new HTable(this.admin.getConfiguration(), tableDesc.getName());
+          table = new HTable(this.admin.getConfiguration(), tableDesc.getTableName());
 
           for (Map.Entry<HRegionInfo, ServerName> entry : table
               .getRegionLocations().entrySet()) {

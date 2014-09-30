@@ -615,8 +615,8 @@ public class TestAdmin {
 
   @Test (timeout=300000)
   public void testCreateTableNumberOfRegions() throws IOException, InterruptedException {
-    byte[] tableName = Bytes.toBytes("testCreateTableNumberOfRegions");
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    TableName tableName = TableName.valueOf("testCreateTableNumberOfRegions");
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc);
     HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
@@ -624,8 +624,8 @@ public class TestAdmin {
     assertEquals("Table should have only 1 region", 1, regions.size());
     ht.close();
 
-    byte [] TABLE_2 = Bytes.add(tableName, Bytes.toBytes("_2"));
-    desc = new HTableDescriptor(TableName.valueOf(TABLE_2));
+    TableName TABLE_2 = TableName.valueOf(tableName.getNameAsString() + "_2");
+    desc = new HTableDescriptor(TABLE_2);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, new byte[][]{new byte[]{42}});
     HTable ht2 = new HTable(TEST_UTIL.getConfiguration(), TABLE_2);
@@ -633,8 +633,8 @@ public class TestAdmin {
     assertEquals("Table should have only 2 region", 2, regions.size());
     ht2.close();
 
-    byte [] TABLE_3 = Bytes.add(tableName, Bytes.toBytes("_3"));
-    desc = new HTableDescriptor(TableName.valueOf(TABLE_3));
+    TableName TABLE_3 = TableName.valueOf(tableName.getNameAsString() + "_3");
+    desc = new HTableDescriptor(TABLE_3);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, "a".getBytes(), "z".getBytes(), 3);
     HTable ht3 = new HTable(TEST_UTIL.getConfiguration(), TABLE_3);
@@ -642,8 +642,8 @@ public class TestAdmin {
     assertEquals("Table should have only 3 region", 3, regions.size());
     ht3.close();
 
-    byte [] TABLE_4 = Bytes.add(tableName, Bytes.toBytes("_4"));
-    desc = new HTableDescriptor(TableName.valueOf(TABLE_4));
+    TableName TABLE_4 = TableName.valueOf(tableName.getNameAsString() + "_4");
+    desc = new HTableDescriptor(TABLE_4);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     try {
       admin.createTable(desc, "a".getBytes(), "z".getBytes(), 2);
@@ -652,8 +652,8 @@ public class TestAdmin {
     // Expected
     }
 
-    byte [] TABLE_5 = Bytes.add(tableName, Bytes.toBytes("_5"));
-    desc = new HTableDescriptor(TableName.valueOf(TABLE_5));
+    TableName TABLE_5 = TableName.valueOf(tableName.getNameAsString() + "_5");
+    desc = new HTableDescriptor(TABLE_5);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, new byte[] {1}, new byte[] {127}, 16);
     HTable ht5 = new HTable(TEST_UTIL.getConfiguration(), TABLE_5);

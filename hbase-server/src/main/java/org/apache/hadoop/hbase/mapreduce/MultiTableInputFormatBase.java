@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -80,13 +81,13 @@ public abstract class MultiTableInputFormatBase extends
     TableSplit tSplit = (TableSplit) split;
     LOG.info(MessageFormat.format("Input split length: {0} bytes.", tSplit.getLength()));
 
-    if (tSplit.getTableName() == null) {
+    if (tSplit.getTable() == null) {
       throw new IOException("Cannot create a record reader because of a"
           + " previous error. Please look at the previous logs lines from"
           + " the task's full log for more details.");
     }
     Table table =
-        new HTable(context.getConfiguration(), tSplit.getTableName());
+        new HTable(context.getConfiguration(), tSplit.getTable());
 
     TableRecordReader trr = this.tableRecordReader;
 
@@ -133,7 +134,7 @@ public abstract class MultiTableInputFormatBase extends
 
       HTable table = null;
       try {
-        table = new HTable(context.getConfiguration(), tableName);
+        table = new HTable(context.getConfiguration(), TableName.valueOf(tableName));
         Pair<byte[][], byte[][]> keys = table.getStartEndKeys();
         if (keys == null || keys.getFirst() == null ||
             keys.getFirst().length == 0) {

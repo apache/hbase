@@ -124,7 +124,7 @@ public class TestVisibilityLabelsWithACL {
       public Void run() throws Exception {
         Scan s = new Scan();
         s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
-        Table t = new HTable(conf, table.getTableName());
+        Table t = new HTable(conf, table.getName());
         try {
           ResultScanner scanner = t.getScanner(s);
           Result result = scanner.next();
@@ -153,7 +153,7 @@ public class TestVisibilityLabelsWithACL {
       public Void run() throws Exception {
         Scan s = new Scan();
         s.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
-        Table t = new HTable(conf, table.getTableName());
+        Table t = new HTable(conf, table.getName());
         try {
           ResultScanner scanner = t.getScanner(s);
           Result[] result = scanner.next(5);
@@ -179,7 +179,7 @@ public class TestVisibilityLabelsWithACL {
       public Void run() throws Exception {
         Get g = new Get(row1);
         g.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
-        Table t = new HTable(conf, table.getTableName());
+        Table t = new HTable(conf, table.getName());
         try {
           Result result = t.get(g);
           assertTrue(!result.isEmpty());
@@ -208,7 +208,7 @@ public class TestVisibilityLabelsWithACL {
       public Void run() throws Exception {
         Get g = new Get(row1);
         g.setAuthorizations(new Authorizations(SECRET, CONFIDENTIAL));
-        Table t = new HTable(conf, table.getTableName());
+        Table t = new HTable(conf, table.getName());
         try {
           Result result = t.get(g);
           assertTrue(result.isEmpty());

@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -100,6 +101,35 @@ public class TableMapReduceUtil {
   throws IOException {
     initTableMapperJob(table, scan, mapper, outputKeyClass, outputValueClass,
         job, true);
+  }
+
+
+  /**
+   * Use this before submitting a TableMap job. It will appropriately set up
+   * the job.
+   *
+   * @param table  The table name to read from.
+   * @param scan  The scan instance with the columns, time range etc.
+   * @param mapper  The mapper class to use.
+   * @param outputKeyClass  The class of the output key.
+   * @param outputValueClass  The class of the output value.
+   * @param job  The current job to adjust.  Make sure the passed job is
+   * carrying all necessary HBase configuration.
+   * @throws IOException When setting up the details fails.
+   */
+  public static void initTableMapperJob(TableName table,
+      Scan scan,
+      Class<? extends TableMapper> mapper,
+      Class<?> outputKeyClass,
+      Class<?> outputValueClass,
+      Job job) throws IOException {
+    initTableMapperJob(table.getNameAsString(),
+        scan,
+        mapper,
+        outputKeyClass,
+        outputValueClass,
+        job,
+        true);
   }
 
   /**

@@ -42,14 +42,14 @@ import org.junit.runners.Suite;
 @Category({ClientTests.class, MediumTests.class})
 public class TestHTablePool {
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private final static byte[] TABLENAME = Bytes.toBytes("TestHTablePool");
+  private final static String TABLENAME = "TestHTablePool";
 
   public abstract static class TestHTablePoolType {
 
     @BeforeClass
     public static void setUpBeforeClass() throws Exception {
       TEST_UTIL.startMiniCluster(1);
-      TEST_UTIL.createTable(TABLENAME, HConstants.CATALOG_FAMILY);
+      TEST_UTIL.createTable(TableName.valueOf(TABLENAME), HConstants.CATALOG_FAMILY);
     }
 
     @AfterClass
@@ -63,7 +63,7 @@ public class TestHTablePool {
 		public void testTableWithStringName() throws Exception {
 			HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
 					Integer.MAX_VALUE, getPoolType());
-			String tableName = Bytes.toString(TABLENAME);
+			String tableName = TABLENAME;
 
 			// Request a table from an empty pool
 			Table table = pool.getTable(tableName);
@@ -132,7 +132,7 @@ public class TestHTablePool {
     public void testProxyImplementationReturned() {
       HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
           Integer.MAX_VALUE);
-      String tableName = Bytes.toString(TABLENAME);// Request a table from
+      String tableName = TABLENAME;// Request a table from
                               // an
                               // empty pool
       Table table = pool.getTable(tableName);
@@ -145,7 +145,7 @@ public class TestHTablePool {
     public void testDeprecatedUsagePattern() throws IOException {
       HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
           Integer.MAX_VALUE);
-      String tableName = Bytes.toString(TABLENAME);// Request a table from
+      String tableName = TABLENAME;// Request a table from
                               // an
                               // empty pool
 
@@ -167,14 +167,14 @@ public class TestHTablePool {
     public void testReturnDifferentTable() throws IOException {
       HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
           Integer.MAX_VALUE);
-      String tableName = Bytes.toString(TABLENAME);// Request a table from
+      String tableName = TABLENAME;// Request a table from
                               // an
                               // empty pool
 
       // get table will return proxy implementation
       final Table table = pool.getTable(tableName);
       HTableInterface alienTable = new HTable(TEST_UTIL.getConfiguration(),
-          TABLENAME) {
+          TableName.valueOf(TABLENAME)) {
         // implementation doesn't matter as long the table is not from
         // pool
       };
@@ -191,7 +191,7 @@ public class TestHTablePool {
     public void testHTablePoolCloseTwice() throws Exception {
       HTablePool pool = new HTablePool(TEST_UTIL.getConfiguration(),
           Integer.MAX_VALUE, getPoolType());
-      String tableName = Bytes.toString(TABLENAME);
+      String tableName = TABLENAME;
 
       // Request a table from an empty pool
       Table table = pool.getTable(tableName);
@@ -278,12 +278,12 @@ public class TestHTablePool {
 			}
 
 			Assert.assertEquals(4,
-					pool.getCurrentPoolSize(Bytes.toString(TABLENAME)));
+					pool.getCurrentPoolSize(TABLENAME));
 
 			pool.closeTablePool(TABLENAME);
 
 			Assert.assertEquals(0,
-					pool.getCurrentPoolSize(Bytes.toString(TABLENAME)));
+					pool.getCurrentPoolSize(TABLENAME));
 		}
 	}
 
@@ -354,12 +354,12 @@ public class TestHTablePool {
 			}
 
 			Assert.assertEquals(1,
-					pool.getCurrentPoolSize(Bytes.toString(TABLENAME)));
+					pool.getCurrentPoolSize(TABLENAME));
 
 			pool.closeTablePool(TABLENAME);
 
 			Assert.assertEquals(0,
-					pool.getCurrentPoolSize(Bytes.toString(TABLENAME)));
+					pool.getCurrentPoolSize(TABLENAME));
 		}
 	}
 

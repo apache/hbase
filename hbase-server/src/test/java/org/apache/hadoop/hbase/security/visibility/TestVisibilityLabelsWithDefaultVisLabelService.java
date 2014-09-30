@@ -145,7 +145,7 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
     // Scan the visibility label
     Scan s = new Scan();
     s.setAuthorizations(new Authorizations(VisibilityUtils.SYSTEM_LABEL));
-    Table ht = new HTable(conf, LABELS_TABLE_NAME.getName());
+    Table ht = new HTable(conf, LABELS_TABLE_NAME);
     int i = 0;
     try {
       ResultScanner scanner = ht.getScanner(s);

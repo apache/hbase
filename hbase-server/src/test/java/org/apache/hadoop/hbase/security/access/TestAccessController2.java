@@ -57,7 +57,7 @@ public class TestAccessController2 extends SecureTestUtil {
     verifyConfiguration(conf);
     TEST_UTIL.startMiniCluster();
     // Wait for the ACL table to become available
-    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
+    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
   }
 
   @AfterClass
@@ -86,7 +86,7 @@ public class TestAccessController2 extends SecureTestUtil {
         return null;
       }
     }, testUser);
-    TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName().getName());
+    TEST_UTIL.waitTableEnabled(TEST_TABLE.getTableName());
     // Verify that owner permissions have been granted to the test user on the
     // table just created
     List<TablePermission> perms = AccessControlLists.getTablePermissions(conf, TEST_TABLE.getTableName())

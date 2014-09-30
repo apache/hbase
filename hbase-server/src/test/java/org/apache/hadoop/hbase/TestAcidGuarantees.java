@@ -58,7 +58,7 @@ import com.google.common.collect.Lists;
 @Category({FlakeyTests.class, MediumTests.class})
 public class TestAcidGuarantees implements Tool {
   protected static final Log LOG = LogFactory.getLog(TestAcidGuarantees.class);
-  public static final byte [] TABLE_NAME = Bytes.toBytes("TestAcidGuarantees");
+  public static final TableName TABLE_NAME = TableName.valueOf("TestAcidGuarantees");
   public static final byte [] FAMILY_A = Bytes.toBytes("A");
   public static final byte [] FAMILY_B = Bytes.toBytes("B");
   public static final byte [] FAMILY_C = Bytes.toBytes("C");

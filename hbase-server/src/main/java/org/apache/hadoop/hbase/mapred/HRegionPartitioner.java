@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -52,7 +53,7 @@ implements Partitioner<ImmutableBytesWritable, V2> {
   public void configure(JobConf job) {
     try {
       this.table = new HTable(HBaseConfiguration.create(job),
-        job.get(TableOutputFormat.OUTPUT_TABLE));
+        TableName.valueOf(job.get(TableOutputFormat.OUTPUT_TABLE)));
     } catch (IOException e) {
       LOG.error(e);
     }

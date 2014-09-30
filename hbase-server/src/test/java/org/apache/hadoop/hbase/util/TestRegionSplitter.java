@@ -280,8 +280,7 @@ public class TestRegionSplitter {
         final Configuration conf = UTIL.getConfiguration();
         conf.setInt("split.count", numRegions);
         SplitAlgorithm splitAlgo = RegionSplitter.newSplitAlgoInstance(conf, splitClass);
-        RegionSplitter.createPresplitTable(tableName.getNameAsString(), splitAlgo,
-                new String[] {CF_NAME}, conf);
+        RegionSplitter.createPresplitTable(tableName, splitAlgo, new String[] {CF_NAME}, conf);
         verifyBounds(expectedBounds, tableName);
     }
 
@@ -301,7 +300,7 @@ public class TestRegionSplitter {
         // Set this larger than the number of splits so RegionSplitter won't block
         conf.setInt("split.outstanding", 5);
         SplitAlgorithm splitAlgo = RegionSplitter.newSplitAlgoInstance(conf, splitClass);
-        RegionSplitter.rollingSplit(tableName.getNameAsString(), splitAlgo, conf);
+        RegionSplitter.rollingSplit(tableName, splitAlgo, conf);
         verifyBounds(expectedBounds, tableName);
     }
 
@@ -328,6 +327,7 @@ public class TestRegionSplitter {
                     startBoundaryIndex+1);
             assertEquals(0, Bytes.compareTo(regionEnd, expectedRegionEnd));
         }
+        hTable.close();
     }
 
     /**

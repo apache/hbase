@@ -187,11 +187,11 @@ public class TestFSErrorsExposed {
       util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
 
       util.startMiniCluster(1);
-      byte[] tableName = Bytes.toBytes("table");
+      TableName tableName = TableName.valueOf("table");
       byte[] fam = Bytes.toBytes("fam");
 
       Admin admin = new HBaseAdmin(util.getConfiguration());
-      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+      HTableDescriptor desc = new HTableDescriptor(tableName);
       desc.addFamily(new HColumnDescriptor(fam)
           .setMaxVersions(1)
           .setBlockCacheEnabled(false)

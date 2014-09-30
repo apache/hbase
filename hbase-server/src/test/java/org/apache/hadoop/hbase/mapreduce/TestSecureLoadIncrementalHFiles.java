@@ -56,7 +56,7 @@ public class TestSecureLoadIncrementalHFiles extends  TestLoadIncrementalHFiles{
     util.startMiniCluster();
 
     // Wait for the ACL table to become available
-    util.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
+    util.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);
 
     setupNamespace();
   }

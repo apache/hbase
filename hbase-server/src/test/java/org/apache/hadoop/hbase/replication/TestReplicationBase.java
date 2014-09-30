@@ -75,7 +75,7 @@ public class TestReplicationBase {
   protected static final long SLEEP_TIME = 500;
   protected static final int NB_RETRIES = 10;
 
-  protected static final byte[] tableName = Bytes.toBytes("test");
+  protected static final TableName tableName = TableName.valueOf("test");
   protected static final byte[] famName = Bytes.toBytes("f");
   protected static final byte[] row = Bytes.toBytes("row");
   protected static final byte[] noRepfamName = Bytes.toBytes("norep");
@@ -129,7 +129,7 @@ public class TestReplicationBase {
     utility1.startMiniCluster(2);
     utility2.startMiniCluster(2);
 
-    HTableDescriptor table = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(famName);
     fam.setMaxVersions(3);
     fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);

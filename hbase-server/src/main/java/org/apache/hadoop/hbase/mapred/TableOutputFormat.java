@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -85,7 +86,7 @@ FileOutputFormat<ImmutableBytesWritable, Put> {
 
     // expecting exactly one path
 
-    String tableName = job.get(OUTPUT_TABLE);
+    TableName tableName = TableName.valueOf(job.get(OUTPUT_TABLE));
     HTable table = null;
     try {
       table = new HTable(HBaseConfiguration.create(job), tableName);

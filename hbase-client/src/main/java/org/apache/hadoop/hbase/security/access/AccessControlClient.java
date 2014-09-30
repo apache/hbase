@@ -76,7 +76,7 @@ public class AccessControlClient {
     try {
       TableName aclTableName =
           TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "acl");
-      ht = new HTable(conf, aclTableName.getName());
+      ht = new HTable(conf, aclTableName);
       Batch.Call<AccessControlService, GrantResponse> callable =
           new Batch.Call<AccessControlService, GrantResponse>() {
         ServerRpcController controller = new ServerRpcController();
@@ -156,7 +156,7 @@ public class AccessControlClient {
     try {
       TableName aclTableName = TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR,
           "acl");
-      ht = new HTable(conf, aclTableName.getName());
+      ht = new HTable(conf, aclTableName);
       Batch.Call<AccessControlService, AccessControlProtos.RevokeResponse> callable =
           new Batch.Call<AccessControlService, AccessControlProtos.RevokeResponse>() {
         ServerRpcController controller = new ServerRpcController();
@@ -219,7 +219,7 @@ public class AccessControlClient {
       TableName aclTableName =
           TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "acl");
       ha = new HBaseAdmin(conf);
-      ht = new HTable(conf, aclTableName.getName());
+      ht = new HTable(conf, aclTableName);
       CoprocessorRpcChannel service = ht.coprocessorService(HConstants.EMPTY_START_ROW);
       BlockingInterface protocol =
           AccessControlProtos.AccessControlService.newBlockingStub(service);

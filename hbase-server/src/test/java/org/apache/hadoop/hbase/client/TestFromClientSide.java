@@ -172,7 +172,7 @@ public class TestFromClientSide {
    */
    @Test
    public void testKeepDeletedCells() throws Exception {
-     final byte[] TABLENAME = Bytes.toBytes("testKeepDeletesCells");
+     final TableName TABLENAME = TableName.valueOf("testKeepDeletesCells");
      final byte[] FAMILY = Bytes.toBytes("family");
      final byte[] C0 = Bytes.toBytes("c0");
 
@@ -400,7 +400,7 @@ public class TestFromClientSide {
    */
   @Test
   public void testWeirdCacheBehaviour() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testWeirdCacheBehaviour");
+    TableName TABLE = TableName.valueOf("testWeirdCacheBehaviour");
     byte [][] FAMILIES = new byte[][] { Bytes.toBytes("trans-blob"),
         Bytes.toBytes("trans-type"), Bytes.toBytes("trans-date"),
         Bytes.toBytes("trans-tags"), Bytes.toBytes("trans-group") };
@@ -4209,8 +4209,7 @@ public class TestFromClientSide {
 
     // Test that attribute changes were applied
     desc = a.getTableDescriptor();
-    assertTrue("wrong table descriptor returned",
-      desc.getTableName().equals(tableAname));
+    assertEquals("wrong table descriptor returned", desc.getTableName(), tableAname);
     // check HTD attribute
     value = desc.getValue(attrName);
     assertFalse("missing HTD attribute value", value == null);
