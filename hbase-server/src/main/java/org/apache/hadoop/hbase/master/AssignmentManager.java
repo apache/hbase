@@ -2947,12 +2947,15 @@ public class AssignmentManager extends ZooKeeperListener {
           ServerName serverName = regionState.getServerName();
           ReentrantLock lock = locker.acquireLock(hri.getEncodedName());
           try {
-            if (!regionState.equals(regionStates.getRegionState(hri))) {
-              return; // Region is not in the expected state any more
-            }
-            while (serverManager.isServerOnline(serverName)
-                && !server.isStopped() && !server.isAborted()) {
+            for (int i = 1; i <= maximumAttempts; i++) {
+              if (!serverManager.isServerOnline(serverName)
+                  || server.isStopped() || server.isAborted()) {
+                return; // No need any more
+              }
               try {
+                if (!regionState.equals(regionStates.getRegionState(hri))) {
+                  return; // Region is not in the expected state any more
+                }
                 List<ServerName> favoredNodes = ServerName.EMPTY_SERVER_LIST;
                 if (shouldAssignRegionsWithFavoredNodes) {
                   favoredNodes = ((FavoredNodeLoadBalancer)balancer).getFavoredNodes(hri);
@@ -3005,12 +3008,15 @@ public class AssignmentManager extends ZooKeeperListener {
           ServerName serverName = regionState.getServerName();
           ReentrantLock lock = locker.acquireLock(hri.getEncodedName());
           try {
-            if (!regionState.equals(regionStates.getRegionState(hri))) {
-              return; // Region is not in the expected state any more
-            }
-            while (serverManager.isServerOnline(serverName)
-                && !server.isStopped() && !server.isAborted()) {
+            for (int i = 1; i <= maximumAttempts; i++) {
+              if (!serverManager.isServerOnline(serverName)
+                  || server.isStopped() || server.isAborted()) {
+                return; // No need any more
+              }
               try {
+                if (!regionState.equals(regionStates.getRegionState(hri))) {
+                  return; // Region is not in the expected state any more
+                }
                 if (!serverManager.sendRegionClose(serverName, hri, -1, null, false)) {
                   // This means the region is still on the target server
                   LOG.debug("Got false in retry sendRegionClose for "

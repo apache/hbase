@@ -35,19 +35,13 @@ public class ClusterLoadState {
   private int numRegions = 0;
   private int numServers = 0;
 
-  public ClusterLoadState(ServerName master,
-      Map<ServerName, List<HRegionInfo>> clusterState) {
+  public ClusterLoadState(Map<ServerName, List<HRegionInfo>> clusterState) {
     this.numRegions = 0;
     this.numServers = clusterState.size();
     this.clusterState = clusterState;
     serversByLoad = new TreeMap<ServerAndLoad, List<HRegionInfo>>();
     // Iterate so we can count regions as we build the map
     for (Map.Entry<ServerName, List<HRegionInfo>> server : clusterState.entrySet()) {
-      if (master != null && numServers > 1 && master.equals(server.getKey())) {
-        // Don't count the master since its load is meant to be low.
-        numServers--;
-        continue;
-      }
       List<HRegionInfo> regions = server.getValue();
       int sz = regions.size();
       if (sz == 0) emptyRegionServerPresent = true;

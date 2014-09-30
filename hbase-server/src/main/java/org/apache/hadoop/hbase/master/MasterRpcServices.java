@@ -1252,8 +1252,10 @@ public class MasterRpcServices extends RSRpcServices
       RegionStateTransition rt = req.getTransition(0);
       TableName tableName = ProtobufUtil.toTableName(
         rt.getRegionInfo(0).getTableName());
-      if (!TableName.META_TABLE_NAME.equals(tableName)
-          && !master.assignmentManager.isFailoverCleanupDone()) {
+      RegionStates regionStates = master.assignmentManager.getRegionStates();
+      if (!(TableName.META_TABLE_NAME.equals(tableName)
+          && regionStates.getRegionState(HRegionInfo.FIRST_META_REGIONINFO) != null)
+            && !master.assignmentManager.isFailoverCleanupDone()) {
         // Meta region is assigned before master finishes the
         // failover cleanup. So no need this check for it
         throw new PleaseHoldException("Master is rebuilding user regions");

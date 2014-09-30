@@ -1106,11 +1106,8 @@ public class HRegionServer extends HasThread implements
           }
           break;
         }
-        try {
-          Thread.sleep(200);
-        } catch (InterruptedException e) {
+        if (sleep(200)) {
           interrupted = true;
-          LOG.warn("Interrupted while sleeping");
         }
       }
     } finally {
@@ -1118,6 +1115,17 @@ public class HRegionServer extends HasThread implements
         Thread.currentThread().interrupt();
       }
     }
+  }
+
+  private boolean sleep(long millis) {
+    boolean interrupted = false;
+    try {
+      Thread.sleep(millis);
+    } catch (InterruptedException e) {
+      LOG.warn("Interrupted while sleeping");
+      interrupted = true;
+    }
+    return interrupted;
   }
 
   private void closeWAL(final boolean delete) {
@@ -1970,10 +1978,14 @@ public class HRegionServer extends HasThread implements
             LOG.debug("No master found and cluster is stopped; bailing out");
             return null;
           }
-          LOG.debug("No master found; retry");
-          previousLogTime = System.currentTimeMillis();
+          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
+            LOG.debug("No master found; retry");
+            previousLogTime = System.currentTimeMillis();
+          }
           refresh = true; // let's try pull it from ZK directly
-          sleeper.sleep();
+          if (sleep(200)) {
+            interrupted = true;
+          }
           continue;
         }
 
@@ -1988,24 +2000,18 @@ public class HRegionServer extends HasThread implements
           intf = RegionServerStatusService.newBlockingStub(channel);
           break;
         } catch (IOException e) {
-          e = e instanceof RemoteException ?
-            ((RemoteException)e).unwrapRemoteException() : e;
-          if (e instanceof ServerNotRunningYetException) {
-            if (System.currentTimeMillis() > (previousLogTime+1000)){
+          if (System.currentTimeMillis() > (previousLogTime + 1000)) {
+            e = e instanceof RemoteException ?
+              ((RemoteException)e).unwrapRemoteException() : e;
+            if (e instanceof ServerNotRunningYetException) {
               LOG.info("Master isn't available yet, retrying");
-              previousLogTime = System.currentTimeMillis();
-            }
-          } else {
-            if (System.currentTimeMillis() > (previousLogTime + 1000)) {
+            } else {
               LOG.warn("Unable to connect to master. Retrying. Error was:", e);
-              previousLogTime = System.currentTimeMillis();
             }
+            previousLogTime = System.currentTimeMillis();
           }
-          try {
-            Thread.sleep(200);
-          } catch (InterruptedException ex) {
+          if (sleep(200)) {
             interrupted = true;
-            LOG.warn("Interrupted while sleeping");
           }
         }
       }

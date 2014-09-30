@@ -444,7 +444,7 @@ public class ServerManager {
   }
 
   /** @return the count of active regionservers */
-  private int countOfRegionServers() {
+  public int countOfRegionServers() {
     // Presumes onlineServers is a concurrent map
     return this.onlineServers.size();
   }

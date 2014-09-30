@@ -242,7 +242,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     // cluster is created (constructor code) would make sure the indices of
     // the servers are in the order in which it is inserted in the clusterState
     // map (linkedhashmap is important). A similar thing applies to the region lists
-    Cluster cluster = new Cluster(master, clusterState, null, null, null, rackManager);
+    Cluster cluster = new Cluster(clusterState, null, null, rackManager);
     // check whether a move of region1 from servers[0] to servers[1] would lower
     // the availability of region1
     assertTrue(cluster.wouldLowerAvailability(hri1, servers[1]));
@@ -259,7 +259,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     // now lets have servers[1] host replica_of_region2
     list1.add(RegionReplicaUtil.getRegionInfoForReplica(hri3, 1));
     // create a new clusterState with the above change
-    cluster = new Cluster(master, clusterState, null, null, null, rackManager);
+    cluster = new Cluster(clusterState, null, null, rackManager);
     // now check whether a move of a replica from servers[0] to servers[1] would lower
     // the availability of region2
     assertTrue(cluster.wouldLowerAvailability(hri3, servers[1]));
@@ -271,14 +271,14 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     clusterState.put(servers[6], list2); //servers[6], rack2 hosts region2
     clusterState.put(servers[10], new ArrayList<HRegionInfo>()); //servers[10], rack3 hosts no region
     // create a cluster with the above clusterState
-    cluster = new Cluster(master, clusterState, null, null, null, rackManager);
+    cluster = new Cluster(clusterState, null, null, rackManager);
     // check whether a move of region1 from servers[0],rack1 to servers[6],rack2 would
     // lower the availability
 
     assertTrue(cluster.wouldLowerAvailability(hri1, servers[0]));
 
     // now create a cluster without the rack manager
-    cluster = new Cluster(master, clusterState, null, null, null, null);
+    cluster = new Cluster(clusterState, null, null, null);
     // now repeat check whether a move of region1 from servers[0] to servers[6] would
     // lower the availability
     assertTrue(!cluster.wouldLowerAvailability(hri1, servers[6]));
@@ -311,7 +311,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     // cluster is created (constructor code) would make sure the indices of
     // the servers are in the order in which it is inserted in the clusterState
     // map (linkedhashmap is important).
-    Cluster cluster = new Cluster(master, clusterState, null, null, null, rackManager);
+    Cluster cluster = new Cluster(clusterState, null, null, rackManager);
     // check whether moving region1 from servers[1] to servers[2] would lower availability
     assertTrue(!cluster.wouldLowerAvailability(hri1, servers[2]));
 
@@ -331,7 +331,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     clusterState.put(servers[6], list2); //servers[6], rack2 hosts region2
     clusterState.put(servers[12], list3); //servers[12], rack3 hosts replica_of_region2
     // create a cluster with the above clusterState
-    cluster = new Cluster(master, clusterState, null, null, null, rackManager);
+    cluster = new Cluster(clusterState, null, null, rackManager);
     // check whether a move of replica_of_region2 from servers[12],rack3 to servers[0],rack1 would
     // lower the availability
     assertTrue(!cluster.wouldLowerAvailability(hri4, servers[0]));
@@ -417,7 +417,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     assignRegions(regions, oldServers, clusterState);
 
     // should not throw exception:
-    BaseLoadBalancer.Cluster cluster = new Cluster(null, clusterState, null, null, null, null);
+    BaseLoadBalancer.Cluster cluster = new Cluster(clusterState, null, null, null);
     assertEquals(101 + 9, cluster.numRegions);
     assertEquals(10, cluster.numServers); // only 10 servers because they share the same host + port
   }
@@ -459,7 +459,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     when(locationFinder.getTopBlockLocations(regions.get(43))).thenReturn(
       Lists.newArrayList(ServerName.valueOf("foo", 0, 0))); // this server does not exists in clusterStatus
 
-    BaseLoadBalancer.Cluster cluster = new Cluster(null, clusterState, null, locationFinder, null, null);
+    BaseLoadBalancer.Cluster cluster = new Cluster(clusterState, null, locationFinder, null);
 
     int r0 = ArrayUtils.indexOf(cluster.regions, regions.get(0)); // this is ok, it is just a test
     int r1 = ArrayUtils.indexOf(cluster.regions, regions.get(1));

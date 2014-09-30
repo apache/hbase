@@ -27,12 +27,12 @@ import java.util.concurrent.locks.Lock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.util.ConfigUtil;
@@ -135,9 +136,10 @@ public class ServerShutdownHandler extends EventHandler {
       // we are not ready to assign dead regions either. So we re-queue up
       // the dead server for further processing too.
       AssignmentManager am = services.getAssignmentManager();
+      ServerManager serverManager = services.getServerManager();
       if (isCarryingMeta() // hbase:meta
           || !am.isFailoverCleanupDone()) {
-        this.services.getServerManager().processDeadServer(serverName, this.shouldSplitHlog);
+        serverManager.processDeadServer(serverName, this.shouldSplitHlog);
         return;
       }
 
@@ -160,6 +162,15 @@ public class ServerShutdownHandler extends EventHandler {
       while (!this.server.isStopped()) {
         try {
           server.getMetaTableLocator().waitMetaRegionLocation(server.getZooKeeper());
+          if (BaseLoadBalancer.tablesOnMaster(server.getConfiguration())) {
+            while (!this.server.isStopped() && serverManager.countOfRegionServers() < 2) {
+              // Wait till at least another regionserver is up besides the active master
+              // so that we don't assign all regions to the active master.
+              // This is best of efforts, because newly joined regionserver
+              // could crash right after that.
+              Thread.sleep(100);
+            }
+          }
           // Skip getting user regions if the server is stopped.
           if (!this.server.isStopped()) {
             if (ConfigUtil.useZKForAssignment(server.getConfiguration())) {
