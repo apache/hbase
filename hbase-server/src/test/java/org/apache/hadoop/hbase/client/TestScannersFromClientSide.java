@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -103,7 +104,7 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testScanBatch() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testScanBatch");
+    TableName TABLE = TableName.valueOf("testScanBatch");
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 8);
 
     Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
@@ -444,7 +445,7 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testScanOnReopenedRegion() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testScanOnReopenedRegion");
+    TableName TABLE = TableName.valueOf("testScanOnReopenedRegion");
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 2);
 
     HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);

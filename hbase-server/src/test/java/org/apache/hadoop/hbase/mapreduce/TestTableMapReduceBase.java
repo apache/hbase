@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -132,7 +133,7 @@ public abstract class TestTableMapReduceBase {
     return outval;
   }
 
-  protected void verify(String tableName) throws IOException {
+  protected void verify(TableName tableName) throws IOException {
     Table table = new HTable(UTIL.getConfiguration(), tableName);
     boolean verified = false;
     long pause = UTIL.getConfiguration().getLong("hbase.client.pause", 5 * 1000);

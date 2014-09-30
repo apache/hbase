@@ -87,7 +87,7 @@ public class TestRegionServerMetrics {
     String regionMetricsKey = "regionCount";
     long regions = metricsHelper.getGaugeLong(regionMetricsKey, serverSource);
     // Creating a table should add one region
-    TEST_UTIL.createTable(Bytes.toBytes("table"), Bytes.toBytes("cf"));
+    TEST_UTIL.createTable(TableName.valueOf("table"), Bytes.toBytes("cf"));
     metricsHelper.assertGaugeGt(regionMetricsKey, regions, serverSource);
   }
 
@@ -99,7 +99,7 @@ public class TestRegionServerMetrics {
   @Test
   public void testRequestCount() throws Exception {
     String tableNameString = "testRequestCount";
-    byte[] tName = Bytes.toBytes(tableNameString);
+    TableName tName = TableName.valueOf(tableNameString);
     byte[] cfName = Bytes.toBytes("d");
     byte[] row = Bytes.toBytes("rk");
     byte[] qualifier = Bytes.toBytes("qual");
@@ -184,7 +184,7 @@ public class TestRegionServerMetrics {
 
   @Test
   public void testMutationsWithoutWal() throws Exception {
-    byte[] tableName = Bytes.toBytes("testMutationsWithoutWal");
+    TableName tableName = TableName.valueOf("testMutationsWithoutWal");
     byte[] cf = Bytes.toBytes("d");
     byte[] row = Bytes.toBytes("rk");
     byte[] qualifier = Bytes.toBytes("qual");
@@ -243,7 +243,7 @@ public class TestRegionServerMetrics {
   @Test
   public void testCheckAndPutCount() throws Exception {
     String tableNameString = "testCheckAndPutCount";
-    byte[] tableName = Bytes.toBytes(tableNameString);
+    TableName tableName = TableName.valueOf(tableNameString);
     byte[] cf = Bytes.toBytes("d");
     byte[] row = Bytes.toBytes("rk");
     byte[] qualifier = Bytes.toBytes("qual");
@@ -279,7 +279,7 @@ public class TestRegionServerMetrics {
   @Test
   public void testIncrement() throws Exception {
     String tableNameString = "testIncrement";
-    byte[] tableName = Bytes.toBytes(tableNameString);
+    TableName tableName = TableName.valueOf(tableNameString);
     byte[] cf = Bytes.toBytes("d");
     byte[] row = Bytes.toBytes("rk");
     byte[] qualifier = Bytes.toBytes("qual");
@@ -311,7 +311,7 @@ public class TestRegionServerMetrics {
   @Test
   public void testAppend() throws Exception {
     String tableNameString = "testAppend";
-    byte[] tableName = Bytes.toBytes(tableNameString);
+    TableName tableName = TableName.valueOf(tableNameString);
     byte[] cf = Bytes.toBytes("d");
     byte[] row = Bytes.toBytes("rk");
     byte[] qualifier = Bytes.toBytes("qual");
@@ -343,7 +343,7 @@ public class TestRegionServerMetrics {
   @Test
   public void testScanNext() throws IOException {
     String tableNameString = "testScanNext";
-    byte[] tableName = Bytes.toBytes(tableNameString);
+    TableName tableName = TableName.valueOf(tableNameString);
     byte[] cf = Bytes.toBytes("d");
     byte[] qualifier = Bytes.toBytes("qual");
     byte[] val = Bytes.toBytes("One");

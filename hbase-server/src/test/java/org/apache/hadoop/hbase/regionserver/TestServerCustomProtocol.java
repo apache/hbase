@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -133,7 +134,7 @@ public class TestServerCustomProtocol {
     }
   }
 
-  private static final byte[] TEST_TABLE = Bytes.toBytes("test");
+  private static final TableName TEST_TABLE = TableName.valueOf("test");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f1");
 
   private static final byte[] ROW_A = Bytes.toBytes("aaa");

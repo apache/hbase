@@ -194,12 +194,12 @@ public class TestSplitTransactionOnCluster {
 
     try {
       // Create table then get the single region for our new table.
-      HTable t = createTableAndWait(tableName.getName(), Bytes.toBytes("cf"));
+      HTable t = createTableAndWait(tableName, Bytes.toBytes("cf"));
       final List<HRegion> regions = cluster.getRegions(tableName);
       HRegionInfo hri = getAndCheckSingleTableRegion(regions);
       int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
       final HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
-      insertData(tableName.getName(), admin, t);
+      insertData(tableName, admin, t);
       t.close();
 
       // Turn off balancer so it doesn't cut in and mess up our placements.
@@ -281,10 +281,10 @@ public class TestSplitTransactionOnCluster {
         TableName.valueOf("testRITStateForRollback");
     try {
       // Create table then get the single region for our new table.
-      Table t = createTableAndWait(tableName.getName(), Bytes.toBytes("cf"));
+      Table t = createTableAndWait(tableName, Bytes.toBytes("cf"));
       final List<HRegion> regions = cluster.getRegions(tableName);
       final HRegionInfo hri = getAndCheckSingleTableRegion(regions);
-      insertData(tableName.getName(), admin, t);
+      insertData(tableName, admin, t);
       t.close();
 
       // Turn off balancer so it doesn't cut in and mess up our placements.
@@ -323,7 +323,7 @@ public class TestSplitTransactionOnCluster {
   }
   @Test(timeout = 60000)
   public void testSplitFailedCompactionAndSplit() throws Exception {
-    final byte[] tableName = Bytes.toBytes("testSplitFailedCompactionAndSplit");
+    final TableName tableName = TableName.valueOf("testSplitFailedCompactionAndSplit");
     Configuration conf = TESTING_UTIL.getConfiguration();
     HBaseAdmin admin = new HBaseAdmin(conf);
     // Create table then get the single region for our new table.
@@ -393,8 +393,8 @@ public class TestSplitTransactionOnCluster {
   @Test (timeout = 300000) public void testRSSplitEphemeralsDisappearButDaughtersAreOnlinedAfterShutdownHandling()
   throws IOException, InterruptedException, NodeExistsException, KeeperException,
       DeserializationException, ServiceException {
-    final byte [] tableName =
-      Bytes.toBytes("testRSSplitEphemeralsDisappearButDaughtersAreOnlinedAfterShutdownHandling");
+    final TableName tableName =
+      TableName.valueOf("testRSSplitEphemeralsDisappearButDaughtersAreOnlinedAfterShutdownHandling");
 
     // Create table then get the single region for our new table.
     HTable t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
@@ -471,8 +471,8 @@ public class TestSplitTransactionOnCluster {
 
   @Test (timeout = 300000) public void testExistingZnodeBlocksSplitAndWeRollback()
   throws IOException, InterruptedException, NodeExistsException, KeeperException, ServiceException {
-    final byte [] tableName =
-      Bytes.toBytes("testExistingZnodeBlocksSplitAndWeRollback");
+    final TableName tableName =
+        TableName.valueOf("testExistingZnodeBlocksSplitAndWeRollback");
 
     // Create table then get the single region for our new table.
     HTable t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
@@ -541,8 +541,8 @@ public class TestSplitTransactionOnCluster {
    */
   @Test (timeout=300000) public void testShutdownFixupWhenDaughterHasSplit()
   throws IOException, InterruptedException, ServiceException {
-    final byte [] tableName =
-      Bytes.toBytes("testShutdownFixupWhenDaughterHasSplit");
+    final TableName tableName =
+        TableName.valueOf("testShutdownFixupWhenDaughterHasSplit");
 
     // Create table then get the single region for our new table.
     HTable t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
@@ -710,7 +710,7 @@ public class TestSplitTransactionOnCluster {
   public void testMasterRestartWhenSplittingIsPartial()
       throws IOException, InterruptedException, NodeExistsException,
       KeeperException, DeserializationException, ServiceException {
-    final byte[] tableName = Bytes.toBytes("testMasterRestartWhenSplittingIsPartial");
+    final TableName tableName = TableName.valueOf("testMasterRestartWhenSplittingIsPartial");
 
     if (!useZKForAssignment) {
       // This test doesn't apply if not using ZK for assignment
@@ -805,7 +805,8 @@ public class TestSplitTransactionOnCluster {
   public void testMasterRestartAtRegionSplitPendingCatalogJanitor()
       throws IOException, InterruptedException, NodeExistsException,
       KeeperException, ServiceException {
-    final byte[] tableName = Bytes.toBytes("testMasterRestartAtRegionSplitPendingCatalogJanitor");
+    final TableName tableName = TableName
+        .valueOf("testMasterRestartAtRegionSplitPendingCatalogJanitor");
 
     // Create table then get the single region for our new table.
     HTable t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
@@ -888,13 +889,13 @@ public class TestSplitTransactionOnCluster {
     final TableName tableName =
         TableName.valueOf("testTableExistsIfTheSpecifiedTableRegionIsSplitParent");
     // Create table then get the single region for our new table.
-    Table t = createTableAndWait(tableName.getName(), Bytes.toBytes("cf"));
+    Table t = createTableAndWait(tableName, Bytes.toBytes("cf"));
     List<HRegion> regions = null;
     try {
       regions = cluster.getRegions(tableName);
       int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
       HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
-      insertData(tableName.getName(), admin, t);
+      insertData(tableName, admin, t);
       // Turn off balancer so it doesn't cut in and mess up our placements.
       admin.setBalancerRunning(false, true);
       // Turn off the meta scanner so it don't remove parent on us.
@@ -926,7 +927,7 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
-  private void insertData(final byte[] tableName, HBaseAdmin admin, Table t) throws IOException,
+  private void insertData(final TableName tableName, HBaseAdmin admin, Table t) throws IOException,
       InterruptedException {
     Put p = new Put(Bytes.toBytes("row1"));
     p.add(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("1"));
@@ -953,7 +954,7 @@ public class TestSplitTransactionOnCluster {
     final TableName tableName =
         TableName.valueOf("testSplitRegionWithNoStoreFiles");
     // Create table then get the single region for our new table.
-    createTableAndWait(tableName.getName(), HConstants.CATALOG_FAMILY);
+    createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
     List<HRegion> regions = cluster.getRegions(tableName);
     HRegionInfo hri = getAndCheckSingleTableRegion(regions);
     ensureTableRegionNotOnSameServerAsMeta(admin, hri);
@@ -1029,19 +1030,19 @@ public class TestSplitTransactionOnCluster {
 
   @Test(timeout = 180000)
   public void testSplitHooksBeforeAndAfterPONR() throws Exception {
-    String firstTable = "testSplitHooksBeforeAndAfterPONR_1";
-    String secondTable = "testSplitHooksBeforeAndAfterPONR_2";
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(firstTable));
+    TableName firstTable = TableName.valueOf("testSplitHooksBeforeAndAfterPONR_1");
+    TableName secondTable = TableName.valueOf("testSplitHooksBeforeAndAfterPONR_2");
+    HTableDescriptor desc = new HTableDescriptor(firstTable);
     desc.addCoprocessor(MockedRegionObserver.class.getName());
     HColumnDescriptor hcd = new HColumnDescriptor("cf");
     desc.addFamily(hcd);
     admin.createTable(desc);
-    desc = new HTableDescriptor(TableName.valueOf(secondTable));
+    desc = new HTableDescriptor(secondTable);
     hcd = new HColumnDescriptor("cf");
     desc.addFamily(hcd);
     admin.createTable(desc);
-    List<HRegion> firstTableregions = cluster.getRegions(TableName.valueOf(firstTable));
-    List<HRegion> secondTableRegions = cluster.getRegions(TableName.valueOf(secondTable));
+    List<HRegion> firstTableregions = cluster.getRegions(firstTable);
+    List<HRegion> secondTableRegions = cluster.getRegions(secondTable);
     ServerName serverName =
         cluster.getServerHoldingRegion(firstTableregions.get(0).getRegionName());
     admin.move(secondTableRegions.get(0).getRegionInfo().getEncodedNameAsBytes(),
@@ -1051,16 +1052,16 @@ public class TestSplitTransactionOnCluster {
     try {
       table1 = new HTable(TESTING_UTIL.getConfiguration(), firstTable);
       table2 = new HTable(TESTING_UTIL.getConfiguration(), firstTable);
-      insertData(Bytes.toBytes(firstTable), admin, table1);
-      insertData(Bytes.toBytes(secondTable), admin, table2);
-      admin.split(Bytes.toBytes(firstTable), "row2".getBytes());
-      firstTableregions = cluster.getRegions(Bytes.toBytes(firstTable));
+      insertData(firstTable, admin, table1);
+      insertData(secondTable, admin, table2);
+      admin.split(firstTable, "row2".getBytes());
+      firstTableregions = cluster.getRegions(firstTable);
       while (firstTableregions.size() != 2) {
         Thread.sleep(1000);
-        firstTableregions = cluster.getRegions(Bytes.toBytes(firstTable));
+        firstTableregions = cluster.getRegions(firstTable);
       }
       assertEquals("Number of regions after split should be 2.", 2, firstTableregions.size());
-      secondTableRegions = cluster.getRegions(Bytes.toBytes(secondTable));
+      secondTableRegions = cluster.getRegions(secondTable);
       assertEquals("Number of regions after split should be 2.", 2, secondTableRegions.size());
     } finally {
       if (table1 != null) {
@@ -1075,7 +1076,7 @@ public class TestSplitTransactionOnCluster {
   }
 
   private void testSplitBeforeSettingSplittingInZKInternals() throws Exception {
-    final byte[] tableName = Bytes.toBytes("testSplitBeforeSettingSplittingInZK");
+    final TableName tableName = TableName.valueOf("testSplitBeforeSettingSplittingInZK");
     try {
       // Create table then get the single region for our new table.
       createTableAndWait(tableName, Bytes.toBytes("cf"));
@@ -1204,7 +1205,7 @@ public class TestSplitTransactionOnCluster {
     return(null);
   }
 
-  private List<HRegion> checkAndGetDaughters(byte[] tableName)
+  private List<HRegion> checkAndGetDaughters(TableName tableName)
       throws InterruptedException {
     List<HRegion> daughters = null;
     // try up to 10s
@@ -1339,7 +1340,7 @@ public class TestSplitTransactionOnCluster {
         getServers().size() > NB_SERVERS);
   }
 
-  private void awaitDaughters(byte[] tableName, int numDaughters) throws InterruptedException {
+  private void awaitDaughters(TableName tableName, int numDaughters) throws InterruptedException {
     // Wait till regions are back on line again.
     for (int i=0; cluster.getRegions(tableName).size() < numDaughters && i<60; i++) {
       LOG.info("Waiting for repair to happen");
@@ -1350,7 +1351,7 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
-  private List<HRegion> awaitTableRegions(final byte[] tableName) throws InterruptedException {
+  private List<HRegion> awaitTableRegions(final TableName tableName) throws InterruptedException {
     List<HRegion> regions = null;
     for (int i = 0; i < 100; i++) {
       regions = cluster.getRegions(tableName);
@@ -1360,11 +1361,11 @@ public class TestSplitTransactionOnCluster {
     return regions;
   }
 
-  private HTable createTableAndWait(byte[] tableName, byte[] cf) throws IOException,
+  private HTable createTableAndWait(TableName tableName, byte[] cf) throws IOException,
       InterruptedException {
     HTable t = TESTING_UTIL.createTable(tableName, cf);
     awaitTableRegions(tableName);
-    assertTrue("Table not online: " + Bytes.toString(tableName),
+    assertTrue("Table not online: " + tableName,
       cluster.getRegions(tableName).size() != 0);
     return t;
   }

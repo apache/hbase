@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -122,8 +123,9 @@ implements Configurable {
   public void setConf(Configuration configuration) {
     this.conf = HBaseConfiguration.create(configuration);
     try {
-      this.table = new HTable(this.conf,
-        configuration.get(TableOutputFormat.OUTPUT_TABLE));
+      TableName tableName = TableName.valueOf(configuration
+          .get(TableOutputFormat.OUTPUT_TABLE));
+      this.table = new HTable(this.conf, tableName);
     } catch (IOException e) {
       LOG.error(e);
     }

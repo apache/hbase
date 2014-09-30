@@ -121,7 +121,7 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
       LOG.info("After map/reduce completion");
 
       // verify map-reduce results
-      verify(Bytes.toString(table.getTableName()));
+      verify(table.getName());
     } catch (InterruptedException e) {
       throw new IOException(e);
     } catch (ClassNotFoundException e) {

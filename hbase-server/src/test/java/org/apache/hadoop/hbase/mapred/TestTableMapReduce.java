@@ -79,19 +79,19 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
       jobConf = new JobConf(UTIL.getConfiguration(), TestTableMapReduce.class);
       jobConf.setJobName("process column contents");
       jobConf.setNumReduceTasks(1);
-      TableMapReduceUtil.initTableMapJob(Bytes.toString(table.getTableName()),
+      TableMapReduceUtil.initTableMapJob(table.getName().getNameAsString(),
         Bytes.toString(INPUT_FAMILY), ProcessContentsMapper.class,
         ImmutableBytesWritable.class, Put.class, jobConf);
-      TableMapReduceUtil.initTableReduceJob(Bytes.toString(table.getTableName()),
+      TableMapReduceUtil.initTableReduceJob(table.getName().getNameAsString(),
         IdentityTableReduce.class, jobConf);
 
-      LOG.info("Started " + Bytes.toString(table.getTableName()));
+      LOG.info("Started " + table.getName());
       RunningJob job = JobClient.runJob(jobConf);
       assertTrue(job.isSuccessful());
       LOG.info("After map/reduce completion");
 
       // verify map-reduce results
-      verify(Bytes.toString(table.getTableName()));
+      verify(table.getName());
     } finally {
       if (jobConf != null) {
         FileUtil.fullyDelete(new File(jobConf.get("hadoop.tmp.dir")));

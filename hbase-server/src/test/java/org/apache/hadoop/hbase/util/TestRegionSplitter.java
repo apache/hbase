@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.RegionSplitter.HexStringSplit;
 import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
@@ -91,8 +92,9 @@ public class TestRegionSplitter {
           expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
 
           // Do table creation/pre-splitting and verification of region boundaries
-      preSplitTableAndVerify(expectedBounds,
-          HexStringSplit.class.getSimpleName(), "NewHexPresplitTable");
+    preSplitTableAndVerify(expectedBounds,
+        HexStringSplit.class.getSimpleName(),
+        TableName.valueOf("NewHexPresplitTable"));
     }
 
     /**
@@ -121,7 +123,7 @@ public class TestRegionSplitter {
 
       // Do table creation/pre-splitting and verification of region boundaries
       preSplitTableAndVerify(expectedBounds, UniformSplit.class.getSimpleName(),
-        "NewUniformPresplitTable");
+        TableName.valueOf("NewUniformPresplitTable"));
     }
 
     /**
@@ -272,12 +274,12 @@ public class TestRegionSplitter {
      * @throws Various junit assertions
      */
     private void preSplitTableAndVerify(List<byte[]> expectedBounds,
-            String splitClass, String tableName) throws Exception {
+            String splitClass, TableName tableName) throws Exception {
         final int numRegions = expectedBounds.size()-1;
         final Configuration conf = UTIL.getConfiguration();
         conf.setInt("split.count", numRegions);
         SplitAlgorithm splitAlgo = RegionSplitter.newSplitAlgoInstance(conf, splitClass);
-        RegionSplitter.createPresplitTable(tableName, splitAlgo,
+        RegionSplitter.createPresplitTable(tableName.getNameAsString(), splitAlgo,
                 new String[] {CF_NAME}, conf);
         verifyBounds(expectedBounds, tableName);
     }
@@ -286,26 +288,28 @@ public class TestRegionSplitter {
   public void noopRollingSplit() throws Exception {
     final List<byte[]> expectedBounds = new ArrayList<byte[]>();
     expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
-    rollingSplitAndVerify(TestRegionSplitter.class.getSimpleName(), "UniformSplit", expectedBounds);
+    rollingSplitAndVerify(
+        TableName.valueOf(TestRegionSplitter.class.getSimpleName()),
+        "UniformSplit", expectedBounds);
   }
 
-    private void rollingSplitAndVerify(String tableName, String splitClass,
+    private void rollingSplitAndVerify(TableName tableName, String splitClass,
             List<byte[]> expectedBounds)  throws Exception {
         final Configuration conf = UTIL.getConfiguration();
 
         // Set this larger than the number of splits so RegionSplitter won't block
         conf.setInt("split.outstanding", 5);
         SplitAlgorithm splitAlgo = RegionSplitter.newSplitAlgoInstance(conf, splitClass);
-        RegionSplitter.rollingSplit(tableName, splitAlgo, conf);
+        RegionSplitter.rollingSplit(tableName.getNameAsString(), splitAlgo, conf);
         verifyBounds(expectedBounds, tableName);
     }
 
-    private void verifyBounds(List<byte[]> expectedBounds, String tableName)
+    private void verifyBounds(List<byte[]> expectedBounds, TableName tableName)
             throws Exception {
         // Get region boundaries from the cluster and verify their endpoints
         final Configuration conf = UTIL.getConfiguration();
         final int numRegions = expectedBounds.size()-1;
-        final HTable hTable = new HTable(conf, tableName.getBytes());
+        final HTable hTable = new HTable(conf, tableName);
         final Map<HRegionInfo, ServerName> regionInfoMap = hTable.getRegionLocations();
         assertEquals(numRegions, regionInfoMap.size());
         for (Map.Entry<HRegionInfo, ServerName> entry: regionInfoMap.entrySet()) {

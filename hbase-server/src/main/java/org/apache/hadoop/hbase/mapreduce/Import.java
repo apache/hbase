@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -396,8 +397,8 @@ public class Import {
    */
   public static Job createSubmittableJob(Configuration conf, String[] args)
   throws IOException {
-    String tableName = args[0];
-    conf.set(TABLE_NAME, tableName);
+    TableName tableName = TableName.valueOf(args[0]);
+    conf.set(TABLE_NAME, tableName.getNameAsString());
     Path inputDir = new Path(args[1]);
     Job job = new Job(conf, NAME + "_" + tableName);
     job.setJarByClass(Importer.class);
@@ -430,7 +431,7 @@ public class Import {
       // No reducers.  Just write straight to table.  Call initTableReducerJob
       // because it sets up the TableOutputFormat.
       job.setMapperClass(Importer.class);
-      TableMapReduceUtil.initTableReducerJob(tableName, null, job);
+      TableMapReduceUtil.initTableReducerJob(tableName.getNameAsString(), null, job);
       job.setNumReduceTasks(0);
     }
     return job;

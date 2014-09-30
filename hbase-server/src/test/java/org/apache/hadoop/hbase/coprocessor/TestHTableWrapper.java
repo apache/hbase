@@ -65,7 +65,7 @@ public class TestHTableWrapper {
 
   private static final HBaseTestingUtility util = new HBaseTestingUtility();
 
-  private static final byte[] TEST_TABLE = Bytes.toBytes("test");
+  private static final TableName TEST_TABLE = TableName.valueOf("test");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f1");
 
   private static final byte[] ROW_A = Bytes.toBytes("aaa");
@@ -135,7 +135,7 @@ public class TestHTableWrapper {
     CoprocessorEnvironment env = cpHost.findCoprocessorEnvironment(implClazz.getName());
     assertEquals(Coprocessor.VERSION, env.getVersion());
     assertEquals(VersionInfo.getVersion(), env.getHBaseVersion());
-    hTableInterface = env.getTable(TableName.valueOf(TEST_TABLE));
+    hTableInterface = env.getTable(TEST_TABLE);
     checkHTableInterfaceMethods();
     cpHost.shutdown(env);
   }
@@ -169,7 +169,7 @@ public class TestHTableWrapper {
   }
 
   private void checkNameAndDescriptor() throws IOException {
-    assertArrayEquals(TEST_TABLE, hTableInterface.getTableName());
+    assertEquals(TEST_TABLE, hTableInterface.getName());
     assertEquals(table.getTableDescriptor(), hTableInterface.getTableDescriptor());
   }
 

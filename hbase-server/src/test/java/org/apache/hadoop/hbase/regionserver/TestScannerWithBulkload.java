@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -57,7 +58,7 @@ public class TestScannerWithBulkload {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  private static void createTable(Admin admin, String tableName) throws IOException {
+  private static void createTable(Admin admin, TableName tableName) throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor("col");
     hcd.setMaxVersions(3);
@@ -67,7 +68,7 @@ public class TestScannerWithBulkload {
 
   @Test
   public void testBulkLoad() throws Exception {
-    String tableName = "testBulkLoad";
+    TableName tableName = TableName.valueOf("testBulkLoad");
     long l = System.currentTimeMillis();
     HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     createTable(admin, tableName);
@@ -162,7 +163,7 @@ public class TestScannerWithBulkload {
     return hfilePath;
   }
 
-  private HTable init(HBaseAdmin admin, long l, Scan scan, String tableName) throws Exception {
+  private HTable init(HBaseAdmin admin, long l, Scan scan, TableName tableName) throws Exception {
     HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
     Put put0 = new Put(Bytes.toBytes("row1"));
     put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
@@ -196,7 +197,7 @@ public class TestScannerWithBulkload {
 
   @Test
   public void testBulkLoadWithParallelScan() throws Exception {
-    String tableName = "testBulkLoadWithParallelScan";
+    TableName tableName = TableName.valueOf("testBulkLoadWithParallelScan");
     final long l = System.currentTimeMillis();
     HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     createTable(admin, tableName);
@@ -238,7 +239,7 @@ public class TestScannerWithBulkload {
 
   @Test
   public void testBulkLoadNativeHFile() throws Exception {
-    String tableName = "testBulkLoadNativeHFile";
+    TableName tableName = TableName.valueOf("testBulkLoadNativeHFile");
     long l = System.currentTimeMillis();
     HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     createTable(admin, tableName);

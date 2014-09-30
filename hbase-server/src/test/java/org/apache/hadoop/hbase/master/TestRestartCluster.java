@@ -48,10 +48,10 @@ public class TestRestartCluster {
 
   private static final byte[] TABLENAME = Bytes.toBytes("master_transitions");
   private static final byte [][] FAMILIES = {Bytes.toBytes("a")};
-  private static final byte [][] TABLES = {
-      Bytes.toBytes("restartTableOne"),
-      Bytes.toBytes("restartTableTwo"),
-      Bytes.toBytes("restartTableThree")
+  private static final TableName[] TABLES = {
+      TableName.valueOf("restartTableOne"),
+      TableName.valueOf("restartTableTwo"),
+      TableName.valueOf("restartTableThree")
   };
   private static final byte [] FAMILY = Bytes.toBytes("family");
 
@@ -95,11 +95,11 @@ public class TestRestartCluster {
       Threads.sleep(1);
     }
     LOG.info("\n\nCreating tables");
-    for(byte [] TABLE : TABLES) {
+    for(TableName TABLE : TABLES) {
       UTIL.createTable(TABLE, FAMILY);
     }
-    for(byte [] TABLE : TABLES) {
-      UTIL.waitTableEnabled(TABLE);
+    for(TableName TABLE : TABLES) {
+      UTIL.waitTableEnabled(TABLE.getName());
     }
 
     List<HRegionInfo> allRegions =
@@ -121,14 +121,14 @@ public class TestRestartCluster {
     allRegions = MetaScanner.listAllRegions(new Configuration(UTIL.getConfiguration()), true);
     assertEquals(4, allRegions.size());
     LOG.info("\n\nWaiting for tables to be available");
-    for(byte [] TABLE: TABLES) {
+    for(TableName TABLE: TABLES) {
       try {
         UTIL.createTable(TABLE, FAMILY);
         assertTrue("Able to create table that should already exist", false);
       } catch(TableExistsException tee) {
         LOG.info("Table already exists as expected");
       }
-      UTIL.waitTableAvailable(TABLE);
+      UTIL.waitTableAvailable(TABLE.getName());
     }
   }
 
@@ -145,11 +145,11 @@ public class TestRestartCluster {
     UTIL.getMiniHBaseCluster().getMaster().
       getMasterRpcServices().synchronousBalanceSwitch(false);
     LOG.info("\n\nCreating tables");
-    for(byte [] TABLE : TABLES) {
+    for(TableName TABLE : TABLES) {
       UTIL.createTable(TABLE, FAMILY);
     }
-    for(byte [] TABLE : TABLES) {
-      UTIL.waitTableEnabled(TABLE);
+    for(TableName TABLE : TABLES) {
+      UTIL.waitTableEnabled(TABLE.getName());
     }
 
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();

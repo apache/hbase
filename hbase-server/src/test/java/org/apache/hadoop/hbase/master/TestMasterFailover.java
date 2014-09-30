@@ -1202,7 +1202,7 @@ public class TestMasterFailover {
     assertTrue(master.isInitialized());
 
     // Create a table with a region online
-    HTable onlineTable = TEST_UTIL.createTable("onlineTable", "family");
+    HTable onlineTable = TEST_UTIL.createTable(TableName.valueOf("onlineTable"), "family");
 
     // Create a table in META, so it has a region offline
     HTableDescriptor offlineTable = new HTableDescriptor(

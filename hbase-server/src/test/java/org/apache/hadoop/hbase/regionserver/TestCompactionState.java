@@ -80,7 +80,7 @@ public class TestCompactionState {
 
   @Test
   public void testInvalidColumnFamily() throws IOException, InterruptedException {
-    byte [] table = Bytes.toBytes("testInvalidColumnFamily");
+    TableName table = TableName.valueOf("testInvalidColumnFamily");
     byte [] family = Bytes.toBytes("family");
     byte [] fakecf = Bytes.toBytes("fakecf");
     boolean caughtMinorCompact = false;
@@ -123,8 +123,7 @@ public class TestCompactionState {
       final CompactionState expectedState, boolean singleFamily)
       throws IOException, InterruptedException {
     // Create a table with regions
-    TableName table =
-        TableName.valueOf(tableName);
+    TableName table = TableName.valueOf(tableName);
     byte [] family = Bytes.toBytes("family");
     byte [][] families =
       {family, Bytes.add(family, Bytes.toBytes("2")), Bytes.add(family, Bytes.toBytes("3"))};

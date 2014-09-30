@@ -51,7 +51,7 @@ public class TestEncryptionRandomKeying {
   private static Configuration conf = TEST_UTIL.getConfiguration();
   private static HTableDescriptor htd;
 
-  private static List<Path> findStorefilePaths(byte[] tableName) throws Exception {
+  private static List<Path> findStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<Path>();
     for (HRegion region:
         TEST_UTIL.getRSForFirstRegionInTable(tableName).getOnlineRegions(htd.getTableName())) {
@@ -102,7 +102,7 @@ public class TestEncryptionRandomKeying {
     TEST_UTIL.waitTableAvailable(htd.getName(), 5000);
 
     // Create a store file
-    Table table = new HTable(conf, htd.getName());
+    Table table = new HTable(conf, htd.getTableName());
     try {
       table.put(new Put(Bytes.toBytes("testrow"))
         .add(hcd.getName(), Bytes.toBytes("q"), Bytes.toBytes("value")));
@@ -120,7 +120,7 @@ public class TestEncryptionRandomKeying {
   @Test
   public void testRandomKeying() throws Exception {
     // Verify we have store file(s) with a random key
-    final List<Path> initialPaths = findStorefilePaths(htd.getName());
+    final List<Path> initialPaths = findStorefilePaths(htd.getTableName());
     assertTrue(initialPaths.size() > 0);
     for (Path path: initialPaths) {
       assertNotNull("Store file " + path + " is not encrypted", extractHFileKey(path));

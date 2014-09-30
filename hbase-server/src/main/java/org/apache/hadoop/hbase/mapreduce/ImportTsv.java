@@ -414,9 +414,9 @@ public class ImportTsv extends Configured implements Tool {
     Class mapperClass = mapperClassName != null ?
         Class.forName(mapperClassName) : DEFAULT_MAPPER;
 
-    String tableName = args[0];
+    TableName tableName = TableName.valueOf(args[0]);
     Path inputDir = new Path(args[1]);
-    String jobName = conf.get(JOB_NAME_CONF_KEY,NAME + "_" + tableName);
+    String jobName = conf.get(JOB_NAME_CONF_KEY,NAME + "_" + tableName.getNameAsString());
     Job job = new Job(conf, jobName);
     job.setJarByClass(mapperClass);
     FileInputFormat.setInputPaths(job, inputDir);
@@ -460,7 +460,8 @@ public class ImportTsv extends Configured implements Tool {
       }
       // No reducers. Just write straight to table. Call initTableReducerJob
       // to set up the TableOutputFormat.
-      TableMapReduceUtil.initTableReducerJob(tableName, null, job);
+      TableMapReduceUtil.initTableReducerJob(tableName.getNameAsString(), null,
+          job);
       job.setNumReduceTasks(0);
     }
 
@@ -470,9 +471,9 @@ public class ImportTsv extends Configured implements Tool {
     return job;
   }
 
-  private static void createTable(Admin admin, String tableName, String[] columns)
+  private static void createTable(Admin admin, TableName tableName, String[] columns)
       throws IOException {
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     Set<String> cfSet = new HashSet<String>();
     for (String aColumn : columns) {
       if (TsvParser.ROWKEY_COLUMN_SPEC.equals(aColumn)

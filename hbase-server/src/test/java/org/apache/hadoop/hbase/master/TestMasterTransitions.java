@@ -51,7 +51,7 @@ import org.junit.experimental.categories.Category;
 public class TestMasterTransitions {
   private static final Log LOG = LogFactory.getLog(TestMasterTransitions.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final String TABLENAME = "master_transitions";
+  private static final TableName TABLENAME = TableName.valueOf("master_transitions");
   private static final byte [][] FAMILIES = new byte [][] {Bytes.toBytes("a"),
     Bytes.toBytes("b"), Bytes.toBytes("c")};
 
@@ -63,11 +63,10 @@ public class TestMasterTransitions {
     TEST_UTIL.getConfiguration().setBoolean("dfs.support.append", true);
     TEST_UTIL.startMiniCluster(2);
     // Create a table of three families.  This will assign a region.
-    TableName tableName = TableName.valueOf(TABLENAME);
-    TEST_UTIL.createTable(tableName, FAMILIES);
+    TEST_UTIL.createTable(TABLENAME, FAMILIES);
     HTable t = new HTable(TEST_UTIL.getConfiguration(), TABLENAME);
     int countOfRegions = TEST_UTIL.createMultiRegions(t, getTestFamily());
-    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+    TEST_UTIL.waitUntilAllRegionsAssigned(TABLENAME);
     addToEachStartKey(countOfRegions);
     t.close();
   }
@@ -490,12 +489,12 @@ public class TestMasterTransitions {
     for (Result r = null; (r = s.next()) != null;) {
       HRegionInfo hri = HRegionInfo.getHRegionInfo(r);
       if (hri == null) break;
-      if (!hri.getTable().getNameAsString().equals(TABLENAME)) {
+      if (!hri.getTable().equals(TABLENAME)) {
         continue;
       }
 
       // If start key, add 'aaa'.
-      if(!hri.getTable().getNameAsString().equals(TABLENAME)) {
+      if(!hri.getTable().equals(TABLENAME)) {
         continue;
       }
       byte [] row = getStartKey(hri);

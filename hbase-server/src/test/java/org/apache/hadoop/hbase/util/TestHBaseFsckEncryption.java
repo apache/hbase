@@ -102,7 +102,7 @@ public class TestHBaseFsckEncryption {
   @Test
   public void testFsckWithEncryption() throws Exception {
     // Populate the table with some data
-    Table table = new HTable(conf, htd.getName());
+    Table table = new HTable(conf, htd.getTableName());
     try {
       byte[] values = { 'A', 'B', 'C', 'D' };
       for (int i = 0; i < values.length; i++) {
@@ -120,7 +120,7 @@ public class TestHBaseFsckEncryption {
     TEST_UTIL.getHBaseAdmin().flush(htd.getTableName());
 
     // Verify we have encrypted store files on disk
-    final List<Path> paths = findStorefilePaths(htd.getName());
+    final List<Path> paths = findStorefilePaths(htd.getTableName());
     assertTrue(paths.size() > 0);
     for (Path path: paths) {
       assertTrue("Store file " + path + " has incorrect key",
@@ -137,7 +137,7 @@ public class TestHBaseFsckEncryption {
     assertEquals(hfcc.getMissing().size(), 0);
   }
 
-  private List<Path> findStorefilePaths(byte[] tableName) throws Exception {
+  private List<Path> findStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<Path>();
     for (HRegion region:
         TEST_UTIL.getRSForFirstRegionInTable(tableName).getOnlineRegions(htd.getTableName())) {

@@ -178,7 +178,7 @@ public class TestLogRolling  {
 
     Table table = createTestTable(this.tableName);
 
-    server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
+    server = TEST_UTIL.getRSForFirstRegionInTable(table.getName());
     this.log = server.getWAL();
     for (int i = 1; i <= 256; i++) {    // 256 writes should cause 8 log rolls
       doPut(table, i);
@@ -331,15 +331,14 @@ public class TestLogRolling  {
     this.log = server.getWAL();
 
     // Create the test table and open it
-    String tableName = getName();
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(getName()));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
 
     admin.createTable(desc);
-    Table table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table table = new HTable(TEST_UTIL.getConfiguration(), desc.getTableName());
     assertTrue(table.isAutoFlush());
 
-    server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
+    server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
     this.log = server.getWAL();
 
     assertTrue("Need HDFS-826 for this test", ((FSHLog) log).canGetCurReplicas());
@@ -439,14 +438,13 @@ public class TestLogRolling  {
       this.log = server.getWAL();
 
       // Create the test table and open it
-      String tableName = getName();
-      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(getName()));
       desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
 
       admin.createTable(desc);
-      HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      HTable table = new HTable(TEST_UTIL.getConfiguration(), desc.getTableName());
 
-      server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
+      server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
       this.log = server.getWAL();
       final List<Path> paths = new ArrayList<Path>();
       final List<Integer> preLogRolledCalled = new ArrayList<Integer>();
@@ -598,12 +596,10 @@ public class TestLogRolling  {
     // When the hbase:meta table can be opened, the region servers are running
     Table t = new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
     try {
-      String tableName = getName();
-      table = createTestTable(tableName);
-      String tableName2 = tableName + "1";
-      table2 = createTestTable(tableName2);
+      table = createTestTable(getName());
+      table2 = createTestTable(getName() + "1");
 
-      server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
+      server = TEST_UTIL.getRSForFirstRegionInTable(table.getName());
       this.log = server.getWAL();
       FSHLog fshLog = (FSHLog)log;
       HRegion region = server.getOnlineRegions(table2.getName()).get(0);
@@ -661,7 +657,7 @@ public class TestLogRolling  {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc);
-    return new HTable(TEST_UTIL.getConfiguration(), tableName);
+    return new HTable(TEST_UTIL.getConfiguration(), desc.getTableName());
   }
 }
 

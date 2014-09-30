@@ -1073,9 +1073,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return An HTable instance for the created table.
    * @throws IOException
    */
-  public HTable createTable(String tableName, String family)
+  public HTable createTable(TableName tableName, String family)
   throws IOException{
-    return createTable(TableName.valueOf(tableName), new String[]{family});
+    return createTable(tableName, new String[]{family});
   }
 
   /**
@@ -2146,20 +2146,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return region server that holds it, null if the row doesn't exist
    * @throws IOException
    * @throws InterruptedException
-   */
-  public HRegionServer getRSForFirstRegionInTable(byte[] tableName)
-      throws IOException, InterruptedException {
-    return getRSForFirstRegionInTable(TableName.valueOf(tableName));
-  }
-  /**
-   * Tool to get the reference to the region server object that holds the
-   * region of the specified user table.
-   * It first searches for the meta rows that contain the region of the
-   * specified table, then gets the index of that RS, and finally retrieves
-   * the RS's reference.
-   * @param tableName user table to lookup in hbase:meta
-   * @return region server that holds it, null if the row doesn't exist
-   * @throws IOException
    */
   public HRegionServer getRSForFirstRegionInTable(TableName tableName)
       throws IOException, InterruptedException {

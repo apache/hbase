@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -119,7 +120,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
         "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_ATTRIBUTES_KEY",
         "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName };
     String data = "KEY\u001bVALUE1\u001bVALUE2\u001btest=>myvalue\n";
-    util.createTable(tableName, FAMILY);
+    util.createTable(TableName.valueOf(tableName), FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1, true);
     util.deleteTable(tableName);
   }
@@ -135,7 +136,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
         "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_ATTRIBUTES_KEY",
         "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName };
     String data = "KEY\u001bVALUE1\u001bVALUE2\u001btest1=>myvalue\n";
-    util.createTable(tableName, FAMILY);
+    util.createTable(TableName.valueOf(tableName), FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1, false);
     util.deleteTable(tableName);
   }
@@ -176,7 +177,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
     LOG.debug("Running ImportTsv with arguments: " + argv);
     assertEquals(0, ToolRunner.run(conf, tool, argv.toArray(args)));
 
-    validateTable(conf, table, family, valueMultiplier, dataAvailable);
+    validateTable(conf, TableName.valueOf(table), family, valueMultiplier, dataAvailable);
 
     if (conf.getBoolean(DELETE_AFTER_LOAD_CONF, true)) {
       LOG.debug("Deleting test subdirectory");
@@ -190,7 +191,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
    * 
    * @param dataAvailable
    */
-  private static void validateTable(Configuration conf, String tableName, String family,
+  private static void validateTable(Configuration conf, TableName tableName, String family,
       int valueMultiplier, boolean dataAvailable) throws IOException {
 
     LOG.debug("Validating table.");

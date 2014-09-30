@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -61,10 +62,10 @@ public class TestReplicationSink {
 
   private static ReplicationSink SINK;
 
-  private static final byte[] TABLE_NAME1 =
-      Bytes.toBytes("table1");
-  private static final byte[] TABLE_NAME2 =
-      Bytes.toBytes("table2");
+  private static final TableName TABLE_NAME1 =
+      TableName.valueOf("table1");
+  private static final TableName TABLE_NAME2 =
+      TableName.valueOf("table2");
 
   private static final byte[] FAM_NAME1 = Bytes.toBytes("info1");
   private static final byte[] FAM_NAME2 = Bytes.toBytes("info2");
@@ -232,8 +233,8 @@ public class TestReplicationSink {
     assertEquals(0, res.size());
   }
 
-  private WALEntry createEntry(byte [] table, int row,  KeyValue.Type type, List<Cell> cells) {
-    byte[] fam = Bytes.equals(table, TABLE_NAME1) ? FAM_NAME1 : FAM_NAME2;
+  private WALEntry createEntry(TableName table, int row,  KeyValue.Type type, List<Cell> cells) {
+    byte[] fam = table.equals(TABLE_NAME1) ? FAM_NAME1 : FAM_NAME2;
     byte[] rowBytes = Bytes.toBytes(row);
     // Just make sure we don't get the same ts for two consecutive rows with
     // same key
@@ -261,7 +262,7 @@ public class TestReplicationSink {
     uuidBuilder.setLeastSigBits(HConstants.DEFAULT_CLUSTER_ID.getLeastSignificantBits());
     uuidBuilder.setMostSigBits(HConstants.DEFAULT_CLUSTER_ID.getMostSignificantBits());
     keyBuilder.setClusterId(uuidBuilder.build());
-    keyBuilder.setTableName(ByteStringer.wrap(table));
+    keyBuilder.setTableName(ByteStringer.wrap(table.getName()));
     keyBuilder.setWriteTime(now);
     keyBuilder.setEncodedRegionName(ByteStringer.wrap(HConstants.EMPTY_BYTE_ARRAY));
     keyBuilder.setLogSequenceNumber(-1);

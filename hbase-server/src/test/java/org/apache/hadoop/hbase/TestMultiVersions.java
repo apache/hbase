@@ -142,7 +142,7 @@ public class TestMultiVersions {
     this.admin.createTable(desc);
     Put put = new Put(row, timestamp1);
     put.add(contents, contents, value1);
-    Table table = new HTable(UTIL.getConfiguration(), tableName);
+    Table table = new HTable(UTIL.getConfiguration(), desc.getTableName());
     table.put(put);
     // Shut down and restart the HBase cluster
     table.close();
@@ -151,7 +151,7 @@ public class TestMultiVersions {
     UTIL.startMiniHBaseCluster(1, NUM_SLAVES);
     // Make a new connection.  Use new Configuration instance because old one
     // is tied to an HConnection that has since gone stale.
-    table = new HTable(new Configuration(UTIL.getConfiguration()), tableName);
+    table = new HTable(new Configuration(UTIL.getConfiguration()), desc.getTableName());
     // Overwrite previous value
     put = new Put(row, timestamp2);
     put.add(contents, contents, value2);

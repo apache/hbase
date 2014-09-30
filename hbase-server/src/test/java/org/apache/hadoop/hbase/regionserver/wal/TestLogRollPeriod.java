@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -71,13 +72,12 @@ public class TestLogRollPeriod {
    */
   @Test
   public void testNoEdits() throws Exception {
-    final String tableName = "TestLogRollPeriodNoEdits";
-
+    TableName tableName = TableName.valueOf("TestLogRollPeriodNoEdits");
     TEST_UTIL.createTable(tableName, "cf");
     try {
       Table table = new HTable(TEST_UTIL.getConfiguration(), tableName);
       try {
-        HRegionServer server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
+        HRegionServer server = TEST_UTIL.getRSForFirstRegionInTable(tableName);
         HLog log = server.getWAL();
         checkMinLogRolls(log, 5);
       } finally {
@@ -93,12 +93,12 @@ public class TestLogRollPeriod {
    */
   @Test(timeout=60000)
   public void testWithEdits() throws Exception {
-    final String tableName = "TestLogRollPeriodWithEdits";
+    final TableName tableName = TableName.valueOf("TestLogRollPeriodWithEdits");
     final String family = "cf";
 
     TEST_UTIL.createTable(tableName, family);
     try {
-      HRegionServer server = TEST_UTIL.getRSForFirstRegionInTable(Bytes.toBytes(tableName));
+      HRegionServer server = TEST_UTIL.getRSForFirstRegionInTable(tableName);
       HLog log = server.getWAL();
       final Table table = new HTable(TEST_UTIL.getConfiguration(), tableName);
 

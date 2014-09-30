@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
@@ -76,10 +77,10 @@ public class TestRegionServerNoMaster {
   public static void before() throws Exception {
     HTU.getConfiguration().setBoolean("hbase.assignment.usezk", true);
     HTU.startMiniCluster(NB_SERVERS);
-    final byte[] tableName = Bytes.toBytes(TestRegionServerNoMaster.class.getSimpleName());
+    final TableName tableName = TableName.valueOf(TestRegionServerNoMaster.class.getSimpleName());
 
     // Create table then get the single region for our new table.
-    table = HTU.createTable(tableName, HConstants.CATALOG_FAMILY);
+    table = HTU.createTable(tableName,HConstants.CATALOG_FAMILY);
     Put p = new Put(row);
     p.add(HConstants.CATALOG_FAMILY, row, row);
     table.put(p);

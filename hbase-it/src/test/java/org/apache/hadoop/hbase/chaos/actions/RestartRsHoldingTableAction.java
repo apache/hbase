@@ -24,6 +24,7 @@ import java.util.Collection;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 
 /**
@@ -43,7 +44,7 @@ public class RestartRsHoldingTableAction extends RestartActionBaseAction {
     HTable table = null;
     try {
       Configuration conf = context.getHBaseIntegrationTestingUtility().getConfiguration();
-      table = new HTable(conf, tableName);
+      table = new HTable(conf, TableName.valueOf(tableName));
     } catch (IOException e) {
       LOG.debug("Error creating HTable used to get list of region locations.", e);
       return;

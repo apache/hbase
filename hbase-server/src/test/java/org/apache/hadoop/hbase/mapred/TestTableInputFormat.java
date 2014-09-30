@@ -89,7 +89,7 @@ public class TestTableInputFormat {
    * @throws IOException
    */
   public static Table createTable(byte[] tableName) throws IOException {
-    Table table = UTIL.createTable(tableName, FAMILY);
+    Table table = UTIL.createTable(TableName.valueOf(tableName), new byte[][]{FAMILY});
     Put p = new Put("aaa".getBytes());
     p.add(FAMILY, null, "value aaa".getBytes());
     table.put(p);

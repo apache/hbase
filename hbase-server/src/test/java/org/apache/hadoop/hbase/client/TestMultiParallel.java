@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.ipc.RpcClient;
@@ -66,7 +67,7 @@ public class TestMultiParallel {
   private static final byte[] VALUE = Bytes.toBytes("value");
   private static final byte[] QUALIFIER = Bytes.toBytes("qual");
   private static final String FAMILY = "family";
-  private static final String TEST_TABLE = "multi_test_table";
+  private static final TableName TEST_TABLE = TableName.valueOf("multi_test_table");
   private static final byte[] BYTES_FAMILY = Bytes.toBytes(FAMILY);
   private static final byte[] ONE_ROW = Bytes.toBytes("xxx");
   private static final byte [][] KEYS = makeKeys();
@@ -78,9 +79,9 @@ public class TestMultiParallel {
     ((Log4JLogger)RpcClient.LOG).getLogger().setLevel(Level.ALL);
     ((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     UTIL.startMiniCluster(slaves);
-    HTable t = UTIL.createTable(Bytes.toBytes(TEST_TABLE), Bytes.toBytes(FAMILY));
+    HTable t = UTIL.createTable(TEST_TABLE, Bytes.toBytes(FAMILY));
     UTIL.createMultiRegions(t, Bytes.toBytes(FAMILY));
-    UTIL.waitTableEnabled(Bytes.toBytes(TEST_TABLE));
+    UTIL.waitTableEnabled(TEST_TABLE.getName());
     t.close();
   }
 

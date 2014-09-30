@@ -119,7 +119,7 @@ public class TestVisibilityWithCheckAuths {
       }
     };
     SUPERUSER.runAs(action);
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
     HColumnDescriptor colDesc = new HColumnDescriptor(fam);
     colDesc.setMaxVersions(5);
@@ -134,7 +134,7 @@ public class TestVisibilityWithCheckAuths {
         public Void run() throws Exception {
           Table table = null;
           try {
-            table = new HTable(conf, TEST_NAME.getMethodName());
+            table = new HTable(conf, tableName);
             Put p = new Put(row1);
             p.setCellVisibility(new CellVisibility(PUBLIC + "&" + TOPSECRET));
             p.add(fam, qual, 125l, value);
@@ -169,7 +169,7 @@ public class TestVisibilityWithCheckAuths {
       }
     };
     SUPERUSER.runAs(action);
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
     Table table = null;
     try {
       table = TEST_UTIL.createTable(tableName, fam);
@@ -180,7 +180,7 @@ public class TestVisibilityWithCheckAuths {
         public Void run() throws Exception {
           Table table = null;
           try {
-            table = new HTable(conf, TEST_NAME.getMethodName());
+            table = new HTable(conf, tableName);
             Put put = new Put(row1);
             put.add(fam, qual, HConstants.LATEST_TIMESTAMP, val);
             put.setCellVisibility(new CellVisibility(TOPSECRET));
@@ -197,7 +197,7 @@ public class TestVisibilityWithCheckAuths {
         public Void run() throws Exception {
           Table table = null;
           try {
-            table = new HTable(conf, TEST_NAME.getMethodName());
+            table = new HTable(conf, tableName);
             Append append = new Append(row1);
             append.add(fam, qual, Bytes.toBytes("b"));
             table.append(append);
@@ -213,7 +213,7 @@ public class TestVisibilityWithCheckAuths {
         public Void run() throws Exception {
           Table table = null;
           try {
-            table = new HTable(conf, TEST_NAME.getMethodName());
+            table = new HTable(conf, tableName);
             Append append = new Append(row1);
             append.add(fam, qual, Bytes.toBytes("c"));
             append.setCellVisibility(new CellVisibility(PUBLIC));

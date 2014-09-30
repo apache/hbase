@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.mapreduce.RowCounter.RowCounterMapper;
@@ -67,8 +68,7 @@ public class TestRowCounter {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
     TEST_UTIL.startMiniMapReduceCluster();
-    Table table = TEST_UTIL.createTable(Bytes.toBytes(TABLE_NAME),
-        Bytes.toBytes(COL_FAM));
+    Table table = TEST_UTIL.createTable(TableName.valueOf(TABLE_NAME), Bytes.toBytes(COL_FAM));
     writeRows(table);
     table.close();
   }
