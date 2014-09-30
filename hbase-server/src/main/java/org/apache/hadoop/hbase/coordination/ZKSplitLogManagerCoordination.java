@@ -152,8 +152,9 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     try {
       List<String> tasks = ZKUtil.listChildrenNoWatch(watcher, watcher.splitLogZNode);
       if (tasks != null) {
-        for (String t : tasks) {
-          if (!ZKSplitLog.isRescanNode(watcher, t)) {
+        int listSize = tasks.size();
+        for (int i = 0; i < listSize; i++) {
+          if (!ZKSplitLog.isRescanNode(watcher, tasks.get(i))) {
             count++;
           }
         }
@@ -302,8 +303,9 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     try {
       List<String> tasks = ZKUtil.listChildrenNoWatch(watcher, watcher.splitLogZNode);
       if (tasks != null) {
-        for (String t : tasks) {
-          if (!ZKSplitLog.isRescanNode(watcher, t)) {
+        int listSize = tasks.size();
+        for (int i = 0; i < listSize; i++) {
+          if (!ZKSplitLog.isRescanNode(watcher, tasks.get(i))) {
             count++;
           }
         }
@@ -319,7 +321,9 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
         // remove recovering regions which doesn't have any RS associated with it
         List<String> regions = ZKUtil.listChildrenNoWatch(watcher, watcher.recoveringRegionsZNode);
         if (regions != null) {
-          for (String region : regions) {
+          int listSize = regions.size();
+          for (int i = 0; i < listSize; i++) {
+            String region = regions.get(i);
             if (isMetaRecovery != null) {
               if ((isMetaRecovery && !region.equalsIgnoreCase(metaEncodeRegionName))
                   || (!isMetaRecovery && region.equalsIgnoreCase(metaEncodeRegionName))) {
@@ -337,7 +341,9 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
             if (recoveredServerNameSet.containsAll(failedServers)) {
               ZKUtil.deleteNodeRecursively(watcher, nodePath);
             } else {
-              for (String failedServer : failedServers) {
+              listSize = failedServers.size();
+              for (int j = 0; j < listSize; j++) {
+                String failedServer = failedServers.get(j);
                 if (recoveredServerNameSet.contains(failedServer)) {
                   String tmpPath = ZKUtil.joinZNode(nodePath, failedServer);
                   ZKUtil.deleteNode(watcher, tmpPath);
@@ -576,7 +582,9 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
       return;
     }
     int rescan_nodes = 0;
-    for (String path : orphans) {
+    int listSize = orphans.size();
+    for (int i = 0; i < listSize; i++) {
+      String path = orphans.get(i);
       String nodepath = ZKUtil.joinZNode(watcher.splitLogZNode, path);
       if (ZKSplitLog.isRescanNode(watcher, nodepath)) {
         rescan_nodes++;
@@ -682,7 +690,9 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     try {
       List<String> tasks = ZKUtil.listChildrenNoWatch(watcher, watcher.splitLogZNode);
       if (tasks != null) {
-        for (String t : tasks) {
+        int listSize = tasks.size();
+        for (int i = 0; i < listSize; i++) {
+          String t = tasks.get(i);
           byte[] data;
           try {
             data = ZKUtil.getData(this.watcher, ZKUtil.joinZNode(watcher.splitLogZNode, t));
@@ -714,16 +724,18 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
       // remove recovering regions which doesn't have any RS associated with it
       List<String> regions = ZKUtil.listChildrenNoWatch(watcher, watcher.recoveringRegionsZNode);
       if (regions != null) {
-        for (String region : regions) {
-          String nodePath = ZKUtil.joinZNode(watcher.recoveringRegionsZNode, region);
+        int listSize = regions.size();
+        for (int i = 0; i < listSize; i++) {
+          String nodePath = ZKUtil.joinZNode(watcher.recoveringRegionsZNode, regions.get(i));
           List<String> regionFailedServers = ZKUtil.listChildrenNoWatch(watcher, nodePath);
           if (regionFailedServers == null || regionFailedServers.isEmpty()) {
             ZKUtil.deleteNode(watcher, nodePath);
             continue;
           }
           boolean needMoreRecovery = false;
-          for (String tmpFailedServer : regionFailedServers) {
-            if (knownFailedServers.contains(tmpFailedServer)) {
+          listSize = regionFailedServers.size();
+          for (i = 0; i < listSize; i++) {
+            if (knownFailedServers.contains(regionFailedServers.get(i))) {
               needMoreRecovery = true;
               break;
             }
@@ -787,7 +799,9 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
           hasSplitLogTask = true;
           if (isForInitialization) {
             // during initialization, try to get recovery mode from splitlogtask
-            for (String task : tasks) {
+            int listSize = tasks.size();
+            for (int i = 0; i < listSize; i++) {
+              String task = tasks.get(i);
               try {
                 byte[] data =
                     ZKUtil.getData(this.watcher, ZKUtil.joinZNode(watcher.splitLogZNode, task));

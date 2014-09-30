@@ -450,9 +450,10 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
               // Make a local copy to prevent ConcurrentModificationException when other threads
               // modify recoveringRegions
               List<String> tmpCopy = new ArrayList<String>(recoveringRegions.keySet());
-              for (String region : tmpCopy) {
-                String nodePath =
-                    ZKUtil.joinZNode(watcher.recoveringRegionsZNode, region);
+              int listSize = tmpCopy.size();
+              for (int i = 0; i < listSize; i++) {
+                String region = tmpCopy.get(i);
+                String nodePath = ZKUtil.joinZNode(watcher.recoveringRegionsZNode, region);
                 try {
                   if (ZKUtil.checkExists(watcher, nodePath) == -1) {
                     HRegion r = recoveringRegions.remove(region);
