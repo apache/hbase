@@ -93,16 +93,7 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
         filesCompacting.size() + " compacting, " + candidateSelection.size() +
         " eligible, " + storeConfigInfo.getBlockingFileCount() + " blocking");
 
-    long cfTtl = this.storeConfigInfo.getStoreFileTtl();
     if (!forceMajor) {
-      // If there are expired files, only select them so that compaction deletes them
-      if (comConf.shouldDeleteExpired() && (cfTtl != Long.MAX_VALUE)) {
-        ArrayList<StoreFile> expiredSelection = selectExpiredStoreFiles(
-            candidateSelection, EnvironmentEdgeManager.currentTimeMillis() - cfTtl);
-        if (expiredSelection != null) {
-          return new CompactionRequest(expiredSelection);
-        }
-      }
       candidateSelection = skipLargeFiles(candidateSelection);
     }
 
@@ -127,41 +118,6 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
     CompactionRequest result = new CompactionRequest(candidateSelection);
     result.setOffPeak(!candidateSelection.isEmpty() && !majorCompaction && mayUseOffPeak);
     return result;
-  }
-
-  /**
-   * Select the expired store files to compact
-   *
-   * @param candidates the initial set of storeFiles
-   * @param maxExpiredTimeStamp
-   *          The store file will be marked as expired if its max time stamp is
-   *          less than this maxExpiredTimeStamp.
-   * @return A CompactSelection contains the expired store files as
-   *         filesToCompact
-   */
-  private ArrayList<StoreFile> selectExpiredStoreFiles(
-      ArrayList<StoreFile> candidates, long maxExpiredTimeStamp) {
-    if (candidates == null || candidates.size() == 0) return null;
-    ArrayList<StoreFile> expiredStoreFiles = null;
-
-    for (StoreFile storeFile : candidates) {
-      if (storeFile.getReader().getMaxTimestamp() < maxExpiredTimeStamp) {
-        LOG.info("Deleting the expired store file by compaction: "
-            + storeFile.getPath() + " whose maxTimeStamp is "
-            + storeFile.getReader().getMaxTimestamp()
-            + " while the max expired timestamp is " + maxExpiredTimeStamp);
-        if (expiredStoreFiles == null) {
-          expiredStoreFiles = new ArrayList<StoreFile>();
-        }
-        expiredStoreFiles.add(storeFile);
-      }
-    }
-    if (expiredStoreFiles != null && expiredStoreFiles.size() == 1
-        && expiredStoreFiles.get(0).getReader().getEntries() == 0) {
-      // If just one empty store file, do not select for compaction.
-      return null;
-    }
-    return expiredStoreFiles;
   }
 
   /**

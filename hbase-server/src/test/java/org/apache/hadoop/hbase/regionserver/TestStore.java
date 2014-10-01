@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
@@ -275,11 +276,15 @@ public class TestStore {
     Configuration conf = HBaseConfiguration.create();
     // Enable the expired store file deletion
     conf.setBoolean("hbase.store.delete.expired.storefile", true);
+    // Set the compaction threshold higher to avoid normal compactions.
+    conf.setInt(CompactionConfiguration.MIN_KEY, 5);
+
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     hcd.setTimeToLive(ttl);
     init(name.getMethodName(), conf, hcd);
 
-    long sleepTime = this.store.getScanInfo().getTtl() / storeFileNum;
+    long storeTtl = this.store.getScanInfo().getTtl();
+    long sleepTime = storeTtl / storeFileNum;
     long timeStamp;
     // There are 4 store files and the max time stamp difference among these
     // store files will be (this.store.ttl / storeFileNum)
@@ -296,29 +301,27 @@ public class TestStore {
     // Verify the total number of store files
     Assert.assertEquals(storeFileNum, this.store.getStorefiles().size());
 
-    // Each compaction request will find one expired store file and delete it
-    // by the compaction.
-    for (int i = 1; i <= storeFileNum; i++) {
+     // Each call will find one expired store file and delete it before compaction happens.
+     // There will be no compaction due to threshold above. Last file will not be replaced.
+    for (int i = 1; i <= storeFileNum - 1; i++) {
       // verify the expired store file.
-      CompactionContext compaction = this.store.requestCompaction();
-      CompactionRequest cr = compaction.getRequest();
-      // the first is expired normally.
-      // If not the first compaction, there is another empty store file,
-      List<StoreFile> files = new ArrayList<StoreFile>(cr.getFiles());
-      Assert.assertEquals(Math.min(i, 2), cr.getFiles().size());
-      for (int j = 0; j < files.size(); j++) {
-        Assert.assertTrue(files.get(j).getReader().getMaxTimestamp() < (edge
-            .currentTimeMillis() - this.store.getScanInfo().getTtl()));
+      Assert.assertNull(this.store.requestCompaction());
+      Collection<StoreFile> sfs = this.store.getStorefiles();
+      // Ensure i files are gone.
+      Assert.assertEquals(storeFileNum - i, sfs.size());
+      // Ensure only non-expired files remain.
+      for (StoreFile sf : sfs) {
+        Assert.assertTrue(sf.getReader().getMaxTimestamp() >= (edge.currentTimeMillis() - storeTtl));
       }
-      // Verify that the expired store file is compacted to an empty store file.
-      // Default compaction policy creates just one and only one compacted file.
-      StoreFile compactedFile = this.store.compact(compaction).get(0);
-      // It is an empty store file.
-      Assert.assertEquals(0, compactedFile.getReader().getEntries());
-
       // Let the next store file expired.
       edge.incrementTime(sleepTime);
     }
+    Assert.assertNull(this.store.requestCompaction());
+    Collection<StoreFile> sfs = this.store.getStorefiles();
+    // Assert the last expired file is not removed.
+    Assert.assertEquals(1, sfs.size());
+    long ts = sfs.iterator().next().getReader().getMaxTimestamp();
+    Assert.assertTrue(ts < (edge.currentTimeMillis() - storeTtl));
   }
 
   @Test

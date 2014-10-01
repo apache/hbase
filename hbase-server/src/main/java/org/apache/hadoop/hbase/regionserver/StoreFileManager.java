@@ -127,4 +127,11 @@ public interface StoreFileManager {
    * @return The store compaction priority.
    */
   int getStoreCompactionPriority();
+
+  /**
+   * @param maxTs Maximum expired timestamp.
+   * @param filesCompacting Files that are currently compacting.
+   * @return The files which don't have any necessary data according to TTL and other criteria.
+   */
+  Collection<StoreFile> getUnneededFiles(long maxTs, List<StoreFile> filesCompacting);
 }

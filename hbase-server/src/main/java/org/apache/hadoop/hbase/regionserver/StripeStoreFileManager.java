@@ -928,4 +928,34 @@ public class StripeStoreFileManager
   public int getStripeCount() {
     return this.state.stripeFiles.size();
   }
+
+  @Override
+  public Collection<StoreFile> getUnneededFiles(long maxTs, List<StoreFile> filesCompacting) {
+    // 1) We can never get rid of the last file which has the maximum seqid in a stripe.
+    // 2) Files that are not the latest can't become one due to (1), so the rest are fair game.
+    State state = this.state;
+    Collection<StoreFile> expiredStoreFiles = null;
+    for (ImmutableList<StoreFile> stripe : state.stripeFiles) {
+      expiredStoreFiles = findExpiredFiles(stripe, maxTs, filesCompacting, expiredStoreFiles);
+    }
+    return findExpiredFiles(state.level0Files, maxTs, filesCompacting, expiredStoreFiles);
+  }
+
+  private Collection<StoreFile> findExpiredFiles(ImmutableList<StoreFile> stripe, long maxTs,
+      List<StoreFile> filesCompacting, Collection<StoreFile> expiredStoreFiles) {
+    // Order by seqnum is reversed.
+    for (int i = 1; i < stripe.size(); ++i) {
+      StoreFile sf = stripe.get(i);
+      long fileTs = sf.getReader().getMaxTimestamp();
+      if (fileTs < maxTs && !filesCompacting.contains(sf)) {
+        LOG.info("Found an expired store file: " + sf.getPath()
+            + " whose maxTimeStamp is " + fileTs + ", which is below " + maxTs);
+        if (expiredStoreFiles == null) {
+          expiredStoreFiles = new ArrayList<StoreFile>();
+        }
+        expiredStoreFiles.add(sf);
+      }
+    }
+    return expiredStoreFiles;
+  }
 }
