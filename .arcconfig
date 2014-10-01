@@ -1,5 +1,5 @@
 {
-  "project_id" : "hbase",
+  "project_id" : "HBaseOnGithub",
   "conduit_uri" : "https://reviews.facebook.net/",
   "copyright_holder" : "Apache Software Foundation",
   "max_line_length" : 100
