@@ -513,20 +513,34 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
   <section
     xml:id="cf.keep.deleted">
     <title> Keeping Deleted Cells </title>
-    <para>ColumnFamilies can optionally keep deleted cells. That means deleted cells can still be
-      retrieved with <link
+    <para>By default, delete markers extend back to the beginning of time. Therefore, <link
         xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Get.html">Get</link>
       or <link
         xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html">Scan</link>
-      operations, as long these operations have a time range specified that ends before the
-      timestamp of any delete that would affect the cells. This allows for point in time queries
-      even in the presence of deletes. </para>
+      operations will not see a deleted cell (row or column), even when the Get or Scan operation
+      indicates a time range
+      before the delete marker was placed.</para> 
+    <para>ColumnFamilies can optionally keep deleted cells. In this case, deleted cells can still be
+      retrieved, as long as these operations specify a time range that ends before the timestamp of
+      any delete that would affect the cells. This allows for point-in-time queries even in the
+      presence of deletes. </para>
     <para> Deleted cells are still subject to TTL and there will never be more than "maximum number
       of versions" deleted cells. A new "raw" scan options returns all deleted rows and the delete
       markers. </para>
-    <para>See <link
-        xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link>
-      for more information. </para>
+    <example>
+      <title>Change the Value of <code>KEEP_DELETED_CELLS</code> Using HBase Shell</title>
+      <screen>hbase> hbase> alter ‘t1′, NAME => ‘f1′, KEEP_DELETED_CELLS => true</screen>
+    </example>
+    <example>
+      <title>Change the Value of <code>KEEP_DELETED_CELLS</code> Using the API</title>
+      <programlisting language="java">...
+HColumnDescriptor.setKeepDeletedCells(true);
+...
+      </programlisting>
+    </example>
+    <para>See the API documentation for <link
+        xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html#KEEP_DELETED_CELLS"
+        >KEEP_DELETED_CELLS</link> for more information. </para>
   </section>
   <section
     xml:id="secondary.indexes">
