@@ -46,6 +46,10 @@ public class SecureWALCellCodec extends WALCellCodec {
   private Encryptor encryptor;
   private Decryptor decryptor;
 
+  public SecureWALCellCodec(Configuration conf, CompressionContext compression) {
+    super(conf, compression);
+  }
+
   public SecureWALCellCodec(Configuration conf, Encryptor encryptor) {
     super(conf, null);
     this.encryptor = encryptor;
@@ -68,11 +72,16 @@ public class SecureWALCellCodec extends WALCellCodec {
     public EncryptedKvDecoder(InputStream in, Decryptor decryptor) {
       super(in);
       this.decryptor = decryptor;
-      this.iv = new byte[decryptor.getIvLength()];
+      if (decryptor != null) {
+        this.iv = new byte[decryptor.getIvLength()];
+      }
     }
 
     @Override
     protected Cell parseCell() throws IOException {
+      if (this.decryptor == null) {
+        return super.parseCell();
+      }
       int ivLength = 0;
       try {
         ivLength = StreamUtils.readRawVarint32(in);
@@ -171,6 +180,10 @@ public class SecureWALCellCodec extends WALCellCodec {
     @Override
     public void write(Cell cell) throws IOException {
       if (!(cell instanceof KeyValue)) throw new IOException("Cannot write non-KV cells to WAL");
+      if (encryptor == null) {
+        super.write(cell);
+        return;
+      }
 
       KeyValue kv = (KeyValue)cell;
       byte[] kvBuffer = kv.getBuffer();
