@@ -1644,5 +1644,24 @@ security.provider.1=sun.security.pkcs11.SunPKCS11 ${java.home}/lib/security/nss.
       <screen language="bourne">[user@host]# <userinput>echo &lt;value&gt; > /proc/sys/vm/min_free_kbytes</userinput></screen>
     </section>
   </section>
+  <section>
+    <title>JDK Issues</title>
+  <section>
+    <title>NoSuchMethodError: java.util.concurrent.ConcurrentHashMap.keySet</title>
+<para>
+If you see this in your logs:
+    <programlisting>Caused by: java.lang.NoSuchMethodError: java.util.concurrent.ConcurrentHashMap.keySet()Ljava/util/concurrent/ConcurrentHashMap$KeySetView;
+  at org.apache.hadoop.hbase.master.ServerManager.findServerWithSameHostnamePortWithLock(ServerManager.java:393)
+  at org.apache.hadoop.hbase.master.ServerManager.checkAndRecordNewServer(ServerManager.java:307)
+  at org.apache.hadoop.hbase.master.ServerManager.regionServerStartup(ServerManager.java:244)
+  at org.apache.hadoop.hbase.master.MasterRpcServices.regionServerStartup(MasterRpcServices.java:304)
+  at org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos$RegionServerStatusService$2.callBlockingMethod(RegionServerStatusProtos.java:7910)
+  at org.apache.hadoop.hbase.ipc.RpcServer.call(RpcServer.java:2020)
+  ... 4 more</programlisting>
+then check if you compiled with jdk8 and tried to run it on jdk7.  If so, this won't work.
+Run on jdk8 or recompile with jdk7.  See <link xlink:href="https://issues.apache.org/jira/browse/HBASE-10607">HBASE-10607 [JDK8] NoSuchMethodError involving ConcurrentHashMap.keySet if running on JRE 7</link>.
+</para>
+  </section>
+  </section>
 
 </chapter>
