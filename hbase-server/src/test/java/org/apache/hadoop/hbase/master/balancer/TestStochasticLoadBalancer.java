@@ -65,9 +65,25 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
   public static void beforeAllTests() throws Exception {
     conf = HBaseConfiguration.create();
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 0.75f);
+    conf.setFloat("hbase.regions.slop", 0.0f);
     loadBalancer = new StochasticLoadBalancer();
     loadBalancer.setConf(conf);
   }
+
+  int[] largeCluster = new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0, 56 };
 
   // int[testnum][servernumber] -> numregions
   int[][] clusterStateMocks = new int[][]{
@@ -86,7 +102,7 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       new int[]{0, 1},
       new int[]{10, 1},
       new int[]{514, 1432},
-      new int[]{47, 53},
+      new int[]{48, 53},
       // 3 node
       new int[]{0, 1, 2},
       new int[]{1, 2, 3},
@@ -123,7 +139,9 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       new int[]{10, 7, 12, 8, 11, 10, 9, 14},
       new int[]{13, 14, 6, 10, 10, 10, 8, 10},
       new int[]{130, 14, 60, 10, 100, 10, 80, 10},
-      new int[]{130, 140, 60, 100, 100, 100, 80, 100}
+      new int[]{130, 140, 60, 100, 100, 100, 80, 100},
+      largeCluster,
+
   };
 
   @Test
@@ -200,24 +218,19 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       assertTrue(cost >= 0);
       assertTrue(cost <= 1.01);
     }
+
     costFunction.init(mockCluster(new int[]{0, 0, 0, 0, 1}));
-    assertEquals(1,
-        costFunction.cost(), 0.01);
+    assertEquals(0,costFunction.cost(), 0.01);
     costFunction.init(mockCluster(new int[]{0, 0, 0, 1, 1}));
-    assertEquals(.75,
-        costFunction.cost(), 0.01);
+    assertEquals(0, costFunction.cost(), 0.01);
     costFunction.init(mockCluster(new int[]{0, 0, 1, 1, 1}));
-    assertEquals(.5,
-        costFunction.cost(), 0.01);
+    assertEquals(0, costFunction.cost(), 0.01);
     costFunction.init(mockCluster(new int[]{0, 1, 1, 1, 1}));
-    assertEquals(.25,
-        costFunction.cost(), 0.01);
+    assertEquals(0, costFunction.cost(), 0.01);
     costFunction.init(mockCluster(new int[]{1, 1, 1, 1, 1}));
-    assertEquals(0,
-        costFunction.cost(), 0.01);
-    costFunction.init(mockCluster(new int[]{10, 10, 10, 10, 10}));
-    assertEquals(0,
-        costFunction.cost(), 0.01);
+    assertEquals(0, costFunction.cost(), 0.01);
+    costFunction.init(mockCluster(new int[]{10000, 0, 0, 0, 0}));
+    assertEquals(1, costFunction.cost(), 0.01);
   }
 
   @Test
