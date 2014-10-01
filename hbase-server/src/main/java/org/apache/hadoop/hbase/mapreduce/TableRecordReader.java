@@ -22,7 +22,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -57,9 +56,18 @@ extends RecordReader<ImmutableBytesWritable, Result> {
    * Sets the HBase table.
    *
    * @param htable  The {@link HTable} to scan.
+   * @deprecated Use setTable() instead.
    */
+  @Deprecated
   public void setHTable(Table htable) {
-    this.recordReaderImpl.setHTable(htable);
+    this.setTable(htable);
+  }
+
+  /**
+   * @param table the {@link Table} to scan.
+   */
+  public void setTable(Table table) {
+    this.recordReaderImpl.setHTable(table);
   }
 
   /**

@@ -34,9 +34,13 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -52,8 +56,8 @@ import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.StringUtils;
 
 /**
- * A base for {@link TableInputFormat}s. Receives a {@link HTable}, an
- * {@link Scan} instance that defines the input columns etc. Subclasses may use
+ * A base for {@link TableInputFormat}s. Receives a {@link Connection}, a {@link TableName},
+ * an {@link Scan} instance that defines the input columns etc. Subclasses may use
  * other TableRecordReader implementations.
  * <p>
  * An example of a subclass:
@@ -61,10 +65,11 @@ import org.apache.hadoop.util.StringUtils;
  *   class ExampleTIF extends TableInputFormatBase implements JobConfigurable {
  *
  *     public void configure(JobConf job) {
- *       HTable exampleTable = new HTable(HBaseConfiguration.create(job),
- *         Bytes.toBytes("exampleTable"));
+ *       Connection connection = 
+ *          ConnectionFactory.createConnection(HBaseConfiguration.create(job));
+ *       TableName tableName = TableName.valueOf("exampleTable");
  *       // mandatory
- *       setHTable(exampleTable);
+ *       initializeTable(connection, tableName);
  *       Text[] inputColumns = new byte [][] { Bytes.toBytes("cf1:columnA"),
  *         Bytes.toBytes("cf2") };
  *       // mandatory
@@ -86,10 +91,14 @@ extends InputFormat<ImmutableBytesWritable, Result> {
 
   final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
 
-  /** Holds the details for the internal scanner. */
+  /** Holds the details for the internal scanner. 
+   *
+   * @see Scan */
   private Scan scan = null;
-  /** The table to scan. */
-  private HTable table = null;
+  /** The {@link Table} to scan. */
+  private Table table;
+  /** The {@link RegionLocator} of the table. */
+  private RegionLocator regionLocator;
   /** The reader scanning the table, can be a custom one. */
   private TableRecordReader tableRecordReader = null;
 
@@ -102,7 +111,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   private String nameServer = null;
   
   /**
-   * Builds a TableRecordReader. If no TableRecordReader was provided, uses
+   * Builds a {@link TableRecordReader}. If no {@link TableRecordReader} was provided, uses
    * the default.
    *
    * @param split  The split to work with.
@@ -133,7 +142,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     sc.setStartRow(tSplit.getStartRow());
     sc.setStopRow(tSplit.getEndRow());
     trr.setScan(sc);
-    trr.setHTable(table);
+    trr.setTable(table);
     return trr;
   }
 
@@ -156,12 +165,12 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     this.nameServer =
       context.getConfiguration().get("hbase.nameserver.address", null);
 
-    RegionSizeCalculator sizeCalculator = new RegionSizeCalculator(table);
+    RegionSizeCalculator sizeCalculator = new RegionSizeCalculator((HTable) table);
 
-    Pair<byte[][], byte[][]> keys = table.getStartEndKeys();
+    Pair<byte[][], byte[][]> keys = regionLocator.getStartEndKeys();
     if (keys == null || keys.getFirst() == null ||
         keys.getFirst().length == 0) {
-      HRegionLocation regLoc = table.getRegionLocation(HConstants.EMPTY_BYTE_ARRAY, false);
+      HRegionLocation regLoc = regionLocator.getRegionLocation(HConstants.EMPTY_BYTE_ARRAY, false);
       if (null == regLoc) {
         throw new IOException("Expecting at least one region.");
       }
@@ -178,7 +187,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       if ( !includeRegionInSplit(keys.getFirst()[i], keys.getSecond()[i])) {
         continue;
       }
-      HRegionLocation location = table.getRegionLocation(keys.getFirst()[i], false);
+      HRegionLocation location = regionLocator.getRegionLocation(keys.getFirst()[i], false);
       // The below InetSocketAddress creation does a name resolution.
       InetSocketAddress isa = new InetSocketAddress(location.getHostname(), location.getPort());
       if (isa.isUnresolved()) {
@@ -268,18 +277,24 @@ extends InputFormat<ImmutableBytesWritable, Result> {
 
   /**
    * Allows subclasses to get the {@link HTable}.
+   * 
+   * @deprecated Use {@link #getTable()} and {@link #getRegionLocator()} instead.
    */
+  @Deprecated
   protected HTable getHTable() {
-    return this.table;
+    return (HTable) this.table;
   }
 
   /**
    * Allows subclasses to set the {@link HTable}.
-   *
-   * @param table  The table to get the data from.
+   * 
+   * @param table  The {@link HTable} to get the data from.
+   * @deprecated Use {@link #initializeTable(Connection, TableName)} instead.
    */
+  @Deprecated
   protected void setHTable(HTable table) {
     this.table = table;
+    this.regionLocator = table;
   }
 
   /**

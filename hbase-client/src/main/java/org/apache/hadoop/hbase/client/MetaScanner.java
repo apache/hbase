@@ -81,7 +81,7 @@ public class MetaScanner {
    * null if not interested in a particular table.
    * @throws IOException e
    */
-  public static void metaScan(Configuration configuration, ClusterConnection connection,
+  public static void metaScan(Configuration configuration, Connection connection,
       MetaScannerVisitor visitor, TableName userTableName) throws IOException {
     metaScan(configuration, connection, visitor, userTableName, null, Integer.MAX_VALUE,
         TableName.META_TABLE_NAME);
@@ -127,7 +127,7 @@ public class MetaScanner {
    * @param metaTableName Meta table to scan, root or meta.
    * @throws IOException e
    */
-  static void metaScan(Configuration configuration, ClusterConnection connection,
+  static void metaScan(Configuration configuration, Connection connection,
       final MetaScannerVisitor visitor, final TableName tableName,
       final byte[] row, final int rowLimit, final TableName metaTableName)
     throws IOException {
@@ -278,7 +278,7 @@ public class MetaScanner {
    * @throws IOException
    */
   public static NavigableMap<HRegionInfo, ServerName> allTableRegions(Configuration conf,
-      ClusterConnection connection, final TableName tableName,
+      Connection connection, final TableName tableName,
       final boolean offlined) throws IOException {
     final NavigableMap<HRegionInfo, ServerName> regions =
       new TreeMap<HRegionInfo, ServerName>();
@@ -304,7 +304,7 @@ public class MetaScanner {
    * Lists table regions and locations grouped by region range from META.
    */
   public static List<RegionLocations> listTableRegionLocations(Configuration conf,
-      ClusterConnection connection, final TableName tableName) throws IOException {
+      Connection connection, final TableName tableName) throws IOException {
     final List<RegionLocations> regions = new ArrayList<RegionLocations>();
     MetaScannerVisitor visitor = new TableMetaScannerVisitor(tableName) {
       @Override
