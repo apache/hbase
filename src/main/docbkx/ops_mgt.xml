@@ -1730,8 +1730,8 @@ hbase> restore_snapshot 'myTableSnapshot-122112'
           pre-split 1 region per RS at most), especially if you don't know how much each table will
           grow. If you split too much, you may end up with too many regions, with some tables having
           too many small regions.</para>
-        <para>For pre-splitting howto, see <xref
-            linkend="precreate.regions" />.</para>
+        <para>For pre-splitting howto, see <xref linkend="manual_region_splitting_decisions"/> and
+            <xref linkend="precreate.regions"/>.</para>
       </section>
       <!-- ops.capacity.config.presplit -->
     </section>
