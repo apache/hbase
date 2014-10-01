@@ -89,6 +89,11 @@ if [ $INTERACTIVE ]; then
     case $yn in
         [Yy]* ) 
     			mvn clean package javadoc:aggregate site site:stage -DskipTests
+          status=$?
+          if [ $status != 0 ]; then
+            echo "The website does not build. Aborting."
+            exit $status
+          fi
     			;;
         [Nn]* ) 
           echo "Not building the site."
@@ -97,6 +102,11 @@ if [ $INTERACTIVE ]; then
 else
   echo "Building the site in auto mode."
   mvn clean package javadoc:aggregate site site:stage -DskipTests
+  status=$?
+  if [ $status != 0 ]; then
+    echo "The website does not build. Aborting."
+    exit $status
+  fi
 fi
 
 
