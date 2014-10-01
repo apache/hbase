@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.regionserver.wal.TestCustomWALCellCodec.CustomWALCellCodec;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
@@ -74,11 +73,16 @@ public class TestHLogReaderOnSecureHLog {
     conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
   }
 
-  private Path writeWAL(String tblName) throws IOException {
+  private Path writeWAL(String tblName, boolean encrypt) throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     String clsName = conf.get(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, WALCellCodec.class.getName());
-    conf.setClass(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, CustomWALCellCodec.class,
+    conf.setClass(WALCellCodec.WAL_CELL_CODEC_CLASS_KEY, SecureWALCellCodec.class,
       WALCellCodec.class);
+    if (encrypt) {
+      conf.set("hbase.regionserver.wal.encryption", "true");
+    } else {
+      conf.set("hbase.regionserver.wal.encryption", "false");
+    }
     TableName tableName = TableName.valueOf(tblName);
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(tableName.getName()));
@@ -116,7 +120,7 @@ public class TestHLogReaderOnSecureHLog {
     conf.setClass("hbase.regionserver.hlog.writer.impl", SecureProtobufLogWriter.class,
       HLog.Writer.class);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    Path walPath = writeWAL("testHLogReaderOnSecureHLog");
+    Path walPath = writeWAL("testHLogReaderOnSecureHLog", true);
 
     // Insure edits are not plaintext
     long length = fs.getFileStatus(walPath).getLen();
@@ -160,7 +164,7 @@ public class TestHLogReaderOnSecureHLog {
     conf.setClass("hbase.regionserver.hlog.writer.impl", ProtobufLogWriter.class,
       HLog.Writer.class);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    Path walPath = writeWAL("testSecureHLogReaderOnHLog");
+    Path walPath = writeWAL("testSecureHLogReaderOnHLog", false);
 
     // Ensure edits are plaintext
     long length = fs.getFileStatus(walPath).getLen();
