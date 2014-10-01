@@ -130,20 +130,22 @@ public class BalancerTestBase {
                                           List<RegionPlan> plans,
                                           Map<ServerName, List<HRegionInfo>> servers) {
     List<ServerAndLoad> result = new ArrayList<ServerAndLoad>(list.size());
-    if (plans == null) return result;
+
     Map<ServerName, ServerAndLoad> map = new HashMap<ServerName, ServerAndLoad>(list.size());
     for (ServerAndLoad sl : list) {
       map.put(sl.getServerName(), sl);
     }
-    for (RegionPlan plan : plans) {
-      ServerName source = plan.getSource();
+    if (plans != null) {
+      for (RegionPlan plan : plans) {
+        ServerName source = plan.getSource();
 
-      updateLoad(map, source, -1);
-      ServerName destination = plan.getDestination();
-      updateLoad(map, destination, +1);
+        updateLoad(map, source, -1);
+        ServerName destination = plan.getDestination();
+        updateLoad(map, destination, +1);
 
-      servers.get(source).remove(plan.getRegionInfo());
-      servers.get(destination).add(plan.getRegionInfo());
+        servers.get(source).remove(plan.getRegionInfo());
+        servers.get(destination).add(plan.getRegionInfo());
+      }
     }
     result.clear();
     result.addAll(map.values());

@@ -597,14 +597,28 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
       // Compute max as if all region servers had 0 and one had the sum of all costs.  This must be
       // a zero sum cost for this to make sense.
-      // TODO: Should we make this sum of square errors?
       double max = ((count - 1) * mean) + (total - mean);
-      for (double n : stats) {
+
+      // It's possible that there aren't enough regions to go around
+      double min;
+      if (count > total) {
+        min = ((count - total) * mean) + ((1 - mean) * total);
+      } else {
+        // Some will have 1 more than everything else.
+        int numHigh = (int) (total - (Math.floor(mean) * count));
+        int numLow = (int) (count - numHigh);
+
+        min = (numHigh * (Math.ceil(mean) - mean)) + (numLow * (mean - Math.floor(mean)));
+
+      }
+      min = Math.max(0, min);
+      for (int i=0; i<stats.length; i++) {
+        double n = stats[i];
         double diff = Math.abs(mean - n);
         totalCost += diff;
       }
 
-      double scaled =  scale(0, max, totalCost);
+      double scaled =  scale(min, max, totalCost);
       return scaled;
     }
 
@@ -630,8 +644,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       if (max == 0 || value == 0) {
         return 0;
       }
+      if ((max - min) <= 0) return 0;
 
-      return Math.max(0d, Math.min(1d, (value - min) / max));
+      return Math.max(0d, Math.min(1d, (value - min) / (max - min)));
     }
   }
 
@@ -710,6 +725,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       for (int i =0; i < cluster.numServers; i++) {
         stats[i] = cluster.regionsPerServer[i].length;
       }
+
       return costFromArray(stats);
     }
   }
