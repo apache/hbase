@@ -1094,6 +1094,34 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
         </step>
       </procedure>
     </section>
+    <section>
+      <title>Units of Measure for Metrics</title>
+      <para>Different metrics are expressed in different units, as appropriate. Often, the unit of
+        measure is in the name (as in the metric <code>shippedKBs</code>). Otherwise, use the
+        following guidelines. When in doubt, you may need to examine the source for a given
+        metric.</para>
+      <itemizedlist>
+        <listitem>
+          <para>Metrics that refer to a point in time are usually expressed as a timestamp.</para>
+        </listitem>
+        <listitem>
+          <para>Metrics that refer to an age (such as <code>ageOfLastShippedOp</code>) are usually
+            expressed in milliseconds.</para>
+        </listitem>
+        <listitem>
+          <para>Metrics that refer to memory sizes are in bytes.</para>
+        </listitem>
+        <listitem>
+          <para>Sizes of queues (such as <code>sizeOfLogQueue</code>) are expressed as the number of
+            items in the queue. Determine the size by multiplying by the block size (default is 64
+            MB in HDFS).</para>
+        </listitem>
+        <listitem>
+          <para>Metrics that refer to things like the number of a given type of operations (such as
+              <code>logEditsRead</code>) are expressed as an integer.</para>
+        </listitem>
+      </itemizedlist>
+    </section>
     <section xml:id="rs_metrics">
       <title>Most Important RegionServer Metrics</title>
       <para>Previously, this section contained a list of the most important RegionServer metrics.
