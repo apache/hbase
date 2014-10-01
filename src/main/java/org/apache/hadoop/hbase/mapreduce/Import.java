@@ -148,7 +148,19 @@ public class Import {
   
           kv = convertKv(kv, cfRenameMap);
           // Deletes and Puts are gathered and written when finished
-          if (kv.isDelete()) {
+          /*
+           * If there are sequence of mutations and tombstones in an Export, and after Import the same
+           * sequence should be restored as it is. If we combine all Delete tombstones into single
+           * request then there is chance of ignoring few DeleteFamily tombstones, because if we
+           * submit multiple DeleteFamily tombstones in single Delete request then we are maintaining
+           * only newest in hbase table and ignoring other. Check - HBASE-12065
+           */
+          if (kv.isDeleteFamily()) {
+            Delete deleteFamily = new Delete(key.get());
+            deleteFamily.addDeleteMarker(kv);
+            deleteFamily.setClusterId(clusterId);
+            context.write(key, deleteFamily);
+          } else if (kv.isDelete()) {
             if (delete == null) {
               delete = new Delete(key.get());
             }

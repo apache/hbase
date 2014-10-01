@@ -17,9 +17,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 
@@ -320,6 +318,99 @@ public class TestImportExport {
     // cleanup
     exportTable.close();
     importTable.close();
+  }
+  
+  
+  @Test
+  public void testWithMultipleDeleteFamilyMarkersOfSameRowSameFamily() throws Exception {
+    String EXPORT_TABLE = "exportWithMultipleDeleteFamilyMarkersOfSameRowSameFamily";
+    HTableDescriptor desc = new HTableDescriptor(EXPORT_TABLE);
+    desc.addFamily(new HColumnDescriptor(FAMILYA)
+        .setMaxVersions(5)
+        .setKeepDeletedCells(true)
+    );
+    UTIL.getHBaseAdmin().createTable(desc);
+    HTable exportT = new HTable(UTIL.getConfiguration(), EXPORT_TABLE);
+
+    //Add first version of QUAL
+    Put p = new Put(ROW1);
+    p.add(FAMILYA, QUAL, now, QUAL);
+    exportT.put(p);
+
+    //Add Delete family marker
+    Delete d = new Delete(ROW1, now+3);
+    exportT.delete(d);
+
+    //Add second version of QUAL
+    p = new Put(ROW1);
+    p.add(FAMILYA, QUAL, now+5, "s".getBytes());
+    exportT.put(p);
+
+    //Add second Delete family marker
+    d = new Delete(ROW1, now+7);
+    exportT.delete(d);
+
+    String[] args = new String[] {
+        "-D" + Export.RAW_SCAN + "=true",
+        EXPORT_TABLE,
+        OUTPUT_DIR,
+        "1000", // max number of key versions per key to export
+    };
+
+    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(
+        UTIL.getConfiguration()), args);
+    Configuration conf = opts.getConfiguration();
+    args = opts.getRemainingArgs();
+
+    Job job = Export.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
+    job.waitForCompletion(false);
+    assertTrue(job.isSuccessful());
+
+    String IMPORT_TABLE = "importWithMultipleDeleteFamilyMarkersOfSameRowSameFamily";
+    desc = new HTableDescriptor(IMPORT_TABLE);
+    desc.addFamily(new HColumnDescriptor(FAMILYA)
+        .setMaxVersions(5)
+        .setKeepDeletedCells(true)
+    );
+    UTIL.getHBaseAdmin().createTable(desc);
+    
+    HTable importT = new HTable(UTIL.getConfiguration(), IMPORT_TABLE);
+    args = new String[] {
+        IMPORT_TABLE,
+        OUTPUT_DIR
+    };
+
+    opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
+    conf = opts.getConfiguration();
+    args = opts.getRemainingArgs();
+
+    job = Import.createSubmittableJob(conf, args);
+    job.getConfiguration().set("mapreduce.framework.name", "yarn");
+    job.waitForCompletion(false);
+    assertTrue(job.isSuccessful());
+
+    Scan s = new Scan();
+    s.setMaxVersions();
+    s.setRaw(true);
+    
+    ResultScanner importedTScanner = importT.getScanner(s);
+    Result importedTResult = importedTScanner.next();
+    
+    ResultScanner exportedTScanner = exportT.getScanner(s);
+    Result  exportedTResult =  exportedTScanner.next();
+    try
+    {
+      Result.compareResults(exportedTResult, importedTResult);
+    }
+    catch (Exception e) {
+      fail("Original and imported tables data comparision failed with error:"+e.getMessage());
+    }
+    finally
+    {
+      exportT.close();
+      importT.close();
+    }
   }
 
   /**
