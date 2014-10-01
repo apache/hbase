@@ -45,13 +45,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
@@ -307,11 +309,12 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
   private void scanKeysValues(Path file, KeyValueStatsCollector fileStats,
       HFileScanner scanner,  byte[] row) throws IOException {
-    KeyValue pkv = null;
+    Cell pCell = null;
     do {
-      KeyValue kv = KeyValueUtil.ensureKeyValue(scanner.getKeyValue());
+      Cell cell = scanner.getKeyValue();
       if (row != null && row.length != 0) {
-        int result = Bytes.compareTo(kv.getRow(), row);
+        int result = CellComparator.compareRows(cell.getRowArray(), cell.getRowOffset(),
+            cell.getRowLength(), row, 0, row.length);
         if (result > 0) {
           break;
         } else if (result < 0) {
@@ -320,48 +323,51 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       }
       // collect stats
       if (printStats) {
-        fileStats.collect(kv);
+        fileStats.collect(cell);
       }
       // dump key value
       if (printKey) {
-        System.out.print("K: " + kv);
+        System.out.print("K: " + cell);
         if (printValue) {
-          System.out.print(" V: " + Bytes.toStringBinary(kv.getValue()));
+          System.out.print(" V: "
+              + Bytes.toStringBinary(cell.getValueArray(), cell.getValueOffset(),
+                  cell.getValueLength()));
           int i = 0;
-          List<Tag> tags = kv.getTags();
+          List<Tag> tags = Tag.asList(cell.getTagsArray(), cell.getTagsOffset(),
+              cell.getTagsLength());
           for (Tag tag : tags) {
-            System.out
-                .print(String.format(" T[%d]: %s", i++, Bytes.toStringBinary(tag.getValue())));
+            System.out.print(String.format(" T[%d]: %s", i++,
+                Bytes.toStringBinary(tag.getBuffer(), tag.getTagOffset(), tag.getTagLength())));
           }
         }
         System.out.println();
       }
       // check if rows are in order
-      if (checkRow && pkv != null) {
-        if (Bytes.compareTo(pkv.getRow(), kv.getRow()) > 0) {
+      if (checkRow && pCell != null) {
+        if (CellComparator.compareRows(pCell, cell) > 0) {
           System.err.println("WARNING, previous row is greater then"
               + " current row\n\tfilename -> " + file + "\n\tprevious -> "
-              + Bytes.toStringBinary(pkv.getKey()) + "\n\tcurrent  -> "
-              + Bytes.toStringBinary(kv.getKey()));
+              + CellUtil.getCellKey(pCell) + "\n\tcurrent  -> "
+              + CellUtil.getCellKey(cell));
         }
       }
       // check if families are consistent
       if (checkFamily) {
-        String fam = Bytes.toString(kv.getFamily());
+        String fam = Bytes.toString(cell.getFamilyArray(), cell.getFamilyOffset(),
+            cell.getFamilyLength());
         if (!file.toString().contains(fam)) {
           System.err.println("WARNING, filename does not match kv family,"
               + "\n\tfilename -> " + file + "\n\tkeyvalue -> "
-              + Bytes.toStringBinary(kv.getKey()));
+              + CellUtil.getCellKey(cell));
         }
-        if (pkv != null
-            && !Bytes.equals(pkv.getFamily(), kv.getFamily())) {
+        if (pCell != null && CellComparator.compareFamilies(pCell, cell) != 0) {
           System.err.println("WARNING, previous kv has different family"
               + " compared to current key\n\tfilename -> " + file
-              + "\n\tprevious -> " + Bytes.toStringBinary(pkv.getKey())
-              + "\n\tcurrent  -> " + Bytes.toStringBinary(kv.getKey()));
+              + "\n\tprevious -> " + CellUtil.getCellKey(pCell)
+              + "\n\tcurrent  -> " + CellUtil.getCellKey(cell));
         }
       }
-      pkv = kv;
+      pCell = cell;
       ++count;
     } while (scanner.next());
   }
@@ -451,21 +457,21 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
     byte[] biggestRow = null;
 
-    private KeyValue prevKV = null;
+    private Cell prevCell = null;
     private long maxRowBytes = 0;
     private long curRowKeyLength;
 
-    public void collect(KeyValue kv) {
-      valLen.update(kv.getValueLength());
-      if (prevKV != null &&
-          KeyValue.COMPARATOR.compareRows(prevKV, kv) != 0) {
+    public void collect(Cell cell) {
+      valLen.update(cell.getValueLength());
+      if (prevCell != null &&
+          KeyValue.COMPARATOR.compareRows(prevCell, cell) != 0) {
         // new row
         collectRow();
       }
-      curRowBytes += kv.getLength();
-      curRowKeyLength = kv.getKeyLength();
+      curRowBytes += KeyValueUtil.length(cell);
+      curRowKeyLength = KeyValueUtil.keyLength(cell);
       curRowCols++;
-      prevKV = kv;
+      prevCell = cell;
     }
 
     private void collectRow() {
@@ -473,8 +479,8 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       rowSizeCols.update(curRowCols);
       keyLen.update(curRowKeyLength);
 
-      if (curRowBytes > maxRowBytes && prevKV != null) {
-        biggestRow = prevKV.getRow();
+      if (curRowBytes > maxRowBytes && prevCell != null) {
+        biggestRow = prevCell.getRow();
         maxRowBytes = curRowBytes;
       }
 
@@ -490,7 +496,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
     @Override
     public String toString() {
-      if (prevKV == null)
+      if (prevCell == null)
         return "no data available for statistics";
 
       // Dump the metrics to the output stream

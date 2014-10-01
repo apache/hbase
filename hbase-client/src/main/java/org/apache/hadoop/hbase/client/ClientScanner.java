@@ -27,11 +27,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -452,9 +452,9 @@ public class ClientScanner extends AbstractClientScanner {
           if (values != null && values.length > 0) {
             for (Result rs : values) {
               cache.add(rs);
-              for (Cell kv : rs.rawCells()) {
-                // TODO make method in Cell or CellUtil
-                remainingResultSize -= KeyValueUtil.ensureKeyValue(kv).heapSize();
+              // We don't make Iterator here
+              for (Cell cell : rs.rawCells()) {
+                remainingResultSize -= CellUtil.estimatedHeapSizeOf(cell);
               }
               countdown--;
               this.lastResult = rs;

@@ -49,13 +49,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -709,30 +709,30 @@ public class HStore implements Store {
       if (verifyBulkLoads) {
         long verificationStartTime = EnvironmentEdgeManager.currentTime();
         LOG.info("Full verification started for bulk load hfile: " + srcPath.toString());
-        Cell prevKV = null;
+        Cell prevCell = null;
         HFileScanner scanner = reader.getScanner(false, false, false);
         scanner.seekTo();
         do {
-          Cell kv = scanner.getKeyValue();
-          if (prevKV != null) {
-            if (Bytes.compareTo(prevKV.getRowArray(), prevKV.getRowOffset(),
-                prevKV.getRowLength(), kv.getRowArray(), kv.getRowOffset(),
-                kv.getRowLength()) > 0) {
+          Cell cell = scanner.getKeyValue();
+          if (prevCell != null) {
+            if (CellComparator.compareRows(prevCell, cell) > 0) {
               throw new InvalidHFileException("Previous row is greater than"
                   + " current row: path=" + srcPath + " previous="
-                  + Bytes.toStringBinary(KeyValueUtil.ensureKeyValue(prevKV).getKey()) + " current="
-                  + Bytes.toStringBinary(KeyValueUtil.ensureKeyValue(kv).getKey()));
+                  + CellUtil.getCellKey(prevCell) + " current="
+                  + CellUtil.getCellKey(cell));
             }
-            if (Bytes.compareTo(prevKV.getFamilyArray(), prevKV.getFamilyOffset(),
-                prevKV.getFamilyLength(), kv.getFamilyArray(), kv.getFamilyOffset(),
-                kv.getFamilyLength()) != 0) {
+            if (CellComparator.compareFamilies(prevCell, cell) != 0) {
               throw new InvalidHFileException("Previous key had different"
                   + " family compared to current key: path=" + srcPath
-                  + " previous=" + Bytes.toStringBinary(prevKV.getFamily())
-                  + " current=" + Bytes.toStringBinary(kv.getFamily()));
+                  + " previous="
+                  + Bytes.toStringBinary(prevCell.getFamilyArray(), prevCell.getFamilyOffset(),
+                      prevCell.getFamilyLength())
+                  + " current="
+                  + Bytes.toStringBinary(cell.getFamilyArray(), cell.getFamilyOffset(),
+                      cell.getFamilyLength()));
             }
           }
-          prevKV = kv;
+          prevCell = cell;
         } while (scanner.next());
       LOG.info("Full verification complete for bulk load hfile: " + srcPath.toString()
          + " took " + (EnvironmentEdgeManager.currentTime() - verificationStartTime)
@@ -1673,7 +1673,7 @@ public class HStore implements Store {
   }
 
   @Override
-  public KeyValue getRowKeyAtOrBefore(final byte[] row) throws IOException {
+  public Cell getRowKeyAtOrBefore(final byte[] row) throws IOException {
     // If minVersions is set, we will not ignore expired KVs.
     // As we're only looking for the latest matches, that should be OK.
     // With minVersions > 0 we guarantee that any KV that has any version
@@ -1698,17 +1698,17 @@ public class HStore implements Store {
         StoreFile sf = sfIterator.next();
         sfIterator.remove(); // Remove sf from iterator.
         boolean haveNewCandidate = rowAtOrBeforeFromStoreFile(sf, state);
-        KeyValue keyv = KeyValueUtil.ensureKeyValue(state.getCandidate());
+        Cell candidate = state.getCandidate();
         // we have an optimization here which stops the search if we find exact match.
-        if (keyv != null && CellUtil.matchingRow(keyv, row)) {
-          return KeyValueUtil.ensureKeyValue(state.getCandidate());
+        if (candidate != null && CellUtil.matchingRow(candidate, row)) {
+          return candidate;
         }
         if (haveNewCandidate) {
           sfIterator = this.storeEngine.getStoreFileManager().updateCandidateFilesForRowKeyBefore(
-              sfIterator, state.getTargetKey(), KeyValueUtil.ensureKeyValue(state.getCandidate()));
+              sfIterator, state.getTargetKey(), candidate);
         }
       }
-      return KeyValueUtil.ensureKeyValue(state.getCandidate());
+      return state.getCandidate();
     } finally {
       this.lock.readLock().unlock();
     }

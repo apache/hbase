@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 
@@ -104,7 +105,7 @@ class DefaultStoreFileManager implements StoreFileManager {
 
   @Override
   public Iterator<StoreFile> updateCandidateFilesForRowKeyBefore(
-      Iterator<StoreFile> candidateFiles, final KeyValue targetKey, final KeyValue candidate) {
+      Iterator<StoreFile> candidateFiles, final KeyValue targetKey, final Cell candidate) {
     // Default store has nothing useful to do here.
     // TODO: move this comment when implementing Level:
     // Level store can trim the list by range, removing all the files which cannot have

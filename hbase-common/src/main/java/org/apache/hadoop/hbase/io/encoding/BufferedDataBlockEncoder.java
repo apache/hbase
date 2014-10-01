@@ -32,12 +32,14 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.SamePrefixComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.WritableUtils;
 
 /**
@@ -326,7 +328,10 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   // there. So this has to be an instance of SettableSequenceId. SeekerState need not be
   // SettableSequenceId as we never return that to top layers. When we have to, we make
   // ClonedSeekerState from it.
-  protected static class ClonedSeekerState implements Cell, SettableSequenceId {
+  protected static class ClonedSeekerState implements Cell, HeapSize, SettableSequenceId {
+    private static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
+        + (4 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + (7 * Bytes.SIZEOF_INT)
+        + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE));
     private byte[] keyOnlyBuffer;
     private ByteBuffer currentBuffer;
     private short rowLength;
@@ -506,6 +511,12 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     @Override
     public void setSequenceId(long seqId) {
       this.seqId = seqId;
+    }
+
+    @Override
+    public long heapSize() {
+      return FIXED_OVERHEAD + rowLength + familyLength + qualifierLength + valueLength + tagsLength
+          + KeyValue.TIMESTAMP_TYPE_SIZE;
     }
   }
 

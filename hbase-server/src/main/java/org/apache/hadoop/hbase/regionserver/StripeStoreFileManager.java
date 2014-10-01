@@ -25,16 +25,15 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
@@ -45,8 +44,6 @@ import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-
 
 /**
  * Stripe implementation of StoreFileManager.
@@ -179,11 +176,11 @@ public class StripeStoreFileManager
   }
 
   /** See {@link StoreFileManager#getCandidateFilesForRowKeyBefore(KeyValue)} and
-   * {@link StoreFileManager#updateCandidateFilesForRowKeyBefore(Iterator, KeyValue, KeyValue)}
+   * {@link StoreFileManager#updateCandidateFilesForRowKeyBefore(Iterator, KeyValue, Cell)}
    * for details on this methods. */
   @Override
   public Iterator<StoreFile> updateCandidateFilesForRowKeyBefore(
-      Iterator<StoreFile> candidateFiles, final KeyValue targetKey, final KeyValue candidate) {
+      Iterator<StoreFile> candidateFiles, final KeyValue targetKey, final Cell candidate) {
     KeyBeforeConcatenatedLists.Iterator original =
         (KeyBeforeConcatenatedLists.Iterator)candidateFiles;
     assert original != null;

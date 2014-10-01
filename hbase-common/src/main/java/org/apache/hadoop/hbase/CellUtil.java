@@ -668,6 +668,17 @@ public final class CellUtil {
   }
 
   /**
+   * @param cell
+   * @return Key portion of the Cell including rk, cf, qualifier, ts and type.
+   */
+  public static CellKey getCellKey(Cell cell){
+    return new CellKey(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+        cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
+        cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(),
+        cell.getTimestamp(), cell.getTypeByte());
+  }
+
+  /**
    * Write rowkey excluding the common part.
    * @param cell
    * @param rLen

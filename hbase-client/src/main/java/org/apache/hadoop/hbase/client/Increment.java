@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
@@ -240,9 +239,8 @@ public class Increment extends Mutation implements Comparable<Row> {
           } else {
             moreThanOneB = true;
           }
-          KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-          sb.append(Bytes.toStringBinary(kv.getKey()) + "+=" +
-              Bytes.toLong(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()));
+          sb.append(CellUtil.getCellKey(cell) + "+=" +
+              Bytes.toLong(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
         }
         sb.append("}");
       }

@@ -743,7 +743,7 @@ public class Result implements CellScannable, CellScanner {
   public static long getTotalSizeOfCells(Result result) {
     long size = 0;
     for (Cell c : result.rawCells()) {
-      size += KeyValueUtil.ensureKeyValue(c).heapSize();
+      size += CellUtil.estimatedHeapSizeOf(c);
     }
     return size;
   }
