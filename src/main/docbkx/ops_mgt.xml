@@ -985,174 +985,41 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
         which may swamp your installation. Options include either increasing Ganglia server
         capacity, or configuring HBase to emit fewer metrics. </para>
     </section>
-    <section
-      xml:id="rs_metrics">
-      <title>Most Important RegionServer Metrics</title>
-      <section
-        xml:id="hbase.regionserver.blockCacheHitCachingRatio">
-        <title><varname>blockCacheExpressCachingRatio (formerly
-          blockCacheHitCachingRatio)</varname></title>
-        <para>Block cache hit caching ratio (0 to 100). The cache-hit ratio for reads configured to
-          look in the cache (i.e., cacheBlocks=true). </para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.callQueueLength">
-        <title><varname>callQueueLength</varname></title>
-        <para>Point in time length of the RegionServer call queue. If requests arrive faster than
-          the RegionServer handlers can process them they will back up in the callQueue.</para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.compactionQueueSize">
-        <title><varname>compactionQueueLength (formerly compactionQueueSize)</varname></title>
-        <para>Point in time length of the compaction queue. This is the number of Stores in the
-          RegionServer that have been targeted for compaction.</para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.flushQueueSize">
-        <title><varname>flushQueueSize</varname></title>
-        <para>Point in time number of enqueued regions in the MemStore awaiting flush.</para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.hdfsBlocksLocalityIndex">
-        <title><varname>hdfsBlocksLocalityIndex</varname></title>
-        <para>Point in time percentage of HDFS blocks that are local to this RegionServer. The
-          higher the better. </para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.memstoreSizeMB">
-        <title><varname>memstoreSizeMB</varname></title>
-        <para>Point in time sum of all the memstore sizes in this RegionServer (MB). Watch for this
-          nearing or exceeding the configured high-watermark for MemStore memory in the
-          RegionServer. </para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.regions">
-        <title><varname>numberOfOnlineRegions</varname></title>
-        <para>Point in time number of regions served by the RegionServer. This is an important
-          metric to track for RegionServer-Region density. </para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.readRequestsCount">
-        <title><varname>readRequestsCount</varname></title>
-        <para>Number of read requests for this RegionServer since startup. Note: this is a 32-bit
-          integer and can roll. </para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.slowHLogAppendCount">
-        <title><varname>slowHLogAppendCount</varname></title>
-        <para>Number of slow HLog append writes for this RegionServer since startup, where "slow" is
-          > 1 second. This is a good "canary" metric for HDFS. </para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.usedHeapMB">
-        <title><varname>usedHeapMB</varname></title>
-        <para>Point in time amount of memory used by the RegionServer (MB).</para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.writeRequestsCount">
-        <title><varname>writeRequestsCount</varname></title>
-        <para>Number of write requests for this RegionServer since startup. Note: this is a 32-bit
-          integer and can roll. </para>
-      </section>
-
+    <section>
+      <title>Units of Measure for Metrics</title>
+      <para>Different metrics are expressed in different units, as appropriate. Often, the unit of
+        measure is in the name (as in the metric <code>shippedKBs</code>). Otherwise, use the
+        following guidelines. When in doubt, you may need to examine the source for a given
+        metric.</para>
+      <itemizedlist>
+        <listitem>
+          <para>Metrics that refer to a point in time are usually expressed as a timestamp.</para>
+        </listitem>
+        <listitem>
+          <para>Metrics that refer to an age (such as <code>ageOfLastShippedOp</code>) are usually
+            expressed in milliseconds.</para>
+        </listitem>
+        <listitem>
+          <para>Metrics that refer to memory sizes are in bytes.</para>
+        </listitem>
+        <listitem>
+          <para>Sizes of queues (such as <code>sizeOfLogQueue</code>) are expressed as the number of
+            items in the queue. Determine the size by multiplying by the block size (default is 64
+            MB in HDFS).</para>
+        </listitem>
+        <listitem>
+          <para>Metrics that refer to things like the number of a given type of operations (such as
+              <code>logEditsRead</code>) are expressed as an integer.</para>
+        </listitem>
+      </itemizedlist>
     </section>
-    <section
-      xml:id="rs_metrics_other">
-      <title>Other RegionServer Metrics</title>
-      <section
-        xml:id="hbase.regionserver.blockCacheCount">
-        <title><varname>blockCacheCount</varname></title>
-        <para>Point in time block cache item count in memory. This is the number of blocks of
-          StoreFiles (HFiles) in the cache.</para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.blockCacheEvictedCount">
-        <title><varname>blockCacheEvictedCount</varname></title>
-        <para>Number of blocks that had to be evicted from the block cache due to heap size
-          constraints by RegionServer since startup.</para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.blockCacheFree">
-        <title><varname>blockCacheFreeMB</varname></title>
-        <para>Point in time block cache memory available (MB).</para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.blockCacheHitCount">
-        <title><varname>blockCacheHitCount</varname></title>
-        <para>Number of blocks of StoreFiles (HFiles) read from the cache by RegionServer since
-          startup.</para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.blockCacheHitRatio">
-        <title><varname>blockCacheHitRatio</varname></title>
-        <para>Block cache hit ratio (0 to 100) from RegionServer startup. Includes all read
-          requests, although those with cacheBlocks=false will always read from disk and be counted
-          as a "cache miss", which means that full-scan MapReduce jobs can affect this metric
-          significantly.</para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.blockCacheMissCount">
-        <title><varname>blockCacheMissCount</varname></title>
-        <para>Number of blocks of StoreFiles (HFiles) requested but not read from the cache from
-          RegionServer startup.</para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.blockCacheSize">
-        <title><varname>blockCacheSizeMB</varname></title>
-        <para>Point in time block cache size in memory (MB). i.e., memory in use by the
-          BlockCache</para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.fsPreadLatency">
-        <title><varname>fsPreadLatency*</varname></title>
-        <para>There are several filesystem positional read latency (ms) metrics, all measured from
-          RegionServer startup.</para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.fsReadLatency">
-        <title><varname>fsReadLatency*</varname></title>
-        <para>There are several filesystem read latency (ms) metrics, all measured from RegionServer
-          startup. The issue with interpretation is that ALL reads go into this metric (e.g.,
-          single-record Gets, full table Scans), including reads required for compactions. This
-          metric is only interesting "over time" when comparing major releases of HBase or your own
-          code.</para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.fsWriteLatency">
-        <title><varname>fsWriteLatency*</varname></title>
-        <para>There are several filesystem write latency (ms) metrics, all measured from
-          RegionServer startup. The issue with interpretation is that ALL writes go into this metric
-          (e.g., single-record Puts, full table re-writes due to compaction). This metric is only
-          interesting "over time" when comparing major releases of HBase or your own code.</para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.stores">
-        <title><varname>NumberOfStores</varname></title>
-        <para>Point in time number of Stores open on the RegionServer. A Store corresponds to a
-          ColumnFamily. For example, if a table (which contains the column family) has 3 regions on
-          a RegionServer, there will be 3 stores open for that column family. </para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.storeFiles">
-        <title><varname>NumberOfStorefiles</varname></title>
-        <para>Point in time number of StoreFiles open on the RegionServer. A store may have more
-          than one StoreFile (HFile).</para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.requests">
-        <title><varname>requestsPerSecond</varname></title>
-        <para>Point in time number of read and write requests. Requests correspond to RegionServer
-          RPC calls, thus a single Get will result in 1 request, but a Scan with caching set to 1000
-          will result in 1 request for each 'next' call (i.e., not each row). A bulk-load request
-          will constitute 1 request per HFile. This metric is less interesting than
-          readRequestsCount and writeRequestsCount in terms of measuring activity due to this metric
-          being periodic. </para>
-      </section>
-      <section
-        xml:id="hbase.regionserver.storeFileIndexSizeMB">
-        <title><varname>storeFileIndexSizeMB</varname></title>
-        <para>Point in time sum of all the StoreFile index sizes in this RegionServer (MB)</para>
-      </section>
+    <section xml:id="rs_metrics">
+      <title>Most Important RegionServer Metrics</title>
+      <para>Previously, this section contained a list of the most important RegionServer metrics.
+        However, the list was extremely out of date. In some cases, the name of a given metric has
+        changed. In other cases, the metric seems to no longer be exposed. An effort is underway to
+        create automatic documentation for each metric based upon information pulled from its
+        implementation.</para>
     </section>
   </section>
 
