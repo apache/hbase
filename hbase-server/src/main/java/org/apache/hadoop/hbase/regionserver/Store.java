@@ -148,10 +148,10 @@ public interface Store extends HeapSize, StoreConfigInformation {
    * see deletes before we come across cells we are to delete. Presumption is that the
    * memstore#kvset is processed before memstore#snapshot and so on.
    * @param row The row key of the targeted row.
-   * @return Found keyvalue or null if none found.
+   * @return Found Cell or null if none found.
    * @throws IOException
    */
-  KeyValue getRowKeyAtOrBefore(final byte[] row) throws IOException;
+  Cell getRowKeyAtOrBefore(final byte[] row) throws IOException;
 
   FileSystem getFileSystem();
 

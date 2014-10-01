@@ -192,13 +192,8 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
         if (--maxCols <= 0 ) {
           continue;
         }
-        // KeyValue v1 expectation.  Cast for now until we go all Cell all the time.
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        Map<String, Object> kvMap = kv.toStringMap();
-        // row and family information are already available in the bigger map
-        kvMap.remove("row");
-        kvMap.remove("family");
-        qualifierDetails.add(kvMap);
+        Map<String, Object> cellMap = cellToStringMap(cell);
+        qualifierDetails.add(cellMap);
       }
     }
     map.put("totalColumns", colCount);
@@ -207,6 +202,23 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
       map.put("id", getId());
     }
     return map;
+  }
+
+  private static Map<String, Object> cellToStringMap(Cell c) {
+    Map<String, Object> stringMap = new HashMap<String, Object>();
+    stringMap.put("qualifier", Bytes.toStringBinary(c.getQualifierArray(), c.getQualifierOffset(),
+                c.getQualifierLength()));
+    stringMap.put("timestamp", c.getTimestamp());
+    stringMap.put("vlen", c.getValueLength());
+    List<Tag> tags = Tag.asList(c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
+    if (tags != null) {
+      List<String> tagsString = new ArrayList<String>();
+      for (Tag t : tags) {
+        tagsString.add((t.getType()) + ":" + Bytes.toStringBinary(t.getValue()));
+      }
+      stringMap.put("tag", tagsString);
+    }
+    return stringMap;
   }
 
   /**
@@ -423,8 +435,7 @@ public abstract class Mutation extends OperationWithAttributes implements Row, C
           size * ClassSize.REFERENCE);
 
       for(Cell cell : entry.getValue()) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-        heapsize += kv.heapSize();
+        heapsize += CellUtil.estimatedHeapSizeOf(cell);
       }
     }
     heapsize += getAttributeSize();

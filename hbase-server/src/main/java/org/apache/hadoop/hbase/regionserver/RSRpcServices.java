@@ -48,8 +48,6 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
@@ -2021,7 +2019,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           lease = regionServer.leases.removeLease(scannerName);
           List<Result> results = new ArrayList<Result>(rows);
           long currentScanResultSize = 0;
-          long totalKvSize = 0;
+          long totalCellSize = 0;
 
           boolean done = false;
           // Call coprocessor. Get region info from scanner.
@@ -2031,9 +2029,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             if (!results.isEmpty()) {
               for (Result r : results) {
                 for (Cell cell : r.rawCells()) {
-                  KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-                  currentScanResultSize += kv.heapSize();
-                  totalKvSize += kv.getLength();
+                  currentScanResultSize += CellUtil.estimatedHeapSizeOf(cell);
+                  totalCellSize += CellUtil.estimatedLengthOf(cell);
                 }
               }
             }
@@ -2063,9 +2060,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                   boolean moreRows = scanner.nextRaw(values);
                   if (!values.isEmpty()) {
                     for (Cell cell : values) {
-                      KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-                      currentScanResultSize += kv.heapSize();
-                      totalKvSize += kv.getLength();
+                      currentScanResultSize += CellUtil.estimatedHeapSizeOf(cell);
+                      totalCellSize += CellUtil.estimatedLengthOf(cell);
                     }
                     results.add(Result.create(values, null, stale));
                     i++;
@@ -2077,7 +2073,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                 }
               }
               region.readRequestsCount.add(i);
-              region.getMetrics().updateScanNext(totalKvSize);
+              region.getMetrics().updateScanNext(totalCellSize);
             } finally {
               region.closeRegionOperation();
             }

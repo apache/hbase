@@ -2048,7 +2048,7 @@ public class HRegion implements HeapSize { // , Writable{
     try {
       Store store = getStore(family);
       // get the closest key. (HStore.getRowKeyAtOrBefore can return null)
-      KeyValue key = store.getRowKeyAtOrBefore(row);
+      Cell key = store.getRowKeyAtOrBefore(row);
       Result result = null;
       if (key != null) {
         Get get = new Get(CellUtil.cloneRow(key));
