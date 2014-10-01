@@ -36,6 +36,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
@@ -50,9 +52,27 @@ import com.google.common.base.Preconditions;
  * Compact region on request and then run split if appropriate
  */
 @InterfaceAudience.Private
-public class CompactSplitThread implements CompactionRequestor {
+public class CompactSplitThread implements CompactionRequestor, PropagatingConfigurationObserver {
   static final Log LOG = LogFactory.getLog(CompactSplitThread.class);
 
+  // Configuration key for the large compaction threads.
+  public final static String LARGE_COMPACTION_THREADS =
+      "hbase.regionserver.thread.compaction.large";
+  public final static int LARGE_COMPACTION_THREADS_DEFAULT = 1;
+  
+  // Configuration key for the small compaction threads.
+  public final static String SMALL_COMPACTION_THREADS =
+      "hbase.regionserver.thread.compaction.small";
+  public final static int SMALL_COMPACTION_THREADS_DEFAULT = 1;
+  
+  // Configuration key for split threads
+  public final static String SPLIT_THREADS = "hbase.regionserver.thread.split";
+  public final static int SPLIT_THREADS_DEFAULT = 1;
+  
+  // Configuration keys for merge threads
+  public final static String MERGE_THREADS = "hbase.regionserver.thread.merge";
+  public final static int MERGE_THREADS_DEFAULT = 1;
+  
   private final HRegionServer server;
   private final Configuration conf;
 
@@ -77,11 +97,11 @@ public class CompactSplitThread implements CompactionRequestor {
         Integer.MAX_VALUE);
 
     int largeThreads = Math.max(1, conf.getInt(
-        "hbase.regionserver.thread.compaction.large", 1));
+        LARGE_COMPACTION_THREADS, LARGE_COMPACTION_THREADS_DEFAULT));
     int smallThreads = conf.getInt(
-        "hbase.regionserver.thread.compaction.small", 1);
+        SMALL_COMPACTION_THREADS, SMALL_COMPACTION_THREADS_DEFAULT);
 
-    int splitThreads = conf.getInt("hbase.regionserver.thread.split", 1);
+    int splitThreads = conf.getInt(SPLIT_THREADS, SPLIT_THREADS_DEFAULT);
 
     // if we have throttle threads, make sure the user also specified size
     Preconditions.checkArgument(largeThreads > 0 && smallThreads > 0);
@@ -121,7 +141,7 @@ public class CompactSplitThread implements CompactionRequestor {
             return t;
           }
       });
-    int mergeThreads = conf.getInt("hbase.regionserver.thread.merge", 1);
+    int mergeThreads = conf.getInt(MERGE_THREADS, MERGE_THREADS_DEFAULT);
     this.mergePool = (ThreadPoolExecutor) Executors.newFixedThreadPool(
         mergeThreads, new ThreadFactory() {
           @Override
@@ -147,7 +167,7 @@ public class CompactSplitThread implements CompactionRequestor {
     queueLists.append("Compaction/Split Queue dump:\n");
     queueLists.append("  LargeCompation Queue:\n");
     BlockingQueue<Runnable> lq = longCompactions.getQueue();
-    Iterator it = lq.iterator();
+    Iterator<Runnable> it = lq.iterator();
     while(it.hasNext()){
       queueLists.append("    "+it.next().toString());
       queueLists.append("\n");
@@ -538,5 +558,85 @@ public class CompactSplitThread implements CompactionRequestor {
         runner.store.cancelRequestedCompaction(runner.compaction);
       }
     }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void onConfigurationChange(Configuration newConf) {
+    // Check if number of large / small compaction threads has changed, and then
+    // adjust the core pool size of the thread pools, by using the
+    // setCorePoolSize() method. According to the javadocs, it is safe to
+    // change the core pool size on-the-fly. We need to reset the maximum
+    // pool size, as well.
+    int largeThreads = Math.max(1, newConf.getInt(
+            LARGE_COMPACTION_THREADS,
+            LARGE_COMPACTION_THREADS_DEFAULT));
+    if (this.longCompactions.getCorePoolSize() != largeThreads) {
+      LOG.info("Changing the value of " + LARGE_COMPACTION_THREADS +
+              " from " + this.longCompactions.getCorePoolSize() + " to " +
+              largeThreads);
+      this.longCompactions.setMaximumPoolSize(largeThreads);
+      this.longCompactions.setCorePoolSize(largeThreads);
+    }
+
+    int smallThreads = newConf.getInt(SMALL_COMPACTION_THREADS,
+            SMALL_COMPACTION_THREADS_DEFAULT);
+    if (this.shortCompactions.getCorePoolSize() != smallThreads) {
+      LOG.info("Changing the value of " + SMALL_COMPACTION_THREADS +
+                " from " + this.shortCompactions.getCorePoolSize() + " to " +
+                smallThreads);
+      this.shortCompactions.setMaximumPoolSize(smallThreads);
+      this.shortCompactions.setCorePoolSize(smallThreads);
+    }
+
+    int splitThreads = newConf.getInt(SPLIT_THREADS,
+            SPLIT_THREADS_DEFAULT);
+    if (this.splits.getCorePoolSize() != splitThreads) {
+      LOG.info("Changing the value of " + SPLIT_THREADS +
+                " from " + this.splits.getCorePoolSize() + " to " +
+                splitThreads);
+      this.splits.setMaximumPoolSize(smallThreads);
+      this.splits.setCorePoolSize(smallThreads);
+    }
+
+    int mergeThreads = newConf.getInt(MERGE_THREADS,
+            MERGE_THREADS_DEFAULT);
+    if (this.mergePool.getCorePoolSize() != mergeThreads) {
+      LOG.info("Changing the value of " + MERGE_THREADS +
+                " from " + this.mergePool.getCorePoolSize() + " to " +
+                mergeThreads);
+      this.mergePool.setMaximumPoolSize(smallThreads);
+      this.mergePool.setCorePoolSize(smallThreads);
+    }
+
+    // We change this atomically here instead of reloading the config in order that upstream
+    // would be the only one with the flexibility to reload the config.
+    this.conf.reloadConfiguration();
+  }
+
+  protected int getSmallCompactionThreadNum() {
+    return this.shortCompactions.getCorePoolSize();
+  }
+
+  public int getLargeCompactionThreadNum() {
+    return this.longCompactions.getCorePoolSize();
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void registerChildren(ConfigurationManager manager) {
+    // No children to register.
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void deregisterChildren(ConfigurationManager manager) {
+    // No children to register
   }
 }
