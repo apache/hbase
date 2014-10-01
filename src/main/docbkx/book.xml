@@ -3298,6 +3298,92 @@ myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName(
         </section>
       </section>
 
+      <section xml:id="manual_region_splitting_decisions">
+        <title>Manual Region Splitting</title>
+        <para>It is possible to manually split your table, either at table creation (pre-splitting),
+          or at a later time as an administrative action. You might choose to split your region for
+          one or more of the following reasons. There may be other valid reasons, but the need to
+          manually split your table might also point to problems with your schema design.</para>
+        <itemizedlist>
+          <title>Reasons to Manually Split Your Table</title>
+          <listitem>
+            <para>Your data is sorted by timeseries or another similar algorithm that sorts new data
+              at the end of the table. This means that the Region Server holding the last region is
+              always under load, and the other Region Servers are idle, or mostly idle. See also
+                <xref linkend="timeseries"/>.</para>
+          </listitem>
+          <listitem>
+            <para>You have developed an unexpected hotspot in one region of your table. For
+              instance, an application which tracks web searches might be inundated by a lot of
+              searches for a celebrity in the event of news about that celebrity. See <xref
+                linkend="perf.one.region"/> for more discussion about this particular
+              scenario.</para>
+          </listitem>
+          <listitem>
+            <para>After a big increase to the number of Region Servers in your cluster, to get the
+              load spread out quickly.</para>
+          </listitem>
+          <listitem>
+            <para>Before a bulk-load which is likely to cause unusual and uneven load across
+              regions.</para>
+          </listitem>
+        </itemizedlist>
+        <para>See <xref linkend="disable.splitting"/> for a discussion about the dangers and
+          possible benefits of managing splitting completely manually.</para>
+        <section>
+          <title>Determining Split Points</title>
+          <para>The goal of splitting your table manually is to improve the chances of balancing the
+            load across the cluster in situations where good rowkey design alone won't get you
+            there. Keeping that in mind, the way you split your regions is very dependent upon the
+            characteristics of your data. It may be that you already know the best way to split your
+            table. If not, the way you split your table depends on what your keys are like.</para>
+          <variablelist>
+            <varlistentry>
+              <term>Alphanumeric Rowkeys</term>
+              <listitem>
+                <para>If your rowkeys start with a letter or number, you can split your table at
+                  letter or number boundaries. For instance, the following command creates a table
+                  with regions that split at each vowel, so the first region has A-D, the second
+                  region has E-H, the third region has I-N, the fourth region has O-V, and the fifth
+                  region has U-Z.</para>
+                  <screen>hbase> create 'test_table', 'f1', SPLITS=> ['a', 'e', 'i', 'o', 'u']</screen>
+                <para>The following command splits an existing table at split point '2'.</para>
+                <screen>hbase> split 'test_table', '2'</screen>
+                <para>You can also split a specific region by referring to its ID. You can find the
+                  region ID by looking at either the table or region in the Web UI. It will be a
+                  long number such as
+                    <literal>t2,1,1410227759524.829850c6eaba1acc689480acd8f081bd.</literal>. The
+                  format is <replaceable>table_name,start_key,region_id</replaceable>To split that
+                  region into two, as close to equally as possible (at the nearest row boundary),
+                  issue the following command.</para>
+                <screen>hbase> split 't2,1,1410227759524.829850c6eaba1acc689480acd8f081bd.'</screen>
+                <para>The split key is optional. If it is omitted, the table or region is split in
+                  half.</para>
+                <para>The following example shows how to use the RegionSplitter to create 10
+                  regions, split at hexadecimal values.</para>
+                <screen>hbase org.apache.hadoop.hbase.util.RegionSplitter test_table HexStringSplit -c 10 -f f1</screen>
+              </listitem>
+            </varlistentry>
+            <varlistentry>
+              <term>Using a Custom Algorithm</term>
+              <listitem>
+                <para>The RegionSplitter tool is provided with HBase, and uses a <firstterm><link
+                      xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/util/RegionSplitter.SplitAlgorithm.html"
+                      >SplitAlgorithm</link></firstterm> to determine split points for you. As
+                  parameters, you give it the algorithm, desired number of regions, and column
+                  families. It includes two split algorithms. The first is the <code><link
+                      xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/util/RegionSplitter.HexStringSplit.html"
+                      >HexStringSplit</link></code> algorithm, which assumes the row keys are
+                  hexadecimal strings. The second, <link
+                    xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/util/RegionSplitter.UniformSplit.html"
+                    >UniformSplit</link>, assumes the row keys are random byte arrays. You will
+                  probably need to develop your own SplitAlgorithm, using the provided ones as
+                  models. </para>
+              </listitem>
+            </varlistentry>
+          </variablelist>
+        </section>
+      </section>
        <section>
         <title>Online Region Merges</title>
 

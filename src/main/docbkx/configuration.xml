@@ -1355,7 +1355,9 @@ export HBASE_HEAPSIZE=4096
             <varname>hbase.hregion.max.filesize</varname>,
             <varname>hbase.regionserver.regionSplitLimit</varname>. A simplistic view of splitting
           is that when a region grows to <varname>hbase.hregion.max.filesize</varname>, it is split.
-          For most use patterns, most of the time, you should use automatic splitting.</para>
+          For most use patterns, most of the time, you should use automatic splitting. See <xref
+            linkend="manual_region_splitting_decisions"/> for more information about manual region
+          splitting.</para>
         <para>Instead of allowing HBase to split your regions automatically, you can choose to
           manage the splitting yourself. This feature was added in HBase 0.90.0. Manually managing
           splits works if you know your keyspace well, otherwise let HBase figure where to split for you.

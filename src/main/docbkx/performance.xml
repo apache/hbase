@@ -682,9 +682,9 @@ admin.createTable(table, startKey, endKey, numberOfRegions);
 byte[][] splits = ...;   // create your own splits
 admin.createTable(table, splits);
 </programlisting>
-      <para> See <xref
-          linkend="rowkey.regionsplits" /> for issues related to understanding your keyspace and
-        pre-creating regions. </para>
+      <para> See <xref linkend="rowkey.regionsplits"/> for issues related to understanding your
+        keyspace and pre-creating regions. See <xref linkend="manual_region_splitting_decisions"/>
+        for discussion on manually pre-splitting regions.</para>
     </section>
     <section
       xml:id="def.log.flush">
