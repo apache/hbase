@@ -5425,6 +5425,7 @@ This option should not normally be used, and it is not in <code>-fixAll</code>.
 	</section>
   </appendix>
 
+  <xi:include xmlns:xi="http://www.w3.org/2001/XInclude" href="appendix_acl_matrix.xml" />
   <appendix
     xml:id="compression">
 
@@ -5490,7 +5491,7 @@ This option should not normally be used, and it is not in <code>-fixAll</code>.
     </itemizedlist>
 
 
-    <itemizedlist>
+    <itemizedlist xml:id="data.block.encoding.types">
       <title>Data Block Encoding Types</title>
       <listitem>
         <para>Prefix - Often, keys are very similar. Specifically, keys often share a common prefix
