@@ -163,8 +163,11 @@ public class ProtobufLogWriter extends WriterBase {
   @Override
   public void sync() throws IOException {
     try {
+      // This looks to be a noop but its what we have always done.  Leaving for now.
+      this.output.flush();
+      // TODO: Add in option to call hsync. See HBASE-5954 Allow proper fsync support for HBase
+      //
       this.output.hflush();
-      this.output.hsync();
     } catch (NullPointerException npe) {
       // Concurrent close...
       throw new IOException(npe);
