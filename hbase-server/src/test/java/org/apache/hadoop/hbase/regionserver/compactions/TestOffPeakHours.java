@@ -62,16 +62,16 @@ public class TestOffPeakHours {
 
   @Test
   public void testSetPeakHourToTargetTime() {
-    conf.setLong("hbase.offpeak.start.hour", hourMinusOne);
-    conf.setLong("hbase.offpeak.end.hour", hourPlusOne);
+    conf.setLong(CompactionConfiguration.HBASE_HSTORE_OFFPEAK_START_HOUR, hourMinusOne);
+    conf.setLong(CompactionConfiguration.HBASE_HSTORE_OFFPEAK_END_HOUR, hourPlusOne);
     OffPeakHours target = OffPeakHours.getInstance(conf);
     assertTrue(target.isOffPeakHour(hourOfDay));
   }
 
   @Test
   public void testSetPeakHourOutsideCurrentSelection() {
-    conf.setLong("hbase.offpeak.start.hour", hourMinusTwo);
-    conf.setLong("hbase.offpeak.end.hour", hourMinusOne);
+    conf.setLong(CompactionConfiguration.HBASE_HSTORE_OFFPEAK_START_HOUR, hourMinusTwo);
+    conf.setLong(CompactionConfiguration.HBASE_HSTORE_OFFPEAK_END_HOUR, hourMinusOne);
     OffPeakHours target = OffPeakHours.getInstance(conf);
     assertFalse(target.isOffPeakHour(hourOfDay));
   }

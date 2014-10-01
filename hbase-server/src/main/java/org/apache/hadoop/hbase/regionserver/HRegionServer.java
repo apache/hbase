@@ -76,6 +76,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -437,6 +439,12 @@ public class HRegionServer extends HasThread implements
   protected BaseCoordinatedStateManager csm;
 
   /**
+   * Configuration manager is used to register/deregister and notify the configuration observers
+   * when the regionserver is notified that there was a change in the on disk configs.
+   */
+  private final ConfigurationManager configurationManager;
+
+  /**
    * Starts a HRegionServer at the default location.
    * @param conf
    * @throws IOException
@@ -534,6 +542,7 @@ public class HRegionServer extends HasThread implements
       clusterStatusTracker = new ClusterStatusTracker(zooKeeper, this);
       clusterStatusTracker.start();
     }
+    this.configurationManager = new ConfigurationManager();
 
     rpcServices.start();
     putUpWebUI();
@@ -769,6 +778,12 @@ public class HRegionServer extends HasThread implements
     if (storefileRefreshPeriod > 0) {
       this.storefileRefresher = new StorefileRefresherChore(storefileRefreshPeriod, this, this);
     }
+    registerConfigurationObservers();
+  }
+
+  private void registerConfigurationObservers() {
+    // Registering the compactSplitThread object with the ConfigurationManager.
+    configurationManager.registerObserver(this.compactSplitThread);
   }
 
   /**
@@ -2284,6 +2299,7 @@ public class HRegionServer extends HasThread implements
   @Override
   public void addToOnlineRegions(HRegion region) {
     this.onlineRegions.put(region.getRegionInfo().getEncodedName(), region);
+    configurationManager.registerObserver(region);
   }
 
   /**
@@ -3089,5 +3105,13 @@ public class HRegionServer extends HasThread implements
    */
   public CacheConfig getCacheConfig() {
     return this.cacheConfig;
+  }
+
+  /**
+   * @return : Returns the ConfigurationManager object for testing purposes.
+   */
+  protected ConfigurationManager getConfigurationManager() {
+    return configurationManager;
+    
   }
 }
