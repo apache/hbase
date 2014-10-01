@@ -186,7 +186,7 @@ public class HBaseAdmin implements Admin {
 
   /**
    * Constructor.
-   * See {@link #HBaseAdmin(HConnection connection)}
+   * See {@link #HBaseAdmin(Connection connection)}
    *
    * @param c Configuration object. Copied internally.
    */
@@ -205,10 +205,10 @@ public class HBaseAdmin implements Admin {
 
 
   /**
-   * Constructor for externally managed HConnections.
+   * Constructor for externally managed Connections.
    * The connection to master will be created when required by admin functions.
    *
-   * @param connection The HConnection instance to use
+   * @param connection The Connection instance to use
    * @throws MasterNotRunningException, ZooKeeperConnectionException are not
    *  thrown anymore but kept into the interface for backward api compatibility
    * @deprecated Do not use this internal ctor.

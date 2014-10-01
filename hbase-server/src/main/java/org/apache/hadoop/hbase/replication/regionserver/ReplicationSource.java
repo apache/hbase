@@ -734,6 +734,8 @@ public class ReplicationSource extends Thread
    * @return true if we're done with the current file, false if we should
    * continue trying to read from it
    */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DE_MIGHT_IGNORE",
+      justification="Yeah, this is how it works")
   protected boolean processEndOfFile() {
     if (this.queue.size() != 0) {
       if (LOG.isTraceEnabled()) {

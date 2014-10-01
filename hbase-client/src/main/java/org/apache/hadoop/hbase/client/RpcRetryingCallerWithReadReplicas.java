@@ -378,6 +378,8 @@ public class RpcRetryingCallerWithReadReplicas {
         }
       }
 
+      @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="RCN_REDUNDANT_NULLCHECK_OF_NULL_VALUE",
+          justification="Is this an issue?")
       @Override
       public Result get(long timeout, TimeUnit unit)
           throws InterruptedException, ExecutionException, TimeoutException {
@@ -390,7 +392,7 @@ public class RpcRetryingCallerWithReadReplicas {
           }
           unit.timedWait(tasks, timeout);
         }
-
+        // Findbugs says this null check is redundant.  Will result be set across the wait above?
         if (result != null) {
           return result;
         }
@@ -398,7 +400,7 @@ public class RpcRetryingCallerWithReadReplicas {
           throw exeEx;
         }
 
-        throw new TimeoutException();
+        throw new TimeoutException("timeout=" + timeout + ", " + unit);
       }
     }
 
@@ -416,7 +418,7 @@ public class RpcRetryingCallerWithReadReplicas {
 
     public QueueingFuture take() throws InterruptedException {
       synchronized (tasks) {
-        if (completed == null) tasks.wait();
+        while (completed == null) tasks.wait();
       }
       return completed;
     }

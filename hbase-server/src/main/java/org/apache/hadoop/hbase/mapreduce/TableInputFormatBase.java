@@ -65,7 +65,7 @@ import org.apache.hadoop.util.StringUtils;
  *   class ExampleTIF extends TableInputFormatBase implements JobConfigurable {
  *
  *     public void configure(JobConf job) {
- *       Connection connection = 
+ *       Connection connection =
  *          ConnectionFactory.createConnection(HBaseConfiguration.create(job));
  *       TableName tableName = TableName.valueOf("exampleTable");
  *       // mandatory
@@ -91,7 +91,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
 
   final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
 
-  /** Holds the details for the internal scanner. 
+  /** Holds the details for the internal scanner.
    *
    * @see Scan */
   private Scan scan = null;
@@ -106,10 +106,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   /** The reverse DNS lookup cache mapping: IPAddress => HostName */
   private HashMap<InetAddress, String> reverseDNSCacheMap =
     new HashMap<InetAddress, String>();
-  
-  /** The NameServer address */
-  private String nameServer = null;
-  
+
   /**
    * Builds a {@link TableRecordReader}. If no {@link TableRecordReader} was provided, uses
    * the default.
@@ -161,9 +158,6 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     if (table == null) {
       throw new IOException("No table was provided.");
     }
-    // Get the name server address and the default value is null.
-    this.nameServer =
-      context.getConfiguration().get("hbase.nameserver.address", null);
 
     RegionSizeCalculator sizeCalculator = new RegionSizeCalculator((HTable) table);
 
@@ -229,7 +223,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     }
     return splits;
   }
-  
+
   public String reverseDNS(InetAddress ipAddress) throws NamingException, UnknownHostException {
     String hostName = this.reverseDNSCacheMap.get(ipAddress);
     if (hostName == null) {
@@ -277,8 +271,8 @@ extends InputFormat<ImmutableBytesWritable, Result> {
 
   /**
    * Allows subclasses to get the {@link HTable}.
-   * 
-   * @deprecated Use {@link #getTable()} and {@link #getRegionLocator()} instead.
+   *
+   * @deprecated
    */
   @Deprecated
   protected HTable getHTable() {
@@ -287,8 +281,8 @@ extends InputFormat<ImmutableBytesWritable, Result> {
 
   /**
    * Allows subclasses to set the {@link HTable}.
-   * 
-   * @param table  The {@link HTable} to get the data from.
+   *
+   * @param table  The table to get the data from.
    * @deprecated Use {@link #initializeTable(Connection, TableName)} instead.
    */
   @Deprecated

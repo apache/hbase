@@ -220,6 +220,8 @@ public class SchemaResource extends ResourceBase {
     return update(model, false, uriInfo);
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DE_MIGHT_IGNORE",
+      justification="Expected")
   @DELETE
   public Response delete(final @Context UriInfo uriInfo) {
     if (LOG.isDebugEnabled()) {

@@ -55,7 +55,7 @@ extends RecordReader<ImmutableBytesWritable, Result> {
   /**
    * Sets the HBase table.
    *
-   * @param htable  The {@link HTable} to scan.
+   * @param htable  The table to scan.
    * @deprecated Use setTable() instead.
    */
   @Deprecated

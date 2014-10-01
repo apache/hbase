@@ -218,6 +218,8 @@ public class HFileOutputFormat2
        * @return A WriterLength, containing a new StoreFile.Writer.
        * @throws IOException
        */
+      @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="BX_UNBOXING_IMMEDIATELY_REBOXED",
+          justification="Not important")
       private WriterLength getNewWriter(byte[] family, Configuration conf)
           throws IOException {
         WriterLength wl = new WriterLength();

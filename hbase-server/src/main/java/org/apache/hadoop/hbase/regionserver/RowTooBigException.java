@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.RegionException;
  */
 @InterfaceAudience.Public
 public class RowTooBigException extends RegionException {
-
   public RowTooBigException(String message) {
     super(message);
   }

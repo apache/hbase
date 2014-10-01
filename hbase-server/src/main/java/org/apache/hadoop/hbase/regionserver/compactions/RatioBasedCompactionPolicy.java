@@ -27,13 +27,12 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -321,6 +320,15 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
     return result;
   }
 
+  /**
+   * Used calculation jitter
+   */
+  private final Random random = new Random();
+
+  /**
+   * @param filesToCompact
+   * @return When to run next major compaction
+   */
   public long getNextMajorCompactTime(final Collection<StoreFile> filesToCompact) {
     // default = 24hrs
     long ret = comConf.getMajorCompactionPeriod();
@@ -332,10 +340,15 @@ public class RatioBasedCompactionPolicy extends CompactionPolicy {
         // deterministic jitter avoids a major compaction storm on restart
         Integer seed = StoreUtils.getDeterministicRandomSeed(filesToCompact);
         if (seed != null) {
-          double rnd = (new Random(seed)).nextDouble();
+          // Synchronized to ensure one user of random instance at a time.
+          double rnd = -1;
+          synchronized (this) {
+            this.random.setSeed(seed);
+            rnd = this.random.nextDouble();
+          }
           ret += jitter - Math.round(2L * jitter * rnd);
         } else {
-          ret = 0; // no storefiles == no major compaction
+          ret = 0; // If seed is null, then no storefiles == no major compaction
         }
       }
     }

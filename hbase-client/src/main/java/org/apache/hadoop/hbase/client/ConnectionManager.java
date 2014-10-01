@@ -819,7 +819,6 @@ class ConnectionManager {
 
     /**
      * An identifier that will remain the same for a given connection.
-     * @return
      */
     @Override
     public String toString(){
@@ -2467,7 +2466,6 @@ class ConnectionManager {
     /**
      * Connects to the master to get the table descriptor.
      * @param tableName table name
-     * @return
      * @throws IOException if the connection to master fails or if the table
      *  is not found.
      */
