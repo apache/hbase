@@ -446,6 +446,9 @@ checkJavadocWarnings () {
     JIRA_COMMENT="$JIRA_COMMENT
 
     {color:red}-1 javadoc{color}.  The javadoc tool appears to have generated `expr $(($javadocWarnings-$OK_JAVADOC_WARNINGS))` warning messages."
+    # Add javadoc output url
+    JIRA_COMMENT_FOOTER="Javadoc warnings: $BUILD_URL/artifact/trunk/patchprocess/patchJavadocWarnings.txt
+$JIRA_COMMENT_FOOTER"
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
