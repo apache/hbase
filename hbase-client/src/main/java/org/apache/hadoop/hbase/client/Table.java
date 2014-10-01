@@ -36,14 +36,9 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.Service;
-import com.google.protobuf.ServiceException;
-
 /**
  * Used to communicate with a single HBase table.
- * Obtain an instance from an {@link HConnection}.
+ * Obtain an instance from a {@link Connection}.
  *
  * @since 0.99.0
  */
