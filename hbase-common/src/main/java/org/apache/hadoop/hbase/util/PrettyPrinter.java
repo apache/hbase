@@ -44,7 +44,8 @@ public class PrettyPrinter {
     return human.toString();
   }
 
-
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="ICAST_INTEGER_MULTIPLY_CAST_TO_LONG",
+      justification="Will not overflow")
   private static String humanReadableTTL(final long interval){
     StringBuilder sb = new StringBuilder();
     int days, hours, minutes, seconds;

@@ -538,7 +538,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     @Override
     public void processHistogram(MetricName name, Histogram histogram, PrintStream stream) {
       super.processHistogram(name, histogram, stream);
-      stream.printf(Locale.getDefault(), "             count = %d\n", histogram.count());
+      stream.printf(Locale.getDefault(), "             count = %d%n", histogram.count());
     }
   }
 

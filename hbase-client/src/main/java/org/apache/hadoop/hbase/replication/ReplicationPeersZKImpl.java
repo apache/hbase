@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.replication;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -391,8 +390,14 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
     if (peer == null) {
       return false;
     }
-    ((ConcurrentMap<String, ReplicationPeerZKImpl>) peerClusters).putIfAbsent(peerId, peer);
-    LOG.info("Added new peer cluster " + peer.getPeerConfig().getClusterKey());
+    ReplicationPeerZKImpl previous =
+      ((ConcurrentMap<String, ReplicationPeerZKImpl>) peerClusters).putIfAbsent(peerId, peer);
+    if (previous == null) {
+      LOG.info("Added new peer cluster=" + peer.getPeerConfig().getClusterKey());
+    } else {
+      LOG.info("Peer already present, " + previous.getPeerConfig().getClusterKey() +
+        ", new cluster=" + peer.getPeerConfig().getClusterKey());
+    }
     return true;
   }
 

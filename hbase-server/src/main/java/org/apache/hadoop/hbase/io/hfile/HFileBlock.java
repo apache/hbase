@@ -28,13 +28,12 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -62,7 +61,7 @@ import com.google.common.base.Preconditions;
  * information from the block index are required to read a block.
  * <li>In version 2 a block is structured as follows:
  * <ul>
- * <li>header (see {@link Writer#finishBlock()})
+ * <li>header (see Writer#finishBlock())
  * <ul>
  * <li>Magic record identifying the block type (8 bytes)
  * <li>Compressed block size, excluding header, including checksum (4 bytes)

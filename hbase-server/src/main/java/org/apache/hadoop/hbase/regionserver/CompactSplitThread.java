@@ -405,6 +405,8 @@ public class CompactSplitThread implements CompactionRequestor {
     return this.regionSplitLimit;
   }
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="EQ_COMPARETO_USE_OBJECT_EQUALS",
+      justification="Contrived use of compareTo")
   private class CompactionRunner implements Runnable, Comparable<CompactionRunner> {
     private final Store store;
     private final HRegion region;

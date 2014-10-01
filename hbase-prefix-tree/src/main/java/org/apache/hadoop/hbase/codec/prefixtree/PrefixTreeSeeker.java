@@ -45,7 +45,6 @@ public class PrefixTreeSeeker implements EncodedSeeker {
   protected ByteBuffer block;
   protected boolean includeMvccVersion;
   protected PrefixTreeArraySearcher ptSearcher;
-  protected boolean movedToPrevious = false;
 
   public PrefixTreeSeeker(boolean includeMvccVersion) {
     this.includeMvccVersion = includeMvccVersion;

@@ -540,6 +540,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       }
     }
 
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NM_FIELD_NAMING_CONVENTION",
+        justification="Mistake. Too disruptive to change now")
     public static Action NullAction = new Action(Type.NULL);
 
     public void doAction(Action action) {
@@ -785,6 +787,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       }
     };
 
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="SBSC_USE_STRINGBUFFER_CONCATENATION",
+        justification="Not important but should be fixed")
     @Override
     public String toString() {
       String desc = "Cluster{" +
