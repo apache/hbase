@@ -380,6 +380,10 @@ grant 'rest_server', 'RWCA'
   <name>hbase.coprocessor.region.classes</name>
   <value>org.apache.hadoop.hbase.security.access.AccessController</value>
 </property>
+<property>
+  <name>hbase.coprocessor.regionserver.classes</name>
+  <value>org.apache.hadoop.hbase.security.access.AccessController</value>
+</property>
     ]]></programlisting>
           <para> For 0.94, add the following to the <code>hbase-site.xml</code> file on every server
             machine in the cluster: </para>
@@ -664,6 +668,10 @@ Put#add(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tag)
             <row>
               <entry />
               <entry>Major Compact</entry>
+            </row>
+            <row>
+              <entry />
+              <entry>Roll HLog</entry>
             </row>
             <row>
               <entry />
@@ -1198,6 +1206,17 @@ Put#add(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tag)
             </row>
             <row>
               <entry>
+                <para>rollHLog</para>
+              </entry>
+              <entry>
+                <para>Global</para>
+              </entry>
+              <entry>
+                <para>A</para>
+              </entry>
+            </row>
+            <row>
+              <entry>
                 <para>mergeRegions</para>
               </entry>
               <entry>
@@ -1394,7 +1413,12 @@ Put#add(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tag)
   <value>org.apache.hadoop.hbase.security.access.AccessController</value>
 </property>
 <property>
-<name>hbase.coprocessor.region.classes</name>
+  <name>hbase.coprocessor.region.classes</name>
+  <value>org.apache.hadoop.hbase.security.token.TokenProvider,
+  org.apache.hadoop.hbase.security.access.AccessController</value>
+</property>
+<property>
+  <name>hbase.coprocessor.regionserver.classes</name>
   <value>org.apache.hadoop.hbase.security.token.TokenProvider,
   org.apache.hadoop.hbase.security.access.AccessController</value>
 </property>
