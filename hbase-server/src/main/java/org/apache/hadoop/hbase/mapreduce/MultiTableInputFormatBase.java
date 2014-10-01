@@ -29,7 +29,11 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -86,8 +90,8 @@ public abstract class MultiTableInputFormatBase extends
           + " previous error. Please look at the previous logs lines from"
           + " the task's full log for more details.");
     }
-    Table table =
-        new HTable(context.getConfiguration(), tSplit.getTable());
+    Connection connection = ConnectionFactory.createConnection(context.getConfiguration());
+    Table table = connection.getTable(tSplit.getTable());
 
     TableRecordReader trr = this.tableRecordReader;
 
@@ -100,10 +104,11 @@ public abstract class MultiTableInputFormatBase extends
       sc.setStartRow(tSplit.getStartRow());
       sc.setStopRow(tSplit.getEndRow());
       trr.setScan(sc);
-      trr.setHTable(table);
+      trr.setTable(table);
     } catch (IOException ioe) {
       // If there is an exception make sure that all
       // resources are closed and released.
+      connection.close();
       table.close();
       trr.close();
       throw ioe;
@@ -128,34 +133,41 @@ public abstract class MultiTableInputFormatBase extends
     List<InputSplit> splits = new ArrayList<InputSplit>();
 
     for (Scan scan : scans) {
-      byte[] tableName = scan.getAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME);
-      if (tableName == null) 
+      byte[] tableNameBytes = scan.getAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME);
+      if (tableNameBytes == null)
         throw new IOException("A scan object did not have a table name");
 
-      HTable table = null;
+      TableName tableName = TableName.valueOf(tableNameBytes);
+      Table table = null;
+      RegionLocator regionLocator = null;
+      Connection conn = null;
       try {
-        table = new HTable(context.getConfiguration(), TableName.valueOf(tableName));
-        Pair<byte[][], byte[][]> keys = table.getStartEndKeys();
+        conn = ConnectionFactory.createConnection(context.getConfiguration());
+        table = conn.getTable(tableName);
+        regionLocator = conn.getRegionLocator(tableName);
+        regionLocator = (RegionLocator) table;
+        Pair<byte[][], byte[][]> keys = regionLocator.getStartEndKeys();
         if (keys == null || keys.getFirst() == null ||
             keys.getFirst().length == 0) {
           throw new IOException("Expecting at least one region for table : "
-              + Bytes.toString(tableName));
+              + tableName.getNameAsString());
         }
         int count = 0;
 
         byte[] startRow = scan.getStartRow();
         byte[] stopRow = scan.getStopRow();
 
-        RegionSizeCalculator sizeCalculator = new RegionSizeCalculator(table);
+        RegionSizeCalculator sizeCalculator = new RegionSizeCalculator((HTable) table);
 
         for (int i = 0; i < keys.getFirst().length; i++) {
           if (!includeRegionInSplit(keys.getFirst()[i], keys.getSecond()[i])) {
             continue;
           }
-          HRegionLocation hregionLocation = table.getRegionLocation(keys.getFirst()[i], false);
+          HRegionLocation hregionLocation = regionLocator.getRegionLocation(
+              keys.getFirst()[i], false);
           String regionHostname = hregionLocation.getHostname();
           HRegionInfo regionInfo = hregionLocation.getRegionInfo();
-        
+
           // determine if the given start and stop keys fall into the range
           if ((startRow.length == 0 || keys.getSecond()[i].length == 0 ||
               Bytes.compareTo(startRow, keys.getSecond()[i]) < 0) &&
@@ -182,6 +194,8 @@ public abstract class MultiTableInputFormatBase extends
         }
       } finally {
         if (null != table) table.close();
+        if (null != regionLocator) regionLocator.close();
+        if (null != conn) conn.close();
       }
     }
     return splits;
