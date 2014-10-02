@@ -446,7 +446,7 @@ public final class TableName implements Comparable<TableName> {
     }
 
     for (TableName tn : tableCache) {
-      if (Arrays.equals(tn.getQualifier(), namespace) &&
+      if (Arrays.equals(tn.getQualifier(), qualifier) &&
           Arrays.equals(tn.getNamespace(), namespace)) {
         return tn;
       }
