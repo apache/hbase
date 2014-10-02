@@ -169,7 +169,11 @@ EOF
     # Delete a row
     def _deleteall_internal(row, column = nil, 
     		timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP, args = {})
-      raise ArgumentError, "Row Not Found" if _get_internal(row).nil?
+      # delete operation doesn't need read permission. Retaining the read check for
+      # meta table as a part of HBASE-5837.
+      if is_meta_table?
+        raise ArgumentError, "Row Not Found" if _get_internal(row).nil?
+      end
       temptimestamp = timestamp
       if temptimestamp.kind_of?(Hash)
       	  timestamp = org.apache.hadoop.hbase.HConstants::LATEST_TIMESTAMP
