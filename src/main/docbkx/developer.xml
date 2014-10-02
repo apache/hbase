@@ -1872,14 +1872,27 @@ justification="I know what I'm doing")</programlisting>
                             <para><code>git format-patch</code> is preferred because it preserves
                                 commit messages. Use <code>git squash</code> first, to combine
                                 smaller commits into a single larger one.</para>
+                            <note>
+                                <para>Do not use <code>--no-prefix</code>, even if you were in the
+                                    habit of doing it previously.</para>
+                            </note>
                             <itemizedlist>
                                 <listitem>
-                                    <screen>git format-patch --no-prefix origin/master --stdout > HBASE-XXXX.patch</screen>
+                                    <screen>git format-patch origin/master --stdout > HBASE-XXXX.patch</screen>
                                 </listitem>
                                 <listitem>
-                                    <screen>git diff --no-prefix origin/master > HBASE-XXXX.patch</screen>
+                                    <screen>git diff origin/master > HBASE-XXXX.patch</screen>
                                 </listitem>
                             </itemizedlist>
+                            <para>If your branch is based upon a different remote branch, replace
+                                    <replaceable>origin/master</replaceable> with the remote to
+                                compare against.</para>
+                            <para>If you are new to creating patches, it's a good idea to check out
+                                a fresh branch and try to apply your patch to it. If you used
+                                    <command>git format-patch</command>, apply the patch using
+                                    <command>git am</command>. Otherwise, use <command>git
+                                    apply</command>. If the patch does not apply correctly, fix the
+                                problem and try again.</para>
                         </listitem>
                     </varlistentry>
                     <varlistentry>
@@ -1890,7 +1903,9 @@ justification="I know what I'm doing")</programlisting>
                     </varlistentry>
                 </variablelist>
                 <para>Make sure you review <xref linkend="eclipse.code.formatting"/> and <xref
-                        linkend="common.patch.feedback"/> for code style. </para>
+                        linkend="common.patch.feedback"/> for code style. If your patch was
+                    generated incorrectly or your code does not adhere to the code formatting
+                    guidelines, you may be asked to redo some work.</para>
             </section>
 
             <section xml:id="submitting.patches.tests">
@@ -2037,15 +2052,123 @@ justification="I know what I'm doing")</programlisting>
                         <listitem>
                             <para>Include the Jira issue id in the commit message, along with a
                                 short description of the change and the name of the contributor if
-                                it is not you. Be sure to get the issue id right, as this causes
-                                Jira to link to the change in Subversion (use the issue's
+                                it is not you. Be sure to get the issue ID right, as this causes
+                                Jira to link to the change in Git (use the issue's
                                 &quot;All&quot; tab to see these). </para>
+                        </listitem>
+                        <listitem>
+                            <para>Commit the patch to a new branch based off master or other
+                                intended branch. It's a good idea to call this branch by the JIRA
+                                ID. Then check out the relevant target branch where you want to
+                                commit, make sure your local branch has all remote changes, by doing
+                                a <command>git pull --rebase</command> or another similar command,
+                                cherry-pick the change into each relevant branch (such as master),
+                                and do <command>git push &lt;remote-server&gt;
+                                    &lt;remote-branch&gt;</command>.</para>
+                            <warning>
+                                <para>If you do not have all remote changes, the push will fail. If
+                                    the push fails for any reason, fix the problem or ask for help.
+                                    Do not do a <command>git push --force</command>.</para>
+                            </warning>
+                            <para>Before you can commit a patch, you need to determine how the patch
+                                was created. The instructions and preferences around the way to
+                                create patches have changed, and there will be a transition
+                                periond.</para>
+                            <itemizedlist>
+                                <title>Determine How a Patch Was Created</title>
+                                <listitem>
+                                    <para>If the first few lines of the patch look like the headers
+                                        of an email, with a From, Date, and Subject, it was created
+                                        using <command>git format-patch</command>. This is the
+                                        preference, because you can reuse the submitter's commit
+                                        message. If the commit message is not appropriate, you can
+                                        still use the commit, then run the command <command>git
+                                            rebase -i origin/master</command>, and squash and reword
+                                        as appropriate.</para>
+                                </listitem>
+                                <listitem>
+                                    <para>If the first line of the patch looks similar to the
+                                        following, it was created using <command>git diff</command>
+                                        without <code>--no-prefix</code>. This is acceptable too.
+                                        Notice the <literal>a</literal> and <literal>b</literal> in
+                                        front of the file names. This is the indication that the
+                                        patch was not created with <code>--no-prefix</code>.</para>
+                                    <screen>diff --git <emphasis>a</emphasis>/src/main/docbkx/developer.xml <emphasis>b</emphasis>/src/main/docbkx/developer.xml</screen>
+                                </listitem>
+                                <listitem>
+                                    <para>If the first line of the patch looks similar to the
+                                        following (without the <literal>a</literal> and
+                                            <literal>b</literal>), the patch was created with
+                                            <command>git diff --no-prefix</command> and you need to
+                                        add <code>-p0</code> to the <command>git apply</command>
+                                        command below.</para>
+                                    <screen>diff --git src/main/docbkx/developer.xml src/main/docbkx/developer.xml</screen>
+                                </listitem>
+                            </itemizedlist>
+                            <example>
+                                <title>Example of Committing a Patch</title>
+                                <para>One thing you will notice with these examples is that there
+                                    are a lot of <command>git pull</command> commands. The only
+                                    command that actually writes anything to the remote repository
+                                    is <command>git push</command>, and you need to make absolutely
+                                    sure you have the correct versions of everything and don't have
+                                    any conflicts before pushing. The extra <command>git
+                                        pull</command> commands are usually redundant, but better
+                                    safe than sorry.</para>
+                                <para>The first example shows how to apply a patch that was
+                                    generated with <command>git format-patch</command> and apply it
+                                    to the <code>master</code> and <code>branch-1</code> branches.
+                                </para>
+                                <para>The directive to use <command>git format-patch</command>
+                                    rather than <command>git diff</command>, and not to use
+                                        <code>--no-prefix</code>, is a new one. See the second
+                                    example for how to apply a patch created with <command>git
+                                        diff</command>, and educate the person who created the
+                                    patch.</para>
+                                <screen>$ git checkout -b HBASE-XXXX
+$ git am ~/Downloads/HBASE-XXXX-v2.patch
+$ git checkout master
+$ git pull --rebase
+$ git cherry-pick &lt;sha-from-commit&gt;
+# Resolve conflicts if necessary or ask the submitter to do it
+$ git pull --rebase          # Better safe than sorry
+$ git push origin master
+$ git checkout branch-1
+$ git pull --rebase
+$ git cherry-pick &lt;sha-from-commit&gt;
+# Resolve conflicts if necessary
+$ git pull --rebase          # Better safe than sorry
+$ git push origin branch-1
+$ git branch -D HBASE-XXXX
+                                </screen>
+                                <para>This example shows how to commit a patch that was created
+                                    using <command>git diff</command> without
+                                        <code>--no-prefix</code>. If the patch was created with
+                                        <code>--no-prefix</code>, add <code>-p0</code> to the
+                                        <command>git apply</command> command.</para>
+                                <screen>$ git apply ~/Downloads/HBASE-XXXX-v2.patch 
+$ git commit -m "HBASE-XXXX Really Good Code Fix (Joe Schmo)" -a # This extra step is needed for patches created with 'git diff'
+$ git checkout master
+$ git pull --rebase
+$ git cherry-pick &lt;sha-from-commit&gt;
+# Resolve conflicts if necessary or ask the submitter to do it
+$ git pull --rebase          # Better safe than sorry
+$ git push origin master
+$ git checkout branch-1
+$ git pull --rebase
+$ git cherry-pick &lt;sha-from-commit&gt;
+# Resolve conflicts if necessary or ask the submitter to do it
+$ git pull --rebase           # Better safe than sorry
+$ git push origin branch-1
+$ git branch -D HBASE-XXXX</screen>
+                            </example>
                         </listitem>
                         <listitem>
                             <para>Resolve the issue as fixed, thanking the contributor. Always set
                                 the &quot;Fix Version&quot; at this point, but please only set a
-                                single fix version, the earliest release in which the change will
-                                appear. </para>
+                                single fix version for each branch where the change was committed,
+                                the earliest release in that branch in which the change will appear.
+                            </para>
                         </listitem>
                     </orderedlist>
 
