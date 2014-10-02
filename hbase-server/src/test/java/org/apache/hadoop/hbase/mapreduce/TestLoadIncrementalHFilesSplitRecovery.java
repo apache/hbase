@@ -229,7 +229,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   /**
    * Checks that all columns have the expected value and that there is the
    * expected number of rows.
-   * @throws IOException 
+   * @throws IOException
    */
   void assertExpectedTable(TableName table, int count, int value) throws IOException {
     Table t = null;
@@ -260,7 +260,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * Test that shows that exception thrown from the RS side will result in an
    * exception on the LIHFile client.
    */
-  @Test(expected=IOException.class, timeout=120)
+  @Test(expected=IOException.class, timeout=120000)
   public void testBulkLoadPhaseFailure() throws Exception {
     TableName table = TableName.valueOf("bulkLoadPhaseFailure");
     setupTable(table, 10);
@@ -332,7 +332,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * to test this path, so we actually inject a split just before the atomic
    * region load.
    */
-  @Test (timeout=120)
+  @Test (timeout=120000)
   public void testSplitWhileBulkLoadPhase() throws Exception {
     final TableName table = TableName.valueOf("splitWhileBulkloadPhase");
     setupTable(table, 10);
@@ -374,7 +374,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * This test splits a table and attempts to bulk load.  The bulk import files
    * should be split before atomically importing.
    */
-  @Test (timeout=120)
+  @Test (timeout=120000)
   public void testGroupOrSplitPresplit() throws Exception {
     final TableName table = TableName.valueOf("groupOrSplitPresplit");
     setupTable(table, 10);
@@ -410,7 +410,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * This simulates an remote exception which should cause LIHF to exit with an
    * exception.
    */
-  @Test(expected = IOException.class, timeout=120)
+  @Test(expected = IOException.class, timeout=120000)
   public void testGroupOrSplitFailure() throws Exception {
     TableName table = TableName.valueOf("groupOrSplitFailure");
     setupTable(table, 10);
@@ -440,7 +440,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     fail("doBulkLoad should have thrown an exception");
   }
 
-  @Test (timeout=120)
+  @Test (timeout=120000)
   public void testGroupOrSplitWhenRegionHoleExistsInMeta() throws Exception {
     TableName tableName = TableName.valueOf("testGroupOrSplitWhenRegionHoleExistsInMeta");
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000100") };
@@ -452,7 +452,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     final AtomicInteger countedLqis = new AtomicInteger();
     LoadIncrementalHFiles loader = new LoadIncrementalHFiles(
       util.getConfiguration()) {
-      
+
     protected List<LoadQueueItem> groupOrSplit(
         Multimap<ByteBuffer, LoadQueueItem> regionGroups,
         final LoadQueueItem item, final HTable htable,
