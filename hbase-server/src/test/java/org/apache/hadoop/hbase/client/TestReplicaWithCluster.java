@@ -224,7 +224,8 @@ public class TestReplicaWithCluster {
     admin.close();
   }
 
-  @Test (timeout=30000)
+  @SuppressWarnings("deprecation")
+  @Test (timeout=120000)
   public void testReplicaAndReplication() throws Exception {
     HTableDescriptor hdt = HTU.createTableDescriptor("testReplicaAndReplication");
     hdt.setRegionReplication(NB_SERVERS);
@@ -330,6 +331,7 @@ public class TestReplicaWithCluster {
 
     // bulk load HFiles
     LOG.debug("Loading test data");
+    @SuppressWarnings("deprecation")
     final HConnection conn = HTU.getHBaseAdmin().getConnection();
     RegionServerCallable<Void> callable = new RegionServerCallable<Void>(
       conn, hdt.getTableName(), TestHRegionServerBulkLoad.rowkey(0)) {
