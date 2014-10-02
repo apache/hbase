@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.row;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.DecoderFactory;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.PrefixTreeEncoder;
+import org.apache.hadoop.hbase.codec.prefixtree.row.data.TestRowDataSearchWithPrefix;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellScannerPosition;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher;
 import org.apache.hadoop.hbase.util.CollectionUtils;
@@ -66,7 +68,6 @@ public class TestPrefixTreeSearcher {
     byte[] outputBytes = os.toByteArray();
     this.block = ByteBuffer.wrap(outputBytes);
   }
-
 
   @Test
   public void testScanForwards() throws IOException {
@@ -192,6 +193,27 @@ public class TestPrefixTreeSearcher {
     try {
       searcher = DecoderFactory.checkOut(block, true);
       rows.individualSearcherAssertions(searcher);
+    } finally {
+      DecoderFactory.checkIn(searcher);
+    }
+  }
+  
+  @Test
+  public void testSeekWithPrefix() throws IOException {
+    if (!(rows instanceof TestRowDataSearchWithPrefix)) {
+      return;
+    }
+    CellSearcher searcher = null;
+    try {
+      searcher = DecoderFactory.checkOut(block, true);
+      // seek with half bytes of second row key, should return second row
+      KeyValue kv = rows.getInputs().get(1);
+      KeyValue firstKVOnRow = KeyValue.createFirstOnRow(Arrays.copyOfRange(
+          kv.getRowArray(), kv.getRowOffset(),
+          kv.getRowOffset() + kv.getRowLength() / 2));
+      CellScannerPosition position = searcher.positionAtOrAfter(firstKVOnRow);
+      Assert.assertEquals(CellScannerPosition.AFTER, position);
+      Assert.assertEquals(kv, searcher.current());
     } finally {
       DecoderFactory.checkIn(searcher);
     }
