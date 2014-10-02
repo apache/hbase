@@ -93,7 +93,7 @@ public class PrefixTreeArraySearcher extends PrefixTreeArrayReversibleScanner im
       byte searchForByte = CellUtil.getRowByte(key, currentNodeDepth);
       fanIndex = currentRowNode.whichFanNode(searchForByte);
       if(fanIndex < 0){//no matching row.  return early
-        int insertionPoint = -fanIndex;
+        int insertionPoint = -fanIndex - 1;
         return fixRowFanMissReverse(insertionPoint);
       }
       //found a match, so dig deeper into the tree
@@ -142,7 +142,7 @@ public class PrefixTreeArraySearcher extends PrefixTreeArrayReversibleScanner im
       byte searchForByte = CellUtil.getRowByte(key, currentNodeDepth);
       fanIndex = currentRowNode.whichFanNode(searchForByte);
       if(fanIndex < 0){//no matching row.  return early
-        int insertionPoint = -fanIndex;
+        int insertionPoint = -fanIndex - 1;
         return fixRowFanMissForward(insertionPoint);
       }
       //found a match, so dig deeper into the tree
@@ -293,6 +293,9 @@ public class PrefixTreeArraySearcher extends PrefixTreeArrayReversibleScanner im
       }
       return UnsignedBytes.compare(keyByte, thisByte);
     }
+    if (!currentRowNode.hasOccurrences() && rowLength >= key.getRowLength()) { // key was shorter
+        return -1;
+    }
     return 0;
   }
 
@@ -366,6 +369,10 @@ public class PrefixTreeArraySearcher extends PrefixTreeArrayReversibleScanner im
 
   protected CellScannerPosition fixRowFanMissReverse(int fanInsertionPoint){
     if(fanInsertionPoint == 0){//we need to back up a row
+      if (currentRowNode.hasOccurrences()) {
+        populateLastNonRowFields();
+        return CellScannerPosition.BEFORE;
+      }
       boolean foundPreviousRow = previousRow(true);//true -> position on last cell in row
       if(foundPreviousRow){
         populateLastNonRowFields();
