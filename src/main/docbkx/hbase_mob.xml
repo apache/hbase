@@ -72,7 +72,7 @@ hbase> alter 't1', {NAME => 'f1', IS_MOB => true, MOB_THRESHOLD => 102400}
             <title>Configure a Column for MOB Using the API</title>
             <programlisting language="java">
 ...
-HColumnDescriptor hcd = new HColumnDescriptor("f");
+HColumnDescriptor hcd = new HColumnDescriptor(“f”);
 hcd.setMobEnabled(true);
 ...
 hcd.setMobThreshold(102400L);
@@ -80,7 +80,7 @@ hcd.setMobThreshold(102400L);
             </programlisting>
         </example>
     </section>
-
+    
     <section>
         <title>Testing MOB</title>
         <para>The utility <command>org.apache.hadoop.hbase.IntegrationTestIngestMOB</command> is
@@ -123,7 +123,7 @@ hcd.setMobThreshold(102400L);
     <name>hbase.mob.sweep.tool.compaction.ratio</name>
     <value>0.5f</value>
     <description>
-      If there're too many cells deleted in a mob file, it's regarded
+      If there are too many cells deleted in a mob file, it's regarded
       as an invalid file and needs to be merged.
       If existingCellsSize/mobFileSize is less than ratio, it's regarded
       as an invalid file. The default value is 0.5f.
