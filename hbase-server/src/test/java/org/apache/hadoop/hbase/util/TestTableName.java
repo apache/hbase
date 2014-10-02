@@ -154,7 +154,7 @@ public class TestTableName extends TestWatcher {
   @Test
   public void testValueOf() {
 
-    Map<String, TableName> inCache = new HashMap<>();
+    Map<String, TableName> inCache = new HashMap<String, TableName>();
     // fill cache
     for (Names name : names) {
       inCache.put(name.nn, TableName.valueOf(name.ns, name.tn));
