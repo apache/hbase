@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -57,6 +58,33 @@ public class ConnectionFactory {
 
   /** No public c.tors */
   protected ConnectionFactory() {
+  }
+
+  /**
+   * Create a new Connection instance using default HBaseConfiguration. Connection
+   * encapsulates all housekeeping for a connection to the cluster. All tables and interfaces
+   * created from returned connection share zookeeper connection, meta cache, and connections
+   * to region servers and masters.
+   * The caller is responsible for calling {@link Connection#close()} on the returned
+   * connection instance.
+   *
+   * Typical usage:
+   * <pre>
+   * Connection connection = ConnectionFactory.createConnection();
+   * Table table = connection.getTable(TableName.valueOf("mytable"));
+   * try {
+   *   table.get(...);
+   *   ...
+   * } finally {
+   *   table.close();
+   *   connection.close();
+   * }
+   * </pre>
+   *
+   * @return Connection object for <code>conf</code>
+   */
+  public static Connection createConnection() throws IOException {
+    return createConnection(HBaseConfiguration.create(), null, null);
   }
 
   /**
