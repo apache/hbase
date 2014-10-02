@@ -260,7 +260,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * Test that shows that exception thrown from the RS side will result in an
    * exception on the LIHFile client.
    */
-  @Test(expected=IOException.class)
+  @Test(expected=IOException.class, timeout=120)
   public void testBulkLoadPhaseFailure() throws Exception {
     TableName table = TableName.valueOf("bulkLoadPhaseFailure");
     setupTable(table, 10);
@@ -332,7 +332,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * to test this path, so we actually inject a split just before the atomic
    * region load.
    */
-  @Test
+  @Test (timeout=120)
   public void testSplitWhileBulkLoadPhase() throws Exception {
     final TableName table = TableName.valueOf("splitWhileBulkloadPhase");
     setupTable(table, 10);
@@ -374,7 +374,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * This test splits a table and attempts to bulk load.  The bulk import files
    * should be split before atomically importing.
    */
-  @Test
+  @Test (timeout=120)
   public void testGroupOrSplitPresplit() throws Exception {
     final TableName table = TableName.valueOf("groupOrSplitPresplit");
     setupTable(table, 10);
@@ -410,7 +410,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * This simulates an remote exception which should cause LIHF to exit with an
    * exception.
    */
-  @Test(expected = IOException.class)
+  @Test(expected = IOException.class, timeout=120)
   public void testGroupOrSplitFailure() throws Exception {
     TableName table = TableName.valueOf("groupOrSplitFailure");
     setupTable(table, 10);
@@ -440,7 +440,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     fail("doBulkLoad should have thrown an exception");
   }
 
-  @Test
+  @Test (timeout=120)
   public void testGroupOrSplitWhenRegionHoleExistsInMeta() throws Exception {
     TableName tableName = TableName.valueOf("testGroupOrSplitWhenRegionHoleExistsInMeta");
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000100") };
