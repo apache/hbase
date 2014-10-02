@@ -37,14 +37,13 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan.Position;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.MediumTests;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MasterTests.class, MediumTests.class})
+@Category({MediumTests.class})
 public class TestRegionPlacement2 {
   final static Log LOG = LogFactory.getLog(TestRegionPlacement2.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
