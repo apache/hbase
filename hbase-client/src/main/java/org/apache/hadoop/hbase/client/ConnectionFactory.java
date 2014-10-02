@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -179,7 +180,29 @@ public class ConnectionFactory {
       user = provider.getCurrent();
     }
 
-    return ConnectionManager.createConnection(conf, pool, user);
+    return createConnection(conf, false, pool, user);
   }
 
+  static Connection createConnection(final Configuration conf, final boolean managed,
+      final ExecutorService pool, final User user)
+  throws IOException {
+    String className = conf.get(HConnection.HBASE_CLIENT_CONNECTION_IMPL,
+      ConnectionManager.HConnectionImplementation.class.getName());
+    Class<?> clazz = null;
+    try {
+      clazz = Class.forName(className);
+    } catch (ClassNotFoundException e) {
+      throw new IOException(e);
+    }
+    try {
+      // Default HCM#HCI is not accessible; make it so before invoking.
+      Constructor<?> constructor =
+        clazz.getDeclaredConstructor(Configuration.class,
+          boolean.class, ExecutorService.class, User.class);
+      constructor.setAccessible(true);
+      return (Connection) constructor.newInstance(conf, managed, pool, user);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
 }

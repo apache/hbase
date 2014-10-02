@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -408,24 +407,7 @@ class ConnectionManager {
   static ClusterConnection createConnection(final Configuration conf, final boolean managed,
       final ExecutorService pool, final User user)
   throws IOException {
-    String className = conf.get(HConnection.HBASE_CLIENT_CONNECTION_IMPL,
-      HConnectionImplementation.class.getName());
-    Class<?> clazz = null;
-    try {
-      clazz = Class.forName(className);
-    } catch (ClassNotFoundException e) {
-      throw new IOException(e);
-    }
-    try {
-      // Default HCM#HCI is not accessible; make it so before invoking.
-      Constructor<?> constructor =
-        clazz.getDeclaredConstructor(Configuration.class,
-          boolean.class, ExecutorService.class, User.class);
-      constructor.setAccessible(true);
-      return (ClusterConnection) constructor.newInstance(conf, managed, pool, user);
-    } catch (Exception e) {
-      throw new IOException(e);
-    }
+    return (ClusterConnection) ConnectionFactory.createConnection(conf, managed, pool, user);
   }
 
   /**
