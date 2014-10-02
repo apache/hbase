@@ -72,27 +72,6 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
   }
 
   /**
-   * Test that the server with request logging enabled
-   *
-   * @throws Throwable on failure
-   */
-  @Test
-  public void testStartedServerWithRequestLog() throws Throwable {
-    HttpRequestLogAppender requestLogAppender = new HttpRequestLogAppender();
-    requestLogAppender.setName("httprequestlog");
-    requestLogAppender.setFilename(System.getProperty("test.build.data", "/tmp/")
-        + "jetty-name-yyyy_mm_dd.log");
-    Logger.getLogger(HttpServer.class.getName() + ".test").addAppender(requestLogAppender);
-    HttpServer server = null;
-    server = createTestServer();
-    assertNotLive(server);
-    server.start();
-    assertAlive(server);
-    Logger.getLogger(HttpServer.class.getName() + ".test").removeAppender(requestLogAppender);
-    stop(server);
-  }
-
-  /**
    * Assert that the result of {@link HttpServer#toString()} contains the specific text
    * @param server server to examine
    * @param text text to search for
