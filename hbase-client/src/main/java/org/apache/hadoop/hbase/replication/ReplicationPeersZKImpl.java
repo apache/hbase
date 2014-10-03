@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -116,21 +117,24 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
             + " because that id already exists.");
       }
       ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
-      ZKUtil.createAndWatch(this.zookeeper, ZKUtil.joinZNode(this.peersZNode, id),
-        toByteArray(clusterKey));
-      // There is a race b/w PeerWatcher and ReplicationZookeeper#add method to create the
-      // peer-state znode. This happens while adding a peer.
+      List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
+      ZKUtilOp op1 =
+          ZKUtilOp.createAndFailSilent(ZKUtil.joinZNode(this.peersZNode, id),
+            toByteArray(clusterKey));
+      // There is a race (if hbase.zookeeper.useMulti is false)
+      // b/w PeerWatcher and ReplicationZookeeper#add method to create the
+      // peer-state znode. This happens while adding a peer
       // The peer state data is set as "ENABLED" by default.
-      ZKUtil.createNodeIfNotExistsAndWatch(this.zookeeper, getPeerStateNode(id),
-        ENABLED_ZNODE_BYTES);
-      // A peer is enabled by default
-
+      ZKUtilOp op2 = ZKUtilOp.createAndFailSilent(getPeerStateNode(id), ENABLED_ZNODE_BYTES);
       String tableCFsStr = (tableCFs == null) ? "" : tableCFs;
-      ZKUtil.createNodeIfNotExistsAndWatch(this.zookeeper, getTableCFsNode(id),
-                    Bytes.toBytes(tableCFsStr));
+      ZKUtilOp op3 = ZKUtilOp.createAndFailSilent(getTableCFsNode(id), Bytes.toBytes(tableCFsStr));
+      listOfOps.add(op1);
+      listOfOps.add(op2);
+      listOfOps.add(op3);
+      ZKUtil.multiOrSequential(this.zookeeper, listOfOps, false);
     } catch (KeeperException e) {
-      throw new ReplicationException("Could not add peer with id=" + id
-          + ", clusterKey=" + clusterKey, e);
+      throw new ReplicationException("Could not add peer with id=" + id + ", clusterKey="
+          + clusterKey, e);
     }
   }
 
