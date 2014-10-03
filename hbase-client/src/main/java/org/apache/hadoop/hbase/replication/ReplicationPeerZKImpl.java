@@ -261,12 +261,19 @@ public class ReplicationPeerZKImpl implements ReplicationPeer, Abortable, Closea
         Abortable abortable) {
       super(watcher, tableCFsZNode, abortable);
     }
+    
+    @Override
+    public synchronized void nodeCreated(String path) {
+      if (path.equals(node)) {
+        super.nodeCreated(path);
+        readTableCFsZnode();
+      }
+    }
 
     @Override
     public synchronized void nodeDataChanged(String path) {
       if (path.equals(node)) {
         super.nodeDataChanged(path);
-        readTableCFsZnode();
       }
     }
   }
