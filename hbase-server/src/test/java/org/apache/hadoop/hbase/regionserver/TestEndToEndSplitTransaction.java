@@ -251,7 +251,7 @@ public class TestEndToEndSplitTransaction {
     public void run() {
       try {
         Random random = new Random();
-        for (int i=0; i< 5; i++) {
+        for (int i= 0; i< 5; i++) {
           NavigableMap<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(conf, null,
               tableName, false);
           if (regions.size() == 0) {
@@ -357,7 +357,7 @@ public class TestEndToEndSplitTransaction {
     }
 
     void verifyTableRegions(Set<HRegionInfo> regions) {
-      log("Verifying " + regions.size() + " regions");
+      log("Verifying " + regions.size() + " regions: " + regions);
 
       byte[][] startKeys = new byte[regions.size()][];
       byte[][] endKeys = new byte[regions.size()][];
@@ -444,14 +444,16 @@ public class TestEndToEndSplitTransaction {
     Table metaTable = new HTable(conf, TableName.META_TABLE_NAME);
 
     try {
-      while (System.currentTimeMillis() - start < timeout) {
-        Result result = getRegionRow(metaTable, regionName);
+      Result result = null;
+      HRegionInfo region = null;
+      while ((System.currentTimeMillis() - start) < timeout) {
+        result = getRegionRow(metaTable, regionName);
         if (result == null) {
           break;
         }
 
-        HRegionInfo region = HRegionInfo.getHRegionInfo(result);
-        if(region.isSplitParent()) {
+        region = HRegionInfo.getHRegionInfo(result);
+        if (region.isSplitParent()) {
           log("found parent region: " + region.toString());
           PairOfSameType<HRegionInfo> pair = HRegionInfo.getDaughterRegions(result);
           daughterA = pair.getFirst();
@@ -459,6 +461,11 @@ public class TestEndToEndSplitTransaction {
           break;
         }
         Threads.sleep(100);
+      }
+      if (daughterA == null || daughterB == null) {
+        throw new IOException("Failed to get daughters, daughterA=" + daughterA + ", daughterB=" +
+          daughterB + ", timeout=" + timeout + ", result=" + result + ", regionName=" + regionName +
+          ", region=" + region);
       }
 
       //if we are here, this means the region split is complete or timed out
