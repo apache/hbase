@@ -98,6 +98,8 @@ public class RecoverableZooKeeper {
   private static final int ID_LENGTH_OFFSET = MAGIC_SIZE;
   private static final int ID_LENGTH_SIZE =  Bytes.SIZEOF_INT;
 
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DE_MIGHT_IGNORE",
+      justification="None. Its always been this way.")
   public RecoverableZooKeeper(String quorumServers, int sessionTimeout,
       Watcher watcher, int maxRetries, int retryIntervalMillis)
   throws IOException {
@@ -691,23 +693,23 @@ public class RecoverableZooKeeper {
     return newData;
   }
 
-  public long getSessionId() {
+  public synchronized long getSessionId() {
     return zk == null ? null : zk.getSessionId();
   }
 
-  public void close() throws InterruptedException {
+  public synchronized void close() throws InterruptedException {
     if (zk != null) zk.close();
   }
 
-  public States getState() {
+  public synchronized States getState() {
     return zk == null ? null : zk.getState();
   }
 
-  public ZooKeeper getZooKeeper() {
+  public synchronized ZooKeeper getZooKeeper() {
     return zk;
   }
 
-  public byte[] getSessionPasswd() {
+  public synchronized byte[] getSessionPasswd() {
     return zk == null ? null : zk.getSessionPasswd();
   }
 
