@@ -1428,11 +1428,13 @@ public class TestMasterObserver {
       String destName = null;
       String serverNameForFirstRegion = firstGoodPair.getValue().toString();
       LOG.info("serverNameForFirstRegion=" + serverNameForFirstRegion);
+      ServerName masterServerName = master.getServerName();
       boolean found = false;
       // Find server that is NOT carrying the first region
       for (ServerName info : servers) {
         LOG.info("ServerName=" + info);
-        if (!serverNameForFirstRegion.equals(info.getServerName())) {
+        if (!serverNameForFirstRegion.equals(info.getServerName())
+            && !masterServerName.equals(info)) {
           destName = info.toString();
           found = true;
           break;
