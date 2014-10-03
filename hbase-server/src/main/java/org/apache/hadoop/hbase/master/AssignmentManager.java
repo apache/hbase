@@ -2586,6 +2586,9 @@ public class AssignmentManager extends ZooKeeperListener {
     // Reuse existing assignment info
     Map<ServerName, List<HRegionInfo>> bulkPlan =
       balancer.retainAssignment(regions, servers);
+    if (bulkPlan == null) {
+      throw new IOException("Unable to determine a plan to assign region(s)");
+    }
 
     assign(regions.size(), servers.size(),
       "retainAssignment=true", bulkPlan);
@@ -2613,8 +2616,11 @@ public class AssignmentManager extends ZooKeeperListener {
     // Generate a round-robin bulk assignment plan
     Map<ServerName, List<HRegionInfo>> bulkPlan
       = balancer.roundRobinAssignment(regions, servers);
-    processFavoredNodes(regions);
+    if (bulkPlan == null) {
+      throw new IOException("Unable to determine a plan to assign region(s)");
+    }
 
+    processFavoredNodes(regions);
     assign(regions.size(), servers.size(),
       "round-robin=true", bulkPlan);
   }

@@ -1073,13 +1073,28 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       final List<ServerName> destServers = this.serverManager.createDestinationServersList(
         regionState.getServerName());
       dest = balancer.randomAssignment(hri, destServers);
-    } else {
-      dest = ServerName.valueOf(Bytes.toString(destServerName));
-      if (dest.equals(regionState.getServerName())) {
-        LOG.debug("Skipping move of region " + hri.getRegionNameAsString()
-          + " because region already assigned to the same server " + dest + ".");
+      if (dest == null) {
+        LOG.debug("Unable to determine a plan to assign " + hri);
         return;
       }
+    } else {
+      dest = ServerName.valueOf(Bytes.toString(destServerName));
+      if (dest.equals(serverName) && balancer instanceof BaseLoadBalancer
+          && !((BaseLoadBalancer)balancer).shouldBeOnMaster(hri)) {
+        // To avoid unnecessary region moving later by balancer. Don't put user
+        // regions on master. Regions on master could be put on other region
+        // server intentionally by test however.
+        LOG.debug("Skipping move of region " + hri.getRegionNameAsString()
+          + " to avoid unnecessary region moving later by load balancer,"
+          + " because it should not be on master");
+        return;
+      }
+    }
+
+    if (dest.equals(regionState.getServerName())) {
+      LOG.debug("Skipping move of region " + hri.getRegionNameAsString()
+        + " because region already assigned to the same server " + dest + ".");
+      return;
     }
 
     // Now we can do the move

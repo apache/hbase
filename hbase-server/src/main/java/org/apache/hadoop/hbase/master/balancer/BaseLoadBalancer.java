@@ -843,7 +843,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
    * Check if a region belongs to some small system table.
    * If so, it may be expected to be put on the master regionserver.
    */
-  protected boolean shouldBeOnMaster(HRegionInfo region) {
+  public boolean shouldBeOnMaster(HRegionInfo region) {
     return tablesOnMaster.contains(region.getTable().getNameAsString());
   }
 
