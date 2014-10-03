@@ -898,6 +898,7 @@
     <jamon-runtime.version>2.3.1</jamon-runtime.version>
     <jettison.version>1.3.1</jettison.version>
     <netty.version>4.0.19.Final</netty.version>
+    <joni.version>2.1.2</joni.version>
     <!-- Plugin Dependencies -->
     <maven.assembly.version>2.4</maven.assembly.version>
     <maven.antrun.version>1.6</maven.antrun.version>
@@ -1191,6 +1192,11 @@
             <artifactId>servlet-api</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.jruby.joni</groupId>
+        <artifactId>joni</artifactId>
+        <version>${joni.version}</version>
       </dependency>
       <dependency>
         <groupId>org.mortbay.jetty</groupId>
