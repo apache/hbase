@@ -22,14 +22,13 @@ import static org.junit.Assert.*;
 
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.hbase.SmallTests;
 import org.apache.hadoop.hbase.filter.RegexStringComparator.EngineType;
-import org.apache.hadoop.hbase.testclassification.FilterTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({FilterTests.class, SmallTests.class})
+@Category(SmallTests.class)
 public class TestRegexComparator {
 
   @Test
