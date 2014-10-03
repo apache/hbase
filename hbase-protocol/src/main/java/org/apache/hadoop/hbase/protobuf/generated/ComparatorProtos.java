@@ -3292,6 +3292,21 @@ public final class ComparatorProtos {
      */
     com.google.protobuf.ByteString
         getCharsetBytes();
+
+    // optional string engine = 4;
+    /**
+     * <code>optional string engine = 4;</code>
+     */
+    boolean hasEngine();
+    /**
+     * <code>optional string engine = 4;</code>
+     */
+    java.lang.String getEngine();
+    /**
+     * <code>optional string engine = 4;</code>
+     */
+    com.google.protobuf.ByteString
+        getEngineBytes();
   }
   /**
    * Protobuf type {@code RegexStringComparator}
@@ -3357,6 +3372,11 @@ public final class ComparatorProtos {
             case 26: {
               bitField0_ |= 0x00000004;
               charset_ = input.readBytes();
+              break;
+            }
+            case 34: {
+              bitField0_ |= 0x00000008;
+              engine_ = input.readBytes();
               break;
             }
           }
@@ -3501,10 +3521,54 @@ public final class ComparatorProtos {
       }
     }
 
+    // optional string engine = 4;
+    public static final int ENGINE_FIELD_NUMBER = 4;
+    private java.lang.Object engine_;
+    /**
+     * <code>optional string engine = 4;</code>
+     */
+    public boolean hasEngine() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>optional string engine = 4;</code>
+     */
+    public java.lang.String getEngine() {
+      java.lang.Object ref = engine_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          engine_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string engine = 4;</code>
+     */
+    public com.google.protobuf.ByteString
+        getEngineBytes() {
+      java.lang.Object ref = engine_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        engine_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private void initFields() {
       pattern_ = "";
       patternFlags_ = 0;
       charset_ = "";
+      engine_ = "";
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -3539,6 +3603,9 @@ public final class ComparatorProtos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeBytes(3, getCharsetBytes());
       }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeBytes(4, getEngineBytes());
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -3559,6 +3626,10 @@ public final class ComparatorProtos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(3, getCharsetBytes());
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(4, getEngineBytes());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -3598,6 +3669,11 @@ public final class ComparatorProtos {
         result = result && getCharset()
             .equals(other.getCharset());
       }
+      result = result && (hasEngine() == other.hasEngine());
+      if (hasEngine()) {
+        result = result && getEngine()
+            .equals(other.getEngine());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -3622,6 +3698,10 @@ public final class ComparatorProtos {
       if (hasCharset()) {
         hash = (37 * hash) + CHARSET_FIELD_NUMBER;
         hash = (53 * hash) + getCharset().hashCode();
+      }
+      if (hasEngine()) {
+        hash = (37 * hash) + ENGINE_FIELD_NUMBER;
+        hash = (53 * hash) + getEngine().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -3738,6 +3818,8 @@ public final class ComparatorProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         charset_ = "";
         bitField0_ = (bitField0_ & ~0x00000004);
+        engine_ = "";
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
 
@@ -3778,6 +3860,10 @@ public final class ComparatorProtos {
           to_bitField0_ |= 0x00000004;
         }
         result.charset_ = charset_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.engine_ = engine_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -3805,6 +3891,11 @@ public final class ComparatorProtos {
         if (other.hasCharset()) {
           bitField0_ |= 0x00000004;
           charset_ = other.charset_;
+          onChanged();
+        }
+        if (other.hasEngine()) {
+          bitField0_ |= 0x00000008;
+          engine_ = other.engine_;
           onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
@@ -4023,6 +4114,80 @@ public final class ComparatorProtos {
   }
   bitField0_ |= 0x00000004;
         charset_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional string engine = 4;
+      private java.lang.Object engine_ = "";
+      /**
+       * <code>optional string engine = 4;</code>
+       */
+      public boolean hasEngine() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional string engine = 4;</code>
+       */
+      public java.lang.String getEngine() {
+        java.lang.Object ref = engine_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          engine_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string engine = 4;</code>
+       */
+      public com.google.protobuf.ByteString
+          getEngineBytes() {
+        java.lang.Object ref = engine_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          engine_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string engine = 4;</code>
+       */
+      public Builder setEngine(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        engine_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string engine = 4;</code>
+       */
+      public Builder clearEngine() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        engine_ = getDefaultInstance().getEngine();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string engine = 4;</code>
+       */
+      public Builder setEngineBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        engine_ = value;
         onChanged();
         return this;
       }
@@ -4614,12 +4779,12 @@ public final class ComparatorProtos {
       "\002(\0132\024.ByteArrayComparable\022,\n\nbitwise_op\030" +
       "\002 \002(\0162\030.BitComparator.BitwiseOp\"%\n\tBitwi" +
       "seOp\022\007\n\003AND\020\001\022\006\n\002OR\020\002\022\007\n\003XOR\020\003\"\020\n\016NullCo",
-      "mparator\"P\n\025RegexStringComparator\022\017\n\007pat" +
+      "mparator\"`\n\025RegexStringComparator\022\017\n\007pat" +
       "tern\030\001 \002(\t\022\025\n\rpattern_flags\030\002 \002(\005\022\017\n\007cha" +
-      "rset\030\003 \002(\t\"%\n\023SubstringComparator\022\016\n\006sub" +
-      "str\030\001 \002(\tBF\n*org.apache.hadoop.hbase.pro" +
-      "tobuf.generatedB\020ComparatorProtosH\001\210\001\001\240\001" +
-      "\001"
+      "rset\030\003 \002(\t\022\016\n\006engine\030\004 \001(\t\"%\n\023SubstringC" +
+      "omparator\022\016\n\006substr\030\001 \002(\tBF\n*org.apache." +
+      "hadoop.hbase.protobuf.generatedB\020Compara" +
+      "torProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -4667,7 +4832,7 @@ public final class ComparatorProtos {
           internal_static_RegexStringComparator_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegexStringComparator_descriptor,
-              new java.lang.String[] { "Pattern", "PatternFlags", "Charset", });
+              new java.lang.String[] { "Pattern", "PatternFlags", "Charset", "Engine", });
           internal_static_SubstringComparator_descriptor =
             getDescriptor().getMessageTypes().get(7);
           internal_static_SubstringComparator_fieldAccessorTable = new

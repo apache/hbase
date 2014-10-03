@@ -61,6 +61,7 @@ message RegexStringComparator {
   required string pattern = 1;
   required int32 pattern_flags = 2;
   required string charset = 3;
+  optional string engine = 4;
 }
 
 message SubstringComparator {
