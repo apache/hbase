@@ -341,8 +341,8 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
             if (recoveredServerNameSet.containsAll(failedServers)) {
               ZKUtil.deleteNodeRecursively(watcher, nodePath);
             } else {
-              listSize = failedServers.size();
-              for (int j = 0; j < listSize; j++) {
+              int tmpFailedServerSize = failedServers.size();
+              for (int j = 0; j < tmpFailedServerSize; j++) {
                 String failedServer = failedServers.get(j);
                 if (recoveredServerNameSet.contains(failedServer)) {
                   String tmpPath = ZKUtil.joinZNode(nodePath, failedServer);
@@ -733,9 +733,9 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
             continue;
           }
           boolean needMoreRecovery = false;
-          listSize = regionFailedServers.size();
-          for (i = 0; i < listSize; i++) {
-            if (knownFailedServers.contains(regionFailedServers.get(i))) {
+          int tmpFailedServerSize = regionFailedServers.size();
+          for (int j = 0; j < tmpFailedServerSize; j++) {
+            if (knownFailedServers.contains(regionFailedServers.get(j))) {
               needMoreRecovery = true;
               break;
             }

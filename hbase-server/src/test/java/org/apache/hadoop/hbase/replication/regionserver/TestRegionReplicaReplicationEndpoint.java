@@ -161,7 +161,7 @@ public class TestRegionReplicaReplicationEndpoint {
       // load the data to the table
       HTU.loadNumericRows(table, HBaseTestingUtility.fam1, 0, 1000);
 
-      verifyReplication(tableName, regionReplication, 0, 1000);
+      verifyReplication(tableName, regionReplication, 0, 6000);
 
     } finally {
       table.close();
@@ -334,7 +334,7 @@ public class TestRegionReplicaReplicationEndpoint {
       // now enable the replication
       admin.enablePeer(ServerRegionReplicaUtil.getReplicationPeerId());
 
-      verifyReplication(tableName, regionReplication, 0, 1000);
+      verifyReplication(tableName, regionReplication, 0, 6000);
 
     } finally {
       admin.close();
