@@ -27,7 +27,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.fail;
 
-import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
@@ -38,7 +38,7 @@ import org.junit.runner.Description;
 /**
  * Returns a {@code byte[]} containing the name of the currently running test method.
  */
-@Category(SmallTests.class)
+@Category(MediumTests.class)
 public class TestTableName extends TestWatcher {
   private TableName tableName;
 
