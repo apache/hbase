@@ -197,7 +197,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     }
     
     Token userToken = null;
-    if (request.getFsToken().hasIdentifier() && request.getFsToken().hasPassword()) {
+    if (userProvider.isHadoopSecurityEnabled()) {
       userToken = new Token(request.getFsToken().getIdentifier().toByteArray(), request.getFsToken()
               .getPassword().toByteArray(), new Text(request.getFsToken().getKind()), new Text(
               request.getFsToken().getService()));
@@ -212,6 +212,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
       //for mini cluster testing
       ResponseConverter.setControllerException(controller,
           new DoNotRetryIOException("User token cannot be null"));
+      done.run(SecureBulkLoadHFilesResponse.newBuilder().setLoaded(false).build());
       return;
     }
 
@@ -222,7 +223,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
         bypass = region.getCoprocessorHost().preBulkLoadHFile(familyPaths);
       } catch (IOException e) {
         ResponseConverter.setControllerException(controller, e);
-        done.run(null);
+        done.run(SecureBulkLoadHFilesResponse.newBuilder().setLoaded(false).build());
         return;
       }
     }
@@ -239,7 +240,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
           targetfsDelegationToken.acquireDelegationToken(fs);
         } catch (IOException e) {
           ResponseConverter.setControllerException(controller, e);
-          done.run(null);
+          done.run(SecureBulkLoadHFilesResponse.newBuilder().setLoaded(false).build());
           return;
         }
         Token<?> targetFsToken = targetfsDelegationToken.getUserToken();
@@ -283,7 +284,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
         loaded = region.getCoprocessorHost().postBulkLoadHFile(familyPaths, loaded);
       } catch (IOException e) {
         ResponseConverter.setControllerException(controller, e);
-        done.run(null);
+        done.run(SecureBulkLoadHFilesResponse.newBuilder().setLoaded(false).build());
         return;
       }
     }
