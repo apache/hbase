@@ -1370,18 +1370,19 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public void addColumn(final TableName tableName, final HColumnDescriptor column)
+  public void addColumn(final TableName tableName, final HColumnDescriptor columnDescriptor)
       throws IOException {
     checkInitialized();
+    checkCompression(columnDescriptor);
     if (cpHost != null) {
-      if (cpHost.preAddColumn(tableName, column)) {
+      if (cpHost.preAddColumn(tableName, columnDescriptor)) {
         return;
       }
     }
     //TODO: we should process this (and some others) in an executor
-    new TableAddFamilyHandler(tableName, column, this, this).prepare().process();
+    new TableAddFamilyHandler(tableName, columnDescriptor, this, this).prepare().process();
     if (cpHost != null) {
-      cpHost.postAddColumn(tableName, column);
+      cpHost.postAddColumn(tableName, columnDescriptor);
     }
   }
 
