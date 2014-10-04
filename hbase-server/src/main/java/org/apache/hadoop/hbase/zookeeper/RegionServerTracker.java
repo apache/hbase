@@ -87,12 +87,12 @@ public class RegionServerTracker extends ZooKeeperListener {
           try {
             String nodePath = ZKUtil.joinZNode(watcher.rsZNode, n);
             byte[] data = ZKUtil.getData(watcher, nodePath);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("RS node: " + nodePath + " data: " + Bytes.toString(data));
-            }
             if (data != null && data.length > 0 && ProtobufUtil.isPBMagicPrefix(data)) {
               int magicLen = ProtobufUtil.lengthOfPBMagic();
               rsInfoBuilder.mergeFrom(data, magicLen, data.length - magicLen);
+            }
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Added tracking of RS " + nodePath);
             }
           } catch (KeeperException e) {
             LOG.warn("Get Rs info port from ephemeral node", e);

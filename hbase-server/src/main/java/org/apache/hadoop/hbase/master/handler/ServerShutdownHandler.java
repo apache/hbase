@@ -191,12 +191,14 @@ public class ServerShutdownHandler extends EventHandler {
 
       try {
         if (this.shouldSplitHlog) {
-          LOG.info("Splitting logs for " + serverName + " before assignment.");
           if (distributedLogReplay) {
-            LOG.info("Mark regions in recovery before assignment.");
+            LOG.info("Mark regions in recovery for crashed server " + serverName +
+              " before assignment; regions=" + hris);
             MasterFileSystem mfs = this.services.getMasterFileSystem();
             mfs.prepareLogReplay(serverName, hris);
           } else {
+            LOG.info("Splitting logs for " + serverName +
+              " before assignment; region count=" + hris.size());
             this.services.getMasterFileSystem().splitLog(serverName);
           }
           am.getRegionStates().logSplit(serverName);
