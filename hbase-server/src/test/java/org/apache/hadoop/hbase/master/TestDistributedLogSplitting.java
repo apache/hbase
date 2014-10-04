@@ -529,8 +529,7 @@ public class TestDistributedLogSplitting {
     });
 
     Thread.sleep(2000);
-    LOG.info("Current Open Regions:"
-        + HBaseTestingUtility.getAllOnlineRegions(cluster).size());
+    LOG.info("Current Open Regions:" + HBaseTestingUtility.getAllOnlineRegions(cluster).size());
 
     // wait for all regions are fully recovered
     TEST_UTIL.waitFor(180000, 200, new Waiter.Predicate<Exception>() {
@@ -538,7 +537,11 @@ public class TestDistributedLogSplitting {
       public boolean evaluate() throws Exception {
         List<String> recoveringRegions = zkw.getRecoverableZooKeeper().getChildren(
           zkw.recoveringRegionsZNode, false);
-        return (recoveringRegions != null && recoveringRegions.size() == 0);
+        boolean done = recoveringRegions != null && recoveringRegions.size() == 0;
+        if (!done) {
+          LOG.info("Recovering regions: " + recoveringRegions);
+        }
+        return done;
       }
     });
 

@@ -297,7 +297,8 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
    */
   @Override
   public void removeRecoveringRegions(final Set<String> recoveredServerNameSet,
-      Boolean isMetaRecovery) throws IOException {
+      Boolean isMetaRecovery)
+  throws IOException {
     final String metaEncodeRegionName = HRegionInfo.FIRST_META_REGIONINFO.getEncodedName();
     int count = 0;
     try {
@@ -312,16 +313,20 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
       }
       if (count == 0 && this.details.getMaster().isInitialized()
           && !this.details.getMaster().getServerManager().areDeadServersInProgress()) {
-        // no splitting work items left
+        // No splitting work items left
         ZKSplitLog.deleteRecoveringRegionZNodes(watcher, null);
         // reset lastRecoveringNodeCreationTime because we cleared all recovering znodes at
         // this point.
         lastRecoveringNodeCreationTime = Long.MAX_VALUE;
       } else if (!recoveredServerNameSet.isEmpty()) {
-        // remove recovering regions which doesn't have any RS associated with it
+        // Remove recovering regions which don't have any RS associated with it
         List<String> regions = ZKUtil.listChildrenNoWatch(watcher, watcher.recoveringRegionsZNode);
         if (regions != null) {
           int listSize = regions.size();
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Processing recovering " + regions + " and servers "  +
+                recoveredServerNameSet + ", isMetaRecovery=" + isMetaRecovery);
+          }
           for (int i = 0; i < listSize; i++) {
             String region = regions.get(i);
             if (isMetaRecovery != null) {
@@ -644,9 +649,10 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
           }
           ZKUtil.createSetData(this.watcher, nodePath,
             ZKUtil.regionSequenceIdsToByteArray(lastSequenceId, null));
-          LOG.debug("Mark region " + regionEncodeName + " recovering from failed region server "
-              + serverName);
-
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Marked " + regionEncodeName + " as recovering from " + serverName +
+              ": " + nodePath);
+          }
           // break retry loop
           break;
         } catch (KeeperException e) {

@@ -6053,9 +6053,10 @@ public class HRegion implements HeapSize { // , Writable{
     case BATCH_MUTATE:
     case COMPACT_REGION:
       // when a region is in recovering state, no read, split or merge is allowed
-      if (this.isRecovering() && (this.disallowWritesInRecovering ||
+      if (isRecovering() && (this.disallowWritesInRecovering ||
               (op != Operation.PUT && op != Operation.DELETE && op != Operation.BATCH_MUTATE))) {
-        throw new RegionInRecoveryException(this.getRegionNameAsString() + " is recovering");
+        throw new RegionInRecoveryException(this.getRegionNameAsString() +
+          " is recovering; cannot take reads");
       }
       break;
     default:

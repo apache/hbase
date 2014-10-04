@@ -1331,13 +1331,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // check if the region to be opened is marked in recovering state in ZK
           if (ZKSplitLog.isRegionMarkedRecoveringInZK(regionServer.getZooKeeper(),
               region.getEncodedName())) {
-            // check if current region open is for distributedLogReplay. This check is to support
+            // Check if current region open is for distributedLogReplay. This check is to support
             // rolling restart/upgrade where we want to Master/RS see same configuration
             if (!regionOpenInfo.hasOpenForDistributedLogReplay()
                   || regionOpenInfo.getOpenForDistributedLogReplay()) {
               regionServer.recoveringRegions.put(region.getEncodedName(), null);
             } else {
-              // remove stale recovery region from ZK when we open region not for recovering which
+              // Remove stale recovery region from ZK when we open region not for recovering which
               // could happen when turn distributedLogReplay off from on.
               List<String> tmpRegions = new ArrayList<String>();
               tmpRegions.add(region.getEncodedName());
