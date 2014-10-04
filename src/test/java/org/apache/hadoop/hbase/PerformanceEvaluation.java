@@ -551,10 +551,11 @@ public class PerformanceEvaluation extends Configured implements Tool {
     if (this.presplitRegions == 0)
       return new byte [0][];
 
-    byte[][] splits = new byte[this.presplitRegions][];
-    int jump = this.R  / this.presplitRegions;
-    for (int i=0; i <this.presplitRegions; i++) {
-      int rowkey = jump * i;
+    int numSplitPoints = this.presplitRegions - 1;
+    byte[][] splits = new byte[numSplitPoints][];
+    int jump = this.R / this.presplitRegions;
+    for (int i = 0; i < numSplitPoints; i++) {
+      int rowkey = jump * (1 + i);
       splits[i] = format(rowkey);
     }
     return splits;
