@@ -47,7 +47,7 @@ import org.apache.zookeeper.KeeperException;
  */
 public class RegionServerTracker extends ZooKeeperListener {
   private static final Log LOG = LogFactory.getLog(RegionServerTracker.class);
-  private NavigableMap<ServerName, RegionServerInfo> regionServers = 
+  private NavigableMap<ServerName, RegionServerInfo> regionServers =
 		  new TreeMap<ServerName, RegionServerInfo>();
   private ServerManager serverManager;
   private Abortable abortable;
@@ -84,7 +84,7 @@ public class RegionServerTracker extends ZooKeeperListener {
           try {
             String nodePath = ZKUtil.joinZNode(watcher.rsZNode, n);
             byte[] data = ZKUtil.getData(watcher, nodePath);
-            LOG.info("Rs node: " + nodePath + " data: " + Bytes.toString(data));
+            LOG.info("Added tracking of RS " + nodePath);
             if (data != null && data.length > 0 && ProtobufUtil.isPBMagicPrefix(data)) {
               int magicLen = ProtobufUtil.lengthOfPBMagic();
               rsInfoBuilder.mergeFrom(data, magicLen, data.length - magicLen);
@@ -141,7 +141,7 @@ public class RegionServerTracker extends ZooKeeperListener {
   public RegionServerInfo getRegionServerInfo(final ServerName sn) {
     return regionServers.get(sn);
   }
-  
+
   /**
    * Gets the online servers.
    * @return list of online servers
