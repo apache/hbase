@@ -226,7 +226,7 @@ public class TestReplicaWithCluster {
   }
 
   @SuppressWarnings("deprecation")
-  @Test (timeout=120000)
+  @Test (timeout=300000)
   public void testReplicaAndReplication() throws Exception {
     HTableDescriptor hdt = HTU.createTableDescriptor("testReplicaAndReplication");
     hdt.setRegionReplication(NB_SERVERS);
