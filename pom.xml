@@ -510,8 +510,11 @@
               using method parallelization class ! -->
             <testFailureIgnore>${surefire.testFailureIgnore}</testFailureIgnore>
             <forkedProcessTimeoutInSeconds>${surefire.timeout}</forkedProcessTimeoutInSeconds>
-            <argLine>${hbase-surefire.argLine}</argLine>
+            <argLine>${hbase-surefire.argLine} ${argLine}</argLine>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
+	    <systemPropertyVariables>
+              <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
+            </systemPropertyVariables>
           </configuration>
           <executions>
             <execution>
@@ -872,6 +875,32 @@
           <templateFile>${basedir}/src/main/site/site.vm</templateFile>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+        <version>${jacoco.version}</version>
+        <executions>
+          <execution>
+            <id>prepare-agent</id>
+            <goals>
+              <goal>prepare-agent</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>report</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>report</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <skip>${hbase.skip-jacoco}</skip>
+          <excludes>
+            <exclude>**/generated/**/*.class</exclude>
+          </excludes>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
   <properties>
@@ -961,6 +990,8 @@
       -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       "-Djava.library.path=${hadoop.library.path};${java.library.path}"
     </hbase-surefire.cygwin-argline>
+    <hbase.skip-jacoco>true</hbase.skip-jacoco>
+    <jacoco.version>0.6.2.201302030002</jacoco.version>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
@@ -1468,7 +1499,7 @@
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-surefire-plugin</artifactId>
               <configuration>
-                <argLine>${hbase-surefire.cygwin-argline}</argLine>
+                <argLine>${hbase-surefire.cygwin-argline} ${argLine}</argLine>
                 <systemProperties>
                   <property>
                     <name>java.net.preferIPv4Stack</name>
