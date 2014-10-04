@@ -850,14 +850,15 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       new LogCleaner(cleanerInterval,
          this, conf, getMasterFileSystem().getFileSystem(),
          getMasterFileSystem().getOldLogDir());
-         Threads.setDaemonThreadRunning(logCleaner.getThread(), getName() + ".oldLogCleaner");
+         Threads.setDaemonThreadRunning(logCleaner.getThread(),
+           getServerName().toShortString() + ".oldLogCleaner");
 
    //start the hfile archive cleaner thread
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
     this.hfileCleaner = new HFileCleaner(cleanerInterval, this, conf, getMasterFileSystem()
         .getFileSystem(), archiveDir);
     Threads.setDaemonThreadRunning(hfileCleaner.getThread(),
-      getName() + ".archivedHFileCleaner");
+      getServerName().toShortString() + ".archivedHFileCleaner");
 
     serviceStarted = true;
     if (LOG.isTraceEnabled()) {
@@ -1296,7 +1297,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           status.cleanup();
         }
       }
-    }, "ActiveMasterManager"));
+    }, getServerName().toShortString() + ".activeMasterManager"));
   }
 
   private void checkCompression(final HTableDescriptor htd)

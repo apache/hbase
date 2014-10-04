@@ -63,7 +63,7 @@ public class RecoveringRegionWatcher extends ZooKeeperListener {
       region.setRecovering(false);
     }
 
-    LOG.info(path + " znode deleted. Region: " + regionName + " completes recovery.");
+    LOG.info(path + " deleted; " + regionName + " recovered.");
   }
 
   @Override

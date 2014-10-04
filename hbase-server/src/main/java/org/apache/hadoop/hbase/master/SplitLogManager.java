@@ -1,5 +1,5 @@
 /**
-  * Licensed to the Apache Software Foundation (ASF) under one
+ * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
  * regarding copyright ownership.  The ASF licenses this file
@@ -228,13 +228,14 @@ public class SplitLogManager {
    */
   public long splitLogDistributed(final Set<ServerName> serverNames, final List<Path> logDirs,
       PathFilter filter) throws IOException {
-    MonitoredTask status =
-        TaskMonitor.get().createStatus("Doing distributed log split in " + logDirs);
+    MonitoredTask status = TaskMonitor.get().createStatus("Doing distributed log split in " +
+      logDirs + " for serverName=" + serverNames);
     FileStatus[] logfiles = getFileList(logDirs, filter);
     status.setStatus("Checking directory contents...");
     LOG.debug("Scheduling batch of logs to split");
     SplitLogCounters.tot_mgr_log_split_batch_start.incrementAndGet();
-    LOG.info("started splitting " + logfiles.length + " logs in " + logDirs);
+    LOG.info("started splitting " + logfiles.length + " logs in " + logDirs +
+      " for " + serverNames);
     long t = EnvironmentEdgeManager.currentTime();
     long totalSize = 0;
     TaskBatch batch = new TaskBatch();

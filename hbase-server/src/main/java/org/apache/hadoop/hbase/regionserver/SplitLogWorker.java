@@ -170,7 +170,7 @@ public class SplitLogWorker implements Runnable {
    * start the SplitLogWorker thread
    */
   public void start() {
-    worker = new Thread(null, this, "SplitLogWorker-" + server.getServerName());
+    worker = new Thread(null, this, "SplitLogWorker-" + server.getServerName().toShortString());
     worker.start();
   }
 
