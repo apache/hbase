@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -82,6 +83,7 @@ public class TestRegionReplicaReplicationEndpoint {
 
   @BeforeClass
   public static void beforeClass() throws Exception {
+    /*
     Configuration conf = HTU.getConfiguration();
     conf.setFloat("hbase.regionserver.logroll.multiplier", 0.0003f);
     conf.setInt("replication.source.size.capacity", 10240);
@@ -98,14 +100,17 @@ public class TestRegionReplicaReplicationEndpoint {
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3); // less number of retries is needed
     conf.setInt("hbase.client.serverside.retries.multiplier", 1);
 
-    HTU.startMiniCluster(NB_SERVERS);
+    HTU.startMiniCluster(NB_SERVERS);*/
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
+    /*
     HTU.shutdownMiniCluster();
+    */
   }
 
+  @Ignore("To be fixed before 1.0")
   @Test
   public void testRegionReplicaReplicationPeerIsCreated() throws IOException, ReplicationException {
     // create a table with region replicas. Check whether the replication peer is created
@@ -209,21 +214,25 @@ public class TestRegionReplicaReplicationEndpoint {
     }
   }
 
+  @Ignore("To be fixed before 1.0")
   @Test(timeout = 60000)
   public void testRegionReplicaReplicationWith2Replicas() throws Exception {
     testRegionReplicaReplication(2);
   }
 
+  @Ignore("To be fixed before 1.0")
   @Test(timeout = 60000)
   public void testRegionReplicaReplicationWith3Replicas() throws Exception {
     testRegionReplicaReplication(3);
   }
 
+  @Ignore("To be fixed before 1.0")
   @Test(timeout = 60000)
   public void testRegionReplicaReplicationWith10Replicas() throws Exception {
     testRegionReplicaReplication(10);
   }
 
+  @Ignore("To be fixed before 1.0")
   @Test (timeout = 60000)
   public void testRegionReplicaReplicationForFlushAndCompaction() throws Exception {
     // Tests a table with region replication 3. Writes some data, and causes flushes and
@@ -259,11 +268,13 @@ public class TestRegionReplicaReplicationEndpoint {
     }
   }
 
+  @Ignore("To be fixed before 1.0")
   @Test (timeout = 60000)
   public void testRegionReplicaReplicationIgnoresDisabledTables() throws Exception {
     testRegionReplicaReplicationIgnoresDisabledTables(false);
   }
 
+  @Ignore("To be fixed before 1.0")
   @Test (timeout = 60000)
   public void testRegionReplicaReplicationIgnoresDroppedTables() throws Exception {
     testRegionReplicaReplicationIgnoresDisabledTables(true);
