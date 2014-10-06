@@ -57,6 +57,7 @@ public class Client {
 
   private HttpClient httpClient;
   private Cluster cluster;
+  private boolean sslEnabled;
 
   private Map<String, String> extraHeaders;
 
@@ -67,13 +68,10 @@ public class Client {
     this(null);
   }
 
-  /**
-   * Constructor
-   * @param cluster the cluster definition
-   */
-  public Client(Cluster cluster) {
+  private void initialize(Cluster cluster, boolean sslEnabled) {
     this.cluster = cluster;
-    MultiThreadedHttpConnectionManager manager = 
+    this.sslEnabled = sslEnabled;
+    MultiThreadedHttpConnectionManager manager =
       new MultiThreadedHttpConnectionManager();
     HttpConnectionManagerParams managerParams = manager.getParams();
     managerParams.setConnectionTimeout(2000); // 2 s
@@ -83,6 +81,23 @@ public class Client {
     this.httpClient = new HttpClient(manager);
     HttpClientParams clientParams = httpClient.getParams();
     clientParams.setVersion(HttpVersion.HTTP_1_1);
+
+  }
+  /**
+   * Constructor
+   * @param cluster the cluster definition
+   */
+  public Client(Cluster cluster) {
+    initialize(cluster, false);
+  }
+
+  /**
+   * Constructor
+   * @param cluster the cluster definition
+   * @param sslEnabled enable SSL or not
+   */
+  public Client(Cluster cluster, boolean sslEnabled) {
+    initialize(cluster, sslEnabled);
   }
 
   /**
@@ -156,7 +171,11 @@ public class Client {
       cluster.lastHost = cluster.nodes.get(i);
       try {
         StringBuilder sb = new StringBuilder();
-        sb.append("http://");
+        if (sslEnabled) {
+          sb.append("https://");
+        } else {
+          sb.append("http://");
+        }
         sb.append(cluster.lastHost);
         sb.append(path);
         URI uri = new URI(sb.toString(), true);
