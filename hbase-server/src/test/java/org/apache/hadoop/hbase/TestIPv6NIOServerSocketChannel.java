@@ -28,6 +28,7 @@ import java.nio.channels.ServerSocketChannel;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -103,6 +104,7 @@ public class TestIPv6NIOServerSocketChannel {
    * Checks whether we are effected by the JDK issue on windows, and if so
    * ensures that we are running with preferIPv4Stack=true.
    */
+  @Ignore("Disabled for investigation, see HBASE-12177")
   @Test
   public void testServerSocket() throws IOException {
     byte[] addr = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
@@ -141,6 +143,7 @@ public class TestIPv6NIOServerSocketChannel {
    * Tests whether every InetAddress we obtain by resolving can open a
    * ServerSocketChannel.
    */
+  @Ignore("Disabled for investigation, see HBASE-12177")
   @Test
   public void testServerSocketFromLocalhostResolution() throws IOException {
     InetAddress[] addrs = InetAddress.getAllByName("localhost");
