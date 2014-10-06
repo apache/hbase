@@ -342,6 +342,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 <%if (tables != null && tables.length > 0)%>
 <table class="table table-striped">
     <tr>
+        <th>Namespace</th>
         <th>Table Name</th>
         <%if (frags != null) %>
             <th title="Fragmentation - Will be 0% after a major compaction and fluctuate during normal usage.">Frag.</th>
@@ -351,9 +352,10 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     </tr>
     <%for HTableDescriptor htDesc : tables%>
     <tr>
-        <td><a href=table.jsp?name=<% htDesc.getTableName().getNameAsString() %>><% htDesc.getTableName().getNameAsString() %></a> </td>
+        <td><% htDesc.getTableName().getNamespaceAsString() %></td>
+        <td><a href=table.jsp?name=<% htDesc.getTableName().getNameAsString() %>><% htDesc.getTableName().getQualifierAsString() %></a> </td>
         <%if (frags != null) %>
-            <td align="center"><% frags.get(htDesc.getTableName().getNameAsString()) != null ? frags.get(htDesc.getTableName().getNameAsString()).intValue() + "%" : "n/a" %></td>
+            <td align="center"><% frags.get(htDesc.getTableName().getNameAsString()) != null ? frags.get(htDesc.getTableName().getQualifierAsString()).intValue() + "%" : "n/a" %></td>
         </%if>
         <td><% master.getAssignmentManager().getRegionStates().getRegionsOfTable(htDesc
         .getTableName()).size() %>
