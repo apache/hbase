@@ -404,6 +404,24 @@ public class HFileOutputFormat2
     LOG.info("Incremental table " + Bytes.toString(table.getTableName())
       + " output configured.");
   }
+  
+  public static void configureIncrementalLoadMap(Job job, Table table) throws IOException {
+    Configuration conf = job.getConfiguration();
+
+    job.setOutputKeyClass(ImmutableBytesWritable.class);
+    job.setOutputValueClass(KeyValue.class);
+    job.setOutputFormatClass(HFileOutputFormat2.class);
+
+    // Set compression algorithms based on column families
+    configureCompression(table, conf);
+    configureBloomType(table, conf);
+    configureBlockSize(table, conf);
+    configureDataBlockEncoding(table, conf);
+
+    TableMapReduceUtil.addDependencyJars(job);
+    TableMapReduceUtil.initCredentials(job);
+    LOG.info("Incremental table " + table.getName() + " output configured.");
+  }
 
   /**
    * Runs inside the task to deserialize column family to compression algorithm

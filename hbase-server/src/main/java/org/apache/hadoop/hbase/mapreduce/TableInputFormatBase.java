@@ -101,8 +101,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   private RegionLocator regionLocator;
   /** The reader scanning the table, can be a custom one. */
   private TableRecordReader tableRecordReader = null;
-
-
+  
   /** The reverse DNS lookup cache mapping: IPAddress => HostName */
   private HashMap<InetAddress, String> reverseDNSCacheMap =
     new HashMap<InetAddress, String>();
@@ -142,6 +141,10 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     trr.setTable(table);
     return trr;
   }
+  
+  protected Pair<byte[][],byte[][]> getStartEndKeys() throws IOException {
+    return regionLocator.getStartEndKeys();
+  }
 
   /**
    * Calculates the splits that will serve as input for the map tasks. The
@@ -160,8 +163,8 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     }
 
     RegionSizeCalculator sizeCalculator = new RegionSizeCalculator((HTable) table);
-
-    Pair<byte[][], byte[][]> keys = regionLocator.getStartEndKeys();
+    
+    Pair<byte[][], byte[][]> keys = getStartEndKeys();
     if (keys == null || keys.getFirst() == null ||
         keys.getFirst().length == 0) {
       HRegionLocation regLoc = regionLocator.getRegionLocation(HConstants.EMPTY_BYTE_ARRAY, false);
