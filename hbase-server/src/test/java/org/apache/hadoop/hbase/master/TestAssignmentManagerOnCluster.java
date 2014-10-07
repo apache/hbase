@@ -28,8 +28,10 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -41,6 +43,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
 import org.apache.hadoop.hbase.ServerLoad;
@@ -48,7 +51,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -83,6 +85,7 @@ import org.junit.experimental.categories.Category;
  * This tests AssignmentManager with a testing cluster.
  */
 @Category(MediumTests.class)
+@SuppressWarnings("deprecation")
 public class TestAssignmentManagerOnCluster {
   private final static byte[] FAMILY = Bytes.toBytes("FAMILY");
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -976,6 +979,58 @@ public class TestAssignmentManagerOnCluster {
   }
 
   /**
+   * Test SSH waiting for extra region server for assignment
+   */
+  @Test (timeout=300000)
+  public void testSSHWaitForServerToAssignRegion() throws Exception {
+    TableName table = TableName.valueOf("testSSHWaitForServerToAssignRegion");
+    MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
+    boolean startAServer = false;
+    try {
+      HTableDescriptor desc = new HTableDescriptor(table);
+      desc.addFamily(new HColumnDescriptor(FAMILY));
+      admin.createTable(desc);
+
+      HMaster master = cluster.getMaster();
+      final ServerManager serverManager = master.getServerManager();
+      MyLoadBalancer.countRegionServers = Integer.valueOf(
+        serverManager.countOfRegionServers());
+      HRegionServer rs = TEST_UTIL.getRSForFirstRegionInTable(table);
+      assertNotNull("First region should be assigned", rs);
+      final ServerName serverName = rs.getServerName();
+      // Wait till SSH tried to assign regions a several times
+      int counter = MyLoadBalancer.counter.get() + 5;
+      cluster.killRegionServer(serverName);
+      startAServer = true;
+      cluster.waitForRegionServerToStop(serverName, -1);
+      while (counter > MyLoadBalancer.counter.get()) {
+        Thread.sleep(1000);
+      }
+      cluster.startRegionServer();
+      startAServer = false;
+      // Wait till the dead server is processed by SSH
+      TEST_UTIL.waitFor(120000, 1000, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return serverManager.isServerDead(serverName)
+            && !serverManager.areDeadServersInProgress();
+        }
+      });
+      TEST_UTIL.waitUntilAllRegionsAssigned(table, 300000);
+
+      rs = TEST_UTIL.getRSForFirstRegionInTable(table);
+      assertTrue("First region should be re-assigned to a different server",
+        rs != null && !serverName.equals(rs.getServerName()));
+    } finally {
+      MyLoadBalancer.countRegionServers = null;
+      TEST_UTIL.deleteTable(table);
+      if (startAServer) {
+        cluster.startRegionServer();
+      }
+    }
+  }
+
+  /**
    * Test disabled region is ignored by SSH
    */
   @Test (timeout=60000)
@@ -1150,6 +1205,9 @@ public class TestAssignmentManagerOnCluster {
     // For this region, if specified, always assign to nowhere
     static volatile String controledRegion = null;
 
+    static volatile Integer countRegionServers = null;
+    static AtomicInteger counter = new AtomicInteger(0);
+
     @Override
     public ServerName randomAssignment(HRegionInfo regionInfo,
         List<ServerName> servers) {
@@ -1157,6 +1215,21 @@ public class TestAssignmentManagerOnCluster {
         return null;
       }
       return super.randomAssignment(regionInfo, servers);
+    }
+
+    @Override
+    public Map<ServerName, List<HRegionInfo>> roundRobinAssignment(
+        List<HRegionInfo> regions, List<ServerName> servers) {
+      if (countRegionServers != null && services != null) {
+        int regionServers = services.getServerManager().countOfRegionServers();
+        if (regionServers < countRegionServers.intValue()) {
+          // Let's wait till more region servers join in.
+          // Before that, fail region assignments.
+          counter.incrementAndGet();
+          return null;
+        }
+      }
+      return super.roundRobinAssignment(regions, servers);
     }
   }
 
