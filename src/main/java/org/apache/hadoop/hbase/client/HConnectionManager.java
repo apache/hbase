@@ -1059,7 +1059,7 @@ public class HConnectionManager {
         MetaScanner.metaScan(conf, this, visitor, tableName, row,
             this.prefetchRegionLimit, HConstants.META_TABLE_NAME);
       } catch (IOException e) {
-        LOG.warn("Encountered problems when prefetch META table: ", e);
+        // ignore during prefetch
       }
     }
 
