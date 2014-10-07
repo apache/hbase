@@ -273,6 +273,12 @@ public class ServerShutdownHandler extends EventHandler {
       } catch (InterruptedException ie) {
         LOG.error("Caught " + ie + " during round-robin assignment");
         throw (InterruptedIOException)new InterruptedIOException().initCause(ie);
+      } catch (IOException ioe) {
+        LOG.info("Caught " + ioe + " during region assignment, will retry");
+        // Only do HLog splitting if shouldSplitHlog and in DLR mode
+        serverManager.processDeadServer(serverName,
+          this.shouldSplitHlog && distributedLogReplay);
+        return;
       }
 
       if (this.shouldSplitHlog && distributedLogReplay) {
