@@ -662,7 +662,26 @@ java.lang.Thread.State: WAITING (on object monitor)
       <para> For additional information, see this thread on <link
           xlink:href="http://search-hadoop.com/m/WUnLM6ojHm1/Long+client+pauses+with+compression&amp;subj=Long+client+pauses+with+compression">Long
           client pauses with compression</link>. </para>
-
+    </section>
+    <section xml:id="trouble.client.security.rpc.krb">
+      <title>Secure Client Connect ([Caused by GSSException: No valid credentials provided...])</title>
+      <para>You may encounter the following error:</para>
+      <screen>Secure Client Connect ([Caused by GSSException: No valid credentials provided
+        (Mechanism level: Request is a replay (34) V PROCESS_TGS)])</screen>
+      <para> This issue is caused by bugs in the MIT Kerberos replay_cache component, <link
+          xlink:href="http://krbdev.mit.edu/rt/Ticket/Display.html?id=1201">#1201</link> and <link
+          xlink:href="http://krbdev.mit.edu/rt/Ticket/Display.html?id=5924">#5924</link>. These bugs
+        caused the old version of krb5-server to erroneously block subsequent requests sent from a
+        Principal. This caused krb5-server to block the connections sent from one Client (one HTable
+        instance with multi-threading connection instances for each regionserver); Messages, such as
+          <literal>Request is a replay (34)</literal>, are logged in the client log You can ignore
+        the messages, because HTable will retry 5 * 10 (50) times for each failed connection by
+        default. HTable will throw IOException if any connection to the regionserver fails after the
+        retries, so that the user client code for HTable instance can handle it further. </para>
+      <para> Alternatively, update krb5-server to a version which solves these issues, such as
+        krb5-server-1.10.3. See JIRA <link
+          xlink:href="https://issues.apache.org/jira/browse/HBASE-10379">HBASE-10379</link> for more
+        details. </para>
     </section>
     <section
       xml:id="trouble.client.zookeeper">
