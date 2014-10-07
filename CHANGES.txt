@@ -1,5 +1,103 @@
 HBase Change Log
 
+Release 0.98.7 - 10/13/2014
+
+** Sub-task
+    * [HBASE-11923] - Potential race condition in RecoverableZookeeper.checkZk()
+    * [HBASE-11963] - Synchronize peer cluster replication connection attempts
+    * [HBASE-12023] - HRegion.applyFamilyMapToMemstore creates too many iterator objects.
+    * [HBASE-12059] - Create hbase-annotations module
+    * [HBASE-12062] - Fix usage of Collections.toArray
+    * [HBASE-12076] - Move InterfaceAudience imports to hbase-annotations
+    * [HBASE-12077] - FilterLists create many ArrayList$Itr objects per row.
+    * [HBASE-12104] - Some optimization and bugfix for HTableMultiplexer
+    * [HBASE-12110] - Fix .arcconfig
+    * [HBASE-12115] - Fix NumberFormat Exception in TableInputFormatBase.
+    * [HBASE-12148] - Remove TimeRangeTracker as point of contention when many threads writing a Store
+
+** Bug
+    * [HBASE-8808] - Use Jacoco to generate Unit Test coverage reports
+    * [HBASE-9473] - Change UI to list 'system tables' rather than 'catalog tables'.
+    * [HBASE-10748] - hbase-daemon.sh fails to execute with 'sh' command
+    * [HBASE-11405] - Multiple invocations of hbck in parallel disables balancer permanently 
+    * [HBASE-11445] - TestZKProcedure#testMultiCohortWithMemberTimeoutDuringPrepare is flaky
+    * [HBASE-11772] - Bulk load mvcc and seqId issues with native hfiles
+    * [HBASE-11815] - Flush and compaction could just close the tmp writer if there is an exception
+    * [HBASE-11839] - TestRegionRebalance is flakey
+    * [HBASE-11890] - HBase REST Client is hard coded to http protocol
+    * [HBASE-11896] - LoadIncrementalHFiles fails in secure mode if the namespace is specified
+    * [HBASE-11898] - CoprocessorHost.Environment should cache class loader instance
+    * [HBASE-11936] - IsolationLevel must be attribute of a Query not a Scan
+    * [HBASE-11972] - The "doAs user" used in the update to hbase:acl table RPC is incorrect
+    * [HBASE-11982] - Bootstraping hbase:meta table creates a WAL file in region dir
+    * [HBASE-11984] - TestClassFinder failing on occasion
+    * [HBASE-11988] - AC/VC system table create on postStartMaster fails too often in test
+    * [HBASE-11989] - IntegrationTestLoadAndVerify cannot be configured anymore on distributed mode
+    * [HBASE-11994] - PutCombiner floods the M/R log with repeated log messages.
+    * [HBASE-12019] - hbase-daemon.sh overwrite HBASE_ROOT_LOGGER and HBASE_SECURITY_LOGGER variables
+    * [HBASE-12033] - SecurityUtil#doAsLoginUser is absent in hadoop-1, making AccessController#postCreateTableHandler() ineffective
+    * [HBASE-12039] - Lower log level for TableNotFoundException log message when throwing
+    * [HBASE-12043] - REST server should respond with FORBIDDEN(403) code on AccessDeniedException
+    * [HBASE-12044] - REST delete operation should not retry disableTable for DoNotRetryIOException
+    * [HBASE-12045] - REST proxy users configuration in hbase-site.xml is ignored
+    * [HBASE-12052] - BulkLoad Failed due to no write permission on input files
+    * [HBASE-12054] - bad state after NamespaceUpgrade with reserved table names
+    * [HBASE-12064] - hbase.master.balancer.stochastic.numRegionLoadsToRemember is not used
+    * [HBASE-12065] -  Import tool is not restoring multiple DeleteFamily markers of a row
+    * [HBASE-12078] - Missing Data when scanning using PREFIX_TREE DATA-BLOCK-ENCODING
+    * [HBASE-12087] - [0.98] Changing the default setting of hbase.security.access.early_out to true
+    * [HBASE-12095] - SecureWALCellCodec should handle the case where encryption is disabled
+    * [HBASE-12098] - User granted namespace table create permissions can't create a table
+    * [HBASE-12099] - TestScannerModel fails if using jackson 1.9.13
+    * [HBASE-12106] - Move test annotations to test artifact
+    * [HBASE-12120] - HBase shell doesn't allow deleting of a cell by user with W-only permissions to it
+    * [HBASE-12123] - Failed assertion in BucketCache after 11331
+    * [HBASE-12124] - Closed region could stay closed if master stops at bad time
+    * [HBASE-12136] - Race condition between client adding tableCF replication znode and  server triggering TableCFsTracker
+    * [HBASE-12137] - Alter table add cf doesn't do compression test
+    * [HBASE-12139] - StochasticLoadBalancer doesn't work on large lightly loaded clusters
+    * [HBASE-12146] - RegionServerTracker should escape data in log messages
+    * [HBASE-12156] - TableName cache isn't used for one of valueOf methods.
+    * [HBASE-12160] - Make Surefire's argLine configurable in the command line
+    * [HBASE-12164] - Check for presence of user Id in SecureBulkLoadEndpoint#secureBulkLoadHFiles() is inaccurate
+    * [HBASE-12184] - ServerShutdownHandler throws NPE
+
+** Improvement
+    * [HBASE-10153] - improve VerifyReplication to compute BADROWS more accurately
+    * [HBASE-11136] - Add permission check to roll WAL writer 
+    * [HBASE-11331] - [blockcache] lazy block decompression
+    * [HBASE-11796] - Add client support for atomic checkAndMutate
+    * [HBASE-11845] - HFile tool should implement Tool, disable blockcache by default
+    * [HBASE-11847] - HFile tool should be able to print block headers
+    * [HBASE-11877] - Make TableSplit more readable
+    * [HBASE-11891] - Introduce HBaseInterfaceAudience level to denote class names that appear in configs.
+    * [HBASE-11907] - Use the joni byte[] regex engine in place of j.u.regex in RegexStringComparator
+    * [HBASE-11948] - graceful_stop.sh should use hbase-daemon.sh when executed on the decomissioned node
+    * [HBASE-11971] - [0.98] Deprecate KeyValue based APIs in WALEdit
+    * [HBASE-12011] - Add namespace column during display of user tables
+    * [HBASE-12013] - Make region_mover.rb support multiple regionservers per host
+    * [HBASE-12021] - Hbase shell does not respect the HBASE_OPTS set by the user in console
+    * [HBASE-12032] - Script to stop regionservers via RPC
+    * [HBASE-12090] - Bytes: more Unsafe, more Faster 
+    * [HBASE-12118] - Explain how to grant permission to a namespace in grant command usage
+    * [HBASE-12144] - Backport HBASE-10141 'instead of putting expired store files thru compaction, just archive them' to 0.98
+
+** New Feature
+    * [HBASE-11885] - Provide a Dockerfile to easily build and run HBase from source
+
+** Task
+    * [HBASE-11858] - Audit regionserver classes that are missing InterfaceAudience
+    * [HBASE-12150] - Backport replication changes from HBASE-12145
+
+** Test
+    * [HBASE-11798] - TestBucketWriterThread may hang due to WriterThread stopping prematurely
+    * [HBASE-11918] - TestVisibilityLabelsWithDistributedLogReplay#testAddVisibilityLabelsOnRSRestart sometimes fails due to VisibilityController initialization not being recognized
+    * [HBASE-11942] - Fix TestHRegionBusyWait
+    * [HBASE-11966] - Minor error in TestHRegion.testCheckAndMutate_WithCorrectValue()
+    * [HBASE-12008] - Remove IntegrationTestImportTsv#testRunFromOutputCommitter
+    * [HBASE-12055] - TestBucketWriterThread hangs flakily based on timing
+
+
 Release 0.98.6 - 9/10/2014
 
 ** Sub-task
