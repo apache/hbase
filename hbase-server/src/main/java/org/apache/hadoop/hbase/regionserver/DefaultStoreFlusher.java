@@ -31,7 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -71,10 +70,19 @@ public class DefaultStoreFlusher extends StoreFlusher {
         writer = store.createWriterInTmp(
             snapshot.size(), store.getFamily().getCompression(), false, true, true);
         writer.setTimeRangeTracker(snapshotTimeRangeTracker);
+        IOException e = null;
         try {
           flushed = performFlush(scanner, writer, smallestReadPoint);
+        } catch (IOException ioe) {
+          e = ioe;
+          // throw the exception out
+          throw ioe;
         } finally {
-          finalizeWriter(writer, cacheFlushId, status);
+          if (e != null) {
+            writer.close();
+          } else {
+            finalizeWriter(writer, cacheFlushId, status);
+          }
         }
       }
     } finally {
