@@ -198,7 +198,7 @@ public class ServerShutdownHandler extends EventHandler {
             mfs.prepareLogReplay(serverName, hris);
           } else {
             LOG.info("Splitting logs for " + serverName +
-              " before assignment; region count=" + hris.size());
+              " before assignment; region count=" + (hris == null ? 0 : hris.size()));
             this.services.getMasterFileSystem().splitLog(serverName);
           }
           am.getRegionStates().logSplit(serverName);
