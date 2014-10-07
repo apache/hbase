@@ -100,4 +100,11 @@ public class Cluster {
     sb.append(port);
     return remove(sb.toString());
   }
+
+  @Override public String toString() {
+    return "Cluster{" +
+        "nodes=" + nodes +
+        ", lastHost='" + lastHost + '\'' +
+        '}';
+  }
 }

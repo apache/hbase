@@ -62,6 +62,7 @@
     <module>hbase-assembly</module>
     <module>hbase-testing-util</module>
     <module>hbase-annotations</module>
+    <module>hbase-rest</module>
   </modules>
   <scm>
     <connection>scm:git:git://git.apache.org/hbase.git</connection>

@@ -24,8 +24,13 @@ import java.io.IOException;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.rest.client.Client;
 import org.apache.hadoop.hbase.rest.client.Cluster;
 import org.apache.hadoop.hbase.rest.client.Response;
@@ -43,14 +48,17 @@ import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestStatusResource {
-  private static final byte[] META_REGION_NAME = Bytes.toBytes(TableName.META_TABLE_NAME+",,1");
+  public static Log LOG = LogFactory.getLog(TestStatusResource.class);
+
+  private static final byte[] META_REGION_NAME = Bytes.toBytes(TableName.META_TABLE_NAME + ",,1");
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static final HBaseRESTTestingUtility REST_TEST_UTIL = 
-    new HBaseRESTTestingUtility();
+  private static final HBaseRESTTestingUtility REST_TEST_UTIL =
+      new HBaseRESTTestingUtility();
   private static Client client;
   private static JAXBContext context;
-  
+  private static Configuration conf;
+
   private static void validate(StorageClusterStatusModel model) {
     assertNotNull(model);
     assertTrue(model.getRegions() + ">= 1", model.getRegions() >= 1);
@@ -75,11 +83,21 @@ public class TestStatusResource {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.startMiniCluster();
-    REST_TEST_UTIL.startServletContainer(TEST_UTIL.getConfiguration());
-    client = new Client(new Cluster().add("localhost", 
-      REST_TEST_UTIL.getServletPort()));
+    conf = TEST_UTIL.getConfiguration();
+    TEST_UTIL.startMiniCluster(1, 1);
+    TEST_UTIL.createTable(Bytes.toBytes("TestStatusResource"), Bytes.toBytes("D"));
+    TEST_UTIL.createTable(Bytes.toBytes("TestStatusResource2"), Bytes.toBytes("D"));
+    REST_TEST_UTIL.startServletContainer(conf);
+    Cluster cluster = new Cluster();
+    cluster.add("localhost", REST_TEST_UTIL.getServletPort());
+    client = new Client(cluster);
     context = JAXBContext.newInstance(StorageClusterStatusModel.class);
+    TEST_UTIL.waitFor(6000, new Waiter.Predicate<IOException>() {
+      @Override
+      public boolean evaluate() throws IOException {
+        return TEST_UTIL.getMiniHBaseCluster().getClusterStatus().getAverageLoad() > 0;
+      }
+    });
   }
 
   @AfterClass

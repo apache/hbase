@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <!--
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -42,6 +44,7 @@
         </includes>
       </resource>
     </resources>
+
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -86,8 +89,10 @@
             <configuration>
               <target>
                 <property name="build.webapps" location="${project.build.directory}/hbase-webapps"/>
-                <property name="src.webapps" location="${basedir}/src/main/resources/hbase-webapps"/>
-                <property name="generated.sources" location="${project.build.directory}/generated-sources"/>
+                <property name="src.webapps"
+                          location="${basedir}/src/main/resources/hbase-webapps"/>
+                <property name="generated.sources"
+                          location="${project.build.directory}/generated-sources"/>
                 <mkdir dir="${build.webapps}"/>
                 <copy todir="${build.webapps}">
                   <fileset dir="${src.webapps}">
@@ -97,9 +102,12 @@
                   </fileset>
                 </copy>
                 <!--The compile.classpath is passed in by maven -->
-                <taskdef classname="org.apache.jasper.JspC" name="jspcompiler" classpathref="maven.compile.classpath"/>
+                <taskdef classname="org.apache.jasper.JspC" name="jspcompiler"
+                         classpathref="maven.compile.classpath"/>
                 <mkdir dir="${build.webapps}/thrift/WEB-INF"/>
-                <jspcompiler uriroot="${src.webapps}/thrift" outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.thrift" webxml="${build.webapps}/thrift/WEB-INF/web.xml"/>
+                <jspcompiler uriroot="${src.webapps}/thrift" outputdir="${generated.sources}/java"
+                             package="org.apache.hadoop.hbase.generated.thrift"
+                             webxml="${build.webapps}/thrift/WEB-INF/web.xml"/>
               </target>
             </configuration>
             <goals>
@@ -131,6 +139,21 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
+      </plugin>
+      <!-- Testing plugins -->
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <properties>
+            <property>
+              <name>listener</name>
+              <value>org.apache.hadoop.hbase.ServerResourceCheckerJUnitListener</value>
+            </property>
+          </properties>
+          <systemPropertyVariables>
+            <test.build.webapps>target/test-classes/webapps</test.build.webapps>
+          </systemPropertyVariables>
+        </configuration>
       </plugin>
     </plugins>
   </build>
@@ -243,7 +266,9 @@ the same time. -->
       <activation>
         <property>
           <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
-          <!--h1--><name>hadoop.profile</name><value>1.1</value>
+          <!--h1-->
+          <name>hadoop.profile</name>
+          <value>1.1</value>
         </property>
       </activation>
       <dependencies>
@@ -286,7 +311,8 @@ the same time. -->
       <activation>
         <property>
           <!--Below formatting for dev-support/generate-hadoopX-poms.sh-->
-          <!--h2--><name>!hadoop.profile</name>
+          <!--h2-->
+          <name>!hadoop.profile</name>
         </property>
       </activation>
       <dependencies>
@@ -330,7 +356,8 @@ the same time. -->
                   the required classpath that is required in the env
                   of the launch container in the mini mr/yarn cluster
                   -->
-                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath</outputFile>
+                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath
+                  </outputFile>
                 </configuration>
               </execution>
             </executions>
@@ -380,7 +407,8 @@ the same time. -->
                   the required classpath that is required in the env
                   of the launch container in the mini mr/yarn cluster
                   -->
-                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath</outputFile>
+                  <outputFile>${project.build.directory}/test-classes/mrapp-generated-classpath
+                  </outputFile>
                 </configuration>
               </execution>
             </executions>
