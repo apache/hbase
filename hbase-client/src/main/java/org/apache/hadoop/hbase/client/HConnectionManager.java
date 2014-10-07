@@ -1140,8 +1140,6 @@ public class HConnectionManager {
       } catch (IOException e) {
         if (ExceptionUtil.isInterrupt(e)) {
           Thread.currentThread().interrupt();
-        } else {
-          LOG.warn("Encountered problems when prefetch hbase:meta table: ", e);
         }
       }
     }
@@ -2132,7 +2130,7 @@ public class HConnectionManager {
         }
       };
     }
- 
+
 
     private static void release(MasterServiceState mss) {
       if (mss != null && mss.connection != null) {
@@ -2753,7 +2751,7 @@ public class HConnectionManager {
    * Look for an exception we know in the remote exception:
    * - hadoop.ipc wrapped exceptions
    * - nested exceptions
-   * 
+   *
    * Looks for: RegionMovedException / RegionOpeningException / RegionTooBusyException
    * @return null if we didn't find the exception, the exception otherwise.
    */
