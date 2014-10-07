@@ -60,10 +60,12 @@ public class ChangeEncodingAction extends Action {
 
     LOG.debug("Performing action: Changing encodings on " + tableNameString);
     // possible DataBlockEncoding id's
-    int[] possibleIds = {0, 2, 3, 4/*, 6*/};
+    int[] possibleIds = {0, 2, 3, 4, 6};
     for (HColumnDescriptor descriptor : columnDescriptors) {
       short id = (short) possibleIds[random.nextInt(possibleIds.length)];
       descriptor.setDataBlockEncoding(DataBlockEncoding.getEncodingById(id));
+      LOG.debug("Set encoding of column family " + descriptor.getNameAsString()
+        + " to: " + descriptor.getDataBlockEncoding());
     }
 
     admin.modifyTable(tableName, tableDescriptor);
