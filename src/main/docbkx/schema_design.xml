@@ -368,10 +368,10 @@ COLUMN                                        CELL
       <para>If you pre-split your table, it is <emphasis>critical</emphasis> to understand how your
         rowkey will be distributed across the region boundaries. As an example of why this is
         important, consider the example of using displayable hex characters as the lead position of
-        the key (e.g., &quot;0000000000000000&quot; to &quot;ffffffffffffffff&quot;). Running those
-        key ranges through <code>Bytes.split</code> (which is the split strategy used when creating
-        regions in <code>HBaseAdmin.createTable(byte[] startKey, byte[] endKey, numRegions)</code>
-        for 10 regions will generate the following splits... </para>
+        the key (e.g., "0000000000000000" to "ffffffffffffffff"). Running those key ranges through
+          <code>Bytes.split</code> (which is the split strategy used when creating regions in
+          <code>HBaseAdmin.createTable(byte[] startKey, byte[] endKey, numRegions)</code> for 10
+        regions will generate the following splits...</para>
       <screen>
 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48 48                                // 0
 54 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10 -10                 // 6
@@ -503,12 +503,17 @@ public static byte[][] getHexSplits(String startKey, String endKey, int numRegio
   <section
     xml:id="ttl">
     <title>Time To Live (TTL)</title>
-    <para>ColumnFamilies can set a TTL length in seconds, and HBase will automatically delete rows
+    <para> ColumnFamilies can set a TTL length in seconds, and HBase will automatically delete rows
       once the expiration time is reached. This applies to <emphasis>all</emphasis> versions of a
-      row - even the current one. The TTL time encoded in the HBase for the row is specified in UTC. </para>
-    <para>See <link
-        xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html">HColumnDescriptor</link>
-      for more information. </para>
+      row - even the current one. The TTL time encoded in the HBase for the row is specified in UTC.
+    </para>
+    <para> Store files which contains only expired rows are deleted on minor compaction. Setting
+        <varname>hbase.store.delete.expired.storefile</varname> to <code>false</code> disables this
+      feature. Setting <link linkend="schema.minversions">minimum number of versions</link> to other
+      than 0 also disables this.</para>
+    <para> See <link
+        xlink:href="http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html"
+        >HColumnDescriptor</link> for more information. </para>
   </section>
   <section
     xml:id="cf.keep.deleted">
