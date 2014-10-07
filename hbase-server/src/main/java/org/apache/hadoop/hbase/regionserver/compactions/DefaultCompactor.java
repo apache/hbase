@@ -26,9 +26,9 @@ import java.util.List;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
+import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 
@@ -55,6 +55,7 @@ public class DefaultCompactor extends Compactor {
     StoreFile.Writer writer = null;
     List<Path> newFiles = new ArrayList<Path>();
     boolean cleanSeqId = false;
+    IOException e = null;
     try {
       InternalScanner scanner = null;
       try {
@@ -92,11 +93,20 @@ public class DefaultCompactor extends Compactor {
            scanner.close();
          }
       }
-    } finally {
+    } catch (IOException ioe) {
+      e = ioe;
+      // Throw the exception
+      throw ioe;
+    }
+    finally {
       if (writer != null) {
-        writer.appendMetadata(fd.maxSeqId, request.isAllFiles());
-        writer.close();
-        newFiles.add(writer.getPath());
+        if (e != null) {
+          writer.close();
+        } else {
+          writer.appendMetadata(fd.maxSeqId, request.isAllFiles());
+          writer.close();
+          newFiles.add(writer.getPath());
+        }
       }
     }
     return newFiles;

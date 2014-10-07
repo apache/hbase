@@ -66,10 +66,19 @@ public class DefaultStoreFlusher extends StoreFlusher {
         writer = store.createWriterInTmp(
             cellsCount, store.getFamily().getCompression(), false, true, true);
         writer.setTimeRangeTracker(snapshot.getTimeRangeTracker());
+        IOException e = null;
         try {
           performFlush(scanner, writer, smallestReadPoint);
+        } catch (IOException ioe) {
+          e = ioe;
+          // throw the exception out
+          throw ioe;
         } finally {
-          finalizeWriter(writer, cacheFlushId, status);
+          if (e != null) {
+            writer.close();
+          } else {
+            finalizeWriter(writer, cacheFlushId, status);
+          }
         }
       }
     } finally {
