@@ -22,10 +22,12 @@ import java.io.IOException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 
 /**
  * Class represents table state on HDFS.
@@ -151,4 +153,30 @@ public class TableDescriptor {
         ", tableState=" + tableState +
         '}';
   }
+
+  public static HTableDescriptor metaTableDescriptor(final Configuration conf)
+      throws IOException {
+    HTableDescriptor metaDescriptor = new HTableDescriptor(
+        TableName.META_TABLE_NAME,
+        new HColumnDescriptor[] {
+            new HColumnDescriptor(HConstants.CATALOG_FAMILY)
+                .setMaxVersions(conf.getInt(HConstants.HBASE_META_VERSIONS,
+                    HConstants.DEFAULT_HBASE_META_VERSIONS))
+                .setInMemory(true)
+                .setBlocksize(conf.getInt(HConstants.HBASE_META_BLOCK_SIZE,
+                    HConstants.DEFAULT_HBASE_META_BLOCK_SIZE))
+                .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+                    // Disable blooms for meta.  Needs work.  Seems to mess w/ getClosestOrBefore.
+                .setBloomFilterType(BloomType.NONE)
+                    // Enable cache of data blocks in L1 if more than one caching tier deployed:
+                    // e.g. if using CombinedBlockCache (BucketCache).
+                .setCacheDataInL1(true)
+        }) {
+    };
+    metaDescriptor.addCoprocessor(
+        "org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint",
+        null, Coprocessor.PRIORITY_SYSTEM, null);
+    return metaDescriptor;
+  }
+
 }

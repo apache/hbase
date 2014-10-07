@@ -128,7 +128,7 @@ public class TestLogRollingNoCluster {
           edit.add(new KeyValue(bytes, bytes, bytes, now, EMPTY_1K_ARRAY));
           this.wal.append(HRegionInfo.FIRST_META_REGIONINFO,
               TableName.META_TABLE_NAME,
-              edit, now, HTableDescriptor.META_TABLEDESC, sequenceId);
+              edit, now, TEST_UTIL.getMetaTableDescriptor(), sequenceId);
         }
         String msg = getName() + " finished";
         if (isException())

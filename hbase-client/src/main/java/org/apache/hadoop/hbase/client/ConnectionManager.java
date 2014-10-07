@@ -2473,9 +2473,6 @@ class ConnectionManager {
     public HTableDescriptor getHTableDescriptor(final TableName tableName)
     throws IOException {
       if (tableName == null) return null;
-      if (tableName.equals(TableName.META_TABLE_NAME)) {
-        return HTableDescriptor.META_TABLEDESC;
-      }
       MasterKeepAliveConnection master = getKeepAliveMasterService();
       GetTableDescriptorsResponse htds;
       try {

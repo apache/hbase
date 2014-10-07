@@ -1261,7 +1261,11 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
               new Path(name.getNamespaceAsString(), new Path(name.getQualifierAsString()))));
   }
 
-  /** Table descriptor for <code>hbase:meta</code> catalog table */
+  /** Table descriptor for <code>hbase:meta</code> catalog table
+   * Deprecated, use TableDescriptors#get(TableName.META_TABLE) or
+   * Admin#getTableDescriptor(TableName.META_TABLE) instead.
+   */
+  @Deprecated
   public static final HTableDescriptor META_TABLEDESC = new HTableDescriptor(
       TableName.META_TABLE_NAME,
       new HColumnDescriptor[] {

@@ -37,7 +37,11 @@ public class TestHColumnDescriptor {
   @Test
   public void testPb() throws DeserializationException {
     HColumnDescriptor hcd = new HColumnDescriptor(
-      HTableDescriptor.META_TABLEDESC.getColumnFamilies()[0]);
+        new HColumnDescriptor(HConstants.CATALOG_FAMILY)
+            .setInMemory(true)
+            .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+            .setBloomFilterType(BloomType.NONE)
+            .setCacheDataInL1(true));
     final int v = 123;
     hcd.setBlocksize(v);
     hcd.setTimeToLive(v);

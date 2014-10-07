@@ -355,7 +355,7 @@ public class SnapshotManifest {
       Path rootDir = FSUtils.getRootDir(conf);
       LOG.info("Using old Snapshot Format");
       // write a copy of descriptor to the snapshot directory
-      new FSTableDescriptors(fs, rootDir)
+      new FSTableDescriptors(conf, fs, rootDir)
         .createTableDescriptorForTableDirectory(workingDir, new TableDescriptor(
             htd, TableState.State.ENABLED), false);
     } else {

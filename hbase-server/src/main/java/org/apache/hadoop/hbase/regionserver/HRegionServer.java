@@ -493,7 +493,7 @@ public class HRegionServer extends HasThread implements
     boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
     this.fs = new HFileSystem(this.conf, useHBaseChecksum);
     this.rootDir = FSUtils.getRootDir(this.conf);
-    this.tableDescriptors = new FSTableDescriptors(
+    this.tableDescriptors = new FSTableDescriptors(this.conf,
       this.fs, this.rootDir, !canUpdateTableDescriptor());
 
     service = new ExecutorService(getServerName().toShortString());

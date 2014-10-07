@@ -28,6 +28,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.primitives.Ints;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,19 +41,18 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.Coprocessor;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptor;
+import org.apache.hadoop.hbase.TableDescriptors;
+import org.apache.hadoop.hbase.TableInfoMissingException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableDescriptors;
-import org.apache.hadoop.hbase.TableInfoMissingException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.primitives.Ints;
-
+import org.apache.hadoop.hbase.regionserver.BloomType;
 
 /**
  * Implementation of {@link TableDescriptors} that reads descriptors from the
@@ -92,6 +93,11 @@ public class FSTableDescriptors implements TableDescriptors {
     new ConcurrentHashMap<TableName, TableDescriptorAndModtime>();
 
   /**
+   * Table descriptor for <code>hbase:meta</code> catalog table
+   */
+  private final HTableDescriptor metaTableDescritor;
+
+  /**
    * Data structure to hold modification time and table descriptor.
    */
   private static class TableDescriptorAndModtime {
@@ -126,23 +132,26 @@ public class FSTableDescriptors implements TableDescriptors {
    * This instance can do write operations (is not read only).
    */
   public FSTableDescriptors(final Configuration conf) throws IOException {
-    this(FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf));
+    this(conf, FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf));
   }
   
-  public FSTableDescriptors(final FileSystem fs, final Path rootdir) {
-    this(fs, rootdir, false);
+  public FSTableDescriptors(final Configuration conf, final FileSystem fs, final Path rootdir)
+      throws IOException {
+    this(conf, fs, rootdir, false);
   }
 
   /**
    * @param fsreadonly True if we are read-only when it comes to filesystem
    * operations; i.e. on remove, we do not do delete in fs.
    */
-  public FSTableDescriptors(final FileSystem fs,
-      final Path rootdir, final boolean fsreadonly) {
+  public FSTableDescriptors(final Configuration conf, final FileSystem fs,
+      final Path rootdir, final boolean fsreadonly) throws IOException {
     super();
     this.fs = fs;
     this.rootdir = rootdir;
     this.fsreadonly = fsreadonly;
+
+    this.metaTableDescritor = TableDescriptor.metaTableDescriptor(conf);
   }
 
   /**
@@ -158,7 +167,7 @@ public class FSTableDescriptors implements TableDescriptors {
     invocations++;
     if (TableName.META_TABLE_NAME.equals(tablename)) {
       cachehits++;
-      return new TableDescriptor(HTableDescriptor.META_TABLEDESC, TableState.State.ENABLED);
+      return new TableDescriptor(metaTableDescritor, TableState.State.ENABLED);
     }
     // hbase:meta is already handled. If some one tries to get the descriptor for
     // .logs, .oldlogs or .corrupt throw an exception.
@@ -204,7 +213,7 @@ public class FSTableDescriptors implements TableDescriptors {
   public HTableDescriptor get(TableName tableName) throws IOException {
     if (TableName.META_TABLE_NAME.equals(tableName)) {
       cachehits++;
-      return HTableDescriptor.META_TABLEDESC;
+      return metaTableDescritor;
     }
     TableDescriptor descriptor = getDescriptor(tableName);
     return descriptor == null ? null : descriptor.getHTableDescriptor();
@@ -826,6 +835,6 @@ public class FSTableDescriptors implements TableDescriptors {
     Path p = writeTableDescriptor(fs, htd, tableDir, status);
     return p != null;
   }
-  
+
 }
 

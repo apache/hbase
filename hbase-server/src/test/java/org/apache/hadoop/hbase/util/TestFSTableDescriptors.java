@@ -76,7 +76,7 @@ public class TestFSTableDescriptors {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testCreate"));
     TableDescriptor td = new TableDescriptor(htd, TableState.State.ENABLED);
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
-    FSTableDescriptors fstd = new FSTableDescriptors(fs, testdir);
+    FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, testdir);
     assertTrue(fstd.createTableDescriptor(td));
     assertFalse(fstd.createTableDescriptor(td));
     FileStatus [] statuses = fs.listStatus(testdir);
@@ -98,7 +98,7 @@ public class TestFSTableDescriptors {
         TableName.valueOf("testSequenceidAdvancesOnTableInfo"));
     TableDescriptor td = new TableDescriptor(htd);
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
-    FSTableDescriptors fstd = new FSTableDescriptors(fs, testdir);
+    FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, testdir);
     Path p0 = fstd.updateTableDescriptor(td);
     int i0 = FSTableDescriptors.getTableInfoSequenceId(p0);
     Path p1 = fstd.updateTableDescriptor(td);
@@ -159,7 +159,7 @@ public class TestFSTableDescriptors {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any detrius laying around.
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
-    TableDescriptors htds = new FSTableDescriptors(fs, rootdir);
+    TableDescriptors htds = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
     htds.add(htd);
     assertNotNull(htds.remove(htd.getTableName()));
@@ -172,7 +172,7 @@ public class TestFSTableDescriptors {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
     TableDescriptor td = new TableDescriptor(htd, TableState.State.ENABLED);
     Path rootdir = UTIL.getDataTestDir(name);
-    FSTableDescriptors fstd = new FSTableDescriptors(fs, rootdir);
+    FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
     fstd.createTableDescriptor(td);
     TableDescriptor td2 =
       FSTableDescriptors.getTableDescriptorFromFs(fs, rootdir, htd.getTableName());
@@ -183,14 +183,14 @@ public class TestFSTableDescriptors {
     final String name = "testReadingOldHTDFromFS";
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     Path rootdir = UTIL.getDataTestDir(name);
-    FSTableDescriptors fstd = new FSTableDescriptors(fs, rootdir);
+    FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
     TableDescriptor td = new TableDescriptor(htd, TableState.State.ENABLED);
     Path descriptorFile = fstd.updateTableDescriptor(td);
     try (FSDataOutputStream out = fs.create(descriptorFile, true)) {
       out.write(htd.toByteArray());
     }
-    FSTableDescriptors fstd2 = new FSTableDescriptors(fs, rootdir);
+    FSTableDescriptors fstd2 = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
     TableDescriptor td2 = fstd2.getDescriptor(htd.getTableName());
     assertEquals(td, td2);
     FileStatus descriptorFile2 =
@@ -209,7 +209,7 @@ public class TestFSTableDescriptors {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any debris laying around.
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
-    FSTableDescriptors htds = new FSTableDescriptors(fs, rootdir) {
+    FSTableDescriptors htds = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir) {
       @Override
       public HTableDescriptor get(TableName tablename)
           throws TableExistsException, FileNotFoundException, IOException {
@@ -256,7 +256,7 @@ public class TestFSTableDescriptors {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any detrius laying around.
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
-    TableDescriptors htds = new FSTableDescriptors(fs, rootdir);
+    TableDescriptors htds = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
     assertNull("There shouldn't be any HTD for this table",
       htds.get(TableName.valueOf("NoSuchTable")));
   }
@@ -267,7 +267,7 @@ public class TestFSTableDescriptors {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     // Cleanup old tests if any detrius laying around.
     Path rootdir = new Path(UTIL.getDataTestDir(), name);
-    TableDescriptors htds = new FSTableDescriptors(fs, rootdir);
+    TableDescriptors htds = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
     htds.add(htd);
     htds.add(htd);
@@ -304,8 +304,8 @@ public class TestFSTableDescriptors {
   public void testReadingInvalidDirectoryFromFS() throws IOException {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     try {
-      // .tmp dir is an invalid table name
-      new FSTableDescriptors(fs, FSUtils.getRootDir(UTIL.getConfiguration()))
+      new FSTableDescriptors(UTIL.getConfiguration(), fs,
+          FSUtils.getRootDir(UTIL.getConfiguration()))
           .get(TableName.valueOf(HConstants.HBASE_TEMP_DIRECTORY));
       fail("Shouldn't be able to read a table descriptor for the archive directory.");
     } catch (Exception e) {
@@ -321,7 +321,7 @@ public class TestFSTableDescriptors {
         "testCreateTableDescriptorUpdatesIfThereExistsAlready"));
     TableDescriptor td = new TableDescriptor(htd, TableState.State.ENABLED);
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
-    FSTableDescriptors fstd = new FSTableDescriptors(fs, testdir);
+    FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, testdir);
     assertTrue(fstd.createTableDescriptor(td));
     assertFalse(fstd.createTableDescriptor(td));
     htd.setValue(Bytes.toBytes("mykey"), Bytes.toBytes("myValue"));

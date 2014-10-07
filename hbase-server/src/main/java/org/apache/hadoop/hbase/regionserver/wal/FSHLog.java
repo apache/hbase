@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.DrainBarrier;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Threads;
@@ -2052,9 +2053,11 @@ class FSHLog implements HLog, Syncable {
       WALEdit walEdit = new WALEdit();
       walEdit.add(new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("family"),
         Bytes.toBytes("qualifier"), -1, new byte [1000]));
+      FSTableDescriptors fst = new FSTableDescriptors(conf);
       for (AtomicLong i = new AtomicLong(0); i.get() < count; i.incrementAndGet()) {
-        wal.append(HRegionInfo.FIRST_META_REGIONINFO, TableName.META_TABLE_NAME, walEdit, start,
-          HTableDescriptor.META_TABLEDESC, i);
+        wal.append(HRegionInfo.FIRST_META_REGIONINFO,
+            TableName.META_TABLE_NAME, walEdit, start,
+          fst.get(TableName.META_TABLE_NAME), i);
         wal.sync();
       }
       wal.close();

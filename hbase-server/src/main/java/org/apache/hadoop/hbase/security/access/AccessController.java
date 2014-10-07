@@ -2173,15 +2173,9 @@ public class AccessController extends BaseMasterAndRegionObserver
     else {
       MasterServices masterServices = ctx.getEnvironment().getMasterServices();
       for (TableName tableName: tableNamesList) {
-        // Do not deny if the table does not exist
-        try {
-          masterServices.checkTableModifiable(tableName);
-        } catch (TableNotFoundException ex) {
-          // Skip checks for a table that does not exist
+        // Skip checks for a table that does not exist
+        if (!masterServices.getTableStateManager().isTablePresent(tableName))
           continue;
-        } catch (TableNotDisabledException ex) {
-          // We don't care about this
-        }
         requirePermission("getTableDescriptors", tableName, null, null,
           Action.ADMIN, Action.CREATE);
       }

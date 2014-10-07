@@ -227,7 +227,7 @@ public class TestMasterFailover {
 
     FileSystem filesystem = FileSystem.get(conf);
     Path rootdir = FSUtils.getRootDir(conf);
-    FSTableDescriptors fstd = new FSTableDescriptors(filesystem, rootdir);
+    FSTableDescriptors fstd = new FSTableDescriptors(conf, filesystem, rootdir);
     fstd.createTableDescriptor(offlineTable);
 
     HRegionInfo hriOffline = new HRegionInfo(offlineTable.getTableName(), null, null);

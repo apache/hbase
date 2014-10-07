@@ -59,7 +59,7 @@ public class TestReplicationWALEntryFilters {
 
     // meta
     HLogKey key1 = new HLogKey( HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
-      HTableDescriptor.META_TABLEDESC.getTableName());
+      TableName.META_TABLE_NAME);
     HLog.Entry metaEntry = new Entry(key1, null);
 
     assertNull(filter.filter(metaEntry));

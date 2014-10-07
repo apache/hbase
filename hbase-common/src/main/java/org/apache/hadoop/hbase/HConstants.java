@@ -694,6 +694,26 @@ public final class HConstants {
   public static int DEFAULT_HBASE_META_SCANNER_CACHING = 100;
 
   /**
+   * Parameter name for number of versions, kept by meta table.
+   */
+  public static String HBASE_META_VERSIONS = "hbase.meta.versions";
+
+  /**
+   * Default value of {@link #HBASE_META_VERSIONS}.
+   */
+  public static int DEFAULT_HBASE_META_VERSIONS = 3;
+
+  /**
+   * Parameter name for number of versions, kept by meta table.
+   */
+  public static String HBASE_META_BLOCK_SIZE = "hbase.meta.blocksize";
+
+  /**
+   * Default value of {@link #HBASE_META_BLOCK_SIZE}.
+   */
+  public static int DEFAULT_HBASE_META_BLOCK_SIZE = 8 * 1024;
+
+  /**
    * Parameter name for unique identifier for this {@link org.apache.hadoop.conf.Configuration}
    * instance. If there are two or more {@link org.apache.hadoop.conf.Configuration} instances that,
    * for all intents and purposes, are the same except for their instance ids, then they will not be
