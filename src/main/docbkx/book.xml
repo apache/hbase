@@ -2262,26 +2262,26 @@ rs.close();
             of time. </para>
           <para>The way to calculate how much memory is available in HBase for caching is: </para>
           <programlisting>
-            number of region servers * heap size * hfile.block.cache.size * 0.85
+            number of region servers * heap size * hfile.block.cache.size * 0.99
         </programlisting>
           <para>The default value for the block cache is 0.25 which represents 25% of the available
-            heap. The last value (85%) is the default acceptable loading factor in the LRU cache
+            heap. The last value (99%) is the default acceptable loading factor in the LRU cache
             after which eviction is started. The reason it is included in this equation is that it
             would be unrealistic to say that it is possible to use 100% of the available memory
             since this would make the process blocking from the point where it loads new blocks.
             Here are some examples: </para>
           <itemizedlist>
             <listitem>
-              <para>One region server with the default heap size (1GB) and the default block cache
-                size will have 217MB of block cache available.</para>
+              <para>One region server with the default heap size (1 GB) and the default block cache
+                size will have 253 MB of block cache available.</para>
             </listitem>
             <listitem>
-              <para>20 region servers with the heap size set to 8GB and a default block cache size
-                will have 34GB of block cache.</para>
+              <para>20 region servers with the heap size set to 8 GB and a default block cache size
+                will have 39.6 of block cache.</para>
             </listitem>
             <listitem>
-              <para>100 region servers with the heap size set to 24GB and a block cache size of 0.5
-                will have about 1TB of block cache.</para>
+              <para>100 region servers with the heap size set to 24 GB and a block cache size of 0.5
+                will have about 1.16 TB of block cache.</para>
             </listitem>
         </itemizedlist>
         <para>Your data is not the only resident of the block cache. Here are others that you may have to take into account:
