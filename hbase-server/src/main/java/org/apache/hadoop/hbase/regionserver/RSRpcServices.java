@@ -1953,11 +1953,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // If checkOpen failed, server not running or filesystem gone,
         // cancel this lease; filesystem is gone or we're closing or something.
         if (scannerName != null) {
-          try {
-            regionServer.leases.cancelLease(scannerName);
-          } catch (LeaseException le) {
-            LOG.info("Server shutting down and client tried to access missing scanner " +
-              scannerName);
+          LOG.debug("Server shutting down and client tried to access missing scanner "
+            + scannerName);
+          if (regionServer.leases != null) {
+            try {
+              regionServer.leases.cancelLease(scannerName);
+            } catch (LeaseException le) {
+              // No problem, ignore
+            }
           }
         }
         throw e;
