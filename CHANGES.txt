@@ -13,10 +13,10 @@ Release 0.98.7 - 10/13/2014
     * [HBASE-12104] - Some optimization and bugfix for HTableMultiplexer
     * [HBASE-12110] - Fix .arcconfig
     * [HBASE-12115] - Fix NumberFormat Exception in TableInputFormatBase.
-    * [HBASE-12148] - Remove TimeRangeTracker as point of contention when many threads writing a Store
 
 ** Bug
     * [HBASE-8808] - Use Jacoco to generate Unit Test coverage reports
+    * [HBASE-8936] - Fixing TestSplitLogWorker while running Jacoco tests.
     * [HBASE-9473] - Change UI to list 'system tables' rather than 'catalog tables'.
     * [HBASE-10748] - hbase-daemon.sh fails to execute with 'sh' command
     * [HBASE-11405] - Multiple invocations of hbck in parallel disables balancer permanently 
@@ -53,7 +53,7 @@ Release 0.98.7 - 10/13/2014
     * [HBASE-12120] - HBase shell doesn't allow deleting of a cell by user with W-only permissions to it
     * [HBASE-12123] - Failed assertion in BucketCache after 11331
     * [HBASE-12124] - Closed region could stay closed if master stops at bad time
-    * [HBASE-12136] - Race condition between client adding tableCF replication znode and  server triggering TableCFsTracker
+    * [HBASE-12136] - Race condition between client adding tableCF replication znode and server triggering TableCFsTracker
     * [HBASE-12137] - Alter table add cf doesn't do compression test
     * [HBASE-12139] - StochasticLoadBalancer doesn't work on large lightly loaded clusters
     * [HBASE-12146] - RegionServerTracker should escape data in log messages
@@ -61,6 +61,8 @@ Release 0.98.7 - 10/13/2014
     * [HBASE-12160] - Make Surefire's argLine configurable in the command line
     * [HBASE-12164] - Check for presence of user Id in SecureBulkLoadEndpoint#secureBulkLoadHFiles() is inaccurate
     * [HBASE-12184] - ServerShutdownHandler throws NPE
+    * [HBASE-12191] - Make TestCacheOnWrite faster.
+    * [HBASE-12199] - Make TestAtomicOperation and TestEncodedSeekers faster
 
 ** Improvement
     * [HBASE-10153] - improve VerifyReplication to compute BADROWS more accurately
@@ -91,6 +93,7 @@ Release 0.98.7 - 10/13/2014
 
 ** Test
     * [HBASE-11798] - TestBucketWriterThread may hang due to WriterThread stopping prematurely
+    * [HBASE-11838] - Enable PREFIX_TREE in integration tests
     * [HBASE-11918] - TestVisibilityLabelsWithDistributedLogReplay#testAddVisibilityLabelsOnRSRestart sometimes fails due to VisibilityController initialization not being recognized
     * [HBASE-11942] - Fix TestHRegionBusyWait
     * [HBASE-11966] - Minor error in TestHRegion.testCheckAndMutate_WithCorrectValue()
