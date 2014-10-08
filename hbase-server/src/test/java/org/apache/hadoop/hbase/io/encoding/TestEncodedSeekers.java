@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -143,6 +144,7 @@ public class TestEncodedSeekers {
       byte[] key = LoadTestKVGenerator.md5PrefixedKey(i).getBytes();
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
         Put put = new Put(key);
+        put.setDurability(Durability.ASYNC_WAL);
         byte[] col = Bytes.toBytes(String.valueOf(j));
         byte[] value = dataGenerator.generateRandomSizeValue(key, col);
         if (includeTags) {

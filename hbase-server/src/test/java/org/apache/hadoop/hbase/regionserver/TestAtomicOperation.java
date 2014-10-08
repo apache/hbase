@@ -71,7 +71,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-
 /**
  * Testing of HRegion.incrementColumnValue, HRegion.increment,
  * and HRegion.append
@@ -238,6 +237,7 @@ public class TestAtomicOperation {
           inc.addColumn(fam1, qual1, amount);
           inc.addColumn(fam1, qual2, amount*2);
           inc.addColumn(fam2, qual3, amount*3);
+          inc.setDurability(Durability.ASYNC_WAL);
           region.increment(inc);
 
           // verify: Make sure we only see completed increments
@@ -275,6 +275,7 @@ public class TestAtomicOperation {
               a.add(fam1, qual1, val);
               a.add(fam1, qual2, val);
               a.add(fam2, qual3, val);
+              a.setDurability(Durability.ASYNC_WAL);
               region.append(a);
 
               Get g = new Get(row);
@@ -350,16 +351,20 @@ public class TestAtomicOperation {
               if (op) {
                 Put p = new Put(row, ts);
                 p.add(fam1, qual1, value1);
+                p.setDurability(Durability.ASYNC_WAL);
                 rm.add(p);
                 Delete d = new Delete(row);
                 d.deleteColumns(fam1, qual2, ts);
+                d.setDurability(Durability.ASYNC_WAL);
                 rm.add(d);
               } else {
                 Delete d = new Delete(row);
                 d.deleteColumns(fam1, qual1, ts);
+                d.setDurability(Durability.ASYNC_WAL);
                 rm.add(d);
                 Put p = new Put(row, ts);
                 p.add(fam1, qual2, value2);
+                p.setDurability(Durability.ASYNC_WAL);
                 rm.add(p);
               }
               region.mutateRow(rm);
@@ -439,15 +444,19 @@ public class TestAtomicOperation {
               if (op) {
                 Put p = new Put(row2, ts);
                 p.add(fam1, qual1, value1);
+                p.setDurability(Durability.ASYNC_WAL);
                 mrm.add(p);
                 Delete d = new Delete(row);
                 d.deleteColumns(fam1, qual1, ts);
+                d.setDurability(Durability.ASYNC_WAL);
                 mrm.add(d);
               } else {
                 Delete d = new Delete(row2);
                 d.deleteColumns(fam1, qual1, ts);
+                d.setDurability(Durability.ASYNC_WAL);
                 mrm.add(d);
                 Put p = new Put(row, ts);
+                p.setDurability(Durability.ASYNC_WAL);
                 p.add(fam1, qual1, value2);
                 mrm.add(p);
               }
