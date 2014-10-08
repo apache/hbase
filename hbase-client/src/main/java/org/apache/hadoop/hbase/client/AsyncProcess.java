@@ -1013,6 +1013,10 @@ class AsyncProcess {
       Retry canRetry = errorsByServer.canRetryMore(numAttempt)
           ? Retry.YES : Retry.NO_RETRIES_EXHAUSTED;
 
+      if (tableName == null) {
+        // tableName is null when we made a cross-table RPC call.
+        hConnection.clearCaches(server);
+      }
       int failed = 0, stopped = 0;
       List<Action<Row>> toReplay = new ArrayList<Action<Row>>();
       for (Map.Entry<byte[], List<Action<Row>>> e : rsActions.actions.entrySet()) {
@@ -1021,7 +1025,9 @@ class AsyncProcess {
         // Do not use the exception for updating cache because it might be coming from
         // any of the regions in the MultiAction.
         // TODO: depending on type of exception we might not want to update cache at all?
-        hConnection.updateCachedLocations(tableName, regionName, row, null, server);
+        if (tableName != null) {
+          hConnection.updateCachedLocations(tableName, regionName, row, null, server);
+        }
         for (Action<Row> action : e.getValue()) {
           Retry retry = manageError(
               action.getOriginalIndex(), action.getAction(), canRetry, t, server);

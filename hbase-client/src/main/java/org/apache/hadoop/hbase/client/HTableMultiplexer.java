@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFuture;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -79,7 +81,7 @@ public class HTableMultiplexer {
   private final Map<HRegionLocation, FlushWorker> serverToFlushWorkerMap =
       new ConcurrentHashMap<>();
 
-  private final Configuration conf;
+  private final Configuration workerConf;
   private final ClusterConnection conn;
   private final ExecutorService pool;
   private final int retryNum;
@@ -95,10 +97,9 @@ public class HTableMultiplexer {
    */
   public HTableMultiplexer(Configuration conf, int perRegionServerBufferQueueSize)
       throws IOException {
-    this.conf = conf;
     this.conn = (ClusterConnection) ConnectionFactory.createConnection(conf);
     this.pool = HTable.getDefaultExecutor(conf);
-    this.retryNum = this.conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
+    this.retryNum = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     this.perRegionServerBufferQueueSize = perRegionServerBufferQueueSize;
     this.maxKeyValueSize = HTable.getMaxKeyValueSize(conf);
@@ -107,6 +108,11 @@ public class HTableMultiplexer {
     this.executor =
         Executors.newScheduledThreadPool(initThreads,
           new ThreadFactoryBuilder().setDaemon(true).setNameFormat("HTableFlushWorker-%d").build());
+
+    this.workerConf = HBaseConfiguration.create(conf);
+    // We do not do the retry because we need to reassign puts to different queues if regions are
+    // moved.
+    this.workerConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
   }
 
   /**
@@ -218,7 +224,7 @@ public class HTableMultiplexer {
         worker = serverToFlushWorkerMap.get(addr);
         if (worker == null) {
           // Create the flush worker
-          worker = new FlushWorker(conf, this.conn, addr, this, perRegionServerBufferQueueSize,
+          worker = new FlushWorker(workerConf, this.conn, addr, this, perRegionServerBufferQueueSize,
                   pool, executor);
           this.serverToFlushWorkerMap.put(addr, worker);
           executor.scheduleAtFixedRate(worker, flushPeriod, flushPeriod, TimeUnit.MILLISECONDS);
@@ -388,32 +394,30 @@ public class HTableMultiplexer {
 
   private static class FlushWorker implements Runnable {
     private final HRegionLocation addr;
-    private final AsyncProcess asyncProc;
     private final LinkedBlockingQueue<PutStatus> queue;
     private final HTableMultiplexer multiplexer;
     private final AtomicLong totalFailedPutCount = new AtomicLong(0);
     private final AtomicInteger currentProcessingCount = new AtomicInteger(0);
     private final AtomicAverageCounter averageLatency = new AtomicAverageCounter();
     private final AtomicLong maxLatency = new AtomicLong(0);
-    private final ExecutorService pool;
+
+    private final AsyncProcess ap;
     private final List<PutStatus> processingList = new ArrayList<>();
     private final ScheduledExecutorService executor;
     private final int maxRetryInQueue;
     private final AtomicInteger retryInQueue = new AtomicInteger(0);
-    private final int rpcTimeOutMs;
     
     public FlushWorker(Configuration conf, ClusterConnection conn, HRegionLocation addr,
         HTableMultiplexer htableMultiplexer, int perRegionServerBufferQueueSize,
         ExecutorService pool, ScheduledExecutorService executor) {
       this.addr = addr;
-      this.asyncProc = conn.getAsyncProcess();
       this.multiplexer = htableMultiplexer;
       this.queue = new LinkedBlockingQueue<>(perRegionServerBufferQueueSize);
-      this.pool = pool;
+      RpcRetryingCallerFactory rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf);
+      RpcControllerFactory rpcControllerFactory = RpcControllerFactory.instantiate(conf);
+      this.ap = new AsyncProcess(conn, conf, pool, rpcCallerFactory, false, rpcControllerFactory);
       this.executor = executor;
       this.maxRetryInQueue = conf.getInt(TABLE_MULTIPLEXER_MAX_RETRIES_IN_QUEUE, 10000);
-      this.rpcTimeOutMs =
-          conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
     }
 
     protected LinkedBlockingQueue<PutStatus> getQueue() {
@@ -456,10 +460,11 @@ public class HTableMultiplexer {
       // The currentPut is failed. So get the table name for the currentPut.
       final TableName tableName = ps.regionInfo.getTable();
 
-      // Wait at least RPC timeout time
-      long delayMs = rpcTimeOutMs;
-      delayMs = Math.max(delayMs, (long) (multiplexer.flushPeriod * Math.pow(2,
-              multiplexer.retryNum - retryCount)));
+      long delayMs = ConnectionUtils.getPauseTime(multiplexer.flushPeriod,
+        multiplexer.retryNum - retryCount - 1);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("resubmitting after " + delayMs + "ms: " + retryCount);
+      }
 
       executor.schedule(new Runnable() {
         @Override
@@ -513,8 +518,8 @@ public class HTableMultiplexer {
             Collections.singletonMap(server, actions);
         try {
           AsyncRequestFuture arf =
-              asyncProc.submitMultiActions(null, retainedActions, 0L, null, results, true, null,
-                null, actionsByServer, pool);
+              ap.submitMultiActions(null, retainedActions, 0L, null, results, true, null,
+                null, actionsByServer, null);
           arf.waitUntilDone();
           if (arf.hasError()) {
             // We just log and ignore the exception here since failed Puts will be resubmit again.
@@ -523,20 +528,20 @@ public class HTableMultiplexer {
           }
         } finally {
           for (int i = 0; i < results.length; i++) {
-            if (results[i] == null) {
+            if (results[i] instanceof Result) {
+              failedCount--;
+            } else {
               if (failed == null) {
                 failed = new ArrayList<PutStatus>();
               }
               failed.add(processingList.get(i));
-            } else {
-              failedCount--;
             }
           }
         }
 
         if (failed != null) {
           // Resubmit failed puts
-          for (PutStatus putStatus : processingList) {
+          for (PutStatus putStatus : failed) {
             if (resubmitFailedPut(putStatus, this.addr)) {
               failedCount--;
             }
