@@ -2075,11 +2075,23 @@ public class HRegionServer extends HasThread implements
     try {
       GetLastFlushedSequenceIdRequest req = RequestConverter
           .buildGetLastFlushedSequenceIdRequest(region);
-      lastFlushedSequenceId = rssStub.getLastFlushedSequenceId(null, req)
+      RegionServerStatusService.BlockingInterface rss = rssStub;
+      if (rss == null) { // Try to connect one more time
+        createRegionServerStatusStub();
+        rss = rssStub;
+        if (rss == null) {
+          // Still no luck, we tried
+          LOG.warn("Unable to connect to the master to check "
+            + "the last flushed sequence id");
+          return -1l;
+        }
+      }
+      lastFlushedSequenceId = rss.getLastFlushedSequenceId(null, req)
           .getLastFlushedSequenceId();
     } catch (ServiceException e) {
       lastFlushedSequenceId = -1l;
-      LOG.warn("Unable to connect to the master to check " + "the last flushed sequence id", e);
+      LOG.warn("Unable to connect to the master to check "
+        + "the last flushed sequence id", e);
     }
     return lastFlushedSequenceId;
   }
