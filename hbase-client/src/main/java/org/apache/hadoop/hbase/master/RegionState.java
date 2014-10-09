@@ -304,8 +304,8 @@ public class RegionState {
     return isOnServer(sn) && (isSplitting() || isSplit());
   }
 
-  public boolean isClosingOnServer(final ServerName sn) {
-    return isOnServer(sn) && isClosing();
+  public boolean isClosingOrClosedOnServer(final ServerName sn) {
+    return isOnServer(sn) && (isClosing() || isClosed());
   }
 
   public boolean isOpeningOrFailedOpenOnServer(final ServerName sn) {

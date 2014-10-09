@@ -2139,16 +2139,20 @@ public class AssignmentManager {
 
   private String onRegionClosed(final RegionState current,
       final HRegionInfo hri, final ServerName serverName) {
-    // We didn't check if the region is already closed/offline on the server
-    // as we did for other transitions to handle reportRegionTransition RPC retry.
-    // There are two reasons. 1. Closed/offline states are transient. Region will be
-    // usually assigned right after closed. When a RPC retry comes in, the region may
-    // already have moved away from closed state. 2. On the region server side, we
-    // don't care much about the response for this transition. We only make sure
-    // master has got and processed this report, either successfully or not.
-    if (current == null || !current.isClosingOnServer(serverName)) {
+    // Region will be usually assigned right after closed. When a RPC retry comes
+    // in, the region may already have moved away from closed state. However, on the
+    // region server side, we don't care much about the response for this transition.
+    // We only make sure master has got and processed this report, either
+    // successfully or not. So this is fine, not a problem at all.
+    if (current == null || !current.isClosingOrClosedOnServer(serverName)) {
       return hri.getShortNameToLog() + " is not closing on " + serverName;
     }
+
+    // Just return in case of retrying
+    if (current.isClosed()) {
+      return null;
+    }
+
     if (getTableStateManager().isTableState(hri.getTable(), TableState.State.DISABLED,
         TableState.State.DISABLING) || replicasToClose.contains(hri)) {
       offlineDisabledRegion(hri);
@@ -2734,7 +2738,7 @@ public class AssignmentManager {
         errorMsg = "Unexpected transition code " + code;
       }
       if (errorMsg != null) {
-        LOG.error("Failed to transition region from " + current + " on "
+        LOG.info("Could not transition region from " + current + " on "
           + code + " by " + serverName + ": " + errorMsg);
       }
       return errorMsg;

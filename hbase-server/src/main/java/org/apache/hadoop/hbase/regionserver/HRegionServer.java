@@ -2591,7 +2591,7 @@ public class HRegionServer extends HasThread implements
     }
 
     if (actualRegion == null) {
-      LOG.error("Received CLOSE for a region which is not online, and we're not opening.");
+      LOG.debug("Received CLOSE for a region which is not online, and we're not opening.");
       this.regionsInTransitionInRS.remove(encodedName.getBytes());
       // The master deletes the znode when it receives this exception.
       throw new NotServingRegionException("The region " + encodedName +
