@@ -19,10 +19,8 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.text.MessageFormat;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -94,8 +92,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   private HTable table = null;
   /** The reader scanning the table, can be a custom one. */
   private TableRecordReader tableRecordReader = null;
-
-
+  
   /** The reverse DNS lookup cache mapping: IPAddress => HostName */
   private HashMap<InetAddress, String> reverseDNSCacheMap =
     new HashMap<InetAddress, String>();
@@ -138,6 +135,10 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     trr.setHTable(table);
     return trr;
   }
+  
+  protected Pair<byte[][],byte[][]> getStartEndKeys() throws IOException {
+    return table.getStartEndKeys();
+  }
 
   /**
    * Calculates the splits that will serve as input for the map tasks. The
@@ -160,7 +161,8 @@ extends InputFormat<ImmutableBytesWritable, Result> {
 
     RegionSizeCalculator sizeCalculator = new RegionSizeCalculator(table);
 
-    Pair<byte[][], byte[][]> keys = table.getStartEndKeys();
+    
+    Pair<byte[][], byte[][]> keys = getStartEndKeys();
     if (keys == null || keys.getFirst() == null ||
         keys.getFirst().length == 0) {
       HRegionLocation regLoc = table.getRegionLocation(HConstants.EMPTY_BYTE_ARRAY, false);

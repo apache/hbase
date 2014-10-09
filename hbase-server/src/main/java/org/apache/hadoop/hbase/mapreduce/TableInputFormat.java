@@ -22,14 +22,17 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -44,6 +47,11 @@ implements Configurable {
 
   /** Job parameter that specifies the input table. */
   public static final String INPUT_TABLE = "hbase.mapreduce.inputtable";
+  /**
+   * If specified, use start keys of this table to split.
+   * This is useful when you are preparing data for bulkload.
+   */
+  private static final String SPLIT_TABLE = "hbase.mapreduce.splittable";
   /** Base-64 encoded scanner. All other SCAN_ confs are ignored if this is specified.
    * See {@link TableMapReduceUtil#convertScanToString(Scan)} for more details.
    */
@@ -102,7 +110,7 @@ implements Configurable {
     } catch (Exception e) {
       LOG.error(StringUtils.stringifyException(e));
     }
-
+    
     Scan scan = null;
 
     if (conf.get(SCAN) != null) {
@@ -213,4 +221,25 @@ implements Configurable {
     }
   }
 
+  @Override
+  protected Pair<byte[][], byte[][]> getStartEndKeys() throws IOException {
+    if (conf.get(SPLIT_TABLE) != null) {
+      TableName splitTableName = TableName.valueOf(conf.get(SPLIT_TABLE));
+      HTable rl = new HTable(getConf(), splitTableName);
+      try {
+        return rl.getStartEndKeys();
+      } finally {
+        rl.close();
+      }
+    }
+
+    return super.getStartEndKeys();
+  }
+  
+  /**
+   * Sets split table in map-reduce job.
+   */
+  public static void configureSplitTable(Job job, TableName tableName) {
+    job.getConfiguration().set(SPLIT_TABLE, tableName.getNameAsString());
+  }
 }

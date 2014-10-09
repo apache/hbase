@@ -105,6 +105,7 @@ public class HFileOutputFormat2
   public static final String DATABLOCK_ENCODING_OVERRIDE_CONF_KEY =
       "hbase.mapreduce.hfileoutputformat.datablock.encoding";
 
+  @Override
   public RecordWriter<ImmutableBytesWritable, Cell> getRecordWriter(
       final TaskAttemptContext context) throws IOException, InterruptedException {
     return createRecordWriter(context);
@@ -153,6 +154,7 @@ public class HFileOutputFormat2
       private final byte [] now = Bytes.toBytes(System.currentTimeMillis());
       private boolean rollRequested = false;
 
+      @Override
       public void write(ImmutableBytesWritable row, V cell)
           throws IOException {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
@@ -263,6 +265,7 @@ public class HFileOutputFormat2
         }
       }
 
+      @Override
       public void close(TaskAttemptContext c)
       throws IOException, InterruptedException {
         for (WriterLength wl: this.writers.values()) {
@@ -399,6 +402,24 @@ public class HFileOutputFormat2
     TableMapReduceUtil.initCredentials(job);
     LOG.info("Incremental table " + Bytes.toString(table.getTableName())
       + " output configured.");
+  }
+  
+  public static void configureIncrementalLoadMap(Job job, HTable table) throws IOException {
+    Configuration conf = job.getConfiguration();
+
+    job.setOutputKeyClass(ImmutableBytesWritable.class);
+    job.setOutputValueClass(KeyValue.class);
+    job.setOutputFormatClass(HFileOutputFormat2.class);
+
+    // Set compression algorithms based on column families
+    configureCompression(table, conf);
+    configureBloomType(table, conf);
+    configureBlockSize(table, conf);
+    configureDataBlockEncoding(table, conf);
+
+    TableMapReduceUtil.addDependencyJars(job);
+    TableMapReduceUtil.initCredentials(job);
+    LOG.info("Incremental table " + table.getName() + " output configured.");
   }
 
   /**
