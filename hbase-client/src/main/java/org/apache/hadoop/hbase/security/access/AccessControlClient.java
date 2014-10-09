@@ -26,6 +26,7 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -49,6 +50,8 @@ import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantRespo
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeResponse;
 import org.apache.hadoop.hbase.util.ByteStringer;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.security.authorize.AccessControlList;
 
 import com.google.protobuf.ByteString;
 
@@ -216,22 +219,25 @@ public class AccessControlClient {
     Table ht = null;
     Admin ha = null;
     try {
-      TableName aclTableName =
-          TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "acl");
+      TableName aclTableName = TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR,
+        "acl");
       ha = new HBaseAdmin(conf);
       ht = new HTable(conf, aclTableName);
       CoprocessorRpcChannel service = ht.coprocessorService(HConstants.EMPTY_START_ROW);
-      BlockingInterface protocol =
-          AccessControlProtos.AccessControlService.newBlockingStub(service);
+      BlockingInterface protocol = AccessControlProtos.AccessControlService
+          .newBlockingStub(service);
       HTableDescriptor[] htds = null;
-      
-      if (tableRegex != null) {
+
+      if (tableRegex == null) {
+        permList = ProtobufUtil.getUserPermissions(protocol);
+      } else if (tableRegex.charAt(0) == '@') {
+        String namespace = tableRegex.substring(1);
+        permList = ProtobufUtil.getUserPermissions(protocol, Bytes.toBytes(namespace));
+      } else {
         htds = ha.listTables(Pattern.compile(tableRegex));
-        for (HTableDescriptor hd: htds) {
+        for (HTableDescriptor hd : htds) {
           permList.addAll(ProtobufUtil.getUserPermissions(protocol, hd.getTableName()));
         }
-      } else {
-        permList = ProtobufUtil.getUserPermissions(protocol);
       }
     } finally {
       if (ht != null) {
