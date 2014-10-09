@@ -156,6 +156,11 @@ module Hbase
       count  = 0
       all_perms.each do |value|
           user_name = String.from_java_bytes(value.getUser)
+          if (isNamespace?(table_regex))
+            namespace = table_regex[1...table_regex.length]
+          else
+            namespace = (value.getTableName != nil) ? value.getTableName.getNamespaceAsString() : ''
+          end
           table = (value.getTableName != nil) ? value.getTableName.getNameAsString() : ''
           family = (value.getFamily != nil) ?
             org.apache.hadoop.hbase.util.Bytes::toStringBinary(value.getFamily) :
@@ -167,7 +172,7 @@ module Hbase
           action = org.apache.hadoop.hbase.security.access.Permission.new value.getActions
 
           if block_given?
-            yield(user_name, "#{table},#{family},#{qualifier}: #{action.to_s}")
+            yield(user_name, "#{namespace},#{table},#{family},#{qualifier}: #{action.to_s}")
           else
             res[user_name] ||= {}
             res[user_name][family + ":" +qualifier] = action
