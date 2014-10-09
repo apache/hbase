@@ -349,6 +349,16 @@ public interface MetricsRegionServerWrapper {
   long getMajorCompactedCellsSize();
 
   /**
+   * @return Count of hedged read operations
+   */
+  long getHedgedReadOps();
+
+  /**
+   * @return Count of times a hedged read beat out the primary read.
+   */
+  long getHedgedReadWins();
+
+  /**
    * @return Number of total bytes read from HDFS.
    */
   long getTotalBytesRead();

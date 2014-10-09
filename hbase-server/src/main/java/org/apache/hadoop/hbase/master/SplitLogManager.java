@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.ChoreService;
+import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
@@ -75,8 +76,8 @@ import com.google.common.annotations.VisibleForTesting;
  * <p>SplitLogManager monitors the tasks that it creates using the
  * timeoutMonitor thread. If a task's progress is slow then
  * {@link SplitLogManagerCoordination#checkTasks} will take away the
- * task from the owner {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker} 
- * and the task will be up for grabs again. When the task is done then it is deleted 
+ * task from the owner {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker}
+ * and the task will be up for grabs again. When the task is done then it is deleted
  * by SplitLogManager.
  *
  * <p>Clients call {@link #splitLogDistributed(Path)} to split a region server's
@@ -412,7 +413,7 @@ public class SplitLogManager {
     for (ServerName tmpServerName : serverNames) {
       recoveredServerNameSet.add(tmpServerName.getServerName());
     }
-   
+
     this.recoveringRegionLock.lock();
     try {
       ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
@@ -592,9 +593,9 @@ public class SplitLogManager {
    * @return whether log is replaying
    */
   public boolean isLogReplaying() {
-    if (server.getCoordinatedStateManager() == null) return false;
-    return ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
-        .getSplitLogManagerCoordination().isReplaying();
+    CoordinatedStateManager m = server.getCoordinatedStateManager();
+    if (m == null) return false;
+    return ((BaseCoordinatedStateManager)m).getSplitLogManagerCoordination().isReplaying();
   }
 
   /**
