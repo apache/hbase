@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hbase.ipc;
 
-import java.io.IOException;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -29,10 +27,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 
 import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -112,6 +108,9 @@ public abstract class RpcExecutor {
           try {
             activeHandlerCount.incrementAndGet();
             task.run();
+          } catch (Throwable t) {
+            LOG.error("RpcServer handler thread throws exception: ", t);
+            throw t;
           } finally {
             activeHandlerCount.decrementAndGet();
           }
