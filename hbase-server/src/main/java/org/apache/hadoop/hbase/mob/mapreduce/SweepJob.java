@@ -33,6 +33,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -57,6 +58,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.serializer.JavaSerialization;
 import org.apache.hadoop.io.serializer.WritableSerialization;
 import org.apache.hadoop.mapreduce.Job;
@@ -288,9 +290,6 @@ public class SweepJob {
     job.getConfiguration().set(WORKING_ALLNAMES_FILE_KEY, allFileNamesPath.toString());
     Path vistiedFileNamesPath = new Path(workingPathOfNames, WORKING_VISITED_DIR);
     job.getConfiguration().set(WORKING_VISITED_DIR_KEY, vistiedFileNamesPath.toString());
-    // create a file includes all the existing mob files whose creation time is older than
-    // (now - oneDay)
-    fs.create(allFileNamesPath, true);
     // create a directory where the files contain names of visited mob files are saved.
     fs.mkdirs(vistiedFileNamesPath);
     Path mobStorePath = MobUtils.getMobFamilyPath(job.getConfiguration(), tn, familyName);
@@ -311,15 +310,25 @@ public class SweepJob {
         }
       }
     }
-    // write the names to a sequence file
-    SequenceFile.Writer writer = SequenceFile.createWriter(fs, job.getConfiguration(),
-        allFileNamesPath, String.class, String.class);
+    FSDataOutputStream fout = null;
+    SequenceFile.Writer writer = null;
     try {
+      // create a file includes all the existing mob files whose creation time is older than
+      // (now - oneDay)
+      fout = fs.create(allFileNamesPath, true);
+      // write the names to a sequence file
+      writer = SequenceFile.createWriter(job.getConfiguration(), fout, String.class, String.class,
+          CompressionType.NONE, null);
       for (String fileName : fileNames) {
         writer.append(fileName, MobConstants.EMPTY_STRING);
       }
     } finally {
-      IOUtils.closeStream(writer);
+      if (writer != null) {
+        IOUtils.closeStream(writer);
+      }
+      if (fout != null) {
+        IOUtils.closeStream(fout);
+      }
     }
   }
 
@@ -366,7 +375,7 @@ public class SweepJob {
       } while (nextAll != null || nextVisited != null);
     } finally {
       if (allNamesReader != null) {
-        allNamesReader.close();
+        IOUtils.closeStream(allNamesReader);
       }
       if (visitedNamesReader != null) {
         visitedNamesReader.close();
@@ -517,7 +526,9 @@ public class SweepJob {
 
     public void close() {
       for (SequenceFile.Reader reader : readers) {
-        IOUtils.closeStream(reader);
+        if (reader != null) {
+          IOUtils.closeStream(reader);
+        }
       }
     }
   }

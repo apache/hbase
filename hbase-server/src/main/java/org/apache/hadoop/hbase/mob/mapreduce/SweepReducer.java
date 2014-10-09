@@ -31,6 +31,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -62,6 +63,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
+import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Reducer;
@@ -149,6 +151,7 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
     String sweeperNode = context.getConfiguration().get(SweepJob.SWEEPER_NODE);
     ZooKeeperWatcher zkw = new ZooKeeperWatcher(context.getConfiguration(), jobId,
         new DummyMobAbortable());
+    FSDataOutputStream fout = null;
     try {
       SweepJobNodeTracker tracker = new SweepJobNodeTracker(zkw, sweeperNode, jobId);
       tracker.start();
@@ -157,11 +160,9 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
       String dir = this.conf.get(SweepJob.WORKING_VISITED_DIR_KEY);
       Path nameFilePath = new Path(dir, UUID.randomUUID().toString()
           .replace("-", MobConstants.EMPTY_STRING));
-      if (!fs.exists(nameFilePath)) {
-        fs.create(nameFilePath, true);
-      }
-      writer = SequenceFile.createWriter(fs, context.getConfiguration(), nameFilePath,
-          String.class, String.class);
+      fout = fs.create(nameFilePath, true);
+      writer = SequenceFile.createWriter(context.getConfiguration(), fout, String.class,
+          String.class, CompressionType.NONE, null);
       SweepPartitionId id;
       SweepPartition partition = null;
       // the mob files which have the same start key and date are in the same partition.
@@ -194,6 +195,9 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
       zkw.close();
       if (writer != null) {
         IOUtils.closeStream(writer);
+      }
+      if (fout != null) {
+        IOUtils.closeStream(fout);
       }
       if (table != null) {
         try {

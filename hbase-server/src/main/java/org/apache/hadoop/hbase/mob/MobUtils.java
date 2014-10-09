@@ -63,7 +63,6 @@ import org.apache.hadoop.hbase.util.FSUtils;
 public class MobUtils {
 
   private static final Log LOG = LogFactory.getLog(MobUtils.class);
-  private static final String COMPACTION_WORKING_DIR_NAME = "working";
 
   private static final ThreadLocal<SimpleDateFormat> LOCAL_FORMAT =
       new ThreadLocal<SimpleDateFormat>() {
@@ -360,8 +359,7 @@ public class MobUtils {
    * @return The directory of the mob compaction for the current job.
    */
   public static Path getCompactionWorkingPath(Path root, String jobName) {
-    Path parent = new Path(root, jobName);
-    return new Path(parent, COMPACTION_WORKING_DIR_NAME);
+    return new Path(root, jobName);
   }
 
   /**
