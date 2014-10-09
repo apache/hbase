@@ -969,21 +969,30 @@ public class TestSplitTransactionOnCluster {
 
   @Test(timeout = 180000)
   public void testSplitHooksBeforeAndAfterPONR() throws Exception {
-    String firstTable = "testSplitHooksBeforeAndAfterPONR_1";
-    String secondTable = "testSplitHooksBeforeAndAfterPONR_2";
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(firstTable));
-    desc.addCoprocessor(MockedRegionObserver.class.getName());
+    TableName firstTable = TableName.valueOf("testSplitHooksBeforeAndAfterPONR_1");
+    TableName secondTable = TableName.valueOf("testSplitHooksBeforeAndAfterPONR_2");
     HColumnDescriptor hcd = new HColumnDescriptor("cf");
+
+    HTableDescriptor desc = new HTableDescriptor(firstTable);
+    desc.addCoprocessor(MockedRegionObserver.class.getName());
     desc.addFamily(hcd);
     admin.createTable(desc);
-    desc = new HTableDescriptor(TableName.valueOf(secondTable));
-    hcd = new HColumnDescriptor("cf");
+    TESTING_UTIL.waitUntilAllRegionsAssigned(firstTable);
+
+    desc = new HTableDescriptor(secondTable);
     desc.addFamily(hcd);
     admin.createTable(desc);
-    List<HRegion> firstTableregions = cluster.getRegions(TableName.valueOf(firstTable));
-    List<HRegion> secondTableRegions = cluster.getRegions(TableName.valueOf(secondTable));
+    TESTING_UTIL.waitUntilAllRegionsAssigned(secondTable);
+
+    List<HRegion> firstTableRegions = cluster.getRegions(firstTable);
+    List<HRegion> secondTableRegions = cluster.getRegions(secondTable);
+
+    // Check that both tables actually have regions.
+    if (firstTableRegions.size() == 0 || secondTableRegions.size() == 0) {
+      fail("Each table should have at least one region.");
+    }
     ServerName serverName =
-        cluster.getServerHoldingRegion(firstTableregions.get(0).getRegionName());
+        cluster.getServerHoldingRegion(firstTableRegions.get(0).getRegionName());
     admin.move(secondTableRegions.get(0).getRegionInfo().getEncodedNameAsBytes(),
       Bytes.toBytes(serverName.getServerName()));
     HTable table1 = null;
@@ -991,16 +1000,16 @@ public class TestSplitTransactionOnCluster {
     try {
       table1 = new HTable(TESTING_UTIL.getConfiguration(), firstTable);
       table2 = new HTable(TESTING_UTIL.getConfiguration(), firstTable);
-      insertData(Bytes.toBytes(firstTable), admin, table1);
-      insertData(Bytes.toBytes(secondTable), admin, table2);
-      admin.split(Bytes.toBytes(firstTable), "row2".getBytes());
-      firstTableregions = cluster.getRegions(Bytes.toBytes(firstTable));
-      while (firstTableregions.size() != 2) {
+      insertData(firstTable.getName(), admin, table1);
+      insertData(secondTable.getName(), admin, table2);
+      admin.split(firstTable.getName(), "row2".getBytes());
+      firstTableRegions = cluster.getRegions(firstTable.getName());
+      while (firstTableRegions.size() != 2) {
         Thread.sleep(1000);
-        firstTableregions = cluster.getRegions(Bytes.toBytes(firstTable));
+        firstTableRegions = cluster.getRegions(firstTable.getName());
       }
-      assertEquals("Number of regions after split should be 2.", 2, firstTableregions.size());
-      secondTableRegions = cluster.getRegions(Bytes.toBytes(secondTable));
+      assertEquals("Number of regions after split should be 2.", 2, firstTableRegions.size());
+      secondTableRegions = cluster.getRegions(secondTable.getName());
       assertEquals("Number of regions after split should be 2.", 2, secondTableRegions.size());
     } finally {
       if (table1 != null) {
