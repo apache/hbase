@@ -43,6 +43,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.NamespaceDescriptor.Builder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -77,6 +79,7 @@ import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.NoopRes
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingRequest;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingResponse;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.PingProtos.PingService;
+import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -2303,5 +2306,22 @@ public class TestAccessController extends SecureTestUtil {
 
     verifyAllowed(setNamespaceQuotaAction, SUPERUSER, USER_ADMIN);
     verifyDenied(setNamespaceQuotaAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+  }
+
+  @Test
+  public void testGetNamespacePermission() throws Exception {
+    String namespace = "testNamespace";
+    NamespaceDescriptor desc = NamespaceDescriptor.create(namespace).build();
+    TEST_UTIL.getMiniHBaseCluster().getMaster().createNamespace(desc);
+    grantOnNamespace(TEST_UTIL, USER_NONE.getShortName(), namespace, Permission.Action.READ);
+    try {
+      List<UserPermission> namespacePermissions = AccessControlClient.getUserPermissions(conf,
+      AccessControlLists.toNamespaceEntry(namespace));
+      assertTrue(namespacePermissions != null);
+      assertTrue(namespacePermissions.size() == 1);
+    } catch (Throwable thw) {
+      throw new HBaseException(thw);
+    }
+    TEST_UTIL.getMiniHBaseCluster().getMaster().deleteNamespace(namespace);
   }
 }
