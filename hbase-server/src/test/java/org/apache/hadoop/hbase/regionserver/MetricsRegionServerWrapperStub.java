@@ -241,4 +241,13 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
     return 10240000;
   }
 
+  @Override
+  public long getHedgedReadOps() {
+    return 100;
+  }
+
+  @Override
+  public long getHedgedReadWins() {
+    return 10;
+  }
 }
