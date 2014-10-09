@@ -576,8 +576,7 @@ HTable htable = ...      // instantiate HTable
 
 Scan scan = new Scan();
 scan.addColumn(CF, ATTR);
-scan.setStartRow(Bytes.toBytes("row")); // start key is inclusive
-scan.setStopRow(Bytes.toBytes("rox"));  // stop key is exclusive
+scan.setRowPrefixFilter(Bytes.toBytes("row"));
 ResultScanner rs = htable.getScanner(scan);
 try {
   for (Result r = rs.next(); r != null; r = rs.next()) {

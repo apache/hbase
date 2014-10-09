@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -298,7 +299,7 @@ public class Scan extends Query {
    * Get versions of columns only within the specified timestamp range,
    * [minStamp, maxStamp).  Note, default maximum versions to return is 1.  If
    * your time range spans more than one version and you want all versions
-   * returned, up the number of versions beyond the defaut.
+   * returned, up the number of versions beyond the default.
    * @param minStamp minimum timestamp value, inclusive
    * @param maxStamp maximum timestamp value, exclusive
    * @throws IOException if invalid time range
@@ -348,12 +349,79 @@ public class Scan extends Query {
   /**
    * Set the stop row.
    * @param stopRow row to end at (exclusive)
-   * Note: In order to make stopRow inclusive add a trailing 0 byte
+   * <p><b>Note:</b> In order to make stopRow inclusive add a trailing 0 byte</p>
+   * <p><b>Note:</b> When doing a filter for a rowKey <u>Prefix</u>
+   * use {@link #setRowPrefixFilter(byte[])}.
+   * The 'trailing 0' will not yield the desired result.</p>
    * @return this
    */
   public Scan setStopRow(byte [] stopRow) {
     this.stopRow = stopRow;
     return this;
+  }
+
+  /**
+   * <p>Set a filter (using stopRow and startRow) so the result set only contains rows where the
+   * rowKey starts with the specified prefix.</p>
+   * <p>This is a utility method that converts the desired rowPrefix into the appropriate values
+   * for the startRow and stopRow to achieve the desired result.</p>
+   * <p>This can safely be used in combination with setFilter.</p>
+   * <p><b>NOTE: Doing a {@link #setStartRow(byte[])} and/or {@link #setStopRow(byte[])}
+   * after this method will yield undefined results.</b></p>
+   * @param rowPrefix the prefix all rows must start with. (Set <i>null</i> to remove the filter.)
+   * @return this
+   */
+  public Scan setRowPrefixFilter(byte[] rowPrefix) {
+    if (rowPrefix == null) {
+      setStartRow(HConstants.EMPTY_START_ROW);
+      setStopRow(HConstants.EMPTY_END_ROW);
+    } else {
+      this.setStartRow(rowPrefix);
+      this.setStopRow(calculateTheClosestNextRowKeyForPrefix(rowPrefix));
+    }
+    return this;
+  }
+
+  /**
+   * <p>When scanning for a prefix the scan should stop immediately after the the last row that
+   * has the specified prefix. This method calculates the closest next rowKey immediately following
+   * the given rowKeyPrefix.</p>
+   * <p><b>IMPORTANT: This converts a rowKey<u>Prefix</u> into a rowKey</b>.</p>
+   * <p>If the prefix is an 'ASCII' string put into a byte[] then this is easy because you can
+   * simply increment the last byte of the array.
+   * But if your application uses real binary rowids you may run into the scenario that your
+   * prefix is something like:</p>
+   * &nbsp;&nbsp;&nbsp;<b>{ 0x12, 0x23, 0xFF, 0xFF }</b><br/>
+   * Then this stopRow needs to be fed into the actual scan<br/>
+   * &nbsp;&nbsp;&nbsp;<b>{ 0x12, 0x24 }</b> (Notice that it is shorter now)<br/>
+   * This method calculates the correct stop row value for this usecase.
+   *
+   * @param rowKeyPrefix the rowKey<u>Prefix</u>.
+   * @return the closest next rowKey immediately following the given rowKeyPrefix.
+   */
+  private byte[] calculateTheClosestNextRowKeyForPrefix(byte[] rowKeyPrefix) {
+    // Essentially we are treating it like an 'unsigned very very long' and doing +1 manually.
+    // Search for the place where the trailing 0xFFs start
+    int offset = rowKeyPrefix.length;
+    while (offset > 0) {
+      if (rowKeyPrefix[offset - 1] != (byte) 0xFF) {
+        break;
+      }
+      offset--;
+    }
+
+    if (offset == 0) {
+      // We got an 0xFFFF... (only FFs) stopRow value which is
+      // the last possible prefix before the end of the table.
+      // So set it to stop at the 'end of the table'
+      return HConstants.EMPTY_END_ROW;
+    }
+
+    // Copy the right length of the original
+    byte[] newStopRow = Arrays.copyOfRange(rowKeyPrefix, 0, offset);
+    // And increment the last one
+    newStopRow[newStopRow.length - 1]++;
+    return newStopRow;
   }
 
   /**
