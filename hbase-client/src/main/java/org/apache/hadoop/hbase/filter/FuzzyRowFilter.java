@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -68,6 +73,16 @@ public class FuzzyRowFilter extends FilterBase {
   private boolean done = false;
 
   public FuzzyRowFilter(List<Pair<byte[], byte[]>> fuzzyKeysData) {
+    Pair<byte[], byte[]> p;
+    for (int i = 0; i < fuzzyKeysData.size(); i++) {
+      p = fuzzyKeysData.get(i);
+      if (p.getFirst().length != p.getSecond().length) {
+        Pair<String, String> readable = new Pair<String, String>(
+          Bytes.toStringBinary(p.getFirst()),
+          Bytes.toStringBinary(p.getSecond()));
+        throw new IllegalArgumentException("Fuzzy pair lengths do not match: " + readable);
+      }
+    }
     this.fuzzyKeysData = fuzzyKeysData;
   }
 
@@ -77,8 +92,8 @@ public class FuzzyRowFilter extends FilterBase {
     // assigning "worst" result first and looking for better options
     SatisfiesCode bestOption = SatisfiesCode.NO_NEXT;
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
-      SatisfiesCode satisfiesCode = satisfies(cell.getRowArray(), cell.getRowOffset(),
-          cell.getRowLength(), fuzzyData.getFirst(), fuzzyData.getSecond());
+      SatisfiesCode satisfiesCode = satisfies(isReversed(), cell.getRowArray(),
+        cell.getRowOffset(), cell.getRowLength(), fuzzyData.getFirst(), fuzzyData.getSecond());
       if (satisfiesCode == SatisfiesCode.YES) {
         return ReturnCode.INCLUDE;
       }
@@ -109,19 +124,23 @@ public class FuzzyRowFilter extends FilterBase {
     byte[] nextRowKey = null;
     // Searching for the "smallest" row key that satisfies at least one fuzzy row key
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
-      byte[] nextRowKeyCandidate = getNextForFuzzyRule(curCell.getRowArray(),
+      byte[] nextRowKeyCandidate = getNextForFuzzyRule(isReversed(), curCell.getRowArray(),
           curCell.getRowOffset(), curCell.getRowLength(), fuzzyData.getFirst(),
           fuzzyData.getSecond());
       if (nextRowKeyCandidate == null) {
         continue;
       }
-      if (nextRowKey == null || Bytes.compareTo(nextRowKeyCandidate, nextRowKey) < 0) {
+      if (nextRowKey == null ||
+        (reversed && Bytes.compareTo(nextRowKeyCandidate, nextRowKey) > 0) ||
+        (!reversed && Bytes.compareTo(nextRowKeyCandidate, nextRowKey) < 0)) {
         nextRowKey = nextRowKeyCandidate;
       }
     }
 
-    if (nextRowKey == null) {
-      // SHOULD NEVER happen
+    if (!reversed && nextRowKey == null) {
+      // Should never happen for forward scanners; logic in filterKeyValue should return NO_NEXT.
+      // Can happen in reversed scanner when currentKV is just before the next possible match; in
+      // this case, fall back on scanner simply calling KeyValueHeap.next()
       // TODO: is there a better way than throw exception? (stop the scanner?)
       throw new IllegalStateException("No next row key that satisfies fuzzy exists when" +
                                          " getNextKeyHint() is invoked." +
@@ -129,7 +148,7 @@ public class FuzzyRowFilter extends FilterBase {
                                          " currentKV: " + curCell);
     }
 
-    return KeyValueUtil.createFirstOnRow(nextRowKey);
+    return nextRowKey == null ? null : KeyValueUtil.createFirstOnRow(nextRowKey);
   }
 
   @Override
@@ -193,26 +212,33 @@ public class FuzzyRowFilter extends FilterBase {
   // Utility methods
 
   static enum SatisfiesCode {
-    // row satisfies fuzzy rule
+    /** row satisfies fuzzy rule */
     YES,
-    // row doesn't satisfy fuzzy rule, but there's possible greater row that does
+    /** row doesn't satisfy fuzzy rule, but there's possible greater row that does */
     NEXT_EXISTS,
-    // row doesn't satisfy fuzzy rule and there's no greater row that does
+    /** row doesn't satisfy fuzzy rule and there's no greater row that does */
     NO_NEXT
   }
 
-  static SatisfiesCode satisfies(byte[] row,
-                                         byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
-    return satisfies(row, 0, row.length, fuzzyKeyBytes, fuzzyKeyMeta);
+  @VisibleForTesting
+  static SatisfiesCode satisfies(byte[] row, byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
+    return satisfies(false, row, 0, row.length, fuzzyKeyBytes, fuzzyKeyMeta);
   }
 
-  private static SatisfiesCode satisfies(byte[] row, int offset, int length,
+  @VisibleForTesting
+  static SatisfiesCode satisfies(boolean reverse, byte[] row, byte[] fuzzyKeyBytes,
+                                 byte[] fuzzyKeyMeta) {
+    return satisfies(reverse, row, 0, row.length, fuzzyKeyBytes, fuzzyKeyMeta);
+  }
+
+  private static SatisfiesCode satisfies(boolean reverse, byte[] row, int offset, int length,
                                          byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
     if (row == null) {
       // do nothing, let scan to proceed
       return SatisfiesCode.YES;
     }
 
+    Order order = Order.orderFor(reverse);
     boolean nextRowKeyCandidateExists = false;
 
     for (int i = 0; i < fuzzyKeyMeta.length && i < length; i++) {
@@ -229,7 +255,13 @@ public class FuzzyRowFilter extends FilterBase {
         // this row and which satisfies the fuzzy rule. Otherwise there's no such byte array:
         // this row is simply bigger than any byte array that satisfies the fuzzy rule
         boolean rowByteLessThanFixed = (row[i + offset] & 0xFF) < (fuzzyKeyBytes[i] & 0xFF);
-        return  rowByteLessThanFixed ? SatisfiesCode.NEXT_EXISTS : SatisfiesCode.NO_NEXT;
+        if (rowByteLessThanFixed && !reverse) {
+          return SatisfiesCode.NEXT_EXISTS;
+        } else if (!rowByteLessThanFixed && reverse) {
+          return SatisfiesCode.NEXT_EXISTS;
+        } else {
+          return SatisfiesCode.NO_NEXT;
+        }
       }
 
       // Second, checking if this position is not fixed and byte value is not the biggest. In this
@@ -238,7 +270,7 @@ public class FuzzyRowFilter extends FilterBase {
       // (see the code of getNextForFuzzyRule below) by one.
       // Note: if non-fixed byte is already at biggest value, this doesn't allow us to say there's
       //       bigger one that satisfies the rule as it can't be increased.
-      if (fuzzyKeyMeta[i] == 1 && !isMax(fuzzyKeyBytes[i])) {
+      if (fuzzyKeyMeta[i] == 1 && !order.isMax(fuzzyKeyBytes[i])) {
         nextRowKeyCandidateExists = true;
       }
     }
@@ -246,19 +278,77 @@ public class FuzzyRowFilter extends FilterBase {
     return SatisfiesCode.YES;
   }
 
-  private static boolean isMax(byte fuzzyKeyByte) {
-    return (fuzzyKeyByte & 0xFF) == 255;
+  @VisibleForTesting
+  static byte[] getNextForFuzzyRule(byte[] row, byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
+    return getNextForFuzzyRule(false, row, 0, row.length, fuzzyKeyBytes, fuzzyKeyMeta);
   }
 
-  static byte[] getNextForFuzzyRule(byte[] row, byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
-    return getNextForFuzzyRule(row, 0, row.length, fuzzyKeyBytes, fuzzyKeyMeta);
+  @VisibleForTesting
+  static byte[] getNextForFuzzyRule(boolean reverse, byte[] row, byte[] fuzzyKeyBytes,
+                                    byte[] fuzzyKeyMeta) {
+    return getNextForFuzzyRule(reverse, row, 0, row.length, fuzzyKeyBytes, fuzzyKeyMeta);
+  }
+
+  /** Abstracts directional comparisons based on scan direction. */
+  private enum Order {
+    ASC {
+      public boolean lt(int lhs, int rhs) {
+        return lhs < rhs;
+      }
+      public boolean gt(int lhs, int rhs) {
+        return lhs > rhs;
+      }
+      public byte inc(byte val) {
+        // TODO: what about over/underflow?
+        return (byte) (val + 1);
+      }
+      public boolean isMax(byte val) {
+        return val == (byte) 0xff;
+      }
+      public byte min() {
+        return 0;
+      }
+    },
+    DESC {
+      public boolean lt(int lhs, int rhs) {
+        return lhs > rhs;
+      }
+      public boolean gt(int lhs, int rhs) {
+        return lhs < rhs;
+      }
+      public byte inc(byte val) {
+        // TODO: what about over/underflow?
+        return (byte) (val - 1);
+      }
+      public boolean isMax(byte val) {
+        return val == 0;
+      }
+      public byte min() {
+        return (byte) 0xFF;
+      }
+    };
+
+    public static Order orderFor(boolean reverse) {
+      return reverse ? DESC : ASC;
+    }
+
+    /** Returns true when {@code lhs < rhs}. */
+    public abstract boolean lt(int lhs, int rhs);
+    /** Returns true when {@code lhs > rhs}. */
+    public abstract boolean gt(int lhs, int rhs);
+    /** Returns {@code val} incremented by 1. */
+    public abstract byte inc(byte val);
+    /** Return true when {@code val} is the maximum value */
+    public abstract boolean isMax(byte val);
+    /** Return the minimum value according to this ordering scheme. */
+    public abstract byte min();
   }
 
   /**
    * @return greater byte array than given (row) which satisfies the fuzzy rule if it exists,
    *         null otherwise
    */
-  private static byte[] getNextForFuzzyRule(byte[] row, int offset, int length,
+  private static byte[] getNextForFuzzyRule(boolean reverse, byte[] row, int offset, int length,
                                             byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
     // To find out the next "smallest" byte array that satisfies fuzzy rule and "greater" than
     // the given one we do the following:
@@ -270,24 +360,32 @@ public class FuzzyRowFilter extends FilterBase {
     // values than otherwise.
     byte[] result = Arrays.copyOf(fuzzyKeyBytes,
                                   length > fuzzyKeyBytes.length ? length : fuzzyKeyBytes.length);
+    if (reverse && length > fuzzyKeyBytes.length) {
+      // we need trailing 0xff's instead of trailing 0x00's
+      for (int i = fuzzyKeyBytes.length; i < result.length; i++) {
+        result[i] = (byte) 0xFF;
+      }
+    }
     int toInc = -1;
+    final Order order = Order.orderFor(reverse);
 
     boolean increased = false;
     for (int i = 0; i < result.length; i++) {
       if (i >= fuzzyKeyMeta.length || fuzzyKeyMeta[i] == 1) {
         result[i] = row[offset + i];
-        if (!isMax(row[i])) {
+        if (!order.isMax(row[i])) {
           // this is "non-fixed" position and is not at max value, hence we can increase it
           toInc = i;
         }
       } else if (i < fuzzyKeyMeta.length && fuzzyKeyMeta[i] == 0) {
-        if ((row[i + offset] & 0xFF) < (fuzzyKeyBytes[i] & 0xFF)) {
+        if (order.lt((row[i + offset] & 0xFF), (fuzzyKeyBytes[i] & 0xFF))) {
           // if setting value for any fixed position increased the original array,
           // we are OK
           increased = true;
           break;
         }
-        if ((row[i + offset] & 0xFF) > (fuzzyKeyBytes[i] & 0xFF)) {
+
+        if (order.gt((row[i + offset] & 0xFF), (fuzzyKeyBytes[i] & 0xFF))) {
           // if setting value for any fixed position makes array "smaller", then just stop:
           // in case we found some non-fixed position to increase we will do it, otherwise
           // there's no "next" row key that satisfies fuzzy rule and "greater" than given row
@@ -300,13 +398,13 @@ public class FuzzyRowFilter extends FilterBase {
       if (toInc < 0) {
         return null;
       }
-      result[toInc]++;
+      result[toInc] = order.inc(result[toInc]);
 
       // Setting all "non-fixed" positions to zeroes to the right of the one we increased so
       // that found "next" row key is the smallest possible
       for (int i = toInc + 1; i < result.length; i++) {
         if (i >= fuzzyKeyMeta.length || fuzzyKeyMeta[i] == 1) {
-          result[i] = 0;
+          result[i] = order.min();
         }
       }
     }
@@ -315,7 +413,6 @@ public class FuzzyRowFilter extends FilterBase {
   }
 
   /**
-   * @param other
    * @return true if and only if the fields of the filter that are serialized
    * are equal to the corresponding fields in other.  Used for testing.
    */
@@ -335,5 +432,4 @@ public class FuzzyRowFilter extends FilterBase {
     }
     return true;
   }
-
 }
