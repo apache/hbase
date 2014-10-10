@@ -116,6 +116,10 @@ public class TestPrefixTree {
       rows[0] = row1;
       rows[1] = row2;
       rows[2] = row3;
+      byte[][] val = new byte[3][];
+      val[0] = Bytes.toBytes("c1-value");
+      val[1] = Bytes.toBytes("c2-value");
+      val[2] = Bytes.toBytes("c2-value-2");
       Scan scan = new Scan();
       scan.setStartRow(row1_bytes);
       scan.setStopRow(Bytes.toBytes("a-b-A-1:"));
@@ -128,6 +132,9 @@ public class TestPrefixTree {
         while (cellScanner.advance()) {
           assertEquals(rows[i], Bytes.toString(cellScanner.current().getRowArray(), cellScanner
               .current().getRowOffset(), cellScanner.current().getRowLength()));
+          assertEquals(Bytes.toString(val[i]), Bytes.toString(
+              cellScanner.current().getValueArray(), cellScanner.current().getValueOffset(),
+              cellScanner.current().getValueLength()));
         }
         i++;
       }
