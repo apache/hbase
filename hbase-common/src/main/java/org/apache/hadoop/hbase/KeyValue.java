@@ -2280,6 +2280,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
 
     @Override
     protected Object clone() throws CloneNotSupportedException {
+      super.clone();
       return new KVComparator();
     }
 

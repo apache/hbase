@@ -1075,10 +1075,11 @@ public abstract class FSUtils {
       }
       // compute percentage per table and store in result list
       frags.put(FSUtils.getTableName(d).getNameAsString(),
-          Math.round((float) cfFrag / cfCount * 100));
+        cfCount == 0? 0: Math.round((float) cfFrag / cfCount * 100));
     }
     // set overall percentage for all tables
-    frags.put("-TOTAL-", Math.round((float) cfFragTotal / cfCountTotal * 100));
+    frags.put("-TOTAL-",
+      cfCountTotal == 0? 0: Math.round((float) cfFragTotal / cfCountTotal * 100));
     return frags;
   }
 
