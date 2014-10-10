@@ -143,7 +143,7 @@ public class TestReplicationTrackerZKImpl {
     assertEquals("hostname2.example.org:1234", rsRemovedData);
   }
 
-  @Ignore ("Flakey") @Test(timeout = 30000)
+  @Test(timeout = 30000)
   public void testPeerRemovedEvent() throws Exception {
     rp.addPeer("5", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()), null);
     rt.registerListener(new DummyReplicationListener());
@@ -155,7 +155,7 @@ public class TestReplicationTrackerZKImpl {
     assertEquals("5", peerRemovedData);
   }
 
-  @Ignore ("Flakey") @Test(timeout = 30000)
+  @Test(timeout = 30000)
   public void testPeerListChangedEvent() throws Exception {
     // add a peer
     rp.addPeer("5", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()), null);
@@ -172,9 +172,34 @@ public class TestReplicationTrackerZKImpl {
     assertTrue(plChangedData.contains("5"));
 
     // clean up
-    ZKUtil.deleteNode(zkw, "/hbase/replication/peers/5");
+    //ZKUtil.deleteNode(zkw, "/hbase/replication/peers/5");
+    rp.removePeer("5");
   }
 
+  @Test(timeout = 30000)
+  public void testPeerNameControl() throws Exception {
+    int exists = 0;
+    int hyphen = 0;
+    rp.addPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()), null);
+    
+    try{
+      rp.addPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()), null);
+    }catch(IllegalArgumentException e){
+      exists++;
+    }
+
+    try{
+      rp.addPeer("6-ec2", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()), null);
+    }catch(IllegalArgumentException e){
+      hyphen++;
+    }
+    assertEquals(1, exists);
+    assertEquals(1, hyphen);
+    
+    // clean up
+    rp.removePeer("6");
+  }
+  
   private class DummyReplicationListener implements ReplicationListener {
 
     @Override
