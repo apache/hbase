@@ -53,6 +53,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.management.ObjectName;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Maps;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
@@ -105,6 +106,7 @@ import org.apache.hadoop.hbase.exceptions.OperationConflictException;
 import org.apache.hadoop.hbase.exceptions.OutOfOrderScannerNextException;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
+import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
@@ -165,6 +167,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequ
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
@@ -248,8 +251,11 @@ import org.cliffc.high_scale_lib.Counter;
 
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 import com.google.protobuf.TextFormat;
 
@@ -462,6 +468,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   /** The nonce manager chore. */
   private Chore nonceManagerChore;
 
+  private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
+
   /**
    * The server name the Master sees us as.  Its made from the hostname the
    * master passes us, port, and server startcode. Gets set after registration
@@ -646,6 +654,25 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     this.rsInfo.setInfoPort(putUpWebUI());
   }
 
+  @Override
+  public boolean registerService(Service instance) {
+    /*
+     * No stacking of instances is allowed for a single service name
+     */
+    Descriptors.ServiceDescriptor serviceDesc = instance.getDescriptorForType();
+    if (coprocessorServiceHandlers.containsKey(serviceDesc.getFullName())) {
+      LOG.error("Coprocessor service " + serviceDesc.getFullName()
+          + " already registered, rejecting request from " + instance);
+      return false;
+    }
+
+    coprocessorServiceHandlers.put(serviceDesc.getFullName(), instance);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Registered regionserver coprocessor service: service=" + serviceDesc.getFullName());
+    }
+    return true;
+  }
+
   /**
    * @return list of blocking services and their security info classes that this server supports
    */
@@ -659,7 +686,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         AdminProtos.AdminService.BlockingInterface.class));
     return bssi;
   }
-
+  
   /**
    * Run test on configured codecs to make sure supporting libs are in place.
    * @param c
@@ -1946,22 +1973,6 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         this.replicationSinkHandler.stopReplicationService();
       }
     }
-  }
-
-  /**
-   * @return Return the object that implements the replication
-   * source service.
-   */
-  ReplicationSourceService getReplicationSourceService() {
-    return replicationSourceHandler;
-  }
-
-  /**
-   * @return Return the object that implements the replication
-   * sink service.
-   */
-  ReplicationSinkService getReplicationSinkService() {
-    return replicationSinkHandler;
   }
 
   @Override
@@ -3399,6 +3410,70 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     }
     return result;
   }
+  
+  @Override
+  public CoprocessorServiceResponse execRegionServerService(final RpcController controller,
+      final CoprocessorServiceRequest serviceRequest) throws ServiceException {
+    try {
+      ServerRpcController execController = new ServerRpcController();
+      CoprocessorServiceCall call = serviceRequest.getCall();
+      String serviceName = call.getServiceName();
+      String methodName = call.getMethodName();
+      if (!coprocessorServiceHandlers.containsKey(serviceName)) {
+        throw new UnknownProtocolException(null,
+            "No registered coprocessor service found for name " + serviceName);
+      }
+      Service service = coprocessorServiceHandlers.get(serviceName);
+      Descriptors.ServiceDescriptor serviceDesc = service.getDescriptorForType();
+      Descriptors.MethodDescriptor methodDesc = serviceDesc.findMethodByName(methodName);
+      if (methodDesc == null) {
+        throw new UnknownProtocolException(service.getClass(), "Unknown method " + methodName
+            + " called on service " + serviceName);
+      }
+      Message request =
+          service.getRequestPrototype(methodDesc).newBuilderForType().mergeFrom(call.getRequest())
+              .build();
+      final Message.Builder responseBuilder =
+          service.getResponsePrototype(methodDesc).newBuilderForType();
+      service.callMethod(methodDesc, controller, request, new RpcCallback<Message>() {
+        @Override
+        public void run(Message message) {
+          if (message != null) {
+            responseBuilder.mergeFrom(message);
+          }
+        }
+      });
+      Message execResult = responseBuilder.build();
+      if (execController.getFailedOn() != null) {
+        throw execController.getFailedOn();
+      }
+      ClientProtos.CoprocessorServiceResponse.Builder builder =
+          ClientProtos.CoprocessorServiceResponse.newBuilder();
+      builder.setRegion(RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME,
+        HConstants.EMPTY_BYTE_ARRAY));
+      builder.setValue(builder.getValueBuilder().setName(execResult.getClass().getName())
+          .setValue(execResult.toByteString()));
+      return builder.build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+  
+  /**
+   * @return Return the object that implements the replication
+   * source service.
+   */
+  public ReplicationSourceService getReplicationSourceService() {
+    return replicationSourceHandler;
+  }
+
+  /**
+   * @return Return the object that implements the replication
+   * sink service.
+   */
+  public ReplicationSinkService getReplicationSinkService() {
+    return replicationSinkHandler;
+  }
 
   /**
    * Execute multiple actions on a table: get, mutate, and/or execCoprocessor
@@ -4803,4 +4878,5 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   public CacheConfig getCacheConfig() {
     return this.cacheConfig;
   }
+
 }

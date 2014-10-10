@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import com.google.protobuf.Message;
+import com.google.protobuf.Service;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
@@ -238,6 +240,12 @@ class MockRegionServerServices implements RegionServerServices {
   @Override
   public boolean reportRegionTransition(TransitionCode code,
       HRegionInfo... hris) {
+    return false;
+  }
+
+  @Override
+  public boolean registerService(Service service) {
+    // TODO Auto-generated method stub
     return false;
   }
 }

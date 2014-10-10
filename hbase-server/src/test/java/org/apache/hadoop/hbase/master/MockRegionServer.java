@@ -77,6 +77,8 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodes
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
@@ -99,6 +101,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -571,5 +574,18 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   public boolean reportRegionTransition(TransitionCode code, long openSeqNum,
       HRegionInfo... hris) {
     return false;
+  }
+
+  @Override
+  public boolean registerService(Service service) {
+    // TODO Auto-generated method stub
+    return false;
+  }
+
+  @Override
+  public CoprocessorServiceResponse execRegionServerService(RpcController controller,
+      CoprocessorServiceRequest request) throws ServiceException {
+    // TODO Auto-generated method stub
+    return null;
   }
 }

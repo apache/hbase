@@ -31,9 +31,11 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
+import org.apache.hadoop.hbase.coprocessor.SingletonCoprocessorService;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
@@ -209,6 +211,12 @@ public class RegionServerCoprocessorHost extends
         final Configuration conf, final RegionServerServices services) {
       super(impl, priority, seq, conf);
       this.regionServerServices = services;
+      for (Class c : implClass.getInterfaces()) {
+        if (SingletonCoprocessorService.class.isAssignableFrom(c)) {
+          this.regionServerServices.registerService(((SingletonCoprocessorService) impl).getService());
+          break;
+        }
+      }
     }
 
     @Override

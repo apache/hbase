@@ -397,6 +397,9 @@ service ClientService {
 
   rpc ExecService(CoprocessorServiceRequest)
     returns(CoprocessorServiceResponse);
+    
+  rpc ExecRegionServerService(CoprocessorServiceRequest)
+    returns(CoprocessorServiceResponse);
 
   rpc Multi(MultiRequest)
     returns(MultiResponse);

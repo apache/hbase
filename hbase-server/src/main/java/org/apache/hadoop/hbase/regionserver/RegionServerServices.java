@@ -30,6 +30,8 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.zookeeper.KeeperException;
 
+import com.google.protobuf.Service;
+
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -132,4 +134,12 @@ public interface RegionServerServices
    * @return The RegionServer's NonceManager
    */
   public ServerNonceManager getNonceManager();
+  
+  /**
+   * Registers a new protocol buffer {@link Service} subclass as a coprocessor endpoint to
+   * be available for handling
+   * @param instance the {@code Service} subclass instance to expose as a coprocessor endpoint
+   * @return {@code true} if the registration was successful, {@code false}
+   */
+  boolean registerService(Service service);
 }
