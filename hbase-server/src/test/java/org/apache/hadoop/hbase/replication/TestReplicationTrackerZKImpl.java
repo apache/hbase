@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.Test;
-import org.junit.Ignore;
 
 import static org.junit.Assert.*;
 
@@ -178,16 +177,16 @@ public class TestReplicationTrackerZKImpl {
   public void testPeerNameControl() throws Exception {
     int exists = 0;
     int hyphen = 0;
-    rp.addPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()), null);
+    rp.addPeer("6", utility.getClusterKey(), null);
     
     try{
-      rp.addPeer("6", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()), null);
+      rp.addPeer("6", utility.getClusterKey(), null);
     }catch(IllegalArgumentException e){
       exists++;
     }
 
     try{
-      rp.addPeer("6-ec2", new ReplicationPeerConfig().setClusterKey(utility.getClusterKey()), null);
+      rp.addPeer("6-ec2", utility.getClusterKey(), null);
     }catch(IllegalArgumentException e){
       hyphen++;
     }
