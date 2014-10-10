@@ -82,6 +82,7 @@ import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
+import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -90,11 +91,16 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
+import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor;
@@ -151,7 +157,13 @@ import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.data.Stat;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Maps;
 import com.google.protobuf.BlockingRpcChannel;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
 /**
@@ -348,6 +360,8 @@ public class HRegionServer extends HasThread implements
 
   /** The nonce manager chore. */
   private Chore nonceManagerChore;
+
+  private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
   /**
    * The server name the Master sees us as.  Its made from the hostname the
@@ -556,6 +570,25 @@ public class HRegionServer extends HasThread implements
   protected void doMetrics() {
   }
 
+  @Override
+  public boolean registerService(Service instance) {
+    /*
+     * No stacking of instances is allowed for a single service name
+     */
+    Descriptors.ServiceDescriptor serviceDesc = instance.getDescriptorForType();
+    if (coprocessorServiceHandlers.containsKey(serviceDesc.getFullName())) {
+      LOG.error("Coprocessor service " + serviceDesc.getFullName()
+          + " already registered, rejecting request from " + instance);
+      return false;
+    }
+
+    coprocessorServiceHandlers.put(serviceDesc.getFullName(), instance);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Registered regionserver coprocessor service: service=" + serviceDesc.getFullName());
+    }
+    return true;
+  }
+
   /**
    * Create wrapped short-circuit connection to this server.
    * In its own method so can intercept and mock it over in tests.
@@ -565,7 +598,7 @@ public class HRegionServer extends HasThread implements
     return ConnectionUtils.createShortCircuitHConnection(
       HConnectionManager.getConnection(conf), serverName, rpcServices, rpcServices);
   }
-
+  
   /**
    * Run test on configured codecs to make sure supporting libs are in place.
    * @param c
@@ -2950,7 +2983,54 @@ public class HRegionServer extends HasThread implements
     }
     return result;
   }
-
+  
+  public CoprocessorServiceResponse execRegionServerService(final RpcController controller,
+      final CoprocessorServiceRequest serviceRequest) throws ServiceException {
+    try {
+      ServerRpcController execController = new ServerRpcController();
+      CoprocessorServiceCall call = serviceRequest.getCall();
+      String serviceName = call.getServiceName();
+      String methodName = call.getMethodName();
+      if (!coprocessorServiceHandlers.containsKey(serviceName)) {
+        throw new UnknownProtocolException(null,
+            "No registered coprocessor service found for name " + serviceName);
+      }
+      Service service = coprocessorServiceHandlers.get(serviceName);
+      Descriptors.ServiceDescriptor serviceDesc = service.getDescriptorForType();
+      Descriptors.MethodDescriptor methodDesc = serviceDesc.findMethodByName(methodName);
+      if (methodDesc == null) {
+        throw new UnknownProtocolException(service.getClass(), "Unknown method " + methodName
+            + " called on service " + serviceName);
+      }
+      Message request =
+          service.getRequestPrototype(methodDesc).newBuilderForType().mergeFrom(call.getRequest())
+              .build();
+      final Message.Builder responseBuilder =
+          service.getResponsePrototype(methodDesc).newBuilderForType();
+      service.callMethod(methodDesc, controller, request, new RpcCallback<Message>() {
+        @Override
+        public void run(Message message) {
+          if (message != null) {
+            responseBuilder.mergeFrom(message);
+          }
+        }
+      });
+      Message execResult = responseBuilder.build();
+      if (execController.getFailedOn() != null) {
+        throw execController.getFailedOn();
+      }
+      ClientProtos.CoprocessorServiceResponse.Builder builder =
+          ClientProtos.CoprocessorServiceResponse.newBuilder();
+      builder.setRegion(RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME,
+        HConstants.EMPTY_BYTE_ARRAY));
+      builder.setValue(builder.getValueBuilder().setName(execResult.getClass().getName())
+          .setValue(execResult.toByteString()));
+      return builder.build();
+    } catch (IOException ie) {
+      throw new ServiceException(ie);
+    }
+  }
+  
   /**
    * @return The cache config instance used by the regionserver.
    */

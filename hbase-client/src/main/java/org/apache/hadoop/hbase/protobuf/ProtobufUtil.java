@@ -1616,6 +1616,31 @@ public final class ProtobufUtil {
     }
   }
 
+  /**
+   * Make a region server endpoint call
+   * @param client
+   * @param call
+   * @return
+   * @throws IOException
+   */
+  public static CoprocessorServiceResponse execRegionServerService(
+      final ClientService.BlockingInterface client, final CoprocessorServiceCall call)
+      throws IOException {
+    CoprocessorServiceRequest request =
+        CoprocessorServiceRequest
+            .newBuilder()
+            .setCall(call)
+            .setRegion(
+              RequestConverter.buildRegionSpecifier(REGION_NAME, HConstants.EMPTY_BYTE_ARRAY))
+            .build();
+    try {
+      CoprocessorServiceResponse response = client.execRegionServerService(null, request);
+      return response;
+    } catch (ServiceException se) {
+      throw getRemoteException(se);
+    }
+  }
+
   @SuppressWarnings("unchecked")
   public static <T extends Service> T newServiceStub(Class<T> service, RpcChannel channel)
       throws Exception {

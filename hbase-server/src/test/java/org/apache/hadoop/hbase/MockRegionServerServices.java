@@ -46,6 +46,8 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
+import com.google.protobuf.Service;
+
 /**
  * Basic mock region server services.  Should only be instantiated by HBaseTestingUtility.b
  */
@@ -242,6 +244,12 @@ class MockRegionServerServices implements RegionServerServices {
   @Override
   public boolean reportRegionStateTransition(TransitionCode code,
       HRegionInfo... hris) {
+    return false;
+  }
+
+  @Override
+  public boolean registerService(Service service) {
+    // TODO Auto-generated method stub
     return false;
   }
 }

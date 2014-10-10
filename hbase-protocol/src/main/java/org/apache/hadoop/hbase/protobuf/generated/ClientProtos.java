@@ -30332,6 +30332,14 @@ public final class ClientProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse> done);
 
       /**
+       * <code>rpc ExecRegionServerService(.CoprocessorServiceRequest) returns (.CoprocessorServiceResponse);</code>
+       */
+      public abstract void execRegionServerService(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse> done);
+
+      /**
        * <code>rpc Multi(.MultiRequest) returns (.MultiResponse);</code>
        */
       public abstract void multi(
@@ -30385,6 +30393,14 @@ public final class ClientProtos {
         }
 
         @java.lang.Override
+        public  void execRegionServerService(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse> done) {
+          impl.execRegionServerService(controller, request, done);
+        }
+
+        @java.lang.Override
         public  void multi(
             com.google.protobuf.RpcController controller,
             org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request,
@@ -30425,6 +30441,8 @@ public final class ClientProtos {
             case 4:
               return impl.execService(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest)request);
             case 5:
+              return impl.execRegionServerService(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest)request);
+            case 6:
               return impl.multi(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -30451,6 +30469,8 @@ public final class ClientProtos {
             case 4:
               return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest.getDefaultInstance();
             case 5:
+              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest.getDefaultInstance();
+            case 6:
               return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -30477,6 +30497,8 @@ public final class ClientProtos {
             case 4:
               return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance();
             case 5:
+              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance();
+            case 6:
               return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -30522,6 +30544,14 @@ public final class ClientProtos {
      * <code>rpc ExecService(.CoprocessorServiceRequest) returns (.CoprocessorServiceResponse);</code>
      */
     public abstract void execService(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse> done);
+
+    /**
+     * <code>rpc ExecRegionServerService(.CoprocessorServiceRequest) returns (.CoprocessorServiceResponse);</code>
+     */
+    public abstract void execRegionServerService(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse> done);
@@ -30582,6 +30612,11 @@ public final class ClientProtos {
               done));
           return;
         case 5:
+          this.execRegionServerService(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse>specializeCallback(
+              done));
+          return;
+        case 6:
           this.multi(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse>specializeCallback(
               done));
@@ -30611,6 +30646,8 @@ public final class ClientProtos {
         case 4:
           return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest.getDefaultInstance();
         case 5:
+          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest.getDefaultInstance();
+        case 6:
           return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -30637,6 +30674,8 @@ public final class ClientProtos {
         case 4:
           return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance();
         case 5:
+          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance();
+        case 6:
           return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -30734,12 +30773,27 @@ public final class ClientProtos {
             org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance()));
       }
 
+      public  void execRegionServerService(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(5),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance()));
+      }
+
       public  void multi(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(5),
+          getDescriptor().getMethods().get(6),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance(),
@@ -30777,6 +30831,11 @@ public final class ClientProtos {
           throws com.google.protobuf.ServiceException;
 
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse execService(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse execRegionServerService(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request)
           throws com.google.protobuf.ServiceException;
@@ -30854,12 +30913,24 @@ public final class ClientProtos {
       }
 
 
+      public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse execRegionServerService(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(5),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance());
+      }
+
+
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse multi(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(5),
+          getDescriptor().getMethods().get(6),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiResponse.getDefaultInstance());
@@ -31121,17 +31192,19 @@ public final class ClientProtos {
       "ondition\030\003 \001(\0132\n.Condition\"S\n\rMultiRespo" +
       "nse\022/\n\022regionActionResult\030\001 \003(\0132\023.Region" +
       "ActionResult\022\021\n\tprocessed\030\002 \001(\010*\'\n\013Consi" +
-      "stency\022\n\n\006STRONG\020\000\022\014\n\010TIMELINE\020\0012\261\002\n\rCli" +
+      "stency\022\n\n\006STRONG\020\000\022\014\n\010TIMELINE\020\0012\205\003\n\rCli" +
       "entService\022 \n\003Get\022\013.GetRequest\032\014.GetResp" +
       "onse\022)\n\006Mutate\022\016.MutateRequest\032\017.MutateR",
       "esponse\022#\n\004Scan\022\014.ScanRequest\032\r.ScanResp" +
       "onse\022>\n\rBulkLoadHFile\022\025.BulkLoadHFileReq" +
       "uest\032\026.BulkLoadHFileResponse\022F\n\013ExecServ" +
       "ice\022\032.CoprocessorServiceRequest\032\033.Coproc" +
-      "essorServiceResponse\022&\n\005Multi\022\r.MultiReq" +
-      "uest\032\016.MultiResponseBB\n*org.apache.hadoo" +
-      "p.hbase.protobuf.generatedB\014ClientProtos" +
-      "H\001\210\001\001\240\001\001"
+      "essorServiceResponse\022R\n\027ExecRegionServer" +
+      "Service\022\032.CoprocessorServiceRequest\032\033.Co" +
+      "processorServiceResponse\022&\n\005Multi\022\r.Mult" +
+      "iRequest\032\016.MultiResponseBB\n*org.apache.h" +
+      "adoop.hbase.protobuf.generatedB\014ClientPr" +
+      "otosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
+import org.apache.hadoop.hbase.coprocessor.SingletonCoprocessorService;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
@@ -243,6 +244,12 @@ public class RegionServerCoprocessorHost extends
         final Configuration conf, final RegionServerServices services) {
       super(impl, priority, seq, conf);
       this.regionServerServices = services;
+      for (Class c : implClass.getInterfaces()) {
+        if (SingletonCoprocessorService.class.isAssignableFrom(c)) {
+          this.regionServerServices.registerService(((SingletonCoprocessorService) impl).getService());
+          break;
+        }
+      }
     }
 
     @Override
