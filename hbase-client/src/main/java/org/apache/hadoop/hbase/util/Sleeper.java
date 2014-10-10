@@ -110,7 +110,9 @@ public class Sleeper {
       woke = (woke == -1)? System.currentTimeMillis(): woke;
       waitTime = this.period - (woke - startTime);
     }
-    triggerWake = false;
+    synchronized(sleepLock) {
+      triggerWake = false;
+    }
   }
 
   /**

@@ -23,16 +23,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
-import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
-import com.google.common.collect.Sets;
 
 /**
  * In-Memory state of the user quotas
@@ -40,8 +35,6 @@ import com.google.common.collect.Sets;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class UserQuotaState extends QuotaState {
-  private static final Log LOG = LogFactory.getLog(UserQuotaState.class);
-
   private Map<String, QuotaLimiter> namespaceLimiters = null;
   private Map<TableName, QuotaLimiter> tableLimiters = null;
   private boolean bypassGlobals = false;
@@ -57,13 +50,13 @@ public class UserQuotaState extends QuotaState {
   @Override
   public synchronized String toString() {
     StringBuilder builder = new StringBuilder();
-    builder.append("UserQuotaState(ts=" + lastUpdate);
+    builder.append("UserQuotaState(ts=" + getLastUpdate());
     if (bypassGlobals) builder.append(" bypass-globals");
 
     if (isBypass()) {
       builder.append(" bypass");
     } else {
-      if (globalLimiter != NoopQuotaLimiter.get()) {
+      if (getGlobalLimiterWithoutUpdatingLastQuery() != NoopQuotaLimiter.get()) {
         builder.append(" global-limiter");
       }
 
@@ -93,9 +86,9 @@ public class UserQuotaState extends QuotaState {
   @Override
   public synchronized boolean isBypass() {
     return !bypassGlobals &&
-            globalLimiter == NoopQuotaLimiter.get() &&
-            (tableLimiters == null || tableLimiters.isEmpty()) &&
-            (namespaceLimiters == null || namespaceLimiters.isEmpty());
+        getGlobalLimiterWithoutUpdatingLastQuery() == NoopQuotaLimiter.get() &&
+        (tableLimiters == null || tableLimiters.isEmpty()) &&
+        (namespaceLimiters == null || namespaceLimiters.isEmpty());
   }
 
   public synchronized boolean hasBypassGlobals() {
@@ -204,6 +197,6 @@ public class UserQuotaState extends QuotaState {
       QuotaLimiter limiter = namespaceLimiters.get(table.getNamespaceAsString());
       if (limiter != null) return limiter;
     }
-    return globalLimiter;
+    return getGlobalLimiterWithoutUpdatingLastQuery();
   }
 }

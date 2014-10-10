@@ -464,9 +464,13 @@ public class LocalHBaseCluster {
     LocalHBaseCluster cluster = new LocalHBaseCluster(conf);
     cluster.startup();
     Admin admin = new HBaseAdmin(conf);
-    HTableDescriptor htd =
-      new HTableDescriptor(TableName.valueOf(cluster.getClass().getName()));
-    admin.createTable(htd);
+    try {
+      HTableDescriptor htd =
+        new HTableDescriptor(TableName.valueOf(cluster.getClass().getName()));
+      admin.createTable(htd);
+    } finally {
+      admin.close();
+    }
     cluster.shutdown();
   }
 }

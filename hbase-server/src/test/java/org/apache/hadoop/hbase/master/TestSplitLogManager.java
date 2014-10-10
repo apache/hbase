@@ -644,11 +644,12 @@ public class TestSplitLogManager {
         Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 
     slm = new SplitLogManager(ds, testConf, stopper, master, DUMMY_MASTER);
+    LOG.info("Mode1=" + slm.getRecoveryMode());
     assertTrue(slm.isLogSplitting());
-
     zkw.getRecoverableZooKeeper().delete(ZKSplitLog.getEncodedNodeName(zkw, "testRecovery"), -1);
+    LOG.info("Mode2=" + slm.getRecoveryMode());
     slm.setRecoveryMode(false);
-    assertTrue(slm.isLogReplaying());
+    LOG.info("Mode3=" + slm.getRecoveryMode());
+    assertTrue("Mode4=" + slm.getRecoveryMode(), slm.isLogReplaying());
   }
-
 }

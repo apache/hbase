@@ -379,10 +379,13 @@ public class RegionSplitter {
       desc.addFamily(new HColumnDescriptor(Bytes.toBytes(cf)));
     }
     HBaseAdmin admin = new HBaseAdmin(conf);
-    Preconditions.checkArgument(!admin.tableExists(tableName),
+    try {
+      Preconditions.checkArgument(!admin.tableExists(tableName),
         "Table already exists: " + tableName);
-    admin.createTable(desc, splitAlgo.split(splitCount));
-    admin.close();
+      admin.createTable(desc, splitAlgo.split(splitCount));
+    } finally {
+      admin.close();
+    }
     LOG.debug("Table created!  Waiting for regions to show online in META...");
     if (!conf.getBoolean("split.verify", true)) {
       // NOTE: createTable is synchronous on the table, but not on the regions
@@ -529,7 +532,11 @@ public class RegionSplitter {
           byte[] split = dr.getSecond();
           LOG.debug("Splitting at " + splitAlgo.rowToStr(split));
           HBaseAdmin admin = new HBaseAdmin(table.getConfiguration());
-          admin.split(table.getTableName(), split);
+          try {
+            admin.split(table.getTableName(), split);
+          } finally {
+            admin.close();
+          }
 
           LinkedList<Pair<byte[], byte[]>> finished = Lists.newLinkedList();
           LinkedList<Pair<byte[], byte[]>> local_finished = Lists.newLinkedList();

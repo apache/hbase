@@ -129,6 +129,7 @@ public class VerifyReplication extends Configured implements Tool {
             ZKUtil.applyClusterKeyToConf(peerConf, zkClusterKey);
 
             TableName tableName = TableName.valueOf(conf.get(NAME + ".tableName"));
+            // TODO: THis HTable doesn't get closed.  Fix!
             Table replicatedTable = new HTable(peerConf, tableName);
             scan.setStartRow(value.getRow());
             scan.setStopRow(tableSplit.getEndRow());

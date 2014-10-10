@@ -194,7 +194,6 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
       clusterMap.remove(masterServerName);
     }
 
-    boolean emptyRegionServerPresent = false;
     long startTime = System.currentTimeMillis();
 
     // construct a Cluster object with clusterMap and rest of the
@@ -256,10 +255,6 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         regionsToMove.add(new RegionPlan(hri, sal.getServerName(), null));
         numTaken++;
         if (numTaken >= numToOffload) break;
-        // fetch in alternate order if there is new region server
-        if (emptyRegionServerPresent) {
-          fetchFromTail = !fetchFromTail;
-        }
       }
       serverBalanceInfo.put(sal.getServerName(),
         new BalanceInfo(numToOffload, (-1)*numTaken));
@@ -303,9 +298,6 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         if (numToTake == 0) continue;
 
         addRegionPlan(regionsToMove, fetchFromTail, si, regionsToReturn);
-        if (emptyRegionServerPresent) {
-          fetchFromTail = !fetchFromTail;
-        }
 
         underloadedServers.put(si, numToTake-1);
         cnt++;
@@ -381,9 +373,6 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         addRegionPlan(regionsToMove, fetchFromTail,
           server.getKey().getServerName(), regionsToReturn);
         numTaken++;
-        if (emptyRegionServerPresent) {
-          fetchFromTail = !fetchFromTail;
-        }
       }
     }
 
@@ -401,9 +390,6 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         }
         addRegionPlan(regionsToMove, fetchFromTail,
           server.getKey().getServerName(), regionsToReturn);
-        if (emptyRegionServerPresent) {
-          fetchFromTail = !fetchFromTail;
-        }
         if (regionsToMove.isEmpty()) {
           break;
         }

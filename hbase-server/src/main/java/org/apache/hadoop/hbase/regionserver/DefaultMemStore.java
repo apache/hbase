@@ -733,6 +733,11 @@ public class DefaultMemStore implements MemStore {
       }
     }
 
+    /**
+     * Lock on 'this' must be held by caller.
+     * @param it
+     * @return Next Cell
+     */
     private Cell getNext(Iterator<Cell> it) {
       Cell startCell = theNext;
       Cell v = null;

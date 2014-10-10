@@ -35,6 +35,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -72,7 +73,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
   private static final Tag[] LABELS_TABLE_TAGS = new Tag[1];
   private static final byte[] DUMMY_VALUE = new byte[0];
 
-  private volatile int ordinalCounter = -1;
+  private AtomicInteger ordinalCounter = new AtomicInteger(-1);
   private Configuration conf;
   private HRegion labelsRegion;
   private VisibilityLabelsCache labelsCache;
@@ -127,7 +128,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
           ordinal = i;
         }
       }
-      this.ordinalCounter = ordinal + 1;
+      this.ordinalCounter.set(ordinal + 1);
       if (labels.size() > 0) {
         // If there is no data need not write to zk
         byte[] serialized = VisibilityUtils.getDataToWriteToZooKeeper(labels);
@@ -239,13 +240,13 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
         finalOpStatus[i] = new OperationStatus(OperationStatusCode.FAILURE,
             new LabelAlreadyExistsException("Label '" + labelStr + "' already exists"));
       } else {
-        Put p = new Put(Bytes.toBytes(ordinalCounter));
+        Put p = new Put(Bytes.toBytes(ordinalCounter.get()));
         p.addImmutable(LABELS_TABLE_FAMILY, LABEL_QUALIFIER, label, LABELS_TABLE_TAGS);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Adding the label " + labelStr);
         }
         puts.add(p);
-        ordinalCounter++;
+        ordinalCounter.incrementAndGet();
       }
       i++;
     }
@@ -350,17 +351,21 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
     s.setFilter(filter);
     List<String> auths = new ArrayList<String>();
     RegionScanner scanner = this.labelsRegion.getScanner(s);
-    List<Cell> results = new ArrayList<Cell>(1);
-    while (true) {
-      scanner.next(results);
-      if (results.isEmpty()) break;
-      Cell cell = results.get(0);
-      int ordinal = Bytes.toInt(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-      String label = this.labelsCache.getLabel(ordinal);
-      if (label != null) {
-        auths.add(label);
+    try {
+      List<Cell> results = new ArrayList<Cell>(1);
+      while (true) {
+        scanner.next(results);
+        if (results.isEmpty()) break;
+        Cell cell = results.get(0);
+        int ordinal = Bytes.toInt(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+        String label = this.labelsCache.getLabel(ordinal);
+        if (label != null) {
+          auths.add(label);
+        }
+        results.clear();
       }
-      results.clear();
+    } finally {
+      scanner.close();
     }
     return auths;
   }

@@ -264,7 +264,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     // might miss the watch-trigger that creation of RESCAN node provides.
     // Since the TimeoutMonitor will keep resubmitting UNASSIGNED tasks
     // therefore this behavior is safe.
-    SplitLogTask slt = new SplitLogTask.Done(this.details.getServerName(), this.recoveryMode);
+    SplitLogTask slt = new SplitLogTask.Done(this.details.getServerName(), getRecoveryMode());
     this.watcher
         .getRecoverableZooKeeper()
         .getZooKeeper()
@@ -424,7 +424,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
   }
 
   private void createNode(String path, Long retry_count) {
-    SplitLogTask slt = new SplitLogTask.Unassigned(details.getServerName(), this.recoveryMode);
+    SplitLogTask slt = new SplitLogTask.Unassigned(details.getServerName(), getRecoveryMode());
     ZKUtil.asyncCreate(this.watcher, path, slt.toByteArray(), new CreateAsyncCallback(),
       retry_count);
     SplitLogCounters.tot_mgr_node_create_queued.incrementAndGet();
@@ -757,12 +757,12 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
   }
 
   @Override
-  public boolean isReplaying() {
+  public synchronized boolean isReplaying() {
     return this.recoveryMode == RecoveryMode.LOG_REPLAY;
   }
 
   @Override
-  public boolean isSplitting() {
+  public synchronized boolean isSplitting() {
     return this.recoveryMode == RecoveryMode.LOG_SPLITTING;
   }
 
@@ -774,15 +774,19 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
    */
   @Override
   public void setRecoveryMode(boolean isForInitialization) throws IOException {
-    if (this.isDrainingDone) {
-      // when there is no outstanding splitlogtask after master start up, we already have up to date
-      // recovery mode
-      return;
+    synchronized(this) {
+      if (this.isDrainingDone) {
+        // when there is no outstanding splitlogtask after master start up, we already have up to date
+        // recovery mode
+        return;
+      }
     }
     if (this.watcher == null) {
       // when watcher is null(testing code) and recovery mode can only be LOG_SPLITTING
-      this.isDrainingDone = true;
-      this.recoveryMode = RecoveryMode.LOG_SPLITTING;
+      synchronized(this) {
+        this.isDrainingDone = true;
+        this.recoveryMode = RecoveryMode.LOG_SPLITTING;
+      }
       return;
     }
     boolean hasSplitLogTask = false;
@@ -877,7 +881,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
     try {
       // blocking zk call but this is done from the timeout thread
       SplitLogTask slt =
-          new SplitLogTask.Unassigned(this.details.getServerName(), this.recoveryMode);
+          new SplitLogTask.Unassigned(this.details.getServerName(), getRecoveryMode());
       if (ZKUtil.setData(this.watcher, path, slt.toByteArray(), version) == false) {
         LOG.debug("failed to resubmit task " + path + " version changed");
         return false;
@@ -1105,7 +1109,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
   }
 
   @Override
-  public RecoveryMode getRecoveryMode() {
+  public synchronized RecoveryMode getRecoveryMode() {
     return recoveryMode;
   }
 

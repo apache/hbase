@@ -18,21 +18,10 @@
 
 package org.apache.hadoop.hbase.quotas;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
-import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-
-import com.google.common.collect.Sets;
 
 /**
  * In-Memory state of table or namespace quotas
@@ -53,7 +42,7 @@ public class QuotaState {
     lastUpdate = updateTs;
   }
 
-  public long getLastUpdate() {
+  public synchronized long getLastUpdate() {
     return lastUpdate;
   }
 
@@ -64,7 +53,7 @@ public class QuotaState {
   @Override
   public synchronized String toString() {
     StringBuilder builder = new StringBuilder();
-    builder.append("QuotaState(ts=" + lastUpdate);
+    builder.append("QuotaState(ts=" + getLastUpdate());
     if (isBypass()) {
       builder.append(" bypass");
     } else {
@@ -117,6 +106,14 @@ public class QuotaState {
    */
   public synchronized QuotaLimiter getGlobalLimiter() {
     lastQuery = EnvironmentEdgeManager.currentTime();
+    return globalLimiter;
+  }
+
+  /**
+   * Return the limiter associated with this quota without updating internal last query stats
+   * @return the quota limiter
+   */
+  synchronized QuotaLimiter getGlobalLimiterWithoutUpdatingLastQuery() {
     return globalLimiter;
   }
 }

@@ -52,9 +52,8 @@ public class JmxCacheBuster {
   public static void clearJmxCache() {
 
     //If there are more then 100 ms before the executor will run then everything should be merged.
-    if (fut == null || (!fut.isDone()  && fut.getDelay(TimeUnit.MILLISECONDS) > 100)) return;
-
     synchronized (lock) {
+      if (fut == null || (!fut.isDone()  && fut.getDelay(TimeUnit.MILLISECONDS) > 100)) return;
       fut = executor.getExecutor().schedule(new JmxCacheBusterRunnable(), 5, TimeUnit.SECONDS);
     }
   }
