@@ -51,6 +51,7 @@
   <modules>
     <module>hbase-server</module>
     <module>hbase-thrift</module>
+    <module>hbase-rest</module>
     <module>hbase-shell</module>
     <module>hbase-protocol</module>
     <module>hbase-client</module>
@@ -1094,12 +1095,24 @@
         <type>test-jar</type>
         <scope>test</scope>
       </dependency>
-        <dependency>
-            <groupId>org.apache.hbase</groupId>
-            <artifactId>hbase-testing-util</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
+      <dependency>
+        <artifactId>hbase-rest</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <artifactId>hbase-rest</artifactId>
+        <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+          <groupId>org.apache.hbase</groupId>
+          <artifactId>hbase-testing-util</artifactId>
+          <version>${project.version}</version>
+          <scope>test</scope>
+      </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-prefix-tree</artifactId>
