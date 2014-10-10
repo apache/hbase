@@ -116,6 +116,11 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
         throw new IllegalArgumentException("Cannot add a peer with id=" + id
             + " because that id already exists.");
       }
+      
+      if(id.contains("-")){
+        throw new IllegalArgumentException("Found invalid peer name:" + id);
+      }
+      
       ZKUtil.createWithParents(this.zookeeper, this.peersZNode);
       List<ZKUtilOp> listOfOps = new ArrayList<ZKUtil.ZKUtilOp>();
       ZKUtilOp op1 =
