@@ -127,8 +127,6 @@
                 <jspcompiler uriroot="${src.webapps}/master" outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.master" webxml="${build.webapps}/master/WEB-INF/web.xml"/>
                 <mkdir dir="${build.webapps}/regionserver/WEB-INF"/>
                 <jspcompiler uriroot="${src.webapps}/regionserver" outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
-                <mkdir dir="${build.webapps}/rest/WEB-INF"/>
-                <jspcompiler uriroot="${src.webapps}/rest" outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.rest" webxml="${build.webapps}/rest/WEB-INF/web.xml"/>
               </target>
             </configuration>
             <goals>
@@ -431,27 +429,6 @@
       <groupId>io.netty</groupId>
       <artifactId>netty-all</artifactId>
     </dependency>
-    <!-- REST dependencies -->
-    <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-core</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-json</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-server</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>javax.xml.bind</groupId>
-      <artifactId>jaxb-api</artifactId>
-    </dependency>
     <!-- tracing Dependencies -->
     <dependency>
       <groupId>org.htrace</groupId>
@@ -720,34 +697,6 @@
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-maven-plugins</artifactId>
             <executions>
-              <execution>
-                <id>compile-protoc</id>
-                <phase>generate-sources</phase>
-                <goals>
-                  <goal>protoc</goal>
-                </goals>
-                <configuration>
-                  <imports>
-                    <param>${basedir}/src/main/resources/org/apache/hadoop/hbase/rest/protobuf</param>
-                  </imports>
-                  <source>
-                    <!-- These should be under src/main/protobuf -->
-                    <directory>${basedir}/src/main/resources/org/apache/hadoop/hbase/rest/protobuf</directory>
-                    <includes>
-                      <include>CellMessage.proto</include>
-                      <include>CellSetMessage.proto</include>
-                      <include>ColumnSchemaMessage.proto</include>
-                      <include>ScannerMessage.proto</include>
-                      <include>StorageClusterStatusMessage.proto</include>
-                      <include>TableInfoMessage.proto</include>
-                      <include>TableListMessage.proto</include>
-                      <include>TableSchemaMessage.proto</include>
-                      <include>VersionMessage.proto</include>
-                    </includes>
-                  </source>
-                 <output>${basedir}/src/main/java/</output>
-                </configuration>
-              </execution>
               <execution>
                 <id>compile-test-protoc</id>
                 <phase>generate-test-sources</phase>
