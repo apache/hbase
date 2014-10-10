@@ -1183,6 +1183,7 @@ public static void verifyAllowed(User user, AccessTestAction action, int count) 
                 <code>public</code> label.</para></entry>
             </row>
             <row>
+              <entry><screen>( secret | topsecret ) &amp; !probationary</screen></entry>
               <entry><para>Allow access to users associated with either the 
                 <code>secret</code> or <code>topsecret</code> label and not 
                 associated with the <code>probationary</code> label.</para></entry>
