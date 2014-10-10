@@ -203,11 +203,11 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionTransitionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionTransitionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -3200,10 +3200,10 @@ MasterServices, Server {
   }
 
   @Override
-  public ReportRegionTransitionResponse reportRegionTransition(RpcController controller,
-      ReportRegionTransitionRequest req) throws ServiceException {
+  public ReportRegionStateTransitionResponse reportRegionStateTransition(RpcController controller,
+      ReportRegionStateTransitionRequest req) throws ServiceException {
     try {
-      RegionTransition rt = req.getTransition(0);
+      RegionStateTransition rt = req.getTransition(0);
       TableName tableName = ProtobufUtil.toTableName(
         rt.getRegionInfo(0).getTableName());
       if (!TableName.META_TABLE_NAME.equals(tableName)
@@ -3214,8 +3214,8 @@ MasterServices, Server {
       }
       ServerName sn = ProtobufUtil.toServerName(req.getServer());
       String error = assignmentManager.onRegionTransition(sn, rt);
-      ReportRegionTransitionResponse.Builder rrtr =
-        ReportRegionTransitionResponse.newBuilder();
+      ReportRegionStateTransitionResponse.Builder rrtr =
+        ReportRegionStateTransitionResponse.newBuilder();
       if (error != null) {
         rrtr.setErrorMessage(error);
       }

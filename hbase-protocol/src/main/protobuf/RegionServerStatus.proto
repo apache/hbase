@@ -78,7 +78,7 @@ message GetLastFlushedSequenceIdResponse {
   required uint64 last_flushed_sequence_id = 1;
 }
 
-message RegionTransition {
+message RegionStateTransition {
   required TransitionCode transition_code = 1;
 
   /** Mutliple regions are involved during merging/splitting */
@@ -107,14 +107,14 @@ message RegionTransition {
   }
 }
 
-message ReportRegionTransitionRequest {
+message ReportRegionStateTransitionRequest {
   /** This region server's server name */
   required ServerName server = 1;
 
-  repeated RegionTransition transition = 2;
+  repeated RegionStateTransition transition = 2;
 }
 
-message ReportRegionTransitionResponse {
+message ReportRegionStateTransitionResponse {
   /** Error message if failed to update the region state */
   optional string error_message = 1;
 }
@@ -146,6 +146,6 @@ service RegionServerStatusService {
    * transition. If the request fails, the transition should
    * be aborted.
    */
-  rpc ReportRegionTransition(ReportRegionTransitionRequest)
-    returns(ReportRegionTransitionResponse);
+  rpc ReportRegionStateTransition(ReportRegionStateTransitionRequest)
+    returns(ReportRegionStateTransitionResponse);
 }

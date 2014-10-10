@@ -196,11 +196,11 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionTransitionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionTransitionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
@@ -1848,7 +1848,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         this.serverNameFromMasterPOV, openSeqNum);
     }
     if (!useZKForAssignment
-        && !reportRegionTransition(TransitionCode.OPENED, openSeqNum, r.getRegionInfo())) {
+        && !reportRegionStateTransition(TransitionCode.OPENED, openSeqNum, r.getRegionInfo())) {
       throw new IOException("Failed to report opened region to master: "
           + r.getRegionNameAsString());
     }
@@ -1976,15 +1976,15 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
   }
 
   @Override
-  public boolean reportRegionTransition(TransitionCode code, HRegionInfo... hris) {
-    return reportRegionTransition(code, HConstants.NO_SEQNUM, hris);
+  public boolean reportRegionStateTransition(TransitionCode code, HRegionInfo... hris) {
+    return reportRegionStateTransition(code, HConstants.NO_SEQNUM, hris);
   }
 
   @Override
-  public boolean reportRegionTransition(TransitionCode code, long openSeqNum, HRegionInfo... hris) {
-    ReportRegionTransitionRequest.Builder builder = ReportRegionTransitionRequest.newBuilder();
+  public boolean reportRegionStateTransition(TransitionCode code, long openSeqNum, HRegionInfo... hris) {
+    ReportRegionStateTransitionRequest.Builder builder = ReportRegionStateTransitionRequest.newBuilder();
     builder.setServer(ProtobufUtil.toServerName(serverName));
-    RegionTransition.Builder transition = builder.addTransitionBuilder();
+    RegionStateTransition.Builder transition = builder.addTransitionBuilder();
     transition.setTransitionCode(code);
     if (code == TransitionCode.OPENED && openSeqNum >= 0) {
       transition.setOpenSeqNum(openSeqNum);
@@ -1992,7 +1992,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     for (HRegionInfo hri : hris) {
       transition.addRegionInfo(HRegionInfo.convert(hri));
     }
-    ReportRegionTransitionRequest request = builder.build();
+    ReportRegionStateTransitionRequest request = builder.build();
     while (keepLooping()) {
       RegionServerStatusService.BlockingInterface rss = rssStub;
       try {
@@ -2000,7 +2000,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           createRegionServerStatusStub();
           continue;
         }
-        ReportRegionTransitionResponse response = rss.reportRegionTransition(null, request);
+        ReportRegionStateTransitionResponse response = rss.reportRegionStateTransition(null, request);
         if (response.hasErrorMessage()) {
           LOG.info("Failed to transition " + hris[0] + " to " + code + ": "
               + response.getErrorMessage());

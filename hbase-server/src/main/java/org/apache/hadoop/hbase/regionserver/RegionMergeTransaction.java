@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.SplitTransaction.LoggingProgressable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConfigUtil;
@@ -329,7 +329,7 @@ public class RegionMergeTransaction {
           region_a.getRegionInfo(), region_b.getRegionInfo(), server.getServerName(), metaEntries);
       }
     } else if (services != null && !useZKForAssignment) {
-      if (!services.reportRegionTransition(TransitionCode.MERGE_PONR,
+      if (!services.reportRegionStateTransition(TransitionCode.MERGE_PONR,
           mergedRegionInfo, region_a.getRegionInfo(), region_b.getRegionInfo())) {
         // Passed PONR, let SSH clean it up
         throw new IOException("Failed to notify master that merge passed PONR: "
@@ -388,7 +388,7 @@ public class RegionMergeTransaction {
             + this.mergedRegionInfo.getRegionNameAsString(), e);
       }
     } else if (services != null && !useZKForAssignment) {
-      if (!services.reportRegionTransition(TransitionCode.READY_TO_MERGE,
+      if (!services.reportRegionStateTransition(TransitionCode.READY_TO_MERGE,
           mergedRegionInfo, region_a.getRegionInfo(), region_b.getRegionInfo())) {
         throw new IOException("Failed to get ok from master to merge "
           + region_a.getRegionInfo().getRegionNameAsString() + " and "
@@ -571,7 +571,7 @@ public class RegionMergeTransaction {
       try {
         if (useZKForAssignment) {
           services.postOpenDeployTasks(merged, server.getCatalogTracker());
-        } else if (!services.reportRegionTransition(TransitionCode.MERGED,
+        } else if (!services.reportRegionStateTransition(TransitionCode.MERGED,
             mergedRegionInfo, region_a.getRegionInfo(), region_b.getRegionInfo())) {
           throw new IOException("Failed to report merged region to master: "
             + mergedRegionInfo.getShortNameToLog());
@@ -773,7 +773,7 @@ public class RegionMergeTransaction {
           if (useZKAndZKIsSet(server)) {
             cleanZK(server, this.mergedRegionInfo);
           } else if (services != null && !useZKForAssignment
-              && !services.reportRegionTransition(TransitionCode.MERGE_REVERTED,
+              && !services.reportRegionStateTransition(TransitionCode.MERGE_REVERTED,
                   mergedRegionInfo, region_a.getRegionInfo(), region_b.getRegionInfo())) {
             return false;
           }

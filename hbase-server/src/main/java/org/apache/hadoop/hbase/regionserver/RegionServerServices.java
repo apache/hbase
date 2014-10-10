@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.TableLockManager;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.zookeeper.KeeperException;
 
@@ -86,12 +86,12 @@ public interface RegionServerServices
   /**
    * Notify master that a handler requests to change a region state
    */
-  boolean reportRegionTransition(TransitionCode code, long openSeqNum, HRegionInfo... hris);
+  boolean reportRegionStateTransition(TransitionCode code, long openSeqNum, HRegionInfo... hris);
 
   /**
    * Notify master that a handler requests to change a region state
    */
-  boolean reportRegionTransition(TransitionCode code, HRegionInfo... hris);
+  boolean reportRegionStateTransition(TransitionCode code, HRegionInfo... hris);
 
   /**
    * Returns a reference to the region server's RPC server

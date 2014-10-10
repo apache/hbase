@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.NullTableLockManager;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.CompactionRequestor;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -232,13 +232,13 @@ class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public boolean reportRegionTransition(TransitionCode code, long openSeqNum,
+  public boolean reportRegionStateTransition(TransitionCode code, long openSeqNum,
       HRegionInfo... hris) {
     return false;
   }
 
   @Override
-  public boolean reportRegionTransition(TransitionCode code,
+  public boolean reportRegionStateTransition(TransitionCode code,
       HRegionInfo... hris) {
     return false;
   }

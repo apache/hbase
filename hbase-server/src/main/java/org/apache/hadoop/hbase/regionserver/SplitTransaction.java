@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ConfigUtil;
@@ -295,7 +295,7 @@ public class SplitTransaction {
           server.getServerName(), metaEntries);
       }
     } else if (services != null && !useZKForAssignment) {
-      if (!services.reportRegionTransition(TransitionCode.SPLIT_PONR, parent.getRegionInfo(),
+      if (!services.reportRegionStateTransition(TransitionCode.SPLIT_PONR, parent.getRegionInfo(),
         hri_a, hri_b)) {
         // Passed PONR, let SSH clean it up
         throw new IOException("Failed to notify master that split passed PONR: "
@@ -318,7 +318,7 @@ public class SplitTransaction {
           this.parent.getRegionNameAsString(), e);
       }
     } else if (services != null && !useZKForAssignment) {
-      if (!services.reportRegionTransition(TransitionCode.READY_TO_SPLIT,
+      if (!services.reportRegionStateTransition(TransitionCode.READY_TO_SPLIT,
         parent.getRegionInfo(), hri_a, hri_b)) {
         throw new IOException("Failed to get ok from master to split "
             + parent.getRegionNameAsString());
@@ -430,7 +430,7 @@ public class SplitTransaction {
           if (useZKForAssignment) {
             // add 2nd daughter first (see HBASE-4335)
             services.postOpenDeployTasks(b, server.getCatalogTracker());
-          } else if (!services.reportRegionTransition(TransitionCode.SPLIT,
+          } else if (!services.reportRegionStateTransition(TransitionCode.SPLIT,
               parent.getRegionInfo(), hri_a, hri_b)) {
             throw new IOException("Failed to report split region to master: "
               + parent.getRegionInfo().getShortNameToLog());
@@ -834,7 +834,7 @@ public class SplitTransaction {
           cleanZK(server, this.parent.getRegionInfo());
         } else if (services != null
             && !useZKForAssignment
-            && !services.reportRegionTransition(TransitionCode.SPLIT_REVERTED,
+            && !services.reportRegionStateTransition(TransitionCode.SPLIT_REVERTED,
               parent.getRegionInfo(), hri_a, hri_b)) {
           return false;
         }

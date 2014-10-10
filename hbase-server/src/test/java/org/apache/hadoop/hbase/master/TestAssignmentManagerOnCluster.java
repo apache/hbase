@@ -59,7 +59,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConfigUtil;
@@ -978,13 +978,13 @@ public class TestAssignmentManagerOnCluster {
 
     @Override
     public boolean
-        reportRegionTransition(TransitionCode code, long openSeqNum, HRegionInfo... hris) {
+        reportRegionStateTransition(TransitionCode code, long openSeqNum, HRegionInfo... hris) {
       if (simulateRetry == true) {
         // Simulate retry by calling the method twice
-        super.reportRegionTransition(code, openSeqNum, hris);
-        return super.reportRegionTransition(code, openSeqNum, hris);
+        super.reportRegionStateTransition(code, openSeqNum, hris);
+        return super.reportRegionStateTransition(code, openSeqNum, hris);
       }
-      return super.reportRegionTransition(code, openSeqNum, hris);
+      return super.reportRegionStateTransition(code, openSeqNum, hris);
     }
 
     @Override

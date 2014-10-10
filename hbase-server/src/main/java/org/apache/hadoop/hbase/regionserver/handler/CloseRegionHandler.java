@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.EventType;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionTransition.TransitionCode;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.ConfigUtil;
@@ -167,7 +167,7 @@ public class CloseRegionHandler extends EventHandler {
 
       this.rsServices.removeFromOnlineRegions(region, destination);
       if (!useZKForAssignment) {
-        rsServices.reportRegionTransition(TransitionCode.CLOSED, regionInfo);
+        rsServices.reportRegionStateTransition(TransitionCode.CLOSED, regionInfo);
       } else {
         if (this.zk) {
           if (setClosedState(this.expectedVersion, region)) {
