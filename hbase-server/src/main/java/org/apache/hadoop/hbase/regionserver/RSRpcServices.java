@@ -2176,4 +2176,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
     }
   }
+
+  @Override
+  public CoprocessorServiceResponse execRegionServerService(RpcController controller,
+      CoprocessorServiceRequest request) throws ServiceException {
+    return regionServer.execRegionServerService(controller, request);
+  }
 }

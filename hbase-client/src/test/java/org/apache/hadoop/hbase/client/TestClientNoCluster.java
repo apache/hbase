@@ -492,6 +492,12 @@ public class TestClientNoCluster extends Configured implements Tool {
         this.multiInvocationsCount.decrementAndGet();
       }
     }
+
+    @Override
+    public CoprocessorServiceResponse execRegionServerService(RpcController controller,
+        CoprocessorServiceRequest request) throws ServiceException {
+      throw new NotImplementedException();
+    }
   }
 
   static ScanResponse doMetaScanResponse(final SortedMap<byte [], Pair<HRegionInfo, ServerName>> meta,

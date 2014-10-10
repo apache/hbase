@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.protobuf.Service;
+
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
@@ -137,4 +139,14 @@ public interface RegionServerServices
    * @return all the online tables in this RS
    */
   Set<TableName> getOnlineTables();
+  
+     
+  /**
+   * Registers a new protocol buffer {@link Service} subclass as a coprocessor endpoint to be
+   * available for handling
+   * @param instance the {@code Service} subclass instance to expose as a coprocessor endpoint
+   * @return {@code true} if the registration was successful, {@code false}
+   */
+  boolean registerService(Service service);
+
 }

@@ -1243,4 +1243,30 @@ public interface Admin extends Abortable, Closeable {
    * @return A MasterCoprocessorRpcChannel instance
    */
   CoprocessorRpcChannel coprocessorService();
+  
+  
+  /**
+   * Creates and returns a {@link com.google.protobuf.RpcChannel} instance
+   * connected to the passed region server.
+   *
+   * <p>
+   * The obtained {@link com.google.protobuf.RpcChannel} instance can be used to access a published
+   * coprocessor {@link com.google.protobuf.Service} using standard protobuf service invocations:
+   * </p>
+   *
+   * <div style="background-color: #cccccc; padding: 2px">
+   * <blockquote><pre>
+   * CoprocessorRpcChannel channel = myAdmin.coprocessorService(serverName);
+   * MyService.BlockingInterface service = MyService.newBlockingStub(channel);
+   * MyCallRequest request = MyCallRequest.newBuilder()
+   *     ...
+   *     .build();
+   * MyCallResponse response = service.myCall(null, request);
+   * </pre></blockquote></div>
+   * 
+   * @param the server name to which the endpoint call is made
+   * @return A RegionServerCoprocessorRpcChannel instance
+   */
+  CoprocessorRpcChannel coprocessorService(ServerName sn);
+  
 }
