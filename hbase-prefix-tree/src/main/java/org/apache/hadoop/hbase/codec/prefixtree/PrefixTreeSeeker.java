@@ -20,12 +20,13 @@ package org.apache.hadoop.hbase.codec.prefixtree;
 
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.SettableSequenceId;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.DecoderFactory;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.PrefixTreeArraySearcher;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellScannerPosition;
@@ -91,11 +92,17 @@ public class PrefixTreeSeeker implements EncodedSeeker {
    * currently must do deep copy into new array
    */
   @Override
-  public KeyValue getKeyValue() {
-    if (ptSearcher.current() == null) {
+  public Cell getKeyValue() {
+    Cell cell = ptSearcher.current();
+    if (cell == null) {
       return null;
     }
-    return KeyValueUtil.copyToNewKeyValue(ptSearcher.current());
+    return new ClonedPrefixTreeCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+        cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
+        cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(),
+        cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(), cell.getTagsArray(),
+        cell.getTagsOffset(), cell.getTagsLength(), cell.getTimestamp(), cell.getTypeByte(),
+        cell.getSequenceId());
   }
 
   /**
@@ -248,7 +255,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
   public int seekToKeyInBlock(Cell key, boolean forceBeforeOnExactMatch) {
     if (USE_POSITION_BEFORE) {
       return seekToOrBeforeUsingPositionAtOrBefore(key, forceBeforeOnExactMatch);
-    }else{
+    } else {
       return seekToOrBeforeUsingPositionAtOrAfter(key, forceBeforeOnExactMatch);
     }
   }
@@ -258,5 +265,180 @@ public class PrefixTreeSeeker implements EncodedSeeker {
     ByteBuffer bb = getKeyDeepCopy();
     return comparator.compare(key,
         new KeyValue.KeyOnlyKeyValue(bb.array(), bb.arrayOffset(), bb.limit()));
+  }
+  /**
+   * Cloned version of the PrefixTreeCell where except the value part, the rest
+   * of the key part is deep copied
+   *
+   */
+  private static class ClonedPrefixTreeCell implements Cell, SettableSequenceId {
+    private byte[] row;
+    private short rowLength;
+    private byte[] fam;
+    private byte famLength;
+    private byte[] qual;
+    private int qualLength;
+    private byte[] val;
+    private int valOffset;
+    private int valLength;
+    private byte[] tag;
+    private int tagLength;
+    private long ts;
+    private long seqId;
+    private byte type;
+
+    public ClonedPrefixTreeCell(byte[] row, int rowOffset, short rowLength, byte[] fam,
+        int famOffset, byte famLength, byte[] qual, int qualOffset, int qualLength, byte[] val,
+        int valOffset, int valLength, byte[] tag, int tagOffset, int tagLength, long ts, byte type,
+        long seqId) {
+      this.row = new byte[rowLength];
+      System.arraycopy(row, rowOffset, this.row, 0, rowLength);
+      this.rowLength = rowLength;
+      this.fam = new byte[famLength];
+      System.arraycopy(fam, famOffset, this.fam, 0, famLength);
+      this.famLength = famLength;
+      this.qual = new byte[qualLength];
+      System.arraycopy(qual, qualOffset, this.qual, 0, qualLength);
+      this.qualLength = qualLength;
+      this.tag = new byte[tagLength];
+      System.arraycopy(tag, tagOffset, this.tag, 0, tagLength);
+      this.tagLength = tagLength;
+      this.val = val;
+      this.valLength = valLength;
+      this.valOffset = valOffset;
+      this.ts = ts;
+      this.seqId = seqId;
+      this.type = type;
+    }
+
+    @Override
+    public void setSequenceId(long seqId) {
+      this.seqId = seqId;
+    }
+
+    @Override
+    public byte[] getRowArray() {
+      return this.row;
+    }
+
+    @Override
+    public int getRowOffset() {
+      return 0;
+    }
+
+    @Override
+    public short getRowLength() {
+      return this.rowLength;
+    }
+
+    @Override
+    public byte[] getFamilyArray() {
+      return this.fam;
+    }
+
+    @Override
+    public int getFamilyOffset() {
+      return 0;
+    }
+
+    @Override
+    public byte getFamilyLength() {
+      return this.famLength;
+    }
+
+    @Override
+    public byte[] getQualifierArray() {
+      return this.qual;
+    }
+
+    @Override
+    public int getQualifierOffset() {
+      return 0;
+    }
+
+    @Override
+    public int getQualifierLength() {
+      return this.qualLength;
+    }
+
+    @Override
+    public long getTimestamp() {
+      return ts;
+    }
+
+    @Override
+    public byte getTypeByte() {
+      return type;
+    }
+
+    @Override
+    @Deprecated
+    public long getMvccVersion() {
+      return getSequenceId();
+    }
+
+    @Override
+    public long getSequenceId() {
+      return seqId;
+    }
+
+    @Override
+    public byte[] getValueArray() {
+      return val;
+    }
+
+    @Override
+    public int getValueOffset() {
+      return this.valOffset;
+    }
+
+    @Override
+    public int getValueLength() {
+      return this.valLength;
+    }
+
+    @Override
+    public byte[] getTagsArray() {
+      return this.tag;
+    }
+
+    @Override
+    public int getTagsOffset() {
+      return 0;
+    }
+
+    @Override
+    public int getTagsLength() {
+      return this.tagLength;
+    }
+
+    @Override
+    @Deprecated
+    public byte[] getValue() {
+      return this.val;
+    }
+
+    @Override
+    @Deprecated
+    public byte[] getFamily() {
+      return this.fam;
+    }
+
+    @Override
+    @Deprecated
+    public byte[] getQualifier() {
+      return this.qual;
+    }
+
+    @Override
+    @Deprecated
+    public byte[] getRow() {
+      return this.row;
+    }
+
+    @Override
+    public String toString() {
+      return KeyValueUtil.copyToNewKeyValue(this).toString();
+    }
   }
 }
