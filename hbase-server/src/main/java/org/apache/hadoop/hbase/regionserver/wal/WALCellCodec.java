@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.codec.BaseDecoder;
 import org.apache.hadoop.hbase.codec.BaseEncoder;
 import org.apache.hadoop.hbase.codec.Codec;
@@ -189,41 +190,34 @@ public class WALCellCodec implements Codec {
 
     @Override
     public void write(Cell cell) throws IOException {
-      if (!(cell instanceof KeyValue)) throw new IOException("Cannot write non-KV cells to WAL");
-      KeyValue kv = (KeyValue)cell;
-      byte[] kvBuffer = kv.getBuffer();
-      int offset = kv.getOffset();
-
       // We first write the KeyValue infrastructure as VInts.
-      StreamUtils.writeRawVInt32(out, kv.getKeyLength());
-      StreamUtils.writeRawVInt32(out, kv.getValueLength());
+      StreamUtils.writeRawVInt32(out, KeyValueUtil.keyLength(cell));
+      StreamUtils.writeRawVInt32(out, cell.getValueLength());
       // To support tags
-      int tagsLength = kv.getTagsLength();
+      int tagsLength = cell.getTagsLength();
       StreamUtils.writeRawVInt32(out, tagsLength);
 
       // Write row, qualifier, and family; use dictionary
       // compression as they're likely to have duplicates.
-      write(kvBuffer, kv.getRowOffset(), kv.getRowLength(), compression.rowDict);
-      write(kvBuffer, kv.getFamilyOffset(), kv.getFamilyLength(), compression.familyDict);
-      write(kvBuffer, kv.getQualifierOffset(), kv.getQualifierLength(), compression.qualifierDict);
+      write(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), compression.rowDict);
+      write(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
+          compression.familyDict);
+      write(cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(),
+          compression.qualifierDict);
 
       // Write timestamp, type and value as uncompressed.
-      int pos = kv.getTimestampOffset();
-      int tsTypeValLen = kv.getLength() + offset - pos;
-      if (tagsLength > 0) {
-        tsTypeValLen = tsTypeValLen - tagsLength - KeyValue.TAGS_LENGTH_SIZE;
-      }
-      assert tsTypeValLen > 0;
-      out.write(kvBuffer, pos, tsTypeValLen);
+      StreamUtils.writeLong(out, cell.getTimestamp());
+      out.write(cell.getTypeByte());
+      out.write(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
       if (tagsLength > 0) {
         if (compression.tagCompressionContext != null) {
           // Write tags using Dictionary compression
-          compression.tagCompressionContext.compressTags(out, kvBuffer, kv.getTagsOffset(),
-              tagsLength);
+          compression.tagCompressionContext.compressTags(out, cell.getTagsArray(),
+              cell.getTagsOffset(), tagsLength);
         } else {
           // Tag compression is disabled within the WAL compression. Just write the tags bytes as
           // it is.
-          out.write(kvBuffer, kv.getTagsOffset(), tagsLength);
+          out.write(cell.getTagsArray(), cell.getTagsOffset(), tagsLength);
         }
       }
     }
@@ -339,10 +333,9 @@ public class WALCellCodec implements Codec {
     }
     @Override
     public void write(Cell cell) throws IOException {
-      if (!(cell instanceof KeyValue)) throw new IOException("Cannot write non-KV cells to WAL");
       checkFlushed();
       // Make sure to write tags into WAL
-      KeyValue.oswrite((KeyValue) cell, this.out, true);
+      KeyValueUtil.oswrite(cell, this.out, true);
     }
   }
 
