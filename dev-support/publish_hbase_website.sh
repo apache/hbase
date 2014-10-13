@@ -234,6 +234,6 @@ else
 changed the size of the website by $SVN_SIZE_DIFF MB and the number of files \
 by $SVN_NUM_DIFF files." |tee /tmp/commit.txt
   cat /tmp/out.txt >> /tmp/commit.txt
-  svn commit -F /tmp/commit.txt
+  svn commit -q -F /tmp/commit.txt
 fi
 
