@@ -255,7 +255,6 @@ case $startStop in
         echo "`date` Terminating $command" >> $loglog
         kill $pidToKill > /dev/null 2>&1
         waitForProcessEnd $pidToKill $command
-        rm $pid
       else
         retval=$?
         echo no $command to stop because kill -0 of pid $pidToKill failed with status $retval
@@ -263,6 +262,7 @@ case $startStop in
     else
       echo no $command to stop because no pid file $pid
     fi
+    rm -f $pid
   ;;
 
 (restart)
