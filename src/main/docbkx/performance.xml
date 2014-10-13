@@ -988,6 +988,58 @@ htable.close();
       </section>
     </section>
     <!--  bloom  -->
+    <section>
+      <title>Hedged Reads</title>
+      <para>Hedged reads are a feature of HDFS, introduced in <link
+          xlink:href="https://issues.apache.org/jira/browse/HDFS-5776">HDFS-5776</link>. Normally, a
+        single thread is spawned for each reqd request. However, if hedged reads are enabled, the
+        client waits some configurable amount of time, and if the read does not return, the client
+        spawns a second read request, against a different block replica of the same data. Whichever
+        read returns first is used, and the other read request is discarded. Hedged reads can be
+        helpful for times where a rare slow read is caused by a transient error such as a failing
+        disk or flaky network connection.</para>
+      <para> Because a HBase RegionServer is a HDFS client, you can enable hedged reads in HBase, by
+        adding the following properties to the RegionServer's hbase-site.xml and tuning the values
+        to suit your environment.</para>
+      <itemizedlist>
+        <title>Configuration for Hedged Reads</title>
+        <listitem>
+          <para><code>dfs.client.hedged.read.threadpool.size</code> - the number of threads
+            dedicated to servicing hedged reads. If this is set to 0 (the default), hedged reads are
+            disabled.</para>
+        </listitem>
+        <listitem>
+          <para><code>dfs.client.hedged.read.threshold.millis</code> - the number of milliseconds to
+            wait before spawning a second read thread.</para>
+        </listitem>
+      </itemizedlist>
+      <example>
+        <title>Hedged Reads Configuration Example</title>
+        <screen><![CDATA[<property>
+  <name>dfs.client.hedged.read.threadpool.size</name>
+  <value>20</value>  <!-- 20 threads -->
+</property>
+<property>
+  <name>dfs.client.hedged.read.threshold.millis</name>
+  <value>10</value>  <!-- 10 milliseconds -->
+</property>]]></screen>
+      </example>
+      <para>Use the following metrics to tune the settings for hedged reads on
+        your cluster. See <xref linkend="hbase_metrics"/>  for more information.</para>
+      <itemizedlist>
+        <title>Metrics for Hedged Reads</title>
+        <listitem>
+          <para>hedgedReadOps - the number of times hedged read threads have been triggered. This
+            could indicate that read requests are often slow, or that hedged reads are triggered too
+            quickly.</para>
+        </listitem>
+        <listitem>
+          <para>hedgeReadOpsWin - the number of times the hedged read thread was faster than the
+            original thread. This could indicate that a given RegionServer is having trouble
+            servicing requests.</para>
+        </listitem>
+      </itemizedlist>
+    </section>
 
   </section>
   <!--  reading -->
