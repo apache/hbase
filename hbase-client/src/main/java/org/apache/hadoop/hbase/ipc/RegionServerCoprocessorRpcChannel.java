@@ -13,7 +13,6 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -23,6 +22,7 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
+import org.apache.hadoop.hbase.util.ByteStringer;
 
 
 import com.google.protobuf.Descriptors;
@@ -55,7 +55,7 @@ public class RegionServerCoprocessorRpcChannel extends CoprocessorRpcChannel {
     }
     final ClientProtos.CoprocessorServiceCall call =
         ClientProtos.CoprocessorServiceCall.newBuilder()
-            .setRow(HBaseZeroCopyByteString.wrap(HConstants.EMPTY_BYTE_ARRAY))
+            .setRow(ByteStringer.wrap(HConstants.EMPTY_BYTE_ARRAY))
             .setServiceName(method.getService().getFullName()).setMethodName(method.getName())
             .setRequest(request.toByteString()).build();
     CoprocessorServiceResponse result =
