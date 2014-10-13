@@ -35,6 +35,8 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
@@ -55,10 +57,18 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * The administrative API for HBase. Obtain an instance from a {@link Connection}.
+ * The administrative API for HBase. Obtain an instance from an {@link Connection#getAdmin()} and
+ * call {@link #close()} afterwards.
+ * <p>Admin can be used to create, drop, list, enable and disable tables, add and drop table
+ * column families and other administrative operations.
  *
+ * @see ConnectionFactory
+ * @see Connection
+ * @see Table
  * @since 0.99.0
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public interface Admin extends Abortable, Closeable {
   int getOperationTimeout();
 

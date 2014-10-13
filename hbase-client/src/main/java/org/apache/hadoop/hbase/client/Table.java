@@ -27,6 +27,7 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -38,13 +39,17 @@ import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 
 /**
  * Used to communicate with a single HBase table.
- * Obtain an instance from a {@link Connection}.
+ * Obtain an instance from a {@link Connection} and call {@link #close()} afterwards.
  *
+ * <p>Table can be used to get, put, delete or scan data from a table.
+ * @see ConnectionFactory
+ * @see Connection
+ * @see Admin
+ * @see RegionLocator
  * @since 0.99.0
  */
-
 @InterfaceAudience.Public
-@InterfaceStability.Stable
+@InterfaceStability.Evolving
 public interface Table extends Closeable {
   /**
    * Gets the fully qualified table name instance of this table.
