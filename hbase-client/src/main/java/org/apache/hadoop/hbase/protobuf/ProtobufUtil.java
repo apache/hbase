@@ -1627,7 +1627,7 @@ public final class ProtobufUtil {
    * Make a region server endpoint call
    * @param client
    * @param call
-   * @return
+   * @return CoprocessorServiceResponse
    * @throws IOException
    */
   public static CoprocessorServiceResponse execRegionServerService(

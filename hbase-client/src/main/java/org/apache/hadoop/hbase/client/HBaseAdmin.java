@@ -36,8 +36,6 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -60,6 +58,8 @@ import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
@@ -3376,7 +3376,7 @@ public class HBaseAdmin implements Abortable, Closeable {
   public CoprocessorRpcChannel coprocessorService() {
     return new MasterCoprocessorRpcChannel(connection);
   }
-  
+
   /**
    * Creates and returns a {@link com.google.protobuf.RpcChannel} instance
    * connected to the passed region server.
@@ -3395,12 +3395,12 @@ public class HBaseAdmin implements Abortable, Closeable {
    *     .build();
    * MyCallResponse response = service.myCall(null, request);
    * </pre></blockquote></div>
-   * 
-   * @param the server name to which the endpoint call is made
+   *
+   * @param sn the server name to which the endpoint call is made
    * @return A RegionServerCoprocessorRpcChannel instance
    */
   public CoprocessorRpcChannel coprocessorService(ServerName sn) {
     return new RegionServerCoprocessorRpcChannel(connection, sn);
   }
-  
+
 }

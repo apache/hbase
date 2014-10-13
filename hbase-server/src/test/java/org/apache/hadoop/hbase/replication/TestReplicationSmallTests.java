@@ -383,7 +383,8 @@ public class TestReplicationSmallTests extends TestReplicationBase {
    * @throws Exception
    */
   @Test(timeout=300000)
-  public void loadTesting() throws Exception {
+  public void testLoading() throws Exception {
+    LOG.info("Writing out rows to table1 in testLoading");
     htable1.setWriteBufferSize(1024);
     htable1.setAutoFlush(false, true);
     for (int i = 0; i < NB_ROWS_IN_BIG_BATCH; i++) {
@@ -401,16 +402,18 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
     assertEquals(NB_ROWS_IN_BIG_BATCH, res.length);
 
-
+    LOG.info("Looking in table2 for replicated rows in testLoading");
     long start = System.currentTimeMillis();
-    for (int i = 0; i < NB_RETRIES; i++) {
+    // Retry more than NB_RETRIES.  As it was, retries were done in 5 seconds and we'd fail
+    // sometimes.
+    final long retries = NB_RETRIES * 10;
+    for (int i = 0; i < retries; i++) {
       scan = new Scan();
-
       scanner = htable2.getScanner(scan);
       res = scanner.next(NB_ROWS_IN_BIG_BATCH);
       scanner.close();
       if (res.length != NB_ROWS_IN_BIG_BATCH) {
-        if (i == NB_RETRIES - 1) {
+        if (i == retries - 1) {
           int lastRow = -1;
           for (Result result : res) {
             int currentRow = Bytes.toInt(result.getRow());
@@ -424,7 +427,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
             res.length + " instead of " + NB_ROWS_IN_BIG_BATCH + "; waited=" +
             (System.currentTimeMillis() - start) + "ms");
         } else {
-          LOG.info("Only got " + res.length + " rows");
+          LOG.info("Only got " + res.length + " rows... retrying");
           Thread.sleep(SLEEP_TIME);
         }
       } else {

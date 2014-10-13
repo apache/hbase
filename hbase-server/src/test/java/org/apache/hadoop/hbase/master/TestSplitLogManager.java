@@ -200,7 +200,7 @@ public class TestSplitLogManager {
    * Test whether the splitlog correctly creates a task in zookeeper
    * @throws Exception
    */
-  @Test
+  @Test (timeout=180000)
   public void testTaskCreation() throws Exception {
 
     LOG.info("TestTaskCreation - test the creation of a task in zk");
@@ -215,7 +215,7 @@ public class TestSplitLogManager {
     assertTrue(slt.isUnassigned(DUMMY_MASTER));
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testOrphanTaskAcquisition() throws Exception {
     LOG.info("TestOrphanTaskAcquisition");
 
@@ -239,7 +239,7 @@ public class TestSplitLogManager {
     waitForCounter(tot_mgr_rescan, 0, 1, to + to/2);
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testUnassignedOrphan() throws Exception {
     LOG.info("TestUnassignedOrphan - an unassigned task is resubmitted at" +
         " startup");
@@ -268,7 +268,7 @@ public class TestSplitLogManager {
     assertTrue(ZKUtil.checkExists(zkw, tasknode) > version);
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testMultipleResubmits() throws Exception {
     LOG.info("TestMultipleResbmits - no indefinite resubmissions");
 
@@ -301,7 +301,7 @@ public class TestSplitLogManager {
     assertEquals(2L, tot_mgr_resubmit.get() - tot_mgr_resubmit_force.get());
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testRescanCleanup() throws Exception {
     LOG.info("TestRescanCleanup - ensure RESCAN nodes are cleaned up");
 
@@ -330,7 +330,7 @@ public class TestSplitLogManager {
     waitForCounter(tot_mgr_rescan_deleted, 0, 1, to/2);
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testTaskDone() throws Exception {
     LOG.info("TestTaskDone - cleanup task node once in DONE state");
 
@@ -349,7 +349,7 @@ public class TestSplitLogManager {
     assertTrue(ZKUtil.checkExists(zkw, tasknode) == -1);
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testTaskErr() throws Exception {
     LOG.info("TestTaskErr - cleanup task node once in ERR state");
 
@@ -372,7 +372,7 @@ public class TestSplitLogManager {
     conf.setInt("hbase.splitlog.max.resubmit", SplitLogManager.DEFAULT_MAX_RESUBMIT);
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testTaskResigned() throws Exception {
     LOG.info("TestTaskResigned - resubmit task node once in RESIGNED state");
     assertEquals(tot_mgr_resubmit.get(), 0);
@@ -398,7 +398,7 @@ public class TestSplitLogManager {
     assertTrue(slt.isUnassigned(DUMMY_MASTER));
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testUnassignedTimeout() throws Exception {
     LOG.info("TestUnassignedTimeout - iff all tasks are unassigned then" +
         " resubmit");
@@ -434,7 +434,7 @@ public class TestSplitLogManager {
     waitForCounter(tot_mgr_resubmit_unassigned, 0, 1, 2 * to + to/2);
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testDeadWorker() throws Exception {
     LOG.info("testDeadWorker");
 
@@ -462,7 +462,7 @@ public class TestSplitLogManager {
     return;
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testWorkerCrash() throws Exception {
     slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER, false, null);
     TaskBatch batch = new TaskBatch();
@@ -486,7 +486,7 @@ public class TestSplitLogManager {
     Assert.assertEquals(1, tot_mgr_resubmit.get());
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testEmptyLogDir() throws Exception {
     LOG.info("testEmptyLogDir");
     slm = new SplitLogManager(zkw, conf, stopper, master, DUMMY_MASTER, false, null);
