@@ -1264,7 +1264,7 @@ public class TestHBaseFsck {
       setupTableWithRegionReplica(table, 2);
       assertEquals(ROWKEYS.length, countRows());
       NavigableMap<HRegionInfo, ServerName> map = MetaScanner.allTableRegions(conf, null,
-          tbl.getName(), false);
+          tbl.getName());
       int i = 0;
       // store the HRIs of the regions we will mess up
       for (Map.Entry<HRegionInfo, ServerName> m : map.entrySet()) {
@@ -1296,7 +1296,7 @@ public class TestHBaseFsck {
       i = 0;
       HRegionInfo[] newHris = new HRegionInfo[2];
       // get all table's regions from meta
-      map = MetaScanner.allTableRegions(conf, null, tbl.getName(), false);
+      map = MetaScanner.allTableRegions(conf, null, tbl.getName());
       // get the HRIs of the new regions (hbck created new regions for fixing the hdfs mess-up)
       for (Map.Entry<HRegionInfo, ServerName> m : map.entrySet()) {
         if (m.getKey().getStartKey().length > 0 &&

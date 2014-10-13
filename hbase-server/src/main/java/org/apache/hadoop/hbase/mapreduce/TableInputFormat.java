@@ -109,6 +109,8 @@ implements Configurable {
     this.conf = configuration;
     TableName tableName = TableName.valueOf(conf.get(INPUT_TABLE));
     try {
+      // TODO: Replace setHTable() with initializeTable() once we have 
+      //       a clean method of closing a connection.
       setHTable(new HTable(new Configuration(conf), tableName));
     } catch (Exception e) {
       LOG.error(StringUtils.stringifyException(e));

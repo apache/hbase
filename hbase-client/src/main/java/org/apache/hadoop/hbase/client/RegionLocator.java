@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.util.Pair;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Used to view region location information for a single HBase table.
@@ -52,6 +53,14 @@ public interface RegionLocator extends Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   public HRegionLocation getRegionLocation(final byte [] row, boolean reload)
+    throws IOException;
+
+  /**
+   * Retrieves all of the regions associated with this table.
+   * @return a {@link List} of all regions associated with this table.
+   * @throws IOException if a remote or network exception occurs
+   */
+  public List<HRegionLocation> getAllRegionLocations()
     throws IOException;
 
   /**

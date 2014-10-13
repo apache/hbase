@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -286,12 +287,25 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    * Allows subclasses to set the {@link HTable}.
    *
    * @param table  The table to get the data from.
+   * @throws IOExceptfion 
    * @deprecated Use {@link #initializeTable(Connection, TableName)} instead.
    */
   @Deprecated
-  protected void setHTable(HTable table) {
+  protected void setHTable(HTable table) throws IOException {
     this.table = table;
     this.regionLocator = table;
+  }
+
+  /**
+   * Allows subclasses to initalize the table information.
+   *
+   * @param connection  The {@link Connection} to the HBase cluster.
+   * @param tableName  The {@link TableName} of the table to process. 
+   * @throws IOExceptfion 
+   */
+  protected void initializeTable(Connection connection, TableName tableName) throws IOException {
+    this.table = connection.getTable(tableName);
+    this.regionLocator = connection.getRegionLocator(tableName);
   }
 
   /**

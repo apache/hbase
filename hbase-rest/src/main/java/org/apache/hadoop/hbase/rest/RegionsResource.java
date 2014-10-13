@@ -77,7 +77,7 @@ public class RegionsResource extends ResourceBase {
       TableName tableName = TableName.valueOf(tableResource.getName());
       TableInfoModel model = new TableInfoModel(tableName.getNameAsString());
       Map<HRegionInfo,ServerName> regions = MetaScanner.allTableRegions(
-        servlet.getConfiguration(), null, tableName, false);
+        servlet.getConfiguration(), null, tableName);
       for (Map.Entry<HRegionInfo,ServerName> e: regions.entrySet()) {
         HRegionInfo hri = e.getKey();
         ServerName addr = e.getValue();

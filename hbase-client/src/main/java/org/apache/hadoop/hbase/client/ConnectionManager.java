@@ -1008,7 +1008,7 @@ class ConnectionManager {
     public List<HRegionLocation> locateRegions(final TableName tableName,
         final boolean useCache, final boolean offlined) throws IOException {
       NavigableMap<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(conf, this,
-          tableName, offlined);
+          tableName);
       final List<HRegionLocation> locations = new ArrayList<HRegionLocation>();
       for (HRegionInfo regionInfo : regions.keySet()) {
         RegionLocations list = locateRegion(tableName, regionInfo.getStartKey(), useCache, true);
