@@ -79,7 +79,14 @@ import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
 
 /**
- * An implementation of {@link Table}. Used to communicate with a single HBase table.
+ *
+ * HTable is no longer a client API. It is marked InterfaceAudience.Private indicating that
+ * this is an HBase-internal class as defined in
+ * https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/InterfaceClassification.html
+ * There are no guarantees for backwards source / binary compatibility and methods or class can
+ * change or go away without deprecation. Use {@link Connection#getTable(TableName)}
+ * to obtain an instance of {@link Table} instead of constructing an HTable directly.
+ * <p>An implementation of {@link Table}. Used to communicate with a single HBase table.
  * Lightweight. Get as needed and just close when done.
  * Instances of this class SHOULD NOT be constructed directly.
  * Obtain an instance via {@link Connection}. See {@link ConnectionFactory}
@@ -90,11 +97,12 @@ import com.google.protobuf.ServiceException;
  * be corrupted if multiple threads contend over a single HTable instance.
  * In the case of reads, some fields used by a Scan are shared among all threads.
  *
- * @see Admin for create, drop, list, enable and disable of tables.
+ * @see Table
+ * @see Admin
  * @see Connection
  * @see ConnectionFactory
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Stable
 public class HTable implements HTableInterface, RegionLocator {
   private static final Log LOG = LogFactory.getLog(HTable.class);

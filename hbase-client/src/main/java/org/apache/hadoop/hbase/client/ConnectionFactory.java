@@ -47,10 +47,13 @@ import org.apache.hadoop.hbase.security.UserProvider;
  *   connection.close();
  * }
  * </pre>
- * 
- * Similarly, {@link Connection} also returns {@link RegionLocator} implementations.
+ *
+ * Similarly, {@link Connection} also returns {@link Admin} and {@link RegionLocator}
+ * implementations.
  *
  * This class replaces {@link HConnectionManager}, which is now deprecated.
+ * @see Connection
+ * @since 0.99.0
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -65,6 +68,7 @@ public class ConnectionFactory {
    * encapsulates all housekeeping for a connection to the cluster. All tables and interfaces
    * created from returned connection share zookeeper connection, meta cache, and connections
    * to region servers and masters.
+   * <br>
    * The caller is responsible for calling {@link Connection#close()} on the returned
    * connection instance.
    *
@@ -92,6 +96,7 @@ public class ConnectionFactory {
    * encapsulates all housekeeping for a connection to the cluster. All tables and interfaces
    * created from returned connection share zookeeper connection, meta cache, and connections
    * to region servers and masters.
+   * <br>
    * The caller is responsible for calling {@link Connection#close()} on the returned
    * connection instance.
    *
@@ -120,6 +125,7 @@ public class ConnectionFactory {
    * encapsulates all housekeeping for a connection to the cluster. All tables and interfaces
    * created from returned connection share zookeeper connection, meta cache, and connections
    * to region servers and masters.
+   * <br>
    * The caller is responsible for calling {@link Connection#close()} on the returned
    * connection instance.
    *
@@ -150,6 +156,7 @@ public class ConnectionFactory {
    * encapsulates all housekeeping for a connection to the cluster. All tables and interfaces
    * created from returned connection share zookeeper connection, meta cache, and connections
    * to region servers and masters.
+   * <br>
    * The caller is responsible for calling {@link Connection#close()} on the returned
    * connection instance.
    *
@@ -180,6 +187,7 @@ public class ConnectionFactory {
    * encapsulates all housekeeping for a connection to the cluster. All tables and interfaces
    * created from returned connection share zookeeper connection, meta cache, and connections
    * to region servers and masters.
+   * <br>
    * The caller is responsible for calling {@link Connection#close()} on the returned
    * connection instance.
    *

@@ -153,15 +153,22 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.ServiceException;
 
 /**
- * Provides an interface to manage HBase database table metadata + general
- * administrative functions.  Use HBaseAdmin to create, drop, list, enable and
- * disable tables. Use it also to add and drop table column families.
+ * HBaseAdmin is no longer a client API. It is marked InterfaceAudience.Private indicating that
+ * this is an HBase-internal class as defined in
+ * https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-common/InterfaceClassification.html
+ * There are no guarantees for backwards source / binary compatibility and methods or class can
+ * change or go away without deprecation.
+ * Use {@link Connection#getAdmin()} to obtain an instance of {@link Admin} instead of constructing
+ * an HBaseAdmin directly.
  *
- * <p>See {@link HTable} to add, update, and delete data from an individual table.
- * <p>Currently HBaseAdmin instances are not expected to be long-lived.  For
- * example, an HBaseAdmin instance will not ride over a Master restart.
+ * <p>Connection should be an <i>unmanaged</i> connection obtained via
+ * {@link ConnectionFactory#createConnection(Configuration)}
+ *
+ * @see ConnectionFactory
+ * @see Connection
+ * @see Admin
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class HBaseAdmin implements Admin {
   private static final Log LOG = LogFactory.getLog(HBaseAdmin.class);
@@ -191,7 +198,10 @@ public class HBaseAdmin implements Admin {
    * See {@link #HBaseAdmin(Connection connection)}
    *
    * @param c Configuration object. Copied internally.
+   * @deprecated Constructing HBaseAdmin objects manually has been deprecated.
+   * Use {@link Connection#getAdmin()} to obtain an instance of {@link Admin} instead.
    */
+  @Deprecated
   public HBaseAdmin(Configuration c)
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     // Will not leak connections, as the new implementation of the constructor
@@ -213,7 +223,8 @@ public class HBaseAdmin implements Admin {
    * @param connection The Connection instance to use
    * @throws MasterNotRunningException, ZooKeeperConnectionException are not
    *  thrown anymore but kept into the interface for backward api compatibility
-   * @deprecated Do not use this internal ctor.
+   * @deprecated Constructing HBaseAdmin objects manually has been deprecated.
+   * Use {@link Connection#getAdmin()} to obtain an instance of {@link Admin} instead.
    */
   @Deprecated
   public HBaseAdmin(Connection connection)
@@ -3642,7 +3653,7 @@ public class HBaseAdmin implements Admin {
       return true;
     }
   }
-  
+
   /**
    * Creates and returns a {@link com.google.protobuf.RpcChannel} instance
    * connected to the passed region server.
@@ -3661,7 +3672,7 @@ public class HBaseAdmin implements Admin {
    *     .build();
    * MyCallResponse response = service.myCall(null, request);
    * </pre></blockquote></div>
-   * 
+   *
    * @param sn the server name to which the endpoint call is made
    * @return A RegionServerCoprocessorRpcChannel instance
    */
@@ -3669,5 +3680,5 @@ public class HBaseAdmin implements Admin {
   public CoprocessorRpcChannel coprocessorService(ServerName sn) {
     return new RegionServerCoprocessorRpcChannel(connection, sn);
   }
-  
+
 }

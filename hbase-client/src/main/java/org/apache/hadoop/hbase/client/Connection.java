@@ -1,5 +1,5 @@
 /**
- * 
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.TableName;
  *
  * <p>This class replaces {@link HConnection}, which is now deprecated.
  * @see ConnectionFactory
+ * @since 0.99.0
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -60,11 +61,11 @@ public interface Connection extends Abortable, Closeable {
    *   -- Most of the classes with names H is deprecated in favor of non-H versions
    *   (Table, Connection vs HConnection, etc)
    *   -- Only real client-facing public methods are allowed
-   *  - Connection should contain only getTable(), gAdmin() kind of general methods.
+   *  - Connection should contain only getTable(), getAdmin() kind of general methods.
    */
 
   /**
-   * @return Configuration instance being used by this HConnection instance.
+   * @return Configuration instance being used by this Connection instance.
    */
   Configuration getConfiguration();
 
@@ -73,7 +74,10 @@ public interface Connection extends Abortable, Closeable {
    * The returned Table is not thread safe, a new instance should be created for each using thread.
    * This is a lightweight operation, pooling or caching of the returned Table
    * is neither required nor desired.
-   * 
+   * <br>
+   * The caller is responsible for calling {@link Table#close()} on the returned
+   * table instance.
+   *
    * @param tableName the name of the table
    * @return a Table to use for interactions with this table
    */
@@ -84,6 +88,9 @@ public interface Connection extends Abortable, Closeable {
    * The returned Table is not thread safe, a new instance should be created for each using thread.
    * This is a lightweight operation, pooling or caching of the returned Table
    * is neither required nor desired.
+   * <br>
+   * The caller is responsible for calling {@link Table#close()} on the returned
+   * table instance.
    *
    * @param tableName the name of the table
    * @param pool The thread pool to use for batch operations, null to use a default pool.
@@ -97,6 +104,9 @@ public interface Connection extends Abortable, Closeable {
    *
    * This is a lightweight operation.  Pooling or caching of the returned RegionLocator is neither
    * required nor desired.
+   * <br>
+   * The caller is responsible for calling {@link RegionLocator#close()} on the returned
+   * RegionLocator instance.
    *
    * RegionLocator needs to be unmanaged
    *
@@ -110,6 +120,9 @@ public interface Connection extends Abortable, Closeable {
    * The returned Admin is not guaranteed to be thread-safe.  A new instance should be created for
    * each using thread.  This is a lightweight operation.  Pooling or caching of the returned
    * Admin is not recommended.
+   * <br>
+   * The caller is responsible for calling {@link Admin#close()} on the returned
+   * Admin instance.
    *
    * @return an Admin instance for cluster administration
    */
