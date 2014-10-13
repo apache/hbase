@@ -189,7 +189,7 @@ public class TestMetaScanner {
          while(!isStopped()) {
            try {
             NavigableMap<HRegionInfo, ServerName> regions =
-                MetaScanner.allTableRegions(TEST_UTIL.getConfiguration(), null, TABLENAME, false);
+                MetaScanner.allTableRegions(TEST_UTIL.getConfiguration(), null, TABLENAME);
 
             LOG.info("-------");
             byte[] lastEndKey = HConstants.EMPTY_START_ROW;

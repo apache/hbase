@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
@@ -614,12 +615,29 @@ public class HTable implements HTableInterface, RegionLocator {
    * This is mainly useful for the MapReduce integration.
    * @return A map of HRegionInfo with it's server address
    * @throws IOException if a remote or network exception occurs
-   * @deprecated This is no longer a public API
+   * @deprecated This is no longer a public API.  Use {@link #getAllRegionLocations()} instead.
    */
   @Deprecated
   public NavigableMap<HRegionInfo, ServerName> getRegionLocations() throws IOException {
     // TODO: Odd that this returns a Map of HRI to SN whereas getRegionLocator, singular, returns an HRegionLocation.
-    return MetaScanner.allTableRegions(getConfiguration(), this.connection, getName(), false);
+    return MetaScanner.allTableRegions(getConfiguration(), this.connection, getName());
+  }
+
+  /**
+   * Gets all the regions and their address for this table.
+   * <p>
+   * This is mainly useful for the MapReduce integration.
+   * @return A map of HRegionInfo with it's server address
+   * @throws IOException if a remote or network exception occurs
+   */
+  @Override
+  public List<HRegionLocation> getAllRegionLocations() throws IOException {
+    NavigableMap<HRegionInfo, ServerName> locations = getRegionLocations();
+    ArrayList<HRegionLocation> regions = new ArrayList<>(locations.size());
+    for (Entry<HRegionInfo, ServerName> entry : locations.entrySet()) {
+      regions.add(new HRegionLocation(entry.getKey(), entry.getValue()));
+    }
+    return regions;
   }
 
   /**

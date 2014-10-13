@@ -253,7 +253,7 @@ public class TestEndToEndSplitTransaction {
         Random random = new Random();
         for (int i= 0; i< 5; i++) {
           NavigableMap<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(conf, null,
-              tableName, false);
+              tableName);
           if (regions.size() == 0) {
             continue;
           }
@@ -326,7 +326,7 @@ public class TestEndToEndSplitTransaction {
 
       //MetaScanner.allTableRegions()
       NavigableMap<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(conf, null,
-          tableName, false);
+          tableName);
       verifyTableRegions(regions.keySet());
 
       //MetaScanner.listAllRegions()

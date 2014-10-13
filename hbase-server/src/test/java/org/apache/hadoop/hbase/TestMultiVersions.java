@@ -210,8 +210,7 @@ public class TestMultiVersions {
     NavigableMap<HRegionInfo, ServerName> locations = table.getRegionLocations();
     assertEquals(2, locations.size());
     int index = 0;
-    for (Map.Entry<HRegionInfo, ServerName> e: locations.entrySet()) {
-      HRegionInfo hri = e.getKey();
+    for (HRegionInfo hri: locations.keySet()) {
       if (index == 0) {
         assertTrue(Bytes.equals(HConstants.EMPTY_START_ROW, hri.getStartKey()));
         assertTrue(Bytes.equals(hri.getEndKey(), splitRows[0]));

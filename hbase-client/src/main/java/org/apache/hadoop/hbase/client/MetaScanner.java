@@ -132,8 +132,10 @@ public class MetaScanner {
       final byte[] row, final int rowLimit, final TableName metaTableName)
     throws IOException {
 
+    boolean closeConnection = false;
     if (connection == null){
-      connection = ConnectionManager.getConnectionInternal(configuration);
+      connection = ConnectionFactory.createConnection(configuration);
+      closeConnection = true;
     }
 
     int rowUpperLimit = rowLimit > 0 ? rowLimit: Integer.MAX_VALUE;
@@ -217,7 +219,9 @@ public class MetaScanner {
           LOG.debug("Got exception in closing meta table", t);
         }
       }
-
+      if (closeConnection) {
+        connection.close();
+      }
     }
   }
 
@@ -276,10 +280,24 @@ public class MetaScanner {
    * leave out offlined regions from returned list.
    * @return Map of all user-space regions to servers
    * @throws IOException
+   * @deprecated Use {@link #allTableRegions(Configuration, Connection, TableName)} instead
+   */
+  @Deprecated
+  public static NavigableMap<HRegionInfo, ServerName> allTableRegions(Configuration conf,
+      Connection connection, final TableName tableName, boolean offlined) throws IOException {
+    return allTableRegions(conf, connection, tableName);
+  }
+
+  /**
+   * Lists all of the table regions currently in META.
+   * @param conf
+   * @param offlined True if we are to include offlined regions, false and we'll
+   * leave out offlined regions from returned list.
+   * @return Map of all user-space regions to servers
+   * @throws IOException
    */
   public static NavigableMap<HRegionInfo, ServerName> allTableRegions(Configuration conf,
-      Connection connection, final TableName tableName,
-      final boolean offlined) throws IOException {
+      Connection connection, final TableName tableName) throws IOException {
     final NavigableMap<HRegionInfo, ServerName> regions =
       new TreeMap<HRegionInfo, ServerName>();
     MetaScannerVisitor visitor = new TableMetaScannerVisitor(tableName) {
