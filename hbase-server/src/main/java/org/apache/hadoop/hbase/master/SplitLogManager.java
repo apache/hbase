@@ -46,7 +46,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Chore;
-import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
@@ -570,9 +569,9 @@ public class SplitLogManager {
    * @return whether log is replaying
    */
   public boolean isLogReplaying() {
-    CoordinatedStateManager m = server.getCoordinatedStateManager();
-    if (m == null) return false;
-    return ((BaseCoordinatedStateManager)m).getSplitLogManagerCoordination().isReplaying();
+    if (server.getCoordinatedStateManager() == null) return false;
+    return ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
+        .getSplitLogManagerCoordination().isReplaying();
   }
 
   /**

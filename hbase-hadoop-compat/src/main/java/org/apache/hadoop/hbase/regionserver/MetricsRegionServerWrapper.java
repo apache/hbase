@@ -246,14 +246,4 @@ public interface MetricsRegionServerWrapper {
    * Get the total amount of data processed during major compactions, in bytes.
    */
   long getMajorCompactedCellsSize();
-
-  /**
-   * @return Count of hedged read operations
-   */
-  public long getHedgedReadOps();
-
-  /**
-   * @return Count of times a hedged read beat out the primary read.
-   */
-  public long getHedgedReadWins();
 }

@@ -70,8 +70,6 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FSProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hdfs.DFSClient;
-import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.FSConstants;
 import org.apache.hadoop.io.IOUtils;
@@ -1871,48 +1869,5 @@ public abstract class FSUtils {
     // But short circuit buffer size is normally not set.  Put in place the hbase wanted size.
     int hbaseSize = conf.getInt("hbase." + dfsKey, defaultSize);
     conf.setIfUnset(dfsKey, Integer.toString(hbaseSize));
-  }
-
-  /**
-   * @param c
-   * @return The DFSClient DFSHedgedReadMetrics instance or null if can't be found or not on hdfs.
-   * @throws IOException 
-   */
-  public static DFSHedgedReadMetrics getDFSHedgedReadMetrics(final Configuration c)
-      throws IOException {
-    if (!isHDFS(c)) return null;
-    // getHedgedReadMetrics is package private. Get the DFSClient instance that is internal
-    // to the DFS FS instance and make the method getHedgedReadMetrics accessible, then invoke it
-    // to get the singleton instance of DFSHedgedReadMetrics shared by DFSClients.
-    final String name = "getHedgedReadMetrics";
-    DFSClient dfsclient = ((DistributedFileSystem)FileSystem.get(c)).getClient();
-    Method m;
-    try {
-      m = dfsclient.getClass().getDeclaredMethod(name);
-    } catch (NoSuchMethodException e) {
-      LOG.warn("Failed find method " + name + " in dfsclient; no hedged read metrics: " +
-          e.getMessage());
-      return null;
-    } catch (SecurityException e) {
-      LOG.warn("Failed find method " + name + " in dfsclient; no hedged read metrics: " +
-          e.getMessage());
-      return null;
-    }
-    m.setAccessible(true);
-    try {
-      return (DFSHedgedReadMetrics)m.invoke(dfsclient);
-    } catch (IllegalAccessException e) {
-      LOG.warn("Failed invoking method " + name + " on dfsclient; no hedged read metrics: " +
-          e.getMessage());
-      return null;
-    } catch (IllegalArgumentException e) {
-      LOG.warn("Failed invoking method " + name + " on dfsclient; no hedged read metrics: " +
-          e.getMessage());
-      return null;
-    } catch (InvocationTargetException e) {
-      LOG.warn("Failed invoking method " + name + " on dfsclient; no hedged read metrics: " +
-          e.getMessage());
-      return null;
-    }
   }
 }

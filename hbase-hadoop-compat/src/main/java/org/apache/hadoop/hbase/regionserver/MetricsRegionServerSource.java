@@ -234,9 +234,4 @@ public interface MetricsRegionServerSource extends BaseSource {
   String MAJOR_COMPACTED_CELLS_SIZE_DESC =
       "The total amount of data processed during major compactions, in bytes";
 
-  String HEDGED_READS = "hedgedReads";
-  String HEDGED_READS_DESC = "The number of times we started a hedged read";
-  String HEDGED_READ_WINS = "hedgedReadWins";
-  String HEDGED_READ_WINS_DESC =
-      "The number of times we started a hedged read and a hedged read won";
 }

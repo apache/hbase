@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -34,9 +33,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 
 /**
@@ -81,11 +78,6 @@ class MetricsRegionServerWrapperImpl
   private Runnable runnable;
   private long period;
 
-  /**
-   * Can be null if not on hdfs.
-   */
-  private DFSHedgedReadMetrics dfsHedgedReadMetrics;
-
   public MetricsRegionServerWrapperImpl(final HRegionServer regionServer) {
     this.regionServer = regionServer;
     initBlockCache();
@@ -99,11 +91,6 @@ class MetricsRegionServerWrapperImpl
     this.executor.scheduleWithFixedDelay(this.runnable, this.period, this.period,
       TimeUnit.MILLISECONDS);
 
-    try {
-      this.dfsHedgedReadMetrics = FSUtils.getDFSHedgedReadMetrics(regionServer.getConfiguration());
-    } catch (IOException e) {
-      LOG.warn("Failed to get hedged metrics", e);
-    }
     if (LOG.isInfoEnabled()) {
       LOG.info("Computing regionserver metrics every " + this.period + " milliseconds");
     }
@@ -525,15 +512,5 @@ class MetricsRegionServerWrapperImpl
       compactedCellsSize = tempCompactedCellsSize;
       majorCompactedCellsSize = tempMajorCompactedCellsSize;
     }
-  }
-
-  @Override
-  public long getHedgedReadOps() {
-    return this.dfsHedgedReadMetrics == null? 0: this.dfsHedgedReadMetrics.getHedgedReadOps();
-  }
-
-  @Override
-  public long getHedgedReadWins() {
-    return this.dfsHedgedReadMetrics == null? 0: this.dfsHedgedReadMetrics.getHedgedReadWins();
   }
 }
