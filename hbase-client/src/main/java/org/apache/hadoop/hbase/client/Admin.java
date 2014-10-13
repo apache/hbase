@@ -55,7 +55,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
- * The administrative API for HBase. Obtain an instance from an {@link HConnection}.
+ * The administrative API for HBase. Obtain an instance from a {@link Connection}.
  *
  * @since 0.99.0
  */
@@ -1243,8 +1243,8 @@ public interface Admin extends Abortable, Closeable {
    * @return A MasterCoprocessorRpcChannel instance
    */
   CoprocessorRpcChannel coprocessorService();
-  
-  
+
+
   /**
    * Creates and returns a {@link com.google.protobuf.RpcChannel} instance
    * connected to the passed region server.
@@ -1263,10 +1263,9 @@ public interface Admin extends Abortable, Closeable {
    *     .build();
    * MyCallResponse response = service.myCall(null, request);
    * </pre></blockquote></div>
-   * 
-   * @param the server name to which the endpoint call is made
+   *
+   * @param sn the server name to which the endpoint call is made
    * @return A RegionServerCoprocessorRpcChannel instance
    */
   CoprocessorRpcChannel coprocessorService(ServerName sn);
-  
 }
