@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -94,6 +95,7 @@ public class ImportTsv extends Configured implements Tool {
   final static String DEFAULT_ATTRIBUTES_SEPERATOR = "=>";
   final static String DEFAULT_MULTIPLE_ATTRIBUTES_SEPERATOR = ",";
   final static Class DEFAULT_MAPPER = TsvImporterMapper.class;
+  public final static String CREATE_TABLE_CONF_KEY = "create.table";
 
   public static class TsvParser {
     /**
@@ -432,10 +434,16 @@ public class ImportTsv extends Configured implements Tool {
 
     if (hfileOutPath != null) {
       if (!admin.tableExists(tableName)) {
-        LOG.warn(format("Table '%s' does not exist.", tableName));
-        // TODO: this is backwards. Instead of depending on the existence of a table,
-        // create a sane splits file for HFileOutputFormat based on data sampling.
-        createTable(admin, tableName, columns);
+        String errorMsg = format("Table '%s' does not exist.", tableName);
+        if ("yes".equalsIgnoreCase(conf.get(CREATE_TABLE_CONF_KEY, "yes"))) {
+          LOG.warn(errorMsg);
+          // TODO: this is backwards. Instead of depending on the existence of a table,
+          // create a sane splits file for HFileOutputFormat based on data sampling.
+          createTable(admin, tableName, columns);
+        } else {
+          LOG.error(errorMsg);
+          throw new TableNotFoundException(errorMsg);
+        }
       }
       HTable table = new HTable(conf, tableName);
       job.setReducerClass(PutSortReducer.class);
@@ -534,6 +542,9 @@ public class ImportTsv extends Configured implements Tool {
       "  -D" + MAPPER_CONF_KEY + "=my.Mapper - A user-defined Mapper to use instead of " +
       DEFAULT_MAPPER.getName() + "\n" +
       "  -D" + JOB_NAME_CONF_KEY + "=jobName - use the specified mapreduce job name for the import\n" +
+      "  -D" + CREATE_TABLE_CONF_KEY + "=no - can be used to avoid creation of table by this tool\n" +
+      "  Note: if you set this to 'no', then the target table must already exist in HBase\n" +
+      "\n" +
       "For performance consider the following options:\n" +
       "  -Dmapreduce.map.speculative=false\n" +
       "  -Dmapreduce.reduce.speculative=false";

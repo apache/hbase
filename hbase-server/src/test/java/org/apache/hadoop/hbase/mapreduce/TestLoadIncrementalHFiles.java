@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -421,6 +422,15 @@ public class TestLoadIncrementalHFiles {
       assertTrue(ie.getMessage().contains("Trying to load more than "
         + MAX_FILES_PER_REGION_PER_FAMILY + " hfiles"));
     }
+  }
+
+  @Test(expected = TableNotFoundException.class)
+  public void testWithoutAnExistingTableAndCreateTableSetToNo() throws Exception {
+    Configuration conf = util.getConfiguration();
+    conf.set(LoadIncrementalHFiles.CREATE_TABLE_CONF_KEY, "no");
+    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
+    String[] args = { "directory", "nonExistingTable" };
+    loader.run(args);
   }
 }
 
