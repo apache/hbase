@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -92,6 +93,7 @@ public class ImportTsv extends Configured implements Tool {
   final static String DEFAULT_ATTRIBUTES_SEPERATOR = "=>";
   final static String DEFAULT_MULTIPLE_ATTRIBUTES_SEPERATOR = ",";
   final static Class DEFAULT_MAPPER = TsvImporterMapper.class;
+  public final static String CREATE_TABLE_CONF_KEY = "create.table";
 
   public static class TsvParser {
     /**
@@ -129,7 +131,7 @@ public class ImportTsv extends Configured implements Tool {
     /**
      * @param columnsSpecification the list of columns to parser out, comma separated.
      * The row key should be the special token TsvParser.ROWKEY_COLUMN_SPEC
-     * @param separatorStr 
+     * @param separatorStr
      */
     public TsvParser(String columnsSpecification, String separatorStr) {
       // Configure separator
@@ -253,7 +255,7 @@ public class ImportTsv extends Configured implements Tool {
       public int getRowKeyLength() {
         return getColumnLength(rowKeyColumnIndex);
       }
-      
+
       public long getTimestamp(long ts) throws BadTsvLineException {
         // Return ts if HBASE_TS_KEY is not configured in column spec
         if (!hasTimestamp()) {
@@ -279,7 +281,7 @@ public class ImportTsv extends Configured implements Tool {
               getColumnLength(attrKeyColumnIndex));
         }
       }
-      
+
       public String[] getIndividualAttributes() {
         String attributes = getAttributes();
         if (attributes != null) {
@@ -288,7 +290,7 @@ public class ImportTsv extends Configured implements Tool {
           return null;
         }
       }
-       
+
       public int getAttributeKeyOffset() {
         if (hasAttributes()) {
           return getColumnOffset(attrKeyColumnIndex);
@@ -430,10 +432,16 @@ public class ImportTsv extends Configured implements Tool {
 
     if (hfileOutPath != null) {
       if (!admin.tableExists(tableName)) {
-        LOG.warn(format("Table '%s' does not exist.", tableName));
-        // TODO: this is backwards. Instead of depending on the existence of a table,
-        // create a sane splits file for HFileOutputFormat based on data sampling.
-        createTable(admin, tableName, columns);
+        String errorMsg = format("Table '%s' does not exist.", tableName);
+        if ("yes".equalsIgnoreCase(conf.get(CREATE_TABLE_CONF_KEY, "yes"))) {
+          LOG.warn(errorMsg);
+          // TODO: this is backwards. Instead of depending on the existence of a table,
+          // create a sane splits file for HFileOutputFormat based on data sampling.
+          createTable(admin, tableName, columns);
+        } else {
+          LOG.error(errorMsg);
+          throw new TableNotFoundException(errorMsg);
+        }
       }
       HTable table = new HTable(conf, tableName);
       job.setReducerClass(PutSortReducer.class);
@@ -497,7 +505,7 @@ public class ImportTsv extends Configured implements Tool {
     if (errorMsg != null && errorMsg.length() > 0) {
       System.err.println("ERROR: " + errorMsg);
     }
-    String usage = 
+    String usage =
       "Usage: " + NAME + " -D"+ COLUMNS_CONF_KEY + "=a,b,c <tablename> <inputdir>\n" +
       "\n" +
       "Imports the given input directory of TSV data into the specified table.\n" +
@@ -531,6 +539,9 @@ public class ImportTsv extends Configured implements Tool {
       "  -D" + MAPPER_CONF_KEY + "=my.Mapper - A user-defined Mapper to use instead of " +
       DEFAULT_MAPPER.getName() + "\n" +
       "  -D" + JOB_NAME_CONF_KEY + "=jobName - use the specified mapreduce job name for the import\n" +
+      "  -D" + CREATE_TABLE_CONF_KEY + "=no - can be used to avoid creation of table by this tool\n" +
+      "  Note: if you set this to 'no', then the target table must already exist in HBase\n" +
+      "\n" +
       "For performance consider the following options:\n" +
       "  -Dmapred.map.tasks.speculative.execution=false\n" +
       "  -Dmapred.reduce.tasks.speculative.execution=false";
@@ -581,7 +592,7 @@ public class ImportTsv extends Configured implements Tool {
             + TsvParser.TIMESTAMPKEY_COLUMN_SPEC);
         return -1;
       }
-      
+
       int attrKeysFound = 0;
       for (String col : columns) {
         if (col.equals(TsvParser.ATTRIBUTES_COLUMN_SPEC))
@@ -592,7 +603,7 @@ public class ImportTsv extends Configured implements Tool {
             + TsvParser.ATTRIBUTES_COLUMN_SPEC);
         return -1;
       }
-    
+
       // Make sure one or more columns are specified excluding rowkey and
       // timestamp key
       if (columns.length - (rowkeysFound + tskeysFound + attrKeysFound) < 1) {
@@ -607,7 +618,7 @@ public class ImportTsv extends Configured implements Tool {
     // Set it back to replace invalid timestamp (non-numeric) with current
     // system time
     getConf().setLong(TIMESTAMP_CONF_KEY, timstamp);
-    
+
     Job job = createSubmittableJob(getConf(), otherArgs);
     return job.waitForCompletion(true) ? 0 : 1;
   }
