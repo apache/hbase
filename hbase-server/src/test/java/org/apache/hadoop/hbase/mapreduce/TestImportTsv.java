@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -228,7 +229,20 @@ public class TestImportTsv implements Configurable {
     String data = "KEY\u001bVALUE4\u001bVALUE8\n";
     doMROnTableTest(util, FAMILY, data, args, 4);
   }
-  
+
+  @Test(expected = TableNotFoundException.class)
+  public void testWithoutAnExistingTableAndCreateTableSetToNo() throws Exception {
+    String table = "test-" + UUID.randomUUID();
+    String[] args =
+        new String[] { table, "/inputFile" };
+
+    Configuration conf = new Configuration(util.getConfiguration());
+    conf.set(ImportTsv.COLUMNS_CONF_KEY, "HBASE_ROW_KEY,FAM:A");
+    conf.set(ImportTsv.BULK_OUTPUT_CONF_KEY, "/output");
+    conf.set(ImportTsv.CREATE_TABLE_CONF_KEY, "no");
+    ImportTsv.createSubmittableJob(conf, args);
+  }
+
   protected static Tool doMROnTableTest(HBaseTestingUtility util, String family,
       String data, String[] args) throws Exception {
     return doMROnTableTest(util, family, data, args, 1);

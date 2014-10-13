@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static java.lang.String.format;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -114,6 +116,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   public static final String MAX_FILES_PER_REGION_PER_FAMILY
     = "hbase.mapreduce.bulkload.max.hfiles.perRegion.perFamily";
   private static final String ASSIGN_SEQ_IDS = "hbase.mapreduce.bulkload.assign.sequenceNumbers";
+  public final static String CREATE_TABLE_CONF_KEY = "create.table";
 
   private int maxFilesPerRegionPerFamily;
   private boolean assignSeqIds;
@@ -148,9 +151,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   private void usage() {
-    System.err.println("usage: " + NAME +
-        " /path/to/hfileoutputformat-output " +
-        "tablename");
+    System.err.println("usage: " + NAME + " /path/to/hfileoutputformat-output tablename" + "\n -D"
+        + CREATE_TABLE_CONF_KEY + "=no - can be used to avoid creation of table by this tool\n"
+        + "  Note: if you set this to 'no', then the target table must already exist in HBase\n"
+        + "\n");
   }
 
   /**
@@ -906,7 +910,15 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     TableName tableName = TableName.valueOf(args[1]);
 
     boolean tableExists = this.doesTableExist(tableName);
-    if (!tableExists) this.createTable(tableName,dirPath);
+    if (!tableExists) {
+      if ("yes".equalsIgnoreCase(getConf().get(CREATE_TABLE_CONF_KEY, "yes"))) {
+        this.createTable(tableName, dirPath);
+      } else {
+        String errorMsg = format("Table '%s' does not exist.", tableName);
+        LOG.error(errorMsg);
+        throw new TableNotFoundException(errorMsg);
+      }
+    }
 
     Path hfofDir = new Path(dirPath);
     HTable table = new HTable(getConf(), tableName);

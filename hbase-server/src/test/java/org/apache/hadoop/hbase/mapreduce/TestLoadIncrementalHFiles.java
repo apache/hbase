@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
@@ -127,7 +128,7 @@ public class TestLoadIncrementalHFiles {
           new byte[][]{ Bytes.toBytes("fff"), Bytes.toBytes("zzz") },
     });
   }
-  
+
   /**
    * Test loading into a column family that has a ROWCOL bloom filter.
    */
@@ -340,7 +341,7 @@ public class TestLoadIncrementalHFiles {
     map.put(last, value-1);
   }
 
-  @Test 
+  @Test
   public void testInferBoundaries() {
     TreeMap<byte[], Integer> map = new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
 
@@ -350,8 +351,8 @@ public class TestLoadIncrementalHFiles {
      *
      * Should be inferred as:
      * a-----------------k   m-------------q   r--------------t  u---------x
-     * 
-     * The output should be (m,r,u) 
+     *
+     * The output should be (m,r,u)
      */
 
     String first;
@@ -359,7 +360,7 @@ public class TestLoadIncrementalHFiles {
 
     first = "a"; last = "e";
     addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
-    
+
     first = "r"; last = "s";
     addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
 
@@ -380,14 +381,14 @@ public class TestLoadIncrementalHFiles {
 
     first = "s"; last = "t";
     addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
-    
+
     first = "u"; last = "w";
     addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
 
     byte[][] keysArray = LoadIncrementalHFiles.inferBoundaries(map);
     byte[][] compare = new byte[3][];
     compare[0] = "m".getBytes();
-    compare[1] = "r".getBytes(); 
+    compare[1] = "r".getBytes();
     compare[2] = "u".getBytes();
 
     assertEquals(keysArray.length, 3);
@@ -420,6 +421,15 @@ public class TestLoadIncrementalHFiles {
       assertTrue(ie.getMessage().contains("Trying to load more than "
         + MAX_FILES_PER_REGION_PER_FAMILY + " hfiles"));
     }
+  }
+
+  @Test(expected = TableNotFoundException.class)
+  public void testWithoutAnExistingTableAndCreateTableSetToNo() throws Exception {
+    Configuration conf = util.getConfiguration();
+    conf.set(LoadIncrementalHFiles.CREATE_TABLE_CONF_KEY, "no");
+    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
+    String[] args = { "directory", "nonExistingTable" };
+    loader.run(args);
   }
 }
 
