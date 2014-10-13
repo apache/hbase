@@ -68,7 +68,6 @@ public class TestMultithreadedTableMapper {
     UTIL.createMultiRegions(table, INPUT_FAMILY);
     UTIL.loadTable(table, INPUT_FAMILY, false);
     UTIL.startMiniMapReduceCluster();
-    UTIL.waitUntilAllRegionsAssigned(MULTI_REGION_TABLE_NAME);
   }
 
   @AfterClass
