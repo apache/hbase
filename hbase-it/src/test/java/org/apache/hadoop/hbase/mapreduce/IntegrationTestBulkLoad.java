@@ -440,7 +440,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
                             LinkChain linkChain,
                             int numPartitions) {
       int hash = linkKey.getChainId().hashCode();
-      return hash % numPartitions;
+      return Math.abs(hash % numPartitions);
     }
   }
 
