@@ -32,8 +32,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.conf.ConfigurationObserver;
-import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -50,7 +48,7 @@ import org.apache.hadoop.hbase.util.Pair;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface Store extends HeapSize, StoreConfigInformation, PropagatingConfigurationObserver {
+public interface Store extends HeapSize, StoreConfigInformation {
 
   /* The default priority for user-specified compaction requests.
    * The user gets top priority unless we have blocking compactions. (Pri <= 0)

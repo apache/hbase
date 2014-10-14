@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
  * Set parameter as "hbase.hstore.compaction.<attribute>"
  */
 
+//TODO: revisit this class for online parameter updating (both in xml and on the CF)
 @InterfaceAudience.Private
 public class CompactionConfiguration {
 
@@ -54,22 +55,19 @@ public class CompactionConfiguration {
   public static final String HBASE_HSTORE_COMPACTION_MAX_KEY = "hbase.hstore.compaction.max";
   public static final String HBASE_HSTORE_COMPACTION_MAX_SIZE_KEY =
     "hbase.hstore.compaction.max.size";
-  public static final String HBASE_HSTORE_OFFPEAK_END_HOUR = "hbase.offpeak.end.hour";
-  public static final String HBASE_HSTORE_OFFPEAK_START_HOUR = "hbase.offpeak.start.hour";
 
   Configuration conf;
   StoreConfigInformation storeConfigInfo;
 
-  private final double offPeakCompactionRatio;
-  /** Since all these properties can change online, they are volatile **/
-  private final long maxCompactSize;
-  private final long minCompactSize;
-  private final int minFilesToCompact;
-  private final int maxFilesToCompact;
-  private final double compactionRatio;
-  private final long throttlePoint;
-  private final long majorCompactionPeriod;
-  private final float majorCompactionJitter;
+  long maxCompactSize;
+  long minCompactSize;
+  int minFilesToCompact;
+  int maxFilesToCompact;
+  double compactionRatio;
+  double offPeekCompactionRatio;
+  long throttlePoint;
+  long majorCompactionPeriod;
+  float majorCompactionJitter;
 
   CompactionConfiguration(Configuration conf, StoreConfigInformation storeConfigInfo) {
     this.conf = conf;
@@ -82,9 +80,9 @@ public class CompactionConfiguration {
           /*old name*/ conf.getInt("hbase.hstore.compactionThreshold", 3)));
     maxFilesToCompact = conf.getInt(HBASE_HSTORE_COMPACTION_MAX_KEY, 10);
     compactionRatio = conf.getFloat(HBASE_HSTORE_COMPACTION_RATIO_KEY, 1.2F);
-    offPeakCompactionRatio = conf.getFloat(HBASE_HSTORE_COMPACTION_RATIO_OFFPEAK_KEY, 5.0F);
+    offPeekCompactionRatio = conf.getFloat(HBASE_HSTORE_COMPACTION_RATIO_OFFPEAK_KEY, 5.0F);
 
-    throttlePoint = conf.getLong("hbase.regionserver.thread.compaction.throttle",
+    throttlePoint =  conf.getLong("hbase.regionserver.thread.compaction.throttle",
           2 * maxFilesToCompact * storeConfigInfo.getMemstoreFlushSize());
     majorCompactionPeriod = conf.getLong(HConstants.MAJOR_COMPACTION_PERIOD, 1000*60*60*24*7);
     // Make it 0.5 so jitter has us fall evenly either side of when the compaction should run
@@ -103,7 +101,7 @@ public class CompactionConfiguration {
       minFilesToCompact,
       maxFilesToCompact,
       compactionRatio,
-      offPeakCompactionRatio,
+      offPeekCompactionRatio,
       throttlePoint,
       majorCompactionPeriod,
       majorCompactionJitter);
@@ -112,49 +110,49 @@ public class CompactionConfiguration {
   /**
    * @return lower bound below which compaction is selected without ratio test
    */
-  public long getMinCompactSize() {
+  long getMinCompactSize() {
     return minCompactSize;
   }
 
   /**
    * @return upper bound on file size to be included in minor compactions
    */
-  public long getMaxCompactSize() {
+  long getMaxCompactSize() {
     return maxCompactSize;
   }
 
   /**
    * @return upper bound on number of files to be included in minor compactions
    */
-  public int getMinFilesToCompact() {
+  int getMinFilesToCompact() {
     return minFilesToCompact;
   }
 
   /**
    * @return upper bound on number of files to be included in minor compactions
    */
-  public int getMaxFilesToCompact() {
+  int getMaxFilesToCompact() {
     return maxFilesToCompact;
   }
 
   /**
    * @return Ratio used for compaction
    */
-  public double getCompactionRatio() {
+  double getCompactionRatio() {
     return compactionRatio;
   }
 
   /**
    * @return Off peak Ratio used for compaction
    */
-  public double getCompactionRatioOffPeak() {
-    return offPeakCompactionRatio;
+  double getCompactionRatioOffPeak() {
+    return offPeekCompactionRatio;
   }
 
   /**
    * @return ThrottlePoint used for classifying small and large compactions
    */
-  public long getThrottlePoint() {
+  long getThrottlePoint() {
     return throttlePoint;
   }
 
@@ -162,7 +160,7 @@ public class CompactionConfiguration {
    * @return Major compaction period from compaction.
    * Major compactions are selected periodically according to this parameter plus jitter
    */
-  public long getMajorCompactionPeriod() {
+  long getMajorCompactionPeriod() {
     return majorCompactionPeriod;
   }
 
@@ -170,7 +168,7 @@ public class CompactionConfiguration {
    * @return Major the jitter fraction, the fraction within which the major compaction
    *  period is randomly chosen from the majorCompactionPeriod in each store.
    */
-  public float getMajorCompactionJitter() {
+  float getMajorCompactionJitter() {
     return majorCompactionJitter;
   }
 }

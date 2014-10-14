@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -60,12 +61,5 @@ public abstract class CompactionPolicy {
    */
   public void setConf(Configuration conf) {
     this.comConf = new CompactionConfiguration(conf, this.storeConfigInfo);
-  }
-
-  /**
-   * @return The current compaction configuration settings.
-   */
-  public CompactionConfiguration getConf() {
-    return this.comConf;
   }
 }
