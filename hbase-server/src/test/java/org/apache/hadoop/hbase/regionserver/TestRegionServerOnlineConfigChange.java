@@ -116,7 +116,7 @@ public class TestRegionServerOnlineConfigChange extends TestCase {
     HStore hstore = (HStore)s;
 
     // Set the new compaction ratio to a different value.
-    double newCompactionRatio = 
+    double newCompactionRatio =
             hstore.getStoreEngine().getCompactionPolicy().getConf().getCompactionRatio() + 0.1;
     conf.setFloat(strPrefix + "ratio", (float)newCompactionRatio);
 

@@ -84,6 +84,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRespo
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
@@ -3680,5 +3681,21 @@ public class HBaseAdmin implements Admin {
   public CoprocessorRpcChannel coprocessorService(ServerName sn) {
     return new RegionServerCoprocessorRpcChannel(connection, sn);
   }
+  
+  @Override
+  public void updateConfiguration(ServerName server) throws IOException {
+    try {
+      this.connection.getAdmin(server).updateConfiguration(null,
+        UpdateConfigurationRequest.getDefaultInstance());
+    } catch (ServiceException e) {
+      throw ProtobufUtil.getRemoteException(e);
+    }
+  }
 
+  @Override
+  public void updateConfiguration() throws IOException {
+    for (ServerName server : this.getClusterStatus().getServers()) {
+      updateConfiguration(server);
+    }
+  }
 }

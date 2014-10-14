@@ -228,6 +228,12 @@ message GetServerInfoResponse {
   required ServerInfo server_info = 1;
 }
 
+message UpdateConfigurationRequest {
+}
+
+message UpdateConfigurationResponse {
+}
+
 service AdminService {
   rpc GetRegionInfo(GetRegionInfoRequest)
     returns(GetRegionInfoResponse);
@@ -273,4 +279,7 @@ service AdminService {
 
   rpc UpdateFavoredNodes(UpdateFavoredNodesRequest)
     returns(UpdateFavoredNodesResponse);
+
+  rpc UpdateConfiguration(UpdateConfigurationRequest)
+    returns(UpdateConfigurationResponse);
 }
