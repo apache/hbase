@@ -485,52 +485,7 @@ hadoop  -       nproc   32000
             <row>
               <entry>Hadoop-2.2.0 </entry>
               <entry>X</entry>
-              <entry><para>NT - To get 0.94.x to run on hadoop 2.2.0, you need to change the hadoop
-                  2 and protobuf versions in the <filename>pom.xml</filename>: Here is a diff with
-                  pom.xml changes: </para>
-                  <programlisting><![CDATA[$ svn diff pom.xml
-Index: pom.xml
-===================================================================
---- pom.xml     (revision 1545157)
-+++ pom.xml     (working copy)
-@@ -1034,7 +1034,7 @@
-     <slf4j.version>1.4.3</slf4j.version>
-     <log4j.version>1.2.16</log4j.version>
-     <mockito-all.version>1.8.5</mockito-all.version>
--    <protobuf.version>2.4.0a</protobuf.version>
-+    <protobuf.version>2.5.0</protobuf.version>
-     <stax-api.version>1.0.1</stax-api.version>
-     <thrift.version>0.8.0</thrift.version>
-     <zookeeper.version>3.4.5</zookeeper.version>
-@@ -2241,7 +2241,7 @@
-         </property>
-       </activation>
-       <properties>
--        <hadoop.version>2.0.0-alpha</hadoop.version>
-+        <hadoop.version>2.2.0</hadoop.version>
-         <slf4j.version>1.6.1</slf4j.version>
-       </properties>
-       <dependencies>]]>
-                   </programlisting>
-                  <para>The next step is to regenerate Protobuf files and assuming that the Protobuf
-                    has been installed:</para>
-                  <itemizedlist>
-                    <listitem>
-                      <para>Go to the hbase root folder, using the command line;</para>
-                    </listitem>
-                    <listitem>
-                      <para>Type the following commands:</para>
-                      <para>
-                        <programlisting language="bourne"><![CDATA[$ protoc -Isrc/main/protobuf --java_out=src/main/java src/main/protobuf/hbase.proto]]></programlisting>
-                      </para>
-                      <para>
-                        <programlisting language="bourne"><![CDATA[$ protoc -Isrc/main/protobuf --java_out=src/main/java src/main/protobuf/ErrorHandling.proto]]></programlisting>
-                      </para>
-                    </listitem>
-                  </itemizedlist>
-                  <para> Building against the hadoop 2 profile by running something like the
-                    following command: </para>
-                  <screen language="bourne">$  mvn clean install assembly:single -Dhadoop.profile=2.0 -DskipTests</screen></entry>
+              <entry><link linkend="hadoop2.hbase-0.94">NT</link></entry>
               <entry>S</entry>
               <entry>S</entry>
               <entry>NT</entry>
@@ -576,6 +531,56 @@ Index: pom.xml
           version mismatch issues have various manifestations but often all looks like its hung up.
         </para>
       </note>
+      <section
+        xml:id="hadoop2.hbase-0.94">
+        <title>Apache HBase 0.94 with Hadoop 2</title>
+        <para>To get 0.94.x to run on hadoop 2.2.0, you need to change the hadoop
+        2 and protobuf versions in the <filename>pom.xml</filename>: Here is a diff with
+        pom.xml changes: </para>
+        <programlisting><![CDATA[$ svn diff pom.xml
+Index: pom.xml
+===================================================================
+--- pom.xml     (revision 1545157)
++++ pom.xml     (working copy)
+@@ -1034,7 +1034,7 @@
+     <slf4j.version>1.4.3</slf4j.version>
+     <log4j.version>1.2.16</log4j.version>
+     <mockito-all.version>1.8.5</mockito-all.version>
+-    <protobuf.version>2.4.0a</protobuf.version>
++    <protobuf.version>2.5.0</protobuf.version>
+     <stax-api.version>1.0.1</stax-api.version>
+     <thrift.version>0.8.0</thrift.version>
+     <zookeeper.version>3.4.5</zookeeper.version>
+@@ -2241,7 +2241,7 @@
+         </property>
+       </activation>
+       <properties>
+-        <hadoop.version>2.0.0-alpha</hadoop.version>
++        <hadoop.version>2.2.0</hadoop.version>
+         <slf4j.version>1.6.1</slf4j.version>
+       </properties>
+       <dependencies>]]>
+                   </programlisting>
+                  <para>The next step is to regenerate Protobuf files and assuming that the Protobuf
+                    has been installed:</para>
+                  <itemizedlist>
+                    <listitem>
+                      <para>Go to the hbase root folder, using the command line;</para>
+                    </listitem>
+                    <listitem>
+                      <para>Type the following commands:</para>
+                      <para>
+                        <programlisting language="bourne"><![CDATA[$ protoc -Isrc/main/protobuf --java_out=src/main/java src/main/protobuf/hbase.proto]]></programlisting>
+                      </para>
+                      <para>
+                        <programlisting language="bourne"><![CDATA[$ protoc -Isrc/main/protobuf --java_out=src/main/java src/main/protobuf/ErrorHandling.proto]]></programlisting>
+                      </para>
+                    </listitem>
+                  </itemizedlist>
+                  <para> Building against the hadoop 2 profile by running something like the
+                    following command: </para>
+                  <screen language="bourne">$  mvn clean install assembly:single -Dhadoop.profile=2.0 -DskipTests</screen>
+      </section>
       <section
         xml:id="hadoop.hbase-0.94">
         <title>Apache HBase 0.92 and 0.94</title>
