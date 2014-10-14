@@ -218,7 +218,7 @@ double-quote'd hexadecimal representation. For example:
   hbase> put 't1', "test\\xef\\xff", 'f1:', "\\x01\\x33\\x40"
 
 The HBase shell is the (J)Ruby IRB with the above HBase-specific commands added.
-For more on the HBase Shell, see http://hbase.apache.org/docs/current/book.html
+For more on the HBase Shell, see http://hbase.apache.org/book.html
       HERE
     end
   end
