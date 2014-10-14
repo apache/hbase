@@ -109,6 +109,7 @@ import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -316,11 +317,20 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (infoPort < 0 || infoServer == null) {
       return;
     }
+    String addr = conf.get("hbase.master.info.bindAddress", "0.0.0.0");
+    if (!Addressing.isLocalAddress(InetAddress.getByName(addr))) {
+      String msg =
+          "Failed to start redirecting jetty server. Address " + addr
+              + " does not belong to this host. Correct configuration parameter: "
+              + "hbase.master.info.bindAddress";
+      LOG.error(msg);
+      throw new IOException(msg);
+    }
 
     RedirectServlet.regionServerInfoPort = infoServer.getPort();
     masterJettyServer = new org.mortbay.jetty.Server();
     Connector connector = new SelectChannelConnector();
-    connector.setHost(conf.get("hbase.master.info.bindAddress", "0.0.0.0"));
+    connector.setHost(addr);
     connector.setPort(infoPort);
     masterJettyServer.addConnector(connector);
     masterJettyServer.setStopAtShutdown(true);
