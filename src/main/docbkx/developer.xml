@@ -1829,7 +1829,6 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
                 <para>Make sure that you're clear about what you are testing in your unit tests and
                     why. </para>
             </section>
-
         </section>
         <!--  patch feedback -->
 
@@ -1867,6 +1866,7 @@ Bar bar = foo.getBar();     &lt;--- imagine there's an extra space(s) after the 
             <title>Submitting incremental patches</title>
             <para> At times you may want to break a big change into mulitple patches. Here is a
                 sample work-flow using git <itemizedlist>
+
                     <listitem>
                         <para>patch 1:</para>
                         <itemizedlist>
