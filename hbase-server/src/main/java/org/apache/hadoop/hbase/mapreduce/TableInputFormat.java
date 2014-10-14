@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -109,9 +108,8 @@ implements Configurable {
     this.conf = configuration;
     TableName tableName = TableName.valueOf(conf.get(INPUT_TABLE));
     try {
-      // TODO: Replace setHTable() with initializeTable() once we have 
-      //       a clean method of closing a connection.
-      setHTable(new HTable(new Configuration(conf), tableName));
+      // NOTE: This connection doesn't currently get closed explicit1ly.
+      initializeTable(ConnectionFactory.createConnection(new Configuration(conf)), tableName);
     } catch (Exception e) {
       LOG.error(StringUtils.stringifyException(e));
     }
@@ -183,7 +181,6 @@ implements Configurable {
    *
    * @param scan The Scan to update.
    * @param familyAndQualifier family and qualifier
-   * @return A reference to this instance.
    * @throws IllegalArgumentException When familyAndQualifier is invalid.
    */
   private static void addColumn(Scan scan, byte[] familyAndQualifier) {
