@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -90,6 +91,7 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -135,7 +137,7 @@ public class HStore implements Store {
   private final HRegion region;
   private final HColumnDescriptor family;
   private final HRegionFileSystem fs;
-  private final Configuration conf;
+  private Configuration conf;
   private final CacheConfig cacheConf;
   private long lastCompactSize = 0;
   volatile boolean forceMajor = false;
@@ -178,7 +180,7 @@ public class HStore implements Store {
   final StoreEngine<?, ?, ?, ?> storeEngine;
 
   private static final AtomicBoolean offPeakCompactionTracker = new AtomicBoolean();
-  private final OffPeakHours offPeakHours;
+  private volatile OffPeakHours offPeakHours;
 
   private static final int DEFAULT_FLUSH_RETRIES_NUMBER = 10;
   private int flushRetriesNumber;
@@ -2200,5 +2202,45 @@ public class HStore implements Store {
   @Override
   public long getMajorCompactedCellsSize() {
     return majorCompactedCellsSize;
+  }
+
+  /**
+   * Returns the StoreEngine that is backing this concrete implementation of Store.
+   * @return Returns the {@link StoreEngine} object used internally inside this HStore object.
+   */
+  protected StoreEngine<?, ?, ?, ?> getStoreEngine() {
+    return this.storeEngine;
+  }
+
+  protected OffPeakHours getOffPeakHours() {
+    return this.offPeakHours;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    this.conf = new CompoundConfiguration()
+            .add(conf)
+            .addWritableMap(family.getValues());
+    this.storeEngine.compactionPolicy.setConf(conf);
+    this.offPeakHours = OffPeakHours.getInstance(conf);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void registerChildren(ConfigurationManager manager) {
+    // No children to register
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void deregisterChildren(ConfigurationManager manager) {
+    // No children to deregister
   }
 }
