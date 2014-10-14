@@ -96,6 +96,8 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    *
    * @see Scan */
   private Scan scan = null;
+  /** The {@link Admin}. */
+  private Admin admin;
   /** The {@link Table} to scan. */
   private Table table;
   /** The {@link RegionLocator} of the table. */
@@ -163,8 +165,8 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       throw new IOException("No table was provided.");
     }
 
-    RegionSizeCalculator sizeCalculator = new RegionSizeCalculator((HTable) table);
-    
+    RegionSizeCalculator sizeCalculator = new RegionSizeCalculator(regionLocator, admin);
+
     Pair<byte[][], byte[][]> keys = getStartEndKeys();
     if (keys == null || keys.getFirst() == null ||
         keys.getFirst().length == 0) {
@@ -287,25 +289,27 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    * Allows subclasses to set the {@link HTable}.
    *
    * @param table  The table to get the data from.
-   * @throws IOExceptfion 
+   * @throws IOException 
    * @deprecated Use {@link #initializeTable(Connection, TableName)} instead.
    */
   @Deprecated
   protected void setHTable(HTable table) throws IOException {
     this.table = table;
     this.regionLocator = table;
+    this.admin = table.getConnection().getAdmin();
   }
 
   /**
-   * Allows subclasses to initalize the table information.
+   * Allows subclasses to initialize the table information.
    *
    * @param connection  The {@link Connection} to the HBase cluster.
    * @param tableName  The {@link TableName} of the table to process. 
-   * @throws IOExceptfion 
+   * @throws IOException 
    */
   protected void initializeTable(Connection connection, TableName tableName) throws IOException {
     this.table = connection.getTable(tableName);
     this.regionLocator = connection.getRegionLocator(tableName);
+    this.admin = connection.getAdmin();
   }
 
   /**
