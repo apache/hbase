@@ -45,6 +45,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.net.InetAddress;
 
 import javax.management.ObjectName;
 import javax.servlet.http.HttpServlet;
@@ -127,6 +128,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
+import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
@@ -1662,6 +1664,14 @@ public class HRegionServer extends HasThread implements
     // -1 is for disabling info server
     if (port < 0) return port;
     String addr = this.conf.get("hbase.regionserver.info.bindAddress", "0.0.0.0");
+    if (!Addressing.isLocalAddress(InetAddress.getByName(addr))) {
+      String msg =
+          "Failed to start http info server. Address " + addr
+              + " does not belong to this host. Correct configuration parameter: "
+              + "hbase.regionserver.info.bindAddress";
+      LOG.error(msg);
+      throw new IOException(msg);
+    }
     // check if auto port bind enabled
     boolean auto = this.conf.getBoolean(HConstants.REGIONSERVER_INFO_PORT_AUTO,
         false);

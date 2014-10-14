@@ -102,4 +102,25 @@ public class Addressing {
 
     throw new SocketException("Can't get our ip address, interfaces are: " + interfaces);
   }
+
+  /**
+   * Given an InetAddress, checks to see if the address is a local address, by comparing the address
+   * with all the interfaces on the node.
+   * @param addr address to check if it is local node's address
+   * @return true if the address corresponds to the local node
+   */
+  public static boolean isLocalAddress(InetAddress addr) {
+    // Check if the address is any local or loop back
+    boolean local = addr.isAnyLocalAddress() || addr.isLoopbackAddress();
+
+    // Check if the address is defined on any interface
+    if (!local) {
+      try {
+        local = NetworkInterface.getByInetAddress(addr) != null;
+      } catch (SocketException e) {
+        local = false;
+      }
+    }
+    return local;
+  }
 }
