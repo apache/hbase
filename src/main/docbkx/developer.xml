@@ -1797,6 +1797,34 @@ justification="I know what I'm doing")</programlisting>
                 Apache HBase Project.</para>
             <section xml:id="submitting.patches.create">
                 <title>Create Patch</title>
+                <para>The script <filename>dev-support/make_patch.sh</filename> has been provided to
+                    help you adhere to patch-creation guidelines. The script has the following syntax:
+                </para>
+                <screen>$ make_patch.sh [-a] [-p &lt;patch_dir&gt;]</patch_dir></screen>
+                <orderedlist>
+                    <listitem>
+                        <para>If you do not pass a <code>patch_dir</code>, the script defaults to
+                                <filename>~/patches/</filename>. If the <code>patch_dir</code> does
+                            not exist, it is created.</para>
+                    </listitem>
+                    <listitem>
+                        <para>By default, if an existing patch exists with the JIRA ID, the version
+                            of the new patch is incremented
+                                (<filename>HBASE-XXXX-v3.patch</filename>). If the <code>-a</code>
+                            option is passed, the version is not incremented, but the suffix
+                                <literal>-addendum</literal> is added
+                                (<filename>HBASE-XXXX-v2-addendum.patch</filename>). A second
+                            addendum to a given version is not supported.</para>
+                    </listitem>
+                    <listitem>
+                        <para>Detects whether you have more than one local commit on your branch. If
+                            you do, the script offers you the chance to run <command>git rebase
+                                -i</command> to squash the changes into a single commit so that it
+                            can use <command>git format-patch</command>. If you decline, the script
+                            uses <command>git diff</command> instead. The patch is saved in a
+                            configurable directory and is ready to be attached to your JIRA.</para>
+                    </listitem>
+                </orderedlist>
                 <itemizedlist>
                     <title>Patching Workflow</title>
                     <listitem>
