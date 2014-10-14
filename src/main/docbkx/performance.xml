@@ -992,7 +992,7 @@ htable.close();
       <title>Hedged Reads</title>
       <para>Hedged reads are a feature of HDFS, introduced in <link
           xlink:href="https://issues.apache.org/jira/browse/HDFS-5776">HDFS-5776</link>. Normally, a
-        single thread is spawned for each reqd request. However, if hedged reads are enabled, the
+        single thread is spawned for each read request. However, if hedged reads are enabled, the
         client waits some configurable amount of time, and if the read does not return, the client
         spawns a second read request, against a different block replica of the same data. Whichever
         read returns first is used, and the other read request is discarded. Hedged reads can be
