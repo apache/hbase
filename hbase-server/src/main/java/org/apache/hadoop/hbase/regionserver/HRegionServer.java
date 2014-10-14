@@ -77,7 +77,6 @@ import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
-import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -3112,6 +3111,15 @@ public class HRegionServer extends HasThread implements
    */
   protected ConfigurationManager getConfigurationManager() {
     return configurationManager;
+  }
     
+  /**
+   * Reload the configuration from disk.
+   */
+  public void updateConfiguration() {
+    LOG.info("Reloading the configuration from disk.");
+    // Reload the configuration from disk.
+    conf.reloadConfiguration();
+    configurationManager.notifyAllObservers(conf);  
   }
 }

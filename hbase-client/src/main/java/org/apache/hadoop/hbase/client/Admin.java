@@ -1278,4 +1278,21 @@ public interface Admin extends Abortable, Closeable {
    * @return A RegionServerCoprocessorRpcChannel instance
    */
   CoprocessorRpcChannel coprocessorService(ServerName sn);
+  
+
+  /**
+   * Update the configuration and trigger an online config change
+   * on the regionserver
+   * @param server : The server whose config needs to be updated.
+   * @throws IOException
+   */
+  void updateConfiguration(ServerName server) throws IOException;
+
+
+  /**
+   * Update the configuration and trigger an online config change
+   * on all the regionservers
+   * @throws IOException
+   */
+  void updateConfiguration() throws IOException;
 }

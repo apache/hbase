@@ -112,6 +112,8 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
@@ -2195,5 +2197,17 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   public CoprocessorServiceResponse execRegionServerService(RpcController controller,
       CoprocessorServiceRequest request) throws ServiceException {
     return regionServer.execRegionServerService(controller, request);
+  }
+
+  @Override
+  public UpdateConfigurationResponse updateConfiguration(
+      RpcController controller, UpdateConfigurationRequest request)
+      throws ServiceException {
+    try {
+      this.regionServer.updateConfiguration();
+    } catch (Exception e) {
+      throw new ServiceException(e);
+    }
+    return UpdateConfigurationResponse.getDefaultInstance();
   }
 }
