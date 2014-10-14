@@ -49,6 +49,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.logging.Log;
@@ -2074,11 +2075,10 @@ public class TestHBaseFsck {
       @Override
       public HFileCorruptionChecker createHFileCorruptionChecker(boolean sidelineCorruptHFiles) throws IOException {
         return new HFileCorruptionChecker(conf, executor, sidelineCorruptHFiles) {
-          boolean attemptedFirstHFile = false;
+          AtomicBoolean attemptedFirstHFile = new AtomicBoolean(false);
           @Override
           protected void checkHFile(Path p) throws IOException {
-            if (!attemptedFirstHFile) {
-              attemptedFirstHFile = true;
+            if (attemptedFirstHFile.compareAndSet(false, true)) {
               assertTrue(fs.delete(p, true)); // make sure delete happened.
             }
             super.checkHFile(p);
@@ -2105,11 +2105,10 @@ public class TestHBaseFsck {
       @Override
       public HFileCorruptionChecker createHFileCorruptionChecker(boolean sidelineCorruptHFiles) throws IOException {
         return new HFileCorruptionChecker(conf, executor, sidelineCorruptHFiles) {
-          boolean attemptedFirstFamDir = false;
+          AtomicBoolean attemptedFirstHFile = new AtomicBoolean(false);
           @Override
           protected void checkColFamDir(Path p) throws IOException {
-            if (!attemptedFirstFamDir) {
-              attemptedFirstFamDir = true;
+            if (attemptedFirstHFile.compareAndSet(false, true)) {
               assertTrue(fs.delete(p, true)); // make sure delete happened.
             }
             super.checkColFamDir(p);
@@ -2134,11 +2133,10 @@ public class TestHBaseFsck {
       @Override
       public HFileCorruptionChecker createHFileCorruptionChecker(boolean sidelineCorruptHFiles) throws IOException {
         return new HFileCorruptionChecker(conf, executor, sidelineCorruptHFiles) {
-          boolean attemptedFirstRegionDir = false;
+          AtomicBoolean attemptedFirstHFile = new AtomicBoolean(false);
           @Override
           protected void checkRegionDir(Path p) throws IOException {
-            if (!attemptedFirstRegionDir) {
-              attemptedFirstRegionDir = true;
+            if (attemptedFirstHFile.compareAndSet(false, true)) {
               assertTrue(fs.delete(p, true)); // make sure delete happened.
             }
             super.checkRegionDir(p);
