@@ -265,12 +265,13 @@ public class TestMasterFailover {
 
     // now actually assign them
     for (HRegionInfo hri : enabledAndAssignedRegions) {
-      master.assignmentManager.regionPlans.put(hri.getEncodedName(),
+      master.assignmentManager.addPlan(hri.getEncodedName(),
           new RegionPlan(hri, null, serverName));
       master.assignRegion(hri);
     }
+
     for (HRegionInfo hri : disabledAndAssignedRegions) {
-      master.assignmentManager.regionPlans.put(hri.getEncodedName(),
+      master.assignmentManager.addPlan(hri.getEncodedName(),
           new RegionPlan(hri, null, serverName));
       master.assignRegion(hri);
     }
@@ -597,12 +598,12 @@ public class TestMasterFailover {
 
     // now actually assign them
     for (HRegionInfo hri : enabledAndAssignedRegions) {
-      master.assignmentManager.regionPlans.put(hri.getEncodedName(),
+      master.assignmentManager.addPlan(hri.getEncodedName(),
           new RegionPlan(hri, null, hrs.getServerName()));
       master.assignRegion(hri);
     }
     for (HRegionInfo hri : disabledAndAssignedRegions) {
-      master.assignmentManager.regionPlans.put(hri.getEncodedName(),
+      master.assignmentManager.addPlan(hri.getEncodedName(),
           new RegionPlan(hri, null, hrs.getServerName()));
       master.assignRegion(hri);
     }
@@ -625,12 +626,12 @@ public class TestMasterFailover {
 
     // set region plan to server to be killed and trigger assign
     for (HRegionInfo hri : enabledAndOnDeadRegions) {
-      master.assignmentManager.regionPlans.put(hri.getEncodedName(),
+      master.assignmentManager.addPlan(hri.getEncodedName(),
           new RegionPlan(hri, null, deadServerName));
       master.assignRegion(hri);
     }
     for (HRegionInfo hri : disabledAndOnDeadRegions) {
-      master.assignmentManager.regionPlans.put(hri.getEncodedName(),
+      master.assignmentManager.addPlan(hri.getEncodedName(),
           new RegionPlan(hri, null, deadServerName));
       master.assignRegion(hri);
     }
