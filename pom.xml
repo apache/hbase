@@ -63,6 +63,7 @@
     <module>hbase-testing-util</module>
     <module>hbase-annotations</module>
     <module>hbase-rest</module>
+    <module>hbase-checkstyle</module>
   </modules>
   <scm>
     <connection>scm:git:git://git.apache.org/hbase.git</connection>
@@ -664,6 +665,22 @@
             <protocCommand>${protoc.path}</protocCommand>
           </configuration>
         </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <version>2.13</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.apache.hbase</groupId>
+              <artifactId>hbase-checkstyle</artifactId>
+              <version>${project.version}</version>
+            </dependency>
+          </dependencies>
+          <configuration>
+            <configLocation>hbase/checkstyle.xml</configLocation>
+            <suppressionsLocation>hbase/checkstyle-suppressions.xml</suppressionsLocation>
+          </configuration>
+        </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
@@ -712,6 +729,21 @@
             </configuration>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.hbase</groupId>
+            <artifactId>hbase-checkstyle</artifactId>
+            <version>${project.version}</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <configLocation>hbase/checkstyle.xml</configLocation>
+          <suppressionsLocation>hbase/checkstyle-suppressions.xml</suppressionsLocation>
+        </configuration>
       </plugin>
       <!--Build the documentation.  We build it twice.  Once as a single page and then
            again as multipage.-->
@@ -2361,8 +2393,16 @@
             </configuration>
           </reportSet>
         </reportSets>
-      </plugin> 
-
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>2.13</version>
+        <configuration>
+          <configLocation>hbase/checkstyle.xml</configLocation>
+          <suppressionsLocation>hbase/checkstyle-suppressions.xml</suppressionsLocation>
+        </configuration>
+      </plugin>
     </plugins>
   </reporting>
   <distributionManagement>
