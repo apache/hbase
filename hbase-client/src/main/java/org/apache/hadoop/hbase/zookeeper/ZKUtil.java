@@ -1857,6 +1857,11 @@ public class ZKUtil {
       try {
         data = ZKUtil.getData(zkw, znode);
       } catch(KeeperException e) {
+        if (e instanceof KeeperException.SessionExpiredException 
+            || e instanceof KeeperException.AuthFailedException) {
+          // non-recoverable errors so stop here
+          throw new InterruptedException("interrupted due to " + e);
+        }
         LOG.warn("Unexpected exception handling blockUntilAvailable", e);
       }
 
