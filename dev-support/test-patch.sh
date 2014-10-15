@@ -220,7 +220,6 @@ setup () {
   against trunk revision ${SVN_REVISION}.
   ATTACHMENT ID: ${ATTACHMENT_ID}"
 
-    #PENDING: cp -f $SUPPORT_DIR/etc/checkstyle* ./src/test
   ### Copy the patch file to $PATCH_DIR
   else
     VERSION=PATCH-${defect}
@@ -250,16 +249,17 @@ setup () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
+  echo "$MVN clean package checkstyle:checkstyle-aggregate -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
   export MAVEN_OPTS="${MAVEN_OPTS}"
   # build core and tests
-  $MVN clean test -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
+  $MVN clean package checkstyle:checkstyle-aggregate -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
     ERR=`$GREP -A 5 'Compilation failure' $PATCH_DIR/trunkJavacWarnings.txt`
     echo "Trunk compilation is broken?
     {code}$ERR{code}"
     cleanupAndExit 1
   fi
+  mv target/checkstyle-result.xml $PATCH_DIR/trunkCheckstyle.xml
 }
 
 ###############################################################################
@@ -489,6 +489,41 @@ checkJavacWarnings () {
   return 0
 }
 
+checkCheckstyleErrors() {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Determining number of patched Checkstyle errors."
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+  if [[ -f $PATCH_DIR/trunkCheckstyle.xml ]] ; then
+    $MVN package -DskipTests checkstyle:checkstyle-aggregate > /dev/null 2>&1
+    mv target/checkstyle-result.xml $PATCH_DIR/patchCheckstyle.xml
+    mv target/site/checkstyle-aggregate.html $PATCH_DIR
+    mv target/site/checkstyle.css $PATCH_DIR
+    trunkCheckstyleErrors=`$GREP '<error' $PATCH_DIR/trunkCheckstyle.xml | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
+    patchCheckstyleErrors=`$GREP '<error' $PATCH_DIR/patchCheckstyle.xml | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
+    if [[ $patchCheckstyleErrors -gt $trunkCheckstyleErrors ]] ; then
+                JIRA_COMMENT_FOOTER="Checkstyle Errors: $BUILD_URL/artifact/patchprocess/checkstyle-aggregate.html
+
+                $JIRA_COMMENT_FOOTER"
+
+                JIRA_COMMENT="$JIRA_COMMENT
+
+                {color:red}-1 javac{color}.  The applied patch generated $patchCheckstyleErrors checkstyle errors (more than the trunk's current $trunkCheckstyleErrors errors)."
+        return 1
+    fi
+    echo "There were $patchCheckstyleErrors checkstyle errors in this patch compared to $trunkCheckstyleErrors on master."
+  fi
+  JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:green}+1 javac{color}.  The applied patch does not increase the total number of checkstyle errors"
+  return 0
+
+}
 ###############################################################################
 checkProtocErrors () {
   echo ""
@@ -549,41 +584,6 @@ $JIRA_COMMENT_FOOTER"
   JIRA_COMMENT="$JIRA_COMMENT
 
     {color:green}+1 release audit{color}.  The applied patch does not increase the total number of release audit warnings."
-  return 0
-}
-
-###############################################################################
-### Check there are no changes in the number of Checkstyle warnings
-checkStyle () {
-  echo ""
-  echo ""
-  echo "======================================================================"
-  echo "======================================================================"
-  echo "    Determining number of patched checkstyle warnings."
-  echo "======================================================================"
-  echo "======================================================================"
-  echo ""
-  echo ""
-  echo "THIS IS NOT IMPLEMENTED YET"
-  echo ""
-  echo ""
-  echo "$MVN package checkstyle:checkstyle -D${PROJECT_NAME}PatchProcess -DskipTests"
-  export MAVEN_OPTS="${MAVEN_OPTS}"
-  $MVN package checkstyle:checkstyle -D${PROJECT_NAME}PatchProcess -DskipTests
-
-  JIRA_COMMENT_FOOTER="Checkstyle results: $BUILD_URL/artifact/trunk/build/test/checkstyle-errors.html
-$JIRA_COMMENT_FOOTER"
-  ### TODO: calculate actual patchStyleErrors
-#  patchStyleErrors=0
-#  if [[ $patchStyleErrors != 0 ]] ; then
-#    JIRA_COMMENT="$JIRA_COMMENT
-#
-#    {color:red}-1 checkstyle{color}.  The patch generated $patchStyleErrors code style errors."
-#    return 1
-#  fi
-#  JIRA_COMMENT="$JIRA_COMMENT
-#
-#    {color:green}+1 checkstyle{color}.  The patch generated 0 code style errors."
   return 0
 }
 
@@ -759,9 +759,9 @@ checkSiteXml () {
   echo ""
   echo ""
 
-  echo "$MVN compile site -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchSiteOutput.txt 2>&1"
+  echo "$MVN package site -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchSiteOutput.txt 2>&1"
   export MAVEN_OPTS="${MAVEN_OPTS}"
-  $MVN compile site -DskipTests -D${PROJECT_NAME}PatchProcess  > $PATCH_DIR/patchSiteOutput.txt 2>&1
+  $MVN package site -DskipTests -D${PROJECT_NAME}PatchProcess  > $PATCH_DIR/patchSiteOutput.txt 2>&1
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
@@ -907,9 +907,8 @@ checkProtocErrors
 (( RESULT = RESULT + $? ))
 checkJavadocWarnings
 (( RESULT = RESULT + $? ))
-### Checkstyle not implemented yet
-#checkStyle
-#(( RESULT = RESULT + $? ))
+checkCheckstyleErrors
+(( RESULT = RESULT + $? ))
 checkFindbugsWarnings
 (( RESULT = RESULT + $? ))
 checkReleaseAuditWarnings
