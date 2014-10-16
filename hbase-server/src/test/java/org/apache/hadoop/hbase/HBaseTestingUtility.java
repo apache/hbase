@@ -1208,6 +1208,21 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   /**
    * Create a table.
+   * @param htd
+   * @param splitRows
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createTable(HTableDescriptor htd, byte[][] splitRows)
+      throws IOException {
+    getHBaseAdmin().createTable(htd, splitRows);
+    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
+    waitUntilAllRegionsAssigned(htd.getTableName());
+    return new HTable(getConfiguration(), htd.getTableName());
+  }
+
+  /**
+   * Create a table.
    * @param tableName
    * @param families
    * @param c Configuration to use
