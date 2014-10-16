@@ -412,7 +412,7 @@ possible configurations would overwhelm and obscure the important.
   <!-- End of properties used to generate ZooKeeper host:port quorum list. -->
   <property>
     <name>hbase.zookeeper.useMulti</name>
-    <value>false</value>
+    <value>true</value>
     <description>Instructs HBase to make use of ZooKeeper's multi-update functionality.
     This allows certain ZooKeeper operations to complete more quickly and prevents some issues
     with rare Replication failure scenarios (see the release note of HBASE-2611 for an example).
