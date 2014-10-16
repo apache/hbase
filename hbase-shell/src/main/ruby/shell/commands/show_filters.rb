@@ -27,7 +27,6 @@ module Shell
 Show all the filters in hbase. Example:
   hbase> show_filters
 
-  Documentation on filters mentioned below can be found at: https://our.intern.facebook.com/intern/wiki/index.php/HBase/Filter_Language
   ColumnPrefixFilter
   TimestampsFilter
   PageFilter
@@ -38,10 +37,6 @@ EOF
 
       def command( )
         now = Time.now
-        formatter.row(["Documentation on filters mentioned below can " +
-                       "be found at: https://our.intern.facebook.com/intern/" +
-                       "wiki/index.php/HBase/Filter_Language"])
-
         parseFilter = ParseFilter.new
         supportedFilters = parseFilter.getSupportedFilters
 
