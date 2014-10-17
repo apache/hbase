@@ -3937,7 +3937,11 @@ public class HRegion implements HeapSize { // , Writable{
     }
 
     @Override
-    public boolean nextRaw(List<Cell> outResults, int limit) throws IOException {
+    public synchronized boolean nextRaw(List<Cell> outResults, int limit) throws IOException {
+      if (storeHeap == null) {
+        // scanner is closed
+        throw new UnknownScannerException("Scanner was closed");
+      }
       boolean returnResult;
       if (outResults.isEmpty()) {
         // Usually outResults is empty. This is true when next is called

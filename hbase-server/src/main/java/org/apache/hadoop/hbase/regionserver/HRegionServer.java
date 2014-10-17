@@ -3317,9 +3317,12 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         if (rsh != null) {
           try {
             RegionScanner scanner = rsh.s;
+            LOG.warn(scannerName + " encountered " + ie.getMessage() + ", closing ...");
             scanner.close();
             leases.cancelLease(scannerName);
-          } catch (IOException e) {}
+          } catch (IOException e) {
+            LOG.warn("Getting exception closing " + scannerName, e);
+          }
         }
       }
       throw new ServiceException(ie);
