@@ -457,6 +457,11 @@ public class ImportTsv extends Configured implements Tool {
       }
       HFileOutputFormat.configureIncrementalLoad(job, table);
     } else {
+      if (!admin.tableExists(tableName)) {
+        String errorMsg = format("Table '%s' does not exist.", tableName);
+        LOG.error(errorMsg);
+        throw new TableNotFoundException(errorMsg);
+      }
       if (mapperClass.equals(TsvImporterTextMapper.class)) {
         usage(TsvImporterTextMapper.class.toString()
             + " should not be used for non bulkloading case. use "
