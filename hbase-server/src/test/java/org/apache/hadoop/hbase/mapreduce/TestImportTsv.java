@@ -244,6 +244,16 @@ public class TestImportTsv implements Configurable {
     ImportTsv.createSubmittableJob(conf, args);
   }
 
+  @Test(expected = TableNotFoundException.class)
+  public void testMRWithoutAnExistingTable() throws Exception {
+    String table = "test-" + UUID.randomUUID();
+    String[] args =
+        new String[] { table, "/inputFile" };
+
+    Configuration conf = new Configuration(util.getConfiguration());
+    ImportTsv.createSubmittableJob(conf, args);
+  }
+
   protected static Tool doMROnTableTest(HBaseTestingUtility util, String family,
       String data, String[] args) throws Exception {
     return doMROnTableTest(util, family, data, args, 1);
