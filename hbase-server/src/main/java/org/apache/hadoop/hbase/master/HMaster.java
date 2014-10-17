@@ -275,7 +275,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       conf.getLong("hbase.master.buffer.for.rs.fatals", 1*1024*1024));
 
     LOG.info("hbase.rootdir=" + FSUtils.getRootDir(this.conf) +
-        ", hbase.cluster.distributed=" + this.conf.getBoolean("hbase.cluster.distributed", false));
+        ", hbase.cluster.distributed=" + this.conf.getBoolean(HConstants.CLUSTER_DISTRIBUTED, false));
 
     Replication.decorateMasterConfiguration(this.conf);
 
