@@ -216,6 +216,7 @@ public class ClusterStatus extends VersionedWritable {
    * @return region server information
    * @deprecated Use {@link #getServers()}
    */
+  @Deprecated
   public Collection<ServerName> getServerInfo() {
     return getServers();
   }

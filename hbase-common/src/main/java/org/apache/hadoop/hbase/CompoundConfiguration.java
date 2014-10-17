@@ -72,11 +72,11 @@ public class CompoundConfiguration extends Configuration {
     int size();
   }
 
-  protected List<ImmutableConfigMap> configs
+  private final List<ImmutableConfigMap> configs
     = new ArrayList<ImmutableConfigMap>();
 
   static class ImmutableConfWrapper implements  ImmutableConfigMap {
-    Configuration c;
+   private final Configuration c;
     
     ImmutableConfWrapper(Configuration conf) {
       c = conf;
@@ -163,7 +163,7 @@ public class CompoundConfiguration extends Configuration {
 
     // put new map at the front of the list (top priority)
     this.configs.add(0, new ImmutableConfigMap() {
-      Map<Bytes, Bytes> m = map;
+      private final Map<Bytes, Bytes> m = map;
 
       @Override
       public Iterator<Map.Entry<String,String>> iterator() {
@@ -224,7 +224,7 @@ public class CompoundConfiguration extends Configuration {
 
     // put new map at the front of the list (top priority)
     this.configs.add(0, new ImmutableConfigMap() {
-      Map<String, String> m = map;
+      private final Map<String, String> m = map;
 
       @Override
       public Iterator<Map.Entry<String,String>> iterator() {

@@ -41,6 +41,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceStability.Evolving
 public final class CellUtil {
 
+  /**
+   * Private constructor to keep this class from being instantiated.
+   */
+  private CellUtil(){}
+
   /******************* ByteRange *******************************/
 
   public static ByteRange fillRowRange(Cell cell, ByteRange range) {
@@ -175,7 +180,8 @@ public final class CellUtil {
   }
 
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
-      final long timestamp, final byte type, final byte[] value, byte[] tags, final long memstoreTS) {
+      final long timestamp, final byte type, final byte[] value, byte[] tags,
+      final long memstoreTS) {
     KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp,
         KeyValue.Type.codeToType(type), value, tags);
     keyValue.setSequenceId(memstoreTS);
@@ -212,7 +218,8 @@ public final class CellUtil {
    * @param cellScannerables
    * @return CellScanner interface over <code>cellIterables</code>
    */
-  public static CellScanner createCellScanner(final List<? extends CellScannable> cellScannerables) {
+  public static CellScanner createCellScanner(
+      final List<? extends CellScannable> cellScannerables) {
     return new CellScanner() {
       private final Iterator<? extends CellScannable> iterator = cellScannerables.iterator();
       private CellScanner cellScanner = null;

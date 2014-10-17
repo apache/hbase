@@ -62,8 +62,7 @@ public class CellKey {
         familyLength);
     String qualifier = (qualifierLength == 0) ? "" : Bytes.toStringBinary(qualifierArray,
         qualifierOffset, qualifierLength);
-    return row + "/" + family +
-        (family != null && family.length() > 0 ? ":" : "") + qualifier
+    return row + "/" + family + (family != null && family.length() > 0 ? ":" : "") + qualifier
         + "/" + KeyValue.humanReadableTimestamp(ts) + "/" + Type.codeToType(type);
   }
 }

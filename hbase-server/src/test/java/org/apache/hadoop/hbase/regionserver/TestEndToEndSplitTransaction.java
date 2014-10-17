@@ -385,7 +385,7 @@ public class TestEndToEndSplitTransaction {
         verify();
       } catch (Throwable ex) {
         this.ex = ex;
-        stopper.stop("caught exception");
+        getStopper().stop("caught exception");
       }
     }
   }

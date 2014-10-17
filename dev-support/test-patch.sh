@@ -517,14 +517,18 @@ checkCheckstyleErrors() {
 
                 JIRA_COMMENT="$JIRA_COMMENT
 
-                {color:red}-1 javac{color}.  The applied patch generated $patchCheckstyleErrors checkstyle errors (more than the trunk's current $trunkCheckstyleErrors errors)."
+                {color:red}-1 checkstyle{color}.  The applied patch generated $patchCheckstyleErrors checkstyle errors (more than the trunk's current $trunkCheckstyleErrors errors)."
         return 1
     fi
     echo "There were $patchCheckstyleErrors checkstyle errors in this patch compared to $trunkCheckstyleErrors on master."
   fi
+  JIRA_COMMENT_FOOTER="Checkstyle Errors: $BUILD_URL/artifact/patchprocess/checkstyle-aggregate.html
+
+  $JIRA_COMMENT_FOOTER"
+
   JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:green}+1 javac{color}.  The applied patch does not increase the total number of checkstyle errors"
+    {color:green}+1 checkstyle{color}.  The applied patch does not increase the total number of checkstyle errors"
   return 0
 
 }

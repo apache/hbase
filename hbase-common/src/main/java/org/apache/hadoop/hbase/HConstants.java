@@ -150,7 +150,9 @@ public final class HConstants {
   /** Parameter name for the master type being backup (waits for primary to go inactive). */
   public static final String MASTER_TYPE_BACKUP = "hbase.master.backup";
 
-  /** by default every master is a possible primary master unless the conf explicitly overrides it */
+  /**
+   * by default every master is a possible primary master unless the conf explicitly overrides it
+   */
   public static final boolean DEFAULT_MASTER_TYPE_BACKUP = false;
 
   /** Name of ZooKeeper quorum configuration parameter. */
@@ -179,8 +181,11 @@ public final class HConstants {
   /** Default client port that the zookeeper listens on */
   public static final int DEFAULT_ZOOKEPER_CLIENT_PORT = 2181;
 
-  /** Parameter name for the wait time for the recoverable zookeeper */
-  public static final String ZOOKEEPER_RECOVERABLE_WAITTIME = "hbase.zookeeper.recoverable.waittime";
+  /**
+   * Parameter name for the wait time for the recoverable zookeeper
+   */
+  public static final String ZOOKEEPER_RECOVERABLE_WAITTIME =
+      "hbase.zookeeper.recoverable.waittime";
 
   /** Default wait time for the recoverable zookeeper */
   public static final long DEFAULT_ZOOKEPER_RECOVERABLE_WAITIME = 10000;
@@ -380,7 +385,10 @@ public final class HConstants {
   // should go down.
 
 
-  /** The hbase:meta table's name. */
+  /**
+   * The hbase:meta table's name.
+   * 
+   */
   @Deprecated  // for compat from 0.94 -> 0.96.
   public static final byte[] META_TABLE_NAME = TableName.META_TABLE_NAME.getName();
 

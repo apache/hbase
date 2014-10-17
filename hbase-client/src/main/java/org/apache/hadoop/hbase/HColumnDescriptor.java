@@ -632,6 +632,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
         Integer.decode(value): Integer.valueOf(DEFAULT_BLOCKSIZE);
     }
     return this.blocksize.intValue();
+
   }
 
   /**
@@ -664,7 +665,10 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
     return setValue(COMPRESSION, type.getName().toUpperCase());
   }
 
-  /** @return data block encoding algorithm used on disk */
+  /**
+   * @return data block encoding algorithm used on disk
+   * @deprecated See getDataBlockEncoding()
+   */
   @Deprecated
   public DataBlockEncoding getDataBlockEncodingOnDisk() {
     return getDataBlockEncoding();
@@ -674,6 +678,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    * This method does nothing now. Flag ENCODE_ON_DISK is not used
    * any more. Data blocks have the same encoding in cache as on disk.
    * @return this (for chained invocation)
+   * @deprecated This does nothing now.
    */
   @Deprecated
   public HColumnDescriptor setEncodeOnDisk(boolean encodeOnDisk) {

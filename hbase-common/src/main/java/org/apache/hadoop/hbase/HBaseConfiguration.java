@@ -42,6 +42,7 @@ public class HBaseConfiguration extends Configuration {
   /**
    * Instantinating HBaseConfiguration() is deprecated. Please use
    * HBaseConfiguration#create() to construct a plain Configuration
+   * @deprecated Please use create() instead.
    */
   @Deprecated
   public HBaseConfiguration() {
@@ -55,6 +56,7 @@ public class HBaseConfiguration extends Configuration {
   /**
    * Instantiating HBaseConfiguration() is deprecated. Please use
    * HBaseConfiguration#create(conf) to construct a plain Configuration
+   * @deprecated Please user create(conf) instead.
    */
   @Deprecated
   public HBaseConfiguration(final Configuration c) {
@@ -167,8 +169,9 @@ public class HBaseConfiguration extends Configuration {
    * Get the password from the Configuration instance using the
    * getPassword method if it exists. If not, then fall back to the
    * general get method for configuration elements.
-   * @param conf configuration instance for accessing the passwords
-   * @param alias the name of the password element
+   *
+   * @param conf    configuration instance for accessing the passwords
+   * @param alias   the name of the password element
    * @param defPass the default password
    * @return String password or default password
    * @throws IOException
@@ -181,10 +184,9 @@ public class HBaseConfiguration extends Configuration {
       char[] p = (char[]) m.invoke(conf, alias);
       if (p != null) {
         LOG.debug(String.format("Config option \"%s\" was found through" +
-        		" the Configuration getPassword method.", alias));
+            " the Configuration getPassword method.", alias));
         passwd = new String(p);
-      }
-      else {
+      } else {
         LOG.debug(String.format(
             "Config option \"%s\" was not found. Using provided default value",
             alias));
@@ -195,7 +197,7 @@ public class HBaseConfiguration extends Configuration {
       //provider API doesn't exist yet
       LOG.debug(String.format(
           "Credential.getPassword method is not available." +
-          " Falling back to configuration."));
+              " Falling back to configuration."));
       passwd = conf.get(alias, defPass);
     } catch (SecurityException e) {
       throw new IOException(e.getMessage(), e);
@@ -209,7 +211,8 @@ public class HBaseConfiguration extends Configuration {
     return passwd;
   }
 
-  /** For debugging.  Dump configurations to system output as xml format.
+  /**
+   * For debugging.  Dump configurations to system output as xml format.
    * Master and RS configurations can also be dumped using
    * http services. e.g. "curl http://master:16010/dump"
    */

@@ -25,7 +25,13 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class HBaseInterfaceAudience {
+public final class HBaseInterfaceAudience {
+
+  /**
+   * Can't create this class.
+   */
+  private HBaseInterfaceAudience(){}
+
   public static final String COPROC = "Coprocesssor";
   public static final String REPLICATION = "Replication";
   public static final String PHOENIX = "Phoenix";
