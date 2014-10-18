@@ -52,9 +52,9 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mapreduce.Import;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.security.visibility.VisibilityClient;
@@ -154,7 +154,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
         admin.createTable(htd);
         if (acl) {
           LOG.info("Granting permissions for user " + USER.getShortName());
-          AccessControlProtos.Permission.Action[] actions = { AccessControlProtos.Permission.Action.READ };
+          Permission.Action[] actions = { Permission.Action.READ };
           try {
             AccessControlClient.grant(getConf(), tableName, USER.getShortName(), null, null,
                 actions);

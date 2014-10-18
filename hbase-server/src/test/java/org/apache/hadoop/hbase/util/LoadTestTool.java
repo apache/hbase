@@ -47,11 +47,11 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
+import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGeneratorWithACL;
 import org.apache.hadoop.security.SecurityUtil;
@@ -572,9 +572,9 @@ public class LoadTestTool extends AbstractHBaseTool {
 
     if (userOwner != null) {
       LOG.info("Granting permissions for user " + userOwner.getShortName());
-      AccessControlProtos.Permission.Action[] actions = {
-        AccessControlProtos.Permission.Action.ADMIN, AccessControlProtos.Permission.Action.CREATE,
-        AccessControlProtos.Permission.Action.READ, AccessControlProtos.Permission.Action.WRITE };
+      Permission.Action[] actions = {
+        Permission.Action.ADMIN, Permission.Action.CREATE,
+        Permission.Action.READ, Permission.Action.WRITE };
       try {
         AccessControlClient.grant(conf, tableName, userOwner.getShortName(), null, null, actions);
       } catch (Throwable e) {
