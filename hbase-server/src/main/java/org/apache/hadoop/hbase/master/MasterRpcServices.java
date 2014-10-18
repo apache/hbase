@@ -172,7 +172,7 @@ import com.google.protobuf.ServiceException;
 @InterfaceAudience.Private
 @SuppressWarnings("deprecation")
 public class MasterRpcServices extends RSRpcServices
-    implements MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface {
+      implements MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface {
   protected static final Log LOG = LogFactory.getLog(MasterRpcServices.class.getName());
 
   private final HMaster master;

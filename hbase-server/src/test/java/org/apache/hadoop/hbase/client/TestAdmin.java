@@ -560,32 +560,6 @@ public class TestAdmin {
         "hbase.online.schema.update.enable", true);
   }
 
-  /**
-   * Listens for when an event is done in Master.
-   */
-  static class DoneListener implements EventHandler.EventHandlerListener {
-    private final AtomicBoolean done;
-
-    DoneListener(final AtomicBoolean done) {
-      super();
-      this.done = done;
-    }
-
-    @Override
-    public void afterProcess(EventHandler event) {
-      this.done.set(true);
-      synchronized (this.done) {
-        // Wake anyone waiting on this value to change.
-        this.done.notifyAll();
-      }
-    }
-
-    @Override
-    public void beforeProcess(EventHandler event) {
-      // continue
-    }
-  }
-
   @SuppressWarnings("deprecation")
   protected void verifyRoundRobinDistribution(HTable ht, int expectedRegions) throws IOException {
     int numRS = ht.getConnection().getCurrentNrHRS();
