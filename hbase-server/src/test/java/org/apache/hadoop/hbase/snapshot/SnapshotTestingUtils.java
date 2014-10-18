@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -630,13 +631,20 @@ public class SnapshotTestingUtils {
     for (HRegion region : onlineRegions) {
       region.waitForFlushesAndCompactions();
     }
-    util.getHBaseAdmin().isTableAvailable(tableName);
+    // Wait up to 60 seconds for a table to be available.
+    final HBaseAdmin hBaseAdmin = util.getHBaseAdmin();
+    util.waitFor(60000, new Waiter.Predicate<IOException>() {
+      @Override
+      public boolean evaluate() throws IOException {
+        return hBaseAdmin.isTableAvailable(tableName);
+      }
+    });
   }
 
   public static void createTable(final HBaseTestingUtility util, final TableName tableName,
       final byte[]... families) throws IOException, InterruptedException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
-    for (byte[] family: families) {
+    for (byte[] family : families) {
       HColumnDescriptor hcd = new HColumnDescriptor(family);
       htd.addFamily(hcd);
     }
@@ -644,8 +652,7 @@ public class SnapshotTestingUtils {
     for (int i = 0; i < splitKeys.length; ++i) {
       splitKeys[i] = new byte[] { KEYS[i+1] };
     }
-    util.getHBaseAdmin().createTable(htd, splitKeys);
-    waitForTableToBeOnline(util, tableName);
+    util.createTable(htd, splitKeys);
     assertEquals(KEYS.length-1, util.getHBaseAdmin().getTableRegions(tableName).size());
   }
 
