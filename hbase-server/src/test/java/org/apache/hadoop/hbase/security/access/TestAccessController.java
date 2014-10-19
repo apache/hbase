@@ -2039,6 +2039,89 @@ public class TestAccessController extends SecureTestUtil {
     verifyAllowed(getAction, USER_NONE);
   }
 
+  @Test
+  public void testAccessControlClientGrantRevoke() throws Exception {
+    // Create user for testing, who has no READ privileges by default.
+    User testGrantRevoke = User.createUserForTesting(conf, "testGrantRevoke", new String[0]);
+    AccessTestAction getAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          return t.get(new Get(TEST_ROW));
+        } finally {
+          t.close();
+        }
+      }
+    };
+
+    verifyDenied(getAction, testGrantRevoke);
+
+    // Grant table READ permissions to testGrantRevoke.
+    try {
+      grantOnTableUsingAccessControlClient(TEST_UTIL, conf, testGrantRevoke.getShortName(),
+          TEST_TABLE.getTableName(), null, null, Permission.Action.READ);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.grant. " + e.getStackTrace());
+    }
+
+    // Now testGrantRevoke should be able to read also
+    verifyAllowed(getAction, testGrantRevoke);
+
+    // Revoke table READ permission to testGrantRevoke.
+    try {
+      revokeFromTableUsingAccessControlClient(TEST_UTIL, conf, testGrantRevoke.getShortName(),
+          TEST_TABLE.getTableName(), null, null, Permission.Action.READ);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.revoke " + e.getStackTrace());
+    }
+
+    // Now testGrantRevoke shouldn't be able read
+    verifyDenied(getAction, testGrantRevoke);
+  }
+
+  @Test
+  public void testAccessControlClientGrantRevokeOnNamespace() throws Exception {
+    // Create user for testing, who has no READ privileges by default.
+    User testNS = User.createUserForTesting(conf, "testNS", new String[0]);
+    AccessTestAction getAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, TEST_TABLE.getTableName());
+        try {
+          return t.get(new Get(TEST_ROW));
+        } finally {
+          t.close();
+        }
+      }
+    };
+
+    verifyDenied(getAction, testNS);
+
+    // Grant namespace READ to testNS, this should supersede any table permissions
+    try {
+      grantOnNamespaceUsingAccessControlClient(TEST_UTIL, conf, testNS.getShortName(),
+          TEST_TABLE.getTableName().getNamespaceAsString(), Permission.Action.READ);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.grant. " + e.getStackTrace());
+    }
+
+    // Now testNS should be able to read also
+    verifyAllowed(getAction, testNS);
+
+    // Revoke namespace READ to testNS, this should supersede any table permissions
+    try {
+      revokeFromNamespaceUsingAccessControlClient(TEST_UTIL, conf, testNS.getShortName(),
+          TEST_TABLE.getTableName().getNamespaceAsString(), Permission.Action.READ);
+    } catch (Throwable e) {
+      LOG.error("error during call of AccessControlClient.revoke " + e.getStackTrace());
+    }
+
+    // Now testNS shouldn't be able read
+    verifyDenied(getAction, testNS);
+  }
+
+
   public static class PingCoprocessor extends PingService implements Coprocessor,
       CoprocessorService {
 

@@ -390,6 +390,48 @@ public class SecureTestUtil {
   }
 
   /**
+   * Grant permissions on a namespace to the given user using AccessControl Client.
+   * Will wait until all active AccessController instances have updated their permissions caches
+   * or will throw an exception upon timeout (10 seconds).
+   */
+  public static void grantOnNamespaceUsingAccessControlClient(final HBaseTestingUtility util,
+      final Configuration conf, final String user, final String namespace,
+      final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        try {
+          AccessControlClient.grant(conf, namespace, user, actions);
+        } catch (Throwable t) {
+          t.printStackTrace();
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
+   * Revoke permissions on a namespace from the given user using AccessControl Client.
+   * Will wait until all active AccessController instances have updated their permissions caches
+   * or will throw an exception upon timeout (10 seconds).
+   */
+  public static void revokeFromNamespaceUsingAccessControlClient(final HBaseTestingUtility util,
+      final Configuration conf, final String user, final String namespace,
+      final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        try {
+          AccessControlClient.revoke(conf, namespace, user, actions);
+        } catch (Throwable t) {
+          t.printStackTrace();
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
    * Revoke permissions on a namespace from the given user. Will wait until all active
    * AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
@@ -439,6 +481,27 @@ public class SecureTestUtil {
   }
 
   /**
+   * Grant permissions on a table to the given user using AccessControlClient. Will wait until all
+   * active AccessController instances have updated their permissions caches or will
+   * throw an exception upon timeout (10 seconds).
+   */
+  public static void grantOnTableUsingAccessControlClient(final HBaseTestingUtility util,
+      final Configuration conf, final String user, final TableName table, final byte[] family,
+      final byte[] qualifier, final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        try {
+          AccessControlClient.grant(conf, table, user, family, qualifier, actions);
+        } catch (Throwable t) {
+          t.printStackTrace();
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
    * Revoke permissions on a table from the given user. Will wait until all active
    * AccessController instances have updated their permissions caches or will
    * throw an exception upon timeout (10 seconds).
@@ -457,6 +520,27 @@ public class SecureTestUtil {
           ProtobufUtil.revoke(protocol, user, table, family, qualifier, actions);
         } finally {
           acl.close();
+        }
+        return null;
+      }
+    });
+  }
+
+  /**
+   * Revoke permissions on a table from the given user using AccessControlClient. Will wait until
+   * all active AccessController instances have updated their permissions caches or will
+   * throw an exception upon timeout (10 seconds).
+   */
+  public static void revokeFromTableUsingAccessControlClient(final HBaseTestingUtility util,
+      final Configuration conf, final String user, final TableName table, final byte[] family,
+      final byte[] qualifier, final Permission.Action... actions) throws Exception {
+    SecureTestUtil.updateACLs(util, new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        try {
+          AccessControlClient.revoke(conf, table, user, family, qualifier, actions);
+        } catch (Throwable t) {
+          t.printStackTrace();
         }
         return null;
       }

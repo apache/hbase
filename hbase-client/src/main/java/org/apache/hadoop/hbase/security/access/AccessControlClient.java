@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.security.access;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
@@ -34,22 +33,11 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.coprocessor.Batch;
-import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
-import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService.BlockingInterface;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantResponse;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequest;
-import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeResponse;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.ByteString;
 
 /**
  * Utility client for doing access control admin operations.
@@ -57,6 +45,23 @@ import com.google.protobuf.ByteString;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class AccessControlClient {
+
+  private static HTable getAclTable(Configuration conf) throws IOException {
+    TableName aclTableName =
+        TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR,
+            AccessControlConstants.OP_ATTRIBUTE_ACL);
+    return new HTable(conf, aclTableName.getName());
+  }
+
+  private static BlockingInterface getAccessControlServiceStub(HTable ht)
+      throws IOException {
+    CoprocessorRpcChannel service = ht.coprocessorService(HConstants.EMPTY_START_ROW);
+    BlockingInterface protocol =
+        AccessControlProtos.AccessControlService.newBlockingStub(service);
+    return protocol;
+  }
+
+
   /**
    * Grants permission on the specified table for the specified user
    * @param conf
@@ -65,63 +70,42 @@ public class AccessControlClient {
    * @param family
    * @param qual
    * @param actions
-   * @return GrantResponse
    * @throws Throwable
    */
-  public static GrantResponse grant(Configuration conf, final TableName tableName,
+  public static void grant(Configuration conf, final TableName tableName,
       final String userName, final byte[] family, final byte[] qual,
-      final AccessControlProtos.Permission.Action... actions) throws Throwable {
+      final Permission.Action... actions) throws Throwable {
     HTable ht = null;
     try {
-      TableName aclTableName =
-          TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "acl");
-      ht = new HTable(conf, aclTableName.getName());
-      Batch.Call<AccessControlService, GrantResponse> callable =
-          new Batch.Call<AccessControlService, GrantResponse>() {
-        ServerRpcController controller = new ServerRpcController();
-        BlockingRpcCallback<GrantResponse> rpcCallback =
-            new BlockingRpcCallback<GrantResponse>();
-
-        @Override
-        public GrantResponse call(AccessControlService service) throws IOException {
-          GrantRequest.Builder builder = GrantRequest.newBuilder();
-          AccessControlProtos.Permission.Builder ret =
-              AccessControlProtos.Permission.newBuilder();
-          AccessControlProtos.TablePermission.Builder permissionBuilder =
-              AccessControlProtos.TablePermission
-              .newBuilder();
-          for (AccessControlProtos.Permission.Action a : actions) {
-            permissionBuilder.addAction(a);
-          }
-          permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
-
-          if (family != null) {
-            permissionBuilder.setFamily(ByteStringer.wrap(family));
-          }
-          if (qual != null) {
-            permissionBuilder.setQualifier(ByteStringer.wrap(qual));
-          }
-          ret.setType(AccessControlProtos.Permission.Type.Table).setTablePermission(
-              permissionBuilder);
-          builder.setUserPermission(AccessControlProtos.UserPermission.newBuilder()
-              .setUser(ByteString.copyFromUtf8(userName)).setPermission(ret));
-          service.grant(controller, builder.build(), rpcCallback);
-          return rpcCallback.get();
-        }
-      };
-      Map<byte[], GrantResponse> result = ht.coprocessorService(AccessControlService.class,
-          HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, callable);
-      return result.values().iterator().next(); // There will be exactly one
-                                                // region for labels
-                                                // table and so one entry in
-                                                // result Map.
+      ht = getAclTable(conf);
+      ProtobufUtil.grant(getAccessControlServiceStub(ht), userName, tableName, family, qual,
+          actions);
     } finally {
       if (ht != null) {
         ht.close();
       }
     }
   }
-
+  /**
+   * Grants permission on the specified namespace for the specified user.
+   * @param conf
+   * @param namespace
+   * @param userName
+   * @param actions
+   * @throws Throwable
+   */
+  public static void grant(Configuration conf, final String namespace,
+      final String userName, final Permission.Action... actions) throws Throwable {
+    HTable ht = null;
+    try {
+      ht = getAclTable(conf);
+      ProtobufUtil.grant(getAccessControlServiceStub(ht), userName, namespace, actions);
+    } finally {
+      if (ht != null) {
+        ht.close();
+      }
+    }
+  }
   public static boolean isAccessControllerRunning(Configuration conf)
       throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     TableName aclTableName = TableName
@@ -136,65 +120,44 @@ public class AccessControlClient {
       }
     }
   }
-
   /**
    * Revokes the permission on the table
    * @param conf
-   * @param username
    * @param tableName
+   * @param username
    * @param family
    * @param qualifier
    * @param actions
-   * @return RevokeResponse
    * @throws Throwable
    */
-  public static RevokeResponse revoke(Configuration conf, final String username,
-      final TableName tableName, final byte[] family, final byte[] qualifier,
-      final AccessControlProtos.Permission.Action... actions) throws Throwable {
+  public static void revoke(Configuration conf, final TableName tableName,
+      final String username, final byte[] family, final byte[] qualifier,
+      final Permission.Action... actions) throws Throwable {
     HTable ht = null;
     try {
-      TableName aclTableName = TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR,
-          "acl");
-      ht = new HTable(conf, aclTableName.getName());
-      Batch.Call<AccessControlService, AccessControlProtos.RevokeResponse> callable =
-          new Batch.Call<AccessControlService, AccessControlProtos.RevokeResponse>() {
-        ServerRpcController controller = new ServerRpcController();
-        BlockingRpcCallback<AccessControlProtos.RevokeResponse> rpcCallback =
-            new BlockingRpcCallback<AccessControlProtos.RevokeResponse>();
-
-        @Override
-        public RevokeResponse call(AccessControlService service) throws IOException {
-          AccessControlProtos.Permission.Builder ret =
-              AccessControlProtos.Permission.newBuilder();
-          AccessControlProtos.TablePermission.Builder permissionBuilder =
-              AccessControlProtos.TablePermission.newBuilder();
-          for (AccessControlProtos.Permission.Action a : actions) {
-            permissionBuilder.addAction(a);
-          }
-          if (tableName != null) {
-            permissionBuilder.setTableName(ProtobufUtil.toProtoTableName(tableName));
-          }
-          if (family != null) {
-            permissionBuilder.setFamily(ByteStringer.wrap(family));
-          }
-          if (qualifier != null) {
-            permissionBuilder.setQualifier(ByteStringer.wrap(qualifier));
-          }
-          ret.setType(AccessControlProtos.Permission.Type.Table).setTablePermission(
-              permissionBuilder);
-          RevokeRequest builder = AccessControlProtos.RevokeRequest
-              .newBuilder()
-              .setUserPermission(
-                  AccessControlProtos.UserPermission.newBuilder()
-                      .setUser(ByteString.copyFromUtf8(username)).setPermission(ret)).build();
-          service.revoke(controller, builder, rpcCallback);
-          return rpcCallback.get();
-        }
-      };
-      Map<byte[], RevokeResponse> result = ht.coprocessorService(AccessControlService.class,
-          HConstants.EMPTY_BYTE_ARRAY, HConstants.EMPTY_BYTE_ARRAY, callable);
-      return result.values().iterator().next();
-
+      ht = getAclTable(conf);
+      ProtobufUtil.revoke(getAccessControlServiceStub(ht), username, tableName, family, qualifier,
+          actions);
+    } finally {
+      if (ht != null) {
+        ht.close();
+      }
+    }
+  }
+  /**
+   * Revokes the permission on the table for the specified user.
+   * @param conf
+   * @param namespace
+   * @param userName
+   * @param actions
+   * @throws Throwable
+   */
+  public static void revoke(Configuration conf, final String namespace,
+      final String userName, final Permission.Action... actions) throws Throwable {
+    HTable ht = null;
+    try {
+      ht = getAclTable(conf);
+      ProtobufUtil.revoke(getAccessControlServiceStub(ht), userName, namespace, actions);
     } finally {
       if (ht != null) {
         ht.close();
