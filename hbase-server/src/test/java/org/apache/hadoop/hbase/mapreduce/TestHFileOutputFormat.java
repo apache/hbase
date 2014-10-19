@@ -795,7 +795,7 @@ public class TestHFileOutputFormat  {
     HTable table = Mockito.mock(HTable.class);
     HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
     Mockito.doReturn(htd).when(table).getTableDescriptor();
-    for (HColumnDescriptor hcd: this.util.generateColumnDescriptors()) {
+    for (HColumnDescriptor hcd: HBaseTestingUtility.generateColumnDescriptors()) {
       htd.addFamily(hcd);
     }
 

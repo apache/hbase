@@ -801,6 +801,7 @@ public class ZKUtil {
    * @throws KeeperException if unexpected zookeeper exception
    * @deprecated Unused
    */
+  @Deprecated
   public static List<NodeAndData> getChildDataAndWatchForNewChildren(
       ZooKeeperWatcher zkw, String baseNode) throws KeeperException {
     List<String> nodes =
@@ -833,6 +834,7 @@ public class ZKUtil {
    * @throws KeeperException.BadVersionException if version mismatch
    * @deprecated Unused
    */
+  @Deprecated
   public static void updateExistingNodeData(ZooKeeperWatcher zkw, String znode,
       byte [] data, int expectedVersion)
   throws KeeperException {

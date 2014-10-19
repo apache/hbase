@@ -77,37 +77,42 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     Configuration conf = UTIL.getConfiguration();
 
     HDFSBlocksDistribution blockDistribution = new HDFSBlocksDistribution();
-    Assert.assertEquals(Lists.newArrayList(), tsif.getBestLocations(conf, blockDistribution));
+    Assert.assertEquals(Lists.newArrayList(),
+      TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h1"}, 1);
-    Assert.assertEquals(Lists.newArrayList("h1"), tsif.getBestLocations(conf, blockDistribution));
+    Assert.assertEquals(Lists.newArrayList("h1"),
+      TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h1"}, 1);
-    Assert.assertEquals(Lists.newArrayList("h1"), tsif.getBestLocations(conf, blockDistribution));
+    Assert.assertEquals(Lists.newArrayList("h1"),
+      TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h2"}, 1);
-    Assert.assertEquals(Lists.newArrayList("h1"), tsif.getBestLocations(conf, blockDistribution));
+    Assert.assertEquals(Lists.newArrayList("h1"),
+      TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution = new HDFSBlocksDistribution();
     blockDistribution.addHostsAndBlockWeight(new String[] {"h1"}, 10);
     blockDistribution.addHostsAndBlockWeight(new String[] {"h2"}, 7);
     blockDistribution.addHostsAndBlockWeight(new String[] {"h3"}, 5);
     blockDistribution.addHostsAndBlockWeight(new String[] {"h4"}, 1);
-    Assert.assertEquals(Lists.newArrayList("h1"), tsif.getBestLocations(conf, blockDistribution));
+    Assert.assertEquals(Lists.newArrayList("h1"),
+      TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h2"}, 2);
     Assert.assertEquals(Lists.newArrayList("h1", "h2"),
-      tsif.getBestLocations(conf, blockDistribution));
+      TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h2"}, 3);
     Assert.assertEquals(Lists.newArrayList("h2", "h1"),
-      tsif.getBestLocations(conf, blockDistribution));
+      TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
 
     blockDistribution.addHostsAndBlockWeight(new String[] {"h3"}, 6);
     blockDistribution.addHostsAndBlockWeight(new String[] {"h4"}, 9);
 
     Assert.assertEquals(Lists.newArrayList("h2", "h3", "h4", "h1"),
-      tsif.getBestLocations(conf, blockDistribution));
+      TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
   }
 
   public static enum TestTableSnapshotCounters {

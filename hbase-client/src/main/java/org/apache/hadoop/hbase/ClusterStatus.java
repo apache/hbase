@@ -379,7 +379,7 @@ public class ClusterStatus extends VersionedWritable {
   public static ClusterStatus convert(ClusterStatusProtos.ClusterStatus proto) {
 
     Map<ServerName, ServerLoad> servers = null;
-    if (proto.getLiveServersList() != null) {
+    if (!proto.getLiveServersList().isEmpty()) {
       servers = new HashMap<ServerName, ServerLoad>(proto.getLiveServersList().size());
       for (LiveServerInfo lsi : proto.getLiveServersList()) {
         servers.put(ProtobufUtil.toServerName(
@@ -388,7 +388,7 @@ public class ClusterStatus extends VersionedWritable {
     }
 
     Collection<ServerName> deadServers = null;
-    if (proto.getDeadServersList() != null) {
+    if (!proto.getDeadServersList().isEmpty()) {
       deadServers = new ArrayList<ServerName>(proto.getDeadServersList().size());
       for (HBaseProtos.ServerName sn : proto.getDeadServersList()) {
         deadServers.add(ProtobufUtil.toServerName(sn));
@@ -396,7 +396,7 @@ public class ClusterStatus extends VersionedWritable {
     }
 
     Collection<ServerName> backupMasters = null;
-    if (proto.getBackupMastersList() != null) {
+    if (!proto.getBackupMastersList().isEmpty()) {
       backupMasters = new ArrayList<ServerName>(proto.getBackupMastersList().size());
       for (HBaseProtos.ServerName sn : proto.getBackupMastersList()) {
         backupMasters.add(ProtobufUtil.toServerName(sn));
@@ -404,7 +404,7 @@ public class ClusterStatus extends VersionedWritable {
     }
 
     Map<String, RegionState> rit = null;
-    if (proto.getRegionsInTransitionList() != null) {
+    if (!proto.getRegionsInTransitionList().isEmpty()) {
       rit = new HashMap<String, RegionState>(proto.getRegionsInTransitionList().size());
       for (RegionInTransition region : proto.getRegionsInTransitionList()) {
         String key = new String(region.getSpec().getValue().toByteArray());
@@ -414,7 +414,7 @@ public class ClusterStatus extends VersionedWritable {
     }
 
     String[] masterCoprocessors = null;
-    if (proto.getMasterCoprocessorsList() != null) {
+    if (!proto.getMasterCoprocessorsList().isEmpty()) {
       final int numMasterCoprocessors = proto.getMasterCoprocessorsCount();
       masterCoprocessors = new String[numMasterCoprocessors];
       for (int i = 0; i < numMasterCoprocessors; i++) {

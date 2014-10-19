@@ -155,6 +155,8 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
     regionStates = assignmentManager.getRegionStates();
     TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, true);
+
+    HBaseFsck.setDisplayFullReport();
   }
 
   @AfterClass
@@ -966,7 +968,6 @@ public class TestHBaseFsck {
       // fix the problem.
       HBaseFsck fsck = new HBaseFsck(conf);
       fsck.connect();
-      fsck.setDisplayFullReport(); // i.e. -details
       fsck.setTimeLag(0);
       fsck.setFixAssignments(true);
       fsck.setFixMeta(true);
@@ -1558,7 +1559,6 @@ public class TestHBaseFsck {
       // fix lingering split parent
       hbck = new HBaseFsck(conf);
       hbck.connect();
-      hbck.setDisplayFullReport(); // i.e. -details
       hbck.setTimeLag(0);
       hbck.setFixSplitParents(true);
       hbck.onlineHbck();
@@ -1813,7 +1813,6 @@ public class TestHBaseFsck {
       // verify that noHdfsChecking report the same errors
       HBaseFsck fsck = new HBaseFsck(conf);
       fsck.connect();
-      fsck.setDisplayFullReport(); // i.e. -details
       fsck.setTimeLag(0);
       fsck.setCheckHdfs(false);
       fsck.onlineHbck();
@@ -1823,7 +1822,6 @@ public class TestHBaseFsck {
       // verify that fixAssignments works fine with noHdfsChecking
       fsck = new HBaseFsck(conf);
       fsck.connect();
-      fsck.setDisplayFullReport(); // i.e. -details
       fsck.setTimeLag(0);
       fsck.setCheckHdfs(false);
       fsck.setFixAssignments(true);
@@ -1863,7 +1861,6 @@ public class TestHBaseFsck {
       // verify that noHdfsChecking report the same errors
       HBaseFsck fsck = new HBaseFsck(conf);
       fsck.connect();
-      fsck.setDisplayFullReport(); // i.e. -details
       fsck.setTimeLag(0);
       fsck.setCheckHdfs(false);
       fsck.onlineHbck();
@@ -1873,7 +1870,6 @@ public class TestHBaseFsck {
       // verify that fixMeta doesn't work with noHdfsChecking
       fsck = new HBaseFsck(conf);
       fsck.connect();
-      fsck.setDisplayFullReport(); // i.e. -details
       fsck.setTimeLag(0);
       fsck.setCheckHdfs(false);
       fsck.setFixAssignments(true);
@@ -1927,7 +1923,6 @@ public class TestHBaseFsck {
       // verify that noHdfsChecking can't detect ORPHAN_HDFS_REGION
       HBaseFsck fsck = new HBaseFsck(conf);
       fsck.connect();
-      fsck.setDisplayFullReport(); // i.e. -details
       fsck.setTimeLag(0);
       fsck.setCheckHdfs(false);
       fsck.onlineHbck();
@@ -1937,7 +1932,6 @@ public class TestHBaseFsck {
       // verify that fixHdfsHoles doesn't work with noHdfsChecking
       fsck = new HBaseFsck(conf);
       fsck.connect();
-      fsck.setDisplayFullReport(); // i.e. -details
       fsck.setTimeLag(0);
       fsck.setCheckHdfs(false);
       fsck.setFixHdfsHoles(true);
