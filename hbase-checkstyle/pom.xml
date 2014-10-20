@@ -28,5 +28,23 @@
 <name>HBase - Checkstyle</name>
 <description>Module to hold Checkstyle properties for HBase.</description>
 
+<build>
+  <plugins>
 
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-site-plugin</artifactId>
+      <configuration>
+        <skip>true</skip>
+      </configuration>
+    </plugin>
+    <plugin>
+      <!--Make it so assembly:single does nothing in here-->
+      <artifactId>maven-assembly-plugin</artifactId>
+      <configuration>
+        <skipAssembly>true</skipAssembly>
+      </configuration>
+    </plugin>
+  </plugins>
+</build>
 </project>
