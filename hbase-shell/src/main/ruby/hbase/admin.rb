@@ -23,7 +23,6 @@ java_import org.apache.hadoop.hbase.util.Pair
 java_import org.apache.hadoop.hbase.util.RegionSplitter
 java_import org.apache.hadoop.hbase.util.Bytes
 java_import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos::SnapshotDescription
-java_import org.apache.commons.collections.MapUtils
 
 # Wrapper for org.apache.hadoop.hbase.client.HBaseAdmin
 
@@ -330,6 +329,10 @@ module Hbase
     # Returns table's structure description
     def describe(table_name)
       @admin.getTableDescriptor(table_name.to_java_bytes).to_s
+    end
+
+    def get_column_families(table_name)
+      @admin.getTableDescriptor(table_name.to_java_bytes).getColumnFamilies()
     end
 
     #----------------------------------------------------------------------------------------------
