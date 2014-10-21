@@ -56,11 +56,13 @@ public abstract class MonkeyFactory {
   // TODO: the name has become a misnomer since the default (not-slow) monkey has been removed
   public static final String SLOW_DETERMINISTIC = "slowDeterministic";
   public static final String UNBALANCE = "unbalance";
+  public static final String NO_KILL = "noKill";
 
   public static Map<String, MonkeyFactory> FACTORIES = ImmutableMap.<String,MonkeyFactory>builder()
     .put(CALM, new CalmMonkeyFactory())
     .put(SLOW_DETERMINISTIC, new SlowDeterministicMonkeyFactory())
     .put(UNBALANCE, new UnbalanceMonkeyFactory())
+    .put(NO_KILL, new NoKillMonkeyFactory())
     .build();
 
   public static MonkeyFactory getFactory(String factoryName) {
