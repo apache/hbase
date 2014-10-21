@@ -21,17 +21,17 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.SettableSequenceId;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.SamePrefixComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.SettableSequenceId;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -331,7 +331,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   protected static class ClonedSeekerState implements Cell, HeapSize, SettableSequenceId {
     private static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
         + (4 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + (7 * Bytes.SIZEOF_INT)
-        + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE));
+        + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE) + (2 * ClassSize.ARRAY));
     private byte[] keyOnlyBuffer;
     private ByteBuffer currentBuffer;
     private short rowLength;
@@ -515,8 +515,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     @Override
     public long heapSize() {
-      return FIXED_OVERHEAD + rowLength + familyLength + qualifierLength + valueLength + tagsLength
-          + KeyValue.TIMESTAMP_TYPE_SIZE;
+      return FIXED_OVERHEAD + rowLength + familyLength + qualifierLength + valueLength + tagsLength;
     }
   }
 
