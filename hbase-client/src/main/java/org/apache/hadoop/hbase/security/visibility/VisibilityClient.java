@@ -92,7 +92,11 @@ public class VisibilityClient {
             }
           }
           service.addLabels(controller, builder.build(), rpcCallback);
-          return rpcCallback.get();
+          VisibilityLabelsResponse response = rpcCallback.get();
+          if (controller.failedOnException()) {
+            throw controller.getFailedOn();
+          }
+          return response;
         }
       };
       Map<byte[], VisibilityLabelsResponse> result = ht.coprocessorService(
@@ -140,7 +144,11 @@ public class VisibilityClient {
           GetAuthsRequest.Builder getAuthReqBuilder = GetAuthsRequest.newBuilder();
           getAuthReqBuilder.setUser(ByteStringer.wrap(Bytes.toBytes(user)));
           service.getAuths(controller, getAuthReqBuilder.build(), rpcCallback);
-          return rpcCallback.get();
+          GetAuthsResponse response = rpcCallback.get();
+          if (controller.failedOnException()) {
+            throw controller.getFailedOn();
+          }
+          return response;
         }
       };
       Map<byte[], GetAuthsResponse> result = ht.coprocessorService(VisibilityLabelsService.class,
@@ -191,7 +199,11 @@ public class VisibilityClient {
           } else {
             service.clearAuths(controller, setAuthReqBuilder.build(), rpcCallback);
           }
-          return rpcCallback.get();
+          VisibilityLabelsResponse response = rpcCallback.get();
+          if (controller.failedOnException()) {
+            throw controller.getFailedOn();
+          }
+          return response;
         }
       };
       Map<byte[], VisibilityLabelsResponse> result = ht.coprocessorService(

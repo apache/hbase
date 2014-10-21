@@ -740,7 +740,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
           User requestingUser = VisibilityUtils.getActiveUser();
           throw new AccessDeniedException("User '"
               + (requestingUser != null ? requestingUser.getShortName() : "null")
-              + " is not authorized to perform this action.");
+              + "' is not authorized to perform this action.");
         }
         labels = this.visibilityLabelService.getAuths(user, false);
       } catch (IOException e) {
