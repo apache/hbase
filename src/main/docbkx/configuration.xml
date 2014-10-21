@@ -1628,5 +1628,23 @@ jconsole -J-Djavax.net.ssl.trustStore=/home/tianq/jconsoleKeyStore
 
   </section>
   <!--  important config -->
+  <section xml:id="dyn_config">
+    <title>Dynamic Configuration</title>
+    <subtitle>Changing Configuration Without Restarting Servers</subtitle>
+    <para>Since HBase 1.0.0, it is possible to change a subset of the configuration without
+      requiring a server restart. In the hbase shell, there are new operators,
+      <command>update_config</command> and <command>update_all_config</command> that
+      will prompt a server or all servers to reload configuration.</para>
+    <para>Only a subset of all configurations can currently be changed in the running server.
+      Here is an incomplete list:
+      <property>hbase.regionserver.thread.compaction.large</property>,
+      <property>hbase.regionserver.thread.compaction.small</property>,
+      <property>hbase.regionserver.thread.split</property>,
+      <property>hbase.regionserver.thread.merge</property>, as well as compaction
+      policy and configurations and adjustment to offpeak hours.
+      For the full list consult the patch attached to 
+      <link xlink:href="https://issues.apache.org/jira/browse/HBASE-12147">HBASE-12147 Porting Online Config Change from 89-fb</link>.
+    </para>
 
+  </section>
 </chapter>

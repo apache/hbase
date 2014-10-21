@@ -354,6 +354,15 @@ Shell.load_command_group(
 )
 
 Shell.load_command_group(
+  'configuration',
+  :full_name => 'ONLINE CONFIGURATION TOOLS',
+  :commands => %w[
+    update_config
+    update_all_config
+  ]
+)
+
+Shell.load_command_group(
   'security',
   :full_name => 'SECURITY TOOLS',
   :comment => "NOTE: Above commands are only applicable if running with the AccessController coprocessor",
