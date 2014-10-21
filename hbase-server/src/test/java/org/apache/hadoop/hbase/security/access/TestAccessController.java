@@ -189,7 +189,7 @@ public class TestAccessController extends SecureTestUtil {
       Coprocessor.PRIORITY_HIGHEST, 1, conf);
 
     // Wait for the ACL table to become available
-    TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME.getName());
+    TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
 
     // create a set of test users
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
@@ -598,9 +598,9 @@ public class TestAccessController extends SecureTestUtil {
 
   @Test
   public void testMergeRegions() throws Exception {
-    
+
     final List<HRegion> regions = TEST_UTIL.getHBaseCluster().findRegionsForTable(TEST_TABLE.getTableName());
-    
+
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
@@ -1490,7 +1490,7 @@ public class TestAccessController extends SecureTestUtil {
     // revoke
     revokeFromTable(TEST_UTIL, user.getShortName(), tableName, family1, qualifier,
       Permission.Action.WRITE, Permission.Action.READ);
-    
+
     acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
     try {
       BlockingRpcChannel service = acl.coprocessorService(tableName.getName());
@@ -2225,7 +2225,7 @@ public class TestAccessController extends SecureTestUtil {
         try {
           KeyValue kv = new KeyValue(TEST_ROW, TEST_FAMILY, TEST_QUALIFIER,
             HConstants.LATEST_TIMESTAMP, HConstants.EMPTY_BYTE_ARRAY,
-            new Tag[] { new Tag(AccessControlLists.ACL_TAG_TYPE, 
+            new Tag[] { new Tag(AccessControlLists.ACL_TAG_TYPE,
               ProtobufUtil.toUsersAndPermissions(USER_OWNER.getShortName(),
                 new Permission(Permission.Action.READ)).toByteArray()) });
           t.put(new Put(TEST_ROW).add(kv));
