@@ -162,12 +162,10 @@ public enum BlockType {
   }
 
   public static BlockType read(ByteBuffer buf) throws IOException {
-    BlockType blockType = parse(buf.array(),
-        buf.arrayOffset() + buf.position(),
-        Math.min(buf.limit() - buf.position(), MAGIC_LENGTH));
-
+    byte[] magicBuf = new byte[Math.min(buf.limit() - buf.position(), MAGIC_LENGTH)];
+    buf.get(magicBuf);
+    BlockType blockType = parse(magicBuf, 0, magicBuf.length);
     // If we got here, we have read exactly MAGIC_LENGTH bytes.
-    buf.position(buf.position() + MAGIC_LENGTH);
     return blockType;
   }
 
