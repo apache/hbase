@@ -20,7 +20,7 @@
 package org.apache.hadoop.hbase;
 
 import java.io.DataOutput;
-import java.io.IOException; 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,9 +29,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.collections.iterators.UnmodifiableIterator;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**

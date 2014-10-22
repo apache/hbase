@@ -28,8 +28,8 @@ import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
-import org.junit.experimental.categories.Category;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /** Tests the HColumnDescriptor with appropriate arguments */
 @Category({MiscTests.class, SmallTests.class})

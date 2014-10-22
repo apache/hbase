@@ -22,7 +22,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.Cell;
 
 /**
  * An interface for iterating through a sequence of cells. Similar to Java's Iterator, but without

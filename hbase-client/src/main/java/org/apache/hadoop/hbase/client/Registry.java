@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.RegionLocations;
-import org.apache.hadoop.hbase.TableName;
 
 /**
  * Cluster registry.
