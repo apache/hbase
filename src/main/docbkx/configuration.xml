@@ -671,6 +671,14 @@ Index: pom.xml
       </section>
     </section>
     <!--  hadoop -->
+    <section xml:id="zookeeper.requirements">
+      <title>ZooKeeper Requirements</title>
+      <para>ZooKeeper 3.4.x is required as of HBase 1.0.0. HBase makes use of the
+        <methodname>multi</methodname> functionality that is only available since 3.4.0
+        (The <property>useMulti</property> is defaulted true in HBase 1.0.0).
+        See <link href="https://issues.apache.org/jira/browse/HBASE-12241">HBASE-12241 The crash of regionServer when taking deadserver's replication queue breaks replication</link>
+        and <link href="https://issues.apache.org/jira/browse/HBASE-6775">Use ZK.multi when available for HBASE-6710 0.92/0.94 compatibility fix</link> for background.</para>
+    </section>
   </section>
 
   <section
