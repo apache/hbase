@@ -122,9 +122,10 @@ public class CellCounter {
           if (!thisRowFamilyName.equals(currentFamilyName)) {
             currentFamilyName = thisRowFamilyName;
             context.getCounter("CF", thisRowFamilyName).increment(1);
-            context.write(new Text("Total Families Across all Rows"),
-              new IntWritable(1));
-            context.write(new Text(thisRowFamilyName), new IntWritable(1));
+            if (1 == context.getCounter("CF", thisRowFamilyName).getValue()) {
+              context.write(new Text("Total Families Across all Rows"), new IntWritable(1));
+              context.write(new Text(thisRowFamilyName), new IntWritable(1));
+            }
           }
           String thisRowQualifierName = thisRowFamilyName + separator
               + Bytes.toStringBinary(CellUtil.cloneQualifier(value));
