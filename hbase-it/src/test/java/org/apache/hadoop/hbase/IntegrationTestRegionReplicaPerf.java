@@ -66,8 +66,6 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
   private static final String SLEEP_TIME_DEFAULT = "" + (10 * 1000l);
   private static final String TABLE_NAME_KEY = "tableName";
   private static final String TABLE_NAME_DEFAULT = "IntegrationTestRegionReplicaPerf";
-  private static final String NOMAPRED_KEY = "nomapred";
-  private static final boolean NOMAPRED_DEFAULT = false;
   private static final String REPLICA_COUNT_KEY = "replicas";
   private static final String REPLICA_COUNT_DEFAULT = "" + 3;
   private static final String PRIMARY_TIMEOUT_KEY = "timeout";
@@ -77,7 +75,6 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
 
   private TableName tableName;
   private long sleepTime;
-  private boolean nomapred = NOMAPRED_DEFAULT;
   private int replicaCount;
   private int primaryTimeout;
   private int clusterSize;
@@ -177,8 +174,6 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
       + TABLE_NAME_DEFAULT + "'");
     addOptWithArg(SLEEP_TIME_KEY, "How long the monkey sleeps between actions. Default: "
       + SLEEP_TIME_DEFAULT);
-    addOptNoArg(NOMAPRED_KEY,
-      "Run multiple clients using threads (rather than use mapreduce)");
     addOptWithArg(REPLICA_COUNT_KEY, "Number of region replicas. Default: "
       + REPLICA_COUNT_DEFAULT);
     addOptWithArg(PRIMARY_TIMEOUT_KEY, "Overrides hbase.client.primaryCallTimeout. Default: "
@@ -191,7 +186,6 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
   protected void processOptions(CommandLine cmd) {
     tableName = TableName.valueOf(cmd.getOptionValue(TABLE_NAME_KEY, TABLE_NAME_DEFAULT));
     sleepTime = Long.parseLong(cmd.getOptionValue(SLEEP_TIME_KEY, SLEEP_TIME_DEFAULT));
-    nomapred = cmd.hasOption(NOMAPRED_KEY);
     replicaCount = Integer.parseInt(cmd.getOptionValue(REPLICA_COUNT_KEY, REPLICA_COUNT_DEFAULT));
     primaryTimeout =
       Integer.parseInt(cmd.getOptionValue(PRIMARY_TIMEOUT_KEY, PRIMARY_TIMEOUT_DEFAULT));
@@ -199,7 +193,6 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
     LOG.debug(Objects.toStringHelper("Parsed Options")
       .add(TABLE_NAME_KEY, tableName)
       .add(SLEEP_TIME_KEY, sleepTime)
-      .add(NOMAPRED_KEY, nomapred)
       .add(REPLICA_COUNT_KEY, replicaCount)
       .add(PRIMARY_TIMEOUT_KEY, primaryTimeout)
       .add(NUM_RS_KEY, clusterSize)
@@ -224,14 +217,13 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
 
   public void test() throws Exception {
     int maxIters = 3;
-    String mr = nomapred ? "--nomapred" : "";
     String replicas = "--replicas=" + replicaCount;
     // TODO: splits disabled until "phase 2" is complete.
     String splitPolicy = "--splitPolicy=" + DisabledRegionSplitPolicy.class.getName();
-    String writeOpts = format("%s %s --table=%s --presplit=16 sequentialWrite 4",
-      mr, splitPolicy, tableName);
+    String writeOpts = format("%s --nomapred --table=%s --presplit=16 sequentialWrite 4",
+      splitPolicy, tableName);
     String readOpts =
-      format("%s --table=%s --latency --sampleRate=0.1 randomRead 4", mr, tableName);
+      format("--nomapred --table=%s --latency --sampleRate=0.1 randomRead 4", tableName);
     String replicaReadOpts = format("%s %s", replicas, readOpts);
 
     ArrayList<TimingResult> resultsWithoutReplica = new ArrayList<TimingResult>(maxIters);
@@ -258,7 +250,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
     // disable monkey, enable region replicas, enable monkey
     cleanUpMonkey("Altering table.");
     LOG.debug("Altering " + tableName + " replica count to " + replicaCount);
-    util.setReplicas(util.getHBaseAdmin(), tableName, replicaCount);
+    IntegrationTestingUtility.setReplicas(util.getHBaseAdmin(), tableName, replicaCount);
     setUpMonkey();
     startMonkey();
 
