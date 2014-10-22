@@ -460,7 +460,7 @@ public class AccessControlLists {
    */
   static ListMultimap<String, TablePermission> getPermissions(Configuration conf,
       byte[] entryName) throws IOException {
-    if (entryName == null) entryName = ACL_TABLE_NAME.getName();
+    if (entryName == null) entryName = ACL_GLOBAL_NAME;
 
     // for normal user tables, we just read the table row from _acl_
     ListMultimap<String, TablePermission> perms = ArrayListMultimap.create();
@@ -655,7 +655,7 @@ public class AccessControlLists {
   public static boolean isNamespaceEntry(byte[] entryName) {
     return entryName[0] == NAMESPACE_PREFIX;
   }
-  
+
   public static String toNamespaceEntry(String namespace) {
      return NAMESPACE_PREFIX + namespace;
    }

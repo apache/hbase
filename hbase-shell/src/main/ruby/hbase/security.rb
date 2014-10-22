@@ -156,7 +156,7 @@ module Hbase
       count  = 0
       all_perms.each do |value|
           user_name = String.from_java_bytes(value.getUser)
-          if (isNamespace?(table_regex))
+          if (table_regex != nil && isNamespace?(table_regex))
             namespace = table_regex[1...table_regex.length]
           else
             namespace = (value.getTableName != nil) ? value.getTableName.getNamespaceAsString() : ''
