@@ -137,7 +137,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       }
     }
 
-    protected void createKeyOnlyKeyValue(byte[] keyBuffer, long memTS) {
+    protected void setKey(byte[] keyBuffer, long memTS) {
       currentKey.setKey(keyBuffer, 0, keyLength);
       memstoreTS = memTS;
     }
@@ -302,11 +302,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     @Override
     public String toString() {
-      KeyValue kv = KeyValueUtil.copyToNewKeyValue(this);
-      if (kv == null) {
-        return "null";
-      }
-      return kv.toString();
+      return KeyValue.keyToString(this.keyBuffer, 0, KeyValueUtil.keyLength(this)) + "/vlen="
+          + getValueLength() + "/seqid=" + memstoreTS;
     }
 
     public Cell shallowCopy() {
@@ -575,7 +572,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         current.tagCompressionContext = tagCompressionContext;
       }
       decodeFirst();
-      current.createKeyOnlyKeyValue(current.keyBuffer, current.memstoreTS);
+      current.setKey(current.keyBuffer, current.memstoreTS);
       previous.invalidate();
     }
 
@@ -588,9 +585,10 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     @Override
     public ByteBuffer getValueShallowCopy() {
-      return ByteBuffer.wrap(currentBuffer.array(),
-          currentBuffer.arrayOffset() + current.valueOffset,
-          current.valueLength);
+      ByteBuffer dup = currentBuffer.duplicate();
+      dup.position(current.valueOffset);
+      dup.limit(current.valueOffset + current.valueLength);
+      return dup.slice();
     }
 
     @Override
@@ -599,8 +597,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       kvBuffer.putInt(current.keyLength);
       kvBuffer.putInt(current.valueLength);
       kvBuffer.put(current.keyBuffer, 0, current.keyLength);
-      kvBuffer.put(currentBuffer.array(),
-          currentBuffer.arrayOffset() + current.valueOffset,
+      ByteBufferUtils.copyFromBufferToBuffer(kvBuffer, currentBuffer, current.valueOffset,
           current.valueLength);
       if (current.tagsLength > 0) {
         // Put short as unsigned
@@ -609,7 +606,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         if (current.tagsOffset != -1) {
           // the offset of the tags bytes in the underlying buffer is marked. So the temp
           // buffer,tagsBuffer was not been used.
-          kvBuffer.put(currentBuffer.array(), currentBuffer.arrayOffset() + current.tagsOffset,
+          ByteBufferUtils.copyFromBufferToBuffer(kvBuffer, currentBuffer, current.tagsOffset,
               current.tagsLength);
         } else {
           // When tagsOffset is marked as -1, tag compression was present and so the tags were
@@ -639,7 +636,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         tagCompressionContext.clear();
       }
       decodeFirst();
-      current.createKeyOnlyKeyValue(current.keyBuffer, current.memstoreTS);
+      current.setKey(current.keyBuffer, current.memstoreTS);
       previous.invalidate();
     }
 
@@ -649,7 +646,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         return false;
       }
       decodeNext();
-      current.createKeyOnlyKeyValue(current.keyBuffer, current.memstoreTS);
+      current.setKey(current.keyBuffer, current.memstoreTS);
       previous.invalidate();
       return true;
     }
@@ -672,7 +669,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         }
         current.tagsOffset = -1;
       } else {
-        // When tag compress is not used, let us not do temp copying of tags bytes into tagsBuffer.
+        // When tag compress is not used, let us not do copying of tags bytes into tagsBuffer.
         // Just mark the tags Offset so as to create the KV buffer later in getKeyValueBuffer()
         current.tagsOffset = currentBuffer.position();
         ByteBufferUtils.skip(currentBuffer, current.tagsLength);
@@ -783,7 +780,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         if (currentBuffer.hasRemaining()) {
           previous.copyFromNext(current);
           decodeNext();
-          current.createKeyOnlyKeyValue(current.keyBuffer, current.memstoreTS);
+          current.setKey(current.keyBuffer, current.memstoreTS);
         } else {
           break;
         }
