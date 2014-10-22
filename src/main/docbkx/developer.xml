@@ -1800,7 +1800,7 @@ justification="I know what I'm doing")</programlisting>
                 <para>The script <filename>dev-support/make_patch.sh</filename> has been provided to
                     help you adhere to patch-creation guidelines. The script has the following syntax:
                 </para>
-                <screen>$ make_patch.sh [-a] [-p &lt;patch_dir&gt;]</patch_dir></screen>
+                <screen>$ make_patch.sh [-a] [-p &lt;patch_dir&gt;]</screen>
                 <orderedlist>
                     <listitem>
                         <para>If you do not pass a <code>patch_dir</code>, the script defaults to
