@@ -33,7 +33,7 @@ For example:
 EOF
       end
 
-      def command(table_regex=".*")
+      def command(table_regex=nil)
         #format_simple_command do
         #admin.user_permission(table_regex)
         now = Time.now

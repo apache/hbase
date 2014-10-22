@@ -47,12 +47,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class AccessControlClient {
+  public static final TableName ACL_TABLE_NAME =
+      TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "acl");
 
   private static HTable getAclTable(Configuration conf) throws IOException {
-    TableName aclTableName =
-        TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR,
-            AccessControlConstants.OP_ATTRIBUTE_ACL);
-    return new HTable(conf, aclTableName.getName());
+    return new HTable(conf, ACL_TABLE_NAME);
   }
 
   private static BlockingInterface getAccessControlServiceStub(HTable ht)
@@ -111,12 +110,10 @@ public class AccessControlClient {
 
   public static boolean isAccessControllerRunning(Configuration conf)
       throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
-    TableName aclTableName = TableName
-        .valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "acl");
     HBaseAdmin ha = null;
     try {
       ha = new HBaseAdmin(conf);
-      return ha.isTableAvailable(aclTableName.getNameAsString());
+      return ha.isTableAvailable(ACL_TABLE_NAME);
     } finally {
       if (ha != null) {
         ha.close();
@@ -183,16 +180,14 @@ public class AccessControlClient {
     Table ht = null;
     Admin ha = null;
     try {
-      TableName aclTableName = TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR,
-        "acl");
       ha = new HBaseAdmin(conf);
-      ht = new HTable(conf, aclTableName);
+      ht = new HTable(conf, ACL_TABLE_NAME);
       CoprocessorRpcChannel service = ht.coprocessorService(HConstants.EMPTY_START_ROW);
       BlockingInterface protocol = AccessControlProtos.AccessControlService
           .newBlockingStub(service);
       HTableDescriptor[] htds = null;
 
-      if (tableRegex == null) {
+      if (tableRegex == null || tableRegex.isEmpty()) {
         permList = ProtobufUtil.getUserPermissions(protocol);
       } else if (tableRegex.charAt(0) == '@') {
         String namespace = tableRegex.substring(1);
