@@ -68,10 +68,12 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
   @Override
   public ByteBuffer getFirstKeyInBlock(ByteBuffer block) {
     int keyLength = block.getInt(Bytes.SIZEOF_INT);
-    return ByteBuffer.wrap(block.array(),
-        block.arrayOffset() + 3 * Bytes.SIZEOF_INT, keyLength).slice();
+    ByteBuffer dup = block.duplicate();
+    int pos = 3 * Bytes.SIZEOF_INT;
+    dup.position(pos);
+    dup.limit(pos + keyLength);
+    return dup.slice();
   }
-
 
   @Override
   public String toString() {
@@ -123,5 +125,4 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
 
     return buffer;
   }
-
 }

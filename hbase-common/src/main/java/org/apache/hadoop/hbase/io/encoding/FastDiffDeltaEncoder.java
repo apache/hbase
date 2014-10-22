@@ -362,8 +362,10 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
     ByteBufferUtils.readCompressedInt(block); // commonLength
     int pos = block.position();
     block.reset();
-    return ByteBuffer.wrap(block.array(), block.arrayOffset() + pos, keyLength)
-        .slice();
+    ByteBuffer dup = block.duplicate();
+    dup.position(pos);
+    dup.limit(pos + keyLength);
+    return dup.slice();
   }
 
   @Override

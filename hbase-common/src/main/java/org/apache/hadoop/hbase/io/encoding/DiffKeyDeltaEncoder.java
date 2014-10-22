@@ -317,6 +317,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     ByteBuffer result = ByteBuffer.allocate(keyLength);
 
     // copy row
+    assert !(result.isDirect());
     int pos = result.arrayOffset();
     block.get(result.array(), pos, Bytes.SIZEOF_SHORT);
     pos += Bytes.SIZEOF_SHORT;
