@@ -156,4 +156,49 @@ public class TestCellCounter {
       System.setSecurityManager(SECURITY_MANAGER);
     }
   }
+
+  /**
+   * Test CellCounter for complete table all data should print to output
+   */
+  @Test(timeout = 300000)
+  public void testCellCounterForCompleteTable() throws Exception {
+    String sourceTable = "testCellCounterForCompleteTable";
+    String outputPath = OUTPUT_DIR + sourceTable;
+    LocalFileSystem localFileSystem = new LocalFileSystem();
+    Path outputDir =
+        new Path(outputPath).makeQualified(localFileSystem.getUri(),
+          localFileSystem.getWorkingDirectory());
+    byte[][] families = { FAMILY_A, FAMILY_B };
+    Table t = UTIL.createTable(Bytes.toBytes(sourceTable), families);
+    try {
+      Put p = new Put(ROW1);
+      p.add(FAMILY_A, QUALIFIER, now, Bytes.toBytes("Data11"));
+      p.add(FAMILY_B, QUALIFIER, now + 1, Bytes.toBytes("Data12"));
+      p.add(FAMILY_A, QUALIFIER, now + 2, Bytes.toBytes("Data13"));
+      t.put(p);
+      p = new Put(ROW2);
+      p.add(FAMILY_B, QUALIFIER, now, Bytes.toBytes("Dat21"));
+      p.add(FAMILY_A, QUALIFIER, now + 1, Bytes.toBytes("Data22"));
+      p.add(FAMILY_B, QUALIFIER, now + 2, Bytes.toBytes("Data23"));
+      t.put(p);
+      String[] args = { sourceTable, outputDir.toString(), ";" };
+      runCount(args);
+      FileInputStream inputStream =
+          new FileInputStream(outputPath + File.separator + "part-r-00000");
+      String data = IOUtils.toString(inputStream);
+      inputStream.close();
+      assertTrue(data.contains("Total Families Across all Rows" + "\t" + "2"));
+      assertTrue(data.contains("Total Qualifiers across all Rows" + "\t" + "4"));
+      assertTrue(data.contains("Total ROWS" + "\t" + "2"));
+      assertTrue(data.contains("b;q" + "\t" + "2"));
+      assertTrue(data.contains("a;q" + "\t" + "2"));
+      assertTrue(data.contains("row1;a;q_Versions" + "\t" + "1"));
+      assertTrue(data.contains("row1;b;q_Versions" + "\t" + "1"));
+      assertTrue(data.contains("row2;a;q_Versions" + "\t" + "1"));
+      assertTrue(data.contains("row2;b;q_Versions" + "\t" + "1"));
+    } finally {
+      t.close();
+      FileUtil.fullyDelete(new File(outputPath));
+    }
+  }
 }
