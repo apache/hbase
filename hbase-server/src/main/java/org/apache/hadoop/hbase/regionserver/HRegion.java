@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Set;
@@ -113,6 +114,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CallerDisconnectedException;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -2992,6 +2994,25 @@ public class HRegion implements HeapSize { // , Writable{
     Path rootDir = FSUtils.getRootDir(conf);
     Path snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
 
+    if (Bytes.equals(getStartKey(), HConstants.EMPTY_START_ROW)) {
+      Map<byte[], Store> stores = getStores();
+      boolean hasMobStore = false;
+      for (Entry<byte[], Store> store : stores.entrySet()) {
+        hasMobStore = store.getValue().getFamily().isMobEnabled();
+        if (hasMobStore) {
+          break;
+        }
+      }
+      if (hasMobStore) {
+        // if this is the first region, snapshot the mob files.
+        SnapshotManifest snapshotManifest = SnapshotManifest.create(conf, getFilesystem(),
+            snapshotDir, desc, exnSnare);
+        // use the .mob as the start key and 0 as the regionid
+        HRegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(this.getTableDesc().getTableName());
+        mobRegionInfo.setOffline(true);
+        snapshotManifest.addMobRegion(mobRegionInfo, this.getTableDesc().getColumnFamilies());
+      }
+    }
     SnapshotManifest manifest = SnapshotManifest.create(conf, getFilesystem(),
                                                         snapshotDir, desc, exnSnare);
     manifest.addRegion(this);

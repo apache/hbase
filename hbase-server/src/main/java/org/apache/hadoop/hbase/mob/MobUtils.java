@@ -106,6 +106,20 @@ public class MobUtils {
   }
 
   /**
+   * Gets the table name tag.
+   * @param cell The current cell.
+   * @return The table name tag.
+   */
+  public static Tag getTableNameTag(Cell cell) {
+    if (cell.getTagsLength() > 0) {
+      Tag tag = Tag.getTag(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength(),
+          TagType.MOB_TABLE_NAME_TAG_TYPE);
+      return tag;
+    }
+    return null;
+  }
+
+  /**
    * Whether the tag list has a mob reference tag.
    * @param tags The tag list.
    * @return True if the list has a mob reference tag, false if it doesn't.

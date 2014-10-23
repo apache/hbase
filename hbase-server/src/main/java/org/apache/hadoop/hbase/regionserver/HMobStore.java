@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -53,6 +54,7 @@ import org.apache.hadoop.hbase.mob.MobStoreEngine;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.mob.MobZookeeper;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.zookeeper.KeeperException;
 
@@ -79,10 +81,12 @@ public class HMobStore extends HStore {
   private Path homePath;
   private Path mobFamilyPath;
   private List<Path> mobDirLocations;
+  private HColumnDescriptor family;
 
   public HMobStore(final HRegion region, final HColumnDescriptor family,
       final Configuration confParam) throws IOException {
     super(region, family, confParam);
+    this.family = family;
     this.mobCacheConfig = (MobCacheConfig) cacheConf;
     this.homePath = MobUtils.getMobHome(conf);
     this.mobFamilyPath = MobUtils.getMobFamilyPath(conf, this.getTableName(),
@@ -253,7 +257,10 @@ public class HMobStore extends HStore {
     Cell result = null;
     if (MobUtils.hasValidMobRefCellValue(reference)) {
       String fileName = MobUtils.getMobFileName(reference);
-      result = readCell(fileName, reference, cacheBlocks);
+      result = readCell(mobDirLocations, fileName, reference, cacheBlocks);
+      if (result == null) {
+        result = readClonedCell(fileName, reference, cacheBlocks);
+      }
     }
     if (result == null) {
       LOG.warn("The KeyValue result is null, assemble a new KeyValue with the same row,family,"
@@ -275,15 +282,17 @@ public class HMobStore extends HStore {
    * 1. The working directory.
    * 2. The archive directory.
    * Reads the cell from the files located in both of the above directories.
+   * @param locations The possible locations where the mob files are saved.
    * @param fileName The file to be read.
    * @param search The cell to be searched.
    * @param cacheMobBlocks Whether the scanner should cache blocks.
    * @return The found cell. Null if there's no such a cell.
    * @throws IOException
    */
-  private Cell readCell(String fileName, Cell search, boolean cacheMobBlocks) throws IOException {
+  private Cell readCell(List<Path> locations, String fileName, Cell search, boolean cacheMobBlocks)
+      throws IOException {
     FileSystem fs = getFileSystem();
-    for (Path location : mobDirLocations) {
+    for (Path location : locations) {
       MobFile file = null;
       Path path = new Path(location, fileName);
       try {
@@ -305,6 +314,39 @@ public class HMobStore extends HStore {
     LOG.error("The mob file " + fileName + " could not be found in the locations "
         + mobDirLocations);
     return null;
+  }
+
+  /**
+   * Reads the cell from a mob file of source table.
+   * The table might be cloned, in this case only hfile link is created in the new table,
+   * and the mob file is located in the source table directories.
+   * 1. The working directory of the source table.
+   * 2. The archive directory of the source table.
+   * Reads the cell from the files located in both of the above directories.
+   * @param fileName The file to be read.
+   * @param search The cell to be searched.
+   * @param cacheMobBlocks Whether the scanner should cache blocks.
+   * @return The found cell. Null if there's no such a cell.
+   * @throws IOException
+   */
+  private Cell readClonedCell(String fileName, Cell search, boolean cacheMobBlocks)
+      throws IOException {
+    Tag tableNameTag = MobUtils.getTableNameTag(search);
+    if (tableNameTag == null) {
+      return null;
+    }
+    byte[] tableName = tableNameTag.getValue();
+    if (Bytes.equals(this.getTableName().getName(), tableName)) {
+      return null;
+    }
+    // the possible locations in the source table.
+    List<Path> locations = new ArrayList<Path>();
+    TableName tn = TableName.valueOf(tableName);
+    locations.add(MobUtils.getMobFamilyPath(conf, tn, family.getNameAsString()));
+    locations.add(HFileArchiveUtil.getStoreArchivePath(conf, tn, MobUtils.getMobRegionInfo(tn)
+        .getEncodedName(), family.getNameAsString()));
+    // read the cell from the source table.
+    return readCell(locations, fileName, search, cacheMobBlocks);
   }
 
   /**
