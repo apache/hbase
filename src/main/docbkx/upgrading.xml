@@ -84,6 +84,15 @@
                 from 0.94.5 by doing a rolling upgrade across the cluster replacing the 0.94.5
                 binary with a 0.94.6 binary. </para>
         </section>
+        <section xml:id="rolling.upgrade">
+          <title><firstterm>Rolling Upgrades</firstterm></title>
+          <para>A rolling upgrade is the process by which you update the servers
+            in your cluster a server at a time.  Coarsely, you do a graceful stop of the server
+            update the software and then restart.  You do this for each server in the cluster.
+            Usually you upgrade the Master first and then the regionservers.
+            See <xlink href="rolling" /> for tools that can help use the rolling upgrade process:
+          e.g. install the new software and configs and then do a rolling restart to come up on it.</para>
+        </section>
     </section>
     <section xml:id="upgrade1.0">
         <title>Upgrading from 0.98.x to 1.0.x</title>
@@ -120,6 +129,12 @@
         </section>
         <section xml:id="upgrade1.0.rolling.upgrade">
           <title>Rolling upgrade from 0.98.x to HBase 1.0.0</title>
+          <note><title>From 0.96.x to 1.0.0</title>
+            <para>You cannot do a <xlink href="rolling.upgrade" /> from 0.96.x to 1.0.0 without
+              first doing a rolling upgrade to 0.98.x. See comment in
+              <link xlink:href="https://issues.apache.org/jira/browse/HBASE-11164?focusedCommentId=14182330&amp;page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-14182330">HBASE-11164 Document and test rolling updates from 0.98 -> 1.0</link> for the why.
+            </para>
+          </note>
           <para>TODO</para>
         </section>
         <section xml:id="upgrade1.0.from.0.94">
