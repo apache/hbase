@@ -76,22 +76,39 @@
                             compatibility between versions also mean binary compatibility?</link>
                         discussion on the hbaes dev mailing list. </para>
         </section>
-        <section
-            xml:id="hbase.rolling.restart">
-            <title>Rolling Upgrade between versions/Binary compatibility</title>
-            <para>Unless otherwise specified, HBase point versions are binary compatible. you can do
-                a rolling upgrade between hbase point versions; for example, you can go to 0.94.6
-                from 0.94.5 by doing a rolling upgrade across the cluster replacing the 0.94.5
-                binary with a 0.94.6 binary. </para>
-        </section>
-        <section xml:id="rolling.upgrade">
+        <section xml:id="hbase.rolling.upgrade">
           <title><firstterm>Rolling Upgrades</firstterm></title>
           <para>A rolling upgrade is the process by which you update the servers
-            in your cluster a server at a time.  Coarsely, you do a graceful stop of the server
-            update the software and then restart.  You do this for each server in the cluster.
+            in your cluster a server at a time. You can rolling upgrade across HBase versions
+            if they are binary or wire compatible.
+            See <xlnk href="hbase.rolling.restart" /> for more on what this means.
+            Coarsely, a rolling upgrade is a graceful stop each server,
+            update the software, and then restart.  You do this for each server in the cluster.
             Usually you upgrade the Master first and then the regionservers.
-            See <xlink href="rolling" /> for tools that can help use the rolling upgrade process:
-          e.g. install the new software and configs and then do a rolling restart to come up on it.</para>
+            See <xlink href="rolling" /> for tools that can help use the rolling upgrade process.
+          </para>
+          <para>For example, in the below, hbase was symlinked to the actual hbase install.
+            On upgrade, before running a rolling restart over the cluser, we changed the symlink
+            to point at the new HBase software version and then ran 
+            <programlisting>$ HADOOP_HOME=~/hadoop-2.6.0-CRC-SNAPSHOT ~/hbase/bin/rolling-restart.sh --config ~/conf_hbase</programlisting>
+            The rolling-restart script will first gracefully stop and restart the master, and then
+            each of the regionservers in turn. Because the symlink was changed, on restart the
+            server will come up using the new hbase version.  Check logs for errors as the
+            rolling upgrade proceeds.
+          </para>
+        <section
+            xml:id="hbase.rolling.restart">
+            <title>Rolling Upgrade between versions that are Binary/Wire compatibile</title>
+            <para>Unless otherwise specified, HBase point versions are binary compatible. You can do
+              a <xlink href="hbase.rolling.upgrade" /> between hbase point versions.
+                For example, you can go to 0.94.6 from 0.94.5 by doing a rolling upgrade
+                across the cluster replacing the 0.94.5 binary with a 0.94.6 binary.</para>
+              <para>In the minor version-particular sections below, we call out where the versions
+                are wire/protocol compatible and in this case, it is also possible to do a
+                <xlink href="hbase.rolling.upgrade" />. For example, in
+            <xlink href="upgrade1.0.rolling.upgrade" />, we
+              state that it is possible to do a rolling upgrade between hbase-0.98.x and hbase-1.0.0.</para>
+        </section>
         </section>
     </section>
     <section xml:id="upgrade1.0">
@@ -106,6 +123,16 @@
             be aware that will go into effect once you upgrade.</para>
             <section xml:id="zookeeper.3.4"><title>ZooKeeper 3.4 is required in HBase 1.0.0</title>
               <para>See <xref linkend="zookeeper.requirements" />.</para>
+            </section>
+            <section xml:id="default.ports.changed"><title>HBase Default Ports Changed</title>
+              <para>The ports used by HBase changed.  The used to be in the 600XX range.  In
+                hbase-1.0.0 they have been moved up out of the ephemeral port range and are
+                160XX instead (Master web UI was 60010 and is now 16030; the RegionServer
+                web UI was 60030 and is now 16030, etc). If you want to keep the old port
+                locations, copy the port setting configs from <filename>hbase-default.xml</filename>
+                into <filename>hbase-site.xml</filename>, change them back to the old values
+                from hbase-0.98.x era, and ensure you've distributed your configurations before
+              you restart.</para>
             </section>
             <section xml:id="upgrade1.0.hbase.bucketcache.percentage.in.combinedcache">
                 <title>hbase.bucketcache.percentage.in.combinedcache configuration has been REMOVED</title>
@@ -135,7 +162,9 @@
               <link xlink:href="https://issues.apache.org/jira/browse/HBASE-11164?focusedCommentId=14182330&amp;page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-14182330">HBASE-11164 Document and test rolling updates from 0.98 -> 1.0</link> for the why.
             </para>
           </note>
-          <para>TODO</para>
+          <para>There are no known issues running a <xlink href="hbase.rolling.upgrade" /> from hbase-0.98.x to hbase-1.0.0.
+          
+          </para>
         </section>
         <section xml:id="upgrade1.0.from.0.94">
           <title>Upgrading to 1.0 from 0.94</title>
