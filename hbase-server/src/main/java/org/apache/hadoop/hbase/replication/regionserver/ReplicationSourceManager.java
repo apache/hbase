@@ -137,7 +137,8 @@ public class ReplicationSourceManager implements ReplicationListener {
     this.fs = fs;
     this.logDir = logDir;
     this.oldLogDir = oldLogDir;
-    this.sleepBeforeFailover = conf.getLong("replication.sleep.before.failover", 2000);
+    this.sleepBeforeFailover =
+        conf.getLong("replication.sleep.before.failover", 30000); // 30 seconds
     this.clusterId = clusterId;
     this.replicationTracker.registerListener(this);
     this.replicationPeers.getAllPeerIds();
