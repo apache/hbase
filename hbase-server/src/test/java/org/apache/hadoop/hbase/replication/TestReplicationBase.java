@@ -99,6 +99,8 @@ public class TestReplicationBase {
     conf1.setLong(HConstants.THREAD_WAKE_FREQUENCY, 100);
     conf1.setInt("replication.stats.thread.period.seconds", 5);
     conf1.setBoolean("hbase.tests.use.shortcircuit.reads", false);
+    conf1.setLong("replication.sleep.before.failover", 2000);
+    conf1.setInt("replication.source.maxretriesmultiplier", 10);
 
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();
