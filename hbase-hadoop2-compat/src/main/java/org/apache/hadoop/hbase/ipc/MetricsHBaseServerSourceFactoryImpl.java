@@ -46,7 +46,7 @@ public class MetricsHBaseServerSourceFactoryImpl extends MetricsHBaseServerSourc
     if (source == null) {
       //Create the source.
       source = new MetricsHBaseServerSourceImpl(
-          METRICS_NAME,
+          context,
           METRICS_DESCRIPTION,
           context.toLowerCase(),
           context + METRICS_JMX_CONTEXT_SUFFIX, wrapper);
