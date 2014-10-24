@@ -34,7 +34,9 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.RequestContext;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -156,9 +158,18 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
                                                  PrepareBulkLoadRequest request,
                                                  RpcCallback<PrepareBulkLoadResponse> done){
     try {
-      if(userProvider.isHBaseSecurityEnabled()) {
-        getAccessController().prePrepareBulkLoad(env);
+      List<BulkLoadObserver> bulkLoadObservers = getBulkLoadObservers();
+
+      if(bulkLoadObservers != null) {
+        ObserverContext<RegionCoprocessorEnvironment> ctx =
+                                           new ObserverContext<RegionCoprocessorEnvironment>();
+        ctx.prepare(env);
+
+        for(BulkLoadObserver bulkLoadObserver : bulkLoadObservers) {
+          bulkLoadObserver.prePrepareBulkLoad(ctx, request);
+        }
       }
+
       String bulkToken = createStagingDir(baseStagingDir,
           getActiveUser(), ProtobufUtil.toTableName(request.getTableName())).toString();
       done.run(PrepareBulkLoadResponse.newBuilder().setBulkToken(bulkToken).build());
@@ -173,9 +184,18 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
                               CleanupBulkLoadRequest request,
                               RpcCallback<CleanupBulkLoadResponse> done) {
     try {
-      if (userProvider.isHBaseSecurityEnabled()) {
-        getAccessController().preCleanupBulkLoad(env);
+      List<BulkLoadObserver> bulkLoadObservers = getBulkLoadObservers();
+
+      if(bulkLoadObservers != null) {
+        ObserverContext<RegionCoprocessorEnvironment> ctx =
+                                           new ObserverContext<RegionCoprocessorEnvironment>();
+        ctx.prepare(env);
+
+        for(BulkLoadObserver bulkLoadObserver : bulkLoadObservers) {
+          bulkLoadObserver.preCleanupBulkLoad(ctx, request);
+        }
       }
+
       fs.delete(createStagingDir(baseStagingDir,
           getActiveUser(),
           new Path(request.getBulkToken()).getName()),
@@ -291,9 +311,11 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     done.run(SecureBulkLoadHFilesResponse.newBuilder().setLoaded(loaded).build());
   }
 
-  private AccessController getAccessController() {
-    return (AccessController) this.env.getRegion()
-        .getCoprocessorHost().findCoprocessor(AccessController.class.getName());
+  private List<BulkLoadObserver> getBulkLoadObservers() {
+    List<BulkLoadObserver> coprocessorList =
+              this.env.getRegion().getCoprocessorHost().findCoprocessors(BulkLoadObserver.class);
+
+    return coprocessorList;
   }
 
   private Path createStagingDir(Path baseDir,
