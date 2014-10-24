@@ -349,6 +349,14 @@ message IsProcedureDoneResponse {
         optional ProcedureDescription snapshot = 2;
 }
 
+message TruncateTableRequest {
+          required TableName tableName = 1;
+            optional bool preserveSplits = 2 [default = false];
+}
+
+message TruncateTableResponse {
+}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -547,4 +555,8 @@ service MasterService {
   /** returns a list of tables for a given namespace*/
   rpc ListTableNamesByNamespace(ListTableNamesByNamespaceRequest)
     returns(ListTableNamesByNamespaceResponse);
+
+  /** Truncate a table */
+    rpc truncateTable(TruncateTableRequest)
+        returns(TruncateTableResponse);
 }

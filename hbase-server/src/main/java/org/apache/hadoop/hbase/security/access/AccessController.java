@@ -172,6 +172,8 @@ public class AccessController extends BaseMasterAndRegionObserver
   private Map<InternalScanner,String> scannerOwners =
       new MapMaker().weakKeys().makeMap();
 
+  private Map<TableName, List<UserPermission>> tableAcls;
+
   // Provider for mapping principal names to Users
   private UserProvider userProvider;
 
@@ -871,11 +873,43 @@ public class AccessController extends BaseMasterAndRegionObserver
           + " is required for " + AccessControlConstants.CF_ATTRIBUTE_EARLY_OUT
           + " to have an effect");
     }
+
+    tableAcls = new MapMaker().weakValues().makeMap();
   }
 
   public void stop(CoprocessorEnvironment env) {
 
   }
+
+   @Override
+  public void preTruncateTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName)
+      throws IOException {
+    requirePermission("truncateTable", tableName, null, null, Action.ADMIN);
+    List<UserPermission> acls = AccessControlLists.getUserTablePermissions(c.getEnvironment()
+        .getConfiguration(), tableName);
+    if (acls != null) {
+      tableAcls.put(tableName, acls);
+    }
+  }
+
+  @Override
+  public void postTruncateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException {
+    List<UserPermission> perms = tableAcls.get(tableName);
+    if (perms != null) {
+      for (UserPermission perm : perms) {
+        AccessControlLists.addUserPermission(ctx.getEnvironment().getConfiguration(), perm);
+      }
+    }
+    tableAcls.remove(tableName);
+  }
+
+  @Override
+  public void preTruncateTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
+      TableName tableName) throws IOException {}
+  @Override
+  public void postTruncateTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
+      TableName tableName) throws IOException {}
 
   @Override
   public void preCreateTable(ObserverContext<MasterCoprocessorEnvironment> c,

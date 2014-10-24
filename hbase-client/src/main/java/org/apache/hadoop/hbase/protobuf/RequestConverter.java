@@ -98,6 +98,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.util.ByteStringer;
@@ -1138,6 +1139,21 @@ public final class RequestConverter {
   public static DeleteTableRequest buildDeleteTableRequest(final TableName tableName) {
     DeleteTableRequest.Builder builder = DeleteTableRequest.newBuilder();
     builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
+    return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer TruncateTableRequest
+   *
+   * @param tableName name of table to truncate
+   * @param preserveSplits True if the splits should be preserved
+   * @return a TruncateTableRequest
+   */
+  public static TruncateTableRequest buildTruncateTableRequest(final TableName tableName,
+        boolean preserveSplits) {
+    TruncateTableRequest.Builder builder = TruncateTableRequest.newBuilder();
+    builder.setTableName(ProtobufUtil.toProtoTableName(tableName));
+    builder.setPreserveSplits(preserveSplits);
     return builder.build();
   }
 

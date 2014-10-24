@@ -835,4 +835,24 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
       return matchFound ? ReturnCode.INCLUDE : ReturnCode.SKIP;
     }
   }
+
+  @Override
+  public void preTruncateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException {
+  }
+
+  @Override
+  public void postTruncateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException {
+  }
+
+  @Override
+  public void preTruncateTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException {
+  }
+
+  @Override
+  public void postTruncateTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException {
+  }
 }

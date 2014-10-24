@@ -134,6 +134,52 @@ public interface MasterObserver extends Coprocessor {
       final ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
       throws IOException;
 
+
+  /**
+   * Called before {@link org.apache.hadoop.hbase.master.HMaster} truncates a
+   * table.  Called as part of truncate table RPC call.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   */
+  void preTruncateTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException;
+
+  /**
+   * Called after the truncateTable operation has been requested.  Called as part
+   * of truncate table RPC call.
+   * The truncate is synchronous, so this method will be called when the
+   * truncate operation is terminated.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   */
+  void postTruncateTable(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName) throws IOException;
+
+  /**
+   * Called before {@link org.apache.hadoop.hbase.master.HMaster} truncates a
+   * table.  Called as part of truncate table handler and it is sync
+   * to the truncate RPC call.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   */
+  void preTruncateTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
+      throws IOException;
+
+  /**
+   * Called after {@link org.apache.hadoop.hbase.master.HMaster} truncates a
+   * table.  Called as part of truncate table handler and it is sync to the
+   * truncate RPC call.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   */
+  void postTruncateTableHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
+      throws IOException;
+
   /**
    * Called prior to modifying a table's properties.  Called as part of modify
    * table RPC call.

@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -317,6 +318,22 @@ public class TestAccessController extends SecureTestUtil {
 
     verifyAllowed(deleteTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER);
     verifyDenied(deleteTable, USER_RW, USER_RO, USER_NONE);
+  }
+
+  @Test
+  public void testTableTruncate() throws Exception {
+    AccessTestAction truncateTable = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER
+            .preTruncateTable(ObserverContext.createAndPrepare(CP_ENV, null),
+              TEST_TABLE.getTableName());
+        return null;
+      }
+    };
+
+    verifyAllowed(truncateTable, SUPERUSER, USER_ADMIN);
+    verifyDenied(truncateTable, USER_RW, USER_RO, USER_NONE,USER_CREATE, USER_OWNER);
   }
 
   @Test
@@ -2259,4 +2276,21 @@ public class TestAccessController extends SecureTestUtil {
     TEST_UTIL.getMiniHBaseCluster().getMaster().deleteNamespace(namespace);
   }
 
+  @Test
+  public void testTruncatePerms() throws Exception {
+    try {
+      List<UserPermission> existingPerms = AccessControlClient.getUserPermissions(conf, TEST_TABLE
+          .getTableName().getNameAsString());
+      assertTrue(existingPerms != null);
+      assertTrue(existingPerms.size() > 1);
+      TEST_UTIL.getHBaseAdmin().disableTable(TEST_TABLE.getTableName());
+      TEST_UTIL.getHBaseAdmin().truncateTable(TEST_TABLE.getTableName(), true);
+      List<UserPermission> perms = AccessControlClient.getUserPermissions(conf, TEST_TABLE
+          .getTableName().getNameAsString());
+      assertTrue(perms != null);
+      assertEquals(existingPerms.size(), perms.size());
+    } catch (Throwable e) {
+      throw new HBaseIOException(e);
+    }
+  }
 }

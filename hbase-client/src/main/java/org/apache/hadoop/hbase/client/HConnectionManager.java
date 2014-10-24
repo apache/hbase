@@ -110,6 +110,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunnin
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.BalanceRequest;
@@ -2127,6 +2129,12 @@ public class HConnectionManager {
             RpcController controller, GetClusterStatusRequest request)
             throws ServiceException {
           return stub.getClusterStatus(controller, request);
+        }
+
+        @Override
+        public TruncateTableResponse truncateTable(RpcController controller,
+            TruncateTableRequest request) throws ServiceException {
+          return stub.truncateTable(controller, request);
         }
       };
     }

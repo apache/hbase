@@ -343,6 +343,10 @@ public class TestCatalogJanitor {
     public void deleteTable(TableName tableName) throws IOException { }
 
     @Override
+    public void truncateTable(TableName tableName, boolean preserveSplits) throws IOException { }
+
+
+    @Override
     public void modifyTable(TableName tableName, HTableDescriptor descriptor)
         throws IOException { }
 

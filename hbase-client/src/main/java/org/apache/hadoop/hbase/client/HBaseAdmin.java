@@ -128,6 +128,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
@@ -3401,6 +3402,26 @@ public class HBaseAdmin implements Abortable, Closeable {
    */
   public CoprocessorRpcChannel coprocessorService(ServerName sn) {
     return new RegionServerCoprocessorRpcChannel(connection, sn);
+  }
+
+  /**
+   * Truncate a table. Synchronous operation.
+   * @param tableName name of table to truncate
+   * @param preserveSplits True if the splits should be preserved
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void truncateTable(final TableName tableName, final boolean preserveSplits)
+      throws IOException {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
+      @Override
+      public Void call() throws ServiceException {
+        LOG.info("Started truncate of " + tableName);
+        TruncateTableRequest req = RequestConverter.buildTruncateTableRequest(
+        tableName, preserveSplits);
+        master.truncateTable(null, req);
+        return null;
+      }
+    });
   }
 
 }

@@ -109,6 +109,9 @@ public class TestAdmin {
 
   @After
   public void tearDown() throws Exception {
+    for (HTableDescriptor htd : this.admin.listTables()) {
+      TEST_UTIL.deleteTable(htd.getName());
+    }
   }
 
   @Test (timeout=300000)
@@ -341,6 +344,48 @@ public class TestAdmin {
   }
 
   @Test (timeout=300000)
+  public void testTruncateTable() throws IOException {
+    testTruncateTable(TableName.valueOf("testTruncateTable"), false);
+  }
+
+  @Test (timeout=300000)
+  public void testTruncateTablePreservingSplits() throws IOException {
+    testTruncateTable(TableName.valueOf("testTruncateTablePreservingSplits"), true);
+  }
+
+  private void testTruncateTable(final TableName tableName, boolean preserveSplits)
+      throws IOException {
+    byte[][] splitKeys = new byte[2][];
+    splitKeys[0] = Bytes.toBytes(4);
+    splitKeys[1] = Bytes.toBytes(8);
+
+    // Create & Fill the table
+    HTable table = TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY, splitKeys);
+    try {
+      TEST_UTIL.loadNumericRows(table, HConstants.CATALOG_FAMILY, 0, 10);
+      assertEquals(10, TEST_UTIL.countRows(table));
+    } finally {
+      table.close();
+    }
+    assertEquals(3, TEST_UTIL.getHBaseCluster().getRegions(tableName).size());
+
+    // Truncate & Verify
+    this.admin.disableTable(tableName);
+    this.admin.truncateTable(tableName, preserveSplits);
+    table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    try {
+      assertEquals(0, TEST_UTIL.countRows(table));
+    } finally {
+      table.close();
+    }
+    if (preserveSplits) {
+      assertEquals(3, TEST_UTIL.getHBaseCluster().getRegions(tableName).size());
+    } else {
+      assertEquals(1, TEST_UTIL.getHBaseCluster().getRegions(tableName).size());
+    }
+  }
+
+  @Test (timeout=300000)
   public void testGetTableDescriptor() throws IOException {
     HColumnDescriptor fam1 = new HColumnDescriptor("fam1");
     HColumnDescriptor fam2 = new HColumnDescriptor("fam2");
@@ -366,7 +411,7 @@ public class TestAdmin {
            assertTrue(exceptionThrown);
        }
    }
-  
+
   /**
    * Verify schema modification takes.
    * @throws IOException

@@ -102,6 +102,7 @@ import org.apache.hadoop.hbase.master.handler.ModifyTableHandler;
 import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
+import org.apache.hadoop.hbase.master.handler.TruncateTableHandler;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -191,6 +192,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest;
@@ -3223,6 +3226,33 @@ MasterServices, Server {
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
+  }
+
+  @Override
+  public void truncateTable(TableName tableName, boolean preserveSplits) throws IOException {
+    checkInitialized();
+    if (cpHost != null) {
+      cpHost.preTruncateTable(tableName);
+    }
+    LOG.info(getClientIdAuditPrefix() + " truncate " + tableName);
+    TruncateTableHandler handler = new TruncateTableHandler(tableName, this, this, preserveSplits);
+    handler.prepare();
+    handler.process();
+    if (cpHost != null) {
+      cpHost.postTruncateTable(tableName);
+    }
+  }
+
+
+  @Override
+  public TruncateTableResponse truncateTable(RpcController controller, TruncateTableRequest request)
+      throws ServiceException {
+    try {
+      truncateTable(ProtobufUtil.toTableName(request.getTableName()), request.getPreserveSplits());
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return TruncateTableResponse.newBuilder().build();
   }
 
 }
