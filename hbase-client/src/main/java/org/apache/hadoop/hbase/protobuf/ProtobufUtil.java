@@ -1447,7 +1447,9 @@ public final class ProtobufUtil {
       }
       return (Filter)parseFrom.invoke(c, value);
     } catch (Exception e) {
-      throw new IOException(e);
+      // Either we couldn't instantiate the method object, or "parseFrom" failed.
+      // In either case, let's not retry.
+      throw new DoNotRetryIOException(e);
     }
   }
 
