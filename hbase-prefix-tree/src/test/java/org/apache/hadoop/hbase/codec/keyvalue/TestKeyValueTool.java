@@ -43,7 +43,7 @@ public class TestKeyValueTool {
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    return TestRowData.InMemory.getAllAsObjectArray();
+    return new TestRowData.InMemory().getAllAsObjectArray();
   }
 
   private TestRowData rows;

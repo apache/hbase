@@ -52,7 +52,7 @@ public class TestPrefixTreeSearcher {
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    return TestRowData.InMemory.getAllAsObjectArray();
+    return new TestRowData.InMemory().getAllAsObjectArray();
   }
 
   protected TestRowData rows;

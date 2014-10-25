@@ -50,7 +50,7 @@ public class HbckTestingUtil {
       TableName table) throws Exception {
     HBaseFsck fsck = new HBaseFsck(conf, exec);
     fsck.connect();
-    HBaseFsck.setDisplayFullReport(); // i.e. -details
+    fsck.setDisplayFullReport(); // i.e. -details
     fsck.setTimeLag(0);
     fsck.setFixAssignments(fixAssignments);
     fsck.setFixMeta(fixMeta);

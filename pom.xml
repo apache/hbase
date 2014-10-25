@@ -441,7 +441,7 @@
         </plugin>
         <plugin>
           <artifactId>maven-compiler-plugin</artifactId>
-          <version>3.2</version>
+          <version>2.5.1</version>
           <configuration>
             <source>${compileSource}</source>
             <target>${compileSource}</target>
@@ -449,23 +449,6 @@
             <showDeprecation>false</showDeprecation>
             <compilerArgument>-Xlint:-options</compilerArgument>
           </configuration>
-          <dependencies>
-           <dependency>
-             <groupId>com.google.errorprone</groupId>
-             <artifactId>error_prone_core</artifactId>
-             <version>1.1.1</version>
-           </dependency>
-           <dependency>
-             <groupId>org.codehaus.plexus</groupId>
-             <artifactId>plexus-compiler-javac</artifactId>
-             <version>2.3</version>
-           </dependency>
-           <dependency>
-             <groupId>org.codehaus.plexus</groupId>
-             <artifactId>plexus-compiler-javac-errorprone</artifactId>
-             <version>2.3</version>
-           </dependency>
-         </dependencies>   
         </plugin>
         <!-- Test oriented plugins -->
         <plugin>
