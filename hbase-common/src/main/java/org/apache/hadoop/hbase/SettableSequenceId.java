@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
@@ -30,5 +32,5 @@ public interface SettableSequenceId {
    * Sets with the given seqId.
    * @param seqId
    */
-  void setSequenceId(long seqId);
+  void setSequenceId(long seqId) throws IOException;
 }
