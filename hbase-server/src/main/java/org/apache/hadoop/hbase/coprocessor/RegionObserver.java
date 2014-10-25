@@ -118,6 +118,7 @@ public interface RegionObserver extends Coprocessor {
    * @throws IOException if an error occurred on the coprocessor
    * @deprecated use {@link #preFlush(ObserverContext, Store, InternalScanner)} instead
    */
+  @Deprecated
   void preFlush(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException;
 
   /**
@@ -138,6 +139,7 @@ public interface RegionObserver extends Coprocessor {
    * @throws IOException if an error occurred on the coprocessor
    * @deprecated use {@link #preFlush(ObserverContext, Store, InternalScanner)} instead.
    */
+  @Deprecated
   void postFlush(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException;
 
   /**
@@ -339,6 +341,7 @@ public interface RegionObserver extends Coprocessor {
    * @deprecated Use preSplit(
    *    final ObserverContext<RegionCoprocessorEnvironment> c, byte[] splitRow)
    */
+  @Deprecated
   void preSplit(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException;
 
   /**
@@ -359,6 +362,7 @@ public interface RegionObserver extends Coprocessor {
    * @throws IOException if an error occurred on the coprocessor
    * @deprecated Use postCompleteSplit() instead
    */
+  @Deprecated
   void postSplit(final ObserverContext<RegionCoprocessorEnvironment> c, final HRegion l,
       final HRegion r) throws IOException;
 

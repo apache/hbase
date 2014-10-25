@@ -71,7 +71,7 @@ public class TestSeekTo extends HBaseTestCase {
   }
 
   Path makeNewFile(TagUsage tagUsage) throws IOException {
-    Path ncTFile = new Path(this.testDir, "basic.hfile");
+    Path ncTFile = new Path(testDir, "basic.hfile");
     if (tagUsage != TagUsage.NO_TAG) {
       conf.setInt("hfile.format.version", 3);
     } else {
