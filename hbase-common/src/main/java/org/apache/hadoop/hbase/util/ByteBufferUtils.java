@@ -486,8 +486,8 @@ public final class ByteBufferUtils {
     int end1 = o1 + len1;
     int end2 = o2 + len2;
     for (int i = o1, j = o2; i < end1 && j < end2; i++, j++) {
-      byte a = buf1.get(i);
-      byte b = buf2.get(j);
+      int a = buf1.get(i) & 0xFF;
+      int b = buf2.get(j) & 0xFF;
       if (a != b) {
         return a - b;
       }
