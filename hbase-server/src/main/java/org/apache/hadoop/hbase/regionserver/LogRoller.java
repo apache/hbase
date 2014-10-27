@@ -40,6 +40,8 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Runs periodically to determine if the WAL should be rolled.
  *
@@ -50,7 +52,8 @@ import java.util.concurrent.locks.ReentrantLock;
  * TODO: change to a pool of threads
  */
 @InterfaceAudience.Private
-class LogRoller extends HasThread {
+@VisibleForTesting
+public class LogRoller extends HasThread {
   static final Log LOG = LogFactory.getLog(LogRoller.class);
   private final ReentrantLock rollLock = new ReentrantLock();
   private final AtomicBoolean rollLog = new AtomicBoolean(false);
