@@ -44,15 +44,18 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MockRegionServerServices;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.LogRoller;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.htrace.Sampler;
@@ -313,13 +316,16 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       final WALFactory wals = new WALFactory(getConf(), null, "wals");
       final HRegion[] regions = new HRegion[numRegions];
       final Runnable[] benchmarks = new Runnable[numRegions];
+      final MockRegionServerServices mockServices = new MockRegionServerServices(getConf());
+      final LogRoller roller = new LogRoller(mockServices, mockServices);
+      Threads.setDaemonThreadRunning(roller.getThread(), "WALPerfEval.logRoller");
 
       try {
         for(int i = 0; i < numRegions; i++) {
           // Initialize Table Descriptor
           // a table per desired region means we can avoid carving up the key space
           final HTableDescriptor htd = createHTableDescriptor(i, numFamilies);
-          regions[i] = openRegion(fs, rootRegionDir, htd, wals, roll);
+          regions[i] = openRegion(fs, rootRegionDir, htd, wals, roll, roller);
           benchmarks[i] = Trace.wrap(new WALPutBenchmark(regions[i], htd, numIterations, noSync,
               syncInterval, traceFreq));
         }
@@ -335,6 +341,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
           }
         }
         if (verify) {
+          LOG.info("verifying written log entries.");
           Path dir = new Path(FSUtils.getRootDir(getConf()),
               DefaultWALProvider.getWALDirectoryName("wals"));
           long editCount = 0;
@@ -351,10 +358,15 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
           }
         }
       } finally {
+        mockServices.stop("test clean up.");
         for (int i = 0; i < numRegions; i++) {
           if (regions[i] != null) {
             closeRegion(regions[i]);
           }
+        }
+        if (null != roller) {
+          LOG.info("shutting down log roller.");
+          Threads.shutdown(roller.getThread());
         }
         wals.shutdown();
         // Remove the root dir for this test region
@@ -465,13 +477,14 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
   private final Set<WAL> walsListenedTo = new HashSet<WAL>();
 
   private HRegion openRegion(final FileSystem fs, final Path dir, final HTableDescriptor htd,
-      final WALFactory wals, final long whenToRoll) throws IOException {
+      final WALFactory wals, final long whenToRoll, final LogRoller roller) throws IOException {
     // Initialize HRegion
     HRegionInfo regionInfo = new HRegionInfo(htd.getTableName());
     // Initialize WAL
     final WAL wal = wals.getWAL(regionInfo.getEncodedNameAsBytes());
     // If we haven't already, attach a listener to this wal to handle rolls and metrics.
     if (walsListenedTo.add(wal)) {
+      roller.addWAL(wal);
       wal.registerWALActionsListener(new WALActionsListener.Base() {
         private int appends = 0;
 
@@ -484,8 +497,6 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
             // We used to do explicit call to rollWriter but changed it to a request
             // to avoid dead lock (there are less threads going on in this class than
             // in the regionserver -- regionserver does not have the issue).
-            // TODO I think this means no rolling actually happens; the request relies on there
-            // being a LogRoller.
             DefaultWALProvider.requestLogRoll(wal);
           }
         }
@@ -502,7 +513,6 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
           appendMeter.mark(size);
         }
       });
-      wal.rollWriter();
     }
      
     return HRegion.createHRegion(regionInfo, dir, getConf(), htd, wal);

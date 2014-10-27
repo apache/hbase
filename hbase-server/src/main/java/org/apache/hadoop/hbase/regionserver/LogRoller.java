@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.ipc.RemoteException;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Runs periodically to determine if the WAL should be rolled.
  *
@@ -46,7 +48,8 @@ import org.apache.hadoop.ipc.RemoteException;
  * TODO: change to a pool of threads
  */
 @InterfaceAudience.Private
-class LogRoller extends HasThread {
+@VisibleForTesting
+public class LogRoller extends HasThread {
   static final Log LOG = LogFactory.getLog(LogRoller.class);
   private final ReentrantLock rollLock = new ReentrantLock();
   private final AtomicBoolean rollLog = new AtomicBoolean(false);

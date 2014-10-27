@@ -24,7 +24,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.ClusterConnection;
@@ -53,28 +56,36 @@ import com.google.protobuf.Service;
 /**
  * Basic mock region server services.  Should only be instantiated by HBaseTestingUtility.b
  */
-class MockRegionServerServices implements RegionServerServices {
+public class MockRegionServerServices implements RegionServerServices {
+  protected static final Log LOG = LogFactory.getLog(MockRegionServerServices.class);
   private final Map<String, HRegion> regions = new HashMap<String, HRegion>();
-  private boolean stopping = false;
   private final ConcurrentSkipListMap<byte[], Boolean> rit =
     new ConcurrentSkipListMap<byte[], Boolean>(Bytes.BYTES_COMPARATOR);
   private HFileSystem hfs = null;
+  private final Configuration conf;
   private ZooKeeperWatcher zkw = null;
   private ServerName serverName = null;
   private RpcServerInterface rpcServer = null;
   private volatile boolean abortRequested;
+  private volatile boolean stopping = false;
+  private final AtomicBoolean running = new AtomicBoolean(true);
 
   MockRegionServerServices(ZooKeeperWatcher zkw) {
-    this.zkw = zkw;
+    this(zkw, null);
   }
 
   MockRegionServerServices(ZooKeeperWatcher zkw, ServerName serverName) {
     this.zkw = zkw;
     this.serverName = serverName;
+    this.conf = (zkw == null ? new Configuration() : zkw.getConfiguration());
   }
 
   MockRegionServerServices(){
-    this(null);
+    this(null, null);
+  }
+
+  public MockRegionServerServices(Configuration conf) {
+    this.conf = conf;
   }
 
   @Override
@@ -179,7 +190,7 @@ class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public Configuration getConfiguration() {
-    return zkw == null ? null : zkw.getConfiguration();
+    return conf;
   }
 
   @Override
@@ -190,12 +201,15 @@ class MockRegionServerServices implements RegionServerServices {
 
   @Override
   public void stop(String why) {
-    //no-op
+    this.stopping = true;
+    if (running.compareAndSet(true, false)) {
+      LOG.info("Shutting down due to request '" + why + "'");
+    }
   }
 
   @Override
   public boolean isStopped() {
-    return false;
+    return !(running.get());
   }
 
   @Override
