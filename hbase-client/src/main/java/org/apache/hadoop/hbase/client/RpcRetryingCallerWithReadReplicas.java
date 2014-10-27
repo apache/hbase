@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.htrace.Trace;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -412,7 +413,7 @@ public class RpcRetryingCallerWithReadReplicas {
 
     public void submit(ReplicaRegionServerCallable task, int callTimeout) {
       QueueingFuture newFuture = new QueueingFuture(task, callTimeout);
-      executor.execute(newFuture);
+      executor.execute(Trace.wrap(newFuture));
       tasks[task.id] = newFuture;
     }
 
