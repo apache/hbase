@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.protobuf.ServiceException;
+import org.htrace.Trace;
 
 /**
  * Caller that goes to replica if the primary region does no answer within a configurable
@@ -413,7 +414,7 @@ public class RpcRetryingCallerWithReadReplicas {
 
     public void submit(ReplicaRegionServerCallable task, int callTimeout) {
       QueueingFuture newFuture = new QueueingFuture(task, callTimeout);
-      executor.execute(newFuture);
+      executor.execute(Trace.wrap(newFuture));
       tasks[task.id] = newFuture;
     }
 
