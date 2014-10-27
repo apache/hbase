@@ -72,17 +72,15 @@ function get_jira_status {
   # span id="resolution-val" class="value resolved" >
   # The following is a bit brittle, but filters for lines with 
   # resolution-val returns 99 if it's resolved
-  jira_url='https://issues.apache.org/jira/browse'
+  jira_url='https://issues.apache.org/jira/rest/api/2/issue'
   jira_id="$1"
-  status="$(curl -s $jira_url/$jira_id | \
-                grep resolution-val | \
-                sed -e "s/.*class=\"value\ //" | \
-                cut -d'"' -f 1)"
-  if [ $? -ne 0 ]; then
+  curl -s "$jira_url/$jira_id?fields=resolution" |grep -q '{"resolution":null}'
+  status=$?
+  if [ $status -ne 0 -a $status -ne 1 ]; then
     echo "Could not get JIRA status. Check your network." >&2
     exit 1
   fi
-  if [ "$status" = "resolved" ]; then
+  if [ $status -ne 0 ]; then
     return 99
   fi
 }
