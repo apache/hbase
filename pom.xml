@@ -1045,7 +1045,7 @@
         <artifactId>hbase-annotations</artifactId>
         <version>${project.version}</version>
         <type>test-jar</type>
-        <scope>test</scope>
+        <!--Was test scope only but if we want to run hbase-it tests, need the annotations test jar-->
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
