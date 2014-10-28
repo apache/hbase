@@ -200,4 +200,31 @@ public class TestCellCounter {
       FileUtil.fullyDelete(new File(outputPath));
     }
   }
+
+  @Test (timeout=300000)
+  public void TestCellCounterWithoutOutputDir() throws Exception {
+    PrintStream oldPrintStream = System.err;
+    SecurityManager SECURITY_MANAGER = System.getSecurityManager();
+    LauncherSecurityManager newSecurityManager= new LauncherSecurityManager();
+    System.setSecurityManager(newSecurityManager);
+    ByteArrayOutputStream data = new ByteArrayOutputStream();
+    String[] args = {"tableName"};
+    System.setErr(new PrintStream(data));
+    try {
+      System.setErr(new PrintStream(data));
+      try {
+        CellCounter.main(args);
+        fail("should be SecurityException");
+      } catch (SecurityException e) {
+        assertEquals(-1, newSecurityManager.getExitCode());
+        assertTrue(data.toString().contains("ERROR: Wrong number of parameters:"));
+        // should be information about usage
+        assertTrue(data.toString().contains("Usage:"));
+      }
+
+    } finally {
+      System.setErr(oldPrintStream);
+      System.setSecurityManager(SECURITY_MANAGER);
+    }
+  }
 }
