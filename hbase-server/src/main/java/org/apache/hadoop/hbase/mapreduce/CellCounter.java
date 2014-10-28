@@ -243,7 +243,7 @@ public class CellCounter {
   public static void main(String[] args) throws Exception {
     Configuration conf = HBaseConfiguration.create();
     String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
-    if (otherArgs.length < 1) {
+    if (otherArgs.length < 2) {
       System.err.println("ERROR: Wrong number of parameters: " + args.length);
       System.err.println("Usage: CellCounter <tablename> <outputDir> <reportSeparator> " +
           "[^[regex pattern] or [Prefix] for row filter]] ");
