@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -200,5 +202,12 @@ public class TestCellCounter {
       t.close();
       FileUtil.fullyDelete(new File(outputPath));
     }
+  }
+
+  @Test
+  public void TestCellCounterWithoutOutputDir() throws Exception {
+    String[] args = new String[] { "tableName" };
+    assertEquals("CellCounter should exit with -1 as output directory is not specified.", -1,
+      ToolRunner.run(HBaseConfiguration.create(), new CellCounter(), args));
   }
 }

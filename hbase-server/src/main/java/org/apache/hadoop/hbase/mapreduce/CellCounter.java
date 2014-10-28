@@ -242,7 +242,7 @@ public class CellCounter extends Configured implements Tool {
   @Override
   public int run(String[] args) throws Exception {
     String[] otherArgs = new GenericOptionsParser(getConf(), args).getRemainingArgs();
-    if (otherArgs.length < 1) {
+    if (otherArgs.length < 2) {
       System.err.println("ERROR: Wrong number of parameters: " + args.length);
       System.err.println("Usage: CellCounter <tablename> <outputDir> <reportSeparator> " +
           "[^[regex pattern] or [Prefix] for row filter]] ");
