@@ -137,7 +137,9 @@ public class TestReplicationBase {
     HBaseAdmin admin1 = new HBaseAdmin(conf1);
     HBaseAdmin admin2 = new HBaseAdmin(conf2);
     admin1.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    utility1.waitUntilAllRegionsAssigned(TableName.valueOf(tableName));
     admin2.createTable(table, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
+    utility2.waitUntilAllRegionsAssigned(TableName.valueOf(tableName));
     htable1 = new HTable(conf1, tableName);
     htable1.setWriteBufferSize(1024);
     htable2 = new HTable(conf2, tableName);

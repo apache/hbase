@@ -1045,6 +1045,7 @@ public class TestAccessController extends SecureTestUtil {
     htd.addFamily(new HColumnDescriptor(family1));
     htd.addFamily(new HColumnDescriptor(family2));
     admin.createTable(htd);
+    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
     // create temp users
     User tblUser = User
@@ -1319,6 +1320,7 @@ public class TestAccessController extends SecureTestUtil {
     htd.addFamily(new HColumnDescriptor(family1));
     htd.addFamily(new HColumnDescriptor(family2));
     admin.createTable(htd);
+    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
     // create temp users
     User user = User.createUserForTesting(TEST_UTIL.getConfiguration(), "user", new String[0]);
@@ -1434,6 +1436,7 @@ public class TestAccessController extends SecureTestUtil {
     htd.addFamily(new HColumnDescriptor(family2));
     htd.setOwner(USER_OWNER);
     admin.createTable(htd);
+    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
     List<UserPermission> perms;
 
@@ -1907,6 +1910,7 @@ public class TestAccessController extends SecureTestUtil {
     HTableDescriptor htd = new HTableDescriptor(TEST_TABLE2);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
     admin.createTable(htd);
+    TEST_UTIL.waitUntilAllRegionsAssigned(TEST_TABLE2);
 
     // Starting a new RegionServer.
     JVMClusterUtil.RegionServerThread newRsThread = hbaseCluster
