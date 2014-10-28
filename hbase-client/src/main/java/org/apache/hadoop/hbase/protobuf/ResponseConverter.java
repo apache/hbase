@@ -114,17 +114,23 @@ public final class ResponseConverter {
       }
 
       for (ResultOrException roe : actionResult.getResultOrExceptionList()) {
+        Object responseValue;
         if (roe.hasException()) {
-          results.add(regionName, roe.getIndex(), ProtobufUtil.toException(roe.getException()));
+          responseValue = ProtobufUtil.toException(roe.getException());
         } else if (roe.hasResult()) {
-          results.add(regionName, roe.getIndex(), ProtobufUtil.toResult(roe.getResult(), cells));
+          responseValue = ProtobufUtil.toResult(roe.getResult(), cells);
+          // add the load stats, if we got any
+          if (roe.hasLoadStats()) {
+            ((Result) responseValue).addResults(roe.getLoadStats());
+          }
         } else if (roe.hasServiceResult()) {
-          results.add(regionName, roe.getIndex(), roe.getServiceResult());
+          responseValue = roe.getServiceResult();
         } else {
           // no result & no exception. Unexpected.
           throw new IllegalStateException("No result & no exception roe=" + roe +
               " for region " + actions.getRegion());
         }
+        results.add(regionName, roe.getIndex(), responseValue);
       }
     }
 
@@ -149,9 +155,11 @@ public final class ResponseConverter {
    * @param r
    * @return an action result builder
    */
-  public static ResultOrException.Builder buildActionResult(final ClientProtos.Result r) {
+  public static ResultOrException.Builder buildActionResult(final ClientProtos.Result r,
+      ClientProtos.RegionLoadStats stats) {
     ResultOrException.Builder builder = ResultOrException.newBuilder();
     if (r != null) builder.setResult(r);
+    if(stats != null) builder.setLoadStats(stats);
     return builder;
   }
 

@@ -64,6 +64,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFuture;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
+import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
+import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicyFactory;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
@@ -541,6 +543,8 @@ class ConnectionManager {
     final int rpcTimeout;
     private NonceGenerator nonceGenerator = null;
     private final AsyncProcess asyncProcess;
+    // single tracker per connection
+    private final ServerStatisticTracker stats;
 
     private volatile boolean closed;
     private volatile boolean aborted;
@@ -595,6 +599,8 @@ class ConnectionManager {
      * Cluster registry of basic info such as clusterid and meta region location.
      */
      Registry registry;
+
+    private final ClientBackoffPolicy backoffPolicy;
 
      HConnectionImplementation(Configuration conf, boolean managed) throws IOException {
        this(conf, managed, null, null);
@@ -670,9 +676,11 @@ class ConnectionManager {
       } else {
         this.nonceGenerator = new NoNonceGenerator();
       }
+      stats = ServerStatisticTracker.create(conf);
       this.asyncProcess = createAsyncProcess(this.conf);
       this.interceptor = (new RetryingCallerInterceptorFactory(conf)).build();
-      this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, interceptor);
+      this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, interceptor, this.stats);
+      this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
     }
 
     @Override
@@ -2207,12 +2215,23 @@ class ConnectionManager {
     protected AsyncProcess createAsyncProcess(Configuration conf) {
       // No default pool available.
       return new AsyncProcess(this, conf, this.batchPool,
-          RpcRetryingCallerFactory.instantiate(conf), false, RpcControllerFactory.instantiate(conf));
+          RpcRetryingCallerFactory.instantiate(conf, this.getStatisticsTracker()), false,
+          RpcControllerFactory.instantiate(conf));
     }
 
     @Override
     public AsyncProcess getAsyncProcess() {
       return asyncProcess;
+    }
+
+    @Override
+    public ServerStatisticTracker getStatisticsTracker() {
+      return this.stats;
+    }
+
+    @Override
+    public ClientBackoffPolicy getBackoffPolicy() {
+      return this.backoffPolicy;
     }
 
     /*
@@ -2506,7 +2525,8 @@ class ConnectionManager {
 
     @Override
     public RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf) {
-      return RpcRetryingCallerFactory.instantiate(conf, this.interceptor);
+      return RpcRetryingCallerFactory
+          .instantiate(conf, this.interceptor, this.getStatisticsTracker());
     }
 
     @Override

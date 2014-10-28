@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RpcRetryingCaller;
+import org.apache.hadoop.hbase.client.RpcRetryingCallerImpl;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -74,7 +75,7 @@ public class TestRegionReplicaReplicationEndpoint {
   private static final Log LOG = LogFactory.getLog(TestRegionReplicaReplicationEndpoint.class);
 
   static {
-    ((Log4JLogger)RpcRetryingCaller.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger) RpcRetryingCallerImpl.LOG).getLogger().setLevel(Level.ALL);
   }
 
   private static final int NB_SERVERS = 2;

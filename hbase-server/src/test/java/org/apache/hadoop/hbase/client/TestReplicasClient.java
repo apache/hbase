@@ -76,7 +76,7 @@ public class TestReplicasClient {
   private static final Log LOG = LogFactory.getLog(TestReplicasClient.class);
 
   static {
-    ((Log4JLogger)RpcRetryingCaller.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)RpcRetryingCallerImpl.LOG).getLogger().setLevel(Level.ALL);
   }
 
   private static final int NB_SERVERS = 1;

@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.backoff.ClientBackoffPolicy;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
@@ -446,5 +447,15 @@ abstract class ConnectionAdapter implements ClusterConnection {
   @Override
   public boolean isManaged() {
     return wrappedConnection.isManaged();
+  }
+
+  @Override
+  public ServerStatisticTracker getStatisticsTracker() {
+    return wrappedConnection.getStatisticsTracker();
+  }
+
+  @Override
+  public ClientBackoffPolicy getBackoffPolicy() {
+    return wrappedConnection.getBackoffPolicy();
   }
 }

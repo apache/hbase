@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -48,6 +49,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -313,7 +315,8 @@ class AsyncProcess {
    * Uses default ExecutorService for this AP (must have been created with one).
    */
   public <CResult> AsyncRequestFuture submit(TableName tableName, List<? extends Row> rows,
-      boolean atLeastOne, Batch.Callback<CResult> callback, boolean needResults) throws InterruptedIOException {
+      boolean atLeastOne, Batch.Callback<CResult> callback, boolean needResults)
+      throws InterruptedIOException {
     return submit(null, tableName, rows, atLeastOne, callback, needResults);
   }
 
@@ -374,7 +377,7 @@ class AsyncProcess {
           locationErrors = new ArrayList<Exception>();
           locationErrorRows = new ArrayList<Integer>();
           LOG.error("Failed to get region location ", ex);
-          // This action failed before creating ars. Add it to retained but do not add to submit list.
+          // This action failed before creating ars. Retain it, but do not add to submit list.
           // We will then add it to ars in an already-failed state.
           retainedActions.add(new Action<Row>(r, ++posInList));
           locationErrors.add(ex);
@@ -918,14 +921,12 @@ class AsyncProcess {
       return loc;
     }
 
-
-
     /**
      * Send a multi action structure to the servers, after a delay depending on the attempt
      * number. Asynchronous.
      *
      * @param actionsByServer the actions structured by regions
-     * @param numAttempt      the attempt number.
+     * @param numAttempt the attempt number.
      * @param actionsForReplicaThread original actions for replica thread; null on non-first call.
      */
     private void sendMultiAction(Map<ServerName, MultiAction<Row>> actionsByServer,
@@ -935,31 +936,96 @@ class AsyncProcess {
       int actionsRemaining = actionsByServer.size();
       // This iteration is by server (the HRegionLocation comparator is by server portion only).
       for (Map.Entry<ServerName, MultiAction<Row>> e : actionsByServer.entrySet()) {
-        final ServerName server = e.getKey();
-        final MultiAction<Row> multiAction = e.getValue();
+        ServerName server = e.getKey();
+        MultiAction<Row> multiAction = e.getValue();
         incTaskCounters(multiAction.getRegions(), server);
-        Runnable runnable = Trace.wrap("AsyncProcess.sendMultiAction",
-            new SingleServerRequestRunnable(multiAction, numAttempt, server));
-        if ((--actionsRemaining == 0) && reuseThread) {
-          runnable.run();
-        } else {
-          try {
-            pool.submit(runnable);
-          } catch (RejectedExecutionException ree) {
-            // This should never happen. But as the pool is provided by the end user, let's secure
-            //  this a little.
-            decTaskCounters(multiAction.getRegions(), server);
-            LOG.warn("#" + id + ", the task was rejected by the pool. This is unexpected." +
-                " Server is " + server.getServerName(), ree);
-            // We're likely to fail again, but this will increment the attempt counter, so it will
-            //  finish.
-            receiveGlobalFailure(multiAction, server, numAttempt, ree);
+        Collection<? extends Runnable> runnables = getNewMultiActionRunnable(server, multiAction,
+            numAttempt);
+        // make sure we correctly count the number of runnables before we try to reuse the send
+        // thread, in case we had to split the request into different runnables because of backoff
+        if (runnables.size() > actionsRemaining) {
+          actionsRemaining = runnables.size();
+        }
+
+        // run all the runnables
+        for (Runnable runnable : runnables) {
+          if ((--actionsRemaining == 0) && reuseThread) {
+            runnable.run();
+          } else {
+            try {
+              pool.submit(runnable);
+            } catch (RejectedExecutionException ree) {
+              // This should never happen. But as the pool is provided by the end user, let's secure
+              //  this a little.
+              decTaskCounters(multiAction.getRegions(), server);
+              LOG.warn("#" + id + ", the task was rejected by the pool. This is unexpected." +
+                  " Server is " + server.getServerName(), ree);
+              // We're likely to fail again, but this will increment the attempt counter, so it will
+              //  finish.
+              receiveGlobalFailure(multiAction, server, numAttempt, ree);
+            }
           }
         }
       }
+
       if (actionsForReplicaThread != null) {
         startWaitingForReplicaCalls(actionsForReplicaThread);
       }
+    }
+
+    private Collection<? extends Runnable> getNewMultiActionRunnable(ServerName server,
+        MultiAction<Row> multiAction,
+        int numAttempt) {
+      // no stats to manage, just do the standard action
+      if (AsyncProcess.this.connection.getStatisticsTracker() == null) {
+        return Collections.singletonList(Trace.wrap("AsyncProcess.sendMultiAction",
+            new SingleServerRequestRunnable(multiAction, numAttempt, server)));
+      }
+
+      // group the actions by the amount of delay
+      Map<Long, DelayingRunner> actions = new HashMap<Long, DelayingRunner>(multiAction
+          .size());
+
+      // split up the actions
+      for (Map.Entry<byte[], List<Action<Row>>> e : multiAction.actions.entrySet()) {
+        Long backoff = getBackoff(server, e.getKey());
+        DelayingRunner runner = actions.get(backoff);
+        if (runner == null) {
+          actions.put(backoff, new DelayingRunner(backoff, e));
+        } else {
+          runner.add(e);
+        }
+      }
+
+      List<Runnable> toReturn = new ArrayList<Runnable>(actions.size());
+      for (DelayingRunner runner : actions.values()) {
+        String traceText = "AsyncProcess.sendMultiAction";
+        Runnable runnable =
+            new SingleServerRequestRunnable(runner.getActions(), numAttempt, server);
+        // use a delay runner only if we need to sleep for some time
+        if (runner.getSleepTime() > 0) {
+          runner.setRunner(runnable);
+          traceText = "AsyncProcess.clientBackoff.sendMultiAction";
+          runnable = runner;
+        }
+        runnable = Trace.wrap(traceText, runnable);
+        toReturn.add(runnable);
+
+      }
+      return toReturn;
+    }
+
+    /**
+     * @param server server location where the target region is hosted
+     * @param regionName name of the region which we are going to write some data
+     * @return the amount of time the client should wait until it submit a request to the
+     * specified server and region
+     */
+    private Long getBackoff(ServerName server, byte[] regionName) {
+      ServerStatisticTracker tracker = AsyncProcess.this.connection.getStatisticsTracker();
+      ServerStatistics stats = tracker.getStats(server);
+      return AsyncProcess.this.connection.getBackoffPolicy()
+          .getBackoffTime(server, regionName, stats);
     }
 
     /**
@@ -1169,6 +1235,13 @@ class AsyncProcess {
               ++failed;
             }
           } else {
+            // update the stats about the region, if its a user table. We don't want to slow down
+            // updates to meta tables, especially from internal updates (master, etc).
+            if (AsyncProcess.this.connection.getStatisticsTracker() != null) {
+              result = ResultStatsUtil.updateStats(result,
+                  AsyncProcess.this.connection.getStatisticsTracker(), server, regionName);
+            }
+
             if (callback != null) {
               try {
                 //noinspection unchecked
@@ -1497,7 +1570,6 @@ class AsyncProcess {
       return results;
     }
   }
-
 
   @VisibleForTesting
   /** Create AsyncRequestFuture. Isolated to be easily overridden in the tests. */

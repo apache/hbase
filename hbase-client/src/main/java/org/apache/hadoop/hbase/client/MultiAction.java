@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -68,12 +69,24 @@ public final class MultiAction<R> {
    * @param a
    */
   public void add(byte[] regionName, Action<R> a) {
+    add(regionName, Arrays.asList(a));
+  }
+
+  /**
+   * Add an Action to this container based on it's regionName. If the regionName
+   * is wrong, the initial execution will fail, but will be automatically
+   * retried after looking up the correct region.
+   *
+   * @param regionName
+   * @param actionList list of actions to add for the region
+   */
+  public void add(byte[] regionName, List<Action<R>> actionList){
     List<Action<R>> rsActions = actions.get(regionName);
     if (rsActions == null) {
-      rsActions = new ArrayList<Action<R>>();
+      rsActions = new ArrayList<Action<R>>(actionList.size());
       actions.put(regionName, rsActions);
     }
-    rsActions.add(a);
+    rsActions.addAll(actionList);
   }
 
   public void setNonceGroup(long nonceGroup) {

@@ -1099,6 +1099,12 @@ public final class HConstants {
   public static final String HBASE_CLIENT_FAST_FAIL_INTERCEPTOR_IMPL =
       "hbase.client.fast.fail.interceptor.impl"; 
 
+  /** Config key for if the server should send backpressure and if the client should listen to
+   * that backpressure from the server */
+  public static final String ENABLE_CLIENT_BACKPRESSURE = "hbase.client.backpressure.enabled";
+  public static final boolean DEFAULT_ENABLE_CLIENT_BACKPRESSURE = false;
+
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }

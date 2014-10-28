@@ -162,7 +162,7 @@ public class WALEditsReplaySink {
   private void replayEdits(final HRegionLocation regionLoc, final HRegionInfo regionInfo,
       final List<Entry> entries) throws IOException {
     try {
-      RpcRetryingCallerFactory factory = RpcRetryingCallerFactory.instantiate(conf);
+      RpcRetryingCallerFactory factory = RpcRetryingCallerFactory.instantiate(conf, null);
       ReplayServerCallable<ReplicateWALEntryResponse> callable =
           new ReplayServerCallable<ReplicateWALEntryResponse>(this.conn, this.tableName, regionLoc,
               regionInfo, entries);
