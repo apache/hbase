@@ -1583,6 +1583,7 @@ public class HFileBlock implements Cacheable {
           // the header has been read when reading the previous block, copy
           // to this block's header
           // headerBuf is HBB
+          assert headerBuf.hasArray();
           System.arraycopy(headerBuf.array(),
               headerBuf.arrayOffset(), onDiskBlock, 0, hdrSize);
         } else {

@@ -85,6 +85,7 @@ public class HFileBlockDefaultDecodingContext implements
     }
 
     Compression.Algorithm compression = fileContext.getCompression();
+    assert blockBufferWithoutHeader.hasArray();
     if (compression != Compression.Algorithm.NONE) {
       Compression.decompress(blockBufferWithoutHeader.array(),
         blockBufferWithoutHeader.arrayOffset(), in, onDiskSizeWithoutHeader,
