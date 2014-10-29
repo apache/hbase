@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.catalog;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -113,7 +115,7 @@ public class CatalogTracker {
   private boolean instantiatedzkw = false;
   private Abortable abortable;
 
-  private boolean stopped = false;
+  private volatile boolean stopped = false;
 
   static final byte [] META_REGION_NAME =
     HRegionInfo.FIRST_META_REGIONINFO.getRegionName();
@@ -200,6 +202,14 @@ public class CatalogTracker {
       this.abortable.abort(e.getMessage(), t);
       throw new IOException("Attempt to start meta tracker failed.", t);
     }
+  }
+
+  /**
+   * @return True if we are stopped. Call only after start else indeterminate answer.
+   */
+  @VisibleForTesting
+  public boolean isStopped() {
+    return this.stopped;
   }
 
   /**

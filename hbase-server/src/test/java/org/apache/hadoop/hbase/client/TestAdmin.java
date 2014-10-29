@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -69,7 +70,13 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKTableReadOnly;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
-import org.junit.*;
+import org.apache.zookeeper.KeeperException;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.protobuf.ServiceException;
@@ -111,6 +118,47 @@ public class TestAdmin {
   public void tearDown() throws Exception {
     for (HTableDescriptor htd : this.admin.listTables()) {
       TEST_UTIL.deleteTable(htd.getName());
+    }
+  }
+
+  @Test (timeout=300000)
+  public void testFailedCatalogTrackerGetCleansUpProperly()
+  throws ZooKeeperConnectionException, IOException {
+    // An HBaseAdmin that we can make fail when it goes to get catalogtracker.
+    final AtomicBoolean fail = new AtomicBoolean(false);
+    final AtomicReference<CatalogTracker> internalCt = new AtomicReference<CatalogTracker>();
+    HBaseAdmin doctoredAdmin = new HBaseAdmin(this.admin.getConfiguration()) {
+      @Override
+      protected CatalogTracker startCatalogTracker(CatalogTracker ct)
+      throws IOException, InterruptedException {
+        internalCt.set(ct);
+        super.startCatalogTracker(ct);
+        if (fail.get()) {
+          throw new IOException("Intentional test fail",
+            new KeeperException.ConnectionLossException());
+        }
+        return ct;
+      }
+    };
+    try {
+      CatalogTracker ct = doctoredAdmin.getCatalogTracker();
+      assertFalse(ct.isStopped());
+      doctoredAdmin.cleanupCatalogTracker(ct);
+      assertTrue(ct.isStopped());
+      // Now have mess with our doctored admin and make the start of catalog tracker 'fail'.
+      fail.set(true);
+      boolean expectedException = false;
+      try {
+        doctoredAdmin.getCatalogTracker();
+      } catch (IOException ioe) {
+        assertTrue(ioe.getCause() instanceof KeeperException.ConnectionLossException);
+        expectedException = true;
+      }
+      if (!expectedException) fail("Didn't get expected exception!");
+      // Assert that the internally made ct was properly shutdown.
+      assertTrue("Internal CatalogTracker not closed down", internalCt.get().isStopped());
+    } finally {
+      doctoredAdmin.close();
     }
   }
 
