@@ -33,6 +33,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -182,21 +184,47 @@ public class HBaseAdmin implements Abortable, Closeable {
    * @throws IOException
    * @see #cleanupCatalogTracker(CatalogTracker)
    */
-  private synchronized CatalogTracker getCatalogTracker()
+  @VisibleForTesting
+  synchronized CatalogTracker getCatalogTracker()
   throws ZooKeeperConnectionException, IOException {
+    boolean succeeded = false;
     CatalogTracker ct = null;
     try {
       ct = new CatalogTracker(this.conf);
-      ct.start();
+      startCatalogTracker(ct);
+      succeeded = true;
     } catch (InterruptedException e) {
       // Let it out as an IOE for now until we redo all so tolerate IEs
       Thread.currentThread().interrupt();
       throw new IOException("Interrupted", e);
+    } finally {
+      // If we did not succeed but created a catalogtracker, clean it up. CT has a ZK instance
+      // in it and we'll leak if we don't do the 'stop'.
+      if (!succeeded && ct != null) {
+        try {
+          ct.stop();
+        } catch (RuntimeException re) {
+          LOG.error("Failed to clean up HBase's internal catalog tracker after a failed initialization. " +
+            "We may have leaked network connections to ZooKeeper; they won't be cleaned up until " +
+            "the JVM exits. If you see a large number of stale connections to ZooKeeper this is likely " +
+            "the cause. The following exception details will be needed for assistance from the " +
+            "HBase community.", re);
+        }
+        ct = null;
+      }
     }
     return ct;
   }
 
-  private void cleanupCatalogTracker(final CatalogTracker ct) {
+  @VisibleForTesting
+  CatalogTracker startCatalogTracker(final CatalogTracker ct)
+  throws IOException, InterruptedException {
+    ct.start();
+    return ct;
+  }
+
+  @VisibleForTesting
+  void cleanupCatalogTracker(final CatalogTracker ct) {
     ct.stop();
   }
 

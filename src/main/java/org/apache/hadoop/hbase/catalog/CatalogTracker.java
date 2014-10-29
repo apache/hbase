@@ -26,6 +26,8 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -48,7 +50,7 @@ import org.apache.hadoop.ipc.RemoteException;
 /**
  * Tracks the availability of the catalog tables <code>-ROOT-</code> and
  * <code>.META.</code>.
- * 
+ *
  * This class is "read-only" in that the locations of the catalog tables cannot
  * be explicitly set.  Instead, ZooKeeper is used to learn of the availability
  * and location of <code>-ROOT-</code>.  <code>-ROOT-</code> is used to learn of
@@ -65,7 +67,7 @@ public class CatalogTracker {
   // servers when they needed to know of root and meta movement but also by
   // client-side (inside in HTable) so rather than figure root and meta
   // locations on fault, the client would instead get notifications out of zk.
-  // 
+  //
   // But this original intent is frustrated by the fact that this class has to
   // read an hbase table, the -ROOT- table, to figure out the .META. region
   // location which means we depend on an HConnection.  HConnection will do
@@ -151,7 +153,7 @@ public class CatalogTracker {
    * @param abortable If fatal exception we'll call abort on this.  May be null.
    * If it is we'll use the Connection associated with the passed
    * {@link Configuration} as our Abortable.
-   * @throws IOException 
+   * @throws IOException
    */
   public CatalogTracker(final ZooKeeperWatcher zk, final Configuration conf,
       Abortable abortable)
@@ -205,7 +207,7 @@ public class CatalogTracker {
    * Determines current availability of catalog tables and ensures all further
    * transitions of either region are tracked.
    * @throws IOException
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public void start() throws IOException, InterruptedException {
     LOG.debug("Starting catalog tracker " + this);
@@ -217,6 +219,14 @@ public class CatalogTracker {
       this.abortable.abort(e.getMessage(), t);
       throw new IOException("Attempt to start root/meta tracker failed.", t);
     }
+  }
+
+  /**
+   * @return True if we are stopped. Call only after start else indeterminate answer.
+   */
+  @VisibleForTesting
+  public boolean isStopped() {
+    return this.stopped;
   }
 
   /**
@@ -253,7 +263,7 @@ public class CatalogTracker {
    * not currently available.
    * @return {@link ServerName} for server hosting <code>-ROOT-</code> or null
    * if none available
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public ServerName getRootLocation() throws InterruptedException {
     return this.rootRegionTracker.getRootRegionLocation();
@@ -535,7 +545,7 @@ public class CatalogTracker {
       } else {
         throw ioe;
       }
-      
+
     }
     return protocol;
   }
@@ -595,7 +605,7 @@ public class CatalogTracker {
    * the internal call to {@link #waitForRootServerConnection(long)}.
    * @return True if the <code>-ROOT-</code> location is healthy.
    * @throws IOException
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   public boolean verifyRootRegionLocation(final long timeout)
   throws InterruptedException, IOException {
