@@ -1129,8 +1129,7 @@ public class HFileBlockIndex {
      *          format version 2), or the uncompressed size of the data block (
      *          {@link HFile} format version 1).
      */
-    public void addEntry(byte[] firstKey, long blockOffset, int blockDataSize)
-    {
+    public void addEntry(byte[] firstKey, long blockOffset, int blockDataSize) {
       curInlineChunk.add(firstKey, blockOffset, blockDataSize);
       ++totalNumEntries;
     }
