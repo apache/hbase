@@ -153,6 +153,11 @@
                     <link xlink:href="https://issues.apache.org/jira/browse/HBASE-11520">HBASE-11520 Simplify offheap cache config by removing the confusing "hbase.bucketcache.percentage.in.combinedcache"</link>.
                 </para>
           </section>
+          <section xml:id="hbase-12068"><title>If you have your own customer filters....</title>
+            <para>See the release notes on the issue <link xlink:href="https://issues.apache.org/jira/browse/HBASE-12068">HBASE-12068 [Branch-1] Avoid need to always do KeyValueUtil#ensureKeyValue for Filter transformCell</link>;
+              be sure to follow the recommendations therein.
+            </para>
+          </section>
         </section>
         <section xml:id="upgrade1.0.rolling.upgrade">
           <title>Rolling upgrade from 0.98.x to HBase 1.0.0</title>
