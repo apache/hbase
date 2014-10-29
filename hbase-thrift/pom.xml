@@ -71,6 +71,15 @@
             </goals>
             <configuration>
               <skip>true</skip>
+             <properties>
+               <property>
+                 <name>listener</name>
+                 <value>org.apache.hadoop.hbase.ServerResourceCheckerJUnitListener</value>
+               </property>
+             </properties>
+             <systemPropertyVariables>
+               <test.build.webapps>target/test-classes/webapps</test.build.webapps>
+             </systemPropertyVariables>
             </configuration>
           </execution>
         </executions>
