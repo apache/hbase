@@ -1296,7 +1296,7 @@ public class AccessController extends BaseMasterAndRegionObserver
             ourFilter = new FilterList(FilterList.Operator.MUST_PASS_ALL,
               Lists.newArrayList(ourFilter, filter));
           }
-          authResult.setAllowed(true);;
+          authResult.setAllowed(true);
           authResult.setReason("Access allowed with filter");
           switch (opType) {
           case GET:
@@ -1322,7 +1322,7 @@ public class AccessController extends BaseMasterAndRegionObserver
           ourFilter = new FilterList(FilterList.Operator.MUST_PASS_ALL,
             Lists.newArrayList(ourFilter, filter));
         }
-        authResult.setAllowed(true);;
+        authResult.setAllowed(true);
         authResult.setReason("Access allowed with filter");
         switch (opType) {
         case GET:

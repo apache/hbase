@@ -2048,9 +2048,7 @@ public class HLogSplitter {
         }
         ((Put) m).add(tmpNewCell);
       }
-      if (m != null) {
-        m.setDurability(durability);
-      }
+      m.setDurability(durability);
       previousCell = cell;
     }
 

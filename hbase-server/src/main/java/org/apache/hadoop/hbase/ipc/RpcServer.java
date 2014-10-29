@@ -146,7 +146,7 @@ import com.google.protobuf.TextFormat;
  * and keep taking while the server is up.
  *
  * CallRunner#run executes the call.  When done, asks the included Call to put itself on new
- * queue for {@link Responder} to pull from and return result to client.
+ * queue for Responder to pull from and return result to client.
  *
  * @see RpcClient
  */
