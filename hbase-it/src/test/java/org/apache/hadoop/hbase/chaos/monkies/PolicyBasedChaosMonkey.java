@@ -149,4 +149,10 @@ public class PolicyBasedChaosMonkey extends ChaosMonkey {
       monkeyThread.join();
     }
   }
+
+  @Override
+  public boolean isDestructive() {
+    // TODO: we can look at the actions, and decide to do the restore cluster or not based on them.
+    return true;
+  }
 }
