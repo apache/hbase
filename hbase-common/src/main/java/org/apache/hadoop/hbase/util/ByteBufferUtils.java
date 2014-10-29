@@ -478,6 +478,21 @@ public final class ByteBufferUtils {
     return output;
   }
 
+  /**
+   * Copy the given number of bytes from specified offset into a new byte[]
+   * @param buffer
+   * @param offset
+   * @param length
+   * @return a new byte[] containing the bytes in the specified range
+   */
+  public static byte[] toBytes(ByteBuffer buffer, int offset, int length) {
+    byte[] output = new byte[length];
+    for (int i = 0; i < length; i++) {
+      output[i] = buffer.get(offset + i);
+    }
+    return output;
+  }
+
   public static int compareTo(ByteBuffer buf1, int o1, int len1, ByteBuffer buf2, int o2, int len2) {
     if (buf1.hasArray() && buf2.hasArray()) {
       return Bytes.compareTo(buf1.array(), buf1.arrayOffset() + o1, len1, buf2.array(),
