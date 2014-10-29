@@ -297,7 +297,7 @@ public class HFileReaderV3 extends HFileReaderV2 {
             if (lastKeyValueSize < 0) {
               throw new IllegalStateException("blockSeek with seekBefore "
                   + "at the first key of the block: key="
-                  + CellUtil.getCellKey(key)
+                  + CellUtil.getCellKeyAsString(key)
                   + ", blockOffset=" + block.getOffset() + ", onDiskSize="
                   + block.getOnDiskSizeWithHeader());
             }

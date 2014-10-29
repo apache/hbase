@@ -196,8 +196,8 @@ public class TestHFileBlockCompatibility {
                            .withIncludesTags(includesTag)
                            .withCompression(algo)
                            .build();
-        HFileBlock.FSReader hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(is),
-            totalSize, fs, path, meta);
+        HFileBlock.FSReader hbr =
+          new HFileBlock.FSReaderImpl(new FSDataInputStreamWrapper(is), totalSize, fs, path, meta);
         HFileBlock b = hbr.readBlockData(0, -1, -1, pread);
         is.close();
 
@@ -209,7 +209,7 @@ public class TestHFileBlockCompatibility {
 
         if (algo == GZ) {
           is = fs.open(path);
-          hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(is), totalSize, fs, path,
+          hbr = new HFileBlock.FSReaderImpl(new FSDataInputStreamWrapper(is), totalSize, fs, path,
               meta);
           b = hbr.readBlockData(0, 2173 + HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM +
                                 b.totalChecksumBytes(), -1, pread);
@@ -291,7 +291,7 @@ public class TestHFileBlockCompatibility {
                               .withIncludesTags(includesTag)
                               .withCompression(algo)
                               .build();
-          HFileBlock.FSReaderV2 hbr = new HFileBlock.FSReaderV2(new FSDataInputStreamWrapper(is),
+          HFileBlock.FSReaderImpl hbr = new HFileBlock.FSReaderImpl(new FSDataInputStreamWrapper(is),
               totalSize, fs, path, meta);
           hbr.setDataBlockEncoder(dataBlockEncoder);
           hbr.setIncludesMemstoreTS(includesMemstoreTS);
@@ -739,7 +739,7 @@ public class TestHFileBlockCompatibility {
              .build();
       return new HFileBlock(blockType, getOnDiskSizeWithoutHeader(),
           getUncompressedSizeWithoutHeader(), prevOffset,
-          getUncompressedBufferWithHeader(), DONT_FILL_HEADER, startOffset, 
+          getUncompressedBufferWithHeader(), DONT_FILL_HEADER, startOffset,
           getOnDiskSizeWithoutHeader(), meta);
     }
   }

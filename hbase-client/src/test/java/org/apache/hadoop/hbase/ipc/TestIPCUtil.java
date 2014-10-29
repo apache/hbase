@@ -89,7 +89,7 @@ public class TestIPCUtil {
   static CellScanner getSizedCellScanner(final Cell [] cells) {
     int size = -1;
     for (Cell cell: cells) {
-      size += CellUtil.estimatedSizeOf(cell);
+      size += CellUtil.estimatedSerializedSizeOf(cell);
     }
     final int totalSize = ClassSize.align(size);
     final CellScanner cellScanner = CellUtil.createCellScanner(cells);

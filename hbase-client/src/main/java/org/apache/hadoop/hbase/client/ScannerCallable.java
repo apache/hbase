@@ -294,7 +294,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     long resultSize = 0;
     for (Result rr : rrs) {
       for (Cell cell : rr.rawCells()) {
-        resultSize += CellUtil.estimatedLengthOf(cell);
+        resultSize += CellUtil.estimatedSerializedSizeOf(cell);
       }
     }
     this.scanMetrics.countOfBytesInResults.addAndGet(resultSize);

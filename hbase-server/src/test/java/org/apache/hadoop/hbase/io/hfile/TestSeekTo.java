@@ -245,8 +245,8 @@ public class TestSeekTo extends HBaseTestCase {
     assertEquals("c", toRowStr(scanner.getKeyValue()));
 
     // Across a block boundary now.
-    // h goes to the next block
-    assertEquals(-2, scanner.seekTo(toKV("h", tagUsage)));
+    // 'h' does not exist so we will get a '1' back for not found.
+    assertEquals(0, scanner.seekTo(toKV("i", tagUsage)));
     assertEquals("i", toRowStr(scanner.getKeyValue()));
 
     assertEquals(1, scanner.seekTo(toKV("l", tagUsage)));
@@ -267,7 +267,6 @@ public class TestSeekTo extends HBaseTestCase {
     HFileBlockIndex.BlockIndexReader blockIndexReader = 
       reader.getDataBlockIndexReader();
     System.out.println(blockIndexReader.toString());
-    int klen = toKV("a", tagUsage).getKey().length;
     // falls before the start of the file.
     assertEquals(-1, blockIndexReader.rootBlockContainingKey(
         toKV("a", tagUsage)));
@@ -279,8 +278,7 @@ public class TestSeekTo extends HBaseTestCase {
         toKV("e", tagUsage)));
     assertEquals(0, blockIndexReader.rootBlockContainingKey(
         toKV("g", tagUsage)));
-    assertEquals(1, blockIndexReader.rootBlockContainingKey(
-        toKV("h", tagUsage)));
+    assertEquals(1, blockIndexReader.rootBlockContainingKey(toKV("h", tagUsage)));
     assertEquals(1, blockIndexReader.rootBlockContainingKey(
         toKV("i", tagUsage)));
     assertEquals(1, blockIndexReader.rootBlockContainingKey(
@@ -291,7 +289,4 @@ public class TestSeekTo extends HBaseTestCase {
         toKV("l", tagUsage)));
     reader.close();
   }
-
-
 }
-

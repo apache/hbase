@@ -140,7 +140,7 @@ public class HFileBlock implements Cacheable {
           }
           return ourBuffer;
         }
-        
+
         @Override
         public int getDeserialiserIdentifier() {
           return deserializerIdentifier;
@@ -197,7 +197,7 @@ public class HFileBlock implements Cacheable {
   /**
    * Creates a new {@link HFile} block from the given fields. This constructor
    * is mostly used when the block data has already been read and uncompressed,
-   * and is sitting in a byte buffer. 
+   * and is sitting in a byte buffer.
    *
    * @param blockType the type of this block, see {@link BlockType}
    * @param onDiskSizeWithoutHeader see {@link #onDiskSizeWithoutHeader}
@@ -246,7 +246,7 @@ public class HFileBlock implements Cacheable {
    * and takes ownership of the buffer. By definition of rewind, ignores the
    * buffer position, but if you slice the buffer beforehand, it will rewind
    * to that point. The reason this has a minorNumber and not a majorNumber is
-   * because majorNumbers indicate the format of a HFile whereas minorNumbers 
+   * because majorNumbers indicate the format of a HFile whereas minorNumbers
    * indicate the format inside a HFileBlock.
    */
   HFileBlock(ByteBuffer b, boolean usesHBaseChecksum) throws IOException {
@@ -357,7 +357,7 @@ public class HFileBlock implements Cacheable {
    * Returns the buffer of this block, including header data. The clients must
    * not modify the buffer object. This method has to be public because it is
    * used in {@link BucketCache} to avoid buffer copy.
-   * 
+   *
    * @return the buffer with header and checksum included for read-only operations
    */
   public ByteBuffer getBufferReadOnlyWithHeader() {
@@ -479,8 +479,8 @@ public class HFileBlock implements Cacheable {
   /**
    * Called after reading a block with provided onDiskSizeWithHeader.
    */
-  private void validateOnDiskSizeWithoutHeader(
-      int expectedOnDiskSizeWithoutHeader) throws IOException {
+  private void validateOnDiskSizeWithoutHeader(int expectedOnDiskSizeWithoutHeader)
+  throws IOException {
     if (onDiskSizeWithoutHeader != expectedOnDiskSizeWithoutHeader) {
       String dataBegin = null;
       if (buf.hasArray()) {
@@ -554,7 +554,7 @@ public class HFileBlock implements Cacheable {
 
   /**
    * Always allocates a new buffer of the correct size. Copies header bytes
-   * from the existing buffer. Does not change header fields. 
+   * from the existing buffer. Does not change header fields.
    * Reserve room to keep checksum bytes too.
    */
   private void allocateBuffer() {
@@ -813,7 +813,7 @@ public class HFileBlock implements Cacheable {
       }
 
       baosInMemory = new ByteArrayOutputStream();
-      
+
       prevOffsetByType = new long[BlockType.values().length];
       for (int i = 0; i < prevOffsetByType.length; ++i)
         prevOffsetByType[i] = -1;
@@ -898,7 +898,7 @@ public class HFileBlock implements Cacheable {
      */
     private void finishBlock() throws IOException {
       if (blockType == BlockType.DATA) {
-        BufferGrabbingByteArrayOutputStream baosInMemoryCopy = 
+        BufferGrabbingByteArrayOutputStream baosInMemoryCopy =
             new BufferGrabbingByteArrayOutputStream();
         baosInMemory.writeTo(baosInMemoryCopy);
         this.dataBlockEncoder.endBlockEncoding(dataBlockEncodingCtx, userDataStream,
@@ -1156,7 +1156,7 @@ public class HFileBlock implements Cacheable {
     /**
      * Creates a new HFileBlock. Checksums have already been validated, so
      * the byte buffer passed into the constructor of this newly created
-     * block does not have checksum data even though the header minor 
+     * block does not have checksum data even though the header minor
      * version is MINOR_VERSION_WITH_CHECKSUM. This is indicated by setting a
      * 0 value in bytesPerChecksum.
      */
@@ -1399,8 +1399,8 @@ public class HFileBlock implements Cacheable {
   }
 
   /** Reads version 2 blocks from the filesystem. */
-  static class FSReaderV2 extends AbstractFSReader {
-    /** The file system stream of the underlying {@link HFile} that 
+  static class FSReaderImpl extends AbstractFSReader {
+    /** The file system stream of the underlying {@link HFile} that
      * does or doesn't do checksum validations in the filesystem */
     protected FSDataInputStreamWrapper streamWrapper;
 
@@ -1417,7 +1417,7 @@ public class HFileBlock implements Cacheable {
           }
         };
 
-    public FSReaderV2(FSDataInputStreamWrapper stream, long fileSize, HFileSystem hfs, Path path,
+    public FSReaderImpl(FSDataInputStreamWrapper stream, long fileSize, HFileSystem hfs, Path path,
         HFileContext fileContext) throws IOException {
       super(fileSize, hfs, path, fileContext);
       this.streamWrapper = stream;
@@ -1431,13 +1431,14 @@ public class HFileBlock implements Cacheable {
      * A constructor that reads files with the latest minor version.
      * This is used by unit tests only.
      */
-    FSReaderV2(FSDataInputStream istream, long fileSize, HFileContext fileContext) throws IOException {
+    FSReaderImpl(FSDataInputStream istream, long fileSize, HFileContext fileContext)
+    throws IOException {
       this(new FSDataInputStreamWrapper(istream), fileSize, null, null, fileContext);
     }
 
     /**
-     * Reads a version 2 block. Tries to do as little memory allocation as
-     * possible, using the provided on-disk size.
+     * Reads a version 2 block (version 1 blocks not supported and not expected). Tries to do as
+     * little memory allocation as possible, using the provided on-disk size.
      *
      * @param offset the offset in the stream to read at
      * @param onDiskSizeWithHeaderL the on-disk size of the block, including
@@ -1448,18 +1449,19 @@ public class HFileBlock implements Cacheable {
      */
     @Override
     public HFileBlock readBlockData(long offset, long onDiskSizeWithHeaderL,
-        int uncompressedSize, boolean pread) throws IOException {
+        int uncompressedSize, boolean pread)
+    throws IOException {
 
       // get a copy of the current state of whether to validate
-      // hbase checksums or not for this read call. This is not 
-      // thread-safe but the one constaint is that if we decide 
-      // to skip hbase checksum verification then we are 
+      // hbase checksums or not for this read call. This is not
+      // thread-safe but the one constaint is that if we decide
+      // to skip hbase checksum verification then we are
       // guaranteed to use hdfs checksum verification.
       boolean doVerificationThruHBaseChecksum = streamWrapper.shouldUseHBaseChecksum();
       FSDataInputStream is = streamWrapper.getStream(doVerificationThruHBaseChecksum);
 
-      HFileBlock blk = readBlockDataInternal(is, offset, 
-                         onDiskSizeWithHeaderL, 
+      HFileBlock blk = readBlockDataInternal(is, offset,
+                         onDiskSizeWithHeaderL,
                          uncompressedSize, pread,
                          doVerificationThruHBaseChecksum);
       if (blk == null) {
@@ -1471,7 +1473,7 @@ public class HFileBlock implements Cacheable {
         if (!doVerificationThruHBaseChecksum) {
           String msg = "HBase checksum verification failed for file " +
                        path + " at offset " +
-                       offset + " filesize " + fileSize + 
+                       offset + " filesize " + fileSize +
                        " but this cannot happen because doVerify is " +
                        doVerificationThruHBaseChecksum;
           HFile.LOG.warn(msg);
@@ -1495,7 +1497,7 @@ public class HFileBlock implements Cacheable {
                          path + " at offset " +
                          offset + " filesize " + fileSize);
         }
-      } 
+      }
       if (blk == null && !doVerificationThruHBaseChecksum) {
         String msg = "readBlockData failed, possibly due to " +
                      "checksum verification failed for file " + path +
@@ -1504,7 +1506,7 @@ public class HFileBlock implements Cacheable {
         throw new IOException(msg);
       }
 
-      // If there is a checksum mismatch earlier, then retry with 
+      // If there is a checksum mismatch earlier, then retry with
       // HBase checksums switched off and use HDFS checksum verification.
       // This triggers HDFS to detect and fix corrupt replicas. The
       // next checksumOffCount read requests will use HDFS checksums.
@@ -1516,7 +1518,7 @@ public class HFileBlock implements Cacheable {
     }
 
     /**
-     * Reads a version 2 block. 
+     * Reads a version 2 block.
      *
      * @param offset the offset in the stream to read at
      * @param onDiskSizeWithHeaderL the on-disk size of the block, including
@@ -1524,18 +1526,20 @@ public class HFileBlock implements Cacheable {
      * @param uncompressedSize the uncompressed size of the the block. Always
      *          expected to be -1. This parameter is only used in version 1.
      * @param pread whether to use a positional read
-     * @param verifyChecksum Whether to use HBase checksums. 
+     * @param verifyChecksum Whether to use HBase checksums.
      *        If HBase checksum is switched off, then use HDFS checksum.
      * @return the HFileBlock or null if there is a HBase checksum mismatch
      */
-    private HFileBlock readBlockDataInternal(FSDataInputStream is, long offset, 
+    private HFileBlock readBlockDataInternal(FSDataInputStream is, long offset,
         long onDiskSizeWithHeaderL, int uncompressedSize, boolean pread,
-        boolean verifyChecksum) throws IOException {
+        boolean verifyChecksum)
+    throws IOException {
       if (offset < 0) {
         throw new IOException("Invalid offset=" + offset + " trying to read "
             + "block (onDiskSize=" + onDiskSizeWithHeaderL
             + ", uncompressedSize=" + uncompressedSize + ")");
       }
+
       if (uncompressedSize != -1) {
         throw new IOException("Version 2 block reader API does not need " +
             "the uncompressed size parameter");
@@ -1555,12 +1559,13 @@ public class HFileBlock implements Cacheable {
       // read this block's header as part of the previous read's look-ahead.
       // And we also want to skip reading the header again if it has already
       // been read.
+      // TODO: How often does this optimization fire? Has to be same thread so the thread local
+      // is pertinent and we have to be reading next block as in a big scan.
       PrefetchedHeader prefetchedHeader = prefetchedHeaderForThread.get();
-      ByteBuffer headerBuf = prefetchedHeader.offset == offset ?
-          prefetchedHeader.buf : null;
+      ByteBuffer headerBuf = prefetchedHeader.offset == offset? prefetchedHeader.buf: null;
 
-      int nextBlockOnDiskSize = 0;
       // Allocate enough space to fit the next block's header too.
+      int nextBlockOnDiskSize = 0;
       byte[] onDiskBlock = null;
 
       HFileBlock b = null;
@@ -1589,10 +1594,9 @@ public class HFileBlock implements Cacheable {
         } else {
           headerBuf = ByteBuffer.wrap(onDiskBlock, 0, hdrSize);
         }
-        // We know the total on-disk size but not the uncompressed size. Read
-        // the entire block into memory, then parse the header. Here we have
-        // already read the block's header
+        // We know the total on-disk size but not the uncompressed size. Parse the header.
         try {
+          // TODO: FIX!!! Expensive parse just to get a length
           b = new HFileBlock(headerBuf, fileContext.isUseHBaseChecksum());
         } catch (IOException ex) {
           // Seen in load testing. Provide comprehensive debug info.
@@ -1632,6 +1636,7 @@ public class HFileBlock implements Cacheable {
           readAtOffset(is, headerBuf.array(), headerBuf.arrayOffset(),
               hdrSize, false, offset, pread);
         }
+        // TODO: FIX!!! Expensive parse just to get a length
         b = new HFileBlock(headerBuf, fileContext.isUseHBaseChecksum());
         onDiskBlock = new byte[b.getOnDiskSizeWithHeader() + hdrSize];
         // headerBuf is HBB
@@ -1662,8 +1667,7 @@ public class HFileBlock implements Cacheable {
       // Set prefetched header
       if (b.hasNextBlockHeader()) {
         prefetchedHeader.offset = offset + b.getOnDiskSizeWithHeader();
-        System.arraycopy(onDiskBlock, onDiskSizeWithHeader,
-            prefetchedHeader.header, 0, hdrSize);
+        System.arraycopy(onDiskBlock, onDiskSizeWithHeader, prefetchedHeader.header, 0, hdrSize);
       }
 
       b.offset = offset;
@@ -1708,7 +1712,7 @@ public class HFileBlock implements Cacheable {
 
     @Override
     public String toString() {
-      return "FSReaderV2 [ hfs=" + hfs + " path=" + path + " fileContext=" + fileContext + " ]";
+      return "hfs=" + hfs + ", path=" + path + ", fileContext=" + fileContext;
     }
   }
 
@@ -1800,7 +1804,7 @@ public class HFileBlock implements Cacheable {
     return this.onDiskDataSizeWithHeader;
   }
 
-  /** 
+  /**
    * Calcuate the number of bytes required to store all the checksums
    * for this block. Each checksum value is a 4 byte integer.
    */
@@ -1874,9 +1878,9 @@ public class HFileBlock implements Cacheable {
     long onDiskDataSizeWithHeader = buf.getInt();
     return " Header dump: magic: " + Bytes.toString(magicBuf) +
                    " blockType " + bt +
-                   " compressedBlockSizeNoHeader " + 
+                   " compressedBlockSizeNoHeader " +
                    compressedBlockSizeNoHeader +
-                   " uncompressedBlockSizeNoHeader " + 
+                   " uncompressedBlockSizeNoHeader " +
                    uncompressedBlockSizeNoHeader +
                    " prevBlockOffset " + prevBlockOffset +
                    " checksumType " + ChecksumType.codeToType(cksumtype) +
