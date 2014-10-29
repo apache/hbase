@@ -89,6 +89,11 @@ public class FSTableDescriptors implements TableDescriptors {
     new ConcurrentHashMap<TableName, TableDescriptorAndModtime>();
 
   /**
+   * Table descriptor for <code>hbase:meta</code> catalog table
+   */
+  private final HTableDescriptor metaTableDescriptor;
+
+  /**
    * Data structure to hold modification time and table descriptor.
    */
   private static class TableDescriptorAndModtime {
@@ -115,23 +120,25 @@ public class FSTableDescriptors implements TableDescriptors {
    * This instance can do write operations (is not read only).
    */
   public FSTableDescriptors(final Configuration conf) throws IOException {
-    this(FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf));
+    this(conf, FSUtils.getCurrentFileSystem(conf), FSUtils.getRootDir(conf));
   }
-  
-  public FSTableDescriptors(final FileSystem fs, final Path rootdir) {
-    this(fs, rootdir, false);
+
+  public FSTableDescriptors(final Configuration conf, final FileSystem fs, final Path rootdir)
+      throws IOException {
+    this(conf, fs, rootdir, false);
   }
 
   /**
    * @param fsreadonly True if we are read-only when it comes to filesystem
    * operations; i.e. on remove, we do not do delete in fs.
    */
-  public FSTableDescriptors(final FileSystem fs,
-      final Path rootdir, final boolean fsreadonly) {
+  public FSTableDescriptors(final Configuration conf, final FileSystem fs,
+      final Path rootdir, final boolean fsreadonly) throws IOException {
     super();
     this.fs = fs;
     this.rootdir = rootdir;
     this.fsreadonly = fsreadonly;
+    this.metaTableDescriptor = HTableDescriptor.metaTableDescriptor(conf);
   }
 
   /**
@@ -144,9 +151,9 @@ public class FSTableDescriptors implements TableDescriptors {
   public HTableDescriptor get(final TableName tablename)
   throws IOException {
     invocations++;
-    if (HTableDescriptor.META_TABLEDESC.getTableName().equals(tablename)) {
+    if (TableName.META_TABLE_NAME.equals(tablename)) {
       cachehits++;
-      return HTableDescriptor.META_TABLEDESC;
+      return metaTableDescriptor;
     }
     // hbase:meta is already handled. If some one tries to get the descriptor for
     // .logs, .oldlogs or .corrupt throw an exception.
@@ -490,7 +497,7 @@ public class FSTableDescriptors implements TableDescriptors {
    */
   private TableDescriptorAndModtime getTableDescriptorAndModtime(TableName tableName)
   throws IOException {
-    // ignore both -ROOT- and hbase:meta tables
+    // ignore hbase:meta
     if (tableName.equals(TableName.META_TABLE_NAME)) {
       return null;
     }

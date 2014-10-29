@@ -1142,13 +1142,13 @@ public class TestAdmin {
   public void testCreateBadTables() throws IOException {
     String msg = null;
     try {
-      this.admin.createTable(HTableDescriptor.META_TABLEDESC);
+      this.admin.createTable(new HTableDescriptor(TableName.META_TABLE_NAME));
     } catch(TableExistsException e) {
       msg = e.toString();
     }
     assertTrue("Unexcepted exception message " + msg, msg != null &&
       msg.startsWith(TableExistsException.class.getName()) &&
-      msg.contains(HTableDescriptor.META_TABLEDESC.getTableName().getNameAsString()));
+      msg.contains(TableName.META_TABLE_NAME.getNameAsString()));
 
     // Now try and do concurrent creation with a bunch of threads.
     final HTableDescriptor threadDesc =

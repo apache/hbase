@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 
@@ -73,6 +74,14 @@ public abstract class HBaseTestCase extends TestCase {
   protected final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
   public volatile Configuration conf = HBaseConfiguration.create();
+  public final FSTableDescriptors fsTableDescriptors;
+  {
+    try {
+      fsTableDescriptors = new FSTableDescriptors(conf);
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to init descriptors", e);
+    }
+  }
 
   /** constructor */
   public HBaseTestCase() {
@@ -629,8 +638,9 @@ public abstract class HBaseTestCase extends TestCase {
    * @throws IOException
    */
   protected void createMetaRegion() throws IOException {
-    meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, testDir,
-        conf, HTableDescriptor.META_TABLEDESC);
+    FSTableDescriptors fsTableDescriptors = new FSTableDescriptors(conf);
+    meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, testDir, conf,
+      fsTableDescriptors.get(TableName.META_TABLE_NAME));
   }
 
   protected void closeRootAndMeta() throws IOException {

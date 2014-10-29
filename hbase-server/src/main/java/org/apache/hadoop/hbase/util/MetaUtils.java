@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
 public class MetaUtils {
   private static final Log LOG = LogFactory.getLog(MetaUtils.class);
   private final Configuration conf;
+  private final FSTableDescriptors descriptors;
   private FileSystem fs;
   private HLog log;
   private HRegion metaRegion;
@@ -69,6 +70,7 @@ public class MetaUtils {
     this.conf = conf;
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     this.metaRegion = null;
+    this.descriptors = new FSTableDescriptors(conf);
     initialize();
   }
 
@@ -147,8 +149,7 @@ public class MetaUtils {
       return this.metaRegion;
     }
     this.metaRegion = HRegion.openHRegion(HRegionInfo.FIRST_META_REGIONINFO,
-      HTableDescriptor.META_TABLEDESC, getLog(),
-      this.conf);
+      descriptors.get(TableName.META_TABLE_NAME), getLog(), this.conf);
     this.metaRegion.compactStores();
     return this.metaRegion;
   }

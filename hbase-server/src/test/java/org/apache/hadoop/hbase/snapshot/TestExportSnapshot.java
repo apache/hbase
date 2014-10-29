@@ -267,7 +267,7 @@ public class TestExportSnapshot {
     Path tableDir = FSUtils.getTableDir(archiveDir, tableWithRefsName);
     HTableDescriptor htd = new HTableDescriptor(tableWithRefsName);
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
-    new FSTableDescriptors(fs, rootDir)
+    new FSTableDescriptors(conf, fs, rootDir)
         .createTableDescriptorForTableDirectory(tableDir, htd, false);
 
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);

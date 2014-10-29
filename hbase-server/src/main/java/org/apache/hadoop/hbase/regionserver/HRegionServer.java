@@ -1309,7 +1309,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
       this.fs = new HFileSystem(this.conf, useHBaseChecksum);
       this.rootDir = FSUtils.getRootDir(this.conf);
-      this.tableDescriptors = new FSTableDescriptors(this.fs, this.rootDir, true);
+      this.tableDescriptors = new FSTableDescriptors(this.conf, this.fs, this.rootDir, true);
       this.hlog = setupWALAndReplication();
       // Init in here rather than in constructor after thread name has been set
       this.metricsRegionServer = new MetricsRegionServer(new MetricsRegionServerWrapperImpl(this));

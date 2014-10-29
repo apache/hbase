@@ -305,7 +305,7 @@ public class TestNamespaceUpgrade {
     // Create a Region
     HTableDescriptor aclTable = new HTableDescriptor(TableName.valueOf("testACLTable"));
     aclTable.addFamily(new HColumnDescriptor(FAMILY));
-    FSTableDescriptors fstd = new FSTableDescriptors(fs, rootDir);
+    FSTableDescriptors fstd = new FSTableDescriptors(conf, fs, rootDir);
     fstd.createTableDescriptor(aclTable);
     HRegionInfo hriAcl = new HRegionInfo(aclTable.getTableName(), null, null);
     HRegion region = HRegion.createHRegion(hriAcl, rootDir, conf, aclTable);

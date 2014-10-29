@@ -24,7 +24,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
@@ -279,7 +278,7 @@ public class MetaReader {
   public static boolean tableExists(CatalogTracker catalogTracker,
       final TableName tableName)
   throws IOException {
-    if (tableName.equals(HTableDescriptor.META_TABLEDESC.getTableName())) {
+    if (tableName.equals(TableName.META_TABLE_NAME)) {
       // Catalog tables always exist.
       return true;
     }

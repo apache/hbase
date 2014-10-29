@@ -20,22 +20,22 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.junit.experimental.categories.Category;
-
 import org.junit.Test;
 
 /** Tests the HColumnDescriptor with appropriate arguments */
 @Category(SmallTests.class)
 public class TestHColumnDescriptor {
   @Test
-  public void testPb() throws DeserializationException {
-    HColumnDescriptor hcd = new HColumnDescriptor(
-      HTableDescriptor.META_TABLEDESC.getColumnFamilies()[0]);
+  public void testPb() throws Exception {
+    HColumnDescriptor hcd = new HColumnDescriptor(HConstants.CATALOG_FAMILY)
+      .setInMemory(true)
+      .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+      .setBloomFilterType(BloomType.NONE);
     final int v = 123;
     hcd.setBlocksize(v);
     hcd.setTimeToLive(v);

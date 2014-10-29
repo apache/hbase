@@ -384,8 +384,9 @@ public class NamespaceUpgrade implements Tool {
     HLog metaHLog = HLogFactory.createMetaHLog(fs, rootDir,
         metaLogName, conf, null,
         fakeServer.toString());
+    FSTableDescriptors fst = new FSTableDescriptors(conf);
     HRegion meta = HRegion.openHRegion(rootDir, HRegionInfo.FIRST_META_REGIONINFO,
-        HTableDescriptor.META_TABLEDESC, metaHLog, conf);
+      fst.get(TableName.META_TABLE_NAME), metaHLog, conf);
     HRegion region = null;
     try {
       for(Path regionDir : FSUtils.getRegionDirs(fs, oldTablePath)) {

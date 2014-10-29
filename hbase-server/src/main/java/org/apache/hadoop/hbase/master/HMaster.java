@@ -803,7 +803,7 @@ MasterServices, Server {
     this.fileSystemManager = new MasterFileSystem(this, this, masterRecovery);
 
     this.tableDescriptors =
-      new FSTableDescriptors(this.fileSystemManager.getFileSystem(),
+      new FSTableDescriptors(this.conf, this.fileSystemManager.getFileSystem(),
       this.fileSystemManager.getRootDir());
 
     // publish cluster ID

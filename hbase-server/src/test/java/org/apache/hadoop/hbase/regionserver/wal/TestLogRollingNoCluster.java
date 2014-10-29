@@ -28,9 +28,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.SmallTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -124,8 +124,8 @@ public class TestLogRollingNoCluster {
           edit.add(new KeyValue(bytes, bytes, bytes, now, EMPTY_1K_ARRAY));
 
           this.wal.append(HRegionInfo.FIRST_META_REGIONINFO,
-              HTableDescriptor.META_TABLEDESC.getTableName(),
-              edit, now, HTableDescriptor.META_TABLEDESC, sequenceId);
+              TableName.META_TABLE_NAME,
+              edit, now, TEST_UTIL.getMetaTableDescriptor(), sequenceId);
         }
         String msg = getName() + " finished";
         if (isException())

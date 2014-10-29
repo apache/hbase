@@ -165,8 +165,7 @@ public class TestHBaseFsck {
 
     // Now let's mess it up and change the assignment in hbase:meta to
     // point to a different region server
-    HTable meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getTableName(),
-        executorService);
+    HTable meta = new HTable(conf, TableName.META_TABLE_NAME, executorService);
     Scan scan = new Scan();
     scan.setStartRow(Bytes.toBytes(table+",,"));
     ResultScanner scanner = meta.getScanner(scan);
@@ -1333,8 +1332,7 @@ public class TestHBaseFsck {
         Bytes.toBytes("C"), true, true, false);
 
       // Create a new meta entry to fake it as a split parent.
-      meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getTableName(),
-          executorService);
+      meta = new HTable(conf, TableName.META_TABLE_NAME, executorService);
       HRegionInfo hri = location.getRegionInfo();
 
       HRegionInfo a = new HRegionInfo(tbl.getName(),
@@ -1408,7 +1406,7 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseAdmin().flush(table.getName());
       HRegionLocation location = tbl.getRegionLocation("B");
 
-      meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getTableName());
+      meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = location.getRegionInfo();
 
       // do a regular split
@@ -1458,7 +1456,7 @@ public class TestHBaseFsck {
       TEST_UTIL.getHBaseAdmin().flush(table.getName());
       HRegionLocation location = tbl.getRegionLocation("B");
 
-      meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getTableName());
+      meta = new HTable(conf, TableName.META_TABLE_NAME);
       HRegionInfo hri = location.getRegionInfo();
 
       // do a regular split
@@ -1964,7 +1962,7 @@ public class TestHBaseFsck {
 
       // Mess it up by removing the RegionInfo for one region.
       final List<Delete> deletes = new LinkedList<Delete>();
-      HTable meta = new HTable(conf, HTableDescriptor.META_TABLEDESC.getTableName());
+      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
       MetaScanner.metaScan(conf, new MetaScanner.MetaScannerVisitor() {
 
         @Override
@@ -2205,7 +2203,7 @@ public class TestHBaseFsck {
       LOG.info("deleting hdfs .regioninfo data: " + hri.toString() + hsa.toString());
       Path rootDir = FSUtils.getRootDir(conf);
       FileSystem fs = rootDir.getFileSystem(conf);
-      Path p = new Path(rootDir + "/" + HTableDescriptor.META_TABLEDESC.getNameAsString(),
+      Path p = new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(),
           hri.getEncodedName());
       Path hriPath = new Path(p, HRegionFileSystem.REGION_INFO_FILE);
       fs.delete(hriPath, true);
@@ -2215,7 +2213,7 @@ public class TestHBaseFsck {
       LOG.info("deleting hdfs data: " + hri.toString() + hsa.toString());
       Path rootDir = FSUtils.getRootDir(conf);
       FileSystem fs = rootDir.getFileSystem(conf);
-      Path p = new Path(rootDir + "/" + HTableDescriptor.META_TABLEDESC.getNameAsString(),
+      Path p = new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(),
           hri.getEncodedName());
       HBaseFsck.debugLsr(conf, p);
       boolean success = fs.delete(p, true);
