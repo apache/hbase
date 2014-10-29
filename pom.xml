@@ -65,6 +65,14 @@
     <module>hbase-annotations</module>
     <module>hbase-checkstyle</module>
   </modules>
+  <!--Add apache snapshots in case we want to use unreleased versions of plugins:
+      e.g. surefire 2.18-SNAPSHOT-->
+  <pluginRepositories>
+    <pluginRepository>
+      <id>apache.snapshots</id>
+      <url>http://repository.apache.org/snapshots/</url>
+    </pluginRepository>
+  </pluginRepositories>
   <scm>
     <connection>scm:git:git://git.apache.org/hbase.git</connection>
     <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/hbase.git</developerConnection>
@@ -1005,7 +1013,7 @@
     <common.test.jar>hbase-common-${project.version}-tests.jar</common.test.jar>
     <it.test.jar>hbase-it-${project.version}-tests.jar</it.test.jar>
     <annotations.test.jar>hbase-annotations-${project.version}-tests.jar</annotations.test.jar>
-    <surefire.version>2.17</surefire.version>
+    <surefire.version>2.18-SNAPSHOT</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
     <!-- default: run small & medium, medium with 2 threads -->
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
