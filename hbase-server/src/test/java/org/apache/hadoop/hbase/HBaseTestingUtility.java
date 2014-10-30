@@ -3251,11 +3251,26 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public static int createPreSplitLoadTestTable(Configuration conf,
       TableName tableName, byte[] columnFamily, Algorithm compression,
       DataBlockEncoding dataBlockEncoding) throws IOException {
+    return createPreSplitLoadTestTable(conf, tableName,
+      columnFamily, compression, dataBlockEncoding, DEFAULT_REGIONS_PER_SERVER,
+      Durability.USE_DEFAULT);
+  }
+  /**
+   * Creates a pre-split table for load testing. If the table already exists,
+   * logs a warning and continues.
+   * @return the number of regions the table was split into
+   */
+  public static int createPreSplitLoadTestTable(Configuration conf,
+      TableName tableName, byte[] columnFamily, Algorithm compression,
+      DataBlockEncoding dataBlockEncoding, int numRegionsPerServer,
+      Durability durability)
+          throws IOException {
     HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.setDurability(durability);
     HColumnDescriptor hcd = new HColumnDescriptor(columnFamily);
     hcd.setDataBlockEncoding(dataBlockEncoding);
     hcd.setCompressionType(compression);
-    return createPreSplitLoadTestTable(conf, desc, hcd);
+    return createPreSplitLoadTestTable(conf, desc, hcd, numRegionsPerServer);
   }
 
   /**
@@ -3265,6 +3280,16 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public static int createPreSplitLoadTestTable(Configuration conf,
       HTableDescriptor desc, HColumnDescriptor hcd) throws IOException {
+    return createPreSplitLoadTestTable(conf, desc, hcd, DEFAULT_REGIONS_PER_SERVER);
+  }
+
+  /**
+   * Creates a pre-split table for load testing. If the table already exists,
+   * logs a warning and continues.
+   * @return the number of regions the table was split into
+   */
+  public static int createPreSplitLoadTestTable(Configuration conf,
+      HTableDescriptor desc, HColumnDescriptor hcd, int numRegionsPerServer) throws IOException {
     if (!desc.hasFamily(hcd.getName())) {
       desc.addFamily(hcd);
     }
@@ -3280,11 +3305,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         throw new IllegalStateException("No live regionservers");
       }
 
-      int regionsPerServer = conf.getInt(REGIONS_PER_SERVER_KEY, DEFAULT_REGIONS_PER_SERVER);
-      totalNumberOfRegions = numberOfServers * regionsPerServer;
+      totalNumberOfRegions = numberOfServers * numRegionsPerServer;
       LOG.info("Number of live regionservers: " + numberOfServers + ", " +
           "pre-splitting table into " + totalNumberOfRegions + " regions " +
-          "(default regions per server: " + regionsPerServer + ")");
+          "(regions per server: " + numRegionsPerServer + ")");
 
       byte[][] splits = new RegionSplitter.HexStringSplit().split(
           totalNumberOfRegions);

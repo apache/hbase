@@ -89,7 +89,7 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
       final String rowKey = Bytes.toString(get.getRow());
 
       // read the data
-      final long start = System.currentTimeMillis();
+      final long start = System.nanoTime();
       PrivilegedExceptionAction<Object> action = new PrivilegedExceptionAction<Object>() {
         @Override
         public Object run() throws Exception {
@@ -107,7 +107,8 @@ public class MultiThreadedReaderWithACL extends MultiThreadedReader {
               result = localTable.get(get);
             }
             boolean isNullExpected = ((((int) keyToRead % specialPermCellInsertionFactor)) == 0);
-            getResultMetricUpdation(verify, rowKey, start, result, localTable, isNullExpected);
+            long end = System.nanoTime();
+            verifyResultsAndUpdateMetrics(verify, rowKey, end - start, result, localTable, isNullExpected);
           } catch (IOException e) {
             recordFailure(keyToRead);
           }

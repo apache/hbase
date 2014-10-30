@@ -100,12 +100,15 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
     util = getTestingUtil(getConf());
     MonkeyFactory fact = MonkeyFactory.getFactory(monkeyToUse);
     if (fact == null) {
-      // Run with no monkey in distributed context, with real monkey in local test context.
       fact = getDefaultMonkeyFactory();
     }
     monkey = fact.setUtil(util)
                  .setTableName(getTablename())
                  .setColumnFamilies(getColumnFamilies()).build();
+    startMonkey();
+  }
+
+  protected void startMonkey() throws Exception {
     monkey.start();
   }
 
@@ -124,6 +127,7 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
     if (this.util == null) {
       if (conf == null) {
         this.util = new IntegrationTestingUtility();
+        this.setConf(util.getConfiguration());
       } else {
         this.util = new IntegrationTestingUtility(conf);
       }

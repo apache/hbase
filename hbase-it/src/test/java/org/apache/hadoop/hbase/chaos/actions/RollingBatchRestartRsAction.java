@@ -32,37 +32,57 @@ import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 
 /**
  * Restarts a ratio of the regionservers in a rolling fashion. At each step, either kills a
- * server, or starts one, sleeping randomly (0-sleepTime) in between steps.
+ * server, or starts one, sleeping randomly (0-sleepTime) in between steps. The parameter maxDeadServers
+ * limits the maximum number of servers that can be down at the same time during rolling restarts.
  */
 public class RollingBatchRestartRsAction extends BatchRestartRsAction {
   private static Log LOG = LogFactory.getLog(RollingBatchRestartRsAction.class);
+  protected int maxDeadServers; // number of maximum dead servers at any given time. Defaults to 5
 
   public RollingBatchRestartRsAction(long sleepTime, float ratio) {
+    this(sleepTime, ratio, 5);
+  }
+
+  public RollingBatchRestartRsAction(long sleepTime, float ratio, int maxDeadServers) {
     super(sleepTime, ratio);
+    this.maxDeadServers = maxDeadServers;
+  }
+
+  enum KillOrStart {
+    KILL,
+    START
   }
 
   @Override
   public void perform() throws Exception {
     LOG.info(String.format("Performing action: Rolling batch restarting %d%% of region servers",
         (int)(ratio * 100)));
-    List<ServerName> selectedServers = PolicyBasedChaosMonkey.selectRandomItems(getCurrentServers(),
-        ratio);
+    List<ServerName> selectedServers = selectServers();
 
     Queue<ServerName> serversToBeKilled = new LinkedList<ServerName>(selectedServers);
     Queue<ServerName> deadServers = new LinkedList<ServerName>();
 
-    //
+    // loop while there are servers to be killed or dead servers to be restarted
     while (!serversToBeKilled.isEmpty() || !deadServers.isEmpty()) {
-      boolean action = true; //action true = kill server, false = start server
+      KillOrStart action = KillOrStart.KILL;
 
-      if (serversToBeKilled.isEmpty() || deadServers.isEmpty()) {
-        action = deadServers.isEmpty();
+      if (serversToBeKilled.isEmpty()) { // no more servers to kill
+        action = KillOrStart.START;
+      } else if (deadServers.isEmpty()) {
+        action = KillOrStart.KILL; // no more servers to start
+      } else if (deadServers.size() >= maxDeadServers) {
+        // we have too many dead servers. Don't kill any more
+        action = KillOrStart.START;
       } else {
-        action = RandomUtils.nextBoolean();
+        // do a coin toss
+        action = RandomUtils.nextBoolean() ? KillOrStart.KILL : KillOrStart.START;
       }
 
-      if (action) {
-        ServerName server = serversToBeKilled.remove();
+      ServerName server;
+
+      switch (action) {
+      case KILL:
+         server = serversToBeKilled.remove();
         try {
           killRs(server);
         } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
@@ -71,19 +91,25 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
           LOG.info("Problem killing but presume successful; code=" + e.getExitCode(), e);
         }
         deadServers.add(server);
-      } else {
+        break;
+      case START:
         try {
-          ServerName server = deadServers.remove();
+          server = deadServers.remove();
           startRs(server);
         } catch (org.apache.hadoop.util.Shell.ExitCodeException e) {
           // The start may fail but better to just keep going though we may lose server.
           //
           LOG.info("Problem starting, will retry; code=" + e.getExitCode(), e);
         }
+        break;
       }
 
       sleep(RandomUtils.nextInt((int)sleepTime));
     }
+  }
+
+  protected List<ServerName> selectServers() throws IOException {
+    return PolicyBasedChaosMonkey.selectRandomItems(getCurrentServers(), ratio);
   }
 
   /**
