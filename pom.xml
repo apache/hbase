@@ -592,6 +592,44 @@
         </configuration>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <!-- version set by parent -->
+        <configuration>
+          <rules>
+            <!-- The earliest maven version we verify builds for via ASF Jenkins -->
+            <requireMavenVersion>
+              <version>[${maven.min.version},)</version>
+              <message>Maven is out of date.
+  HBase requires at least version ${maven.min.version} of Maven to properly build from source.
+  You appear to be using an older version. You can use either "mvn -version" or
+  "mvn enforcer:display-info" to verify what version is active.
+  See the reference guide on building for more information: http://hbase.apache.org/book.html#build
+              </message>
+            </requireMavenVersion>
+            <!-- The earliest JVM version we verify builds for via ASF Jenkins -->
+            <requireJavaVersion>
+              <version>[${java.min.version},)</version>
+              <message>Java is out of date.
+  HBase requirs at least version ${java.min.version} of the JDK to properly build from source.
+  You appear to be using an older version. You can use either "mvn -version" or
+  "mvn enforcer:display-info" to verify what version is active.
+  See the reference guide on building for more information: http://hbase.apache.org/book.html#build
+              </message>
+            </requireJavaVersion>
+          </rules>
+        </configuration>
+        <executions>
+          <execution>
+            <id>enforce</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- parent-module only plugins -->
+      <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>xml-maven-plugin</artifactId>
         <version>1.0-beta-3</version>
@@ -1028,11 +1066,11 @@
     <maven.build.timestamp.format>
       yyyy-MM-dd'T'HH:mm
     </maven.build.timestamp.format>
-    <buildDate>
-      ${maven.build.timestamp}
-    </buildDate>
     <compileSource>1.6</compileSource>
-
+    <buildDate>${maven.build.timestamp}</buildDate>
+    <!-- Build dependencies -->
+    <maven.min.version>3.0.3</maven.min.version>
+    <java.min.version>${compileSource}</java.min.version>
     <!-- Dependencies -->
     <avro.version>1.5.3</avro.version>
     <commons-cli.version>1.2</commons-cli.version>
