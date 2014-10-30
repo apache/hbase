@@ -155,7 +155,8 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
     StoreFile.Writer mobFileWriter = null;
     int compactionKVMax = conf.getInt(HConstants.COMPACTION_KV_MAX,
         HConstants.COMPACTION_KV_MAX_DEFAULT);
-    long mobKVCount = 0;
+    long mobCount = 0;
+    long mobSize = 0;
     long time = snapshot.getTimeRangeTracker().getMaximumTimestamp();
     mobFileWriter = mobStore.createWriterInTmp(new Date(time), snapshot.getCellsCount(),
         store.getFamily().getCompression(), store.getRegionInfo().getStartKey());
@@ -181,7 +182,8 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
             } else {
               // append the original keyValue in the mob file.
               mobFileWriter.append(kv);
-              mobKVCount++;
+              mobSize += kv.getValueLength();
+              mobCount++;
 
               // append the tags to the KeyValue.
               // The key is same, the value is the filename of the mob file
@@ -199,12 +201,15 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
       mobFileWriter.close();
     }
 
-    if (mobKVCount > 0) {
+    if (mobCount > 0) {
       // commit the mob file from temp folder to target folder.
       // If the mob file is committed successfully but the store file is not,
       // the committed mob file will be handled by the sweep tool as an unused
       // file.
       mobStore.commitFile(mobFileWriter.getPath(), targetPath);
+      mobStore.updateMobFlushCount();
+      mobStore.updateMobFlushedCellsCount(mobCount);
+      mobStore.updateMobFlushedCellsSize(mobSize);
     } else {
       try {
         // If the mob file is empty, delete it instead of committing.

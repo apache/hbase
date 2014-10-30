@@ -36,14 +36,21 @@ public class MobCacheConfig extends CacheConfig {
     instantiateMobFileCache(conf);
   }
 
+  public MobCacheConfig(Configuration conf) {
+    super(conf);
+    instantiateMobFileCache(conf);
+  }
+
   /**
    * Instantiates the MobFileCache.
    * @param conf The current configuration.
+   * @return The current instance of MobFileCache.
    */
-  public static synchronized void instantiateMobFileCache(Configuration conf) {
+  public static synchronized MobFileCache instantiateMobFileCache(Configuration conf) {
     if (mobFileCache == null) {
       mobFileCache = new MobFileCache(conf);
     }
+    return mobFileCache;
   }
 
   /**

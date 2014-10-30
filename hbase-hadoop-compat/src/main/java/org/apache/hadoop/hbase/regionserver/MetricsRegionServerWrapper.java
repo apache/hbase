@@ -246,4 +246,74 @@ public interface MetricsRegionServerWrapper {
    * Get the total amount of data processed during major compactions, in bytes.
    */
   long getMajorCompactedCellsSize();
+
+  /**
+   * Gets the number of cells move to mob during compaction.
+   */
+  long getMobCompactedIntoMobCellsCount();
+
+  /**
+   * Gets the number of cells move from mob during compaction.
+   */
+  long getMobCompactedFromMobCellsCount();
+
+  /**
+   * Gets the total amount of cells move to mob during compaction, in bytes.
+   */
+  long getMobCompactedIntoMobCellsSize();
+
+  /**
+   * Gets the total amount of cells move from mob during compaction, in bytes.
+   */
+  long getMobCompactedFromMobCellsSize();
+
+  /**
+   * Gets the number of the flushes in mob-enabled stores.
+   */
+  long getMobFlushCount();
+
+  /**
+   * Gets the number of mob cells flushed to disk.
+   */
+  long getMobFlushedCellsCount();
+
+  /**
+   * Gets the total amount of mob cells flushed to disk, in bytes.
+   */
+  long getMobFlushedCellsSize();
+
+  /**
+   * Gets the number of scanned mob cells.
+   */
+  long getMobScanCellsCount();
+
+  /**
+   * Gets the total amount of scanned mob cells, in bytes.
+   */
+  long getMobScanCellsSize();
+
+  /**
+   * Gets the count of accesses to the mob file cache.
+   */
+  long getMobFileCacheAccessCount();
+
+  /**
+   * Gets the count of misses to the mob file cache.
+   */
+  long getMobFileCacheMissCount();
+
+  /**
+   * Gets the number of items evicted from the mob file cache.
+   */
+  long getMobFileCacheEvictedCount();
+
+  /**
+   * Gets the count of cached mob files.
+   */
+  long getMobFileCacheCount();
+
+  /**
+   * Gets the hit percent to the mob file cache.
+   */
+  int getMobFileCacheHitPercent();
 }

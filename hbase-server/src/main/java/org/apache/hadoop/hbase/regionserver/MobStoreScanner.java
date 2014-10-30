@@ -36,11 +36,16 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 public class MobStoreScanner extends StoreScanner {
 
   private boolean cacheMobBlocks = false;
+  private final HMobStore mobStore;
 
   public MobStoreScanner(Store store, ScanInfo scanInfo, Scan scan,
       final NavigableSet<byte[]> columns, long readPt) throws IOException {
     super(store, scanInfo, scan, columns, readPt);
     cacheMobBlocks = MobUtils.isCacheMobBlocks(scan);
+    if (!(store instanceof HMobStore)) {
+      throw new IllegalArgumentException("The store " + store + " is not a HMobStore");
+    }
+    mobStore = (HMobStore) store;
   }
 
   /**
@@ -56,13 +61,19 @@ public class MobStoreScanner extends StoreScanner {
       if (outResult.isEmpty()) {
         return result;
       }
-      HMobStore mobStore = (HMobStore) store;
+      long mobKVCount = 0;
+      long mobKVSize = 0;
       for (int i = 0; i < outResult.size(); i++) {
         Cell cell = outResult.get(i);
         if (MobUtils.isMobReferenceCell(cell)) {
-          outResult.set(i, mobStore.resolve(cell, cacheMobBlocks));
+          Cell mobCell = mobStore.resolve(cell, cacheMobBlocks);
+          mobKVCount++;
+          mobKVSize += mobCell.getValueLength();
+          outResult.set(i, mobCell);
         }
       }
+      mobStore.updateMobScanCellsCount(mobKVCount);
+      mobStore.updateMobScanCellsSize(mobKVSize);
     }
     return result;
   }

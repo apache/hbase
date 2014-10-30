@@ -80,6 +80,15 @@ public class HMobStore extends HStore {
   private MobCacheConfig mobCacheConfig;
   private Path homePath;
   private Path mobFamilyPath;
+  private volatile long mobCompactedIntoMobCellsCount = 0;
+  private volatile long mobCompactedFromMobCellsCount = 0;
+  private volatile long mobCompactedIntoMobCellsSize = 0;
+  private volatile long mobCompactedFromMobCellsSize = 0;
+  private volatile long mobFlushCount = 0;
+  private volatile long mobFlushedCellsCount = 0;
+  private volatile long mobFlushedCellsSize = 0;
+  private volatile long mobScanCellsCount = 0;
+  private volatile long mobScanCellsSize = 0;
   private List<Path> mobDirLocations;
   private HColumnDescriptor family;
 
@@ -437,5 +446,77 @@ public class HMobStore extends HStore {
       // If it's not a major compaction, continue the compaction.
       return super.compact(compaction);
     }
+  }
+
+  public void updateMobCompactedIntoMobCellsCount(long count) {
+    mobCompactedIntoMobCellsCount += count;
+  }
+
+  public long getMobCompactedIntoMobCellsCount() {
+    return mobCompactedIntoMobCellsCount;
+  }
+
+  public void updateMobCompactedFromMobCellsCount(long count) {
+    mobCompactedFromMobCellsCount += count;
+  }
+
+  public long getMobCompactedFromMobCellsCount() {
+    return mobCompactedFromMobCellsCount;
+  }
+
+  public void updateMobCompactedIntoMobCellsSize(long size) {
+    mobCompactedIntoMobCellsSize += size;
+  }
+
+  public long getMobCompactedIntoMobCellsSize() {
+    return mobCompactedIntoMobCellsSize;
+  }
+
+  public void updateMobCompactedFromMobCellsSize(long size) {
+    mobCompactedFromMobCellsSize += size;
+  }
+
+  public long getMobCompactedFromMobCellsSize() {
+    return mobCompactedFromMobCellsSize;
+  }
+
+  public void updateMobFlushCount() {
+    mobFlushCount++;
+  }
+
+  public long getMobFlushCount() {
+    return mobFlushCount;
+  }
+
+  public void updateMobFlushedCellsCount(long count) {
+    mobFlushedCellsCount += count;
+  }
+
+  public long getMobFlushedCellsCount() {
+    return mobFlushedCellsCount;
+  }
+
+  public void updateMobFlushedCellsSize(long size) {
+    mobFlushedCellsSize += size;
+  }
+
+  public long getMobFlushedCellsSize() {
+    return mobFlushedCellsSize;
+  }
+
+  public void updateMobScanCellsCount(long count) {
+    mobScanCellsCount += count;
+  }
+
+  public long getMobScanCellsCount() {
+    return mobScanCellsCount;
+  }
+
+  public void updateMobScanCellsSize(long size) {
+    mobScanCellsSize += size;
+  }
+
+  public long getMobScanCellsSize() {
+    return mobScanCellsSize;
   }
 }

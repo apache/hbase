@@ -74,10 +74,12 @@ public class MobFileCache {
   // a ConcurrentHashMap, accesses to this map are synchronized.
   private Map<String, CachedMobFile> map = null;
   // caches access count
-  private final AtomicLong count;
-  private long lastAccess;
-  private final AtomicLong miss;
-  private long lastMiss;
+  private final AtomicLong count = new AtomicLong(0);
+  private long lastAccess = 0;
+  private final AtomicLong miss = new AtomicLong(0);
+  private long lastMiss = 0;
+  private final AtomicLong evictedFileCount = new AtomicLong(0);
+  private long lastEvictedFileCount = 0;
 
   // a lock to sync the evict to guarantee the eviction occurs in sequence.
   // the method evictFile is not sync by this lock, the ConcurrentHashMap does the sync there.
@@ -101,10 +103,6 @@ public class MobFileCache {
         MobConstants.DEFAULT_MOB_FILE_CACHE_SIZE);
     isCacheEnabled = (mobFileMaxCacheSize > 0);
     map = new ConcurrentHashMap<String, CachedMobFile>(mobFileMaxCacheSize);
-    this.count = new AtomicLong(0);
-    this.miss = new AtomicLong(0);
-    this.lastAccess = 0;
-    this.lastMiss = 0;
     if (isCacheEnabled) {
       long period = conf.getLong(MobConstants.MOB_CACHE_EVICT_PERIOD,
           MobConstants.DEFAULT_MOB_CACHE_EVICT_PERIOD); // in seconds
@@ -159,6 +157,7 @@ public class MobFileCache {
       for (CachedMobFile evictedFile : evictedFiles) {
         closeFile(evictedFile);
       }
+      evictedFileCount.addAndGet(evictedFiles.size());
     }
   }
 
@@ -175,6 +174,7 @@ public class MobFileCache {
         CachedMobFile evictedFile = map.remove(fileName);
         if (evictedFile != null) {
           evictedFile.close();
+          evictedFileCount.incrementAndGet();
         }
       } catch (IOException e) {
         LOG.error("Fail to evict the file " + fileName, e);
@@ -245,6 +245,26 @@ public class MobFileCache {
     }
   }
 
+  public void shutdown() {
+    this.scheduleThreadPool.shutdown();
+    for (int i = 0; i < 10; i++) {
+      if (!this.scheduleThreadPool.isShutdown()) {
+        try {
+          Thread.sleep(10);
+        } catch (InterruptedException e) {
+          LOG.warn("Interrupted while sleeping");
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
+    }
+
+    if (!this.scheduleThreadPool.isShutdown()) {
+      List<Runnable> runnables = this.scheduleThreadPool.shutdownNow();
+      LOG.debug("Still running " + runnables);
+    }
+  }
+
   /**
    * Gets the count of cached mob files.
    * @return The count of the cached mob files.
@@ -254,17 +274,50 @@ public class MobFileCache {
   }
 
   /**
+   * Gets the count of accesses to the mob file cache.
+   * @return The count of accesses to the mob file cache.
+   */
+  public long getAccessCount() {
+    return count.get();
+  }
+
+  /**
+   * Gets the count of misses to the mob file cache.
+   * @return The count of misses to the mob file cache.
+   */
+  public long getMissCount() {
+    return miss.get();
+  }
+
+  /**
+   * Gets the number of items evicted from the mob file cache.
+   * @return The number of items evicted from the mob file cache.
+   */
+  public long getEvictedFileCount() {
+    return evictedFileCount.get();
+  }
+
+  /**
+   * Gets the hit ratio to the mob file cache.
+   * @return The hit ratio to the mob file cache.
+   */
+  public double getHitRatio() {
+    return count.get() == 0 ? 0 : ((float) (count.get() - miss.get())) / (float) count.get();
+  }
+
+  /**
    * Prints the statistics.
    */
   public void printStatistics() {
     long access = count.get() - lastAccess;
     long missed = miss.get() - lastMiss;
-    long hitRate = (access - missed) * 100 / access;
+    long evicted = evictedFileCount.get() - lastEvictedFileCount;
+    int hitRatio = access == 0 ? 0 : (int) (((float) (access - missed)) / (float) access * 100);
     LOG.info("MobFileCache Statistics, access: " + access + ", miss: " + missed + ", hit: "
-        + (access - missed) + ", hit rate: "
-        + ((access == 0) ? 0 : hitRate) + "%");
+        + (access - missed) + ", hit ratio: " + hitRatio + "%, evicted files: " + evicted);
     lastAccess += access;
     lastMiss += missed;
+    lastEvictedFileCount += evicted;
   }
 
 }

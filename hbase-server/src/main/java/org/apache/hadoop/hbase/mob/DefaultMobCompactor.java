@@ -128,6 +128,10 @@ public class DefaultMobCompactor extends DefaultCompactor {
     long mobCells = 0;
     Tag tableNameTag = new Tag(TagType.MOB_TABLE_NAME_TAG_TYPE, store.getTableName()
             .getName());
+    long mobCompactedIntoMobCellsCount = 0;
+    long mobCompactedFromMobCellsCount = 0;
+    long mobCompactedIntoMobCellsSize = 0;
+    long mobCompactedFromMobCellsSize = 0;
     try {
       try {
         // If the mob file writer could not be created, directly write the cell to the store file.
@@ -173,6 +177,8 @@ public class DefaultMobCompactor extends DefaultCompactor {
                   // next compaction.
                   writer.append(kv);
                 }
+                mobCompactedFromMobCellsCount++;
+                mobCompactedFromMobCellsSize += cell.getValueLength();
               }
             } else {
               LOG.warn("The value format of the KeyValue " + kv
@@ -192,6 +198,8 @@ public class DefaultMobCompactor extends DefaultCompactor {
             KeyValue reference = MobUtils.createMobRefKeyValue(kv, fileName, tableNameTag);
             // write the cell whose value is the path of a mob file to the store file.
             writer.append(reference);
+            mobCompactedIntoMobCellsCount++;
+            mobCompactedIntoMobCellsSize += kv.getValueLength();
           }
           ++progress.currentCompactedKVs;
 
@@ -227,6 +235,10 @@ public class DefaultMobCompactor extends DefaultCompactor {
         }
       }
     }
+    mobStore.updateMobCompactedFromMobCellsCount(mobCompactedFromMobCellsCount);
+    mobStore.updateMobCompactedIntoMobCellsCount(mobCompactedIntoMobCellsCount);
+    mobStore.updateMobCompactedFromMobCellsSize(mobCompactedFromMobCellsSize);
+    mobStore.updateMobCompactedIntoMobCellsSize(mobCompactedIntoMobCellsSize);
     progress.complete();
     return true;
   }
