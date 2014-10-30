@@ -336,7 +336,8 @@ public class RpcClient {
 
   protected final static Map<AuthenticationProtos.TokenIdentifier.Kind,
       TokenSelector<? extends TokenIdentifier>> tokenHandlers =
-      new HashMap<AuthenticationProtos.TokenIdentifier.Kind, TokenSelector<? extends TokenIdentifier>>();
+      new HashMap<AuthenticationProtos.TokenIdentifier.Kind,
+        TokenSelector<? extends TokenIdentifier>>();
   static {
     tokenHandlers.put(AuthenticationProtos.TokenIdentifier.Kind.HBASE_AUTH_TOKEN,
         new AuthenticationTokenSelector());
@@ -650,18 +651,21 @@ public class RpcClient {
           socket.getOutputStream().close();
         }
       } catch (IOException ignored) {  // Can happen if the socket is already closed
+        if (LOG.isTraceEnabled()) LOG.trace("ignored", ignored);
       }
       try {
         if (socket.getInputStream() != null) {
           socket.getInputStream().close();
         }
       } catch (IOException ignored) {  // Can happen if the socket is already closed
+        if (LOG.isTraceEnabled()) LOG.trace("ignored", ignored);
       }
       try {
         if (socket.getChannel() != null) {
           socket.getChannel().close();
         }
       } catch (IOException ignored) {  // Can happen if the socket is already closed
+        if (LOG.isTraceEnabled()) LOG.trace("ignored", ignored);
       }
       try {
         socket.close();
@@ -1159,18 +1163,18 @@ public class RpcClient {
           int readSoFar = IPCUtil.getTotalSizeWhenWrittenDelimited(responseHeader);
           int whatIsLeftToRead = totalSize - readSoFar;
           IOUtils.skipFully(in, whatIsLeftToRead);
+          return;
         }
         if (responseHeader.hasException()) {
           ExceptionResponse exceptionResponse = responseHeader.getException();
           RemoteException re = createRemoteException(exceptionResponse);
-          if (expectedCall) call.setException(re);
+          call.setException(re);
           if (isFatalConnectionException(exceptionResponse)) {
             markClosed(re);
           }
         } else {
           Message value = null;
-          // Call may be null because it may have timeout and been cleaned up on this side already
-          if (expectedCall && call.responseDefaultType != null) {
+          if (call.responseDefaultType != null) {
             Builder builder = call.responseDefaultType.newBuilderForType();
             builder.mergeDelimitedFrom(in);
             value = builder.build();
@@ -1182,9 +1186,7 @@ public class RpcClient {
             IOUtils.readFully(this.in, cellBlock, 0, cellBlock.length);
             cellBlockScanner = ipcUtil.createCellScanner(this.codec, this.compressor, cellBlock);
           }
-          // it's possible that this call may have been cleaned up due to a RPC
-          // timeout, so check if it still exists before setting the value.
-          if (expectedCall) call.setResponse(value, cellBlockScanner);
+          call.setResponse(value, cellBlockScanner);
         }
       } catch (IOException e) {
         if (expectedCall) call.setException(e);
@@ -1192,6 +1194,7 @@ public class RpcClient {
           // Clean up open calls but don't treat this as a fatal condition,
           // since we expect certain responses to not make it by the specified
           // {@link ConnectionId#rpcTimeout}.
+          if (LOG.isTraceEnabled()) LOG.trace("ignored", e);
         } else {
           // Treat this as a fatal condition and close this connection
           markClosed(e);
@@ -1487,7 +1490,6 @@ public class RpcClient {
           @Override
           public void run(Object parameter) {
             connection.callSender.remove(cts);
-            call.callComplete();
           }
         });
         if (pcrc.isCanceled()) {
@@ -1660,7 +1662,7 @@ public class RpcClient {
     public int hashCode() {
       int hashcode = (address.hashCode() +
         PRIME * (PRIME * this.serviceName.hashCode() ^
-        (ticket == null ? 0 : ticket.hashCode()) ));
+        (ticket == null ? 0 : ticket.hashCode())));
       return hashcode;
     }
   }
