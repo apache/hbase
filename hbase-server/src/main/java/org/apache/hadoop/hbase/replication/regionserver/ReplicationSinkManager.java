@@ -106,8 +106,8 @@ public class ReplicationSinkManager {
    * @return a replication sink to replicate to
    */
   public SinkPeer getReplicationSink() throws IOException {
-    if (endpoint.getLastRegionServerUpdate() > this.lastUpdateToPeers) {
-      LOG.info("Current list of sinks is out of date, updating");
+    if (endpoint.getLastRegionServerUpdate() > this.lastUpdateToPeers || sinks.isEmpty()) {
+      LOG.info("Current list of sinks is out of date or empty, updating");
       chooseSinks();
     }
 
