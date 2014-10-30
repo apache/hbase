@@ -146,6 +146,7 @@ public class ReplicationSourceManager implements ReplicationListener {
         new LinkedBlockingQueue<Runnable>());
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
     tfb.setNameFormat("ReplicationExecutor-%d");
+    tfb.setDaemon(true);
     this.executor.setThreadFactory(tfb.build());
     this.rand = new Random();
   }
