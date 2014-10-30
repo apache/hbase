@@ -36,15 +36,14 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({CoprocessorTests.class, MediumTests.class})
+@Category({MediumTests.class})
 public class TestCoprocessorHConnection {
 
   static final Log LOG = LogFactory.getLog(TestCoprocessorHConnection.class);
@@ -53,7 +52,7 @@ public class TestCoprocessorHConnection {
   private static final int ROWSIZE = 20;
   private static final byte[] rowSeperator1 = Bytes.toBytes(5);
   private static final byte[] rowSeperator2 = Bytes.toBytes(12);
-  
+
   private static HBaseTestingUtility util = new HBaseTestingUtility();
   private static MiniHBaseCluster cluster = null;
 
@@ -61,7 +60,7 @@ public class TestCoprocessorHConnection {
     private HRegion region;
     private ClusterConnection conn;
     private CoprocessorEnvironment env;
-    
+
     @Override
     public void start(CoprocessorEnvironment e) {
       region = ((RegionCoprocessorEnvironment)e).getRegion();
@@ -71,11 +70,11 @@ public class TestCoprocessorHConnection {
     public void stop(CoprocessorEnvironment e) {
       region = null;
     }
-    
+
     public byte[] getRegionStartKey() {
       return region.getStartKey();
     }
-    
+
     public Result getOnCoprocessorHConnection(TableName tableName, byte[] key)
         throws IOException {
       conn = CoprocessorHConnection.getConnectionForEnvironment(env);
@@ -85,7 +84,7 @@ public class TestCoprocessorHConnection {
       return result;
     }
   }
-  
+
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     util.startMiniCluster();
@@ -145,7 +144,7 @@ public class TestCoprocessorHConnection {
 
       // Find the start key for the region that FooCoprocessor is running on.
       byte[] regionStartKey = fc.getRegionStartKey();
- 
+
       // Get Key Data
       Get get =  new Get(regionStartKey);
       Result keyData = table.get(get);
