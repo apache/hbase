@@ -96,8 +96,8 @@ public class MetaTableLocator {
    */
   public List<Pair<HRegionInfo, ServerName>> getMetaRegionsAndLocations(ZooKeeperWatcher zkw) {
     ServerName serverName = new MetaTableLocator().getMetaRegionLocation(zkw);
-    List<Pair<HRegionInfo, ServerName>> list = new ArrayList<>();
-    list.add(new Pair<>(HRegionInfo.FIRST_META_REGIONINFO, serverName));
+    List<Pair<HRegionInfo, ServerName>> list = new ArrayList<Pair<HRegionInfo, ServerName>>();
+    list.add(new Pair<HRegionInfo, ServerName>(HRegionInfo.FIRST_META_REGIONINFO, serverName));
     return list;
   }
 
@@ -114,7 +114,7 @@ public class MetaTableLocator {
   private List<HRegionInfo> getListOfHRegionInfos(
       final List<Pair<HRegionInfo, ServerName>> pairs) {
     if (pairs == null || pairs.isEmpty()) return null;
-    List<HRegionInfo> result = new ArrayList<>(pairs.size());
+    List<HRegionInfo> result = new ArrayList<HRegionInfo>(pairs.size());
     for (Pair<HRegionInfo, ServerName> pair: pairs) {
       result.add(pair.getFirst());
     }
@@ -265,7 +265,7 @@ public class MetaTableLocator {
       }
     }
     LOG.info("Failed verification of " + Bytes.toStringBinary(regionName) +
-      " at address=" + address + ", exception=" + t);
+      " at address=" + address + ", exception=" + t.getMessage());
     return false;
   }
 
