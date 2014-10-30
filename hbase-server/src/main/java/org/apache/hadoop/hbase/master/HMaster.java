@@ -256,7 +256,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * </ol>
    * <p>
    * Remaining steps of initialization occur in
-   * {@link #finishActiveMasterInitialization(MonitoredTask)} after
+   * #finishActiveMasterInitialization(MonitoredTask) after
    * the master becomes the active one.
    *
    * @throws InterruptedException
@@ -286,6 +286,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.metricsMaster = new MetricsMaster( new MetricsMasterWrapperImpl(this));
 
     // Do we publish the status?
+    
     boolean shouldPublish = conf.getBoolean(HConstants.STATUS_PUBLISHED,
         HConstants.STATUS_PUBLISHED_DEFAULT);
     Class<? extends ClusterStatusPublisher.Publisher> publisherClass =
@@ -1261,8 +1262,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     * this node explicitly.  If we crash before then, ZooKeeper will delete
     * this node for us since it is ephemeral.
     */
-    LOG.info("Adding ZNode for " + backupZNode + " in backup master directory");
-    MasterAddressTracker.setMasterAddress(zooKeeper, backupZNode, serverName);
+    LOG.info("Adding backup master ZNode " + backupZNode);
+    if (!MasterAddressTracker.setMasterAddress(zooKeeper, backupZNode, serverName)) {
+      LOG.warn("Failed create of " + backupZNode + " by " + serverName);
+    }
 
     activeMasterManager = new ActiveMasterManager(zooKeeper, serverName, this);
     // Start a thread to try to become the active master, so we won't block here

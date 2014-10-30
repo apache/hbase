@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
@@ -47,6 +48,9 @@ import java.net.NoRouteToHostException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.rmi.UnknownHostException;
+
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Utility class to perform operation (get/wait for/verify/set/delete) on znode in ZooKeeper
@@ -78,15 +82,38 @@ public class MetaTableLocator {
    * @return true if meta region location is available, false if not
    */
   public boolean isLocationAvailable(ZooKeeperWatcher zkw) {
-    try {
-      return ZKUtil.getData(zkw, zkw.metaServerZNode) != null;
-    } catch(KeeperException e) {
-      LOG.error("ZK error trying to get hbase:meta from ZooKeeper");
-      return false;
-    } catch (InterruptedException e) {
-      LOG.error("ZK error trying to get hbase:meta from ZooKeeper");
-      return false;
+    return getMetaRegionLocation(zkw) != null;
+  }
+
+  /**
+   * @param zkw ZooKeeper watcher to be used
+   * @return meta table regions and their locations.
+   */
+  public List<Pair<HRegionInfo, ServerName>> getMetaRegionsAndLocations(ZooKeeperWatcher zkw) {
+    ServerName serverName = new MetaTableLocator().getMetaRegionLocation(zkw);
+    List<Pair<HRegionInfo, ServerName>> list = new ArrayList<Pair<HRegionInfo, ServerName>>();
+    list.add(new Pair<HRegionInfo, ServerName>(HRegionInfo.FIRST_META_REGIONINFO, serverName));
+    return list;
+  }
+
+  /**
+   * @param zkw ZooKeeper watcher to be used
+   * @return List of meta regions
+   */
+  public List<HRegionInfo> getMetaRegions(ZooKeeperWatcher zkw) {
+    List<Pair<HRegionInfo, ServerName>> result;
+    result = getMetaRegionsAndLocations(zkw);
+    return getListOfHRegionInfos(result);
+  }
+
+  private List<HRegionInfo> getListOfHRegionInfos(
+      final List<Pair<HRegionInfo, ServerName>> pairs) {
+    if (pairs == null || pairs.isEmpty()) return null;
+    List<HRegionInfo> result = new ArrayList<HRegionInfo>(pairs.size());
+    for (Pair<HRegionInfo, ServerName> pair: pairs) {
+      result.add(pair.getFirst());
     }
+    return result;
   }
 
   /**
@@ -239,7 +266,7 @@ public class MetaTableLocator {
       }
     }
     LOG.info("Failed verification of " + Bytes.toStringBinary(regionName) +
-      " at address=" + address + ", exception=" + t);
+      " at address=" + address + ", exception=" + t.getMessage());
     return false;
   }
 
