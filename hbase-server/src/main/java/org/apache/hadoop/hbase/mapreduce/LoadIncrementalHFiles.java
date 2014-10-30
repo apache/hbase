@@ -200,8 +200,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         continue;
       }
       Path familyDir = stat.getPath();
-      // Skip _logs, etc
-      if (familyDir.getName().startsWith("_")) continue;
       byte[] family = familyDir.getName().getBytes();
       Path[] hfiles = FileUtil.stat2Paths(fs.listStatus(familyDir));
       for (Path hfile : hfiles) {
@@ -837,8 +835,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         continue;
       }
       Path familyDir = stat.getPath();
-      // Skip _logs, etc
-      if (familyDir.getName().startsWith("_")) continue;
       byte[] family = familyDir.getName().getBytes();
 
       hcd = new HColumnDescriptor(family);
