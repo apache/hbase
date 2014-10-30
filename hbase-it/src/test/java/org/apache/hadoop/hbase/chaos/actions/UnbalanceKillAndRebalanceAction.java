@@ -36,9 +36,16 @@ public class UnbalanceKillAndRebalanceAction extends Action {
   private static final double HOARD_FRC_OF_REGIONS = 0.8;
   /** Waits between calling unbalance and killing servers, kills and rebalance, and rebalance
    * and restarting the servers; to make sure these events have time to impact the cluster. */
-  private static final long WAIT_FOR_UNBALANCE_MS = 2 * 1000;
-  private static final long WAIT_FOR_KILLS_MS = 2 * 1000;
-  private static final long WAIT_AFTER_BALANCE_MS = 5 * 1000;
+  private long waitForUnbalanceMilliSec;
+  private long waitForKillsMilliSec;
+  private long waitAfterBalanceMilliSec;
+
+  public UnbalanceKillAndRebalanceAction(long waitUnbalance, long waitKill, long waitAfterBalance) {
+    super();
+    waitForUnbalanceMilliSec = waitUnbalance;
+    waitForKillsMilliSec = waitKill;
+    waitAfterBalanceMilliSec = waitAfterBalance;
+  }
 
   @Override
   public void perform() throws Exception {
@@ -53,13 +60,13 @@ public class UnbalanceKillAndRebalanceAction extends Action {
       targetServers.add(victimServers.remove(victimIx));
     }
     unbalanceRegions(status, victimServers, targetServers, HOARD_FRC_OF_REGIONS);
-    Thread.sleep(WAIT_FOR_UNBALANCE_MS);
+    Thread.sleep(waitForUnbalanceMilliSec);
     for (int i = 0; i < liveCount; ++i) {
       killRs(targetServers.get(i));
     }
-    Thread.sleep(WAIT_FOR_KILLS_MS);
+    Thread.sleep(waitForKillsMilliSec);
     forceBalancer();
-    Thread.sleep(WAIT_AFTER_BALANCE_MS);
+    Thread.sleep(waitAfterBalanceMilliSec);
     for (int i = 0; i < liveCount; ++i) {
       startRs(targetServers.get(i));
     }

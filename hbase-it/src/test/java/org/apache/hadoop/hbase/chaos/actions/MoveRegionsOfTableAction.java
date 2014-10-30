@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -38,14 +39,14 @@ public class MoveRegionsOfTableAction extends Action {
   private final long maxTime;
 
   public MoveRegionsOfTableAction(String tableName) {
-    this(-1, tableName);
+    this(-1, MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME, tableName);
   }
 
-  public MoveRegionsOfTableAction(long sleepTime, String tableName) {
+  public MoveRegionsOfTableAction(long sleepTime, long maxSleepTime, String tableName) {
     this.sleepTime = sleepTime;
     this.tableNameBytes = Bytes.toBytes(tableName);
     this.tableName = tableName;
-    this.maxTime = 10 * 60 * 1000; // 10 min default
+    this.maxTime = maxSleepTime;
   }
 
   @Override

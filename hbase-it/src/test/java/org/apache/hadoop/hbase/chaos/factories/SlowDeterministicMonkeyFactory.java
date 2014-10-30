@@ -45,17 +45,37 @@ import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.chaos.policies.CompositeSequentialPolicy;
 import org.apache.hadoop.hbase.chaos.policies.DoActionsOncePolicy;
 import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
+import org.junit.Assert;
 
 public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
+
+  private long action1Period;
+  private long action2Period;
+  private long action3Period;
+  private long action4Period;
+  private long moveRegionsMaxTime;
+  private long moveRegionsSleepTime;
+  private long moveRandomRegionSleepTime;
+  private long restartRandomRSSleepTime;
+  private long batchRestartRSSleepTime;
+  private float batchRestartRSRatio;
+  private long restartActiveMasterSleepTime;
+  private long rollingBatchRestartRSSleepTime;
+  private float rollingBatchRestartRSRatio;
+  private long restartRsHoldingMetaSleepTime;
+  private float compactTableRatio;
+  private float compactRandomRegionRatio;
+
   @Override
   public ChaosMonkey build() {
 
+    loadProperties();
     // Actions such as compact/flush a table/region,
     // move one region around. They are not so destructive,
     // can be executed more frequently.
     Action[] actions1 = new Action[] {
-        new CompactTableAction(tableName, 0.5f),
-        new CompactRandomRegionOfTableAction(tableName, 0.6f),
+        new CompactTableAction(tableName, compactTableRatio),
+        new CompactRandomRegionOfTableAction(tableName, compactRandomRegionRatio),
         new FlushTableAction(tableName),
         new FlushRandomRegionOfTableAction(tableName),
         new MoveRandomRegionOfTableAction(tableName)
@@ -78,13 +98,15 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
 
     // Destructive actions to mess things around.
     Action[] actions3 = new Action[] {
-        new MoveRegionsOfTableAction(800, tableName),
-        new MoveRandomRegionOfTableAction(800, tableName),
-        new RestartRandomRsAction(60000),
-        new BatchRestartRsAction(5000, 0.5f),
-        new RestartActiveMasterAction(5000),
-        new RollingBatchRestartRsAction(5000, 1.0f),
-        new RestartRsHoldingMetaAction(35000)
+        new MoveRegionsOfTableAction(moveRegionsSleepTime, moveRegionsMaxTime,
+            tableName),
+        new MoveRandomRegionOfTableAction(moveRandomRegionSleepTime, tableName),
+        new RestartRandomRsAction(restartRandomRSSleepTime),
+        new BatchRestartRsAction(batchRestartRSSleepTime, batchRestartRSRatio),
+        new RestartActiveMasterAction(restartActiveMasterSleepTime),
+        new RollingBatchRestartRsAction(rollingBatchRestartRSSleepTime,
+            rollingBatchRestartRSRatio),
+        new RestartRsHoldingMetaAction(restartRsHoldingMetaSleepTime)
     };
 
     // Action to log more info for debugging
@@ -93,11 +115,60 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
     };
 
     return new PolicyBasedChaosMonkey(util,
-        new PeriodicRandomActionPolicy(60 * 1000, actions1),
-        new PeriodicRandomActionPolicy(90 * 1000, actions2),
+        new PeriodicRandomActionPolicy(action1Period, actions1),
+        new PeriodicRandomActionPolicy(action2Period, actions2),
         new CompositeSequentialPolicy(
-            new DoActionsOncePolicy(150 * 1000, actions3),
-            new PeriodicRandomActionPolicy(150 * 1000, actions3)),
-        new PeriodicRandomActionPolicy(90 * 1000, actions4));
+            new DoActionsOncePolicy(action3Period, actions3),
+            new PeriodicRandomActionPolicy(action3Period, actions3)),
+        new PeriodicRandomActionPolicy(action4Period, actions4));
+  }
+
+  private void loadProperties() {
+
+      action1Period = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.PERIODIC_ACTION1_PERIOD,
+        MonkeyConstants.DEFAULT_PERIODIC_ACTION1_PERIOD + ""));
+      action2Period = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.PERIODIC_ACTION2_PERIOD,
+        MonkeyConstants.DEFAULT_PERIODIC_ACTION2_PERIOD + ""));
+      action3Period = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.COMPOSITE_ACTION3_PERIOD,
+        MonkeyConstants.DEFAULT_COMPOSITE_ACTION3_PERIOD + ""));
+      action4Period = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.PERIODIC_ACTION4_PERIOD,
+        MonkeyConstants.DEFAULT_PERIODIC_ACTION4_PERIOD + ""));
+      moveRegionsMaxTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.MOVE_REGIONS_MAX_TIME,
+        MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME + ""));
+      moveRegionsSleepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.MOVE_REGIONS_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_MOVE_REGIONS_SLEEP_TIME + ""));
+      moveRandomRegionSleepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.MOVE_RANDOM_REGION_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_MOVE_RANDOM_REGION_SLEEP_TIME + ""));
+      restartRandomRSSleepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.RESTART_RANDOM_RS_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_RESTART_RANDOM_RS_SLEEP_TIME + ""));
+      batchRestartRSSleepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.BATCH_RESTART_RS_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_BATCH_RESTART_RS_SLEEP_TIME + ""));
+      restartActiveMasterSleepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.RESTART_ACTIVE_MASTER_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_RESTART_ACTIVE_MASTER_SLEEP_TIME + ""));
+      rollingBatchRestartRSSleepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.ROLLING_BATCH_RESTART_RS_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_SLEEP_TIME + ""));
+      rollingBatchRestartRSRatio = Float.parseFloat(this.properties.getProperty(
+        MonkeyConstants.ROLLING_BATCH_RESTART_RS_RATIO,
+        MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_RATIO + ""));
+      restartRsHoldingMetaSleepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.RESTART_RS_HOLDING_META_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_RESTART_RS_HOLDING_META_SLEEP_TIME + ""));
+      compactTableRatio = Float.parseFloat(this.properties.getProperty(
+        MonkeyConstants.COMPACT_TABLE_ACTION_RATIO,
+        MonkeyConstants.DEFAULT_COMPACT_TABLE_ACTION_RATIO + ""));
+      compactRandomRegionRatio = Float.parseFloat(this.properties.getProperty(
+        MonkeyConstants.COMPACT_RANDOM_REGION_RATIO,
+        MonkeyConstants.DEFAULT_COMPACT_RANDOM_REGION_RATIO + ""));
   }
 }

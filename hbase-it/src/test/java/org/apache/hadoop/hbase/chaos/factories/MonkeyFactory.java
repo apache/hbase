@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.chaos.factories;
 
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
@@ -34,6 +35,7 @@ public abstract class MonkeyFactory {
   protected String tableName;
   protected Set<String> columnFamilies;
   protected IntegrationTestingUtility util;
+  protected Properties properties = new Properties();
 
   public MonkeyFactory setTableName(String tableName) {
     this.tableName = tableName;
@@ -47,6 +49,13 @@ public abstract class MonkeyFactory {
 
   public MonkeyFactory setUtil(IntegrationTestingUtility util) {
     this.util = util;
+    return this;
+  }
+
+  public MonkeyFactory setProperties(Properties props) {
+    if (props != null) {
+      this.properties = props;
+    }
     return this;
   }
 

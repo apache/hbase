@@ -67,7 +67,7 @@ public class NoKillMonkeyFactory extends MonkeyFactory {
     };
 
     Action[] actions3 = new Action[] {
-        new MoveRegionsOfTableAction(800,tableName),
+        new MoveRegionsOfTableAction(800,1600,tableName),
         new MoveRandomRegionOfTableAction(800,tableName),
     };
 
