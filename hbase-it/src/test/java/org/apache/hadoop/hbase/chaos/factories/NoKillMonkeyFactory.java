@@ -47,8 +47,9 @@ import org.apache.hadoop.hbase.chaos.policies.TwoConcurrentActionPolicy;
 public class NoKillMonkeyFactory extends MonkeyFactory {
   @Override public ChaosMonkey build() {
     Action[] actions1 = new Action[] {
-        new CompactTableAction(tableName, 60*1000),
-        new CompactRandomRegionOfTableAction(tableName,0.6f),
+        new CompactTableAction(tableName, MonkeyConstants.DEFAULT_PERIODIC_ACTION1_PERIOD),
+        new CompactRandomRegionOfTableAction(tableName,
+            MonkeyConstants.DEFAULT_COMPACT_RANDOM_REGION_RATIO),
         new FlushTableAction(tableName),
         new FlushRandomRegionOfTableAction(tableName),
         new MoveRandomRegionOfTableAction(tableName)
@@ -67,8 +68,11 @@ public class NoKillMonkeyFactory extends MonkeyFactory {
     };
 
     Action[] actions3 = new Action[] {
-        new MoveRegionsOfTableAction(800,1600,tableName),
-        new MoveRandomRegionOfTableAction(800,tableName),
+        new MoveRegionsOfTableAction(MonkeyConstants.DEFAULT_MOVE_REGIONS_SLEEP_TIME,
+            MonkeyConstants.DEFAULT_MOVE_REGIONS_MAX_TIME,
+            tableName),
+        new MoveRandomRegionOfTableAction(MonkeyConstants.DEFAULT_RESTART_ACTIVE_MASTER_SLEEP_TIME,
+            tableName),
     };
 
     Action[] actions4 = new Action[] {
@@ -76,8 +80,8 @@ public class NoKillMonkeyFactory extends MonkeyFactory {
     };
 
     return new PolicyBasedChaosMonkey(util,
-        new TwoConcurrentActionPolicy(60*1000, actions1, actions2),
-        new PeriodicRandomActionPolicy(90*1000,actions3),
-        new PeriodicRandomActionPolicy(90*1000,actions4));
+        new TwoConcurrentActionPolicy(MonkeyConstants.DEFAULT_PERIODIC_ACTION1_PERIOD, actions1, actions2),
+        new PeriodicRandomActionPolicy(MonkeyConstants.DEFAULT_PERIODIC_ACTION2_PERIOD,actions3),
+        new PeriodicRandomActionPolicy(MonkeyConstants.DEFAULT_PERIODIC_ACTION4_PERIOD,actions4));
   }
 }
