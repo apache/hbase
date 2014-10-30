@@ -112,7 +112,9 @@ implements WALObserver {
         cell.getValueArray()[cell.getValueOffset()] += 1;
       }
     }
-    cells.add(new KeyValue(row, addedFamily, addedQualifier));
+    if (null != row) {
+      cells.add(new KeyValue(row, addedFamily, addedQualifier));
+    }
     if (deletedCell != null) {
       LOG.debug("About to delete a KeyValue from WALEdit.");
       cells.remove(deletedCell);
