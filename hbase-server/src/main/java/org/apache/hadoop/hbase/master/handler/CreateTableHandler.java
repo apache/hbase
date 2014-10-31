@@ -266,7 +266,7 @@ public class CreateTableHandler extends EventHandler {
       ModifyRegionUtils.assignRegions(assignmentManager, regionInfos);
     }
 
-    // 6. Set table enabled flag up in zk.
+    // 7. Set table enabled flag up in zk.
     try {
       assignmentManager.getTableStateManager().setTableState(tableName,
         ZooKeeperProtos.Table.State.ENABLED);
@@ -274,6 +274,9 @@ public class CreateTableHandler extends EventHandler {
       throw new IOException("Unable to ensure that " + tableName + " will be" +
         " enabled because of a ZooKeeper issue", e);
     }
+
+    // 8. Update the tabledescriptor cache.
+    ((HMaster) this.server).getTableDescriptors().get(tableName);
   }
 
   /**
