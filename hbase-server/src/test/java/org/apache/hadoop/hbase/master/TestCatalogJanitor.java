@@ -291,6 +291,14 @@ public class TestCatalogJanitor {
           // TODO Auto-generated method stub
 
         }
+
+        @Override
+        public void setCacheOn() throws IOException {
+        }
+
+        @Override
+        public void setCacheOff() throws IOException {
+        }
       };
     }
 

@@ -263,6 +263,9 @@ public class CreateTableHandler extends EventHandler {
       throw new IOException("Unable to ensure that " + tableName + " will be" +
         " enabled because of a ZooKeeper issue", e);
     }
+
+    // 7. Update the tabledescriptor cache.
+    ((HMaster) this.server).getTableDescriptors().get(tableName);
   }
 
   private void releaseTableLock() {

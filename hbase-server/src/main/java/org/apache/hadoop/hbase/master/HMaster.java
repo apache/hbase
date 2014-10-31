@@ -362,6 +362,8 @@ MasterServices, Server {
   private MasterCoprocessorHost cpHost;
   private final ServerName serverName;
 
+  private final boolean preLoadTableDescriptors;
+
   private TableDescriptors tableDescriptors;
 
   // Table level lock manager for schema changes
@@ -486,6 +488,9 @@ MasterServices, Server {
     this.masterCheckCompression = conf.getBoolean("hbase.master.check.compression", true);
 
     this.metricsMaster = new MetricsMaster( new MetricsMasterWrapperImpl(this));
+
+    // preload table descriptor at startup
+    this.preLoadTableDescriptors = conf.getBoolean("hbase.master.preload.tabledescriptors", true);
 
     // Health checker thread.
     int sleepTime = this.conf.getInt(HConstants.HEALTH_CHORE_WAKE_FREQ,
@@ -805,6 +810,15 @@ MasterServices, Server {
     this.tableDescriptors =
       new FSTableDescriptors(this.conf, this.fileSystemManager.getFileSystem(),
       this.fileSystemManager.getRootDir());
+
+    // enable table descriptors cache
+    this.tableDescriptors.setCacheOn();
+
+    // warm-up HTDs cache on master initialization
+    if (preLoadTableDescriptors) {
+      status.setStatus("Pre-loading table descriptors");
+      this.tableDescriptors.getAll();
+    }
 
     // publish cluster ID
     status.setStatus("Publishing Cluster ID in ZooKeeper");

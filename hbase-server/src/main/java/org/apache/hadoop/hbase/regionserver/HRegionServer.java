@@ -617,7 +617,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     } catch (IllegalAccessException e) {
       throw new IllegalArgumentException(e);
     }
-    
+
     this.rpcServer = new RpcServer(this, name, getServices(),
       /*HBaseRPCErrorHandler.class, OnlineRegions.class},*/
       initialIsa, // BindAddress is IP we got for this server.
@@ -626,7 +626,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
     // Set our address.
     this.isa = this.rpcServer.getListenerAddress();
-    
+
     this.rpcServer.setErrorHandler(this);
     this.startcode = System.currentTimeMillis();
     serverName = ServerName.valueOf(isa.getHostName(), isa.getPort(), startcode);
@@ -686,7 +686,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         AdminProtos.AdminService.BlockingInterface.class));
     return bssi;
   }
-  
+
   /**
    * Run test on configured codecs to make sure supporting libs are in place.
    * @param c
@@ -1309,7 +1309,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       boolean useHBaseChecksum = conf.getBoolean(HConstants.HBASE_CHECKSUM_VERIFICATION, true);
       this.fs = new HFileSystem(this.conf, useHBaseChecksum);
       this.rootDir = FSUtils.getRootDir(this.conf);
-      this.tableDescriptors = new FSTableDescriptors(this.conf, this.fs, this.rootDir, true);
+      this.tableDescriptors = new FSTableDescriptors(this.conf, this.fs, this.rootDir, true, false);
       this.hlog = setupWALAndReplication();
       // Init in here rather than in constructor after thread name has been set
       this.metricsRegionServer = new MetricsRegionServer(new MetricsRegionServerWrapperImpl(this));
@@ -2770,10 +2770,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       String regionNameStr = regionName == null?
         encodedRegionName: Bytes.toStringBinary(regionName);
       if (isOpening != null && isOpening.booleanValue()) {
-        throw new RegionOpeningException("Region " + regionNameStr + 
+        throw new RegionOpeningException("Region " + regionNameStr +
           " is opening on " + this.serverNameFromMasterPOV);
       }
-      throw new NotServingRegionException("Region " + regionNameStr + 
+      throw new NotServingRegionException("Region " + regionNameStr +
         " is not online on " + this.serverNameFromMasterPOV);
     }
     return region;
@@ -3416,7 +3416,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     }
     return result;
   }
-  
+
   @Override
   public CoprocessorServiceResponse execRegionServerService(final RpcController controller,
       final CoprocessorServiceRequest serviceRequest) throws ServiceException {
@@ -3464,7 +3464,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       throw new ServiceException(ie);
     }
   }
-  
+
   /**
    * @return Return the object that implements the replication
    * source service.
@@ -3856,7 +3856,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
                 region.getEncodedName())) {
             // check if current region open is for distributedLogReplay. This check is to support
             // rolling restart/upgrade where we want to Master/RS see same configuration
-            if (!regionOpenInfo.hasOpenForDistributedLogReplay() 
+            if (!regionOpenInfo.hasOpenForDistributedLogReplay()
                   || regionOpenInfo.getOpenForDistributedLogReplay()) {
               this.recoveringRegions.put(region.getEncodedName(), null);
             } else {
@@ -4809,7 +4809,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         minSeqIdForLogReplay = storeSeqIdForReplay;
       }
     }
-    
+
     try {
       long lastRecordedFlushedSequenceId = -1;
       String nodePath = ZKUtil.joinZNode(this.zooKeeper.recoveringRegionsZNode,
@@ -4833,7 +4833,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         LOG.warn("Can't find failed region server for recovering region " + region.getEncodedName());
       }
     } catch (NoNodeException ignore) {
-      LOG.debug("Region " + region.getEncodedName() + 
+      LOG.debug("Region " + region.getEncodedName() +
         " must have completed recovery because its recovery znode has been removed", ignore);
     }
   }
