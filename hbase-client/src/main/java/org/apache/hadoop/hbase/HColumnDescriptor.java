@@ -726,8 +726,23 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   /**
    * @return Whether KV tags should be compressed along with DataBlockEncoding. When no
    *         DataBlockEncoding is been used, this is having no effect.
+   * @deprecated Use {@link #isCompressTags()} instead
    */
+  @Deprecated
   public boolean shouldCompressTags() {
+    String compressTagsStr = getValue(COMPRESS_TAGS);
+    boolean compressTags = DEFAULT_COMPRESS_TAGS;
+    if (compressTagsStr != null) {
+      compressTags = Boolean.valueOf(compressTagsStr);
+    }
+    return compressTags;
+  }
+
+  /**
+   * @return Whether KV tags should be compressed along with DataBlockEncoding. When no
+   *         DataBlockEncoding is been used, this is having no effect.
+   */
+  public boolean isCompressTags() {
     String compressTagsStr = getValue(COMPRESS_TAGS);
     boolean compressTags = DEFAULT_COMPRESS_TAGS;
     if (compressTagsStr != null) {
@@ -886,8 +901,17 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
 
   /**
    * @return true if we should cache data blocks on write
+   * @deprecated Use {@link #isCacheDataOnWrite()} instead
    */
+  @Deprecated
   public boolean shouldCacheDataOnWrite() {
+    return setAndGetBoolean(CACHE_DATA_ON_WRITE, DEFAULT_CACHE_DATA_ON_WRITE);
+  }
+
+  /**
+   * @return true if we should cache data blocks on write
+   */
+  public boolean isCacheDataOnWrite() {
     return setAndGetBoolean(CACHE_DATA_ON_WRITE, DEFAULT_CACHE_DATA_ON_WRITE);
   }
 
@@ -902,8 +926,18 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   /**
    * @return true if we should cache data blocks in the L1 cache (if block cache deploy
    * has more than one tier; e.g. we are using CombinedBlockCache).
+   * @deprecated Use {@link #isCacheDataInL1()} instead
    */
+  @Deprecated
   public boolean shouldCacheDataInL1() {
+    return setAndGetBoolean(CACHE_DATA_IN_L1, DEFAULT_CACHE_DATA_IN_L1);
+  }
+
+  /**
+   * @return true if we should cache data blocks in the L1 cache (if block cache deploy has more
+   *         than one tier; e.g. we are using CombinedBlockCache).
+   */
+  public boolean isCacheDataInL1() {
     return setAndGetBoolean(CACHE_DATA_IN_L1, DEFAULT_CACHE_DATA_IN_L1);
   }
 
@@ -924,8 +958,17 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
 
   /**
    * @return true if we should cache index blocks on write
+   * @deprecated Use {@link #isCacheIndexesOnWrite()} instead
    */
+  @Deprecated
   public boolean shouldCacheIndexesOnWrite() {
+    return setAndGetBoolean(CACHE_INDEX_ON_WRITE, DEFAULT_CACHE_INDEX_ON_WRITE);
+  }
+
+  /**
+   * @return true if we should cache index blocks on write
+   */
+  public boolean isCacheIndexesOnWrite() {
     return setAndGetBoolean(CACHE_INDEX_ON_WRITE, DEFAULT_CACHE_INDEX_ON_WRITE);
   }
 
@@ -939,8 +982,17 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
 
   /**
    * @return true if we should cache bloomfilter blocks on write
+   * @deprecated Use {@link #isCacheBloomsOnWrite()} instead
    */
+  @Deprecated
   public boolean shouldCacheBloomsOnWrite() {
+    return setAndGetBoolean(CACHE_BLOOMS_ON_WRITE, DEFAULT_CACHE_BLOOMS_ON_WRITE);
+  }
+
+  /**
+   * @return true if we should cache bloomfilter blocks on write
+   */
+  public boolean isCacheBloomsOnWrite() {
     return setAndGetBoolean(CACHE_BLOOMS_ON_WRITE, DEFAULT_CACHE_BLOOMS_ON_WRITE);
   }
 
@@ -955,8 +1007,17 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   /**
    * @return true if we should evict cached blocks from the blockcache on
    * close
+   * @deprecated {@link #isEvictBlocksOnClose()} instead
    */
+  @Deprecated
   public boolean shouldEvictBlocksOnClose() {
+    return setAndGetBoolean(EVICT_BLOCKS_ON_CLOSE, DEFAULT_EVICT_BLOCKS_ON_CLOSE);
+  }
+
+  /**
+   * @return true if we should evict cached blocks from the blockcache on close
+   */
+  public boolean isEvictBlocksOnClose() {
     return setAndGetBoolean(EVICT_BLOCKS_ON_CLOSE, DEFAULT_EVICT_BLOCKS_ON_CLOSE);
   }
 
@@ -971,8 +1032,17 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
 
   /**
    * @return true if we should prefetch blocks into the blockcache on open
+   * @deprecated Use {@link #isPrefetchBlocksOnOpen()} instead
    */
+  @Deprecated
   public boolean shouldPrefetchBlocksOnOpen() {
+    return setAndGetBoolean(PREFETCH_BLOCKS_ON_OPEN, DEFAULT_PREFETCH_BLOCKS_ON_OPEN);
+  }
+
+  /**
+   * @return true if we should prefetch blocks into the blockcache on open
+   */
+  public boolean isPrefetchBlocksOnOpen() {
     return setAndGetBoolean(PREFETCH_BLOCKS_ON_OPEN, DEFAULT_PREFETCH_BLOCKS_ON_OPEN);
   }
 
