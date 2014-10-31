@@ -1341,6 +1341,8 @@ public class HRegionServer extends HasThread implements
           (int) (store.getTotalStaticBloomSize() / 1024);
       }
     }
+    float dataLocality =
+        r.getHDFSBlocksDistribution().getBlockLocalityIndex(serverName.getHostname());
     if (regionLoadBldr == null) {
       regionLoadBldr = RegionLoad.newBuilder();
     }
@@ -1363,7 +1365,8 @@ public class HRegionServer extends HasThread implements
       .setWriteRequestsCount(r.writeRequestsCount.get())
       .setTotalCompactingKVs(totalCompactingKVs)
       .setCurrentCompactedKVs(currentCompactedKVs)
-      .setCompleteSequenceId(r.lastFlushSeqId);
+      .setCompleteSequenceId(r.lastFlushSeqId)
+      .setDataLocality(dataLocality);
 
     return regionLoadBldr.build();
   }
