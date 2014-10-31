@@ -1398,6 +1398,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           (int) (store.getTotalStaticBloomSize() / 1024);
       }
     }
+    float dataLocality =
+        r.getHDFSBlocksDistribution().getBlockLocalityIndex(serverName.getHostname());
     if (regionLoadBldr == null) {
       regionLoadBldr = RegionLoad.newBuilder();
     }
@@ -1420,7 +1422,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       .setWriteRequestsCount(r.writeRequestsCount.get())
       .setTotalCompactingKVs(totalCompactingKVs)
       .setCurrentCompactedKVs(currentCompactedKVs)
-      .setCompleteSequenceId(r.completeSequenceId);
+      .setCompleteSequenceId(r.completeSequenceId)
+      .setDataLocality(dataLocality);
 
     return regionLoadBldr.build();
   }

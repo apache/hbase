@@ -42,7 +42,7 @@
   HBaseAdmin hbadmin = new HBaseAdmin(conf);
   String fqtn = request.getParameter("name");
   HTable table = new HTable(conf, fqtn);
-  String tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Requests</th></tr>";
+  String tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Locality</th><th>Requests</th></tr>";
   ServerName rl = master.getCatalogTracker().getMetaLocation();
   boolean showFragmentation = conf.getBoolean("hbase.master.ui.fragmentation.enabled", false);
   boolean readOnly = conf.getBoolean("hbase.master.ui.readonly", false);
@@ -202,9 +202,10 @@
 <tr>
   <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
     <td><a href="<%= url %>"><%= metaLocation.getHostname().toString() + ":" + master.getRegionServerInfoPort(metaLocation) %></a></td>
-    <td>-</td>
     <td><%= escapeXml(Bytes.toString(meta.getStartKey())) %></td>
     <td><%= escapeXml(Bytes.toString(meta.getEndKey())) %></td>
+    <td>-</td>
+    <td>-</td>
 </tr>
 <%  } %>
 </table>
@@ -258,7 +259,7 @@
     HRegionInfo regionInfo = hriEntry.getKey();
     ServerName addr = hriEntry.getValue();
     long req = 0;
-
+    float locality = 0.0f;
     String urlRegionServer = null;
 
     if (addr != null) {
@@ -267,6 +268,7 @@
         Map<byte[], RegionLoad> map = sl.getRegionsLoad();
         if (map.containsKey(regionInfo.getRegionName())) {
           req = map.get(regionInfo.getRegionName()).getRequestsCount();
+          locality = map.get(regionInfo.getRegionName()).getDataLocality();
         }
         Integer i = regDistribution.get(addr);
         if (null == i) i = Integer.valueOf(0);
@@ -292,6 +294,7 @@
   %>
   <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getStartKey())) %></td>
   <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getEndKey())) %></td>
+  <td><%= locality%></td>
   <td><%= req%></td>
 </tr>
 <% } %>
