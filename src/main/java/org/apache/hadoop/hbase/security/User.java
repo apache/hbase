@@ -159,6 +159,27 @@ public abstract class User {
   }
 
   /**
+   * Executes the given action as the login user
+   * @param action
+   * @return
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  @SuppressWarnings({ "rawtypes", "unchecked" })
+  public static <T> T runAsLoginUser(PrivilegedExceptionAction<T> action) throws IOException {
+    return doAsUser(UserGroupInformation.getLoginUser(), action);
+  }
+
+  private static <T> T doAsUser(UserGroupInformation ugi,
+      PrivilegedExceptionAction<T> action) throws IOException {
+    try {
+      return ugi.doAs(action);
+    } catch (InterruptedException ie) {
+      throw new IOException(ie);
+    }
+  }
+
+  /**
    * Wraps an underlying {@code UserGroupInformation} instance.
    * @param ugi The base Hadoop user
    * @return User

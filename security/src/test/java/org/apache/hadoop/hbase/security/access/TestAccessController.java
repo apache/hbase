@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -1960,6 +1961,152 @@ public class TestAccessController {
 
     verifyDenied(deleteTableAction, USER_RW, USER_RO, USER_NONE);
     verifyAllowed(deleteTableAction, tableAdmin);
+  }
+
+  @Test
+  public void testCreateWithCorrectOwner() throws Exception {
+    final byte[] tableName = Bytes.toBytes("testCreateWithCorrectOwner");
+    
+    // Create a test user
+    User testUser = User.createUserForTesting(TEST_UTIL.getConfiguration(), "TestUser",
+      new String[0]);
+
+    // Grant the test user the ability to create tables
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(
+          AccessControllerProtocol.class, AccessControlLists.ACL_TABLE_NAME);
+      protocol.grant(new UserPermission(Bytes.toBytes(testUser.getShortName()),
+        Permission.Action.CREATE));
+    } finally {
+      acl.close();
+    }
+
+    verifyAllowed(new PrivilegedExceptionAction() {
+      @Override
+      public Object run() throws Exception {
+        HTableDescriptor desc = new HTableDescriptor(tableName);
+        desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
+        HBaseAdmin admin = new HBaseAdmin(conf);
+        try {
+          admin.createTable(desc);
+        } finally {
+          admin.close();
+        }
+        return null;
+      }
+    }, testUser);
+    TEST_UTIL.waitTableEnabled(tableName, 5000);
+
+    // Verify that owner permissions have been granted to the test user on the
+    // table just created
+    List<TablePermission> perms = AccessControlLists.getTablePermissions(conf, tableName)
+       .get(testUser.getShortName());
+    assertNotNull(perms);
+    assertFalse(perms.isEmpty());
+    // Should be RWXCA
+    assertTrue(perms.get(0).implies(Permission.Action.READ));
+    assertTrue(perms.get(0).implies(Permission.Action.WRITE));
+    assertTrue(perms.get(0).implies(Permission.Action.EXEC));
+    assertTrue(perms.get(0).implies(Permission.Action.CREATE));
+    assertTrue(perms.get(0).implies(Permission.Action.ADMIN));
+  }
+
+  @Test
+  public void testACLTableAccess() throws Exception {
+    final Configuration conf = TEST_UTIL.getConfiguration();
+
+    final byte[] tableName = Bytes.toBytes("testACLTableAccess");
+    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
+    admin.createTable(htd);
+    TEST_UTIL.waitTableEnabled(tableName, 5000);
+
+    // Global users
+    User globalRead = User.createUserForTesting(conf, "globalRead", new String[0]);
+    User globalWrite = User.createUserForTesting(conf, "globalWrite", new String[0]);
+    User globalCreate = User.createUserForTesting(conf, "globalCreate", new String[0]);
+    User globalAdmin = User.createUserForTesting(conf, "globalAdmin", new String[0]);
+    
+    // Table users
+    User tableRead = User.createUserForTesting(conf, "tableRead", new String[0]);
+    User tableWrite = User.createUserForTesting(conf, "tableWrite", new String[0]);
+    User tableCreate = User.createUserForTesting(conf, "tableCreate", new String[0]);
+    User tableAdmin = User.createUserForTesting(conf, "tableAdmin", new String[0]);
+
+    // Set up grants
+    HTable acl = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+    try {
+      AccessControllerProtocol protocol = acl.coprocessorProxy(
+        AccessControllerProtocol.class, AccessControlLists.ACL_TABLE_NAME);
+      protocol.grant(new UserPermission(Bytes.toBytes(globalRead.getShortName()), Action.READ));
+      protocol.grant(new UserPermission(Bytes.toBytes(globalWrite.getShortName()), Action.WRITE));
+      protocol.grant(new UserPermission(Bytes.toBytes(globalCreate.getShortName()),
+        Action.CREATE));
+      protocol.grant(new UserPermission(Bytes.toBytes(globalAdmin.getShortName()),
+        Action.ADMIN));
+      protocol.grant(new UserPermission(Bytes.toBytes(tableRead.getShortName()), tableName,
+        null, Action.READ));
+      protocol.grant(new UserPermission(Bytes.toBytes(tableWrite.getShortName()), tableName,
+        null, Action.WRITE));
+      protocol.grant(new UserPermission(Bytes.toBytes(tableCreate.getShortName()), tableName,
+        null, Action.CREATE));
+      protocol.grant(new UserPermission(Bytes.toBytes(tableAdmin.getShortName()), tableName,
+        null, Action.ADMIN));
+    } finally {
+      acl.close();
+    }
+
+    // Write tests
+
+    PrivilegedExceptionAction writeAction = new PrivilegedExceptionAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        try {
+          t.put(new Put(Bytes.toBytes("test")).add(AccessControlLists.ACL_LIST_FAMILY,
+            Bytes.toBytes("q"), Bytes.toBytes("value")));
+          return null;
+        } finally {
+          t.close();
+        }
+      }
+    };
+
+    // All writes to ACL table denied except for GLOBAL WRITE permission and superuser
+
+    verifyDenied(writeAction, globalAdmin, globalCreate, globalRead);
+    verifyDenied(writeAction, tableAdmin, tableCreate, tableRead, tableWrite);
+    verifyAllowed(writeAction, SUPERUSER, globalWrite);
+
+    // Read tests
+
+    PrivilegedExceptionAction scanAction = new PrivilegedExceptionAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        try {
+          ResultScanner s = t.getScanner(new Scan());
+          try {
+            for (Result r = s.next(); r != null; r = s.next()) {
+              // do nothing
+            }
+          } finally {
+            s.close();
+          }
+          return null;
+        } finally {
+          t.close();
+        }
+      }
+    };
+
+    // All reads from ACL table denied except for GLOBAL READ and superuser
+
+    verifyDenied(scanAction, globalAdmin, globalCreate, globalWrite);
+    verifyDenied(scanAction, tableCreate, tableAdmin, tableRead, tableWrite);
+    verifyAllowed(scanAction, SUPERUSER, globalRead);
   }
 
 }
