@@ -93,7 +93,7 @@ public class VersionInfo {
   static String[] versionReport() {
     return new String[] {
       "HBase " + getVersion(),
-      "Source code repository " + getUrl() + " -r " + getRevision(),
+      "Source code repository " + getUrl() + " revision=" + getRevision(),
       "Compiled by " + getUser() + " on " + getDate(),
       "From source with checksum " + getSrcChecksum()
       };
