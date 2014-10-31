@@ -183,6 +183,10 @@ public class IntegrationTestMTTR {
   }
 
   private static void setupActions() throws IOException {
+    // allow a little more time for RS restart actions because RS start depends on having a master
+    // to report to and the master is also being monkeyed.
+    util.getConfiguration().setLong(Action.START_RS_TIMEOUT_KEY, 3 * 60 * 1000);
+
     // Set up the action that will restart a region server holding a region from our table
     // because this table should only have one region we should be good.
     restartRSAction = new RestartRsHoldingTableAction(sleepTime, tableName.getNameAsString());
