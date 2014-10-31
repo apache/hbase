@@ -186,17 +186,33 @@ public class FSTableDescriptors implements TableDescriptors {
   public Map<String, HTableDescriptor> getAll()
   throws IOException {
     Map<String, HTableDescriptor> htds = new TreeMap<String, HTableDescriptor>();
-    List<Path> tableDirs = FSUtils.getTableDirs(fs, rootdir);
-    for (Path d: tableDirs) {
-      HTableDescriptor htd = null;
-      try {
-        htd = get(FSUtils.getTableName(d));
-      } catch (FileNotFoundException fnfe) {
-        // inability of retrieving one HTD shouldn't stop getting the remaining
-        LOG.warn("Trouble retrieving htd", fnfe);
+
+    if (fsvisited && usecache) {
+      for (Map.Entry<TableName, HTableDescriptor> entry: this.cache.entrySet()) {
+        htds.put(entry.getKey().toString(), entry.getValue());
       }
-      if (htd == null) continue;
-      htds.put(htd.getTableName().getNameAsString(), htd);
+      // add hbase:meta to the response
+      htds.put(HTableDescriptor.META_TABLEDESC.getTableName().getNameAsString(),
+        HTableDescriptor.META_TABLEDESC);
+    } else {
+      LOG.debug("Fetching table descriptors from the filesystem.");
+      boolean allvisited = true;
+      for (Path d : FSUtils.getTableDirs(fs, rootdir)) {
+        HTableDescriptor htd = null;
+        try {
+          htd = get(FSUtils.getTableName(d));
+        } catch (FileNotFoundException fnfe) {
+          // inability of retrieving one HTD shouldn't stop getting the remaining
+          LOG.warn("Trouble retrieving htd", fnfe);
+        }
+        if (htd == null) {
+          allvisited = false;
+          continue;
+        } else {
+          htds.put(htd.getTableName().getNameAsString(), htd);
+        }
+        fsvisited = allvisited;
+      }
     }
     return htds;
   }
