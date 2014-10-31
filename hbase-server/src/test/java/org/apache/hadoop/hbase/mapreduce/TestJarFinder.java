@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.mapreduce.hadoopbackport;
+package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.SmallTests;
