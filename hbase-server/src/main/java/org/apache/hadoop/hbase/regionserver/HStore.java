@@ -976,7 +976,7 @@ public class HStore implements Store {
                                 .withIncludesMvcc(includeMVCCReadpoint)
                                 .withIncludesTags(includesTag)
                                 .withCompression(compression)
-                                .withCompressTags(family.shouldCompressTags())
+                                .withCompressTags(family.isCompressTags())
                                 .withChecksumType(checksumType)
                                 .withBytesPerCheckSum(bytesPerChecksum)
                                 .withBlockSize(blocksize)
