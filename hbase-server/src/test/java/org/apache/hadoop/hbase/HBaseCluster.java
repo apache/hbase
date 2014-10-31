@@ -95,7 +95,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
   }
 
   /**
-   * Returns an {@link MasterAdminService.BlockingInterface} to the active master
+   * Returns an {@link MasterService.BlockingInterface} to the active master
    */
   public abstract MasterService.BlockingInterface getMaster()
   throws IOException;
@@ -150,7 +150,8 @@ public abstract class HBaseCluster implements Closeable, Configurable {
       }
       Threads.sleep(100);
     }
-    throw new IOException("did timeout waiting for region server to start:" + hostname);
+    throw new IOException("did timeout " + timeout + "ms waiting for region server to start: "
+        + hostname);
   }
 
   /**
