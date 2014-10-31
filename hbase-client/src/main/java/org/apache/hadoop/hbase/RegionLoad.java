@@ -161,6 +161,15 @@ public class RegionLoad {
   }
 
   /**
+   * @return the data locality of region in the regionserver.
+   */
+  public float getDataLocality() {
+    if (regionLoadPB.hasDataLocality()) {
+      return regionLoadPB.getDataLocality();
+    }
+    return 0.0f;
+  }
+  /**
    * @see java.lang.Object#toString()
    */
   @Override
@@ -205,6 +214,8 @@ public class RegionLoad {
         compactionProgressPct);
     sb = Strings.appendKeyValue(sb, "completeSequenceId",
         this.getCompleteSequenceId());
+    sb = Strings.appendKeyValue(sb, "dataLocality",
+        this.getDataLocality());
     return sb.toString();
   }
 }
