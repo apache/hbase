@@ -216,7 +216,7 @@ public class CompactionRequest implements Comparable<CompactionRequest> {
    */
   public boolean isRetainDeleteMarkers() {
     return (this.retainDeleteMarkers != null) ? this.retainDeleteMarkers.booleanValue()
-        : isAllFiles();
+        : !isAllFiles();
   }
 
   @Override
