@@ -514,7 +514,7 @@ public class HRegionServer extends HasThread implements
     this.fs = new HFileSystem(this.conf, useHBaseChecksum);
     this.rootDir = FSUtils.getRootDir(this.conf);
     this.tableDescriptors = new FSTableDescriptors(
-      this.fs, this.rootDir, !canUpdateTableDescriptor(), false);
+      this.fs, this.rootDir, !canUpdateTableDescriptor());
 
     service = new ExecutorService(getServerName().toShortString());
     spanReceiverHost = SpanReceiverHost.getInstance(getConfiguration());
@@ -608,7 +608,7 @@ public class HRegionServer extends HasThread implements
     return ConnectionUtils.createShortCircuitHConnection(
       HConnectionManager.getConnection(conf), serverName, rpcServices, rpcServices);
   }
-
+  
   /**
    * Run test on configured codecs to make sure supporting libs are in place.
    * @param c
@@ -3011,7 +3011,7 @@ public class HRegionServer extends HasThread implements
     }
     return result;
   }
-
+  
   public CoprocessorServiceResponse execRegionServerService(final RpcController controller,
       final CoprocessorServiceRequest serviceRequest) throws ServiceException {
     try {
@@ -3058,7 +3058,7 @@ public class HRegionServer extends HasThread implements
       throw new ServiceException(ie);
     }
   }
-
+  
   /**
    * @return The cache config instance used by the regionserver.
    */
@@ -3072,7 +3072,7 @@ public class HRegionServer extends HasThread implements
   protected ConfigurationManager getConfigurationManager() {
     return configurationManager;
   }
-
+    
   /**
    * Reload the configuration from disk.
    */
@@ -3080,6 +3080,6 @@ public class HRegionServer extends HasThread implements
     LOG.info("Reloading the configuration from disk.");
     // Reload the configuration from disk.
     conf.reloadConfiguration();
-    configurationManager.notifyAllObservers(conf);
+    configurationManager.notifyAllObservers(conf);  
   }
 }

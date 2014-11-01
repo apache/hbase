@@ -214,8 +214,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   MasterCoprocessorHost cpHost;
 
-  private final boolean preLoadTableDescriptors;
-
   // Time stamps for when a hmaster became active
   private long masterActiveTime;
 
@@ -287,11 +285,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     this.metricsMaster = new MetricsMaster( new MetricsMasterWrapperImpl(this));
 
-    // preload table descriptor at startup
-    this.preLoadTableDescriptors = conf.getBoolean("hbase.master.preload.tabledescriptors", true);
-
     // Do we publish the status?
-
+    
     boolean shouldPublish = conf.getBoolean(HConstants.STATUS_PUBLISHED,
         HConstants.STATUS_PUBLISHED_DEFAULT);
     Class<? extends ClusterStatusPublisher.Publisher> publisherClass =
@@ -509,15 +504,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.masterActiveTime = System.currentTimeMillis();
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
     this.fileSystemManager = new MasterFileSystem(this, this);
-
-    // enable table descriptors cache
-    this.tableDescriptors.setCacheOn();
-
-    // warm-up HTDs cache on master initialization
-    if (preLoadTableDescriptors) {
-      status.setStatus("Pre-loading table descriptors");
-      this.tableDescriptors.getAll();
-    }
 
     // publish cluster ID
     status.setStatus("Publishing Cluster ID in ZooKeeper");
