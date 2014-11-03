@@ -2279,22 +2279,31 @@ hbase> restore_snapshot 'myTableSnapshot-122112'
         xml:id="ops.capacity.regions.count">
         <title>Number of regions per RS - upper bound</title>
         <para>In production scenarios, where you have a lot of data, you are normally concerned with
-          the maximum number of regions you can have per server. <xref
-            linkend="too_many_regions" /> has technical discussion on the subject; in short, maximum
-          number of regions is mostly determined by memstore memory usage. Each region has its own
-          memstores; these grow up to a configurable size; usually in 128-256Mb range, see <xref
-            linkend="hbase.hregion.memstore.flush.size" />. There's one memstore per column family
-          (so there's only one per region if there's one CF in the table). RS dedicates some
-          fraction of total memory (see <xref
-            linkend="hbase.regionserver.global.memstore.size" />) to region memstores. If this
-          memory is exceeded (too much memstore usage), undesirable consequences such as
-          unresponsive server, or later compaction storms, can result. Thus, a good starting point
-          for the number of regions per RS (assuming one table) is:</para>
+          the maximum number of regions you can have per server. <xref linkend="too_many_regions"/>
+          has technical discussion on the subject. Basically, the maximum number of regions is
+          mostly determined by memstore memory usage. Each region has its own memstores; these grow
+          up to a configurable size; usually in 128-256 MB range, see <xref
+            linkend="hbase.hregion.memstore.flush.size"/>. One memstore exists per column family (so
+          there's only one per region if there's one CF in the table). The RS dedicates some
+          fraction of total memory to its memstores (see <xref
+            linkend="hbase.regionserver.global.memstore.size"/>). If this memory is exceeded (too
+          much memstore usage), it can cause undesirable consequences such as unresponsive server or
+          compaction storms. A good starting point for the number of regions per RS (assuming one
+          table) is:</para>
 
-        <programlisting>(RS memory)*(total memstore fraction)/((memstore size)*(# column families))</programlisting>
-        <para> E.g. if RS has 16Gb RAM, with default settings, it is 16384*0.4/128 ~ 51 regions per
-          RS is a starting point. The formula can be extended to multiple tables; if they all have
-          the same configuration, just use total number of families.</para>
+        <programlisting>((RS memory) * (total memstore fraction)) / ((memstore size)*(# column families))</programlisting>
+        <para>This formula is pseudo-code. Here are two formulas using the actual tunable
+          parameters, first for HBase 0.98+ and second for HBase 0.94.x.</para>
+        <itemizedlist>
+          <listitem><para>HBase 0.98.x:<code>((RS Xmx) * hbase.regionserver.global.memstore.size) /
+                (hbase.hregion.memstore.flush.size * (# column families))</code></para></listitem>
+          <listitem><para>HBase 0.94.x:<code>((RS Xmx) * hbase.regionserver.global.memstore.upperLimit) /
+                (hbase.hregion.memstore.flush.size * (# column families))</code></para></listitem>
+        </itemizedlist>
+        <para>If a given RegionServer has 16 GB of RAM, with default settings, the formula works out
+          to 16384*0.4/128 ~ 51 regions per RS is a starting point. The formula can be extended to
+          multiple tables; if they all have the same configuration, just use the total number of
+          families.</para>
         <para>This number can be adjusted; the formula above assumes all your regions are filled at
           approximately the same rate. If only a fraction of your regions are going to be actively
           written to, you can divide the result by that fraction to get a larger region count. Then,
