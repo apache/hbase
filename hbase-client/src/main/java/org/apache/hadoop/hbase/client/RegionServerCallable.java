@@ -129,7 +129,7 @@ public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
 
   @Override
   public String getExceptionMessageAdditionalDetail() {
-    return "row '" + Bytes.toString(row) + "' on table '" + tableName;
+    return "row '" + Bytes.toString(row) + "' on table '" + tableName + "' at " + location;
   }
 
   @Override
