@@ -213,6 +213,7 @@ public class Scan extends Query {
     loadColumnFamiliesOnDemand = scan.getLoadColumnFamiliesOnDemandValue();
     consistency = scan.getConsistency();
     reversed = scan.isReversed();
+    small = scan.isSmall();
     TimeRange ctr = scan.getTimeRange();
     tr = new TimeRange(ctr.getMin(), ctr.getMax());
     Map<byte[], NavigableSet<byte[]>> fams = scan.getFamilyMap();
