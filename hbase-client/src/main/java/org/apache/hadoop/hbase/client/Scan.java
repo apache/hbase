@@ -211,6 +211,7 @@ public class Scan extends Query {
     TimeRange ctr = scan.getTimeRange();
     tr = new TimeRange(ctr.getMin(), ctr.getMax());
     reversed = scan.isReversed();
+    small = scan.isSmall();
     Map<byte[], NavigableSet<byte[]>> fams = scan.getFamilyMap();
     for (Map.Entry<byte[],NavigableSet<byte[]>> entry : fams.entrySet()) {
       byte [] fam = entry.getKey();
