@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -97,6 +98,7 @@ public class TestSeekTo extends HBaseTestCase {
     return ncTFile;
   }
 
+  @Test
   public void testSeekBefore() throws Exception {
     testSeekBeforeInternals(TagUsage.NO_TAG);
     testSeekBeforeInternals(TagUsage.ONLY_TAG);
@@ -138,6 +140,7 @@ public class TestSeekTo extends HBaseTestCase {
     reader.close();
   }
 
+  @Test
   public void testSeekBeforeWithReSeekTo() throws Exception {
     testSeekBeforeWithReSeekToInternals(TagUsage.NO_TAG);
     testSeekBeforeWithReSeekToInternals(TagUsage.ONLY_TAG);
@@ -227,6 +230,7 @@ public class TestSeekTo extends HBaseTestCase {
     assertEquals("k", toRowStr(scanner.getKeyValue()));
   }
 
+  @Test
   public void testSeekTo() throws Exception {
     testSeekToInternals(TagUsage.NO_TAG);
     testSeekToInternals(TagUsage.ONLY_TAG);
@@ -255,6 +259,8 @@ public class TestSeekTo extends HBaseTestCase {
 
     reader.close();
   }
+
+  @Test
   public void testBlockContainingKey() throws Exception {
     testBlockContainingKeyInternals(TagUsage.NO_TAG);
     testBlockContainingKeyInternals(TagUsage.ONLY_TAG);

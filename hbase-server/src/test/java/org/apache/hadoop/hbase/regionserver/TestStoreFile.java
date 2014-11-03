@@ -58,6 +58,9 @@ import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
@@ -78,12 +81,12 @@ public class TestStoreFile extends HBaseTestCase {
   private static final int CKBYTES = 512;
   private static String TEST_FAMILY = "cf";
 
-  @Override
+  @Before
   public void setUp() throws Exception {
     super.setUp();
   }
 
-  @Override
+  @After
   public void tearDown() throws Exception {
     super.tearDown();
   }
@@ -93,6 +96,7 @@ public class TestStoreFile extends HBaseTestCase {
    * using two HalfMapFiles.
    * @throws Exception
    */
+  @Test
   public void testBasicHalfMapFile() throws Exception {
     final HRegionInfo hri =
         new HRegionInfo(TableName.valueOf("testBasicHalfMapFileTb"));
@@ -145,6 +149,7 @@ public class TestStoreFile extends HBaseTestCase {
    * store files in other regions works.
    * @throws IOException
    */
+  @Test
   public void testReference() throws IOException {
     final HRegionInfo hri = new HRegionInfo(TableName.valueOf("testReferenceTb"));
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(
@@ -188,6 +193,7 @@ public class TestStoreFile extends HBaseTestCase {
     assertTrue(Bytes.equals(kv.getRow(), finalRow));
   }
 
+  @Test
   public void testHFileLink() throws IOException {
     final HRegionInfo hri = new HRegionInfo(TableName.valueOf("testHFileLinkTb"));
     // force temp data in hbase/target/test-data instead of /tmp/hbase-xxxx/
@@ -230,6 +236,7 @@ public class TestStoreFile extends HBaseTestCase {
    * This test creates an hfile and then the dir structures and files to verify that references
    * to hfilelinks (created by snapshot clones) can be properly interpreted.
    */
+  @Test
   public void testReferenceToHFileLink() throws IOException {
     // force temp data in hbase/target/test-data instead of /tmp/hbase-xxxx/
     Configuration testConf = new Configuration(this.conf);
@@ -494,6 +501,7 @@ public class TestStoreFile extends HBaseTestCase {
   
   private static final int BLOCKSIZE_SMALL = 8192;
 
+  @Test
   public void testBloomFilter() throws Exception {
     FileSystem fs = FileSystem.getLocal(conf);
     conf.setFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE, (float) 0.01);
@@ -514,6 +522,7 @@ public class TestStoreFile extends HBaseTestCase {
     bloomWriteRead(writer, fs);
   }
 
+  @Test
   public void testDeleteFamilyBloomFilter() throws Exception {
     FileSystem fs = FileSystem.getLocal(conf);
     conf.setFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE, (float) 0.01);
@@ -576,6 +585,7 @@ public class TestStoreFile extends HBaseTestCase {
   /**
    * Test for HBASE-8012
    */
+  @Test
   public void testReseek() throws Exception {
     // write the file
     Path f = new Path(ROOT_DIR, getName());
@@ -600,6 +610,7 @@ public class TestStoreFile extends HBaseTestCase {
     assertNotNull("Intial reseek should position at the beginning of the file", s.peek());
   }
 
+  @Test
   public void testBloomTypes() throws Exception {
     float err = (float) 0.01;
     FileSystem fs = FileSystem.getLocal(conf);
@@ -688,6 +699,7 @@ public class TestStoreFile extends HBaseTestCase {
     }
   }
 
+  @Test
   public void testSeqIdComparator() {
     assertOrdering(StoreFile.Comparators.SEQ_ID,
         mockStoreFile(true,  100,   1000, -1, "/foo/123"),
@@ -766,6 +778,7 @@ public class TestStoreFile extends HBaseTestCase {
    * Test to ensure correctness when using StoreFile with multiple timestamps
    * @throws IOException
    */
+  @Test
   public void testMultipleTimestamps() throws IOException {
     byte[] family = Bytes.toBytes("familyname");
     byte[] qualifier = Bytes.toBytes("qualifier");
@@ -816,6 +829,7 @@ public class TestStoreFile extends HBaseTestCase {
     assertTrue(!scanner.shouldUseScanner(scan, columns, Long.MIN_VALUE));
   }
 
+  @Test
   public void testCacheOnWriteEvictOnClose() throws Exception {
     Configuration conf = this.conf;
 
@@ -988,6 +1002,7 @@ public class TestStoreFile extends HBaseTestCase {
    * Check if data block encoding information is saved correctly in HFile's
    * file info.
    */
+  @Test
   public void testDataBlockEncodingMetaData() throws IOException {
     // Make up a directory hierarchy that has a regiondir ("7e0102") and familyname.
     Path dir = new Path(new Path(testDir, "7e0102"), "familyname");

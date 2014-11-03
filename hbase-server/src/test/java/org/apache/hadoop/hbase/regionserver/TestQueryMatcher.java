@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({RegionServerTests.class, SmallTests.class})
@@ -64,6 +66,7 @@ public class TestQueryMatcher extends HBaseTestCase {
   KVComparator rowComparator;
   private Scan scan;
 
+  @Before
   public void setUp() throws Exception {
     super.setUp();
     row1 = Bytes.toBytes("row1");
@@ -124,6 +127,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     }
   }
 
+  @Test
   public void testMatch_ExplicitColumns()
   throws IOException {
     //Moving up from the Tracker by using Gets and List<KeyValue> instead
@@ -141,6 +145,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     _testMatch_ExplicitColumns(scan, expected);
   }
 
+  @Test
   public void testMatch_ExplicitColumnsWithLookAhead()
   throws IOException {
     //Moving up from the Tracker by using Gets and List<KeyValue> instead
@@ -161,6 +166,7 @@ public class TestQueryMatcher extends HBaseTestCase {
   }
 
 
+  @Test
   public void testMatch_Wildcard()
   throws IOException {
     //Moving up from the Tracker by using Gets and List<KeyValue> instead
@@ -215,6 +221,7 @@ public class TestQueryMatcher extends HBaseTestCase {
    *
    * @throws IOException
    */
+  @Test
   public void testMatch_ExpiredExplicit()
   throws IOException {
 
@@ -269,6 +276,7 @@ public class TestQueryMatcher extends HBaseTestCase {
    *
    * @throws IOException
    */
+  @Test
   public void testMatch_ExpiredWildcard()
   throws IOException {
 
@@ -314,6 +322,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     }
   }
 
+  @Test
   public void testMatch_PartialRangeDropDeletes() throws Exception {
     // Some ranges.
     testDropDeletes(
