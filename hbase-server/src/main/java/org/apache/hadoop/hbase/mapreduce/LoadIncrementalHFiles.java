@@ -200,6 +200,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         continue;
       }
       Path familyDir = stat.getPath();
+      if (familyDir.getName().equals("_logs")) {
+        // Family name of "_logs" is not supported.
+        // This is due to the presence of history directory under _logs directory
+        // when hadoop-1 is used
+        continue;
+      }
       byte[] family = familyDir.getName().getBytes();
       Path[] hfiles = FileUtil.stat2Paths(fs.listStatus(familyDir));
       for (Path hfile : hfiles) {
@@ -835,6 +841,12 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         continue;
       }
       Path familyDir = stat.getPath();
+      if (familyDir.getName().equals("_logs")) {
+        // Family name of "_logs" is not supported.
+        // This is due to the presence of history directory under _logs directory
+        // when hadoop-1 is used
+        continue;
+      }
       byte[] family = familyDir.getName().getBytes();
 
       hcd = new HColumnDescriptor(family);
