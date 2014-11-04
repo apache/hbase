@@ -402,7 +402,7 @@ public class TestRegionServerNoMaster {
       getRS().rpcServices.closeRegion(null, crr);
       Assert.assertTrue(false);
     } catch (ServiceException expected) {
-      Assert.assertTrue(expected.getCause() instanceof RegionAlreadyInTransitionException);
+      Assert.assertTrue(expected.getCause() instanceof NotServingRegionException);
     }
 
     // The close should have left the ZK state as it is: it's the job the AM to delete it
