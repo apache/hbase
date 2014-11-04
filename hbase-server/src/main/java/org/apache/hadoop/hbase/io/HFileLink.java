@@ -246,15 +246,6 @@ public class HFileLink extends FileLink {
   }
 
   /**
-   * Returns true if the HFileLink exists
-   */
-  public boolean exists(final FileSystem fs) throws IOException {
-    return fs.exists(this.originPath) ||
-           fs.exists(this.tempPath) ||
-           fs.exists(this.archivePath);
-  }
-
-  /**
    * Create a new HFileLink name
    *
    * @param hfileRegionInfo - Linked HFile Region Info

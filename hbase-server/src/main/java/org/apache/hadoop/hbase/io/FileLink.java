@@ -337,22 +337,33 @@ public class FileLink {
   public String toString() {
     StringBuilder str = new StringBuilder(getClass().getName());
     str.append(" locations=[");
-    int i = 0;
-    for (Path location: locations) {
-      if (i++ > 0) str.append(", ");
-      str.append(location.toString());
+    for (int i = 0; i < locations.length; ++i) {
+      if (i > 0) str.append(", ");
+      str.append(locations[i].toString());
     }
     str.append("]");
     return str.toString();
   }
 
   /**
+   * @return true if the file pointed by the link exists
+   */
+  public boolean exists(final FileSystem fs) throws IOException {
+    for (int i = 0; i < locations.length; ++i) {
+      if (fs.exists(locations[i])) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * @return the path of the first available link.
    */
   public Path getAvailablePath(FileSystem fs) throws IOException {
-    for (Path path: locations) {
-      if (fs.exists(path)) {
-        return path;
+    for (int i = 0; i < locations.length; ++i) {
+      if (fs.exists(locations[i])) {
+        return locations[i];
       }
     }
     throw new FileNotFoundException("Unable to open link: " + this);
@@ -366,9 +377,9 @@ public class FileLink {
    * @throws IOException on unexpected error.
    */
   public FileStatus getFileStatus(FileSystem fs) throws IOException {
-    for (Path path: locations) {
+    for (int i = 0; i < locations.length; ++i) {
       try {
-        return fs.getFileStatus(path);
+        return fs.getFileStatus(locations[i]);
       } catch (FileNotFoundException e) {
         // Try another file location
       }
