@@ -97,9 +97,9 @@ public class TruncateTableHandler extends DeleteTableHandler {
     CreateTableHandler.checkAndSetEnablingTable(assignmentManager, tableName);
     try {
       // 1. Create Table Descriptor
-      new FSTableDescriptors(server.getConfiguration())
-        .createTableDescriptorForTableDirectory(tempdir, this.hTableDescriptor, false);
       Path tempTableDir = FSUtils.getTableDir(tempdir, this.tableName);
+      new FSTableDescriptors(server.getConfiguration())
+        .createTableDescriptorForTableDirectory(tempTableDir, this.hTableDescriptor, false);
       Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), this.tableName);
 
       HRegionInfo[] newRegions;
