@@ -31,6 +31,7 @@ import org.apache.zookeeper.KeeperException;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * Handles synchronization of access control list entries and updates
@@ -48,6 +49,7 @@ public class ZKPermissionWatcher extends ZooKeeperListener {
   static final String ACL_NODE = "acl";
   TableAuthManager authManager;
   String aclZNode;
+  CountDownLatch initialized = new CountDownLatch(1);
 
   public ZKPermissionWatcher(ZooKeeperWatcher watcher,
       TableAuthManager authManager, Configuration conf) {
@@ -58,18 +60,32 @@ public class ZKPermissionWatcher extends ZooKeeperListener {
   }
 
   public void start() throws KeeperException {
-    watcher.registerListener(this);
-    if (ZKUtil.watchAndCheckExists(watcher, aclZNode)) {
-      List<ZKUtil.NodeAndData> existing =
-          ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode);
-      if (existing != null) {
-        refreshNodes(existing);
+    try {
+      watcher.registerListener(this);
+      if (ZKUtil.watchAndCheckExists(watcher, aclZNode)) {
+        List<ZKUtil.NodeAndData> existing =
+            ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode);
+        if (existing != null) {
+          refreshNodes(existing);
+        }
       }
+    } finally {
+      initialized.countDown();
+    }
+  }
+
+  private void waitUntilStarted() {
+    try {
+      initialized.await();
+    } catch (InterruptedException e) {
+      LOG.warn("Interrupted while waiting", e);
+      Thread.currentThread().interrupt();
     }
   }
 
   @Override
   public void nodeCreated(String path) {
+    waitUntilStarted();
     if (path.equals(aclZNode)) {
       try {
         List<ZKUtil.NodeAndData> nodes =
@@ -85,6 +101,7 @@ public class ZKPermissionWatcher extends ZooKeeperListener {
 
   @Override
   public void nodeDeleted(String path) {
+    waitUntilStarted();
     if (aclZNode.equals(ZKUtil.getParent(path))) {
       String table = ZKUtil.getNodeName(path);
       if(AccessControlLists.isNamespaceEntry(table)) {
@@ -97,6 +114,7 @@ public class ZKPermissionWatcher extends ZooKeeperListener {
 
   @Override
   public void nodeDataChanged(String path) {
+    waitUntilStarted();
     if (aclZNode.equals(ZKUtil.getParent(path))) {
       // update cache on an existing table node
       String entry = ZKUtil.getNodeName(path);
@@ -115,6 +133,7 @@ public class ZKPermissionWatcher extends ZooKeeperListener {
 
   @Override
   public void nodeChildrenChanged(String path) {
+    waitUntilStarted();
     if (path.equals(aclZNode)) {
       // table permissions changed
       try {
