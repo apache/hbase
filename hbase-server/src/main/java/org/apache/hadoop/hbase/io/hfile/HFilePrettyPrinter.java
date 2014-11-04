@@ -228,6 +228,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
         processFile(fileName);
       } catch (IOException ex) {
         LOG.error("Error reading " + fileName, ex);
+        System.exit(-2);
       }
     }
 
@@ -244,6 +245,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     FileSystem fs = file.getFileSystem(getConf());
     if (!fs.exists(file)) {
       System.err.println("ERROR, file doesnt exist: " + file);
+      System.exit(-2);
     }
 
     HFile.Reader reader = HFile.createReader(fs, file, new CacheConfig(getConf()), getConf());
