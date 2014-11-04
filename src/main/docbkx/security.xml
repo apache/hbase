@@ -573,233 +573,232 @@ grant 'rest_server', 'RWCA'
         </note>
         <para>HBase has a simpler security model than relational databases, especially in terms of
           client operations. No distinction is made between an insert (new record) and update (of
-          existing record), for example, as both collapse down into a Put. Accordingly, the
-          important operations condense to four permissions: READ, WRITE, CREATE, and ADMIN.</para>
-        <table>
-          <title>Operation To Permission Mapping</title>
-          <tgroup cols="2" align="left" colsep="1" rowsep="1">
-            <colspec colname="c1" align="center"/>
-            <colspec colname="c2" align="left"/>
-            <thead>
-              <row>
-                <entry>Permission</entry>
-                <entry>Operation</entry>
-              </row>
-            </thead>
-            <tbody>
-              <!-- READ -->
-              <row>
-                <entry>Read</entry>
-                <entry>Get</entry>
-              </row>
-              <row>
-                <entry/>
-                <entry>Exists</entry>
-              </row>
-              <row>
-                <entry/>
-                <entry>Scan</entry>
-              </row>
-              <!-- WRITE -->
-              <row>
-                <entry>Write</entry>
-                <entry>Put</entry>
-              </row>
-              <row>
-                <entry/>
-                <entry>Delete</entry>
-              </row>
-              <row>
-                <entry/>
-                <entry>IncrementColumnValue</entry>
-              </row>
-              <row>
-                <entry/>
-                <entry>CheckAndDelete/Put</entry>
-              </row>
-              <!-- CREATE -->
-              <row>
-                <entry>Create</entry>
-                <entry>Create</entry>
-              </row>
-              <row>
-                <entry/>
-                <entry>Alter</entry>
-              </row>
-              <row>
-                <entry/>
-                <entry>Drop</entry>
-              </row>
-              <row>
-                <entry/>
-                <entry>Bulk Load</entry>
-              </row>
-              <!-- ADMIN -->
-              <row>
-                <entry>Admin</entry>
-                <entry>Enable/Disable</entry>
-              </row>
-              <row>
-                <entry/>
-                <entry>Snapshot/Restore/Clone</entry>
-              </row>
-              <row>
-                <entry/>
-                <entry>Split</entry>
-              </row>
-              <row>
-                <entry/>
-                <entry>Flush</entry>
-              </row>
-              <row>
-                <entry/>
-                <entry>Compact</entry>
-              </row>
-              <row>
-                <entry/>
-                <entry>Major Compact</entry>
-              </row>
-            <row>
-              <entry />
-              <entry>Roll HLog</entry>
-            </row>
-              <row>
-                <entry/>
-                <entry>Grant</entry>
-              </row>
-              <row>
-                <entry/>
-                <entry>Revoke</entry>
-              </row>
-              <row>
-                <entry/>
-                <entry>Shutdown</entry>
-              </row>
-              <row>
-                <entry>Execute</entry>
-                <entry>Execute coprocessor endpoints</entry>
-              </row>
-            </tbody>
-          </tgroup>
-        </table>
-        <para> Permissions can be granted in any of the following scopes, though CREATE and ADMIN
-          permissions are effective only at table, namespace, and global scopes. </para>
-        <variablelist>
-          <varlistentry>
-            <term>Namespace</term>
+          existing record), for example, as both collapse down into a Put.</para>
+        <section>
+          <title>Understanding Access Levels</title>
+          <para>HBase access levels are granted independently of each other and allow for different
+            types of operations at a given scope.</para>
+          <itemizedlist>
             <listitem>
+              <para>Read (R) - can read data at the given scope</para>
+            </listitem>
+            <listitem>
+              <para><command>Write (W)</command> - can write data at the given scope</para>
+            </listitem>
+            <listitem>
+              <para><command>Execute (X)</command> - can execute coprocessor endpoints at the given
+                scope</para>
+            </listitem>
+            <listitem>
+              <para><command>Create (C)</command> - can create tables or drop tables (even those
+                they did not create) at the given scope</para>
+            </listitem>
+            <listitem>
+              <para><command>Admin (A)</command> - can perform cluster operations such as balancing
+                the cluster or assigning regions at the given scope</para>
+            </listitem>
+          </itemizedlist>
+          <para>The possible scopes are:</para>
+          <itemizedlist>
+            <listitem>
+              <para><command>Superuser</command> - superusers can perform any operation available in
+                HBase, to any resource. The user who runs HBase on your cluster is a superuser, as
+                are any principals assigned to the configuration property
+                  <code>hbase.superuser</code> in <filename>hbase-site.xml</filename> on the
+                HMaster.</para>
+            </listitem>
+            <listitem>
+              <para><command>Global</command> - permissions granted at <filename>global</filename>
+                scope allow the admin to operate on all tables of the cluster.</para>
+            </listitem>
+            <listitem>
+              <para><command>Namespace</command> - permissions granted at
+                  <filename>namespace</filename> scope apply to all tables within a given
+                namespace.</para>
+            </listitem>
+            <listitem>
+              <para><command>Table</command> - permissions granted at <filename>table</filename>
+                scope apply to data or metadata within a given table.</para>
+            </listitem>
+            <listitem>
+              <para><command>ColumnFamily</command> - permissions granted at
+                  <filename>ColumnFamily</filename> scope apply to cells within that
+                ColumnFamily.</para>
+            </listitem>
+            <listitem>
+              <para><command>Cell</command> - permissions granted at <filename>cell</filename> scope
+                apply to that exact cell coordinate (key, value, timestamp). This allows for policy
+                evolution along with data.</para>
+              <para>To change an ACL on a specific cell, write an updated cell with new ACL to the
+                precise coordinates of the original.</para>
+              <para>If you have a multi-versioned schema and want to update ACLs on all visible
+                versions, you need to write new cells for all visible versions. The application
+                has complete control over policy evolution.</para>
+              <para>The exception to the above rule is <code>append</code> and
+                  <code>increment</code> processing. Appends and increments can carry an ACL in the
+                operation. If one is included in the operation, then it will be applied to the
+                result of the <code>append</code> or <code>increment</code>. Otherwise, the ACL of
+                the existing cell you are appending to or incrementing is preserved.</para>
+            </listitem>
+          </itemizedlist>
+          <para>The combination of access levels and scopes creates a matrix of possible access
+            levels that can be granted to a user. In a production environment, it is useful to think
+            of access levels in terms of what is needed to do a specific job. The following list
+            describes appropriate access levels for some common types of HBase users. It is
+            important not to grant more access than is required for a given user to perform their
+            required tasks.</para>
+          <itemizedlist>
+            <listitem>
+              <para>Superusers - In a production system, only the HBase user should have superuser
+                access. In a development environment, an administrator may need superuser access in
+                order to quickly control and manage the cluster. However, this type of administrator
+                should usually be a Global Admin rather than a superuser.</para>
+            </listitem>
+            <listitem>
+              <para>Global Admins - A global admin can perform tasks and access every table in
+                HBase. In a typical production environment, an admin should not have Read or Write
+                permissions to data within tables.</para>
               <itemizedlist>
                 <listitem>
-                  <para>Read: User can read any table in the namespace.</para>
+                  <para>A global admin with Admin permissions can perform cluster-wide operations on
+                    the cluster, such as balancing, assigning or unassigning regions, or calling an
+                    explicit major compaction. This is an operations role.</para>
                 </listitem>
                 <listitem>
-                  <para>Write: User can write to any table in the namespace.</para>
-                </listitem>
-                <listitem>
-                  <para>Create: User can create tables in the namespace.</para>
-                </listitem>
-                <listitem>
-                  <para>Admin: User can alter table attributes; add, alter, or drop column families;
-                    and enable, disable, or drop the table. User can also trigger region
-                    (re)assignments or relocation.</para>
+                  <para>A global admin with Create permissions can create or drop any table within
+                    HBase. This is more of a DBA-type role.</para>
                 </listitem>
               </itemizedlist>
+              <para>In a production environment, it is likely that different users will have only
+                one of Admin and Create permissions.</para>
+              <warning>
+                <para>In the current implementation, a Global Admin with <code>Admin</code>
+                  permission can grant himself <code>Read</code> and <code>Write</code> permissions
+                  on a table and gain access to that table's data. For this reason, only grant
+                    <code>Global Admin</code> permissions to trusted user who actually need
+                  them.</para>
+                <para>Also be aware that a <code>Global Admin</code> with <code>Create</code>
+                  permission can perform a <code>Put</code> operation on the ACL table, simulating a
+                    <code>grant</code> or <code>revoke</code> and circumventing the authorization
+                  check for <code>Global Admin</code> permissions.</para>
+                <para>Due to these issues, be cautious with granting <code>Global Admin</code>
+                  privileges.</para>
+              </warning>
             </listitem>
-          </varlistentry>
-          <varlistentry>
-            <term>Table</term>
             <listitem>
-              <itemizedlist>
-                <listitem>
-                  <para>Read: User can read from any column family in table</para>
-                </listitem>
-                <listitem>
-                  <para>Write: User can write to any column family in table</para>
-                </listitem>
-                <listitem>
-                  <para>Create: User can alter table attributes; add, alter, or drop column
-                    families; and drop the table.</para>
-                </listitem>
-                <listitem>
-                  <para>Admin: User can alter table attributes; add, alter, or drop column families;
-                    and enable, disable, or drop the table. User can also trigger region
-                    (re)assignments or relocation.</para>
-                </listitem>
-              </itemizedlist>
+              <para><command>Namespace Admins</command> - a namespace admin with <code>Create</code>
+                permissions can create or drop tables within that namespace, and take and restore
+                snapshots. A namespace admin with <code>Admin</code> permissions can perform
+                operations such as splits or major compactions on tables within that
+                namespace.</para>
             </listitem>
-          </varlistentry>
-          <varlistentry>
-            <term>Column Family / Column Qualifier / Cell</term>
             <listitem>
-              <itemizedlist>
-                <listitem>
-                  <para>Read: User can read at the specified scope.</para>
-                </listitem>
-                <listitem>
-                  <para>Write: User can write at the specified scope.</para>
-                </listitem>
-              </itemizedlist>
+              <para><command>Table Admins</command> - A table admin can perform administrative
+                operations only on that table. A table admin with <code>Create</code> permissions
+                can create snapshots from that table or restore that table from a snapshot. A table
+                admin with <code>Admin</code> permissions can perform operations such as splits or
+                major compactions on that table.</para>
             </listitem>
-          </varlistentry>
-          <varlistentry>
-            <term>Coprocessor Endpoint</term>
             <listitem>
-              <para>Execute: the user can execute the coprocessor endpoint.</para>
+              <para><command>Users</command> - Users can read or write data, or both. Users can also
+                execute coprocessor endpoints, if given <code>Executable</code> permissions.</para>
             </listitem>
-          </varlistentry>
-          <varlistentry>
-            <term>Global</term>
+          </itemizedlist>
+          <table>
+            <title>Real-World Example of Access Levels</title>
+            <tgroup cols="4">
+              <thead>
+                <row>
+                  <entry>Job Title</entry>
+                  <entry>Scope</entry>
+                  <entry>Permissions</entry>
+                  <entry>Description</entry>
+                </row>
+              </thead>
+              <tbody>
+                <row>
+                  <entry><para>Senior Administrator</para></entry>
+                  <entry><para>Global</para></entry>
+                  <entry><para>Access, Create</para></entry>
+                  <entry><para>Manages the cluster and gives access to Junior
+                    Administrators.</para></entry>
+                </row>
+                <row>
+                  <entry><para>Junior Administrator</para></entry>
+                  <entry><para>Global</para></entry>
+                  <entry><para>Create</para></entry>
+                  <entry><para>Creates tables and gives access to Table
+                    Administrators.</para></entry>
+                </row>
+                <row>
+                  <entry><para>Table Administrator</para></entry>
+                  <entry><para>Table</para></entry>
+                  <entry><para>Access</para></entry>
+                  <entry><para>Maintains a table from an operations point of view.</para></entry>
+                </row>
+                <row>
+                  <entry><para>Data Analyst</para></entry>
+                  <entry><para>Table</para></entry>
+                  <entry><para>Read</para></entry>
+                  <entry><para>Creates reports from HBase data.</para></entry>
+                </row>
+                <row>
+                  <entry><para>Web Application</para></entry>
+                  <entry><para>Table</para></entry>
+                  <entry><para>Read, Write</para></entry>
+                  <entry><para>Puts data into HBase and uses HBase data to perform
+                      operations.</para></entry>
+                </row>
+              </tbody>
+            </tgroup>
+            <caption><para>This table shows how real-world titles might map to HBase permissions in
+                a hypothetical company.</para></caption>
+
+          </table>
+          <formalpara>
+            <title>ACL Matrix</title>
+            <para>For more details on how ACLs map to specific HBase operations and tasks, see <xref
+                linkend="appendix_acl_matrix"/>.</para>
+          </formalpara>
+        </section>
+        <section>
+          <title>Implementation Details</title>
+          <para>Cell-level ACLs are implemented using tags (see <xref linkend="hbase.tags"/>). In
+            order to use cell-level ACLs, you must be using HFile v3 and HBase 0.98 or newer.</para>
+          <orderedlist>
+            <title>ACL Implementation Caveats</title>
             <listitem>
-              <para>Superusers are specified as a comma-separated list of users and groups, in the
-                  <option>hbase.superuser</option> option in <filename>hbase-site.xml</filename>.
-                The superuser is equivalent to the <literal>root</literal> user in a UNIX
-                environment. As a minimum, the superuser should include the principal used to run
-                the HMaster process. Global admin privileges, which are implicitly granted to the
-                superuser, are required to create namespaces, switch the balancer on and off, or
-                take other actions with global consequences. The superuser can also grant all
-                permissions to all resources.</para>
+              <para>Files created by HBase are owned by the operating system user running the HBase
+                process. To interact with HBase files, you should use the API or bulk load
+                facility.</para>
             </listitem>
-          </varlistentry>
-        </variablelist>
-        <formalpara>
-          <title>ACL Matrix</title>
-          <para>For more details on how ACLs map to specific HBase operations and tasks, see <xref
-              linkend="appendix_acl_matrix"/>.</para>
-        </formalpara>
-        <para>Cell-level ACLs are implemented using tags (see <xref linkend="hbase.tags"/>). In
-          order to use cell-level ACLs, you must be using HFile v3 and HBase 0.98 or newer.</para>
-        <orderedlist>
-          <title>ACL Implementation Caveats</title>
-          <listitem>
-            <para>Files created by HBase are owned by the operating system user running the HBase
-              process. To interact with HBase files, you should use the API or bulk load
-              facility.</para>
-          </listitem>
-          <listitem>
-            <para>HBase does not model "roles" internally in HBase. Instead, group names can be
-              granted permissions. This allows external modeling of roles via group membership.
-              Groups are created and manipulated externally to HBase, via the Hadoop group mapping
-              service.</para>
-          </listitem>
-        </orderedlist>
-      </section>
-      <section>
-        <title>Server-Side Configuration</title>
-        <procedure>
-          <step>
-            <para>As a prerequisite, perform the steps in <xref
-                linkend="security.data.basic.server.side"/>.</para></step>
-          <step>
-            <para>Install and configure the AccessController coprocessor, by setting the following
-              properties in <filename>hbase-site.xml</filename>. These properties take a list of
-              classes. </para>
-            <note>
-              <para>If you use the AccessController along with the VisibilityController, the
-                AccessController must come first in the list, because with both components active,
-                the VisibilityController will delegate access control on its system tables to the
-                AccessController. For an example of using both together, see <xref
-                  linkend="security.example.config"/>.</para></note>
-            <programlisting language="xml"><![CDATA[
+            <listitem>
+              <para>HBase does not model "roles" internally in HBase. Instead, group names can be
+                granted permissions. This allows external modeling of roles via group membership.
+                Groups are created and manipulated externally to HBase, via the Hadoop group mapping
+                service.</para>
+            </listitem>
+          </orderedlist>
+        </section>
+        <section>
+          <title>Server-Side Configuration</title>
+          <procedure>
+            <step>
+              <para>As a prerequisite, perform the steps in <xref
+                  linkend="security.data.basic.server.side"/>.</para>
+            </step>
+            <step>
+              <para>Install and configure the AccessController coprocessor, by setting the following
+                properties in <filename>hbase-site.xml</filename>. These properties take a list of
+                classes. </para>
+              <note>
+                <para>If you use the AccessController along with the VisibilityController, the
+                  AccessController must come first in the list, because with both components active,
+                  the VisibilityController will delegate access control on its system tables to the
+                  AccessController. For an example of using both together, see <xref
+                    linkend="security.example.config"/>.</para>
+              </note>
+              <programlisting language="xml"><![CDATA[
 <property>
   <name>hbase.coprocessor.region.classes</name>
   <value>org.apache.hadoop.hbase.security.access.AccessController, org.apache.hadoop.hbase.security.token.TokenProvider</value>
@@ -817,15 +816,15 @@ grant 'rest_server', 'RWCA'
   <value>true</value>
 </property>
           ]]></programlisting>
-            <para>Optionally, you can enable transport security, by setting
-              <option>hbase.rpc.protection</option> to <literal>auth-conf</literal>. This requires
-              HBase 0.98.4 or newer.</para>
-          </step>
-          <step>
-            <para>Set up the Hadoop group mapper in the Hadoop namenode's
-                <filename>core-site.xml</filename>. This is a Hadoop file, not an HBase file.
-              Customize it to your site's needs. Following is an example.</para>
-            <programlisting language="xml"><![CDATA[
+              <para>Optionally, you can enable transport security, by setting
+                  <option>hbase.rpc.protection</option> to <literal>auth-conf</literal>. This
+                requires HBase 0.98.4 or newer.</para>
+            </step>
+            <step>
+              <para>Set up the Hadoop group mapper in the Hadoop namenode's
+                  <filename>core-site.xml</filename>. This is a Hadoop file, not an HBase file.
+                Customize it to your site's needs. Following is an example.</para>
+              <programlisting language="xml"><![CDATA[
 <property>
   <name>hadoop.security.group.mapping</name>
   <value>org.apache.hadoop.security.LdapGroupsMapping</value>
@@ -871,140 +870,140 @@ grant 'rest_server', 'RWCA'
   <value>cn</value>
 </property>]]>
             </programlisting>
-          </step>
-          <step>
-            <para>Optionally, enable the early-out evaluation strategy. Prior to HBase 0.98.0, if a
-              user was not granted access to a column family, or at least a column qualifier, an
-              AccessDeniedException would be thrown. HBase 0.98.0 removed this exception in order to
-              allow cell-level exceptional grants. To restore the old behavior in HBase
-              0.98.0-0.98.6, set <option>hbase.security.access.early_out</option> to
-                <literal>true</literal> in <filename>hbase-site.xml</filename>. In HBase 0.98.6, the
-              default has been returned to <literal>true</literal>.</para>
-          </step>
-          <step>
-            <para>Distribute your configuration and restart your cluster for changes to take
-              effect.</para>
-          </step>
-          <step>
-            <para>To test your configuration, log into HBase Shell as a given user and use the
-                <command>whoami</command> command to report the groups your user is part of. In this
-              example, the user is reported as being a member of the <code>services</code>
-              group.</para>
-            <screen>
+            </step>
+            <step>
+              <para>Optionally, enable the early-out evaluation strategy. Prior to HBase 0.98.0, if
+                a user was not granted access to a column family, or at least a column qualifier, an
+                AccessDeniedException would be thrown. HBase 0.98.0 removed this exception in order
+                to allow cell-level exceptional grants. To restore the old behavior in HBase
+                0.98.0-0.98.6, set <option>hbase.security.access.early_out</option> to
+                  <literal>true</literal> in <filename>hbase-site.xml</filename>. In HBase 0.98.6,
+                the default has been returned to <literal>true</literal>.</para>
+            </step>
+            <step>
+              <para>Distribute your configuration and restart your cluster for changes to take
+                effect.</para>
+            </step>
+            <step>
+              <para>To test your configuration, log into HBase Shell as a given user and use the
+                  <command>whoami</command> command to report the groups your user is part of. In
+                this example, the user is reported as being a member of the <code>services</code>
+                group.</para>
+              <screen>
 hbase> <userinput>whoami</userinput>
 <computeroutput>service (auth:KERBEROS)
     groups: services</computeroutput>
             </screen>
-          </step>
-        </procedure>
-      </section>
-      <section>
-        <title>Administration</title>
-        <para>Administration tasks can be performed from HBase Shell or via an API.</para>
-        <caution>
-          <title>API Examples</title>
-          <para>Many of the API examples below are taken from source files
-            <filename>hbase-server/src/test/java/org/apache/hadoop/hbase/security/access/TestAccessController.java</filename>
-            and
-            <filename>hbase-server/src/test/java/org/apache/hadoop/hbase/security/access/SecureTestUtil.java</filename>.</para>
-          <para>Neither the examples, nor the source files they are taken from, are part of the
-            public HBase API, and are provided for illustration only. Refer to the
-            official API for usage instructions.</para>
-        </caution>
-        <procedure>
-          <step>
-            <title>User and Group Administration</title>
-            <para>Users and groups are maintained external to HBase, in your directory.</para>
-          </step>
-          <step>
-            <title>Granting Access To A Namespace, Table, Column Family, or Cell</title>
-            <para>There are a few different types of syntax for grant statements. The first, and
-              most familiar, is as follows, with the table and column family being optional:</para>
-            <screen>grant 'user', 'RWXCA', 'TABLE', 'CF', 'CQ'</screen>
-            <para>Groups and users are granted access in the same way, but groups are prefixed with
-              an <literal>@</literal> symbol. In the same way, tables and namespaces are specified
-              in the same way, but namespaces are prefixed with an <literal>@</literal>
-              symbol.</para>
-            <para>It is also possible to grant multiple permissions against the same resource in a
-              single statement, as in this example. The first sub-clause maps users to
-              ACLs and the second sub-clause specifies the resource.</para>
-            <note>
-              <para>HBase Shell support for granting and revoking access at the cell level is for
-                testing and verification support, and should not be employed for production use
-                because it won't apply the permissions to cells that don't exist yet. The correct
-                way to apply cell level permissions is to do so in the application code when storing
-                the values.</para>
-            </note>
-            <formalpara>
-              <title>ACL Granularity and Evaluation Order</title>
-              <para>ACLs are evaluated from least granular to most granular, and when an ACL is
-                reached that grants permission, evaluation stops. This means that cell ACLs do not
-                override ACLs at less granularity.</para>
-            </formalpara>
-            <example>
-              <title>HBase Shell</title>
-              <itemizedlist>
-                <listitem>
-                  <para>Global:</para>
-                  <screen>hbase> <userinput>grant '@admins', 'RWXCA'</userinput></screen>
-                </listitem>
-                <listitem>
-                  <para>Namespace:</para>
-                  <screen>hbase> <userinput>grant 'service', 'RWXCA', '@test-NS'</userinput></screen>
-                </listitem>
-                <listitem>
-                  <para>Table:</para>
-                  <screen>hbase> <userinput>grant 'service', 'RWXCA', 'user'</userinput></screen>
-                </listitem>
-                <listitem>
-                  <para>Column Family:</para>
-                  <screen>hbase> <userinput>grant '@developers', 'RW', 'user', 'i'</userinput></screen>
-                </listitem>
-                <listitem>
-                  <para>Column Qualifier:</para>
-                  <screen>hbase> <userinput>grant 'service, 'RW', 'user', 'i', 'foo'</userinput></screen>
-                </listitem>
-                <listitem>
-                  <para>Cell:</para>
-                  <para>The syntax for granting cell ACLs uses the following syntax:</para>
-                  <screen>grant <replaceable>&lt;table&gt;</replaceable>, \
+            </step>
+          </procedure>
+        </section>
+        <section>
+          <title>Administration</title>
+          <para>Administration tasks can be performed from HBase Shell or via an API.</para>
+          <caution>
+            <title>API Examples</title>
+            <para>Many of the API examples below are taken from source files
+                <filename>hbase-server/src/test/java/org/apache/hadoop/hbase/security/access/TestAccessController.java</filename>
+              and
+                <filename>hbase-server/src/test/java/org/apache/hadoop/hbase/security/access/SecureTestUtil.java</filename>.</para>
+            <para>Neither the examples, nor the source files they are taken from, are part of the
+              public HBase API, and are provided for illustration only. Refer to the official API
+              for usage instructions.</para>
+          </caution>
+          <procedure>
+            <step>
+              <title>User and Group Administration</title>
+              <para>Users and groups are maintained external to HBase, in your directory.</para>
+            </step>
+            <step>
+              <title>Granting Access To A Namespace, Table, Column Family, or Cell</title>
+              <para>There are a few different types of syntax for grant statements. The first, and
+                most familiar, is as follows, with the table and column family being
+                optional:</para>
+              <screen>grant 'user', 'RWXCA', 'TABLE', 'CF', 'CQ'</screen>
+              <para>Groups and users are granted access in the same way, but groups are prefixed
+                with an <literal>@</literal> symbol. In the same way, tables and namespaces are
+                specified in the same way, but namespaces are prefixed with an <literal>@</literal>
+                symbol.</para>
+              <para>It is also possible to grant multiple permissions against the same resource in a
+                single statement, as in this example. The first sub-clause maps users to ACLs and
+                the second sub-clause specifies the resource.</para>
+              <note>
+                <para>HBase Shell support for granting and revoking access at the cell level is for
+                  testing and verification support, and should not be employed for production use
+                  because it won't apply the permissions to cells that don't exist yet. The correct
+                  way to apply cell level permissions is to do so in the application code when
+                  storing the values.</para>
+              </note>
+              <formalpara>
+                <title>ACL Granularity and Evaluation Order</title>
+                <para>ACLs are evaluated from least granular to most granular, and when an ACL is
+                  reached that grants permission, evaluation stops. This means that cell ACLs do not
+                  override ACLs at less granularity.</para>
+              </formalpara>
+              <example>
+                <title>HBase Shell</title>
+                <itemizedlist>
+                  <listitem>
+                    <para>Global:</para>
+                    <screen>hbase> <userinput>grant '@admins', 'RWXCA'</userinput></screen>
+                  </listitem>
+                  <listitem>
+                    <para>Namespace:</para>
+                    <screen>hbase> <userinput>grant 'service', 'RWXCA', '@test-NS'</userinput></screen>
+                  </listitem>
+                  <listitem>
+                    <para>Table:</para>
+                    <screen>hbase> <userinput>grant 'service', 'RWXCA', 'user'</userinput></screen>
+                  </listitem>
+                  <listitem>
+                    <para>Column Family:</para>
+                    <screen>hbase> <userinput>grant '@developers', 'RW', 'user', 'i'</userinput></screen>
+                  </listitem>
+                  <listitem>
+                    <para>Column Qualifier:</para>
+                    <screen>hbase> <userinput>grant 'service, 'RW', 'user', 'i', 'foo'</userinput></screen>
+                  </listitem>
+                  <listitem>
+                    <para>Cell:</para>
+                    <para>The syntax for granting cell ACLs uses the following syntax:</para>
+                    <screen>grant <replaceable>&lt;table&gt;</replaceable>, \
   { '<replaceable>&lt;user-or-group&gt;</replaceable>' => \
     '<replaceable>&lt;permissions&gt;</replaceable>', ... }, \
   { <replaceable>&lt;scanner-specification&gt;</replaceable> }</screen>
-                  <itemizedlist>
-                    <listitem>
-                      <para><replaceable>&lt;user-or-group&gt;</replaceable> is the user or group
-                        name, prefixed with <literal>@</literal> in the case of a group.</para>
-                    </listitem>
-                    <listitem>
-                      <para><replaceable>&lt;permissions&gt;</replaceable> is a string containing
-                        any or all of "RWXCA", though only R and W are meaningful at cell
-                        scope.</para>
-                    </listitem>
-                    <listitem>
-                      <para><replaceable>&lt;scanner-specification&gt;</replaceable> is the scanner
-                        specification syntax and conventions used by the 'scan' shell command. For
-                        some examples of scanner specifications, issue the following HBase Shell
-                        command.</para>
-                      <screen>hbase> help "scan"</screen>
-                    </listitem>
-                  </itemizedlist>
-                  <para>This example grants read access to the 'testuser' user and read/write access
-                    to the 'developers' group, on cells in the 'pii' column which match the
-                    filter.</para>
-                  <screen>hbase> grant 'user', \
+                    <itemizedlist>
+                      <listitem>
+                        <para><replaceable>&lt;user-or-group&gt;</replaceable> is the user or group
+                          name, prefixed with <literal>@</literal> in the case of a group.</para>
+                      </listitem>
+                      <listitem>
+                        <para><replaceable>&lt;permissions&gt;</replaceable> is a string containing
+                          any or all of "RWXCA", though only R and W are meaningful at cell
+                          scope.</para>
+                      </listitem>
+                      <listitem>
+                        <para><replaceable>&lt;scanner-specification&gt;</replaceable> is the
+                          scanner specification syntax and conventions used by the 'scan' shell
+                          command. For some examples of scanner specifications, issue the following
+                          HBase Shell command.</para>
+                        <screen>hbase> help "scan"</screen>
+                      </listitem>
+                    </itemizedlist>
+                    <para>This example grants read access to the 'testuser' user and read/write
+                      access to the 'developers' group, on cells in the 'pii' column which match the
+                      filter.</para>
+                    <screen>hbase> grant 'user', \
   { '@developers' => 'RW', 'testuser' => 'R' }, \
   { COLUMNS => 'pii', FILTER => "(PrefixFilter ('test'))" }</screen>
-                  <para>The shell will run a scanner with the given criteria, rewrite the found
-                    cells with new ACLs, and store them back to their exact coordinates.</para>
-                </listitem>
-              </itemizedlist>
-            </example>
-            <example>
-              <title>API</title>
-              <para>The following example shows how to grant access at the
-                table level.</para>
-              <programlisting language="java"><![CDATA[
+                    <para>The shell will run a scanner with the given criteria, rewrite the found
+                      cells with new ACLs, and store them back to their exact coordinates.</para>
+                  </listitem>
+                </itemizedlist>
+              </example>
+              <example>
+                <title>API</title>
+                <para>The following example shows how to grant access at the table level.</para>
+                <programlisting language="java"><![CDATA[
 public static void grantOnTable(final HBaseTestingUtility util, final String user,
     final TableName table, final byte[] family, final byte[] qualifier,
     final Permission.Action... actions) throws Exception {
@@ -1025,37 +1024,38 @@ public static void grantOnTable(final HBaseTestingUtility util, final String use
   });
 }               ]]>
               </programlisting>
-              <para>To grant permissions at the cell level, you can use the
-                  <code>Mutation.setACL</code> method:</para>
-              <programlisting language="java"><![CDATA[
+                <para>To grant permissions at the cell level, you can use the
+                    <code>Mutation.setACL</code> method:</para>
+                <programlisting language="java"><![CDATA[
 Mutation.setACL(String user, Permission perms)
 Mutation.setACL(Map<String, Permission> perms)
     ]]>
               </programlisting>
-              <para>Specifically, this example provides read permission to a user called
-                  <literal>user1</literal> on any cells contained in a particular Put
-                operation:</para>
-              <programlisting language="java"><![CDATA[
+                <para>Specifically, this example provides read permission to a user called
+                    <literal>user1</literal> on any cells contained in a particular Put
+                  operation:</para>
+                <programlisting language="java"><![CDATA[
 put.setACL(“user1”, new Permission(Permission.Action.READ))
     ]]></programlisting>
-            </example>
-          </step>
-          <step>
-            <title>Revoking Access Control From a Namespace, Table, Column Family, or Cell</title>
-            <para>The <command>revoke</command> command and API are twins of the grant command and
-              API, and the syntax is exactly the same. The only exception is that you cannot revoke
-              permissions at the cell level. You can only revoke access that has previously been
-              granted, and a <command>revoke</command> statement is not the same thing as explicit
-              denial to a resource.</para>
-            <note>
-              <para>HBase Shell support for granting and revoking access is for testing and verification
-                support, and should not be employed for production use because it won't apply the
-                permissions to cells that don't exist yet. The correct way to apply cell-level
-                permissions is to do so in the application code when storing the values.</para>
-            </note>
-            <example>
-              <title>Revoking Access To a Table</title>
-              <programlisting language="java">
+              </example>
+            </step>
+            <step>
+              <title>Revoking Access Control From a Namespace, Table, Column Family, or Cell</title>
+              <para>The <command>revoke</command> command and API are twins of the grant command and
+                API, and the syntax is exactly the same. The only exception is that you cannot
+                revoke permissions at the cell level. You can only revoke access that has previously
+                been granted, and a <command>revoke</command> statement is not the same thing as
+                explicit denial to a resource.</para>
+              <note>
+                <para>HBase Shell support for granting and revoking access is for testing and
+                  verification support, and should not be employed for production use because it
+                  won't apply the permissions to cells that don't exist yet. The correct way to
+                  apply cell-level permissions is to do so in the application code when storing the
+                  values.</para>
+              </note>
+              <example>
+                <title>Revoking Access To a Table</title>
+                <programlisting language="java">
 <![CDATA[public static void revokeFromTable(final HBaseTestingUtility util, final String user,
     final TableName table, final byte[] family, final byte[] qualifier,
     final Permission.Action... actions) throws Exception {
@@ -1076,19 +1076,19 @@ put.setACL(“user1”, new Permission(Permission.Action.READ))
   });
 } ]]>
               </programlisting>
-            </example>
-          </step>
-          <step>
-            <title>Showing a User's Effective Permissions</title>
-            <example>
-              <title>HBase Shell</title>
-              <screen>hbase> user_permission 'user'</screen>
-              <screen>hbase> user_permission '.*'</screen>
-              <screen>hbase> user_permission <replaceable>JAVA_REGEX</replaceable></screen>
-            </example>
-            <example>
-              <title>API</title>
-              <programlisting language="java"><![CDATA[
+              </example>
+            </step>
+            <step>
+              <title>Showing a User's Effective Permissions</title>
+              <example>
+                <title>HBase Shell</title>
+                <screen>hbase> user_permission 'user'</screen>
+                <screen>hbase> user_permission '.*'</screen>
+                <screen>hbase> user_permission <replaceable>JAVA_REGEX</replaceable></screen>
+              </example>
+              <example>
+                <title>API</title>
+                <programlisting language="java"><![CDATA[
 public static void verifyAllowed(User user, AccessTestAction action, int count) throws Exception {
   try {
     Object obj = user.runAs(action);
@@ -1104,9 +1104,10 @@ public static void verifyAllowed(User user, AccessTestAction action, int count) 
   }
 }]]>
               </programlisting>
-            </example>
-          </step>
-        </procedure>
+              </example>
+            </step>
+          </procedure>
+        </section>
       </section>
     </section>
 
