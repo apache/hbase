@@ -368,7 +368,7 @@ hadoop  -       nproc   32000
         <title>Hadoop 2.x is recommended.</title>
         <para>Hadoop 2.x is faster and includes features, such as short-circuit reads, which will
           help improve your HBase random read profile. Hadoop 2.x also includes important bug fixes
-          that will improve your overall HBase experience. HBase 0.98 deprecates use of Hadoop 1.x,
+          that will improve your overall HBase experience. HBase 0.98 drops support for Hadoop 1.0, deprecates use of Hadoop 1.1+,
           and HBase 1.0 will not support Hadoop 1.x.</para>
       </tip>
       <para>Use the following legend to interpret this table:</para>
@@ -411,7 +411,7 @@ hadoop  -       nproc   32000
               <entry>HBase-0.92.x</entry>
               <entry>HBase-0.94.x</entry>
               <entry>HBase-0.96.x</entry>
-              <entry><para>HBase-0.98.x (Support for Hadoop 1.x is deprecated.)</para></entry>
+              <entry><para>HBase-0.98.x (Support for Hadoop 1.1+ is deprecated.)</para></entry>
               <entry><para>HBase-1.0.x (Hadoop 1.x is NOT supported)</para></entry>
             </row>
           </thead>
@@ -433,20 +433,10 @@ hadoop  -       nproc   32000
               <entry>X</entry>
             </row>
             <row>
-              <entry><para>Hadoop-1.0.0-1.0.2 (HBase requires hadoop 1.0.3 at a minimum; there is an
-                  issue where we cannot find KerberosUtil compiling against earlier versions of
-                  Hadoop.)</para></entry>
+              <entry>Hadoop-1.0.x</entry>
               <entry>X</entry>
               <entry>X</entry>
               <entry>X</entry>
-              <entry>X</entry>
-              <entry>X</entry>
-            </row>
-            <row>
-              <entry>Hadoop-1.0.3+</entry>
-              <entry>S</entry>
-              <entry>S</entry>
-              <entry>S</entry>
               <entry>X</entry>
               <entry>X</entry>
             </row>
@@ -455,7 +445,7 @@ hadoop  -       nproc   32000
               <entry>NT</entry>
               <entry>S</entry>
               <entry>S</entry>
-              <entry>X</entry>
+              <entry>NT</entry>
               <entry>X</entry>
             </row>
             <row>
