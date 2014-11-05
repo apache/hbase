@@ -51,7 +51,7 @@ public class TestHColumnDescriptor {
     assertEquals(v, hcd.getMaxVersions());
     hcd.setMinVersions(v);
     assertEquals(v, hcd.getMinVersions());
-    hcd.setKeepDeletedCells(!HColumnDescriptor.DEFAULT_KEEP_DELETED);
+    hcd.setKeepDeletedCells(KeepDeletedCells.TRUE);
     hcd.setInMemory(!HColumnDescriptor.DEFAULT_IN_MEMORY);
     boolean inmemory = hcd.isInMemory();
     hcd.setScope(v);
