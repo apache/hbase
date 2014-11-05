@@ -230,6 +230,7 @@
       <artifactId>jasper-runtime</artifactId>
     </dependency>
   </dependencies>
+
   <profiles>
     <!-- Skip the tests in this module -->
     <profile>
@@ -244,6 +245,117 @@
         <surefire.skipSecondPart>true</surefire.skipSecondPart>
       </properties>
     </profile>
+
+    <!--
+      Profile for regenerating the thrift java classes.
+      The generated files are to be committed to version control.
+      Activate using:
+       mvn compile -Dcompile-thrift
+    -->
+    <profile>
+      <id>compile-thrift</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <version>1.3.1</version>
+            <executions>
+              <execution>
+                <id>enforce-thrift-version</id>
+                <goals>
+                  <goal>enforce</goal>
+                </goals>
+                <configuration>
+                  <rules>
+                    <requireProperty>
+                      <property>thrift.version</property>
+                      <message>"The Thrift version must be specified."</message>
+                      <regex>0\.9\.0</regex>
+                      <regexMessage>
+-
+-
+[FATAL] ==========================================================================================
+[FATAL] HBase Thrift requires the thrift generator version 0.9.0.
+[FATAL] Setting it to something else needs to be reviewed for wire and behavior compatibility.
+[FATAL] ==========================================================================================
+-
+-
+                      </regexMessage>
+                    </requireProperty>
+                  </rules>
+                  <fail>true</fail>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.2.1</version>
+            <executions>
+              <execution>
+                <id>check-thrift-version</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>sh</executable>
+                  <workingDirectory>${basedir}</workingDirectory>
+                  <arguments>
+                    <argument>-c</argument>
+                    <argument>${thrift.path} -version | \
+                      fgrep 'Thrift version ${thrift.version}' &amp;&amp; exit 0;
+                      echo "========== [FATAL] Need Thrift version ${thrift.version} ==========";
+                      exit 1</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>thrift</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>${thrift.path}</executable>
+                  <workingDirectory>${basedir}</workingDirectory>
+                  <arguments>
+                    <argument>-strict</argument>
+                    <argument>--gen</argument>
+                    <argument>java:hashcode</argument>
+                    <argument>-out</argument>
+                    <argument>${basedir}/src/main/java</argument>
+                    <argument>${basedir}/src/main/resources/org/apache/hadoop/hbase/thrift/Hbase.thrift</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+              <execution>
+                <id>thrift2</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>${thrift.path}</executable>
+                  <workingDirectory>${basedir}</workingDirectory>
+                  <arguments>
+                    <argument>-strict</argument>
+                    <argument>--gen</argument>
+                    <argument>java:hashcode</argument>
+                    <argument>-out</argument>
+                    <argument>${basedir}/src/main/java</argument>
+                    <argument>${basedir}/src/main/resources/org/apache/hadoop/hbase/thrift2/hbase.thrift</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
     <!-- profile against Hadoop 1.1.x: This is the default. It has to have the same
 activation property as the parent Hadoop 1.1.x profile to make sure it gets run at
 the same time. -->
