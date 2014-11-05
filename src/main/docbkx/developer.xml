@@ -396,7 +396,7 @@ Access restriction: The method getLong(Object, long) from the type Unsafe is not
                 <title>Build Protobuf</title>
                 <para>You may need to change the protobuf definitions that reside in the
                         <filename>hbase-protocol</filename> module or other modules.</para>
-                <para> The protobuf files are located
+                <para> The protobuf files are located in
                         <filename>hbase-protocol/src/main/protobuf</filename>. For the change to be
                     effective, you will need to regenerate the classes. You can use maven profile
                         <code>compile-protobuf</code> to do this.</para>
@@ -408,6 +408,22 @@ mvn compile -Pcompile-protobuf -Dprotoc.path=/opt/local/bin/protoc
              </programlisting>
                 <para>Read the <filename>hbase-protocol/README.txt</filename> for more details.
                 </para>
+            </section>
+
+            <section xml:id="build.thrift">
+                <title>Build Thrift</title>
+                <para>You may need to change the thrift definitions that reside in the
+                  <filename>hbase-thrift</filename> module or other modules.</para>
+                <para>The thrift files are located in
+                  <filename>hbase-thrift/src/main/resources</filename>.
+                  For the change to be effective, you will need to regenerate the classes.
+                  You can use maven profile  <code>compile-thrift</code> to do this.</para>
+                <programlisting language="bourne">mvn compile -Pcompile-thrift</programlisting>
+                <para>You may also want to define <varname>thrift.path</varname> for the thrift
+                  binary, using the following command:</para>
+                <programlisting language="bourne">
+                  mvn compile -Pcompile-thrift -Dthrift.path=/opt/local/bin/thrift
+                </programlisting>
             </section>
 
             <section>

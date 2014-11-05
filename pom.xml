@@ -464,7 +464,7 @@
              <artifactId>plexus-compiler-javac-errorprone</artifactId>
              <version>2.3</version>
            </dependency>
-         </dependencies>   
+         </dependencies>
         </plugin>
         <!-- Test oriented plugins -->
         <plugin>
@@ -492,7 +492,7 @@
             <!--Allocate some direct memory for direct memory tests-->
             <argLine>${hbase-surefire.argLine} ${argLine}</argLine>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
-	    <systemPropertyVariables>
+            <systemPropertyVariables>
               <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
             </systemPropertyVariables>
           </configuration>
@@ -1012,6 +1012,7 @@
     <log4j.version>1.2.17</log4j.version>
     <mockito-all.version>1.10.8</mockito-all.version>
     <protobuf.version>2.5.0</protobuf.version>
+    <thrift.path>thrift</thrift.path>
     <thrift.version>0.9.0</thrift.version>
     <zookeeper.version>3.4.6</zookeeper.version>
     <slf4j.version>1.7.7</slf4j.version>
