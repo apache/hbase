@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
-import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
@@ -110,20 +109,6 @@ public class AccessControlLists {
 
   public static final char NAMESPACE_PREFIX = '@';
 
-  /** Table descriptor for ACL internal table */
-  public static final HTableDescriptor ACL_TABLEDESC = new HTableDescriptor(ACL_TABLE_NAME);
-  static {
-    ACL_TABLEDESC.addFamily(
-        new HColumnDescriptor(ACL_LIST_FAMILY,
-            10, // Ten is arbitrary number.  Keep versions to help debugging.
-            Compression.Algorithm.NONE.getName(), true, true, 8 * 1024,
-            HConstants.FOREVER, BloomType.NONE.toString(),
-            HConstants.REPLICATION_SCOPE_LOCAL).
-            // Set cache data blocks in L1 if more than one cache tier deployed; e.g. this will
-            // be the case if we are using CombinedBlockCache (Bucket Cache).
-            setCacheDataInL1(true));
-  }
-
   /**
    * Delimiter to separate user, column family, and qualifier in
    * _acl_ table info: column keys */
@@ -136,11 +121,23 @@ public class AccessControlLists {
   private static Log LOG = LogFactory.getLog(AccessControlLists.class);
 
   /**
-   * Check for existence of {@code _acl_} table and create it if it does not exist
-   * @param master reference to HMaster
+   * Create the ACL table
+   * @param master
+   * @throws IOException
    */
-  static void init(MasterServices master) throws IOException {
-    master.createTable(ACL_TABLEDESC, null);
+  static void createACLTable(MasterServices master) throws IOException {
+    master.createTable(new HTableDescriptor(ACL_TABLE_NAME)
+      .addFamily(new HColumnDescriptor(ACL_LIST_FAMILY)
+        .setMaxVersions(1)
+        .setInMemory(true)
+        .setBlockCacheEnabled(true)
+        .setBlocksize(8 * 1024)
+        .setBloomFilterType(BloomType.NONE)
+        .setScope(HConstants.REPLICATION_SCOPE_LOCAL)
+        // Set cache data blocks in L1 if more than one cache tier deployed; e.g. this will
+        // be the case if we are using CombinedBlockCache (Bucket Cache).
+        .setCacheDataInL1(true)),
+    null);
   }
 
   /**

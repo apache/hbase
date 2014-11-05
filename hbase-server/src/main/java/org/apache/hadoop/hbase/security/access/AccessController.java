@@ -1070,7 +1070,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     if (!MetaTableAccessor.tableExists(ctx.getEnvironment().getMasterServices()
       .getShortCircuitConnection(), AccessControlLists.ACL_TABLE_NAME)) {
       // initialize the ACL storage table
-      AccessControlLists.init(ctx.getEnvironment().getMasterServices());
+      AccessControlLists.createACLTable(ctx.getEnvironment().getMasterServices());
     } else {
       aclTabAvailable = true;
     }
