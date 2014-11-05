@@ -233,7 +233,7 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   @Override
-  public void startRegionServer(String hostname) throws IOException {
+  public void startRegionServer(String hostname, int port) throws IOException {
     this.startRegionServer();
   }
 
@@ -260,7 +260,7 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   @Override
-  public void startMaster(String hostname) throws IOException {
+  public void startMaster(String hostname, int port) throws IOException {
     this.startMaster();
   }
 

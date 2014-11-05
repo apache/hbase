@@ -118,7 +118,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    * @param hostname the hostname to start the regionserver on
    * @throws IOException if something goes wrong
    */
-  public abstract void startRegionServer(String hostname) throws IOException;
+  public abstract void startRegionServer(String hostname, int port) throws IOException;
 
   /**
    * Kills the region server process if this is a distributed cluster, otherwise
@@ -139,12 +139,12 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    * @return whether the operation finished with success
    * @throws IOException if something goes wrong or timeout occurs
    */
-  public void waitForRegionServerToStart(String hostname, long timeout)
+  public void waitForRegionServerToStart(String hostname, int port, long timeout)
       throws IOException {
     long start = System.currentTimeMillis();
     while ((System.currentTimeMillis() - start) < timeout) {
       for (ServerName server : getClusterStatus().getServers()) {
-        if (server.getHostname().equals(hostname)) {
+        if (server.getHostname().equals(hostname) && server.getPort() == port) {
           return;
         }
       }
@@ -169,7 +169,7 @@ public abstract class HBaseCluster implements Closeable, Configurable {
    * @return whether the operation finished with success
    * @throws IOException if something goes wrong
    */
-  public abstract void startMaster(String hostname) throws IOException;
+  public abstract void startMaster(String hostname, int port) throws IOException;
 
   /**
    * Kills the master process if this is a distributed cluster, otherwise,

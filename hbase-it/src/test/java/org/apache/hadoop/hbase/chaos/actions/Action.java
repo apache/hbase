@@ -114,7 +114,7 @@ public class Action {
 
   protected void startMaster(ServerName server) throws IOException {
     LOG.info("Starting master:" + server.getHostname());
-    cluster.startMaster(server.getHostname());
+    cluster.startMaster(server.getHostname(), server.getPort());
     cluster.waitForActiveAndReadyMaster(startMasterTimeout);
     LOG.info("Started master: " + server);
   }
@@ -129,8 +129,8 @@ public class Action {
 
   protected void startRs(ServerName server) throws IOException {
     LOG.info("Starting region server:" + server.getHostname());
-    cluster.startRegionServer(server.getHostname());
-    cluster.waitForRegionServerToStart(server.getHostname(), startRsTimeout);
+    cluster.startRegionServer(server.getHostname(), server.getPort());
+    cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(), startRsTimeout);
     LOG.info("Started region server:" + server + ". Reported num of rs:"
         + cluster.getClusterStatus().getServersSize());
   }
