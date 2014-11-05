@@ -152,7 +152,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * Default setting for preventing deleted from being collected immediately.
    */
-  public static final boolean DEFAULT_KEEP_DELETED = false;
+  public static final KeepDeletedCells DEFAULT_KEEP_DELETED = KeepDeletedCells.FALSE;
 
   /**
    * Default setting for whether to use a block cache or not.
@@ -410,7 +410,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    */
   @Deprecated
   public HColumnDescriptor(final byte[] familyName, final int minVersions,
-      final int maxVersions, final boolean keepDeletedCells,
+      final int maxVersions, final KeepDeletedCells keepDeletedCells,
       final String compression, final boolean encodeOnDisk,
       final String dataBlockEncoding, final boolean inMemory,
       final boolean blockCacheEnabled, final int blocksize,
@@ -754,10 +754,11 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     return setValue(HConstants.IN_MEMORY, Boolean.toString(inMemory));
   }
 
-  public boolean getKeepDeletedCells() {
+  public KeepDeletedCells getKeepDeletedCells() {
     String value = getValue(KEEP_DELETED_CELLS);
     if (value != null) {
-      return Boolean.valueOf(value).booleanValue();
+      // toUpperCase for backwards compatibility
+      return KeepDeletedCells.valueOf(value.toUpperCase());
     }
     return DEFAULT_KEEP_DELETED;
   }
@@ -766,9 +767,21 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @param keepDeletedCells True if deleted rows should not be collected
    * immediately.
    * @return this (for chained invocation)
+   * @deprecated use {@link #setKeepDeletedCells(KeepDeletedCells)}
    */
+  @Deprecated
   public HColumnDescriptor setKeepDeletedCells(boolean keepDeletedCells) {
-    return setValue(KEEP_DELETED_CELLS, Boolean.toString(keepDeletedCells));
+    return setValue(KEEP_DELETED_CELLS, (keepDeletedCells ? KeepDeletedCells.TRUE
+        : KeepDeletedCells.FALSE).toString());
+  }
+
+  /**
+   * @param keepDeletedCells True if deleted rows should not be collected
+   * immediately.
+   * @return this (for chained invocation)
+   */
+  public HColumnDescriptor setKeepDeletedCells(KeepDeletedCells keepDeletedCells) {
+    return setValue(KEEP_DELETED_CELLS, keepDeletedCells.toString());
   }
 
   /**

@@ -205,7 +205,7 @@ public abstract class HBaseTestCase extends TestCase {
    * @return Column descriptor.
    */
   protected HTableDescriptor createTableDescriptor(final String name,
-      final int minVersions, final int versions, final int ttl, boolean keepDeleted) {
+      final int minVersions, final int versions, final int ttl, KeepDeletedCells keepDeleted) {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
     for (byte[] cfName : new byte[][]{ fam1, fam2, fam3 }) {
       htd.addFamily(new HColumnDescriptor(cfName)
