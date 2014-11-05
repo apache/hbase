@@ -356,7 +356,6 @@ Shell.load_command_group(
     restore_snapshot
     rename_snapshot
     delete_snapshot
-    delete_all_snapshot
     list_snapshots
   ]
 )
