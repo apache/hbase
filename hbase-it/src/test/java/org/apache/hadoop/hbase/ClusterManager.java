@@ -61,38 +61,38 @@ interface ClusterManager extends Configurable {
   /**
    * Start the service on the given host
    */
-  void start(ServiceType service, String hostname) throws IOException;
+  void start(ServiceType service, String hostname, int port) throws IOException;
 
   /**
    * Stop the service on the given host
    */
-  void stop(ServiceType service, String hostname) throws IOException;
+  void stop(ServiceType service, String hostname, int port) throws IOException;
 
   /**
-   * Restarts the service on the given host
+   * Restart the service on the given host
    */
-  void restart(ServiceType service, String hostname) throws IOException;
+  void restart(ServiceType service, String hostname, int port) throws IOException;
 
   /**
    * Kills the service running on the given host
    */
-  void kill(ServiceType service, String hostname) throws IOException;
+  void kill(ServiceType service, String hostname, int port) throws IOException;
 
   /**
    * Suspends the service running on the given host
    */
-  void suspend(ServiceType service, String hostname) throws IOException;
+  void suspend(ServiceType service, String hostname, int port) throws IOException;
 
   /**
    * Resumes the services running on the given host
    */
-  void resume(ServiceType service, String hostname) throws IOException;
+  void resume(ServiceType service, String hostname, int port) throws IOException;
 
   /**
    * Returns whether the service is running on the remote host. This only checks whether the
    * service still has a pid.
    */
-  boolean isRunning(ServiceType service, String hostname) throws IOException;
+  boolean isRunning(ServiceType service, String hostname, int port) throws IOException;
 
   /* TODO: further API ideas:
    *

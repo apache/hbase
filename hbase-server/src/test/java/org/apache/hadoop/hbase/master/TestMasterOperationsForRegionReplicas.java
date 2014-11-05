@@ -157,7 +157,7 @@ public class TestMasterOperationsForRegionReplicas {
       ServerName master = TEST_UTIL.getHBaseClusterInterface().getClusterStatus().getMaster();
       TEST_UTIL.getHBaseClusterInterface().stopMaster(master);
       TEST_UTIL.getHBaseClusterInterface().waitForMasterToStop(master, 30000);
-      TEST_UTIL.getHBaseClusterInterface().startMaster(master.getHostname());
+      TEST_UTIL.getHBaseClusterInterface().startMaster(master.getHostname(), master.getPort());
       TEST_UTIL.getHBaseClusterInterface().waitForActiveAndReadyMaster();
       for (int i = 0; i < numRegions; i++) {
         for (int j = 0; j < numReplica; j++) {
