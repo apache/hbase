@@ -563,7 +563,7 @@ public class TestFastFailWithoutTestUtil {
 
   public RpcRetryingCaller<Void> getRpcRetryingCaller(int pauseTime,
       int retries, RetryingCallerInterceptor interceptor) {
-    return new RpcRetryingCaller<Void>(pauseTime, retries, interceptor) {
+    return new RpcRetryingCaller<Void>(pauseTime, retries, interceptor, 9) {
       @Override
       public Void callWithRetries(RetryingCallable<Void> callable,
           int callTimeout) throws IOException, RuntimeException {

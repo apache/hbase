@@ -97,6 +97,16 @@ class AsyncProcess {
   public static final String PRIMARY_CALL_TIMEOUT_KEY = "hbase.client.primaryCallTimeout.multiget";
 
   /**
+   * Configure the number of failures after which the client will start logging. A few failures
+   * is fine: region moved, then is not opened, then is overloaded. We try to have an acceptable
+   * heuristic for the number of errors we don't log. 9 was chosen because we wait for 1s at
+   * this stage.
+   */
+  public static final String START_LOG_ERRORS_AFTER_COUNT_KEY =
+      "hbase.client.start.log.errors.counter";
+  public static final int DEFAULT_START_LOG_ERRORS_AFTER_COUNT = 9;
+
+  /**
    * The context used to wait for results from one submit call.
    * 1) If AsyncProcess is set to track errors globally, and not per call (for HTable puts),
    *    then errors and failed operations in this object will reflect global errors.
@@ -255,10 +265,8 @@ class AsyncProcess {
     this.maxConcurrentTasksPerRegion = conf.getInt(HConstants.HBASE_CLIENT_MAX_PERREGION_TASKS,
           HConstants.DEFAULT_HBASE_CLIENT_MAX_PERREGION_TASKS);
 
-    // A few failure is fine: region moved, then is not opened, then is overloaded. We try
-    //  to have an acceptable heuristic for the number of errors we don't log.
-    //  9 was chosen because we wait for 1s at this stage.
-    this.startLogErrorsCnt = conf.getInt("hbase.client.start.log.errors.counter", 9);
+    this.startLogErrorsCnt =
+        conf.getInt(START_LOG_ERRORS_AFTER_COUNT_KEY, DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
 
     if (this.maxTotalConcurrentTasks <= 0) {
       throw new IllegalArgumentException("maxTotalConcurrentTasks=" + maxTotalConcurrentTasks);
