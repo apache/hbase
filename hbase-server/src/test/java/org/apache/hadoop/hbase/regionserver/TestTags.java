@@ -125,13 +125,12 @@ public class TestTags {
       put.setAttribute("visibility", Bytes.toBytes("myTag"));
       table.put(put);
       admin.flush(tableName);
-      List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
-      for (HRegion region : regions) {
-        Store store = region.getStore(fam);
-        while (!(store.getStorefilesCount() > 0)) {
-          Thread.sleep(10);
-        }
-      }
+      // We are lacking an API for confirming flush request compaction.
+      // Just sleep for a short time. We won't be able to confirm flush
+      // completion but the test won't hang now or in the future if
+      // default compaction policy causes compaction between flush and
+      // when we go to confirm it.
+      Thread.sleep(1000);
 
       Put put1 = new Put(row1);
       byte[] value1 = Bytes.toBytes("1000dfsdf");
@@ -139,29 +138,18 @@ public class TestTags {
       // put1.setAttribute("visibility", Bytes.toBytes("myTag3"));
       table.put(put1);
       admin.flush(tableName);
-      regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
-      for (HRegion region : regions) {
-        Store store = region.getStore(fam);
-        while (!(store.getStorefilesCount() > 1)) {
-          Thread.sleep(10);
-        }
-      }
+      Thread.sleep(1000);
 
       Put put2 = new Put(row2);
       byte[] value2 = Bytes.toBytes("1000dfsdf");
       put2.add(fam, qual, HConstants.LATEST_TIMESTAMP, value2);
       put2.setAttribute("visibility", Bytes.toBytes("myTag3"));
       table.put(put2);
-
       admin.flush(tableName);
-      regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
-      for (HRegion region : regions) {
-        Store store = region.getStore(fam);
-        while (!(store.getStorefilesCount() > 2)) {
-          Thread.sleep(10);
-        }
-      }
+      Thread.sleep(1000);
+
       result(fam, row, qual, row2, table, value, value2, row1, value1);
+
       admin.compact(tableName);
       while (admin.getCompactionState(tableName) != CompactionState.NONE) {
         Thread.sleep(10);
@@ -203,40 +191,27 @@ public class TestTags {
       put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
       table.put(put);
       admin.flush(tableName);
-      List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
-      for (HRegion region : regions) {
-        Store store = region.getStore(fam);
-        while (!(store.getStorefilesCount() > 0)) {
-          Thread.sleep(10);
-        }
-      }
+      // We are lacking an API for confirming flush request compaction.
+      // Just sleep for a short time. We won't be able to confirm flush
+      // completion but the test won't hang now or in the future if
+      // default compaction policy causes compaction between flush and
+      // when we go to confirm it.
+      Thread.sleep(1000);
 
       Put put1 = new Put(row1);
       byte[] value1 = Bytes.toBytes("1000dfsdf");
       put1.add(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
       table.put(put1);
       admin.flush(tableName);
-      regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
-      for (HRegion region : regions) {
-        Store store = region.getStore(fam);
-        while (!(store.getStorefilesCount() > 1)) {
-          Thread.sleep(10);
-        }
-      }
+      Thread.sleep(1000);
 
       Put put2 = new Put(row2);
       byte[] value2 = Bytes.toBytes("1000dfsdf");
       put2.add(fam, qual, HConstants.LATEST_TIMESTAMP, value2);
       table.put(put2);
-
       admin.flush(tableName);
-      regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
-      for (HRegion region : regions) {
-        Store store = region.getStore(fam);
-        while (!(store.getStorefilesCount() > 2)) {
-          Thread.sleep(10);
-        }
-      }
+      Thread.sleep(1000);
+
       Scan s = new Scan(row);
       ResultScanner scanner = table.getScanner(s);
       try {
@@ -312,26 +287,20 @@ public class TestTags {
         put1.add(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
         table.put(put1);
         admin.flush(tableName);
-        List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName.getName());
-        for (HRegion region : regions) {
-          Store store = region.getStore(fam);
-          while (!(store.getStorefilesCount() > 0)) {
-            Thread.sleep(10);
-          }
-        }
+	// We are lacking an API for confirming flush request compaction.
+	// Just sleep for a short time. We won't be able to confirm flush
+	// completion but the test won't hang now or in the future if
+	// default compaction policy causes compaction between flush and
+	// when we go to confirm it.
+        Thread.sleep(1000);
 
         put1 = new Put(row2);
         value1 = Bytes.toBytes("1000dfsdf");
         put1.add(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
         table.put(put1);
         admin.flush(tableName);
-        regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
-        for (HRegion region : regions) {
-          Store store = region.getStore(fam);
-          while (!(store.getStorefilesCount() > 1)) {
-            Thread.sleep(10);
-          }
-        }
+        Thread.sleep(1000);
+
         Put put2 = new Put(rowd);
         byte[] value2 = Bytes.toBytes("1000dfsdf");
         put2.add(fam, qual, HConstants.LATEST_TIMESTAMP, value2);
@@ -342,13 +311,8 @@ public class TestTags {
         put.setAttribute("visibility", Bytes.toBytes("ram"));
         table.put(put2);
         admin.flush(tableName);
-        regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
-        for (HRegion region : regions) {
-          Store store = region.getStore(fam);
-          while (!(store.getStorefilesCount() > 2)) {
-            Thread.sleep(10);
-          }
-        }
+        Thread.sleep(1000);
+
         TestCoprocessorForTags.checkTagPresence = true;
         Scan s = new Scan(row);
         s.setCaching(1);

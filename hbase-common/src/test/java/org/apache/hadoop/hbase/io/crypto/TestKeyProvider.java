@@ -25,10 +25,9 @@ import java.security.Key;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.io.crypto.aes.AES;
-
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 

@@ -21,7 +21,19 @@
 package org.apache.hadoop.hbase.client;
 
 
-import com.google.protobuf.ServiceException;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.RunnableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -38,18 +50,8 @@ import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
-import java.util.concurrent.RunnableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import com.google.protobuf.ServiceException;
+import org.htrace.Trace;
 
 /**
  * Caller that goes to replica if the primary region does no answer within a configurable
@@ -412,7 +414,7 @@ public class RpcRetryingCallerWithReadReplicas {
 
     public void submit(ReplicaRegionServerCallable task, int callTimeout) {
       QueueingFuture newFuture = new QueueingFuture(task, callTimeout);
-      executor.execute(newFuture);
+      executor.execute(Trace.wrap(newFuture));
       tasks[task.id] = newFuture;
     }
 

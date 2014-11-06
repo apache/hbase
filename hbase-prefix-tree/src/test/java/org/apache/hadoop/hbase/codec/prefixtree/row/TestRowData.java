@@ -57,7 +57,7 @@ public interface TestRowData {
 
   void individualSearcherAssertions(CellSearcher searcher);
 
-  class InMemory {
+  static class InMemory {
 
     /*
      * The following are different styles of data that the codec may encounter.  Having these small

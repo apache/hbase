@@ -19,11 +19,6 @@
 
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.util.Bytes;
-
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Collection;
@@ -32,6 +27,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * This subclass of {@link org.apache.hadoop.hbase.client.RetriesExhaustedException}

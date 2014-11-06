@@ -77,20 +77,18 @@ public class MultiHConnection {
   public void close() {
     synchronized (hConnectionsLock) {
       if (hConnections != null) {
-        if (hConnections != null) {
-          for (Connection conn : hConnections) {
-            if (conn != null) {
-              try {
-                conn.close();
-              } catch (IOException e) {
-                LOG.info("Got exception in closing connection", e);
-              } finally {
-                conn = null;
-              }
+        for (Connection conn : hConnections) {
+          if (conn != null) {
+            try {
+              conn.close();
+            } catch (IOException e) {
+              LOG.info("Got exception in closing connection", e);
+            } finally {
+              conn = null;
             }
           }
-          hConnections = null;
         }
+        hConnections = null;
       }
     }
     if (this.batchPool != null && !this.batchPool.isShutdown()) {

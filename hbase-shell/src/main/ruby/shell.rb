@@ -361,6 +361,15 @@ Shell.load_command_group(
 )
 
 Shell.load_command_group(
+  'configuration',
+  :full_name => 'ONLINE CONFIGURATION TOOLS',
+  :commands => %w[
+    update_config
+    update_all_config
+  ]
+)
+
+Shell.load_command_group(
   'quotas',
   :full_name => 'CLUSTER QUOTAS TOOLS',
   :commands => %w[

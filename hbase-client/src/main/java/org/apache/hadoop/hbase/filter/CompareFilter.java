@@ -19,7 +19,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
-import com.google.common.base.Preconditions;
+import java.util.ArrayList;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -28,7 +29,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import java.util.ArrayList;
+import com.google.common.base.Preconditions;
 /**
  * This is a generic filter to be used to filter by comparison.  It takes an
  * operator (equal, greater, not equal, etc) and a byte [] comparator.

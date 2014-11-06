@@ -215,6 +215,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   MasterCoprocessorHost cpHost;
 
+  private final boolean preLoadTableDescriptors;
+
   // Time stamps for when a hmaster became active
   private long masterActiveTime;
 
@@ -262,7 +264,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * </ol>
    * <p>
    * Remaining steps of initialization occur in
-   * {@link #finishActiveMasterInitialization(MonitoredTask)} after
+   * #finishActiveMasterInitialization(MonitoredTask) after
    * the master becomes the active one.
    *
    * @throws KeeperException
@@ -290,7 +292,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     this.metricsMaster = new MetricsMaster( new MetricsMasterWrapperImpl(this));
 
+    // preload table descriptor at startup
+    this.preLoadTableDescriptors = conf.getBoolean("hbase.master.preload.tabledescriptors", true);
+
     // Do we publish the status?
+    
     boolean shouldPublish = conf.getBoolean(HConstants.STATUS_PUBLISHED,
         HConstants.STATUS_PUBLISHED_DEFAULT);
     Class<? extends ClusterStatusPublisher.Publisher> publisherClass =
@@ -515,6 +521,15 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.masterActiveTime = System.currentTimeMillis();
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
     this.fileSystemManager = new MasterFileSystem(this, this);
+
+    // enable table descriptors cache
+    this.tableDescriptors.setCacheOn();
+
+    // warm-up HTDs cache on master initialization
+    if (preLoadTableDescriptors) {
+      status.setStatus("Pre-loading table descriptors");
+      this.tableDescriptors.getAll();
+    }
 
     // publish cluster ID
     status.setStatus("Publishing Cluster ID in ZooKeeper");
@@ -1267,8 +1282,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     * this node explicitly.  If we crash before then, ZooKeeper will delete
     * this node for us since it is ephemeral.
     */
-    LOG.info("Adding ZNode for " + backupZNode + " in backup master directory");
-    MasterAddressTracker.setMasterAddress(zooKeeper, backupZNode, serverName);
+    LOG.info("Adding backup master ZNode " + backupZNode);
+    if (!MasterAddressTracker.setMasterAddress(zooKeeper, backupZNode, serverName)) {
+      LOG.warn("Failed create of " + backupZNode + " by " + serverName);
+    }
 
     activeMasterManager = new ActiveMasterManager(zooKeeper, serverName, this);
     // Start a thread to try to become the active master, so we won't block here

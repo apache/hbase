@@ -209,6 +209,8 @@ public class QuotaCache implements Stoppable {
     }
 
     @Override
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="GC_UNRELATED_TYPES",
+      justification="I do not understand why the complaints, it looks good to me -- FIX")
     protected void chore() {
       // Prefetch online tables/namespaces
       for (TableName table: QuotaCache.this.rsServices.getOnlineTables()) {

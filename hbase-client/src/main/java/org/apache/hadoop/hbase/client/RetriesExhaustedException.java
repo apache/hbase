@@ -14,13 +14,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.Callable;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Exception thrown by HTable methods when an attempt to do something (like

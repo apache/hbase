@@ -1447,7 +1447,9 @@ public final class ProtobufUtil {
       }
       return (Filter)parseFrom.invoke(c, value);
     } catch (Exception e) {
-      throw new IOException(e);
+      // Either we couldn't instantiate the method object, or "parseFrom" failed.
+      // In either case, let's not retry.
+      throw new DoNotRetryIOException(e);
     }
   }
 
@@ -2279,7 +2281,7 @@ public final class ProtobufUtil {
     AccessControlProtos.GetUserPermissionsRequest request = builder.build();
     AccessControlProtos.GetUserPermissionsResponse response =
       protocol.getUserPermissions(null, request);
-    List<UserPermission> perms = new ArrayList<UserPermission>();
+    List<UserPermission> perms = new ArrayList<UserPermission>(response.getUserPermissionCount());
     for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
       perms.add(ProtobufUtil.toUserPermission(perm));
     }
@@ -2307,7 +2309,7 @@ public final class ProtobufUtil {
     AccessControlProtos.GetUserPermissionsRequest request = builder.build();
     AccessControlProtos.GetUserPermissionsResponse response =
       protocol.getUserPermissions(null, request);
-    List<UserPermission> perms = new ArrayList<UserPermission>();
+    List<UserPermission> perms = new ArrayList<UserPermission>(response.getUserPermissionCount());
     for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
       perms.add(ProtobufUtil.toUserPermission(perm));
     }
@@ -2335,7 +2337,7 @@ public final class ProtobufUtil {
     AccessControlProtos.GetUserPermissionsRequest request = builder.build();
     AccessControlProtos.GetUserPermissionsResponse response =
       protocol.getUserPermissions(null, request);
-    List<UserPermission> perms = new ArrayList<UserPermission>();
+    List<UserPermission> perms = new ArrayList<UserPermission>(response.getUserPermissionCount());
     for (AccessControlProtos.UserPermission perm: response.getUserPermissionList()) {
       perms.add(ProtobufUtil.toUserPermission(perm));
     }

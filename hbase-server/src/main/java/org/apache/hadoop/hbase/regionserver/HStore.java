@@ -44,7 +44,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -57,6 +56,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -91,7 +91,6 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
@@ -720,8 +719,8 @@ public class HStore implements Store {
             if (CellComparator.compareRows(prevCell, cell) > 0) {
               throw new InvalidHFileException("Previous row is greater than"
                   + " current row: path=" + srcPath + " previous="
-                  + CellUtil.getCellKey(prevCell) + " current="
-                  + CellUtil.getCellKey(cell));
+                  + CellUtil.getCellKeyAsString(prevCell) + " current="
+                  + CellUtil.getCellKeyAsString(cell));
             }
             if (CellComparator.compareFamilies(prevCell, cell) != 0) {
               throw new InvalidHFileException("Previous key had different"
@@ -977,7 +976,7 @@ public class HStore implements Store {
                                 .withIncludesMvcc(includeMVCCReadpoint)
                                 .withIncludesTags(includesTag)
                                 .withCompression(compression)
-                                .withCompressTags(family.shouldCompressTags())
+                                .withCompressTags(family.isCompressTags())
                                 .withChecksumType(checksumType)
                                 .withBytesPerCheckSum(bytesPerChecksum)
                                 .withBlockSize(blocksize)

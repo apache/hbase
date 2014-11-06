@@ -23,6 +23,7 @@ import java.nio.ByteBuffer;
 import java.util.zip.Checksum;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 
@@ -132,7 +133,11 @@ public class ChecksumUtil {
     }
     // Extract the header and compute checksum for the header.
     ByteBuffer hdr = block.getBufferWithHeader();
-    checksumObject.update(hdr.array(), hdr.arrayOffset(), hdrSize);
+    if (hdr.hasArray()) {
+      checksumObject.update(hdr.array(), hdr.arrayOffset(), hdrSize);
+    } else {
+      checksumObject.update(ByteBufferUtils.toBytes(hdr, 0, hdrSize), 0, hdrSize);
+    }
 
     int off = hdrSize;
     int consumed = hdrSize;

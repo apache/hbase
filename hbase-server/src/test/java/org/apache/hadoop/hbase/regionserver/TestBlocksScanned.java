@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -49,7 +50,7 @@ public class TestBlocksScanned extends HBaseTestCase {
 
   private static HBaseTestingUtility TEST_UTIL = null;
 
-  @Override
+  @Before
   public void setUp() throws Exception {
     super.setUp();
 

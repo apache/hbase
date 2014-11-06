@@ -27,7 +27,12 @@ import org.apache.hadoop.util.ReflectionUtils;
  * based on configuration.
  */
 @InterfaceAudience.Private
-public class CoordinatedStateManagerFactory {
+public final class CoordinatedStateManagerFactory {
+
+  /**
+   * Private to keep this class from being accidentally instantiated.
+   */
+  private CoordinatedStateManagerFactory(){}
 
   /**
    * Creates consensus provider from the given configuration.

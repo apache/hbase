@@ -175,7 +175,11 @@ public class TestStore {
 
     fs.delete(logdir, true);
 
-    htd.addFamily(hcd);
+    if (htd.hasFamily(hcd.getName())) {
+      htd.modifyFamily(hcd);
+    } else {
+      htd.addFamily(hcd);
+    }
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     HLog hlog = HLogFactory.createHLog(fs, basedir, logName, conf);
     HRegion region = new HRegion(tableDir, hlog, fs, conf, info, htd, null);

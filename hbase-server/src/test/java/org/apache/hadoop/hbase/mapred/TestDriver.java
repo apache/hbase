@@ -32,7 +32,6 @@ import static org.mockito.Mockito.verify;
 public class TestDriver {
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testDriverMainMethod() throws Throwable {
     ProgramDriver programDriverMock = mock(ProgramDriver.class);
     Driver.setProgramDriver(programDriverMock);
