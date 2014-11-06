@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 <!--
@@ -1096,6 +1096,7 @@
     <mockito-all.version>1.8.5</mockito-all.version>
     <protobuf.version>2.4.0a</protobuf.version>
     <stax-api.version>1.0.1</stax-api.version>
+    <thrift.path>thrift</thrift.path>
     <thrift.version>0.8.0</thrift.version>
     <zookeeper.version>3.4.5</zookeeper.version>
     <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
