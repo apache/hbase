@@ -63,7 +63,9 @@ public abstract class BaseDecoder implements Codec.Decoder {
       LOG.trace("Error getting available for error message - ignoring", t);
     }
     if (!isEof) throw ioEx;
-    LOG.error("Partial cell read caused by EOF: " + ioEx);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Partial cell read caused by EOF", ioEx);
+    }
     EOFException eofEx = new EOFException("Partial cell read");
     eofEx.initCause(ioEx);
     throw eofEx;
