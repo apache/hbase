@@ -264,7 +264,7 @@ public class TestFromClientSide {
      result = table.get(get);
      assertNull(result.getValue(FAMILY, COLUMN));
 
-     // major compaction, purged future deletes 
+     // major compaction, purged future deletes
      TEST_UTIL.getHBaseAdmin().flush(TABLENAME);
      TEST_UTIL.getHBaseAdmin().majorCompact(TABLENAME);
 
@@ -288,7 +288,7 @@ public class TestFromClientSide {
      get = new Get(ROW);
      result = table.get(get);
      assertArrayEquals(VALUE, result.getValue(FAMILY, COLUMN));
-     
+
      table.close();
    }
 
@@ -837,7 +837,7 @@ public class TestFromClientSide {
   @Test
   public void testFilterWithLongCompartor() throws Exception {
     byte [] TABLE = Bytes.toBytes("testFilterWithLongCompartor");
-    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
     byte [][] ROWS = makeN(ROW, 10);
     byte [][] values = new byte[10][];
     for (int i = 0; i < 10; i ++) {
