@@ -67,6 +67,11 @@ public class UnmodifyableHTableDescriptor extends HTableDescriptor {
     throw new UnsupportedOperationException("HTableDescriptor is read-only");
   }
 
+  @Override
+  public HTableDescriptor modifyFamily(HColumnDescriptor family) {
+    throw new UnsupportedOperationException("HTableDescriptor is read-only");
+  }
+
   /**
    * @param column
    * @return Column descriptor for the passed family name or the family on

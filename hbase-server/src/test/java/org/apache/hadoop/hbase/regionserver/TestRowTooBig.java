@@ -70,7 +70,11 @@ public class TestRowTooBig {
 
     HTableDescriptor htd = TEST_HTD;
     HColumnDescriptor hcd = new HColumnDescriptor(fam1);
-    htd.addFamily(hcd);
+    if (htd.hasFamily(hcd.getName())) {
+      htd.modifyFamily(hcd);
+    } else {
+      htd.addFamily(hcd);
+    }
 
     final HRegionInfo hri =
       new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
@@ -108,7 +112,11 @@ public class TestRowTooBig {
 
     HTableDescriptor htd = TEST_HTD;
     HColumnDescriptor hcd = new HColumnDescriptor(fam1);
-    htd.addFamily(hcd);
+    if (htd.hasFamily(hcd.getName())) {
+      htd.modifyFamily(hcd);
+    } else {
+      htd.addFamily(hcd);
+    }
 
     final HRegionInfo hri =
       new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,

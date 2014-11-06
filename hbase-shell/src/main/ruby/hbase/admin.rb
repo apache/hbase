@@ -217,7 +217,14 @@ module Hbase
         if arg.kind_of?(String) or arg.has_key?(NAME)
           # If the arg is a string, default action is to add a column to the table.
           # If arg has a name, it must also be a column descriptor.
-          htd.addFamily(hcd(arg, htd))
+          descriptor = hcd(arg, htd);
+          # Warn if duplicate columns are added
+          if htd.hasFamily(descriptor.getName)
+            puts "Family '" + descriptor.getNameAsString() + "' already exists, the old one will be replaced"
+            htd.modifyFamily(descriptor)
+          else
+            htd.addFamily(descriptor)
+          end
           has_columns = true
           next
         end
