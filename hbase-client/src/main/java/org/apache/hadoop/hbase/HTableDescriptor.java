@@ -767,11 +767,33 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
 
   /**
    * Adds a column family.
+   * For the updating purpose please use {@link #modifyFamily(HColumnDescriptor)} instead.
    * @param family HColumnDescriptor of family to add.
    */
   public HTableDescriptor addFamily(final HColumnDescriptor family) {
     if (family.getName() == null || family.getName().length <= 0) {
-      throw new NullPointerException("Family name cannot be null or empty");
+      throw new IllegalArgumentException("Family name cannot be null or empty");
+    }
+    if (hasFamily(family.getName())) {
+      throw new IllegalArgumentException("Family '" +
+        family.getNameAsString() + "' already exists so cannot be added");
+    }
+    this.families.put(family.getName(), family);
+    return this;
+  }
+
+  /**
+   * Modifies the existing column family.
+   * @param family HColumnDescriptor of family to update
+   * @return this (for chained invocation)
+   */
+  public HTableDescriptor modifyFamily(final HColumnDescriptor family) {
+    if (family.getName() == null || family.getName().length <= 0) {
+      throw new IllegalArgumentException("Family name cannot be null or empty");
+    }
+    if (!hasFamily(family.getName())) {
+      throw new IllegalArgumentException("Column family '" + family.getNameAsString()
+        + "' does not exist");
     }
     this.families.put(family.getName(), family);
     return this;
