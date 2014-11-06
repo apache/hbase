@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.LongComparator;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
@@ -747,6 +748,37 @@ public class TestFromClientSide {
     assertEquals(expectedIndex, 6);
     scanner.close();
   }
+
+  @Test
+  public void testFilterWithLongCompartor() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testFilterWithLongCompartor");
+    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    byte [][] ROWS = makeN(ROW, 10);
+    byte [][] values = new byte[10][];
+    for (int i = 0; i < 10; i ++) {
+        values[i] = Bytes.toBytes(100L * i);
+    }
+    for(int i = 0; i < 10; i ++) {
+      Put put = new Put(ROWS[i]);
+      put.setDurability(Durability.SKIP_WAL);
+      put.add(FAMILY, QUALIFIER, values[i]);
+      ht.put(put);
+    }
+    Scan scan = new Scan();
+    scan.addFamily(FAMILY);
+    Filter filter = new SingleColumnValueFilter(FAMILY, QUALIFIER, CompareOp.GREATER,
+      new LongComparator(500));
+    scan.setFilter(filter);
+    ResultScanner scanner = ht.getScanner(scan);
+    int expectedIndex = 0;
+    for(Result result : ht.getScanner(scan)) {
+      assertEquals(result.size(), 1);
+      assertTrue(Bytes.toLong(result.getValue(FAMILY, QUALIFIER)) > 500);
+      expectedIndex++;
+    }
+    assertEquals(expectedIndex, 4);
+    scanner.close();
+}
 
   @Test
   public void testKeyOnlyFilter() throws Exception {
