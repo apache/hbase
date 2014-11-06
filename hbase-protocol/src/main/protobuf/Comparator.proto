@@ -39,6 +39,10 @@ message BinaryComparator {
   required ByteArrayComparable comparable = 1;
 }
 
+message LongComparator {
+  required ByteArrayComparable comparable = 1;
+}
+
 message BinaryPrefixComparator {
   required ByteArrayComparable comparable = 1;
 }
