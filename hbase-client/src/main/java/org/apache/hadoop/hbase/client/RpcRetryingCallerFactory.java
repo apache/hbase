@@ -31,6 +31,7 @@ public class RpcRetryingCallerFactory {
   protected final Configuration conf;
   private final long pause;
   private final int retries;
+  private final int startLogErrorsCnt;
 
   public RpcRetryingCallerFactory(Configuration conf) {
     this.conf = conf;
@@ -38,12 +39,14 @@ public class RpcRetryingCallerFactory {
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     retries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
         HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+    startLogErrorsCnt = conf.getInt(AsyncProcess.START_LOG_ERRORS_AFTER_COUNT_KEY,
+        AsyncProcess.DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
   }
 
   public <T> RpcRetryingCaller<T> newCaller() {
     // We store the values in the factory instance. This way, constructing new objects
     //  is cheap as it does not require parsing a complex structure.
-    return new RpcRetryingCaller<T>(pause, retries);
+    return new RpcRetryingCaller<T>(pause, retries, startLogErrorsCnt);
   }
 
   public static RpcRetryingCallerFactory instantiate(Configuration configuration) {

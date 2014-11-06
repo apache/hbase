@@ -92,6 +92,17 @@ import com.google.common.base.Preconditions;
  */
 class AsyncProcess<CResult> {
   private static final Log LOG = LogFactory.getLog(AsyncProcess.class);
+
+  /**
+   * Configure the number of failures after which the client will start logging. A few failures
+   * is fine: region moved, then is not opened, then is overloaded. We try to have an acceptable
+   * heuristic for the number of errors we don't log. 9 was chosen because we wait for 1s at
+   * this stage.
+   */
+  public static final String START_LOG_ERRORS_AFTER_COUNT_KEY =
+      "hbase.client.start.log.errors.counter";
+  public static final int DEFAULT_START_LOG_ERRORS_AFTER_COUNT = 9;
+
   protected static final AtomicLong COUNTER = new AtomicLong();
   protected final long id;
   private final int startLogErrorsCnt;
@@ -230,10 +241,8 @@ class AsyncProcess<CResult> {
     this.maxConcurrentTasksPerRegion = conf.getInt(HConstants.HBASE_CLIENT_MAX_PERREGION_TASKS,
           HConstants.DEFAULT_HBASE_CLIENT_MAX_PERREGION_TASKS);
 
-    // A few failure is fine: region moved, then is not opened, then is overloaded. We try
-    //  to have an acceptable heuristic for the number of errors we don't log.
-    //  9 was chosen because we wait for 1s at this stage.
-    this.startLogErrorsCnt = conf.getInt("hbase.client.start.log.errors.counter", 9);
+    this.startLogErrorsCnt =
+        conf.getInt(START_LOG_ERRORS_AFTER_COUNT_KEY, DEFAULT_START_LOG_ERRORS_AFTER_COUNT);
 
     if (this.maxTotalConcurrentTasks <= 0) {
       throw new IllegalArgumentException("maxTotalConcurrentTasks=" + maxTotalConcurrentTasks);

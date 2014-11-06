@@ -107,7 +107,7 @@ public class TestAsyncProcess {
     protected RpcRetryingCaller<MultiResponse> createCaller(MultiServerCallable<Row> callable) {
       final MultiResponse mr = createMultiResponse(callable.getLocation(), callable.getMulti(),
           nbMultiResponse, nbActions);
-      return new RpcRetryingCaller<MultiResponse>(100, 10) {
+      return new RpcRetryingCaller<MultiResponse>(100, 10, 9) {
         @Override
         public MultiResponse callWithoutRetries(RetryingCallable<MultiResponse> callable, int to)
         throws IOException, RuntimeException {
@@ -127,7 +127,7 @@ public class TestAsyncProcess {
   static class CallerWithFailure extends RpcRetryingCaller<MultiResponse>{
 
     public CallerWithFailure() {
-      super(100, 100);
+      super(100, 100, 9);
     }
 
     @Override
