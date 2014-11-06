@@ -319,15 +319,13 @@ end
 
 # Move regions off the passed hostname:port
 def unloadRegions(options, hostname, port)
-  # Get configuration
-  config = getConfiguration()
   # Clean up any old files.
   filename = getFilename(options, hostname, port)
   deleteFile(filename)
+  # Get configuration
+  config = getConfiguration()
   # Get an admin instance
-  admin = HBaseAdmin.new(config) 
-  port = config.getInt(HConstants::REGIONSERVER_PORT, HConstants::DEFAULT_REGIONSERVER_PORT) \
-    unless port
+  admin = HBaseAdmin.new(config)
   servers = getServers(admin)
   # Remove the server we are unloading from from list of servers.
   # Side-effect is the servername that matches this hostname 
@@ -382,9 +380,7 @@ def loadRegions(options, hostname, port)
   config = getConfiguration()
   # Get an admin instance
   admin = HBaseAdmin.new(config) 
-  port = config.getInt(HConstants::REGIONSERVER_PORT, HConstants::DEFAULT_REGIONSERVER_PORT) \
-    unless port
-  filename = getFilename(options, hostname, port) 
+  filename = getFilename(options, hostname, port)
   regions = readFile(filename)
   return if regions.isEmpty()
   servername = nil
@@ -504,6 +500,14 @@ if not hostname
   opts optparse
   exit 2
 end
+
+# Get configuration
+config = getConfiguration()
+if not port
+    port = config.getInt(HConstants::REGIONSERVER_PORT, HConstants::DEFAULT_REGIONSERVER_PORT)
+end
+port = port.to_s
+
 # Create a logger and save it to ruby global
 $LOG = configureLogging(options) 
 case ARGV[0]
