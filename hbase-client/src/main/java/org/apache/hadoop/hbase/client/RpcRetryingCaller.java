@@ -58,6 +58,8 @@ public class RpcRetryingCaller<T> {
    * Start and end times for a single call.
    */
   private final static int MIN_RPC_TIMEOUT = 2000;
+  /** How many retries are allowed before we start to log */
+  private final int startLogErrorsCnt;
 
   private final long pause;
   private final int retries;
@@ -65,16 +67,17 @@ public class RpcRetryingCaller<T> {
   private final RetryingCallerInterceptor interceptor;
   private final RetryingCallerInterceptorContext context;
 
-  public RpcRetryingCaller(long pause, int retries) {
-    this(pause, retries, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR);
+  public RpcRetryingCaller(long pause, int retries, int startLogErrorsCnt) {
+    this(pause, retries, RetryingCallerInterceptorFactory.NO_OP_INTERCEPTOR, startLogErrorsCnt);
   }
   
   public RpcRetryingCaller(long pause, int retries,
-      RetryingCallerInterceptor interceptor) {
+      RetryingCallerInterceptor interceptor, int startLogErrorsCnt) {
     this.pause = pause;
     this.retries = retries;
     this.interceptor = interceptor;
     context = interceptor.createEmptyContext();
+    this.startLogErrorsCnt = startLogErrorsCnt;
   }
 
   private int getRemainingTime(int callTimeout) {
@@ -125,10 +128,11 @@ public class RpcRetryingCaller<T> {
         throw e;
       } catch (Throwable t) {
         ExceptionUtil.rethrowIfInterrupt(t);
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("Call exception, tries=" + tries + ", retries=" + retries + ", started=" +
+        if (tries > startLogErrorsCnt) {
+          LOG.info("Call exception, tries=" + tries + ", retries=" + retries + ", started=" +
               (EnvironmentEdgeManager.currentTime() - this.globalStartTime) + " ms ago, "
-              + "cancelled=" + cancelled.get(), t);
+              + "cancelled=" + cancelled.get() + ", msg="
+              + callable.getExceptionMessageAdditionalDetail());
         }
 
         // translateException throws exception when should not retry: i.e. when request is bad.

@@ -190,7 +190,7 @@ public class TestAsyncProcess {
             }
           });
 
-      return new RpcRetryingCaller<MultiResponse>(100, 10) {
+      return new RpcRetryingCaller<MultiResponse>(100, 10, 9) {
         @Override
         public MultiResponse callWithoutRetries(RetryingCallable<MultiResponse> callable,
                                                 int callTimeout)
@@ -211,7 +211,7 @@ public class TestAsyncProcess {
   static class CallerWithFailure extends RpcRetryingCaller<MultiResponse>{
 
     public CallerWithFailure() {
-      super(100, 100);
+      super(100, 100, 9);
     }
 
     @Override
@@ -294,7 +294,7 @@ public class TestAsyncProcess {
         replicaCalls.incrementAndGet();
       }
 
-      return new RpcRetryingCaller<MultiResponse>(100, 10) {
+      return new RpcRetryingCaller<MultiResponse>(100, 10, 9) {
         @Override
         public MultiResponse callWithoutRetries(RetryingCallable<MultiResponse> callable, int callTimeout)
         throws IOException, RuntimeException {
