@@ -173,7 +173,7 @@ public abstract class User {
    */
   @SuppressWarnings({ "rawtypes", "unchecked" })
   public static <T> T runAsLoginUser(PrivilegedExceptionAction<T> action) throws IOException {
-    return doAsUser(UserGroupInformation.getCurrentUser(), action);
+    return doAsUser(UserGroupInformation.getLoginUser(), action);
   }
 
   private static <T> T doAsUser(UserGroupInformation ugi,

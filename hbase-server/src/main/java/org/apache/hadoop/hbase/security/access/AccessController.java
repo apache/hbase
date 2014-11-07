@@ -287,21 +287,6 @@ public class AccessController extends BaseMasterAndRegionObserver
         permRequest, tableName, families);
     }
 
-    // Users with CREATE/ADMIN rights need to modify hbase:meta and _acl_ table
-    // e.g. When a new table is created a new entry in hbase:meta is added,
-    // so the user need to be allowed to write on it.
-    // e.g. When a table is removed an entry is removed from hbase:meta and _acl_
-    // and the user need to be allowed to write on both tables.
-    if (permRequest == Action.WRITE &&
-       (hri.isMetaRegion() ||
-        Bytes.equals(tableName.getName(), AccessControlLists.ACL_GLOBAL_NAME)) &&
-       (authManager.authorize(user, Action.CREATE) ||
-        authManager.authorize(user, Action.ADMIN)))
-    {
-       return AuthResult.allow(request, "Table permission granted", user,
-        permRequest, tableName, families);
-    }
-
     // 2. check for the table-level, if successful we can short-circuit
     if (authManager.authorize(user, tableName, (byte[])null, permRequest)) {
       return AuthResult.allow(request, "Table permission granted", user,
@@ -880,31 +865,45 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
    @Override
-  public void preTruncateTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName)
-      throws IOException {
+  public void preTruncateTable(ObserverContext<MasterCoprocessorEnvironment> c,
+      final TableName tableName) throws IOException {
     requirePermission("truncateTable", tableName, null, null, Action.ADMIN);
-    List<UserPermission> acls = AccessControlLists.getUserTablePermissions(c.getEnvironment()
-        .getConfiguration(), tableName);
-    if (acls != null) {
-      tableAcls.put(tableName, acls);
-    }
+    final Configuration conf = c.getEnvironment().getConfiguration();
+    User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        List<UserPermission> acls = AccessControlLists.getUserTablePermissions(conf, tableName);
+        if (acls != null) {
+          tableAcls.put(tableName, acls);
+        }
+        return null;
+      }
+    });
   }
 
   @Override
   public void postTruncateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName) throws IOException {
-    List<UserPermission> perms = tableAcls.get(tableName);
-    if (perms != null) {
-      for (UserPermission perm : perms) {
-        AccessControlLists.addUserPermission(ctx.getEnvironment().getConfiguration(), perm);
+      final TableName tableName) throws IOException {
+    final Configuration conf = ctx.getEnvironment().getConfiguration();
+    User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        List<UserPermission> perms = tableAcls.get(tableName);
+        if (perms != null) {
+          for (UserPermission perm : perms) {
+            AccessControlLists.addUserPermission(conf, perm);
+          }
+        }
+        tableAcls.remove(tableName);
+        return null;
       }
-    }
-    tableAcls.remove(tableName);
+    });
   }
 
   @Override
   public void preTruncateTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
       TableName tableName) throws IOException {}
+
   @Override
   public void postTruncateTableHandler(ObserverContext<MasterCoprocessorEnvironment> c,
       TableName tableName) throws IOException {}
@@ -973,8 +972,15 @@ public class AccessController extends BaseMasterAndRegionObserver
 
   @Override
   public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName) throws IOException {
-    AccessControlLists.removeTablePermissions(c.getEnvironment().getConfiguration(), tableName);
+      final TableName tableName) throws IOException {
+    final Configuration conf = c.getEnvironment().getConfiguration();
+    User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        AccessControlLists.removeTablePermissions(conf, tableName);
+        return null;
+      }
+    });
   }
 
   @Override
@@ -985,13 +991,20 @@ public class AccessController extends BaseMasterAndRegionObserver
 
   @Override
   public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName, HTableDescriptor htd) throws IOException {
-    String owner = htd.getOwnerString();
+      TableName tableName, final HTableDescriptor htd) throws IOException {
+    final Configuration conf = c.getEnvironment().getConfiguration();
     // default the table owner to current user, if not specified.
-    if (owner == null) owner = getActiveUser().getShortName();
-    UserPermission userperm = new UserPermission(Bytes.toBytes(owner), htd.getTableName(), null,
-        Action.values());
-    AccessControlLists.addUserPermission(c.getEnvironment().getConfiguration(), userperm);
+    final String owner = (htd.getOwnerString() != null) ? htd.getOwnerString() : 
+      getActiveUser().getShortName();
+    User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        UserPermission userperm = new UserPermission(Bytes.toBytes(owner),
+          htd.getTableName(), null, Action.values());
+        AccessControlLists.addUserPermission(conf, userperm);
+        return null;
+      }
+    });
   }
 
   @Override
@@ -1014,8 +1027,15 @@ public class AccessController extends BaseMasterAndRegionObserver
 
   @Override
   public void postDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> c,
-      TableName tableName, byte[] col) throws IOException {
-    AccessControlLists.removeTablePermissions(c.getEnvironment().getConfiguration(), tableName, col);
+      final TableName tableName, final byte[] col) throws IOException {
+    final Configuration conf = c.getEnvironment().getConfiguration();
+    User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        AccessControlLists.removeTablePermissions(conf, tableName, col);
+        return null;
+      }
+    });
   }
 
   @Override
@@ -1136,9 +1156,15 @@ public class AccessController extends BaseMasterAndRegionObserver
 
   @Override
   public void postDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-                                  String namespace) throws IOException {
-    AccessControlLists.removeNamespacePermissions(ctx.getEnvironment().getConfiguration(),
-        namespace);
+      final String namespace) throws IOException {
+    final Configuration conf = ctx.getEnvironment().getConfiguration();
+    User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        AccessControlLists.removeNamespacePermissions(conf, namespace);
+        return null;
+      }
+    });
     LOG.info(namespace + "entry deleted in "+AccessControlLists.ACL_TABLE_NAME+" table.");
   }
 
@@ -1870,18 +1896,27 @@ public class AccessController extends BaseMasterAndRegionObserver
     }
   }
 
-  private AuthResult hasSomeAccess(RegionCoprocessorEnvironment e, String method, Action action) throws IOException {
+  private AuthResult hasSomeAccess(RegionCoprocessorEnvironment e, String method, Action action)
+      throws IOException {
     User requestUser = getActiveUser();
-    TableName tableName = e.getRegion().getTableDesc().getTableName();
-    AuthResult authResult = permissionGranted(method, requestUser,
-        action, e, Collections.EMPTY_MAP);
+    final TableName tableName = e.getRegion().getTableDesc().getTableName();
+    AuthResult authResult = permissionGranted(method, requestUser, action, e,
+      Collections.EMPTY_MAP);
     if (!authResult.isAllowed()) {
-      for(UserPermission userPerm:
-          AccessControlLists.getUserTablePermissions(regionEnv.getConfiguration(), tableName)) {
-        for(Action userAction: userPerm.getActions()) {
-          if(userAction.equals(action)) {
+      final Configuration conf = e.getConfiguration();
+      // hasSomeAccess is called from bulkload pre hooks
+      List<UserPermission> perms =
+        User.runAsLoginUser(new PrivilegedExceptionAction<List<UserPermission>>() {
+          @Override
+          public List<UserPermission> run() throws Exception {
+            return AccessControlLists.getUserTablePermissions(conf, tableName);
+          }
+        });
+      for (UserPermission userPerm: perms) {
+        for (Action userAction: userPerm.getActions()) {
+          if (userAction.equals(action)) {
             return AuthResult.allow(method, "Access allowed", requestUser,
-                action, tableName, null, null);
+              action, tableName, null, null);
           }
         }
       }
@@ -1948,7 +1983,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void grant(RpcController controller,
                     AccessControlProtos.GrantRequest request,
                     RpcCallback<AccessControlProtos.GrantResponse> done) {
-    UserPermission perm = ProtobufUtil.toUserPermission(request.getUserPermission());
+    final UserPermission perm = ProtobufUtil.toUserPermission(request.getUserPermission());
     AccessControlProtos.GrantResponse response = null;
     try {
       // verify it's only running at .acl.
@@ -1968,9 +2003,17 @@ public class AccessController extends BaseMasterAndRegionObserver
             break;
           case Namespace :
             requireGlobalPermission("grant", Action.ADMIN, perm.getNamespace());
+            break;
         }
 
-        AccessControlLists.addUserPermission(regionEnv.getConfiguration(), perm);
+        User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            AccessControlLists.addUserPermission(regionEnv.getConfiguration(), perm);
+            return null;
+          }
+        });
+
         if (AUDITLOG.isTraceEnabled()) {
           // audit log should store permission changes in addition to auth results
           AUDITLOG.trace("Granted permission " + perm.toString());
@@ -1991,7 +2034,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void revoke(RpcController controller,
                      AccessControlProtos.RevokeRequest request,
                      RpcCallback<AccessControlProtos.RevokeResponse> done) {
-    UserPermission perm = ProtobufUtil.toUserPermission(request.getUserPermission());
+    final UserPermission perm = ProtobufUtil.toUserPermission(request.getUserPermission());
     AccessControlProtos.RevokeResponse response = null;
     try {
       // only allowed to be called on _acl_ region
@@ -2011,9 +2054,17 @@ public class AccessController extends BaseMasterAndRegionObserver
             break;
           case Namespace :
             requireGlobalPermission("revoke", Action.ADMIN, perm.getNamespace());
+            break;
         }
 
-        AccessControlLists.removeUserPermission(regionEnv.getConfiguration(), perm);
+        User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
+          @Override
+          public Void run() throws Exception {
+            AccessControlLists.removeUserPermission(regionEnv.getConfiguration(), perm);
+            return null;
+          }
+        });
+
         if (AUDITLOG.isTraceEnabled()) {
           // audit log should record all permission changes
           AUDITLOG.trace("Revoked permission " + perm.toString());
@@ -2042,21 +2093,32 @@ public class AccessController extends BaseMasterAndRegionObserver
           throw new CoprocessorException("AccessController not yet initialized");
         }
         List<UserPermission> perms = null;
-        if(request.getType() == AccessControlProtos.Permission.Type.Table) {
-          TableName table = null;
-          if (request.hasTableName()) {
-            table = ProtobufUtil.toTableName(request.getTableName());
-          }
+        if (request.getType() == AccessControlProtos.Permission.Type.Table) {
+          final TableName table = request.hasTableName() ?
+            ProtobufUtil.toTableName(request.getTableName()) : null;
           requirePermission("userPermissions", table, null, null, Action.ADMIN);
-
-          perms = AccessControlLists.getUserTablePermissions(
-              regionEnv.getConfiguration(), table);
+          perms = User.runAsLoginUser(new PrivilegedExceptionAction<List<UserPermission>>() {
+            @Override
+            public List<UserPermission> run() throws Exception {
+              return AccessControlLists.getUserTablePermissions(regionEnv.getConfiguration(), table);
+            }
+          });
         } else if (request.getType() == AccessControlProtos.Permission.Type.Namespace) {
-          perms = AccessControlLists.getUserNamespacePermissions(
-              regionEnv.getConfiguration(), request.getNamespaceName().toStringUtf8());
+          final String namespace = request.getNamespaceName().toStringUtf8();
+          perms = User.runAsLoginUser(new PrivilegedExceptionAction<List<UserPermission>>() {
+            @Override
+            public List<UserPermission> run() throws Exception {
+              return AccessControlLists.getUserNamespacePermissions(regionEnv.getConfiguration(),
+                namespace);
+            }
+          });
         } else {
-          perms = AccessControlLists.getUserPermissions(
-              regionEnv.getConfiguration(), null);
+          perms = User.runAsLoginUser(new PrivilegedExceptionAction<List<UserPermission>>() {
+            @Override
+            public List<UserPermission> run() throws Exception {
+              return AccessControlLists.getUserPermissions(regionEnv.getConfiguration(), null);
+            }
+          });
         }
         response = ResponseConverter.buildGetUserPermissionsResponse(perms);
       } else {
