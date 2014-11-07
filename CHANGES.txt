@@ -1,4 +1,24 @@
 HBase Change Log
+Release 0.94.25 - 11/7/2014
+Bug
+
+    [HBASE-12039] - Lower log level for TableNotFoundException log message when throwing
+    [HBASE-12065] - Import tool is not restoring multiple DeleteFamily markers of a row
+    [HBASE-12146] - RegionServerTracker should escape data in log messages
+    [HBASE-12171] - Backport: PerformanceEvaluation: getSplits doesn't provide right splits.
+    [HBASE-12336] - RegionServer failed to shutdown for NodeFailoverWorker thread
+    [HBASE-12376] - HBaseAdmin leaks ZK connections if failure starting watchers (ConnectionLossException)
+
+Improvement
+
+    [HBASE-12272] - Generate Thrift code through maven
+
+Task
+
+    [HBASE-12235] - Backport to 0.94: HBASE-9002 TestDistributedLogSplitting.testRecoverdEdits should test correct region
+    [HBASE-12381] - Add maven enforcer rules for build assumptions
+
+
 Release 0.94.24 - 09/29/2014
 Sub-task
 
