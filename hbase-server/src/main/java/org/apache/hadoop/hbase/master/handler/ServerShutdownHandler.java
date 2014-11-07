@@ -243,7 +243,7 @@ public class ServerShutdownHandler extends EventHandler {
           Lock lock = am.acquireRegionLock(encodedName);
           try {
             RegionState rit = regionStates.getRegionTransitionState(hri);
-            if (processDeadRegion(hri, am)) {
+            if (processDeadRegion(hri, am)) { 
               ServerName addressFromAM = regionStates.getRegionServerOfRegion(hri);
               if (addressFromAM != null && !addressFromAM.equals(this.serverName)) {
                 // If this region is in transition on the dead server, it must be
@@ -273,7 +273,7 @@ public class ServerShutdownHandler extends EventHandler {
               }
               toAssignRegions.add(hri);
             } else if (rit != null) {
-              if (rit.isPendingCloseOrClosing()
+              if ((rit.isPendingCloseOrClosing() || rit.isOffline())
                   && am.getTableStateManager().isTableState(hri.getTable(),
                   ZooKeeperProtos.Table.State.DISABLED, ZooKeeperProtos.Table.State.DISABLING)) {
                 // If the table was partially disabled and the RS went down, we should clear the RIT
