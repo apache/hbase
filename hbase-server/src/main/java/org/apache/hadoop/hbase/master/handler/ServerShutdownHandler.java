@@ -263,7 +263,7 @@ public class ServerShutdownHandler extends EventHandler {
               }
               toAssignRegions.add(hri);
             } else if (rit != null) {
-              if (rit.isPendingCloseOrClosing()
+              if ((rit.isPendingCloseOrClosing() || rit.isOffline())
                   && am.getZKTable().isDisablingOrDisabledTable(hri.getTable())) {
                 // If the table was partially disabled and the RS went down, we should clear the RIT
                 // and remove the node for the region.

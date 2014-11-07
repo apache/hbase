@@ -73,6 +73,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+
 /**
  * This tests AssignmentManager with a testing cluster.
  */
@@ -131,7 +132,7 @@ public class TestAssignmentManagerOnCluster {
 
       RegionStates regionStates = am.getRegionStates();
       ServerName serverName = regionStates.getRegionServerOfRegion(hri);
-      TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
+      TEST_UTIL.assertRegionOnServer(hri, serverName, 6000);
 
       // Region is assigned now. Let's assign it again.
       // Master should not abort, and region should be assigned.
@@ -146,6 +147,58 @@ public class TestAssignmentManagerOnCluster {
     }
   }
   
+  // Simulate a scenario where the AssignCallable and SSH are trying to assign a region
+  @Test (timeout=60000)
+  public void testAssignRegionBySSH() throws Exception {
+    if (!conf.getBoolean("hbase.assignment.usezk", true)) {
+      return;
+    }
+    String table = "testAssignRegionBySSH";
+    MyMaster master = (MyMaster) TEST_UTIL.getHBaseCluster().getMaster();
+    try {
+      HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(table));
+      desc.addFamily(new HColumnDescriptor(FAMILY));
+      admin.createTable(desc);
+
+      HTable meta = new HTable(conf, TableName.META_TABLE_NAME);
+      HRegionInfo hri = new HRegionInfo(
+        desc.getTableName(), Bytes.toBytes("A"), Bytes.toBytes("Z"));
+      MetaEditor.addRegionToMeta(meta, hri);
+      // Add some dummy server for the region entry
+      MetaEditor.updateRegionLocation(TEST_UTIL.getHBaseCluster().getMaster().getCatalogTracker(), hri,
+        ServerName.valueOf("example.org", 1234, System.currentTimeMillis()), 0);
+      RegionStates regionStates = master.getAssignmentManager().getRegionStates();
+      int i = TEST_UTIL.getHBaseCluster().getServerWithMeta();
+      HRegionServer rs = TEST_UTIL.getHBaseCluster().getRegionServer(i == 0 ? 1 : 0);
+      // Choose a server other than meta to kill
+      ServerName controlledServer = rs.getServerName();
+      master.enableSSH(false);
+      TEST_UTIL.getHBaseCluster().killRegionServer(controlledServer);
+      TEST_UTIL.getHBaseCluster().waitForRegionServerToStop(controlledServer, -1);
+      AssignmentManager am = master.getAssignmentManager();
+      
+      // Simulate the AssignCallable trying to assign the region. Have the region in OFFLINE state,
+      // but not in transition and the server is the dead 'controlledServer'  
+      regionStates.createRegionState(hri, State.OFFLINE, controlledServer);
+      am.assign(hri, true, true);
+      // Region should remain in OFFLINE and go to transition
+      assertEquals(State.OFFLINE, regionStates.getRegionState(hri).getState());
+      assertTrue (regionStates.isRegionInTransition(hri));
+      
+      master.enableSSH(true);
+      am.waitForAssignment(hri);
+      assertTrue (regionStates.getRegionState(hri).isOpened());
+      ServerName serverName = regionStates.getRegionServerOfRegion(hri);
+      TEST_UTIL.assertRegionOnlyOnServer(hri, serverName, 6000);
+    } finally {
+      if (master != null) {
+        master.enableSSH(true);
+      }
+      TEST_UTIL.deleteTable(Bytes.toBytes(table));
+      TEST_UTIL.getHBaseCluster().startRegionServer();
+    }
+  }
+
   /**
    * This tests region assignment on a simulated restarted server
    */
@@ -220,7 +273,7 @@ public class TestAssignmentManagerOnCluster {
       RegionStates regionStates = TEST_UTIL.getHBaseCluster().
         getMaster().getAssignmentManager().getRegionStates();
       ServerName serverName = regionStates.getRegionServerOfRegion(hri);
-      TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
+      TEST_UTIL.assertRegionOnServer(hri, serverName, 6000);
       admin.offline(hri.getRegionName());
 
       long timeoutTime = System.currentTimeMillis() + 800;
@@ -272,7 +325,7 @@ public class TestAssignmentManagerOnCluster {
       while (true) {
         ServerName sn = regionStates.getRegionServerOfRegion(hri);
         if (sn != null && sn.equals(destServerName)) {
-          TEST_UTIL.assertRegionOnServer(hri, sn, 200);
+          TEST_UTIL.assertRegionOnServer(hri, sn, 6000);
           break;
         }
         long now = System.currentTimeMillis();
@@ -450,7 +503,7 @@ public class TestAssignmentManagerOnCluster {
       assertTrue(am.waitForAssignment(hri));
       ServerName serverName = master.getAssignmentManager().
         getRegionStates().getRegionServerOfRegion(hri);
-      TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
+      TEST_UTIL.assertRegionOnServer(hri, serverName, 6000);
     } finally {
       MyRegionObserver.preCloseEnabled.set(false);
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
@@ -491,7 +544,7 @@ public class TestAssignmentManagerOnCluster {
 
       ServerName serverName = master.getAssignmentManager().
         getRegionStates().getRegionServerOfRegion(hri);
-      TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
+      TEST_UTIL.assertRegionOnServer(hri, serverName, 6000);
     } finally {
       MyLoadBalancer.controledRegion = null;
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
@@ -541,7 +594,7 @@ public class TestAssignmentManagerOnCluster {
 
       ServerName serverName = master.getAssignmentManager().
         getRegionStates().getRegionServerOfRegion(hri);
-      TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
+      TEST_UTIL.assertRegionOnServer(hri, serverName, 6000);
     } finally {
       TEST_UTIL.deleteTable(table);
     }
@@ -573,7 +626,7 @@ public class TestAssignmentManagerOnCluster {
       if (ConfigUtil.useZKForAssignment(conf)) {
         ZKAssign.createNodeOffline(zkw, hri, destServerName);
         ZKAssign.transitionNodeOpening(zkw, hri, destServerName);
-  
+
         // Wait till the event is processed and the region is in transition
         long timeoutTime = System.currentTimeMillis() + 20000;
         while (!am.getRegionStates().isRegionInTransition(hri)) {
@@ -644,7 +697,7 @@ public class TestAssignmentManagerOnCluster {
       assertTrue(am.waitForAssignment(hri));
       ServerName serverName = master.getAssignmentManager().
         getRegionStates().getRegionServerOfRegion(hri);
-      TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
+      TEST_UTIL.assertRegionOnServer(hri, serverName, 6000);
     } finally {
       MyRegionObserver.postCloseEnabled.set(false);
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
@@ -836,7 +889,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }
-  
+
   /**
    * Test that region state transition call is idempotent
    */
@@ -859,7 +912,7 @@ public class TestAssignmentManagerOnCluster {
       RegionStates regionStates = am.getRegionStates();
       ServerName serverName = regionStates.getRegionServerOfRegion(hri);
       // Assert the the region is actually open on the server
-      TEST_UTIL.assertRegionOnServer(hri, serverName, 200);
+      TEST_UTIL.assertRegionOnServer(hri, serverName, 6000);
       // Closing region should just work fine
       admin.disableTable(TableName.valueOf(table));
       assertTrue(regionStates.isRegionOffline(hri));

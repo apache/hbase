@@ -1693,6 +1693,10 @@ public class AssignmentManager extends ZooKeeperListener {
               getLong("hbase.regionserver.rpc.startup.waittime", 60000);
           for (int i = 1; i <= maximumAttempts && !server.isStopped(); i++) {
             try {
+              // regionOpenInfos is empty if all regions are in failedToOpenRegions list
+              if (regionOpenInfos.isEmpty()) {
+                break;
+              }
               List<RegionOpeningState> regionOpeningStateList = serverManager
                 .sendRegionOpen(destination, regionOpenInfos);
               if (regionOpeningStateList == null) {
@@ -1956,8 +1960,12 @@ public class AssignmentManager extends ZooKeeperListener {
       if (useZKForAssignment
           && regionStates.isServerDeadAndNotProcessed(sn)
           && wasRegionOnDeadServerByMeta(region, sn)) {
+        if (!regionStates.isRegionInTransition(region)) {
+          LOG.info("Updating the state to " + State.OFFLINE + " to allow to be reassigned by SSH");
+          regionStates.updateRegionState(region, State.OFFLINE);
+        }
         LOG.info("Skip assigning " + region.getRegionNameAsString()
-          + ", it is on a dead but not processed yet server: " + sn);
+            + ", it is on a dead but not processed yet server: " + sn);
         return null;
       }
     case CLOSED:
