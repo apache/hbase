@@ -448,17 +448,29 @@ class MemStoreFlusher implements FlushRequester {
    * not flushed.
    */
   private boolean flushRegion(final HRegion region, final boolean emergencyFlush) {
+    long startTime = 0;
     synchronized (this.regionsInQueue) {
       FlushRegionEntry fqe = this.regionsInQueue.remove(region);
+      // Use the start time of the FlushRegionEntry if available
+      if (fqe != null) {
+        startTime = fqe.createTime;
+      }
       if (fqe != null && emergencyFlush) {
         // Need to remove from region from delay queue.  When NOT an
         // emergencyFlush, then item was removed via a flushQueue.poll.
         flushQueue.remove(fqe);
      }
     }
+    if (startTime == 0) {
+      // Avoid getting the system time unless we don't have a FlushRegionEntry;
+      // shame we can't capture the time also spent in the above synchronized
+      // block
+      startTime = EnvironmentEdgeManager.currentTimeMillis();
+    }
     lock.readLock().lock();
     try {
-      boolean shouldCompact = region.flushcache().isCompactionNeeded();
+      HRegion.FlushResult flushResult = region.flushcache();
+      boolean shouldCompact = flushResult.isCompactionNeeded();
       // We just want to check the size
       boolean shouldSplit = region.checkSplit() != null;
       if (shouldSplit) {
@@ -467,7 +479,10 @@ class MemStoreFlusher implements FlushRequester {
         server.compactSplitThread.requestSystemCompaction(
             region, Thread.currentThread().getName());
       }
-
+      if (flushResult.isFlushSucceeded()) {
+        long endTime = EnvironmentEdgeManager.currentTimeMillis();
+        server.getMetrics().updateFlushTime(endTime - startTime);
+      }
     } catch (DroppedSnapshotException ex) {
       // Cache flush can fail in a few places. If it fails in a critical
       // section, we get a DroppedSnapshotException and a replay of hlog

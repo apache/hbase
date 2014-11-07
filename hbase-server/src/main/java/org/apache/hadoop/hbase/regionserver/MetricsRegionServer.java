@@ -94,4 +94,12 @@ public class MetricsRegionServer {
   public void updateReplay(long t){
     serverSource.updateReplay(t);
   }
+
+  public void updateSplitTime(long t) {
+    serverSource.updateSplitTime(t);
+  }
+
+  public void updateFlushTime(long t) {
+    serverSource.updateFlushTime(t);
+  }
 }

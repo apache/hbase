@@ -112,6 +112,18 @@ public interface MetricsRegionServerSource extends BaseSource {
    */
   void incrSlowAppend();
 
+  /**
+   * Update the split transaction time histogram
+   * @param t time it took, in milliseconds
+   */
+  void updateSplitTime(long t);
+
+  /**
+   * Update the flush time histogram
+   * @param t time it took, in milliseconds
+   */
+  void updateFlushTime(long t);
+
   // Strings used for exporting to metrics system.
   String REGION_COUNT = "regionCount";
   String REGION_COUNT_DESC = "Number of regions";
@@ -234,4 +246,6 @@ public interface MetricsRegionServerSource extends BaseSource {
   String MAJOR_COMPACTED_CELLS_SIZE_DESC =
       "The total amount of data processed during major compactions, in bytes";
 
+  String SPLIT_KEY = "splitTime";
+  String FLUSH_KEY = "flushTime";
 }

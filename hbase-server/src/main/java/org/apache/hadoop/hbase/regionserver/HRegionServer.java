@@ -3994,7 +3994,13 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       }
       FlushRegionResponse.Builder builder = FlushRegionResponse.newBuilder();
       if (shouldFlush) {
-        boolean result = region.flushcache().isCompactionNeeded();
+        long startTime = EnvironmentEdgeManager.currentTimeMillis();
+        HRegion.FlushResult flushResult = region.flushcache();
+        if (flushResult.isFlushSucceeded()) {
+          long endTime = EnvironmentEdgeManager.currentTimeMillis();
+          metricsRegionServer.updateFlushTime(endTime - startTime);
+        }
+        boolean result = flushResult.isCompactionNeeded();
         if (result) {
           this.compactSplitThread.requestSystemCompaction(region,
               "Compaction through user triggered flush");
@@ -4032,7 +4038,12 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       HRegion region = getRegion(request.getRegion());
       region.startRegionOperation(Operation.SPLIT_REGION);
       LOG.info("Splitting " + region.getRegionNameAsString());
-      region.flushcache();
+      long startTime = EnvironmentEdgeManager.currentTimeMillis();
+      HRegion.FlushResult flushResult = region.flushcache();
+      if (flushResult.isFlushSucceeded()) {
+        long endTime = EnvironmentEdgeManager.currentTimeMillis();
+        metricsRegionServer.updateFlushTime(endTime - startTime);
+      }
       byte[] splitPoint = null;
       if (request.hasSplitPoint()) {
         splitPoint = request.getSplitPoint().toByteArray();
@@ -4067,8 +4078,18 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       regionB.startRegionOperation(Operation.MERGE_REGION);
       LOG.info("Receiving merging request for  " + regionA + ", " + regionB
           + ",forcible=" + forcible);
-      regionA.flushcache();
-      regionB.flushcache();
+      long startTime = EnvironmentEdgeManager.currentTimeMillis();
+      HRegion.FlushResult flushResult = regionA.flushcache();
+      if (flushResult.isFlushSucceeded()) {
+        long endTime = EnvironmentEdgeManager.currentTimeMillis();
+        metricsRegionServer.updateFlushTime(endTime - startTime);
+      }
+      startTime = EnvironmentEdgeManager.currentTimeMillis();
+      flushResult = regionB.flushcache();
+      if (flushResult.isFlushSucceeded()) {
+        long endTime = EnvironmentEdgeManager.currentTimeMillis();
+        metricsRegionServer.updateFlushTime(endTime - startTime);
+      }
       compactSplitThread.requestRegionsMerge(regionA, regionB, forcible);
       return MergeRegionsResponse.newBuilder().build();
     } catch (IOException ie) {
