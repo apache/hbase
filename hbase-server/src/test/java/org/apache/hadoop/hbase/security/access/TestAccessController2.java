@@ -27,6 +27,11 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -42,7 +47,11 @@ import org.junit.experimental.categories.Category;
 @Category({SecurityTests.class, LargeTests.class})
 public class TestAccessController2 extends SecureTestUtil {
 
+  private static final byte[] TEST_ROW = Bytes.toBytes("test");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("f");
+  private static final byte[] TEST_QUALIFIER = Bytes.toBytes("q");
+  private static final byte[] TEST_VALUE = Bytes.toBytes("value");
+
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Configuration conf;
 
@@ -99,6 +108,104 @@ public class TestAccessController2 extends SecureTestUtil {
     assertTrue(perms.get(0).implies(Permission.Action.EXEC));
     assertTrue(perms.get(0).implies(Permission.Action.CREATE));
     assertTrue(perms.get(0).implies(Permission.Action.ADMIN));
+  }
+
+  @Test
+  public void testACLTableAccess() throws Exception {
+    final Configuration conf = TEST_UTIL.getConfiguration();
+
+    // Superuser
+    User superUser = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
+
+    // Global users
+    User globalRead = User.createUserForTesting(conf, "globalRead", new String[0]);
+    User globalWrite = User.createUserForTesting(conf, "globalWrite", new String[0]);
+    User globalCreate = User.createUserForTesting(conf, "globalCreate", new String[0]);
+    User globalAdmin = User.createUserForTesting(conf, "globalAdmin", new String[0]);
+    SecureTestUtil.grantGlobal(TEST_UTIL, globalRead.getShortName(), Action.READ);
+    SecureTestUtil.grantGlobal(TEST_UTIL, globalWrite.getShortName(), Action.WRITE);
+    SecureTestUtil.grantGlobal(TEST_UTIL, globalCreate.getShortName(), Action.CREATE);
+    SecureTestUtil.grantGlobal(TEST_UTIL, globalAdmin.getShortName(), Action.ADMIN);
+
+    // Namespace users
+    User nsRead = User.createUserForTesting(conf, "nsRead", new String[0]);
+    User nsWrite = User.createUserForTesting(conf, "nsWrite", new String[0]);
+    User nsCreate = User.createUserForTesting(conf, "nsCreate", new String[0]);
+    User nsAdmin = User.createUserForTesting(conf, "nsAdmin", new String[0]);
+    SecureTestUtil.grantOnNamespace(TEST_UTIL, nsRead.getShortName(),
+      TEST_TABLE.getTableName().getNamespaceAsString(), Action.READ);
+    SecureTestUtil.grantOnNamespace(TEST_UTIL, nsWrite.getShortName(),
+      TEST_TABLE.getTableName().getNamespaceAsString(), Action.WRITE);
+    SecureTestUtil.grantOnNamespace(TEST_UTIL, nsCreate.getShortName(),
+      TEST_TABLE.getTableName().getNamespaceAsString(), Action.CREATE);
+    SecureTestUtil.grantOnNamespace(TEST_UTIL, nsAdmin.getShortName(),
+      TEST_TABLE.getTableName().getNamespaceAsString(), Action.ADMIN);
+
+    // Table users
+    User tableRead = User.createUserForTesting(conf, "tableRead", new String[0]);
+    User tableWrite = User.createUserForTesting(conf, "tableWrite", new String[0]);
+    User tableCreate = User.createUserForTesting(conf, "tableCreate", new String[0]);
+    User tableAdmin = User.createUserForTesting(conf, "tableAdmin", new String[0]);
+    SecureTestUtil.grantOnTable(TEST_UTIL, tableRead.getShortName(),
+      TEST_TABLE.getTableName(), null, null, Action.READ);
+    SecureTestUtil.grantOnTable(TEST_UTIL, tableWrite.getShortName(),
+      TEST_TABLE.getTableName(), null, null, Action.WRITE);
+    SecureTestUtil.grantOnTable(TEST_UTIL, tableCreate.getShortName(),
+      TEST_TABLE.getTableName(), null, null, Action.CREATE);
+    SecureTestUtil.grantOnTable(TEST_UTIL, tableAdmin.getShortName(),
+      TEST_TABLE.getTableName(), null, null, Action.ADMIN);
+
+    // Write tests
+
+    AccessTestAction writeAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        try {
+          t.put(new Put(TEST_ROW).add(AccessControlLists.ACL_LIST_FAMILY, TEST_QUALIFIER,
+            TEST_VALUE));
+          return null;
+        } finally {
+          t.close();
+        }
+      }
+    };
+
+    // All writes to ACL table denied except for GLOBAL WRITE permission and superuser
+
+    verifyDenied(writeAction, globalAdmin, globalCreate, globalRead);
+    verifyDenied(writeAction, nsAdmin, nsCreate, nsRead, nsWrite);
+    verifyDenied(writeAction, tableAdmin, tableCreate, tableRead, tableWrite);
+    verifyAllowed(writeAction, superUser, globalWrite);
+
+    // Read tests
+
+    AccessTestAction scanAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTable t = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+        try {
+          ResultScanner s = t.getScanner(new Scan());
+          try {
+            for (Result r = s.next(); r != null; r = s.next()) {
+              // do nothing
+            }
+          } finally {
+            s.close();
+          }
+          return null;
+        } finally {
+          t.close();
+        }
+      }
+    };
+
+    // All reads from ACL table denied except for GLOBAL READ and superuser
+
+    verifyDenied(scanAction, globalAdmin, globalCreate, globalWrite);
+    verifyDenied(scanAction, nsCreate, nsAdmin, nsRead, nsWrite);
+    verifyDenied(scanAction, tableCreate, tableAdmin, tableRead, tableWrite);
+    verifyAllowed(scanAction, superUser, globalRead);
   }
 
 }
