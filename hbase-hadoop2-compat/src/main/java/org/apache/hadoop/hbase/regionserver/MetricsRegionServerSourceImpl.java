@@ -35,8 +35,6 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 public class MetricsRegionServerSourceImpl
     extends BaseSourceImpl implements MetricsRegionServerSource {
 
-
-
   final MetricsRegionServerWrapper rsWrap;
   private final MetricHistogram putHisto;
   private final MetricHistogram deleteHisto;
@@ -51,6 +49,8 @@ public class MetricsRegionServerSourceImpl
   private final MutableCounterLong slowIncrement;
   private final MutableCounterLong slowAppend;
 
+  private final MetricHistogram splitTimeHisto;
+  private final MetricHistogram flushTimeHisto;
 
   public MetricsRegionServerSourceImpl(MetricsRegionServerWrapper rsWrap) {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT, rsWrap);
@@ -80,6 +80,9 @@ public class MetricsRegionServerSourceImpl
     slowAppend = getMetricsRegistry().newCounter(SLOW_APPEND_KEY, SLOW_APPEND_DESC, 0l);
     
     replayHisto = getMetricsRegistry().newHistogram(REPLAY_KEY);
+
+    splitTimeHisto = getMetricsRegistry().newHistogram(SPLIT_KEY);
+    flushTimeHisto = getMetricsRegistry().newHistogram(FLUSH_KEY);
   }
 
   @Override
@@ -135,6 +138,16 @@ public class MetricsRegionServerSourceImpl
   @Override
   public void incrSlowAppend() {
     slowAppend.incr();
+  }
+
+  @Override
+  public void updateSplitTime(long t) {
+    splitTimeHisto.add(t);
+  }
+
+  @Override
+  public void updateFlushTime(long t) {
+    flushTimeHisto.add(t);
   }
 
   /**

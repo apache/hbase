@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
 
@@ -60,10 +61,10 @@ class SplitRequest implements Runnable {
         this.server.isStopping() + " or stopped=" + this.server.isStopped());
       return;
     }
+    boolean success = false;
+    long startTime = EnvironmentEdgeManager.currentTime();
+    SplitTransaction st = new SplitTransaction(parent, midKey);
     try {
-      final long startTime = System.currentTimeMillis();
-      SplitTransaction st = new SplitTransaction(parent, midKey);
-
       //acquire a shared read lock on the table, so that table schema modifications
       //do not happen concurrently
       tableLock = server.getTableLockManager().readLock(parent.getTableDesc().getTableName()
@@ -80,6 +81,7 @@ class SplitRequest implements Runnable {
       if (!st.prepare()) return;
       try {
         st.execute(this.server, this.server);
+        success = true;
       } catch (Exception e) {
         if (this.server.isStopping() || this.server.isStopped()) {
           LOG.info(
@@ -106,11 +108,6 @@ class SplitRequest implements Runnable {
         }
         return;
       }
-      LOG.info("Region split, hbase:meta updated, and report to master. Parent="
-          + parent.getRegionNameAsString() + ", new regions: "
-          + st.getFirstDaughter().getRegionNameAsString() + ", "
-          + st.getSecondDaughter().getRegionNameAsString() + ". Split took "
-          + StringUtils.formatTimeDiff(System.currentTimeMillis(), startTime));
     } catch (IOException ex) {
       ex = ex instanceof RemoteException ? ((RemoteException) ex).unwrapRemoteException() : ex;
       LOG.error("Split failed " + this, ex);
@@ -128,6 +125,19 @@ class SplitRequest implements Runnable {
         parent.clearSplit();
       }
       releaseTableLock();
+      long endTime = EnvironmentEdgeManager.currentTime();
+      // Update regionserver metrics with the split transaction total running time
+      server.metricsRegionServer.updateSplitTime(endTime - startTime);
+      if (success) {
+        // Log success
+        LOG.info("Region split, hbase:meta updated, and report to master. Parent="
+            + parent.getRegionNameAsString() + ", new regions: "
+            + st.getFirstDaughter().getRegionNameAsString() + ", "
+            + st.getSecondDaughter().getRegionNameAsString() + ". Split took "
+            + StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTime(), startTime));
+      }
+      // Always log the split transaction journal
+      LOG.info("Split transaction journal:\n\t" + StringUtils.join("\n\t", st.getJournal()));
     }
   }
 

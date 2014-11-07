@@ -112,6 +112,18 @@ public interface MetricsRegionServerSource extends BaseSource {
    */
   void incrSlowAppend();
 
+  /**
+   * Update the split transaction time histogram
+   * @param t time it took, in milliseconds
+   */
+  void updateSplitTime(long t);
+
+  /**
+   * Update the flush time histogram
+   * @param t time it took, in milliseconds
+   */
+  void updateFlushTime(long t);
+
   // Strings used for exporting to metrics system.
   String REGION_COUNT = "regionCount";
   String REGION_COUNT_DESC = "Number of regions";
@@ -239,4 +251,7 @@ public interface MetricsRegionServerSource extends BaseSource {
   String HEDGED_READ_WINS = "hedgedReadWins";
   String HEDGED_READ_WINS_DESC =
       "The number of times we started a hedged read and a hedged read won";
+
+  String SPLIT_KEY = "splitTime";
+  String FLUSH_KEY = "flushTime";
 }
