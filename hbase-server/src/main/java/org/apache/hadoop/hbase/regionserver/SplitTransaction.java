@@ -103,7 +103,23 @@ public class SplitTransaction {
    * Each enum is a step in the split transaction. Used to figure how much
    * we need to rollback.
    */
-  enum JournalEntry {
+  static enum JournalEntryType {
+    /**
+     * Started
+     */
+    STARTED,
+    /**
+     * Prepared (after table lock)
+     */
+    PREPARED,
+    /**
+     * Before preSplit coprocessor hook
+     */
+    BEFORE_PRE_SPLIT_HOOK,
+    /**
+     * After preSplit coprocessor hook
+     */
+    AFTER_PRE_SPLIT_HOOK,
     /**
      * Set region as in transition, set it into SPLITTING state.
      */
@@ -129,11 +145,50 @@ public class SplitTransaction {
      */
     STARTED_REGION_B_CREATION,
     /**
+     * Opened the first daughter region
+     */
+    OPENED_REGION_A,
+    /**
+     * Opened the second daughter region
+     */
+    OPENED_REGION_B,
+    /**
+     * Before postSplit coprocessor hook
+     */
+    BEFORE_POST_SPLIT_HOOK,
+    /**
+     * After postSplit coprocessor hook
+     */
+    AFTER_POST_SPLIT_HOOK,
+    /**
      * Point of no return.
      * If we got here, then transaction is not recoverable other than by
      * crashing out the regionserver.
      */
     PONR
+  }
+
+  static class JournalEntry {
+    public JournalEntryType type;
+    public long timestamp;
+
+    public JournalEntry(JournalEntryType type) {
+      this(type, EnvironmentEdgeManager.currentTime());
+    }
+
+    public JournalEntry(JournalEntryType type, long timestamp) {
+      this.type = type;
+      this.timestamp = timestamp;
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append(type);
+      sb.append(" at ");
+      sb.append(timestamp);
+      return sb.toString();
+    }
   }
 
   /*
@@ -149,6 +204,7 @@ public class SplitTransaction {
   public SplitTransaction(final HRegion r, final byte [] splitrow) {
     this.parent = r;
     this.splitrow = splitrow;
+    this.journal.add(new JournalEntry(JournalEntryType.STARTED));
   }
 
   /**
@@ -174,6 +230,7 @@ public class SplitTransaction {
     long rid = getDaughterRegionIdTimestamp(hri);
     this.hri_a = new HRegionInfo(hri.getTable(), startKey, this.splitrow, false, rid);
     this.hri_b = new HRegionInfo(hri.getTable(), this.splitrow, endKey, false, rid);
+    this.journal.add(new JournalEntry(JournalEntryType.PREPARED));
     return true;
   }
 
@@ -216,15 +273,16 @@ public class SplitTransaction {
     assert !this.parent.lock.writeLock().isHeldByCurrentThread():
       "Unsafe to hold write lock while performing RPCs";
 
-    // Coprocessor callback
-    if (this.parent.getCoprocessorHost() != null) {
-      this.parent.getCoprocessorHost().preSplit();
-    }
+    journal.add(new JournalEntry(JournalEntryType.BEFORE_PRE_SPLIT_HOOK));
 
     // Coprocessor callback
     if (this.parent.getCoprocessorHost() != null) {
+      // TODO: Remove one of these
+      this.parent.getCoprocessorHost().preSplit();
       this.parent.getCoprocessorHost().preSplit(this.splitrow);
     }
+
+    journal.add(new JournalEntry(JournalEntryType.AFTER_PRE_SPLIT_HOOK));
 
     // If true, no cluster to write meta edits to or to update znodes in.
     boolean testing = server == null? true:
@@ -268,7 +326,7 @@ public class SplitTransaction {
     // OfflineParentInMeta timeout,this will cause regionserver exit,and then
     // master ServerShutdownHandler will fix daughter & avoid data loss. (See
     // HBase-4562).
-    this.journal.add(JournalEntry.PONR);
+    this.journal.add(new JournalEntry(JournalEntryType.PONR));
 
     // Edit parent in meta.  Offlines parent region and adds splita and splitb
     // as an atomic update. See HBASE-7721. This update to META makes the region
@@ -315,7 +373,7 @@ public class SplitTransaction {
           + parent.getRegionNameAsString());
       }
     }
-    this.journal.add(JournalEntry.SET_SPLITTING);
+    this.journal.add(new JournalEntry(JournalEntryType.SET_SPLITTING));
     if (useCoordinatedStateManager(server)) {
       ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
           .getSplitTransactionCoordination().waitForSplitTransaction(services, parent, hri_a,
@@ -323,7 +381,7 @@ public class SplitTransaction {
     }
 
     this.parent.getRegionFileSystem().createSplitsDir();
-    this.journal.add(JournalEntry.CREATE_SPLIT_DIR);
+    this.journal.add(new JournalEntry(JournalEntryType.CREATE_SPLIT_DIR));
 
     Map<byte[], List<StoreFile>> hstoreFilesToSplit = null;
     Exception exceptionToThrow = null;
@@ -341,7 +399,7 @@ public class SplitTransaction {
       exceptionToThrow = closedByOtherException;
     }
     if (exceptionToThrow != closedByOtherException) {
-      this.journal.add(JournalEntry.CLOSED_PARENT_REGION);
+      this.journal.add(new JournalEntry(JournalEntryType.CLOSED_PARENT_REGION));
     }
     if (exceptionToThrow != null) {
       if (exceptionToThrow instanceof IOException) throw (IOException)exceptionToThrow;
@@ -350,7 +408,7 @@ public class SplitTransaction {
     if (!testing) {
       services.removeFromOnlineRegions(this.parent, null);
     }
-    this.journal.add(JournalEntry.OFFLINED_PARENT);
+    this.journal.add(new JournalEntry(JournalEntryType.OFFLINED_PARENT));
 
     // TODO: If splitStoreFiles were multithreaded would we complete steps in
     // less elapsed time?  St.Ack 20100920
@@ -364,11 +422,11 @@ public class SplitTransaction {
     // region.  We could fail halfway through.  If we do, we could have left
     // stuff in fs that needs cleanup -- a storefile or two.  Thats why we
     // add entry to journal BEFORE rather than AFTER the change.
-    this.journal.add(JournalEntry.STARTED_REGION_A_CREATION);
+    this.journal.add(new JournalEntry(JournalEntryType.STARTED_REGION_A_CREATION));
     HRegion a = this.parent.createDaughterRegionFromSplits(this.hri_a);
 
     // Ditto
-    this.journal.add(JournalEntry.STARTED_REGION_B_CREATION);
+    this.journal.add(new JournalEntry(JournalEntryType.STARTED_REGION_B_CREATION));
     HRegion b = this.parent.createDaughterRegionFromSplits(this.hri_b);
     return new PairOfSameType<HRegion>(a, b);
   }
@@ -402,7 +460,13 @@ public class SplitTransaction {
       bOpener.start();
       try {
         aOpener.join();
+        if (aOpener.getException() == null) {
+          journal.add(new JournalEntry(JournalEntryType.OPENED_REGION_A));
+        }
         bOpener.join();
+        if (bOpener.getException() == null) {
+          journal.add(new JournalEntry(JournalEntryType.OPENED_REGION_B));
+        }
       } catch (InterruptedException e) {
         throw (InterruptedIOException)new InterruptedIOException().initCause(e);
       }
@@ -473,12 +537,12 @@ public class SplitTransaction {
           .getSplitTransactionCoordination().completeSplitTransaction(services, regions.getFirst(),
             regions.getSecond(), std, parent);
     }
+    journal.add(new JournalEntry(JournalEntryType.BEFORE_POST_SPLIT_HOOK));
     // Coprocessor callback
     if (parent.getCoprocessorHost() != null) {
       parent.getCoprocessorHost().postSplit(regions.getFirst(), regions.getSecond());
     }
-
-
+    journal.add(new JournalEntry(JournalEntryType.AFTER_POST_SPLIT_HOOK));
     return regions;
   }
 
@@ -579,7 +643,7 @@ public class SplitTransaction {
 
     @Override
     public boolean progress() {
-      long now = System.currentTimeMillis();
+      long now = EnvironmentEdgeManager.currentTime();
       if (now - lastLog > this.interval) {
         LOG.info("Opening " + this.hri.getRegionNameAsString());
         this.lastLog = now;
@@ -704,7 +768,7 @@ public class SplitTransaction {
     // Iterate in reverse.
     while (iterator.hasPrevious()) {
       JournalEntry je = iterator.previous();
-      switch(je) {
+      switch(je.type) {
 
       case SET_SPLITTING:
         if (useCoordinatedStateManager(server) && server instanceof HRegionServer) {
@@ -756,6 +820,17 @@ public class SplitTransaction {
         // See HBASE-3872.
         return false;
 
+      // Informational only cases
+      case STARTED:
+      case PREPARED:
+      case BEFORE_PRE_SPLIT_HOOK:
+      case AFTER_PRE_SPLIT_HOOK:
+      case BEFORE_POST_SPLIT_HOOK:
+      case AFTER_POST_SPLIT_HOOK:
+      case OPENED_REGION_A:
+      case OPENED_REGION_B:
+        break;
+
       default:
         throw new RuntimeException("Unhandled journal entry: " + je);
       }
@@ -775,4 +850,7 @@ public class SplitTransaction {
     return hri_b;
   }
 
+  List<JournalEntry> getJournal() {
+    return journal;
+  }
 }

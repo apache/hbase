@@ -569,6 +569,7 @@ public class RegionCoprocessorHost
    * Invoked just before a split
    * @throws IOException
    */
+  // TODO: Deprecate this
   public void preSplit() throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
