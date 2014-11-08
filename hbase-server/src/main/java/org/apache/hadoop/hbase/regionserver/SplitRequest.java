@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
@@ -136,7 +137,7 @@ class SplitRequest implements Runnable {
             + StringUtils.formatTimeDiff(EnvironmentEdgeManager.currentTimeMillis(), startTime));
       }
       // Always log the split transaction journal
-      LOG.info("Split transaction journal:\n\t" + StringUtils.join("\n\t", st.getJournal()));
+      LOG.info("Split transaction journal:\n\t" + Strings.join("\n\t", st.getJournal()));
     }
   }
 

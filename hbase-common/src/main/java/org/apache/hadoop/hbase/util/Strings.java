@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.util.Iterator;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
@@ -108,6 +110,25 @@ public class Strings {
     StringBuilder sb = new StringBuilder();
     for (int i = 0; i < reapeatFor; ++i) {
       sb.append(c);
+    }
+    return sb.toString();
+  }
+
+  /**
+   * Concatenates strings, using a separator.
+   *
+   * @param separator Separator to join with.
+   * @param strings Strings to join.
+   */
+  public static String join(CharSequence separator, Iterable<?> strings) {
+    Iterator<?> i = strings.iterator();
+    if (!i.hasNext()) {
+      return "";
+    }
+    StringBuilder sb = new StringBuilder(i.next().toString());
+    while (i.hasNext()) {
+      sb.append(separator);
+      sb.append(i.next().toString());
     }
     return sb.toString();
   }
