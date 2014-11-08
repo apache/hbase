@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift2.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -286,7 +287,19 @@ public class TTimeRange implements org.apache.thrift.TBase<TTimeRange, TTimeRang
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_minStamp = true;
+    builder.append(present_minStamp);
+    if (present_minStamp)
+      builder.append(minStamp);
+
+    boolean present_maxStamp = true;
+    builder.append(present_maxStamp);
+    if (present_maxStamp)
+      builder.append(maxStamp);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TTimeRange other) {
