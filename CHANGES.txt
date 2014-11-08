@@ -1,6 +1,105 @@
 HBase Change Log
 
-Release 0.98.7 - 10/13/2014
+Release 0.98.8 - 11/14/2014
+
+** Sub-task
+    * [HBASE-11997] - CopyTable with bulkload
+    * [HBASE-12353] - Turn down logging on some spewing unit tests
+    * [HBASE-12363] - Improve how KEEP_DELETED_CELLS works with MIN_VERSIONS
+    * [HBASE-12370] - Backport IT changes from HBASE-10572 to 0.98
+
+** Bug
+    * [HBASE-9157] - ZKUtil.blockUntilAvailable loops forever with non-recoverable errors
+    * [HBASE-10780] - HFilePrettyPrinter#processFile should return immediately if file does not exist
+    * [HBASE-11394] - Replication can have data loss if peer id contains hyphen "-"
+    * [HBASE-12109] - user_permission command for namespace does not return correct result
+    * [HBASE-12126] - Region server coprocessor endpoint
+    * [HBASE-12142] - Truncate command does not preserve ACLs table
+    * [HBASE-12181] - Some tests create a table and try to use it before regions get assigned
+    * [HBASE-12183] - FuzzyRowFilter doesn't support reverse scans
+    * [HBASE-12197] - Move REST
+    * [HBASE-12198] - Fix the bug of not updating location cache
+    * [HBASE-12200] - When an RPC server handler thread dies, throw exception 
+    * [HBASE-12218] - Make HBaseCommonTestingUtil#deleteDir try harder
+    * [HBASE-12219] - Cache more efficiently getAll() and get() in FSTableDescriptors
+    * [HBASE-12226] - TestAccessController#testPermissionList failing on master
+    * [HBASE-12228] - Backport HBASE-11373 (hbase-protocol compile failed for name conflict of RegionTransition) to 0.98
+    * [HBASE-12229] - NullPointerException in SnapshotTestingUtils
+    * [HBASE-12237] - HBaseZeroCopyByteString#wrap() should not be called in hbase-client code
+    * [HBASE-12240] - hbase-daemon.sh should remove pid file if process not found running
+    * [HBASE-12242] - Fix new javadoc warnings in Admin, etc.
+    * [HBASE-12248] - broken link in hbase shell help
+    * [HBASE-12252] - IntegrationTestBulkLoad fails with illegal partition error
+    * [HBASE-12257] - TestAssignmentManager unsynchronized access to regionPlans
+    * [HBASE-12258] - Make TestHBaseFsck less flaky
+    * [HBASE-12261] - Add checkstyle to HBase build process
+    * [HBASE-12265] - HBase shell 'show_filters' points to internal Facebook URL
+    * [HBASE-12274] - Race between RegionScannerImpl#nextInternal() and RegionScannerImpl#close() may produce null pointer exception
+    * [HBASE-12278] - Race condition in TestSecureLoadIncrementalHFilesSplitRecovery
+    * [HBASE-12279] - Generated thrift files were generated with the wrong parameters
+    * [HBASE-12294] - Can't build the docs after the hbase-checkstyle module was added
+    * [HBASE-12301] - user_permission command does not show global permissions
+    * [HBASE-12302] - VisibilityClient getAuths does not propagate remote service exception correctly
+    * [HBASE-12304] - CellCounter will throw AIOBE when output directory is not specified
+    * [HBASE-12306] - CellCounter output's wrong value for Total Families Across all Rows in output file
+    * [HBASE-12308] - Fix typo in hbase-rest profile name
+    * [HBASE-12312] - Another couple of createTable race conditions
+    * [HBASE-12314] - Add chaos monkey policy to execute two actions concurrently
+    * [HBASE-12315] - Fix 0.98 Tests after checkstyle got parented
+    * [HBASE-12316] - test-patch.sh (Hadoop-QA) outputs the wrong release audit warnings URL
+    * [HBASE-12318] - Add license header to checkstyle xml files
+    * [HBASE-12334] - Handling of DeserializationException causes needless retry on failure
+    * [HBASE-12336] - RegionServer failed to shutdown for NodeFailoverWorker thread
+    * [HBASE-12372] - [WINDOWS] Enable log4j configuration in hbase.cmd 
+    * [HBASE-12375] - LoadIncrementalHFiles fails to load data in table when CF name starts with '_'
+    * [HBASE-12376] - HBaseAdmin leaks ZK connections if failure starting watchers (ConnectionLossException)
+    * [HBASE-12384] - TestTags can hang on fast test hosts
+    * [HBASE-12386] - Replication gets stuck following a transient zookeeper error to remote peer cluster
+    * [HBASE-12397] - CopyTable fails to compile with the Hadoop 1 profile
+    * [HBASE-12399] - Master startup race between metrics and RpcServer
+    * [HBASE-12402] - ZKPermissionWatcher race condition in refreshing the cache leaving stale ACLs and causing AccessDenied
+    * [HBASE-12406] - Bulk load fails in 0.98 against hadoop-1 due to unmatched family name
+    * [HBASE-12407] - HConnectionKey doesn't contain CUSTOM_CONTROLLER_CONF_KEY in CONNECTION_PROPERTIES 
+    * [HBASE-12414] - Move HFileLink.exists() to base class
+    * [HBASE-12417] - Scan copy constructor does not retain small attribute
+    * [HBASE-12419] - "Partial cell read caused by EOF" ERRORs on replication source during replication
+    * [HBASE-12420] - BucketCache logged startup message is egregiously large
+    * [HBASE-12440] - Region may remain offline on clean startup under certain race condition
+    * [HBASE-12448] - Fix rate reporting in compaction progress DEBUG logging
+    * [HBASE-12450] - Unbalance chaos monkey might kill all region servers without starting them back
+
+** Improvement
+    * [HBASE-8361] - Bulk load and other utilities should not create tables for user
+    * [HBASE-10082] - Describe 'table' output is all on one line, could use better formatting
+    * [HBASE-12161] - Add support for grant/revoke on namespaces in AccessControlClient
+    * [HBASE-12212] - HBaseTestingUtility#waitUntilAllRegionsAssigned should wait for RegionStates
+    * [HBASE-12243] - HBaseFsck should auto set ignorePreCheckPermission to true if no fix option is set.
+    * [HBASE-12264] - ImportTsv should fail fast if output is not specified and table does not exist
+    * [HBASE-12271] - Add counters for files skipped during snapshot export
+    * [HBASE-12272] - Generate Thrift code through maven
+    * [HBASE-12389] - Reduce the number of versions configured for the ACL table
+    * [HBASE-12416] - RegionServerCallable should report what host it was communicating with
+    * [HBASE-12424] - Finer grained logging and metrics for split transactions
+    * [HBASE-12432] - RpcRetryingCaller should log after fixed number of retries like AsyncProcess
+
+** New Feature
+    * [HBASE-12361] - Show data locality of region in table page
+
+** Task
+    * [HBASE-12205] - Backport HBASE-12016 'Reduce number of versions in Meta table. Make it configurable' to 0.98
+    * [HBASE-12344] - Split up TestAdmin
+    * [HBASE-12381] - Add maven enforcer rules for build assumptions
+
+** Test
+    * [HBASE-12367] - Integration tests should not restore the cluster if the CM is not destructive
+    * [HBASE-12401] - Add some timestamp signposts in IntegrationTestMTTR
+    * [HBASE-12403] - IntegrationTestMTTR flaky due to aggressive RS restart timeout
+
+** Umbrella
+    * [HBASE-12371] - Backport IT improvements to 0.98
+
+
+Release 0.98.7 - 10/16/2014
 
 ** Sub-task
     * [HBASE-11923] - Potential race condition in RecoverableZookeeper.checkZk()
