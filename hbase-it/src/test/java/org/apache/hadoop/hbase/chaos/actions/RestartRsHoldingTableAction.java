@@ -43,6 +43,7 @@ public class RestartRsHoldingTableAction extends RestartActionBaseAction {
   public void perform() throws Exception {
     HTable table = null;
     try {
+      LOG.info("Performing action: Restart random RS holding table " + this.tableName);
       Configuration conf = context.getHBaseIntegrationTestingUtility().getConfiguration();
       table = new HTable(conf, TableName.valueOf(tableName));
     } catch (IOException e) {

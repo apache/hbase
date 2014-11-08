@@ -163,7 +163,12 @@ public class Action {
 
   protected void forceBalancer() throws Exception {
     Admin admin = this.context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
-    boolean result = admin.balancer();
+    boolean result = false;
+    try {
+      result = admin.balancer();
+    } catch (Exception e) {
+      LOG.warn("Got exception while doing balance ", e);
+    }
     if (!result) {
       LOG.error("Balancer didn't succeed");
     }
