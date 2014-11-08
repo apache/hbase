@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -317,7 +318,19 @@ public class BatchMutation implements org.apache.thrift.TBase<BatchMutation, Bat
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_row = true && (isSetRow());
+    builder.append(present_row);
+    if (present_row)
+      builder.append(row);
+
+    boolean present_mutations = true && (isSetMutations());
+    builder.append(present_mutations);
+    if (present_mutations)
+      builder.append(mutations);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(BatchMutation other) {

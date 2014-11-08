@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift2.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -530,7 +531,34 @@ public class TAppend implements org.apache.thrift.TBase<TAppend, TAppend._Fields
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_row = true && (isSetRow());
+    builder.append(present_row);
+    if (present_row)
+      builder.append(row);
+
+    boolean present_columns = true && (isSetColumns());
+    builder.append(present_columns);
+    if (present_columns)
+      builder.append(columns);
+
+    boolean present_attributes = true && (isSetAttributes());
+    builder.append(present_attributes);
+    if (present_attributes)
+      builder.append(attributes);
+
+    boolean present_durability = true && (isSetDurability());
+    builder.append(present_durability);
+    if (present_durability)
+      builder.append(durability.getValue());
+
+    boolean present_cellVisibility = true && (isSetCellVisibility());
+    builder.append(present_cellVisibility);
+    if (present_cellVisibility)
+      builder.append(cellVisibility);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TAppend other) {
