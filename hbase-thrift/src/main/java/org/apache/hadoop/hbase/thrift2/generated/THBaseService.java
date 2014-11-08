@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift2.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -2027,7 +2028,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_get = true && (isSetGet());
+      builder.append(present_get);
+      if (present_get)
+        builder.append(get);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(exists_args other) {
@@ -2477,7 +2490,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(exists_result other) {
@@ -2966,7 +2991,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_get = true && (isSetGet());
+      builder.append(present_get);
+      if (present_get)
+        builder.append(get);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(get_args other) {
@@ -3414,7 +3451,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(get_result other) {
@@ -3938,7 +3987,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_gets = true && (isSetGets());
+      builder.append(present_gets);
+      if (present_gets)
+        builder.append(gets);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getMultiple_args other) {
@@ -4064,14 +4125,14 @@ public class THBaseService {
             case 2: // GETS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list124 = iprot.readListBegin();
-                  struct.gets = new ArrayList<TGet>(_list124.size);
-                  for (int _i125 = 0; _i125 < _list124.size; ++_i125)
+                  org.apache.thrift.protocol.TList _list132 = iprot.readListBegin();
+                  struct.gets = new ArrayList<TGet>(_list132.size);
+                  for (int _i133 = 0; _i133 < _list132.size; ++_i133)
                   {
-                    TGet _elem126; // required
-                    _elem126 = new TGet();
-                    _elem126.read(iprot);
-                    struct.gets.add(_elem126);
+                    TGet _elem134; // required
+                    _elem134 = new TGet();
+                    _elem134.read(iprot);
+                    struct.gets.add(_elem134);
                   }
                   iprot.readListEnd();
                 }
@@ -4104,9 +4165,9 @@ public class THBaseService {
           oprot.writeFieldBegin(GETS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.gets.size()));
-            for (TGet _iter127 : struct.gets)
+            for (TGet _iter135 : struct.gets)
             {
-              _iter127.write(oprot);
+              _iter135.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -4132,9 +4193,9 @@ public class THBaseService {
         oprot.writeBinary(struct.table);
         {
           oprot.writeI32(struct.gets.size());
-          for (TGet _iter128 : struct.gets)
+          for (TGet _iter136 : struct.gets)
           {
-            _iter128.write(oprot);
+            _iter136.write(oprot);
           }
         }
       }
@@ -4145,14 +4206,14 @@ public class THBaseService {
         struct.table = iprot.readBinary();
         struct.setTableIsSet(true);
         {
-          org.apache.thrift.protocol.TList _list129 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-          struct.gets = new ArrayList<TGet>(_list129.size);
-          for (int _i130 = 0; _i130 < _list129.size; ++_i130)
+          org.apache.thrift.protocol.TList _list137 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+          struct.gets = new ArrayList<TGet>(_list137.size);
+          for (int _i138 = 0; _i138 < _list137.size; ++_i138)
           {
-            TGet _elem131; // required
-            _elem131 = new TGet();
-            _elem131.read(iprot);
-            struct.gets.add(_elem131);
+            TGet _elem139; // required
+            _elem139 = new TGet();
+            _elem139.read(iprot);
+            struct.gets.add(_elem139);
           }
         }
         struct.setGetsIsSet(true);
@@ -4435,7 +4496,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getMultiple_result other) {
@@ -4547,14 +4620,14 @@ public class THBaseService {
             case 0: // SUCCESS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list132 = iprot.readListBegin();
-                  struct.success = new ArrayList<TResult>(_list132.size);
-                  for (int _i133 = 0; _i133 < _list132.size; ++_i133)
+                  org.apache.thrift.protocol.TList _list140 = iprot.readListBegin();
+                  struct.success = new ArrayList<TResult>(_list140.size);
+                  for (int _i141 = 0; _i141 < _list140.size; ++_i141)
                   {
-                    TResult _elem134; // required
-                    _elem134 = new TResult();
-                    _elem134.read(iprot);
-                    struct.success.add(_elem134);
+                    TResult _elem142; // required
+                    _elem142 = new TResult();
+                    _elem142.read(iprot);
+                    struct.success.add(_elem142);
                   }
                   iprot.readListEnd();
                 }
@@ -4591,9 +4664,9 @@ public class THBaseService {
           oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.success.size()));
-            for (TResult _iter135 : struct.success)
+            for (TResult _iter143 : struct.success)
             {
-              _iter135.write(oprot);
+              _iter143.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -4632,9 +4705,9 @@ public class THBaseService {
         if (struct.isSetSuccess()) {
           {
             oprot.writeI32(struct.success.size());
-            for (TResult _iter136 : struct.success)
+            for (TResult _iter144 : struct.success)
             {
-              _iter136.write(oprot);
+              _iter144.write(oprot);
             }
           }
         }
@@ -4649,14 +4722,14 @@ public class THBaseService {
         BitSet incoming = iprot.readBitSet(2);
         if (incoming.get(0)) {
           {
-            org.apache.thrift.protocol.TList _list137 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.success = new ArrayList<TResult>(_list137.size);
-            for (int _i138 = 0; _i138 < _list137.size; ++_i138)
+            org.apache.thrift.protocol.TList _list145 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.success = new ArrayList<TResult>(_list145.size);
+            for (int _i146 = 0; _i146 < _list145.size; ++_i146)
             {
-              TResult _elem139; // required
-              _elem139 = new TResult();
-              _elem139.read(iprot);
-              struct.success.add(_elem139);
+              TResult _elem147; // required
+              _elem147 = new TResult();
+              _elem147.read(iprot);
+              struct.success.add(_elem147);
             }
           }
           struct.setSuccessIsSet(true);
@@ -4960,7 +5033,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_put = true && (isSetPut());
+      builder.append(present_put);
+      if (present_put)
+        builder.append(put);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(put_args other) {
@@ -5349,7 +5434,14 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(put_result other) {
@@ -6135,7 +6227,39 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_family = true && (isSetFamily());
+      builder.append(present_family);
+      if (present_family)
+        builder.append(family);
+
+      boolean present_qualifier = true && (isSetQualifier());
+      builder.append(present_qualifier);
+      if (present_qualifier)
+        builder.append(qualifier);
+
+      boolean present_value = true && (isSetValue());
+      builder.append(present_value);
+      if (present_value)
+        builder.append(value);
+
+      boolean present_put = true && (isSetPut());
+      builder.append(present_put);
+      if (present_put)
+        builder.append(put);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(checkAndPut_args other) {
@@ -6740,7 +6864,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(checkAndPut_result other) {
@@ -7249,7 +7385,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_puts = true && (isSetPuts());
+      builder.append(present_puts);
+      if (present_puts)
+        builder.append(puts);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(putMultiple_args other) {
@@ -7375,14 +7523,14 @@ public class THBaseService {
             case 2: // PUTS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list140 = iprot.readListBegin();
-                  struct.puts = new ArrayList<TPut>(_list140.size);
-                  for (int _i141 = 0; _i141 < _list140.size; ++_i141)
+                  org.apache.thrift.protocol.TList _list148 = iprot.readListBegin();
+                  struct.puts = new ArrayList<TPut>(_list148.size);
+                  for (int _i149 = 0; _i149 < _list148.size; ++_i149)
                   {
-                    TPut _elem142; // required
-                    _elem142 = new TPut();
-                    _elem142.read(iprot);
-                    struct.puts.add(_elem142);
+                    TPut _elem150; // required
+                    _elem150 = new TPut();
+                    _elem150.read(iprot);
+                    struct.puts.add(_elem150);
                   }
                   iprot.readListEnd();
                 }
@@ -7415,9 +7563,9 @@ public class THBaseService {
           oprot.writeFieldBegin(PUTS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.puts.size()));
-            for (TPut _iter143 : struct.puts)
+            for (TPut _iter151 : struct.puts)
             {
-              _iter143.write(oprot);
+              _iter151.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -7443,9 +7591,9 @@ public class THBaseService {
         oprot.writeBinary(struct.table);
         {
           oprot.writeI32(struct.puts.size());
-          for (TPut _iter144 : struct.puts)
+          for (TPut _iter152 : struct.puts)
           {
-            _iter144.write(oprot);
+            _iter152.write(oprot);
           }
         }
       }
@@ -7456,14 +7604,14 @@ public class THBaseService {
         struct.table = iprot.readBinary();
         struct.setTableIsSet(true);
         {
-          org.apache.thrift.protocol.TList _list145 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-          struct.puts = new ArrayList<TPut>(_list145.size);
-          for (int _i146 = 0; _i146 < _list145.size; ++_i146)
+          org.apache.thrift.protocol.TList _list153 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+          struct.puts = new ArrayList<TPut>(_list153.size);
+          for (int _i154 = 0; _i154 < _list153.size; ++_i154)
           {
-            TPut _elem147; // required
-            _elem147 = new TPut();
-            _elem147.read(iprot);
-            struct.puts.add(_elem147);
+            TPut _elem155; // required
+            _elem155 = new TPut();
+            _elem155.read(iprot);
+            struct.puts.add(_elem155);
           }
         }
         struct.setPutsIsSet(true);
@@ -7667,7 +7815,14 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(putMultiple_result other) {
@@ -8117,7 +8272,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_deleteSingle = true && (isSetDeleteSingle());
+      builder.append(present_deleteSingle);
+      if (present_deleteSingle)
+        builder.append(deleteSingle);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteSingle_args other) {
@@ -8506,7 +8673,14 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteSingle_result other) {
@@ -8976,7 +9150,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_deletes = true && (isSetDeletes());
+      builder.append(present_deletes);
+      if (present_deletes)
+        builder.append(deletes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteMultiple_args other) {
@@ -9102,14 +9288,14 @@ public class THBaseService {
             case 2: // DELETES
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list148 = iprot.readListBegin();
-                  struct.deletes = new ArrayList<TDelete>(_list148.size);
-                  for (int _i149 = 0; _i149 < _list148.size; ++_i149)
+                  org.apache.thrift.protocol.TList _list156 = iprot.readListBegin();
+                  struct.deletes = new ArrayList<TDelete>(_list156.size);
+                  for (int _i157 = 0; _i157 < _list156.size; ++_i157)
                   {
-                    TDelete _elem150; // required
-                    _elem150 = new TDelete();
-                    _elem150.read(iprot);
-                    struct.deletes.add(_elem150);
+                    TDelete _elem158; // required
+                    _elem158 = new TDelete();
+                    _elem158.read(iprot);
+                    struct.deletes.add(_elem158);
                   }
                   iprot.readListEnd();
                 }
@@ -9142,9 +9328,9 @@ public class THBaseService {
           oprot.writeFieldBegin(DELETES_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.deletes.size()));
-            for (TDelete _iter151 : struct.deletes)
+            for (TDelete _iter159 : struct.deletes)
             {
-              _iter151.write(oprot);
+              _iter159.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -9170,9 +9356,9 @@ public class THBaseService {
         oprot.writeBinary(struct.table);
         {
           oprot.writeI32(struct.deletes.size());
-          for (TDelete _iter152 : struct.deletes)
+          for (TDelete _iter160 : struct.deletes)
           {
-            _iter152.write(oprot);
+            _iter160.write(oprot);
           }
         }
       }
@@ -9183,14 +9369,14 @@ public class THBaseService {
         struct.table = iprot.readBinary();
         struct.setTableIsSet(true);
         {
-          org.apache.thrift.protocol.TList _list153 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-          struct.deletes = new ArrayList<TDelete>(_list153.size);
-          for (int _i154 = 0; _i154 < _list153.size; ++_i154)
+          org.apache.thrift.protocol.TList _list161 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+          struct.deletes = new ArrayList<TDelete>(_list161.size);
+          for (int _i162 = 0; _i162 < _list161.size; ++_i162)
           {
-            TDelete _elem155; // required
-            _elem155 = new TDelete();
-            _elem155.read(iprot);
-            struct.deletes.add(_elem155);
+            TDelete _elem163; // required
+            _elem163 = new TDelete();
+            _elem163.read(iprot);
+            struct.deletes.add(_elem163);
           }
         }
         struct.setDeletesIsSet(true);
@@ -9473,7 +9659,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteMultiple_result other) {
@@ -9585,14 +9783,14 @@ public class THBaseService {
             case 0: // SUCCESS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list156 = iprot.readListBegin();
-                  struct.success = new ArrayList<TDelete>(_list156.size);
-                  for (int _i157 = 0; _i157 < _list156.size; ++_i157)
+                  org.apache.thrift.protocol.TList _list164 = iprot.readListBegin();
+                  struct.success = new ArrayList<TDelete>(_list164.size);
+                  for (int _i165 = 0; _i165 < _list164.size; ++_i165)
                   {
-                    TDelete _elem158; // required
-                    _elem158 = new TDelete();
-                    _elem158.read(iprot);
-                    struct.success.add(_elem158);
+                    TDelete _elem166; // required
+                    _elem166 = new TDelete();
+                    _elem166.read(iprot);
+                    struct.success.add(_elem166);
                   }
                   iprot.readListEnd();
                 }
@@ -9629,9 +9827,9 @@ public class THBaseService {
           oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.success.size()));
-            for (TDelete _iter159 : struct.success)
+            for (TDelete _iter167 : struct.success)
             {
-              _iter159.write(oprot);
+              _iter167.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -9670,9 +9868,9 @@ public class THBaseService {
         if (struct.isSetSuccess()) {
           {
             oprot.writeI32(struct.success.size());
-            for (TDelete _iter160 : struct.success)
+            for (TDelete _iter168 : struct.success)
             {
-              _iter160.write(oprot);
+              _iter168.write(oprot);
             }
           }
         }
@@ -9687,14 +9885,14 @@ public class THBaseService {
         BitSet incoming = iprot.readBitSet(2);
         if (incoming.get(0)) {
           {
-            org.apache.thrift.protocol.TList _list161 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.success = new ArrayList<TDelete>(_list161.size);
-            for (int _i162 = 0; _i162 < _list161.size; ++_i162)
+            org.apache.thrift.protocol.TList _list169 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.success = new ArrayList<TDelete>(_list169.size);
+            for (int _i170 = 0; _i170 < _list169.size; ++_i170)
             {
-              TDelete _elem163; // required
-              _elem163 = new TDelete();
-              _elem163.read(iprot);
-              struct.success.add(_elem163);
+              TDelete _elem171; // required
+              _elem171 = new TDelete();
+              _elem171.read(iprot);
+              struct.success.add(_elem171);
             }
           }
           struct.setSuccessIsSet(true);
@@ -10334,7 +10532,39 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_family = true && (isSetFamily());
+      builder.append(present_family);
+      if (present_family)
+        builder.append(family);
+
+      boolean present_qualifier = true && (isSetQualifier());
+      builder.append(present_qualifier);
+      if (present_qualifier)
+        builder.append(qualifier);
+
+      boolean present_value = true && (isSetValue());
+      builder.append(present_value);
+      if (present_value)
+        builder.append(value);
+
+      boolean present_deleteSingle = true && (isSetDeleteSingle());
+      builder.append(present_deleteSingle);
+      if (present_deleteSingle)
+        builder.append(deleteSingle);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(checkAndDelete_args other) {
@@ -10939,7 +11169,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(checkAndDelete_result other) {
@@ -11428,7 +11670,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_increment = true && (isSetIncrement());
+      builder.append(present_increment);
+      if (present_increment)
+        builder.append(increment);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(increment_args other) {
@@ -11876,7 +12130,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(increment_result other) {
@@ -12372,7 +12638,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_append = true && (isSetAppend());
+      builder.append(present_append);
+      if (present_append)
+        builder.append(append);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(append_args other) {
@@ -12820,7 +13098,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(append_result other) {
@@ -13316,7 +13606,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_scan = true && (isSetScan());
+      builder.append(present_scan);
+      if (present_scan)
+        builder.append(scan);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(openScanner_args other) {
@@ -13766,7 +14068,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(openScanner_result other) {
@@ -14248,7 +14562,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_scannerId = true;
+      builder.append(present_scannerId);
+      if (present_scannerId)
+        builder.append(scannerId);
+
+      boolean present_numRows = true;
+      builder.append(present_numRows);
+      if (present_numRows)
+        builder.append(numRows);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getScannerRows_args other) {
@@ -14780,7 +15106,24 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getScannerRows_result other) {
@@ -14910,14 +15253,14 @@ public class THBaseService {
             case 0: // SUCCESS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list164 = iprot.readListBegin();
-                  struct.success = new ArrayList<TResult>(_list164.size);
-                  for (int _i165 = 0; _i165 < _list164.size; ++_i165)
+                  org.apache.thrift.protocol.TList _list172 = iprot.readListBegin();
+                  struct.success = new ArrayList<TResult>(_list172.size);
+                  for (int _i173 = 0; _i173 < _list172.size; ++_i173)
                   {
-                    TResult _elem166; // required
-                    _elem166 = new TResult();
-                    _elem166.read(iprot);
-                    struct.success.add(_elem166);
+                    TResult _elem174; // required
+                    _elem174 = new TResult();
+                    _elem174.read(iprot);
+                    struct.success.add(_elem174);
                   }
                   iprot.readListEnd();
                 }
@@ -14963,9 +15306,9 @@ public class THBaseService {
           oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.success.size()));
-            for (TResult _iter167 : struct.success)
+            for (TResult _iter175 : struct.success)
             {
-              _iter167.write(oprot);
+              _iter175.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -15012,9 +15355,9 @@ public class THBaseService {
         if (struct.isSetSuccess()) {
           {
             oprot.writeI32(struct.success.size());
-            for (TResult _iter168 : struct.success)
+            for (TResult _iter176 : struct.success)
             {
-              _iter168.write(oprot);
+              _iter176.write(oprot);
             }
           }
         }
@@ -15032,14 +15375,14 @@ public class THBaseService {
         BitSet incoming = iprot.readBitSet(3);
         if (incoming.get(0)) {
           {
-            org.apache.thrift.protocol.TList _list169 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.success = new ArrayList<TResult>(_list169.size);
-            for (int _i170 = 0; _i170 < _list169.size; ++_i170)
+            org.apache.thrift.protocol.TList _list177 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.success = new ArrayList<TResult>(_list177.size);
+            for (int _i178 = 0; _i178 < _list177.size; ++_i178)
             {
-              TResult _elem171; // required
-              _elem171 = new TResult();
-              _elem171.read(iprot);
-              struct.success.add(_elem171);
+              TResult _elem179; // required
+              _elem179 = new TResult();
+              _elem179.read(iprot);
+              struct.success.add(_elem179);
             }
           }
           struct.setSuccessIsSet(true);
@@ -15268,7 +15611,14 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_scannerId = true;
+      builder.append(present_scannerId);
+      if (present_scannerId)
+        builder.append(scannerId);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(closeScanner_args other) {
@@ -15683,7 +16033,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(closeScanner_result other) {
@@ -16176,7 +16538,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_rowMutations = true && (isSetRowMutations());
+      builder.append(present_rowMutations);
+      if (present_rowMutations)
+        builder.append(rowMutations);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(mutateRow_args other) {
@@ -16565,7 +16939,14 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(mutateRow_result other) {
@@ -17090,7 +17471,24 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_scan = true && (isSetScan());
+      builder.append(present_scan);
+      if (present_scan)
+        builder.append(scan);
+
+      boolean present_numRows = true;
+      builder.append(present_numRows);
+      if (present_numRows)
+        builder.append(numRows);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getScannerResults_args other) {
@@ -17598,7 +17996,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getScannerResults_result other) {
@@ -17710,14 +18120,14 @@ public class THBaseService {
             case 0: // SUCCESS
               if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
                 {
-                  org.apache.thrift.protocol.TList _list172 = iprot.readListBegin();
-                  struct.success = new ArrayList<TResult>(_list172.size);
-                  for (int _i173 = 0; _i173 < _list172.size; ++_i173)
+                  org.apache.thrift.protocol.TList _list180 = iprot.readListBegin();
+                  struct.success = new ArrayList<TResult>(_list180.size);
+                  for (int _i181 = 0; _i181 < _list180.size; ++_i181)
                   {
-                    TResult _elem174; // required
-                    _elem174 = new TResult();
-                    _elem174.read(iprot);
-                    struct.success.add(_elem174);
+                    TResult _elem182; // required
+                    _elem182 = new TResult();
+                    _elem182.read(iprot);
+                    struct.success.add(_elem182);
                   }
                   iprot.readListEnd();
                 }
@@ -17754,9 +18164,9 @@ public class THBaseService {
           oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
           {
             oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.success.size()));
-            for (TResult _iter175 : struct.success)
+            for (TResult _iter183 : struct.success)
             {
-              _iter175.write(oprot);
+              _iter183.write(oprot);
             }
             oprot.writeListEnd();
           }
@@ -17795,9 +18205,9 @@ public class THBaseService {
         if (struct.isSetSuccess()) {
           {
             oprot.writeI32(struct.success.size());
-            for (TResult _iter176 : struct.success)
+            for (TResult _iter184 : struct.success)
             {
-              _iter176.write(oprot);
+              _iter184.write(oprot);
             }
           }
         }
@@ -17812,14 +18222,14 @@ public class THBaseService {
         BitSet incoming = iprot.readBitSet(2);
         if (incoming.get(0)) {
           {
-            org.apache.thrift.protocol.TList _list177 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-            struct.success = new ArrayList<TResult>(_list177.size);
-            for (int _i178 = 0; _i178 < _list177.size; ++_i178)
+            org.apache.thrift.protocol.TList _list185 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+            struct.success = new ArrayList<TResult>(_list185.size);
+            for (int _i186 = 0; _i186 < _list185.size; ++_i186)
             {
-              TResult _elem179; // required
-              _elem179 = new TResult();
-              _elem179.read(iprot);
-              struct.success.add(_elem179);
+              TResult _elem187; // required
+              _elem187 = new TResult();
+              _elem187.read(iprot);
+              struct.success.add(_elem187);
             }
           }
           struct.setSuccessIsSet(true);
