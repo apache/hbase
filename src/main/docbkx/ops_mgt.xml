@@ -1594,6 +1594,19 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
         </listitem>
       </orderedlist>
 
+      <note xml:id="cluster.replication.spreading.load">
+        <title>Spreading Queue Failover Load</title>
+        <para>When replication is active, a subset of RegionServers in the source cluster are
+          responsible for shipping edits to the sink. This function must be failed over like all
+          other RegionServer functions should a process or node crash. The following configuration
+          settings are recommended for maintaining an even distribution of replication activity
+          over the remaining live servers in the source cluster: Set
+            <code>replication.source.maxretriesmultiplier</code> to
+            <literal>300</literal> (5 minutes), and
+            <code>replication.sleep.before.failover</code> to
+            <literal>30000</literal> (30 seconds) in the source cluster site configuration.
+        </para>
+      </note>
 
       <note xml:id="cluster.replication.preserving.tags">
         <title>Preserving Tags During Replication</title>
