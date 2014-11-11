@@ -1042,7 +1042,7 @@
     <common.test.jar>hbase-common-${project.version}-tests.jar</common.test.jar>
     <it.test.jar>hbase-it-${project.version}-tests.jar</it.test.jar>
     <annotations.test.jar>hbase-annotations-${project.version}-tests.jar</annotations.test.jar>
-    <surefire.version>2.18-SNAPSHOT</surefire.version>
+    <surefire.version>2.18</surefire.version>
     <surefire.provider>surefire-junit47</surefire.provider>
     <!-- default: run small & medium, medium with 2 threads -->
     <surefire.skipFirstPart>false</surefire.skipFirstPart>
