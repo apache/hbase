@@ -1015,26 +1015,38 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
         uncommented lines. Restart the region server for the changes to take effect.</para>
     </section>
 
-    <section>
+    <section xml:id="discovering.available.metrics">
       <title>Discovering Available Metrics</title>
       <para>Rather than listing each metric which HBase emits by default, you can browse through the
-        available metrics, either as a JSON output or via JMX. At this time, the JSON output does
-        not include the description field which is included in the JMX view. Different metrics are
+        available metrics, either as a JSON output or via JMX. Different metrics are
         exposed for the Master process and each region server process.</para>
       <procedure>
         <title>Access a JSON Output of Available Metrics</title>
         <step>
           <para>After starting HBase, access the region server's web UI, at
-              <literal>http://localhost:60030</literal> by default.</para>
+              <literal>http://REGIONSERVER_HOSTNAME:60030</literal> by default (or port 16030 in HBase 1.0+).</para>
         </step>
         <step>
           <para>Click the <guilabel>Metrics Dump</guilabel> link near the top. The metrics for the region server are
-            presented as a dump of the JMX bean in JSON format.</para>
+            presented as a dump of the JMX bean in JSON format. This will dump out all metrics names and their
+            values.
+            To include metrics descriptions in the listing &mdash; this can be useful when you are exploring
+            what is available &mdash; add a query string of
+            <literal>?description=true</literal> so your URL becomes
+            <literal>http://REGIONSERVER_HOSTNAME:60030/jmx?description=true</literal>.
+            Not all beans and attributes have descriptions.
+          </para>
         </step>
         <step>
           <para>To view metrics for the Master, connect to the Master's web UI instead (defaults to
-              <literal>http://localhost:60010</literal>) and click its <guilabel>Metrics
-              Dump</guilabel> link.</para>
+              <literal>http://localhost:60010</literal> or port 16010 in HBase 1.0+) and click its <guilabel>Metrics
+                Dump</guilabel> link.
+            To include metrics descriptions in the listing &mdash; this can be useful when you are exploring
+            what is available &mdash; add a query string of
+            <literal>?description=true</literal> so your URL becomes
+            <literal>http://REGIONSERVER_HOSTNAME:60010/jmx?description=true</literal>.
+            Not all beans and attributes have descriptions.
+            </para>
         </step>
       </procedure>
 
