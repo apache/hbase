@@ -42,14 +42,12 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
   private static enum DefaultMetricsSystemInitializer {
     INSTANCE;
     private boolean inited = false;
-    private JvmMetrics jvmMetricsSource;
 
     synchronized void init(String name) {
       if (inited) return;
       inited = true;
       DefaultMetricsSystem.initialize(HBASE_METRICS_SYSTEM_NAME);
-      jvmMetricsSource = JvmMetrics.initSingleton(name, "");
-
+      JvmMetrics.initSingleton(name, "");
     }
   }
 

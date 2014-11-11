@@ -123,6 +123,12 @@ public class JMXJsonServlet extends HttpServlet {
   private static final long serialVersionUID = 1L;
 
   private static final String CALLBACK_PARAM = "callback";
+  /**
+   * If query string includes 'description', then we will emit bean and attribute descriptions to
+   * output IFF they are not null and IFF the description is not the same as the attribute name:
+   * i.e. specify an URL like so: /jmx?description=true
+   */
+  private static final String INCLUDE_DESCRIPTION = "description";
 
   /**
    * MBean server.
@@ -154,8 +160,7 @@ public class JMXJsonServlet extends HttpServlet {
   @Override
   public void doGet(HttpServletRequest request, HttpServletResponse response) {
     try {
-      if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(),
-                                                     request, response)) {
+      if (!HttpServer.isInstrumentationAccessAllowed(getServletContext(), request, response)) {
         return;
       }
       JsonGenerator jg = null;
@@ -172,6 +177,9 @@ public class JMXJsonServlet extends HttpServlet {
         } else {
           response.setContentType("application/json; charset=utf8");
         }
+        // Should we output description on each attribute and bean?
+        String tmpStr = request.getParameter(INCLUDE_DESCRIPTION);
+        boolean description = tmpStr != null && tmpStr.length() > 0;
 
         jg = jsonFactory.createJsonGenerator(writer);
         jg.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
@@ -189,8 +197,7 @@ public class JMXJsonServlet extends HttpServlet {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             return;
           }
-          listBeans(jg, new ObjectName(splitStrings[0]), splitStrings[1],
-              response);
+          listBeans(jg, new ObjectName(splitStrings[0]), splitStrings[1], description, response);
           return;
         }
 
@@ -199,7 +206,7 @@ public class JMXJsonServlet extends HttpServlet {
         if (qry == null) {
           qry = "*:*";
         }
-        listBeans(jg, new ObjectName(qry), null, response);
+        listBeans(jg, new ObjectName(qry), null, description, response);
       } finally {
         if (jg != null) {
           jg.close();
@@ -222,22 +229,23 @@ public class JMXJsonServlet extends HttpServlet {
 
   // --------------------------------------------------------- Private Methods
   private void listBeans(JsonGenerator jg, ObjectName qry, String attribute,
-      HttpServletResponse response)
+      final boolean description, final HttpServletResponse response)
   throws IOException {
     LOG.trace("Listing beans for "+qry);
     Set<ObjectName> names = null;
     names = mBeanServer.queryNames(qry, null);
-
     jg.writeArrayFieldStart("beans");
     Iterator<ObjectName> it = names.iterator();
     while (it.hasNext()) {
       ObjectName oname = it.next();
       MBeanInfo minfo;
       String code = "";
+      String descriptionStr = null;
       Object attributeinfo = null;
       try {
         minfo = mBeanServer.getMBeanInfo(oname);
         code = minfo.getClassName();
+        if (description) descriptionStr = minfo.getDescription();
         String prs = "";
         try {
           if ("org.apache.commons.modeler.BaseModelMBean".equals(code)) {
@@ -301,12 +309,13 @@ public class JMXJsonServlet extends HttpServlet {
 
       jg.writeStartObject();
       jg.writeStringField("name", oname.toString());
-
+      if (description && descriptionStr != null && descriptionStr.length() > 0) {
+        jg.writeStringField("description", descriptionStr);
+      }
       jg.writeStringField("modelerType", code);
-      if ((attribute != null) && (attributeinfo == null)) {
+      if (attribute != null && attributeinfo == null) {
         jg.writeStringField("result", "ERROR");
-        jg.writeStringField("message", "No attribute with name " + attribute
-            + " was found.");
+        jg.writeStringField("message", "No attribute with name " + attribute + " was found.");
         jg.writeEndObject();
         jg.writeEndArray();
         jg.close();
@@ -315,11 +324,11 @@ public class JMXJsonServlet extends HttpServlet {
       }
 
       if (attribute != null) {
-        writeAttribute(jg, attribute, attributeinfo);
+        writeAttribute(jg, attribute, descriptionStr, attributeinfo);
       } else {
         MBeanAttributeInfo attrs[] = minfo.getAttributes();
         for (int i = 0; i < attrs.length; i++) {
-          writeAttribute(jg, oname, attrs[i]);
+          writeAttribute(jg, oname, description, attrs[i]);
         }
       }
       jg.writeEndObject();
@@ -327,7 +336,8 @@ public class JMXJsonServlet extends HttpServlet {
     jg.writeEndArray();
   }
 
-  private void writeAttribute(JsonGenerator jg, ObjectName oname, MBeanAttributeInfo attr)
+  private void writeAttribute(JsonGenerator jg, ObjectName oname, final boolean description,
+      MBeanAttributeInfo attr)
   throws IOException {
     if (!attr.isReadable()) {
       return;
@@ -336,10 +346,10 @@ public class JMXJsonServlet extends HttpServlet {
     if ("modelerType".equals(attName)) {
       return;
     }
-    if (attName.indexOf("=") >= 0 || attName.indexOf(":") >= 0
-        || attName.indexOf(" ") >= 0) {
+    if (attName.indexOf("=") >= 0 || attName.indexOf(":") >= 0 || attName.indexOf(" ") >= 0) {
       return;
     }
+    String descriptionStr = description? attr.getDescription(): null;
     Object value = null;
     try {
       value = mBeanServer.getAttribute(oname, attName);
@@ -386,15 +396,30 @@ public class JMXJsonServlet extends HttpServlet {
       return;
     }
 
-    writeAttribute(jg, attName, value);
+    writeAttribute(jg, attName, descriptionStr, value);
   }
 
-  private void writeAttribute(JsonGenerator jg, String attName, Object value) throws IOException {
-    jg.writeFieldName(attName);
-    writeObject(jg, value);
+  private void writeAttribute(JsonGenerator jg, String attName, final String descriptionStr,
+      Object value)
+  throws IOException {
+    boolean description = false;
+    if (descriptionStr != null && descriptionStr.length() > 0 && !attName.equals(descriptionStr)) {
+      description = true;
+      jg.writeFieldName(attName);
+      jg.writeStartObject();
+      jg.writeFieldName("description");
+      jg.writeString(descriptionStr);
+      jg.writeFieldName("value");
+      writeObject(jg, description, value);
+      jg.writeEndObject();
+    } else {
+      jg.writeFieldName(attName);
+      writeObject(jg, description, value);
+    }
   }
 
-  private void writeObject(JsonGenerator jg, Object value) throws IOException {
+  private void writeObject(JsonGenerator jg, final boolean description, Object value)
+  throws IOException {
     if(value == null) {
       jg.writeNull();
     } else {
@@ -404,7 +429,7 @@ public class JMXJsonServlet extends HttpServlet {
         int len = Array.getLength(value);
         for (int j = 0; j < len; j++) {
           Object item = Array.get(value, j);
-          writeObject(jg, item);
+          writeObject(jg, description, item);
         }
         jg.writeEndArray();
       } else if(value instanceof Number) {
@@ -418,15 +443,15 @@ public class JMXJsonServlet extends HttpServlet {
         CompositeType comp = cds.getCompositeType();
         Set<String> keys = comp.keySet();
         jg.writeStartObject();
-        for(String key: keys) {
-          writeAttribute(jg, key, cds.get(key));
+        for (String key: keys) {
+          writeAttribute(jg, key, null, cds.get(key));
         }
         jg.writeEndObject();
       } else if(value instanceof TabularData) {
         TabularData tds = (TabularData)value;
         jg.writeStartArray();
         for(Object entry : tds.values()) {
-          writeObject(jg, entry);
+          writeObject(jg, description, entry);
         }
         jg.writeEndArray();
       } else {
