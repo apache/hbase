@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -94,9 +95,14 @@ public class RowCounter extends Configured implements Tool {
     String tableName = args[0];
     String startKey = null;
     String endKey = null;
+    long startTime = 0;
+    long endTime = 0;
+
     StringBuilder sb = new StringBuilder();
 
     final String rangeSwitch = "--range=";
+    final String startTimeArgKey = "--starttime=";
+    final String endTimeArgKey = "--endtime=";
 
     // First argument is table name, starting from second
     for (int i = 1; i < args.length; i++) {
@@ -109,6 +115,18 @@ public class RowCounter extends Configured implements Tool {
         }
         startKey = startEnd[0];
         endKey = startEnd[1];
+      }
+      if (startTime < endTime) {
+        printUsage("--endtime=" + endTime + " needs to be greater than --starttime=" + startTime);
+        return null;
+      }
+      if (args[i].startsWith(startTimeArgKey)) {
+        startTime = Long.parseLong(args[i].substring(startTimeArgKey.length()));
+        continue;
+      }
+      if (args[i].startsWith(endTimeArgKey)) {
+        endTime = Long.parseLong(args[i].substring(endTimeArgKey.length()));
+        continue;
       }
       else {
         // if no switch, assume column names
@@ -149,6 +167,7 @@ public class RowCounter extends Configured implements Tool {
     } else {
       scan.setFilter(new FirstKeyValueMatchingQualifiersFilter(qualifiers));
     }
+    scan.setTimeRange(startTime, endTime == 0 ? HConstants.LATEST_TIMESTAMP : endTime);
     job.setOutputFormatClass(NullOutputFormat.class);
     TableMapReduceUtil.initTableMapperJob(tableName, scan,
       RowCounterMapper.class, ImmutableBytesWritable.class, Result.class, job);
@@ -169,6 +188,7 @@ public class RowCounter extends Configured implements Tool {
    */
   private static void printUsage() {
     System.err.println("Usage: RowCounter [options] <tablename> " +
+        "[--starttime=[start] --endtime=[end] " +
         "[--range=[startKey],[endKey]] [<column1> <column2>...]");
     System.err.println("For performance consider the following options:\n"
         + "-Dhbase.client.scanner.caching=100\n"
