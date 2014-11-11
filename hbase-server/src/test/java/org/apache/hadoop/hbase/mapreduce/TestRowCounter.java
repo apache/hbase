@@ -32,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MediumTests;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.mapreduce.RowCounter.RowCounterMapper;
@@ -64,7 +65,8 @@ public class TestRowCounter {
    * @throws java.lang.Exception
    */
   @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  public static void setUpBeforeClass()
+      throws Exception {
     TEST_UTIL.startMiniCluster();
     TEST_UTIL.startMiniMapReduceCluster();
     HTable table = TEST_UTIL.createTable(Bytes.toBytes(TABLE_NAME),
@@ -77,35 +79,34 @@ public class TestRowCounter {
    * @throws java.lang.Exception
    */
   @AfterClass
-  public static void tearDownAfterClass() throws Exception {
+  public static void tearDownAfterClass()
+      throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     TEST_UTIL.shutdownMiniMapReduceCluster();
   }
 
   /**
    * Test a case when no column was specified in command line arguments.
-   * 
+   *
    * @throws Exception
    */
   @Test
-  public void testRowCounterNoColumn() throws Exception {
-    String[] args = new String[] {
-        TABLE_NAME
-    };
+  public void testRowCounterNoColumn()
+      throws Exception {
+    String[] args = new String[] {TABLE_NAME};
     runRowCount(args, 10);
   }
 
   /**
    * Test a case when the column specified in command line arguments is
    * exclusive for few rows.
-   * 
+   *
    * @throws Exception
    */
   @Test
-  public void testRowCounterExclusiveColumn() throws Exception {
-    String[] args = new String[] {
-        TABLE_NAME, COL_FAM + ":" + COL1
-    };
+  public void testRowCounterExclusiveColumn()
+      throws Exception {
+    String[] args = new String[] {TABLE_NAME, COL_FAM + ":" + COL1};
     runRowCount(args, 8);
   }
 
@@ -116,51 +117,95 @@ public class TestRowCounter {
    * @throws Exception
    */
   @Test
-  public void testRowCounterColumnWithColonInQualifier() throws Exception {
-    String[] args = new String[] {
-        TABLE_NAME, COL_FAM + ":" + COMPOSITE_COLUMN
-    };
+  public void testRowCounterColumnWithColonInQualifier()
+      throws Exception {
+    String[] args = new String[] {TABLE_NAME, COL_FAM + ":" + COMPOSITE_COLUMN};
     runRowCount(args, 8);
   }
 
   /**
    * Test a case when the column specified in command line arguments is not part
    * of first KV for a row.
-   * 
+   *
    * @throws Exception
    */
   @Test
-  public void testRowCounterHiddenColumn() throws Exception {
-    String[] args = new String[] {
-        TABLE_NAME, COL_FAM + ":" + COL2
-    };
+  public void testRowCounterHiddenColumn()
+      throws Exception {
+    String[] args = new String[] {TABLE_NAME, COL_FAM + ":" + COL2};
     runRowCount(args, 10);
   }
 
   /**
+   * Test a case when the timerange is specified with --starttime and --endtime options
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testRowCounterTimeRange()
+      throws Exception {
+    final byte[] family = Bytes.toBytes(COL_FAM);
+    final byte[] col1 = Bytes.toBytes(COL1);
+    Put put1 = new Put(Bytes.toBytes("row_timerange_" + 1));
+    Put put2 = new Put(Bytes.toBytes("row_timerange_" + 2));
+    Put put3 = new Put(Bytes.toBytes("row_timerange_" + 3));
+
+    long ts;
+
+    // clean up content of TABLE_NAME
+    HTable table = TEST_UTIL.truncateTable(TableName.valueOf(TABLE_NAME));
+    ts = System.currentTimeMillis();
+    put1.add(family, col1, ts, Bytes.toBytes("val1"));
+    table.put(put1);
+    Thread.sleep(100);
+
+    ts = System.currentTimeMillis();
+    put2.add(family, col1, ts, Bytes.toBytes("val2"));
+    put3.add(family, col1, ts, Bytes.toBytes("val3"));
+    table.put(put2);
+    table.put(put3);
+    table.close();
+
+    String[] args = new String[] {TABLE_NAME, COL_FAM + ":" + COL1, "--starttime=" + 0,
+                                     "--endtime=" + ts};
+    runRowCount(args, 1);
+
+    args = new String[] {TABLE_NAME, COL_FAM + ":" + COL1, "--starttime=" + 0,
+                            "--endtime=" + (ts - 10)};
+    runRowCount(args, 1);
+
+    args = new String[] {TABLE_NAME, COL_FAM + ":" + COL1, "--starttime=" + ts,
+                            "--endtime=" + (ts + 1000)};
+    runRowCount(args, 2);
+
+    args = new String[] {TABLE_NAME, COL_FAM + ":" + COL1, "--starttime=" + (ts - 30 * 1000),
+                            "--endtime=" + (ts + 30 * 1000),};
+    runRowCount(args, 3);
+  }
+
+  /**
    * Run the RowCounter map reduce job and verify the row count.
-   * 
+   *
    * @param args the command line arguments to be used for rowcounter job.
    * @param expectedCount the expected row count (result of map reduce job).
    * @throws Exception
    */
-  private void runRowCount(String[] args, int expectedCount) throws Exception {
-    GenericOptionsParser opts = new GenericOptionsParser(
-        TEST_UTIL.getConfiguration(), args);
+  private void runRowCount(String[] args, int expectedCount)
+      throws Exception {
+    GenericOptionsParser opts = new GenericOptionsParser(TEST_UTIL.getConfiguration(), args);
     Configuration conf = opts.getConfiguration();
     args = opts.getRemainingArgs();
     Job job = RowCounter.createSubmittableJob(conf, args);
     job.waitForCompletion(true);
     assertTrue(job.isSuccessful());
-    Counter counter = job.getCounters().findCounter(
-        RowCounterMapper.Counters.ROWS);
+    Counter counter = job.getCounters().findCounter(RowCounterMapper.Counters.ROWS);
     assertEquals(expectedCount, counter.getValue());
   }
 
   /**
    * Writes TOTAL_ROWS number of distinct rows in to the table. Few rows have
    * two columns, Few have one.
-   * 
+   *
    * @param table
    * @throws IOException
    */
@@ -196,10 +241,11 @@ public class TestRowCounter {
    * test main method. Import should print help and call System.exit
    */
   @Test
-  public void testImportMain() throws Exception {
+  public void testImportMain()
+      throws Exception {
     PrintStream oldPrintStream = System.err;
     SecurityManager SECURITY_MANAGER = System.getSecurityManager();
-    LauncherSecurityManager newSecurityManager= new LauncherSecurityManager();
+    LauncherSecurityManager newSecurityManager = new LauncherSecurityManager();
     System.setSecurityManager(newSecurityManager);
     ByteArrayOutputStream data = new ByteArrayOutputStream();
     String[] args = {};
@@ -213,9 +259,10 @@ public class TestRowCounter {
       } catch (SecurityException e) {
         assertEquals(-1, newSecurityManager.getExitCode());
         assertTrue(data.toString().contains("Wrong number of parameters:"));
-        assertTrue(data.toString().contains(
-            "Usage: RowCounter [options] <tablename> [--range=[startKey],[endKey]] " +
-            "[<column1> <column2>...]"));
+        assertTrue(data.toString().contains("Usage: RowCounter [options] <tablename> " +
+                                                "[--starttime=[start] --endtime=[end] " +
+                                                "[--range=[startKey],[endKey]] " +
+                                                "[<column1> <column2>...]"));
         assertTrue(data.toString().contains("-Dhbase.client.scanner.caching=100"));
         assertTrue(data.toString().contains("-Dmapred.map.tasks.speculative.execution=false"));
       }
@@ -228,12 +275,12 @@ public class TestRowCounter {
         fail("should be SecurityException");
       } catch (SecurityException e) {
         assertEquals(-1, newSecurityManager.getExitCode());
-        assertTrue(data.toString().contains(
-            "Please specify range in such format as \"--range=a,b\" or, with only one boundary," +
-            " \"--range=,b\" or \"--range=a,\""));
-        assertTrue(data.toString().contains(
-            "Usage: RowCounter [options] <tablename> [--range=[startKey],[endKey]] " +
-            "[<column1> <column2>...]"));
+        assertTrue(data.toString().contains("Please specify range in such format as \"--range=a,b\" or, with only one boundary," +
+                                                " \"--range=,b\" or \"--range=a,\""));
+        assertTrue(data.toString().contains("Usage: RowCounter [options] <tablename> " +
+                                                "[--starttime=[start] --endtime=[end] " +
+                                                "[--range=[startKey],[endKey]] " +
+                                                "[<column1> <column2>...]"));
       }
 
     } finally {
@@ -242,5 +289,4 @@ public class TestRowCounter {
     }
 
   }
-
 }
