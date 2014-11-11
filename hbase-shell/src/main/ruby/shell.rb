@@ -325,6 +325,7 @@ Shell.load_command_group(
     catalogjanitor_run
     catalogjanitor_switch
     catalogjanitor_enabled
+    compact_rs
     trace
   ]
 )

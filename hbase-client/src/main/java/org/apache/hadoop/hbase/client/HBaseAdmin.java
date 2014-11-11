@@ -83,6 +83,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterReque
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
@@ -1602,6 +1603,17 @@ public class HBaseAdmin implements Admin {
     } catch (IllegalArgumentException e) {
       // Bad region, try table
       compact(TableName.valueOf(tableNameOrRegionName), columnFamily, false);
+    }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public void compactRegionServer(final ServerName sn, boolean major)
+  throws IOException, InterruptedException {
+    for (HRegionInfo region : getOnlineRegions(sn)) {
+      compact(sn, region, major, null);
     }
   }
 

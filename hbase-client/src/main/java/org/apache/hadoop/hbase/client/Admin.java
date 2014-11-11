@@ -594,6 +594,16 @@ public interface Admin extends Abortable, Closeable {
     throws IOException, InterruptedException;
 
   /**
+   * Compact all regions on the region server
+   * @param regionserver the region server name
+   * @param major if it's major compaction
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public void compactRegionServer(final ServerName sn, boolean major)
+    throws IOException, InterruptedException;
+
+  /**
    * Move the region <code>r</code> to <code>dest</code>.
    *
    * @param encodedRegionName The encoded region name; i.e. the hash that makes up the region name

@@ -65,6 +65,11 @@ module Hbase
       end
     end
 
+    # Requests to compact all regions on the regionserver
+    def compact_regionserver(servername, major = false)
+      @admin.compactRegionServer(ServerName.valueOf(servername), major)
+    end
+
     #----------------------------------------------------------------------------------------------
     # Requests a table or region or column family major compaction
     def major_compact(table_or_region_name, family = nil)
