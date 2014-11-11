@@ -1684,6 +1684,20 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
+   * Compact all regions on the region server
+   * @param regionserver the region server name
+   * @param major if it's major compaction
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public void compactRegionServer(final ServerName sn, boolean major)
+      throws IOException, InterruptedException {
+    for (HRegionInfo region : getOnlineRegions(sn)) {
+      compact(sn, region, major, null);
+    }
+  }
+
+  /**
    * Move the region <code>r</code> to <code>dest</code>.
    * @param encodedRegionName The encoded region name; i.e. the hash that makes
    * up the region name suffix: e.g. if regionname is
