@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift2.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -758,7 +759,54 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_startRow = true && (isSetStartRow());
+    builder.append(present_startRow);
+    if (present_startRow)
+      builder.append(startRow);
+
+    boolean present_stopRow = true && (isSetStopRow());
+    builder.append(present_stopRow);
+    if (present_stopRow)
+      builder.append(stopRow);
+
+    boolean present_columns = true && (isSetColumns());
+    builder.append(present_columns);
+    if (present_columns)
+      builder.append(columns);
+
+    boolean present_caching = true && (isSetCaching());
+    builder.append(present_caching);
+    if (present_caching)
+      builder.append(caching);
+
+    boolean present_maxVersions = true && (isSetMaxVersions());
+    builder.append(present_maxVersions);
+    if (present_maxVersions)
+      builder.append(maxVersions);
+
+    boolean present_timeRange = true && (isSetTimeRange());
+    builder.append(present_timeRange);
+    if (present_timeRange)
+      builder.append(timeRange);
+
+    boolean present_filterString = true && (isSetFilterString());
+    builder.append(present_filterString);
+    if (present_filterString)
+      builder.append(filterString);
+
+    boolean present_batchSize = true && (isSetBatchSize());
+    builder.append(present_batchSize);
+    if (present_batchSize)
+      builder.append(batchSize);
+
+    boolean present_attributes = true && (isSetAttributes());
+    builder.append(present_attributes);
+    if (present_attributes)
+      builder.append(attributes);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TScan other) {
@@ -1084,7 +1132,7 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
                 for (int _i74 = 0; _i74 < _map73.size; ++_i74)
                 {
                   ByteBuffer _key75; // required
-                  ByteBuffer _val76; // optional
+                  ByteBuffer _val76; // required
                   _key75 = iprot.readBinary();
                   _val76 = iprot.readBinary();
                   struct.attributes.put(_key75, _val76);
@@ -1325,7 +1373,7 @@ public class TScan implements org.apache.thrift.TBase<TScan, TScan._Fields>, jav
           for (int _i85 = 0; _i85 < _map84.size; ++_i85)
           {
             ByteBuffer _key86; // required
-            ByteBuffer _val87; // optional
+            ByteBuffer _val87; // required
             _key86 = iprot.readBinary();
             _val87 = iprot.readBinary();
             struct.attributes.put(_key86, _val87);

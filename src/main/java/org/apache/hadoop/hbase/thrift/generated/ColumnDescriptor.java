@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -730,7 +731,54 @@ public class ColumnDescriptor implements org.apache.thrift.TBase<ColumnDescripto
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_name = true && (isSetName());
+    builder.append(present_name);
+    if (present_name)
+      builder.append(name);
+
+    boolean present_maxVersions = true;
+    builder.append(present_maxVersions);
+    if (present_maxVersions)
+      builder.append(maxVersions);
+
+    boolean present_compression = true && (isSetCompression());
+    builder.append(present_compression);
+    if (present_compression)
+      builder.append(compression);
+
+    boolean present_inMemory = true;
+    builder.append(present_inMemory);
+    if (present_inMemory)
+      builder.append(inMemory);
+
+    boolean present_bloomFilterType = true && (isSetBloomFilterType());
+    builder.append(present_bloomFilterType);
+    if (present_bloomFilterType)
+      builder.append(bloomFilterType);
+
+    boolean present_bloomFilterVectorSize = true;
+    builder.append(present_bloomFilterVectorSize);
+    if (present_bloomFilterVectorSize)
+      builder.append(bloomFilterVectorSize);
+
+    boolean present_bloomFilterNbHashes = true;
+    builder.append(present_bloomFilterNbHashes);
+    if (present_bloomFilterNbHashes)
+      builder.append(bloomFilterNbHashes);
+
+    boolean present_blockCacheEnabled = true;
+    builder.append(present_blockCacheEnabled);
+    if (present_blockCacheEnabled)
+      builder.append(blockCacheEnabled);
+
+    boolean present_timeToLive = true;
+    builder.append(present_timeToLive);
+    if (present_timeToLive)
+      builder.append(timeToLive);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(ColumnDescriptor other) {

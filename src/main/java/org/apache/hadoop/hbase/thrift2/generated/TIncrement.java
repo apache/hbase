@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift2.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -380,7 +381,24 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_row = true && (isSetRow());
+    builder.append(present_row);
+    if (present_row)
+      builder.append(row);
+
+    boolean present_columns = true && (isSetColumns());
+    builder.append(present_columns);
+    if (present_columns)
+      builder.append(columns);
+
+    boolean present_writeToWal = true && (isSetWriteToWal());
+    builder.append(present_writeToWal);
+    if (present_writeToWal)
+      builder.append(writeToWal);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TIncrement other) {
@@ -523,14 +541,14 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
           case 2: // COLUMNS
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list32 = iprot.readListBegin();
-                struct.columns = new ArrayList<TColumnIncrement>(_list32.size);
-                for (int _i33 = 0; _i33 < _list32.size; ++_i33)
+                org.apache.thrift.protocol.TList _list62 = iprot.readListBegin();
+                struct.columns = new ArrayList<TColumnIncrement>(_list62.size);
+                for (int _i63 = 0; _i63 < _list62.size; ++_i63)
                 {
-                  TColumnIncrement _elem34; // required
-                  _elem34 = new TColumnIncrement();
-                  _elem34.read(iprot);
-                  struct.columns.add(_elem34);
+                  TColumnIncrement _elem64; // required
+                  _elem64 = new TColumnIncrement();
+                  _elem64.read(iprot);
+                  struct.columns.add(_elem64);
                 }
                 iprot.readListEnd();
               }
@@ -571,9 +589,9 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
         oprot.writeFieldBegin(COLUMNS_FIELD_DESC);
         {
           oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.columns.size()));
-          for (TColumnIncrement _iter35 : struct.columns)
+          for (TColumnIncrement _iter65 : struct.columns)
           {
-            _iter35.write(oprot);
+            _iter65.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -604,9 +622,9 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
       oprot.writeBinary(struct.row);
       {
         oprot.writeI32(struct.columns.size());
-        for (TColumnIncrement _iter36 : struct.columns)
+        for (TColumnIncrement _iter66 : struct.columns)
         {
-          _iter36.write(oprot);
+          _iter66.write(oprot);
         }
       }
       BitSet optionals = new BitSet();
@@ -625,14 +643,14 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
       struct.row = iprot.readBinary();
       struct.setRowIsSet(true);
       {
-        org.apache.thrift.protocol.TList _list37 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-        struct.columns = new ArrayList<TColumnIncrement>(_list37.size);
-        for (int _i38 = 0; _i38 < _list37.size; ++_i38)
+        org.apache.thrift.protocol.TList _list67 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+        struct.columns = new ArrayList<TColumnIncrement>(_list67.size);
+        for (int _i68 = 0; _i68 < _list67.size; ++_i68)
         {
-          TColumnIncrement _elem39; // required
-          _elem39 = new TColumnIncrement();
-          _elem39.read(iprot);
-          struct.columns.add(_elem39);
+          TColumnIncrement _elem69; // required
+          _elem69 = new TColumnIncrement();
+          _elem69.read(iprot);
+          struct.columns.add(_elem69);
         }
       }
       struct.setColumnsIsSet(true);

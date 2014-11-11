@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift2.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -648,7 +649,44 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_row = true && (isSetRow());
+    builder.append(present_row);
+    if (present_row)
+      builder.append(row);
+
+    boolean present_columns = true && (isSetColumns());
+    builder.append(present_columns);
+    if (present_columns)
+      builder.append(columns);
+
+    boolean present_timestamp = true && (isSetTimestamp());
+    builder.append(present_timestamp);
+    if (present_timestamp)
+      builder.append(timestamp);
+
+    boolean present_timeRange = true && (isSetTimeRange());
+    builder.append(present_timeRange);
+    if (present_timeRange)
+      builder.append(timeRange);
+
+    boolean present_maxVersions = true && (isSetMaxVersions());
+    builder.append(present_maxVersions);
+    if (present_maxVersions)
+      builder.append(maxVersions);
+
+    boolean present_filterString = true && (isSetFilterString());
+    builder.append(present_filterString);
+    if (present_filterString)
+      builder.append(filterString);
+
+    boolean present_attributes = true && (isSetAttributes());
+    builder.append(present_attributes);
+    if (present_attributes)
+      builder.append(attributes);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TGet other) {
@@ -923,7 +961,7 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
                 for (int _i12 = 0; _i12 < _map11.size; ++_i12)
                 {
                   ByteBuffer _key13; // required
-                  ByteBuffer _val14; // optional
+                  ByteBuffer _val14; // required
                   _key13 = iprot.readBinary();
                   _val14 = iprot.readBinary();
                   struct.attributes.put(_key13, _val14);
@@ -1123,7 +1161,7 @@ public class TGet implements org.apache.thrift.TBase<TGet, TGet._Fields>, java.i
           for (int _i23 = 0; _i23 < _map22.size; ++_i23)
           {
             ByteBuffer _key24; // required
-            ByteBuffer _val25; // optional
+            ByteBuffer _val25; // required
             _key24 = iprot.readBinary();
             _val25 = iprot.readBinary();
             struct.attributes.put(_key24, _val25);

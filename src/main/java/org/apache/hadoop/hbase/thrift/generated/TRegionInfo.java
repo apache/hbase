@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -622,7 +623,44 @@ public class TRegionInfo implements org.apache.thrift.TBase<TRegionInfo, TRegion
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_startKey = true && (isSetStartKey());
+    builder.append(present_startKey);
+    if (present_startKey)
+      builder.append(startKey);
+
+    boolean present_endKey = true && (isSetEndKey());
+    builder.append(present_endKey);
+    if (present_endKey)
+      builder.append(endKey);
+
+    boolean present_id = true;
+    builder.append(present_id);
+    if (present_id)
+      builder.append(id);
+
+    boolean present_name = true && (isSetName());
+    builder.append(present_name);
+    if (present_name)
+      builder.append(name);
+
+    boolean present_version = true;
+    builder.append(present_version);
+    if (present_version)
+      builder.append(version);
+
+    boolean present_serverName = true && (isSetServerName());
+    builder.append(present_serverName);
+    if (present_serverName)
+      builder.append(serverName);
+
+    boolean present_port = true;
+    builder.append(present_port);
+    if (present_port)
+      builder.append(port);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TRegionInfo other) {

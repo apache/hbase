@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift2.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -1873,7 +1874,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_get = true && (isSetGet());
+      builder.append(present_get);
+      if (present_get)
+        builder.append(get);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(exists_args other) {
@@ -2320,7 +2333,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(exists_result other) {
@@ -2400,8 +2425,6 @@ public class THBaseService {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -2806,7 +2829,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_get = true && (isSetGet());
+      builder.append(present_get);
+      if (present_get)
+        builder.append(get);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(get_args other) {
@@ -3250,7 +3285,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(get_result other) {
@@ -3770,7 +3817,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_gets = true && (isSetGets());
+      builder.append(present_gets);
+      if (present_gets)
+        builder.append(gets);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getMultiple_args other) {
@@ -4266,7 +4325,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getMultiple_result other) {
@@ -4790,7 +4861,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_put = true && (isSetPut());
+      builder.append(present_put);
+      if (present_put)
+        builder.append(put);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(put_args other) {
@@ -5175,7 +5258,14 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(put_result other) {
@@ -5960,7 +6050,39 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_family = true && (isSetFamily());
+      builder.append(present_family);
+      if (present_family)
+        builder.append(family);
+
+      boolean present_qualifier = true && (isSetQualifier());
+      builder.append(present_qualifier);
+      if (present_qualifier)
+        builder.append(qualifier);
+
+      boolean present_value = true && (isSetValue());
+      builder.append(present_value);
+      if (present_value)
+        builder.append(value);
+
+      boolean present_put = true && (isSetPut());
+      builder.append(present_put);
+      if (present_put)
+        builder.append(put);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(checkAndPut_args other) {
@@ -6562,7 +6684,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(checkAndPut_result other) {
@@ -6642,8 +6776,6 @@ public class THBaseService {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -7068,7 +7200,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_puts = true && (isSetPuts());
+      builder.append(present_puts);
+      if (present_puts)
+        builder.append(puts);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(putMultiple_args other) {
@@ -7485,7 +7629,14 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(putMultiple_result other) {
@@ -7934,7 +8085,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_deleteSingle = true && (isSetDeleteSingle());
+      builder.append(present_deleteSingle);
+      if (present_deleteSingle)
+        builder.append(deleteSingle);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteSingle_args other) {
@@ -8319,7 +8482,14 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteSingle_result other) {
@@ -8788,7 +8958,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_deletes = true && (isSetDeletes());
+      builder.append(present_deletes);
+      if (present_deletes)
+        builder.append(deletes);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteMultiple_args other) {
@@ -9284,7 +9466,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(deleteMultiple_result other) {
@@ -10144,7 +10338,39 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_row = true && (isSetRow());
+      builder.append(present_row);
+      if (present_row)
+        builder.append(row);
+
+      boolean present_family = true && (isSetFamily());
+      builder.append(present_family);
+      if (present_family)
+        builder.append(family);
+
+      boolean present_qualifier = true && (isSetQualifier());
+      builder.append(present_qualifier);
+      if (present_qualifier)
+        builder.append(qualifier);
+
+      boolean present_value = true && (isSetValue());
+      builder.append(present_value);
+      if (present_value)
+        builder.append(value);
+
+      boolean present_deleteSingle = true && (isSetDeleteSingle());
+      builder.append(present_deleteSingle);
+      if (present_deleteSingle)
+        builder.append(deleteSingle);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(checkAndDelete_args other) {
@@ -10746,7 +10972,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(checkAndDelete_result other) {
@@ -10826,8 +11064,6 @@ public class THBaseService {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -11232,7 +11468,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_increment = true && (isSetIncrement());
+      builder.append(present_increment);
+      if (present_increment)
+        builder.append(increment);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(increment_args other) {
@@ -11676,7 +11924,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(increment_result other) {
@@ -12168,7 +12428,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_scan = true && (isSetScan());
+      builder.append(present_scan);
+      if (present_scan)
+        builder.append(scan);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(openScanner_args other) {
@@ -12615,7 +12887,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true;
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(openScanner_result other) {
@@ -12695,8 +12979,6 @@ public class THBaseService {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -13095,7 +13377,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_scannerId = true;
+      builder.append(present_scannerId);
+      if (present_scannerId)
+        builder.append(scannerId);
+
+      boolean present_numRows = true;
+      builder.append(present_numRows);
+      if (present_numRows)
+        builder.append(numRows);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getScannerRows_args other) {
@@ -13626,7 +13920,24 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getScannerRows_result other) {
@@ -14114,7 +14425,14 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_scannerId = true;
+      builder.append(present_scannerId);
+      if (present_scannerId)
+        builder.append(scannerId);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(closeScanner_args other) {
@@ -14177,8 +14495,6 @@ public class THBaseService {
 
     private void readObject(java.io.ObjectInputStream in) throws java.io.IOException, ClassNotFoundException {
       try {
-        // it doesn't seem like you should have to do this, but java serialization is wacky, and doesn't call the default constructor.
-        __isset_bit_vector = new BitSet(1);
         read(new org.apache.thrift.protocol.TCompactProtocol(new org.apache.thrift.transport.TIOStreamTransport(in)));
       } catch (org.apache.thrift.TException te) {
         throw new java.io.IOException(te);
@@ -14528,7 +14844,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      boolean present_ia = true && (isSetIa());
+      builder.append(present_ia);
+      if (present_ia)
+        builder.append(ia);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(closeScanner_result other) {
@@ -15020,7 +15348,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_rowMutations = true && (isSetRowMutations());
+      builder.append(present_rowMutations);
+      if (present_rowMutations)
+        builder.append(rowMutations);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(mutateRow_args other) {
@@ -15405,7 +15745,14 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(mutateRow_result other) {
@@ -15930,7 +16277,24 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_table = true && (isSetTable());
+      builder.append(present_table);
+      if (present_table)
+        builder.append(table);
+
+      boolean present_scan = true && (isSetScan());
+      builder.append(present_scan);
+      if (present_scan)
+        builder.append(scan);
+
+      boolean present_numRows = true;
+      builder.append(present_numRows);
+      if (present_numRows)
+        builder.append(numRows);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getScannerResults_args other) {
@@ -16434,7 +16798,19 @@ public class THBaseService {
 
     @Override
     public int hashCode() {
-      return 0;
+      HashCodeBuilder builder = new HashCodeBuilder();
+
+      boolean present_success = true && (isSetSuccess());
+      builder.append(present_success);
+      if (present_success)
+        builder.append(success);
+
+      boolean present_io = true && (isSetIo());
+      builder.append(present_io);
+      if (present_io)
+        builder.append(io);
+
+      return builder.toHashCode();
     }
 
     public int compareTo(getScannerResults_result other) {

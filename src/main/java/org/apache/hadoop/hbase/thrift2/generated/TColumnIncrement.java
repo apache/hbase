@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift2.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -368,7 +369,24 @@ public class TColumnIncrement implements org.apache.thrift.TBase<TColumnIncremen
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_family = true && (isSetFamily());
+    builder.append(present_family);
+    if (present_family)
+      builder.append(family);
+
+    boolean present_qualifier = true && (isSetQualifier());
+    builder.append(present_qualifier);
+    if (present_qualifier)
+      builder.append(qualifier);
+
+    boolean present_amount = true && (isSetAmount());
+    builder.append(present_amount);
+    if (present_amount)
+      builder.append(amount);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TColumnIncrement other) {

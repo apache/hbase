@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -294,7 +295,19 @@ public class TColumn implements org.apache.thrift.TBase<TColumn, TColumn._Fields
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_columnName = true && (isSetColumnName());
+    builder.append(present_columnName);
+    if (present_columnName)
+      builder.append(columnName);
+
+    boolean present_cell = true && (isSetCell());
+    builder.append(present_cell);
+    if (present_cell)
+      builder.append(cell);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TColumn other) {

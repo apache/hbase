@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift2.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -315,7 +316,19 @@ public class TRowMutations implements org.apache.thrift.TBase<TRowMutations, TRo
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_row = true && (isSetRow());
+    builder.append(present_row);
+    if (present_row)
+      builder.append(row);
+
+    boolean present_mutations = true && (isSetMutations());
+    builder.append(present_mutations);
+    if (present_mutations)
+      builder.append(mutations);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TRowMutations other) {
@@ -440,14 +453,14 @@ public class TRowMutations implements org.apache.thrift.TBase<TRowMutations, TRo
           case 2: // MUTATIONS
             if (schemeField.type == org.apache.thrift.protocol.TType.LIST) {
               {
-                org.apache.thrift.protocol.TList _list98 = iprot.readListBegin();
-                struct.mutations = new ArrayList<TMutation>(_list98.size);
-                for (int _i99 = 0; _i99 < _list98.size; ++_i99)
+                org.apache.thrift.protocol.TList _list88 = iprot.readListBegin();
+                struct.mutations = new ArrayList<TMutation>(_list88.size);
+                for (int _i89 = 0; _i89 < _list88.size; ++_i89)
                 {
-                  TMutation _elem100; // required
-                  _elem100 = new TMutation();
-                  _elem100.read(iprot);
-                  struct.mutations.add(_elem100);
+                  TMutation _elem90; // required
+                  _elem90 = new TMutation();
+                  _elem90.read(iprot);
+                  struct.mutations.add(_elem90);
                 }
                 iprot.readListEnd();
               }
@@ -480,9 +493,9 @@ public class TRowMutations implements org.apache.thrift.TBase<TRowMutations, TRo
         oprot.writeFieldBegin(MUTATIONS_FIELD_DESC);
         {
           oprot.writeListBegin(new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, struct.mutations.size()));
-          for (TMutation _iter101 : struct.mutations)
+          for (TMutation _iter91 : struct.mutations)
           {
-            _iter101.write(oprot);
+            _iter91.write(oprot);
           }
           oprot.writeListEnd();
         }
@@ -508,9 +521,9 @@ public class TRowMutations implements org.apache.thrift.TBase<TRowMutations, TRo
       oprot.writeBinary(struct.row);
       {
         oprot.writeI32(struct.mutations.size());
-        for (TMutation _iter102 : struct.mutations)
+        for (TMutation _iter92 : struct.mutations)
         {
-          _iter102.write(oprot);
+          _iter92.write(oprot);
         }
       }
     }
@@ -521,14 +534,14 @@ public class TRowMutations implements org.apache.thrift.TBase<TRowMutations, TRo
       struct.row = iprot.readBinary();
       struct.setRowIsSet(true);
       {
-        org.apache.thrift.protocol.TList _list103 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
-        struct.mutations = new ArrayList<TMutation>(_list103.size);
-        for (int _i104 = 0; _i104 < _list103.size; ++_i104)
+        org.apache.thrift.protocol.TList _list93 = new org.apache.thrift.protocol.TList(org.apache.thrift.protocol.TType.STRUCT, iprot.readI32());
+        struct.mutations = new ArrayList<TMutation>(_list93.size);
+        for (int _i94 = 0; _i94 < _list93.size; ++_i94)
         {
-          TMutation _elem105; // required
-          _elem105 = new TMutation();
-          _elem105.read(iprot);
-          struct.mutations.add(_elem105);
+          TMutation _elem95; // required
+          _elem95 = new TMutation();
+          _elem95.read(iprot);
+          struct.mutations.add(_elem95);
         }
       }
       struct.setMutationsIsSet(true);

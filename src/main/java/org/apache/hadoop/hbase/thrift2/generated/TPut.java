@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift2.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -596,7 +597,39 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_row = true && (isSetRow());
+    builder.append(present_row);
+    if (present_row)
+      builder.append(row);
+
+    boolean present_columnValues = true && (isSetColumnValues());
+    builder.append(present_columnValues);
+    if (present_columnValues)
+      builder.append(columnValues);
+
+    boolean present_timestamp = true && (isSetTimestamp());
+    builder.append(present_timestamp);
+    if (present_timestamp)
+      builder.append(timestamp);
+
+    boolean present_writeToWal = true && (isSetWriteToWal());
+    builder.append(present_writeToWal);
+    if (present_writeToWal)
+      builder.append(writeToWal);
+
+    boolean present_attributes = true && (isSetAttributes());
+    builder.append(present_attributes);
+    if (present_attributes)
+      builder.append(attributes);
+
+    boolean present_durability = true && (isSetDurability());
+    builder.append(present_durability);
+    if (present_durability)
+      builder.append(durability.getValue());
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TPut other) {
@@ -835,7 +868,7 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
                 for (int _i30 = 0; _i30 < _map29.size; ++_i30)
                 {
                   ByteBuffer _key31; // required
-                  ByteBuffer _val32; // optional
+                  ByteBuffer _val32; // required
                   _key31 = iprot.readBinary();
                   _val32 = iprot.readBinary();
                   struct.attributes.put(_key31, _val32);
@@ -1012,7 +1045,7 @@ public class TPut implements org.apache.thrift.TBase<TPut, TPut._Fields>, java.i
           for (int _i41 = 0; _i41 < _map40.size; ++_i41)
           {
             ByteBuffer _key42; // required
-            ByteBuffer _val43; // optional
+            ByteBuffer _val43; // required
             _key42 = iprot.readBinary();
             _val43 = iprot.readBinary();
             struct.attributes.put(_key42, _val43);

@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -436,7 +437,29 @@ public class TIncrement implements org.apache.thrift.TBase<TIncrement, TIncremen
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_table = true && (isSetTable());
+    builder.append(present_table);
+    if (present_table)
+      builder.append(table);
+
+    boolean present_row = true && (isSetRow());
+    builder.append(present_row);
+    if (present_row)
+      builder.append(row);
+
+    boolean present_column = true && (isSetColumn());
+    builder.append(present_column);
+    if (present_column)
+      builder.append(column);
+
+    boolean present_ammount = true;
+    builder.append(present_ammount);
+    if (present_ammount)
+      builder.append(ammount);
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TIncrement other) {

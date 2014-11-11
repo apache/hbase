@@ -6,6 +6,7 @@
  */
 package org.apache.hadoop.hbase.thrift2.generated;
 
+import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.thrift.scheme.IScheme;
 import org.apache.thrift.scheme.SchemeFactory;
 import org.apache.thrift.scheme.StandardScheme;
@@ -682,7 +683,44 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
 
   @Override
   public int hashCode() {
-    return 0;
+    HashCodeBuilder builder = new HashCodeBuilder();
+
+    boolean present_row = true && (isSetRow());
+    builder.append(present_row);
+    if (present_row)
+      builder.append(row);
+
+    boolean present_columns = true && (isSetColumns());
+    builder.append(present_columns);
+    if (present_columns)
+      builder.append(columns);
+
+    boolean present_timestamp = true && (isSetTimestamp());
+    builder.append(present_timestamp);
+    if (present_timestamp)
+      builder.append(timestamp);
+
+    boolean present_deleteType = true && (isSetDeleteType());
+    builder.append(present_deleteType);
+    if (present_deleteType)
+      builder.append(deleteType.getValue());
+
+    boolean present_writeToWal = true && (isSetWriteToWal());
+    builder.append(present_writeToWal);
+    if (present_writeToWal)
+      builder.append(writeToWal);
+
+    boolean present_attributes = true && (isSetAttributes());
+    builder.append(present_attributes);
+    if (present_attributes)
+      builder.append(attributes);
+
+    boolean present_durability = true && (isSetDurability());
+    builder.append(present_durability);
+    if (present_durability)
+      builder.append(durability.getValue());
+
+    return builder.toHashCode();
   }
 
   public int compareTo(TDelete other) {
@@ -948,7 +986,7 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
                 for (int _i48 = 0; _i48 < _map47.size; ++_i48)
                 {
                   ByteBuffer _key49; // required
-                  ByteBuffer _val50; // optional
+                  ByteBuffer _val50; // required
                   _key49 = iprot.readBinary();
                   _val50 = iprot.readBinary();
                   struct.attributes.put(_key49, _val50);
@@ -1151,7 +1189,7 @@ public class TDelete implements org.apache.thrift.TBase<TDelete, TDelete._Fields
           for (int _i59 = 0; _i59 < _map58.size; ++_i59)
           {
             ByteBuffer _key60; // required
-            ByteBuffer _val61; // optional
+            ByteBuffer _val61; // required
             _key60 = iprot.readBinary();
             _val61 = iprot.readBinary();
             struct.attributes.put(_key60, _val61);
