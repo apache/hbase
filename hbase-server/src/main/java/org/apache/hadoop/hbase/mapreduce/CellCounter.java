@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
@@ -217,6 +219,12 @@ public class CellCounter {
       LOG.info("Setting Row Filter for counter.");
       s.setFilter(rowFilter);
     }
+    // Set TimeRange if defined
+    long timeRange[] = getTimeRange(args);
+    if (timeRange != null) {
+      LOG.info("Setting TimeRange for counter.");
+      s.setTimeRange(timeRange[0], timeRange[1]);
+    }
     return s;
   }
 
@@ -234,6 +242,28 @@ public class CellCounter {
     return rowFilter;
   }
 
+  private static long[] getTimeRange(String[] args) throws IOException {
+    final String startTimeArgKey = "--starttime=";
+    final String endTimeArgKey = "--endtime=";
+    long startTime = 0L;
+    long endTime = 0L;
+
+    for (int i = 1; i < args.length; i++) {
+      System.out.println("i:" + i + "arg[i]" + args[i]);
+      if (args[i].startsWith(startTimeArgKey)) {
+        startTime = Long.parseLong(args[i].substring(startTimeArgKey.length()));
+      }
+      if (args[i].startsWith(endTimeArgKey)) {
+        endTime = Long.parseLong(args[i].substring(endTimeArgKey.length()));
+      }
+    }
+
+    if (startTime == 0 && endTime == 0)
+      return null;
+
+    endTime = endTime == 0 ? HConstants.LATEST_TIMESTAMP : endTime;
+    return new long [] {startTime, endTime};
+  }
   /**
    * Main entry point.
    *
@@ -245,8 +275,9 @@ public class CellCounter {
     String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
     if (otherArgs.length < 2) {
       System.err.println("ERROR: Wrong number of parameters: " + args.length);
-      System.err.println("Usage: CellCounter <tablename> <outputDir> <reportSeparator> " +
-          "[^[regex pattern] or [Prefix] for row filter]] ");
+      System.err.println("Usage: CellCounter ");
+      System.err.println("       <outputDir> <reportSeparator> [^[regex pattern] or " +
+        "[Prefix] for row filter]] <tablename> --starttime=[starttime] --endtime=[endtime]");
       System.err.println("  Note: -D properties will be applied to the conf used. ");
       System.err.println("  Additionally, the following SCAN properties can be specified");
       System.err.println("  to get fine grained control on what is counted..");
