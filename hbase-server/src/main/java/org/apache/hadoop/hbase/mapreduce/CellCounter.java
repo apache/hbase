@@ -276,8 +276,8 @@ public class CellCounter {
     if (otherArgs.length < 2) {
       System.err.println("ERROR: Wrong number of parameters: " + args.length);
       System.err.println("Usage: CellCounter ");
-      System.err.println("       <outputDir> <reportSeparator> [^[regex pattern] or " +
-        "[Prefix] for row filter]] <tablename> --starttime=[starttime] --endtime=[endtime]");
+      System.err.println("       <tablename> <outputDir> <reportSeparator> [^[regex pattern] or " +
+        "[Prefix] for row filter]] --starttime=[starttime] --endtime=[endtime]");
       System.err.println("  Note: -D properties will be applied to the conf used. ");
       System.err.println("  Additionally, the following SCAN properties can be specified");
       System.err.println("  to get fine grained control on what is counted..");
