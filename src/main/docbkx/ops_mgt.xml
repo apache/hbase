@@ -1030,8 +1030,8 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
           <para>Click the <guilabel>Metrics Dump</guilabel> link near the top. The metrics for the region server are
             presented as a dump of the JMX bean in JSON format. This will dump out all metrics names and their
             values.
-            To include metrics descriptions in the listing &mdash; this can be useful when you are exploring
-            what is available &mdash; add a query string of
+            To include metrics descriptions in the listing &#x2014; this can be useful when you are exploring
+            what is available &#x2014; add a query string of
             <literal>?description=true</literal> so your URL becomes
             <literal>http://REGIONSERVER_HOSTNAME:60030/jmx?description=true</literal>.
             Not all beans and attributes have descriptions.
@@ -1041,8 +1041,8 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
           <para>To view metrics for the Master, connect to the Master's web UI instead (defaults to
               <literal>http://localhost:60010</literal> or port 16010 in HBase 1.0+) and click its <guilabel>Metrics
                 Dump</guilabel> link.
-            To include metrics descriptions in the listing &mdash; this can be useful when you are exploring
-            what is available &mdash; add a query string of
+            To include metrics descriptions in the listing &#x2014; this can be useful when you are exploring
+            what is available &#x2014; add a query string of
             <literal>?description=true</literal> so your URL becomes
             <literal>http://REGIONSERVER_HOSTNAME:60010/jmx?description=true</literal>.
             Not all beans and attributes have descriptions.
