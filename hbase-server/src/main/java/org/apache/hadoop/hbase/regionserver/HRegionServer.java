@@ -2664,7 +2664,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       if (actualRegion == null) { // If already online, we still need to close it.
         LOG.info("The opening previously in progress has been cancelled by a CLOSE request.");
         // The master deletes the znode when it receives this exception.
-        throw new NotServingRegionException("The region " + encodedName +
+        throw new RegionAlreadyInTransitionException("The region " + encodedName +
           " was opening but not yet served. Opening is cancelled.");
       }
     } else if (Boolean.FALSE.equals(previous)) {

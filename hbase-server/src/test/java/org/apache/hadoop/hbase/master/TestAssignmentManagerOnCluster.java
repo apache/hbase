@@ -745,7 +745,6 @@ public class TestAssignmentManagerOnCluster {
       // Let's forcefully re-assign it to trigger closing/opening
       // racing. This test is to make sure this scenario
       // is handled properly.
-      MyRegionObserver.postOpenEnabled.set(false);
       ServerName destServerName = null;
       int numRS = TEST_UTIL.getHBaseCluster().getLiveRegionServerThreads().size();
       for (int i = 0; i < numRS; i++) {
@@ -761,6 +760,9 @@ public class TestAssignmentManagerOnCluster {
       List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
       regions.add(hri);
       am.assign(destServerName, regions);
+      
+      // let region open continue
+      MyRegionObserver.postOpenEnabled.set(false);
 
       // let's check if it's assigned after it's out of transition
       am.waitOnRegionToClearRegionsInTransition(hri);

@@ -148,7 +148,7 @@ public class OpenRegionHandler extends EventHandler {
       }
 
       boolean failed = true;
-      if (!useZKForAssignment || tickleOpening("post_region_open")) {
+      if (isRegionStillOpening() && (!useZKForAssignment || tickleOpening("post_region_open"))) {
         if (updateMeta(region)) {
           failed = false;
         }
@@ -520,8 +520,14 @@ public class OpenRegionHandler extends EventHandler {
 
   void cleanupFailedOpen(final HRegion region) throws IOException {
     if (region != null) {
-      this.rsServices.removeFromOnlineRegions(region, null);
-      region.close();
+      byte[] encodedName = regionInfo.getEncodedNameAsBytes();
+      try {
+        rsServices.getRegionsInTransitionInRS().put(encodedName,Boolean.FALSE);
+        this.rsServices.removeFromOnlineRegions(region, null);
+        region.close();
+      } finally {
+        rsServices.getRegionsInTransitionInRS().remove(encodedName);
+      }
     }
   }
 
