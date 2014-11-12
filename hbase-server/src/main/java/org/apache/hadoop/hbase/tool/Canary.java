@@ -34,6 +34,7 @@ import org.apache.commons.lang.time.StopWatch;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -751,7 +752,9 @@ public final class Canary implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
-    int exitCode = ToolRunner.run(HBaseConfiguration.create(), new Canary(), args);
+    final Configuration conf = HBaseConfiguration.create();
+    AuthUtil.launchAuthChore(conf);
+    int exitCode = ToolRunner.run(conf, new Canary(), args);
     System.exit(exitCode);
   }
 }
