@@ -1544,7 +1544,9 @@ public class HStore implements Store {
 
   @Override
   public void cancelRequestedCompaction(CompactionContext compaction) {
-    finishCompactionRequest(compaction.getRequest());
+    if (compaction != null) {
+      finishCompactionRequest(compaction.getRequest());
+    }
   }
 
   private void finishCompactionRequest(CompactionRequest cr) {
