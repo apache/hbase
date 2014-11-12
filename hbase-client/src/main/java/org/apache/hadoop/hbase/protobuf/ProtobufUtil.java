@@ -1058,6 +1058,7 @@ public final class ProtobufUtil {
       if (values != null && values.size() > 0) {
         for (Cell cell: values) {
           KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+          valueBuilder.clear();
           valueBuilder.setQualifier(ByteStringer.wrap(
               kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
           valueBuilder.setValue(ByteStringer.wrap(
@@ -1120,6 +1121,7 @@ public final class ProtobufUtil {
       columnBuilder.setFamily(ByteStringer.wrap(family.getKey()));
       for (Cell cell: family.getValue()) {
         KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
+        valueBuilder.clear();
         valueBuilder.setQualifier(ByteStringer.wrap(
             kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
         valueBuilder.setValue(ByteStringer.wrap(
@@ -1972,7 +1974,7 @@ public final class ProtobufUtil {
           for (Permission.Action a : actions) {
             builder.addAction(toPermissionAction(a));
           }
-	}
+        }
         ret.setNamespacePermission(builder);
         return ret.build();
       } else if (tablePerm.hasTable()) {
