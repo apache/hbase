@@ -334,12 +334,12 @@ public class TestZooKeeperNodeTracker {
     Assert.assertFalse(ZKUtil.getData(zkw, nodeName) == null);
 
     // Check that we don't delete if we're not supposed to
-    ZKUtil.setData(zkw, nodeName, MasterAddressTracker.toByteArray(sn));
+    ZKUtil.setData(zkw, nodeName, MasterAddressTracker.toByteArray(sn, 0));
     MasterAddressTracker.deleteIfEquals(zkw, ServerName.valueOf("127.0.0.2:52", 45L).toString());
     Assert.assertFalse(ZKUtil.getData(zkw, nodeName) == null);
 
     // Check that we delete when we're supposed to
-    ZKUtil.setData(zkw, nodeName,MasterAddressTracker.toByteArray(sn));
+    ZKUtil.setData(zkw, nodeName,MasterAddressTracker.toByteArray(sn, 0));
     MasterAddressTracker.deleteIfEquals(zkw, sn.toString());
     Assert.assertTrue( ZKUtil.getData(zkw, nodeName)== null );
 

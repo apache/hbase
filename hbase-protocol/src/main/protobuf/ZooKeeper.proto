@@ -52,6 +52,7 @@ message Master {
   required ServerName master = 1;
   // Major RPC version so that clients can know what version the master can accept.
   optional uint32 rpc_version = 2;
+  optional uint32 info_port = 3;
 }
 
 /**

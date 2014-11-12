@@ -241,6 +241,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   /** jetty server for master to redirect requests to regionserver infoServer */
   private org.mortbay.jetty.Server masterJettyServer;
 
+  private int masterInfoPort;
   public static class RedirectServlet extends HttpServlet {
     private static final long serialVersionUID = 2894774810058302472L;
     private static int regionServerInfoPort;
@@ -352,6 +353,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     } catch (Exception e) {
       throw new IOException("Failed to start redirecting jetty server", e);
     }
+    masterInfoPort = connector.getPort();
   }
 
   /**
@@ -1283,11 +1285,13 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     * this node for us since it is ephemeral.
     */
     LOG.info("Adding backup master ZNode " + backupZNode);
-    if (!MasterAddressTracker.setMasterAddress(zooKeeper, backupZNode, serverName)) {
+    if (!MasterAddressTracker.setMasterAddress(zooKeeper, backupZNode,
+        serverName, masterInfoPort)) {
       LOG.warn("Failed create of " + backupZNode + " by " + serverName);
     }
 
-    activeMasterManager = new ActiveMasterManager(zooKeeper, serverName, this);
+    activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName,
+        masterInfoPort, this);
     // Start a thread to try to become the active master, so we won't block here
     Threads.setDaemonThreadRunning(new Thread(new Runnable() {
       public void run() {

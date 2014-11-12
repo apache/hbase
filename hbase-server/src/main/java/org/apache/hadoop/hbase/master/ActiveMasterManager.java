@@ -56,6 +56,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
   final AtomicBoolean clusterShutDown = new AtomicBoolean(false);
 
   private final ServerName sn;
+  private final int infoPort;
   private final Server master;
 
   /**
@@ -63,10 +64,11 @@ public class ActiveMasterManager extends ZooKeeperListener {
    * @param sn ServerName
    * @param master In an instance of a Master.
    */
-  ActiveMasterManager(ZooKeeperWatcher watcher, ServerName sn, Server master) {
+  ActiveMasterManager(ZooKeeperWatcher watcher, ServerName sn, int infoPort, Server master) {
     super(watcher);
     watcher.registerListener(this);
     this.sn = sn;
+    this.infoPort = infoPort;
     this.master = master;
   }
 
@@ -156,7 +158,7 @@ public class ActiveMasterManager extends ZooKeeperListener {
       // Write out our ServerName as versioned bytes.
       try {
         if (MasterAddressTracker.setMasterAddress(this.watcher,
-            this.watcher.getMasterAddressZNode(), this.sn)) {
+            this.watcher.getMasterAddressZNode(), this.sn, infoPort)) {
 
           // If we were a backup master before, delete our ZNode from the backup
           // master directory since we are the active now)

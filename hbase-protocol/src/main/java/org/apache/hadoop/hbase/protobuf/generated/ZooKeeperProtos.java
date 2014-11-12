@@ -969,6 +969,16 @@ public final class ZooKeeperProtos {
      * </pre>
      */
     int getRpcVersion();
+
+    // optional uint32 info_port = 3;
+    /**
+     * <code>optional uint32 info_port = 3;</code>
+     */
+    boolean hasInfoPort();
+    /**
+     * <code>optional uint32 info_port = 3;</code>
+     */
+    int getInfoPort();
   }
   /**
    * Protobuf type {@code Master}
@@ -1042,6 +1052,11 @@ public final class ZooKeeperProtos {
             case 16: {
               bitField0_ |= 0x00000002;
               rpcVersion_ = input.readUInt32();
+              break;
+            }
+            case 24: {
+              bitField0_ |= 0x00000004;
+              infoPort_ = input.readUInt32();
               break;
             }
           }
@@ -1142,9 +1157,26 @@ public final class ZooKeeperProtos {
       return rpcVersion_;
     }
 
+    // optional uint32 info_port = 3;
+    public static final int INFO_PORT_FIELD_NUMBER = 3;
+    private int infoPort_;
+    /**
+     * <code>optional uint32 info_port = 3;</code>
+     */
+    public boolean hasInfoPort() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional uint32 info_port = 3;</code>
+     */
+    public int getInfoPort() {
+      return infoPort_;
+    }
+
     private void initFields() {
       master_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       rpcVersion_ = 0;
+      infoPort_ = 0;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -1172,6 +1204,9 @@ public final class ZooKeeperProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeUInt32(2, rpcVersion_);
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeUInt32(3, infoPort_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -1188,6 +1223,10 @@ public final class ZooKeeperProtos {
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(2, rpcVersion_);
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt32Size(3, infoPort_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1222,6 +1261,11 @@ public final class ZooKeeperProtos {
         result = result && (getRpcVersion()
             == other.getRpcVersion());
       }
+      result = result && (hasInfoPort() == other.hasInfoPort());
+      if (hasInfoPort()) {
+        result = result && (getInfoPort()
+            == other.getInfoPort());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -1242,6 +1286,10 @@ public final class ZooKeeperProtos {
       if (hasRpcVersion()) {
         hash = (37 * hash) + RPC_VERSION_FIELD_NUMBER;
         hash = (53 * hash) + getRpcVersion();
+      }
+      if (hasInfoPort()) {
+        hash = (37 * hash) + INFO_PORT_FIELD_NUMBER;
+        hash = (53 * hash) + getInfoPort();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -1366,6 +1414,8 @@ public final class ZooKeeperProtos {
         bitField0_ = (bitField0_ & ~0x00000001);
         rpcVersion_ = 0;
         bitField0_ = (bitField0_ & ~0x00000002);
+        infoPort_ = 0;
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
 
@@ -1406,6 +1456,10 @@ public final class ZooKeeperProtos {
           to_bitField0_ |= 0x00000002;
         }
         result.rpcVersion_ = rpcVersion_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.infoPort_ = infoPort_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1427,6 +1481,9 @@ public final class ZooKeeperProtos {
         }
         if (other.hasRpcVersion()) {
           setRpcVersion(other.getRpcVersion());
+        }
+        if (other.hasInfoPort()) {
+          setInfoPort(other.getInfoPort());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -1661,6 +1718,39 @@ public final class ZooKeeperProtos {
       public Builder clearRpcVersion() {
         bitField0_ = (bitField0_ & ~0x00000002);
         rpcVersion_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // optional uint32 info_port = 3;
+      private int infoPort_ ;
+      /**
+       * <code>optional uint32 info_port = 3;</code>
+       */
+      public boolean hasInfoPort() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional uint32 info_port = 3;</code>
+       */
+      public int getInfoPort() {
+        return infoPort_;
+      }
+      /**
+       * <code>optional uint32 info_port = 3;</code>
+       */
+      public Builder setInfoPort(int value) {
+        bitField0_ |= 0x00000004;
+        infoPort_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint32 info_port = 3;</code>
+       */
+      public Builder clearInfoPort() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        infoPort_ = 0;
         onChanged();
         return this;
       }
@@ -9565,38 +9655,38 @@ public final class ZooKeeperProtos {
       "\n\017ZooKeeper.proto\032\013HBase.proto\032\023ClusterS" +
       "tatus.proto\"g\n\020MetaRegionServer\022\033\n\006serve" +
       "r\030\001 \002(\0132\013.ServerName\022\023\n\013rpc_version\030\002 \001(" +
-      "\r\022!\n\005state\030\003 \001(\0162\022.RegionState.State\":\n\006" +
+      "\r\022!\n\005state\030\003 \001(\0162\022.RegionState.State\"M\n\006" +
       "Master\022\033\n\006master\030\001 \002(\0132\013.ServerName\022\023\n\013r" +
-      "pc_version\030\002 \001(\r\"\037\n\tClusterUp\022\022\n\nstart_d" +
-      "ate\030\001 \002(\t\"\214\002\n\014SplitLogTask\022\"\n\005state\030\001 \002(" +
-      "\0162\023.SplitLogTask.State\022 \n\013server_name\030\002 " +
-      "\002(\0132\013.ServerName\0221\n\004mode\030\003 \001(\0162\032.SplitLo" +
-      "gTask.RecoveryMode:\007UNKNOWN\"C\n\005State\022\016\n\n",
-      "UNASSIGNED\020\000\022\t\n\005OWNED\020\001\022\014\n\010RESIGNED\020\002\022\010\n" +
-      "\004DONE\020\003\022\007\n\003ERR\020\004\">\n\014RecoveryMode\022\013\n\007UNKN" +
-      "OWN\020\000\022\021\n\rLOG_SPLITTING\020\001\022\016\n\nLOG_REPLAY\020\002" +
-      "\"\214\001\n\024DeprecatedTableState\0223\n\005state\030\001 \002(\016" +
-      "2\033.DeprecatedTableState.State:\007ENABLED\"?" +
-      "\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DISABLED\020\001\022\r\n\tDI" +
-      "SABLING\020\002\022\014\n\010ENABLING\020\003\"\215\001\n\017ReplicationP" +
-      "eer\022\022\n\nclusterkey\030\001 \002(\t\022\037\n\027replicationEn" +
-      "dpointImpl\030\002 \001(\t\022\035\n\004data\030\003 \003(\0132\017.BytesBy" +
-      "tesPair\022&\n\rconfiguration\030\004 \003(\0132\017.NameStr",
-      "ingPair\"^\n\020ReplicationState\022&\n\005state\030\001 \002" +
-      "(\0162\027.ReplicationState.State\"\"\n\005State\022\013\n\007" +
-      "ENABLED\020\000\022\014\n\010DISABLED\020\001\"+\n\027ReplicationHL" +
-      "ogPosition\022\020\n\010position\030\001 \002(\003\"%\n\017Replicat" +
-      "ionLock\022\022\n\nlock_owner\030\001 \002(\t\"\230\001\n\tTableLoc" +
-      "k\022\036\n\ntable_name\030\001 \001(\0132\n.TableName\022\037\n\nloc" +
-      "k_owner\030\002 \001(\0132\013.ServerName\022\021\n\tthread_id\030" +
-      "\003 \001(\003\022\021\n\tis_shared\030\004 \001(\010\022\017\n\007purpose\030\005 \001(" +
-      "\t\022\023\n\013create_time\030\006 \001(\003\";\n\017StoreSequenceI" +
-      "d\022\023\n\013family_name\030\001 \002(\014\022\023\n\013sequence_id\030\002 ",
-      "\002(\004\"g\n\026RegionStoreSequenceIds\022 \n\030last_fl" +
-      "ushed_sequence_id\030\001 \002(\004\022+\n\021store_sequenc" +
-      "e_id\030\002 \003(\0132\020.StoreSequenceIdBE\n*org.apac" +
-      "he.hadoop.hbase.protobuf.generatedB\017ZooK" +
-      "eeperProtosH\001\210\001\001\240\001\001"
+      "pc_version\030\002 \001(\r\022\021\n\tinfo_port\030\003 \001(\r\"\037\n\tC" +
+      "lusterUp\022\022\n\nstart_date\030\001 \002(\t\"\214\002\n\014SplitLo" +
+      "gTask\022\"\n\005state\030\001 \002(\0162\023.SplitLogTask.Stat" +
+      "e\022 \n\013server_name\030\002 \002(\0132\013.ServerName\0221\n\004m" +
+      "ode\030\003 \001(\0162\032.SplitLogTask.RecoveryMode:\007U",
+      "NKNOWN\"C\n\005State\022\016\n\nUNASSIGNED\020\000\022\t\n\005OWNED" +
+      "\020\001\022\014\n\010RESIGNED\020\002\022\010\n\004DONE\020\003\022\007\n\003ERR\020\004\">\n\014R" +
+      "ecoveryMode\022\013\n\007UNKNOWN\020\000\022\021\n\rLOG_SPLITTIN" +
+      "G\020\001\022\016\n\nLOG_REPLAY\020\002\"\214\001\n\024DeprecatedTableS" +
+      "tate\0223\n\005state\030\001 \002(\0162\033.DeprecatedTableSta" +
+      "te.State:\007ENABLED\"?\n\005State\022\013\n\007ENABLED\020\000\022" +
+      "\014\n\010DISABLED\020\001\022\r\n\tDISABLING\020\002\022\014\n\010ENABLING" +
+      "\020\003\"\215\001\n\017ReplicationPeer\022\022\n\nclusterkey\030\001 \002" +
+      "(\t\022\037\n\027replicationEndpointImpl\030\002 \001(\t\022\035\n\004d" +
+      "ata\030\003 \003(\0132\017.BytesBytesPair\022&\n\rconfigurat",
+      "ion\030\004 \003(\0132\017.NameStringPair\"^\n\020Replicatio" +
+      "nState\022&\n\005state\030\001 \002(\0162\027.ReplicationState" +
+      ".State\"\"\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DISABLED" +
+      "\020\001\"+\n\027ReplicationHLogPosition\022\020\n\010positio" +
+      "n\030\001 \002(\003\"%\n\017ReplicationLock\022\022\n\nlock_owner" +
+      "\030\001 \002(\t\"\230\001\n\tTableLock\022\036\n\ntable_name\030\001 \001(\013" +
+      "2\n.TableName\022\037\n\nlock_owner\030\002 \001(\0132\013.Serve" +
+      "rName\022\021\n\tthread_id\030\003 \001(\003\022\021\n\tis_shared\030\004 " +
+      "\001(\010\022\017\n\007purpose\030\005 \001(\t\022\023\n\013create_time\030\006 \001(" +
+      "\003\";\n\017StoreSequenceId\022\023\n\013family_name\030\001 \002(",
+      "\014\022\023\n\013sequence_id\030\002 \002(\004\"g\n\026RegionStoreSeq" +
+      "uenceIds\022 \n\030last_flushed_sequence_id\030\001 \002" +
+      "(\004\022+\n\021store_sequence_id\030\002 \003(\0132\020.StoreSeq" +
+      "uenceIdBE\n*org.apache.hadoop.hbase.proto" +
+      "buf.generatedB\017ZooKeeperProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -9614,7 +9704,7 @@ public final class ZooKeeperProtos {
           internal_static_Master_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Master_descriptor,
-              new java.lang.String[] { "Master", "RpcVersion", });
+              new java.lang.String[] { "Master", "RpcVersion", "InfoPort", });
           internal_static_ClusterUp_descriptor =
             getDescriptor().getMessageTypes().get(2);
           internal_static_ClusterUp_fieldAccessorTable = new

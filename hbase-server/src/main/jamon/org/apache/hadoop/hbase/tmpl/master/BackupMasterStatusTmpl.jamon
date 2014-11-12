@@ -28,12 +28,11 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 </%import>
 <%java>
 Collection<ServerName> masters = null;
-
+MasterAddressTracker masterAddressTracker = master.getMasterAddressTracker();
 if (master.isActiveMaster()) {
   ClusterStatus status = master.getClusterStatus();
   masters = status.getBackupMasters();
 } else{
-  MasterAddressTracker masterAddressTracker = master.getMasterAddressTracker();
   ServerName sn = masterAddressTracker == null ? null
     : masterAddressTracker.getMasterAddress();
   assert sn != null : "Failed to retreive master's ServerName!";
@@ -43,7 +42,7 @@ if (master.isActiveMaster()) {
 
 <%java>
 ServerName [] serverNames = masters.toArray(new ServerName[masters.size()]);
-int infoPort = master.getConfiguration().getInt("hbase.master.info.port", 16010);
+int infoPort = masterAddressTracker == null ? 0 : masterAddressTracker.getMasterInfoPort();
 </%java>
 <%if (!master.isActiveMaster()) %>
     <%if serverNames[0] != null %>
@@ -66,6 +65,7 @@ int infoPort = master.getConfiguration().getInt("hbase.master.info.port", 16010)
     <%java>
     Arrays.sort(serverNames);
     for (ServerName serverName : serverNames) {
+      infoPort = masterAddressTracker == null ? 0 : masterAddressTracker.getBackupMasterInfoPort(serverName);
     </%java>
     <tr>
         <td><a href="//<% serverName.getHostname() %>:<%

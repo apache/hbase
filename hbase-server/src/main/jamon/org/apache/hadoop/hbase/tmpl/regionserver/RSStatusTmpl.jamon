@@ -45,10 +45,10 @@ org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
   ServerInfo serverInfo = ProtobufUtil.getServerInfo(regionServer.getRSRpcServices());
   ServerName serverName = ProtobufUtil.toServerName(serverInfo.getServerName());
   List<HRegionInfo> onlineRegions = ProtobufUtil.getOnlineRegions(regionServer.getRSRpcServices());
-  int infoPort = regionServer.getConfiguration().getInt("hbase.master.info.port", 16010);
   MasterAddressTracker masterAddressTracker = regionServer.getMasterAddressTracker();
   ServerName masterServerName = masterAddressTracker == null ? null
     : masterAddressTracker.getMasterAddress();
+  int infoPort = masterAddressTracker == null ? 0 : masterAddressTracker.getMasterInfoPort();
 </%java>
 <!--[if IE]>
 <!DOCTYPE html>
