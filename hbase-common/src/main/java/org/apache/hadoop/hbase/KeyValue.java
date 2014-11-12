@@ -749,6 +749,65 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
   }
 
   /**
+   * Create a KeyValue that is smaller than all other possible KeyValues
+   * for the given row. That is any (valid) KeyValue on 'row' would sort
+   * _after_ the result.
+   *
+   * @param row - row key (arbitrary byte array)
+   * @return First possible KeyValue on passed <code>row</code>
+   * @deprecated Since 0.99.2. Use {@link KeyValueUtil#createFirstOnRow(byte [])} instead
+   */
+  @Deprecated
+  public static KeyValue createFirstOnRow(final byte [] row) {
+    return KeyValueUtil.createFirstOnRow(row, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * Create a KeyValue for the specified row, family and qualifier that would be
+   * smaller than all other possible KeyValues that have the same row,family,qualifier.
+   * Used for seeking.
+   * @param row - row key (arbitrary byte array)
+   * @param family - family name
+   * @param qualifier - column qualifier
+   * @return First possible key on passed <code>row</code>, and column.
+   * @deprecated Since 0.99.2. Use {@link KeyValueUtil#createFirstOnRow(byte[], byte[], byte[])}
+   * instead
+   */
+  @Deprecated
+  public static KeyValue createFirstOnRow(final byte [] row, final byte [] family,
+      final byte [] qualifier) {
+    return KeyValueUtil.createFirstOnRow(row, family, qualifier);
+  }
+
+  /**
+   * Create a KeyValue for the specified row, family and qualifier that would be
+   * smaller than all other possible KeyValues that have the same row,
+   * family, qualifier.
+   * Used for seeking.
+   * @param row row key
+   * @param roffset row offset
+   * @param rlength row length
+   * @param family family name
+   * @param foffset family offset
+   * @param flength family length
+   * @param qualifier column qualifier
+   * @param qoffset qualifier offset
+   * @param qlength qualifier length
+   * @return First possible key on passed Row, Family, Qualifier.
+   * @deprecated Since 0.99.2. Use {@link KeyValueUtil#createFirstOnRow(byte[], int, int,
+   * byte[], int, int, byte[], int, int)} instead
+   */
+  @Deprecated
+  public static KeyValue createFirstOnRow(final byte [] row,
+      final int roffset, final int rlength, final byte [] family,
+      final int foffset, final int flength, final byte [] qualifier,
+      final int qoffset, final int qlength) {
+    return new KeyValue(row, roffset, rlength, family,
+        foffset, flength, qualifier, qoffset, qlength,
+        HConstants.LATEST_TIMESTAMP, Type.Maximum, null, 0, 0);
+  }
+
+  /**
    * Create an empty byte[] representing a KeyValue
    * All lengths are preset and can be filled in later.
    * @param rlength
