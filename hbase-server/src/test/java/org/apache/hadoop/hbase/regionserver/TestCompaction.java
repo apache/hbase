@@ -161,9 +161,6 @@ public class TestCompaction {
       }).when(spyR).doRegionCompactionPrep();
 
       // force a minor compaction, but not before requesting a stop
-
-      // Accounting: Normally compaction requests go through HStore#requestCompaction
-      r.reportCompactionRequestStart(false);      
       spyR.compactStores();
 
       // ensure that the compaction stopped, all old files are intact,
