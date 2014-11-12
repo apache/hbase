@@ -1566,8 +1566,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
         doRegionCompactionPrep();
         try {
           status.setStatus("Compacting store " + store);
-          store.compact(compaction);
           didPerformCompaction = true;
+          store.compact(compaction);
         } catch (InterruptedIOException iioe) {
           String msg = "compaction interrupted";
           LOG.info(msg, iioe);
