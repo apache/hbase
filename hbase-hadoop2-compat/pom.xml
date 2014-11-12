@@ -42,6 +42,7 @@ limitations under the License.
             <configuration>
               <compilerId>javac-with-errorprone</compilerId>
               <forceJavacCompilerUse>true</forceJavacCompilerUse>
+              <useIncrementalCompilation>false</useIncrementalCompilation>
             </configuration>
           </execution>
           <execution>
@@ -49,6 +50,7 @@ limitations under the License.
             <configuration>
               <compilerId>javac-with-errorprone</compilerId>
               <forceJavacCompilerUse>true</forceJavacCompilerUse>
+              <useIncrementalCompilation>false</useIncrementalCompilation>
             </configuration>
           </execution>
        </executions>

@@ -446,6 +446,7 @@
             <target>${compileSource}</target>
             <showWarnings>true</showWarnings>
             <showDeprecation>false</showDeprecation>
+            <useIncrementalCompilation>false</useIncrementalCompilation>
             <compilerArgument>-Xlint:-options</compilerArgument>
           </configuration>
           <dependencies>
