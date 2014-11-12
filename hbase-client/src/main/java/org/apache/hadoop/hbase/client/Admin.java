@@ -1285,4 +1285,11 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException
    */
   void updateConfiguration() throws IOException;
+
+  /**
+   * Get the info port of the current master if one is available.
+   * @return master info port
+   * @throws IOException
+   */
+  public int getMasterInfoPort() throws IOException;
 }

@@ -258,9 +258,9 @@ public class TestActiveMasterManager {
       this.clusterStatusTracker =
         new ClusterStatusTracker(zk, this);
       clusterStatusTracker.start();
-      
+
       this.activeMasterManager =
-        new ActiveMasterManager(zk, master, this);
+        new ActiveMasterManager(zk, master, 0, this);
       zk.registerListener(activeMasterManager);
     }
 

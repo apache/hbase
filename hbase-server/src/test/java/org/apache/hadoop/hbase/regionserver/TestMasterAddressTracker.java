@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -75,9 +76,10 @@ public class TestMasterAddressTracker {
     // Create the master node with a dummy address
     String host = "localhost";
     int port = 1234;
+    int infoPort = 1235;
     ServerName sn = ServerName.valueOf(host, port, System.currentTimeMillis());
     LOG.info("Creating master node");
-    MasterAddressTracker.setMasterAddress(zk, zk.getMasterAddressZNode(), sn);
+    MasterAddressTracker.setMasterAddress(zk, zk.getMasterAddressZNode(), sn, infoPort);
 
     // Wait for the node to be created
     LOG.info("Waiting for master address manager to be notified");
@@ -86,7 +88,7 @@ public class TestMasterAddressTracker {
     assertTrue(addressTracker.hasMaster());
     ServerName pulledAddress = addressTracker.getMasterAddress();
     assertTrue(pulledAddress.equals(sn));
-
+    assertEquals(infoPort, addressTracker.getMasterInfoPort());
   }
 
   public static class NodeCreationListener extends ZooKeeperListener {

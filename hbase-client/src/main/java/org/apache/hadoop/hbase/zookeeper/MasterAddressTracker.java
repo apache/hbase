@@ -30,6 +30,7 @@ import org.apache.zookeeper.data.Stat;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Manages the location of the current active Master for the RegionServer.
@@ -76,6 +77,36 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
   }
 
   /**
+   * Get the info port of the current master of one is available.
+   * Return 0 if no current master or zookeeper is unavailable
+   * @return info port or 0 if timed out
+   */
+  public int getMasterInfoPort() {
+    try {
+      return parse(this.getData(false)).getInfoPort();
+    } catch (DeserializationException e) {
+      LOG.warn("Failed parse master zk node data", e);
+      return 0;
+    }
+  }
+  /**
+   * Get the info port of the backup master if it is available.
+   * Return 0 if no current master or zookeeper is unavailable
+   * @param sn server name of backup master
+   * @return info port or 0 if timed out or exceptions
+   */
+  public int getBackupMasterInfoPort(final ServerName sn) {
+    String backupZNode = ZKUtil.joinZNode(watcher.backupMasterAddressesZNode, sn.toString());
+    try {
+      byte[] data = ZKUtil.getData(watcher, backupZNode);
+      return parse(data).getInfoPort();
+    } catch (Exception e) {
+      LOG.warn("Failed to get backup master: " + sn + "'s info port.", e);
+      return 0;
+    }
+  }
+
+  /**
    * Get the address of the current master if one is available.  Returns null
    * if no current master. If refresh is set, try to load the data from ZK again,
    * otherwise, cached data will be used.
@@ -99,8 +130,8 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
    * @param zkw ZooKeeperWatcher to use
    * @return ServerName stored in the the master address znode or null if no
    * znode present.
-   * @throws KeeperException 
-   * @throws IOException 
+   * @throws KeeperException
+   * @throws IOException
    */
   public static ServerName getMasterAddress(final ZooKeeperWatcher zkw)
   throws KeeperException, IOException {
@@ -123,6 +154,36 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
   }
 
   /**
+   * Get master info port.
+   * Use this instead of {@link #getMasterInfoPort()} if you do not have an
+   * instance of this tracker in your context.
+   * @param zkw ZooKeeperWatcher to use
+   * @return master info port in the the master address znode or null if no
+   * znode present.
+   * @throws KeeperException
+   * @throws IOException
+   */
+  public static int getMasterInfoPort(final ZooKeeperWatcher zkw) throws KeeperException,
+      IOException {
+    byte[] data;
+    try {
+      data = ZKUtil.getData(zkw, zkw.getMasterAddressZNode());
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException();
+    }
+    if (data == null) {
+      throw new IOException("Can't get master address from ZooKeeper; znode data == null");
+    }
+    try {
+      return parse(data).getInfoPort();
+    } catch (DeserializationException e) {
+      KeeperException ke = new KeeperException.DataInconsistencyException();
+      ke.initCause(e);
+      throw ke;
+    }
+  }
+
+  /**
    * Set master address into the <code>master</code> znode or into the backup
    * subdirectory of backup masters; switch off the passed in <code>znode</code>
    * path.
@@ -134,9 +195,9 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
    * @throws KeeperException
    */
   public static boolean setMasterAddress(final ZooKeeperWatcher zkw,
-      final String znode, final ServerName master)
+      final String znode, final ServerName master, int infoPort)
   throws KeeperException {
-    return ZKUtil.createEphemeralNodeAndWatch(zkw, znode, toByteArray(master));
+    return ZKUtil.createEphemeralNodeAndWatch(zkw, znode, toByteArray(master, infoPort));
   }
 
   /**
@@ -152,17 +213,31 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
    * @return Content of the master znode as a serialized pb with the pb
    * magic as prefix.
    */
-   static byte [] toByteArray(final ServerName sn) {
-     ZooKeeperProtos.Master.Builder mbuilder = ZooKeeperProtos.Master.newBuilder();
-     HBaseProtos.ServerName.Builder snbuilder = HBaseProtos.ServerName.newBuilder();
-     snbuilder.setHostName(sn.getHostname());
-     snbuilder.setPort(sn.getPort());
-     snbuilder.setStartCode(sn.getStartcode());
-     mbuilder.setMaster(snbuilder.build());
-     mbuilder.setRpcVersion(HConstants.RPC_CURRENT_VERSION);
-     return ProtobufUtil.prependPBMagic(mbuilder.build().toByteArray());
-   }
+  static byte[] toByteArray(final ServerName sn, int infoPort) {
+    ZooKeeperProtos.Master.Builder mbuilder = ZooKeeperProtos.Master.newBuilder();
+    HBaseProtos.ServerName.Builder snbuilder = HBaseProtos.ServerName.newBuilder();
+    snbuilder.setHostName(sn.getHostname());
+    snbuilder.setPort(sn.getPort());
+    snbuilder.setStartCode(sn.getStartcode());
+    mbuilder.setMaster(snbuilder.build());
+    mbuilder.setRpcVersion(HConstants.RPC_CURRENT_VERSION);
+    mbuilder.setInfoPort(infoPort);
+    return ProtobufUtil.prependPBMagic(mbuilder.build().toByteArray());
+  }
 
+  /**
+   * @param data zookeeper data
+   * @return pb object of master
+   * @throws DeserializationException
+   */
+  public static ZooKeeperProtos.Master parse(byte[] data) throws DeserializationException {
+    int prefixLen = ProtobufUtil.lengthOfPBMagic();
+    try {
+      return ZooKeeperProtos.Master.PARSER.parseFrom(data, prefixLen, data.length - prefixLen);
+    } catch (InvalidProtocolBufferException e) {
+      throw new DeserializationException(e);
+    }
+  }
   /**
    * delete the master znode if its content is same as the parameter
    */

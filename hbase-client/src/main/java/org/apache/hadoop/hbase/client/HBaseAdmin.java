@@ -139,6 +139,8 @@ import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
+import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.util.StringUtils;
@@ -3684,7 +3686,7 @@ public class HBaseAdmin implements Admin {
   public CoprocessorRpcChannel coprocessorService(ServerName sn) {
     return new RegionServerCoprocessorRpcChannel(connection, sn);
   }
-  
+
   @Override
   public void updateConfiguration(ServerName server) throws IOException {
     try {
@@ -3699,6 +3701,18 @@ public class HBaseAdmin implements Admin {
   public void updateConfiguration() throws IOException {
     for (ServerName server : this.getClusterStatus().getServers()) {
       updateConfiguration(server);
+    }
+  }
+
+  @Override
+  public int getMasterInfoPort() throws IOException {
+    ConnectionManager.HConnectionImplementation connection =
+        (ConnectionManager.HConnectionImplementation) HConnectionManager.getConnection(conf);
+    ZooKeeperKeepAliveConnection zkw = connection.getKeepAliveZooKeeperWatcher();
+    try {
+      return MasterAddressTracker.getMasterInfoPort(zkw);
+    } catch (KeeperException e) {
+      throw new IOException("Failed to get master info port from MasterAddressTracker", e);
     }
   }
 }
