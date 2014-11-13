@@ -693,6 +693,7 @@ public class SplitTransaction {
         break;
 
       case CREATE_SPLIT_DIR:
+        this.parent.writestate.writesEnabled = true;
         this.parent.getRegionFileSystem().cleanupSplitsDir();
         break;
 

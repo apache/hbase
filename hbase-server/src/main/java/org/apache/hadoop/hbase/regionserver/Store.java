@@ -398,16 +398,4 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * @throws IOException
    */
    void refreshStoreFiles() throws IOException;
-
-   /**
-    * report the beginning of a compaction
-    * this must be called from the thread performing the compaction
-    */
-   void reportCompactionStart();
-
-   /**
-    * report the completion of a compaction
-    * this must be called from the thread performing the compaction
-    */
-   void reportCompactionEnd();
 }
