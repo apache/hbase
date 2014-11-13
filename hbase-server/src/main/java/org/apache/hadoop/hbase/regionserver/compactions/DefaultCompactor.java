@@ -26,6 +26,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
@@ -57,6 +58,7 @@ public class DefaultCompactor extends Compactor {
     boolean cleanSeqId = false;
     IOException e = null;
     try {
+      store.reportCompactionStart();
       InternalScanner scanner = null;
       try {
         /* Include deletes, unless we are doing a compaction of all files */
@@ -108,6 +110,7 @@ public class DefaultCompactor extends Compactor {
           newFiles.add(writer.getPath());
         }
       }
+      store.reportCompactionEnd();
     }
     return newFiles;
   }
