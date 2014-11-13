@@ -2243,4 +2243,14 @@ public class HStore implements Store {
   public void deregisterChildren(ConfigurationManager manager) {
     // No children to deregister
   }
+
+  @Override
+  public void reportCompactionStart() {
+    getHRegion().reportCompactionStart(this);
+  }
+
+  @Override
+  public void reportCompactionEnd() {
+    getHRegion().reportCompactionEnd(this);
+  }
 }
