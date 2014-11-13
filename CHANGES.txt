@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.98.8 - 11/14/2014
+Release 0.98.8 - 11/17/2014
 
 ** Sub-task
     * [HBASE-11997] - CopyTable with bulkload
@@ -48,8 +48,10 @@ Release 0.98.8 - 11/14/2014
     * [HBASE-12315] - Fix 0.98 Tests after checkstyle got parented
     * [HBASE-12316] - test-patch.sh (Hadoop-QA) outputs the wrong release audit warnings URL
     * [HBASE-12318] - Add license header to checkstyle xml files
+    * [HBASE-12319] - Inconsistencies during region recovery due to close/open of a region during recovery
     * [HBASE-12334] - Handling of DeserializationException causes needless retry on failure
     * [HBASE-12336] - RegionServer failed to shutdown for NodeFailoverWorker thread
+    * [HBASE-12366] - Add login code to HBase Canary tool.
     * [HBASE-12372] - [WINDOWS] Enable log4j configuration in hbase.cmd 
     * [HBASE-12375] - LoadIncrementalHFiles fails to load data in table when CF name starts with '_'
     * [HBASE-12376] - HBaseAdmin leaks ZK connections if failure starting watchers (ConnectionLossException)
@@ -65,8 +67,11 @@ Release 0.98.8 - 11/14/2014
     * [HBASE-12419] - "Partial cell read caused by EOF" ERRORs on replication source during replication
     * [HBASE-12420] - BucketCache logged startup message is egregiously large
     * [HBASE-12440] - Region may remain offline on clean startup under certain race condition
+    * [HBASE-12445] - hbase is removing all remaining cells immediately after the cell marked with marker = KeyValue.Type.DeleteColumn via PUT
     * [HBASE-12448] - Fix rate reporting in compaction progress DEBUG logging
     * [HBASE-12450] - Unbalance chaos monkey might kill all region servers without starting them back
+    * [HBASE-12460] - Moving Chore to hbase-common module.
+    * [HBASE-12461] - FSVisitor logging is excessive
 
 ** Improvement
     * [HBASE-8361] - Bulk load and other utilities should not create tables for user
@@ -81,6 +86,8 @@ Release 0.98.8 - 11/14/2014
     * [HBASE-12416] - RegionServerCallable should report what host it was communicating with
     * [HBASE-12424] - Finer grained logging and metrics for split transactions
     * [HBASE-12432] - RpcRetryingCaller should log after fixed number of retries like AsyncProcess
+    * [HBASE-12434] - Add a command to compact all the regions in a regionserver
+    * [HBASE-12447] - Add support for setTimeRange for RowCounter and CellCounter
 
 ** New Feature
     * [HBASE-12361] - Show data locality of region in table page
