@@ -2124,4 +2124,14 @@ public class HStore implements Store {
   public long getMajorCompactedCellsSize() {
     return majorCompactedCellsSize;
   }
+
+  @Override
+  public void reportCompactionStart() {
+    getHRegion().reportCompactionStart(this);
+  }
+
+  @Override
+  public void reportCompactionEnd() {
+    getHRegion().reportCompactionEnd(this);
+  }
 }

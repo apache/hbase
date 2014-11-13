@@ -233,6 +233,8 @@ public class HRegion implements HeapSize { // , Writable{
     REPLAY_BATCH_MUTATE, COMPACT_REGION
   }
 
+  private final Map<Thread, Store> currentCompactions = Maps.newConcurrentMap();
+
   //////////////////////////////////////////////////////////////////////////////
   // Members
   //////////////////////////////////////////////////////////////////////////////
@@ -745,6 +747,7 @@ public class HRegion implements HeapSize { // , Writable{
     // A region can be reopened if failed a split; reset flags
     this.closing.set(false);
     this.closed.set(false);
+    this.writestate.writesEnabled = true;
 
     if (coprocessorHost != null) {
       status.setStatus("Running coprocessor post-open hooks");
@@ -1109,7 +1112,8 @@ public class HRegion implements HeapSize { // , Writable{
       // region.
       writestate.writesEnabled = false;
       LOG.debug("Closing " + this + ": disabling compactions & flushes");
-      waitForFlushesAndCompactions();
+      // give compactions 30s to finish before we start to interrupt
+      waitForFlushesAndCompactions(30000);
     }
     // If we were not just flushing, is it worth doing a preflush...one
     // that will clear out of the bulk of the memstore before we put up
@@ -1230,12 +1234,34 @@ public class HRegion implements HeapSize { // , Writable{
    * Exposed for TESTING.
    */
   public void waitForFlushesAndCompactions() {
+    waitForFlushesAndCompactions(0);
+  }
+  /**
+   * Wait for all current flushes and compactions of the region to complete.
+   * <p>
+   * Exposed for TESTING.
+   */
+  public void waitForFlushesAndCompactions(long millis) {
     synchronized (writestate) {
       while (writestate.compacting > 0 || writestate.flushing) {
         LOG.debug("waiting for " + writestate.compacting + " compactions"
             + (writestate.flushing ? " & cache flush" : "") + " to complete for region " + this);
         try {
-          writestate.wait();
+          long start = EnvironmentEdgeManager.currentTimeMillis();
+          writestate.wait(millis);
+          if (millis > 0 && EnvironmentEdgeManager.currentTimeMillis() - start >= millis) {
+            // if we waited once for compactions to finish, interrupt them, and try again
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Waited for " + millis
+                  + " ms for compactions to finish on close. Interrupting "
+                  + currentCompactions.size() + " compactions.");
+            }
+            for (Thread t : currentCompactions.keySet()) {
+              // interrupt any current IO in the currently running compactions.
+              t.interrupt();
+            }
+            millis = 0;
+          }
         } catch (InterruptedException iex) {
           // essentially ignore and propagate the interrupt back up
           Thread.currentThread().interrupt();
@@ -5561,7 +5587,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      41 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      42 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (12 * Bytes.SIZEOF_LONG) +
       4 * Bytes.SIZEOF_BOOLEAN);
 
@@ -6155,6 +6181,14 @@ public class HRegion implements HeapSize { // , Writable{
     boolean hasMajor = majorInProgress.get() > 0, hasMinor = minorInProgress.get() > 0;
     return (hasMajor ? (hasMinor ? CompactionState.MAJOR_AND_MINOR : CompactionState.MAJOR)
         : (hasMinor ? CompactionState.MINOR : CompactionState.NONE));
+  }
+
+  public void reportCompactionStart(Store store) {
+    currentCompactions.put(Thread.currentThread(), store);
+  }
+
+  public void reportCompactionEnd(Store store) {
+    currentCompactions.remove(Thread.currentThread());
   }
 
   public void reportCompactionRequestStart(boolean isMajor){
