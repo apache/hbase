@@ -982,7 +982,10 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
     <title>HBase Metrics</title>
     <para>HBase emits metrics which adhere to the <link
         xlink:href="http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html"
-        >Hadoop metrics</link> API. Starting with HBase 0.95, HBase is configured to emit a default
+        >Hadoop metrics</link> API. Starting with HBase 0.95<footnote><para>The Metrics system was redone in
+          HBase 0.96. See <link xlink:href="https://blogs.apache.org/hbase/entry/migration_to_the_new_metrics">Migration
+            to the New Metrics Hotness – Metrics2</link> by Elliot Clark for detail</para></footnote>,
+      HBase is configured to emit a default
       set of metrics with a default sampling period of every 10 seconds. You can use HBase
       metrics in conjunction with Ganglia. You can also filter which metrics are emitted and extend
       the metrics framework to capture custom metrics appropriate for your environment.</para>
