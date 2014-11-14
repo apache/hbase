@@ -28,6 +28,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.base.Joiner;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
@@ -603,27 +604,50 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     protected void reduce(LinkKey key, Iterable<LinkChain> values, Context context)
         throws java.io.IOException, java.lang.InterruptedException {
       long next = -1L;
+      long prev = -1L;
       long count = 0L;
 
       for (LinkChain lc : values) {
 
         if (next == -1) {
-          if (lc.getRk() != 0L) throw new RuntimeException("Chains should all start at 0 rk"
-            + ". Chain:" + key.chainId + ", order:" + key.order);
+          if (lc.getRk() != 0L) {
+            String msg = "Chains should all start at rk 0, but read rk " + lc.getRk()
+                + ". Chain:" + key.chainId + ", order:" + key.order;
+            logError(msg, context);
+            throw new RuntimeException(msg);
+          }
           next = lc.getNext();
         } else {
-          if (next != lc.getRk())
-            throw new RuntimeException("Missing a link in the chain. Expecting " +
-                next + " got " + lc.getRk() + ". Chain:" + key.chainId + ", order:" + key.order);
+          if (next != lc.getRk()) {
+            String msg = "Missing a link in the chain. Prev rk " + prev + " was, expecting "
+                + next + " but got " + lc.getRk() + ". Chain:" + key.chainId
+                + ", order:" + key.order;
+            logError(msg, context);
+            throw new RuntimeException(msg);
+          }
+          prev = lc.getRk();
           next = lc.getNext();
         }
         count++;
       }
 
       int expectedChainLen = context.getConfiguration().getInt(CHAIN_LENGTH_KEY, CHAIN_LENGTH);
-      if (count != expectedChainLen)
-        throw new RuntimeException("Chain wasn't the correct length.  Expected " +
-            expectedChainLen + " got " + count + ". Chain:" + key.chainId + ", order:" + key.order);
+      if (count != expectedChainLen) {
+        String msg = "Chain wasn't the correct length.  Expected " + expectedChainLen + " got "
+            + count + ". Chain:" + key.chainId + ", order:" + key.order;
+        logError(msg, context);
+        throw new RuntimeException(msg);
+      }
+    }
+
+    private static void logError(String msg, Context context) throws IOException {
+      HBaseTestingUtility util = new HBaseTestingUtility(context.getConfiguration());
+      TableName table = getTableName(context.getConfiguration());
+
+      LOG.error("Failure in chain verification: " + msg);
+      LOG.error("cluster status:\n" + util.getHBaseClusterInterface().getClusterStatus());
+      LOG.error("table regions:\n"
+          + Joiner.on("\n").join(util.getHBaseAdmin().getTableRegions(table)));
     }
   }
 
@@ -729,7 +753,11 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
 
   @Override
   public TableName getTablename() {
-    return TableName.valueOf(getConf().get(TABLE_NAME_KEY, TABLE_NAME));
+    return getTableName(getConf());
+  }
+
+  public static TableName getTableName(Configuration conf) {
+    return TableName.valueOf(conf.get(TABLE_NAME_KEY, TABLE_NAME));
   }
 
   @Override
