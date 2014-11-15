@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.98.8 - 11/17/2014
+Release 0.98.8 - 11/18/2014
 
 ** Sub-task
     * [HBASE-11997] - CopyTable with bulkload
@@ -12,6 +12,7 @@ Release 0.98.8 - 11/17/2014
     * [HBASE-9157] - ZKUtil.blockUntilAvailable loops forever with non-recoverable errors
     * [HBASE-10780] - HFilePrettyPrinter#processFile should return immediately if file does not exist
     * [HBASE-11394] - Replication can have data loss if peer id contains hyphen "-"
+    * [HBASE-11698] - TestFullLogReconstruction has duplicate config setting
     * [HBASE-12109] - user_permission command for namespace does not return correct result
     * [HBASE-12126] - Region server coprocessor endpoint
     * [HBASE-12142] - Truncate command does not preserve ACLs table
@@ -72,6 +73,7 @@ Release 0.98.8 - 11/17/2014
     * [HBASE-12450] - Unbalance chaos monkey might kill all region servers without starting them back
     * [HBASE-12460] - Moving Chore to hbase-common module.
     * [HBASE-12461] - FSVisitor logging is excessive
+    * [HBASE-12478] - HBASE-10141 and MIN_VERSIONS are not compatible
 
 ** Improvement
     * [HBASE-8361] - Bulk load and other utilities should not create tables for user
