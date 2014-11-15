@@ -1517,6 +1517,11 @@ public class HStore implements Store {
 
   private void removeUnneededFiles() throws IOException {
     if (!conf.getBoolean("hbase.store.delete.expired.storefile", true)) return;
+    if (getFamily().getMinVersions() > 0) {
+      LOG.debug("Skipping expired store file removal due to min version being " +
+          getFamily().getMinVersions());
+      return;
+    }
     this.lock.readLock().lock();
     Collection<StoreFile> delSfs = null;
     try {
