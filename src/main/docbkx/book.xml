@@ -2516,6 +2516,25 @@ rs.close();
               </note>
           </section>
         </section>
+        <section>
+          <title>Comprewssed Blockcache</title>
+          <para><link xlink:href="https://issues.apache.org/jira/browse/HBASE-11331"
+              >HBASE-11331</link> introduced lazy blockcache decompression, more simply referred to
+            as compressed blockcache. When compressed blockcache is enabled. data and encoded data
+            blocks are cached in the blockcache in their on-disk format, rather than being
+            decompressed and decrypted before caching.</para>
+          <para xlink:href="https://issues.apache.org/jira/browse/HBASE-11331">For a RegionServer
+            hosting more data than can fit into cache, enabling this feature with SNAPPY compression
+            has been shown to result in 50% increase in throughput and 30% improvement in mean
+            latency while, increasing garbage collection by 80% and increasing overall CPU load by
+            2%. See HBASE-11331 for more details about how performance was measured and achieved.
+            For a RegionServer hosting data that can comfortably fit into cache, or if your workload
+            is sensitive to extra CPU or garbage-collection load, you may receive less
+            benefit.</para>
+          <para>Compressed blockcache is disabled by default. To enable it, set
+              <code>hbase.block.data.cachecompressed</code> to <code>true</code> in
+              <filename>hbase-site.xml</filename> on all RegionServers.</para>
+        </section>
       </section>
 
       <section
