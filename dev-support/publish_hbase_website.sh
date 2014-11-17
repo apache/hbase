@@ -90,7 +90,7 @@ if [ $INTERACTIVE ]; then
         [Yy]* ) 
     			mvn clean package javadoc:aggregate site site:stage -DskipTests
           status=$?
-          if [ $status != 0 ]; then
+          if [ $status -ne 0 ]; then
             echo "The website does not build. Aborting."
             exit $status
           fi
