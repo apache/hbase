@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
@@ -285,6 +287,59 @@ public class HMaster extends HasThread implements MasterProtos.MasterService.Blo
 RegionServerStatusProtos.RegionServerStatusService.BlockingInterface,
 MasterServices, Server {
   private static final Log LOG = LogFactory.getLog(HMaster.class.getName());
+
+  /**
+   * Protection against zombie master. Started once Master accepts active responsibility and
+   * starts taking over responsibilities. Allows a finite time window before giving up ownership.
+   */
+  private static class InitializationMonitor extends HasThread {
+    /** The amount of time in milliseconds to sleep before checking initialization status. */
+    public static final String TIMEOUT_KEY = "hbase.master.initializationmonitor.timeout";
+    public static final long TIMEOUT_DEFAULT = TimeUnit.MILLISECONDS.convert(15, TimeUnit.MINUTES);
+
+    /**
+     * When timeout expired and initialization has not complete, call {@link System#exit(int)} when
+     * true, do nothing otherwise.
+     */
+    public static final String HALT_KEY = "hbase.master.initializationmonitor.haltontimeout";
+    public static final boolean HALT_DEFAULT = false;
+
+    private final HMaster master;
+    private final long timeout;
+    private final boolean haltOnTimeout;
+
+    /** Creates a Thread that monitors the {@link #isInitialized()} state. */
+    InitializationMonitor(HMaster master) {
+      super("MasterInitializationMonitor");
+      this.master = master;
+      this.timeout = master.getConfiguration().getLong(TIMEOUT_KEY, TIMEOUT_DEFAULT);
+      this.haltOnTimeout = master.getConfiguration().getBoolean(HALT_KEY, HALT_DEFAULT);
+      this.setDaemon(true);
+    }
+
+    @Override
+    public void run() {
+      try {
+        while (!master.isStopped() && master.isActiveMaster()) {
+          Thread.sleep(timeout);
+          if (master.isInitialized()) {
+            LOG.debug("Initialization completed within allotted tolerance. Monitor exiting.");
+          } else {
+            LOG.error("Master failed to complete initialization after " + timeout + "ms. Please"
+                + " consider submitting a bug report including a thread dump of this process.");
+            if (haltOnTimeout) {
+              LOG.error("Zombie Master exiting. Thread dump to stdout");
+              org.apache.hadoop.util.ReflectionUtils.printThreadInfo(
+                  new PrintWriter(System.out), "Zombie HMaster");
+              System.exit(-1);
+            }
+          }
+        }
+      } catch (InterruptedException ie) {
+        LOG.trace("InitMonitor thread interrupted. Existing.");
+      }
+    }
+  }
 
   // MASTER is name of the webapp and the attribute name used stuffing this
   //instance into web context.
@@ -811,6 +866,8 @@ MasterServices, Server {
   throws IOException, InterruptedException, KeeperException {
 
     isActiveMaster = true;
+    Thread zombieDetector = new Thread(new InitializationMonitor(this));
+    zombieDetector.start();
 
     /*
      * We are active master now... go initialize components we need to run.
@@ -984,6 +1041,8 @@ MasterServices, Server {
         }
       }
     }
+
+    zombieDetector.interrupt();
   }
 
   /**
