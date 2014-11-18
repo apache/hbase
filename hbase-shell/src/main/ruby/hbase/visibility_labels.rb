@@ -27,7 +27,8 @@ module Hbase
     def initialize(configuration, formatter)
       @config = configuration
       @formatter = formatter
-      @admin = org.apache.hadoop.hbase.client.HBaseAdmin.new(configuration)
+      @connection = org.apache.hadoop.hbase.client.ConnectionFactory(configuration)
+      @admin = @connection.getAdmin()
     end
 
     def add_labels(*args)
