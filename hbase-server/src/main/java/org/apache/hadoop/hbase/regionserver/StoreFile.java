@@ -220,6 +220,18 @@ public class StoreFile {
   }
 
   /**
+   * Clone
+   * @param other The StoreFile to clone from
+   */
+  public StoreFile(final StoreFile other) {
+    this.fs = other.fs;
+    this.fileInfo = other.fileInfo;
+    this.cacheConf = other.cacheConf;
+    this.cfBloomType = other.cfBloomType;
+    this.modificationTimeStamp = other.modificationTimeStamp;
+  }
+
+  /**
    * @return the StoreFile object associated to this StoreFile.
    *         null if the StoreFile is not a reference.
    */

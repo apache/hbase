@@ -29,6 +29,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -127,10 +128,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
     if (store != null && ((HStore)store).getHRegion() != null
         && ((HStore)store).getHRegion().getBaseConf() != null) {
-      this.maxRowSize = ((HStore) store).getHRegion().getBaseConf().getLong(
-        HConstants.TABLE_MAX_ROWSIZE_KEY, HConstants.TABLE_MAX_ROWSIZE_DEFAULT);
+      Configuration conf = ((HStore) store).getHRegion().getBaseConf();
+      this.maxRowSize =
+          conf.getLong(HConstants.TABLE_MAX_ROWSIZE_KEY, HConstants.TABLE_MAX_ROWSIZE_DEFAULT);
+      this.scanUsePread = conf.getBoolean("hbase.storescanner.use.pread", scan.isSmall());
     } else {
       this.maxRowSize = HConstants.TABLE_MAX_ROWSIZE_DEFAULT;
+      this.scanUsePread = scan.isSmall();
     }
 
     // We look up row-column Bloom filters for multi-column queries as part of
@@ -138,7 +142,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // for multi-row (non-"get") scans because this is not done in
     // StoreFile.passesBloomFilter(Scan, SortedSet<byte[]>).
     useRowColBloom = numCol > 1 || (!isGet && numCol == 1);
-    this.scanUsePread = scan.isSmall();
+
     // The parallel-seeking is on :
     // 1) the config value is *true*
     // 2) store has more than one store file
