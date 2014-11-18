@@ -246,4 +246,9 @@ public interface MetricsRegionServerWrapper {
    * Get the total amount of data processed during major compactions, in bytes.
    */
   long getMajorCompactedCellsSize();
+
+  /**
+   * @return Count of requests blocked because the memstore size is larger than blockingMemStoreSize
+   */
+  public long getBlockedRequestsCount();
 }

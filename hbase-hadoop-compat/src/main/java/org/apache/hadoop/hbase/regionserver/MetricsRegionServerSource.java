@@ -246,6 +246,10 @@ public interface MetricsRegionServerSource extends BaseSource {
   String MAJOR_COMPACTED_CELLS_SIZE_DESC =
       "The total amount of data processed during major compactions, in bytes";
 
+  String BLOCKED_REQUESTS_COUNT = "blockedRequestCount";
+  String BLOCKED_REQUESTS_COUNT_DESC = "The number of blocked requests because of memstore size is "
+      + "larger than blockingMemStoreSize";
+
   String SPLIT_KEY = "splitTime";
   String FLUSH_KEY = "flushTime";
 }

@@ -241,4 +241,8 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
     return 10240000;
   }
 
+  @Override
+  public long getBlockedRequestsCount() {
+    return 0;
+  }
 }

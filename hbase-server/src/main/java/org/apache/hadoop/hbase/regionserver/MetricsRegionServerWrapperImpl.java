@@ -72,6 +72,7 @@ class MetricsRegionServerWrapperImpl
   private volatile long flushedCellsSize = 0;
   private volatile long compactedCellsSize = 0;
   private volatile long majorCompactedCellsSize = 0;
+  private volatile long blockedRequestsCount = 0L;
 
   private CacheStats cacheStats;
   private ScheduledExecutorService executor;
@@ -427,6 +428,7 @@ class MetricsRegionServerWrapperImpl
       long tempFlushedCellsSize = 0;
       long tempCompactedCellsSize = 0;
       long tempMajorCompactedCellsSize = 0;
+      long tempBlockedRequestsCount = 0L;
 
       for (HRegion r : regionServer.getOnlineRegionsLocalContext()) {
         tempNumMutationsWithoutWAL += r.numMutationsWithoutWAL.get();
@@ -435,6 +437,7 @@ class MetricsRegionServerWrapperImpl
         tempWriteRequestsCount += r.writeRequestsCount.get();
         tempCheckAndMutateChecksFailed += r.checkAndMutateChecksFailed.get();
         tempCheckAndMutateChecksPassed += r.checkAndMutateChecksPassed.get();
+        tempBlockedRequestsCount += r.getBlockedRequestsCount();
         tempNumStores += r.stores.size();
         for (Store store : r.stores.values()) {
           tempNumStoreFiles += store.getStorefilesCount();
@@ -511,6 +514,12 @@ class MetricsRegionServerWrapperImpl
       flushedCellsSize = tempFlushedCellsSize;
       compactedCellsSize = tempCompactedCellsSize;
       majorCompactedCellsSize = tempMajorCompactedCellsSize;
+      blockedRequestsCount = tempBlockedRequestsCount;
     }
+  }
+
+  @Override
+  public long getBlockedRequestsCount() {
+    return blockedRequestsCount;
   }
 }
