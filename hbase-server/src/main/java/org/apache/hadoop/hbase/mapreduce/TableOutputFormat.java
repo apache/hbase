@@ -86,8 +86,6 @@ implements Configurable {
 
   /**
    * Writes the reducer output to an HBase table.
-   *
-   * @param <KEY>  The type of the key.
    */
   protected class TableRecordWriter
   extends RecordWriter<KEY, Mutation> {
