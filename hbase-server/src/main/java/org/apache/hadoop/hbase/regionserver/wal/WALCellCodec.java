@@ -131,7 +131,7 @@ public class WALCellCodec implements Codec {
     byte[] uncompress(ByteString data, Dictionary dict) throws IOException;
   }
 
-  // TODO: it sucks that compression context is in HLog.Entry. It'd be nice if it was here.
+  // TODO: it sucks that compression context is in WAL.Entry. It'd be nice if it was here.
   //       Dictionary could be gotten by enum; initially, based on enum, context would create
   //       an array of dictionaries.
   static class BaosAndCompressor extends ByteArrayOutputStream implements ByteStringCompressor {

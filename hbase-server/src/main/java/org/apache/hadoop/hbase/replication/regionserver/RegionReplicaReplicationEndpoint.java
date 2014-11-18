@@ -60,14 +60,14 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ReplicationProtbufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.PipelineController;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.RegionEntryBuffer;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.SinkWriter;
 import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.EntryBuffers;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter.OutputSink;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALSplitter.EntryBuffers;
+import org.apache.hadoop.hbase.wal.WALSplitter.OutputSink;
+import org.apache.hadoop.hbase.wal.WALSplitter.PipelineController;
+import org.apache.hadoop.hbase.wal.WALSplitter.RegionEntryBuffer;
+import org.apache.hadoop.hbase.wal.WALSplitter.SinkWriter;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.WALEntryFilter;
@@ -92,7 +92,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
   private Configuration conf;
   private ClusterConnection connection;
 
-  // Reuse HLogSplitter constructs as a WAL pipe
+  // Reuse WALSplitter constructs as a WAL pipe
   private PipelineController controller;
   private RegionReplicaOutputSink outputSink;
   private EntryBuffers entryBuffers;
@@ -211,7 +211,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
      * WAL file filling up a buffer of heap size "replication.source.size.capacity"(64MB) or at most
      * "replication.source.nb.capacity" entries or until it sees the end of file (in live tailing).
      * Then RS passes all the buffered edits in this replicate() call context. RRRE puts the edits
-     * to the HLogSplitter.EntryBuffers which is a blocking buffer space of up to
+     * to the WALSplitter.EntryBuffers which is a blocking buffer space of up to
      * "hbase.region.replica.replication.buffersize" (128MB) in size. This buffer splits the edits
      * based on regions.
      *
@@ -456,7 +456,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
     // replicaId of the region replica that we want to replicate to
     private final int replicaId;
 
-    private final List<HLog.Entry> entries;
+    private final List<Entry> entries;
     private final byte[] initialEncodedRegionName;
     private final AtomicLong skippedEntries;
     private final RpcControllerFactory rpcControllerFactory;
@@ -464,7 +464,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
 
     public RegionReplicaReplayCallable(ClusterConnection connection,
         RpcControllerFactory rpcControllerFactory, TableName tableName,
-        HRegionLocation location, HRegionInfo regionInfo, byte[] row,List<HLog.Entry> entries,
+        HRegionLocation location, HRegionInfo regionInfo, byte[] row,List<Entry> entries,
         AtomicLong skippedEntries) {
       super(connection, location, tableName, row);
       this.replicaId = regionInfo.getReplicaId();
@@ -502,14 +502,14 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       return replayToServer(this.entries, timeout);
     }
 
-    private ReplicateWALEntryResponse replayToServer(List<HLog.Entry> entries, int timeout)
+    private ReplicateWALEntryResponse replayToServer(List<Entry> entries, int timeout)
         throws IOException {
       if (entries.isEmpty() || skip) {
         skippedEntries.incrementAndGet();
         return ReplicateWALEntryResponse.newBuilder().build();
       }
 
-      HLog.Entry[] entriesArray = new HLog.Entry[entries.size()];
+      Entry[] entriesArray = new Entry[entries.size()];
       entriesArray = entries.toArray(entriesArray);
 
       // set the region name for the target region replica

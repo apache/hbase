@@ -35,8 +35,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
 
 /**
  * Contains utility methods for manipulating HBase meta tables.
@@ -51,7 +51,7 @@ public class MetaUtils {
   private final Configuration conf;
   private final FSTableDescriptors descriptors;
   private FileSystem fs;
-  private HLog log;
+  private WALFactory walFactory;
   private HRegion metaRegion;
   private Map<byte [], HRegion> metaRegions = Collections.synchronizedSortedMap(
     new TreeMap<byte [], HRegion>(Bytes.BYTES_COMPARATOR));
@@ -84,17 +84,19 @@ public class MetaUtils {
   }
 
   /**
-   * @return the HLog
+   * @return the WAL associated with the given region
    * @throws IOException e
    */
-  public synchronized HLog getLog() throws IOException {
-    if (this.log == null) {
+  public synchronized WAL getLog(HRegionInfo info) throws IOException {
+    if (this.walFactory == null) {
       String logName = 
           HConstants.HREGION_LOGDIR_NAME + "_" + System.currentTimeMillis();
-      this.log = HLogFactory.createHLog(this.fs, this.fs.getHomeDirectory(),
-                                        logName, this.conf);
+      final Configuration walConf = new Configuration(this.conf);
+      FSUtils.setRootDir(walConf, fs.getHomeDirectory());
+      this.walFactory = new WALFactory(walConf, null, logName);
     }
-    return this.log;
+    final byte[] region = info.getEncodedNameAsBytes();
+    return info.isMetaRegion() ? walFactory.getMetaWAL(region) : walFactory.getWAL(region);
   }
 
   /**
@@ -109,11 +111,11 @@ public class MetaUtils {
   }
 
   /**
-   * Closes catalog regions if open. Also closes and deletes the HLog. You
+   * Closes catalog regions if open. Also closes and deletes the WAL. You
    * must call this method if you want to persist changes made during a
    * MetaUtils edit session.
    */
-  public void shutdown() {
+  public synchronized void shutdown() {
     if (this.metaRegion != null) {
       try {
         this.metaRegion.close();
@@ -134,14 +136,11 @@ public class MetaUtils {
       metaRegions.clear();
     }
     try {
-      if (this.log != null) {
-        this.log.rollWriter();
-        this.log.closeAndDelete();
+      if (this.walFactory != null) {
+        this.walFactory.close();
       }
     } catch (IOException e) {
-      LOG.error("closing HLog", e);
-    } finally {
-      this.log = null;
+      LOG.error("closing WAL", e);
     }
   }
 
@@ -150,7 +149,7 @@ public class MetaUtils {
       return this.metaRegion;
     }
     this.metaRegion = HRegion.openHRegion(HRegionInfo.FIRST_META_REGIONINFO,
-      descriptors.get(TableName.META_TABLE_NAME), getLog(),
+      descriptors.get(TableName.META_TABLE_NAME), getLog(HRegionInfo.FIRST_META_REGIONINFO),
       this.conf);
     this.metaRegion.compactStores();
     return this.metaRegion;

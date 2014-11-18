@@ -51,9 +51,10 @@ import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileReaderV2;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.TestHFileWriterV2;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -126,7 +127,7 @@ public class TestCacheOnWriteInSchema {
   private final String testDescription;
   private HRegion region;
   private HStore store;
-  private HLog hlog;
+  private WALFactory walFactory;
   private FileSystem fs;
 
   public TestCacheOnWriteInSchema(CacheOnWriteType cowType) {
@@ -165,15 +166,16 @@ public class TestCacheOnWriteInSchema {
     htd.addFamily(hcd);
 
     // Create a store based on the schema
-    Path basedir = new Path(DIR);
-    String logName = "logs";
-    Path logdir = new Path(DIR, logName);
+    final String id = TestCacheOnWriteInSchema.class.getName();
+    final Path logdir = new Path(FSUtils.getRootDir(conf),
+        DefaultWALProvider.getWALDirectoryName(id));
     fs.delete(logdir, true);
 
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    hlog = HLogFactory.createHLog(fs, basedir, logName, conf);
+    walFactory = new WALFactory(conf, null, id);
 
-    region = TEST_UTIL.createLocalHRegion(info, htd, hlog);
+    region = TEST_UTIL.createLocalHRegion(info, htd,
+        walFactory.getWAL(info.getEncodedNameAsBytes()));
     store = new HStore(region, hcd, conf);
   }
 
@@ -187,7 +189,7 @@ public class TestCacheOnWriteInSchema {
       ex = e;
     }
     try {
-      hlog.closeAndDelete();
+      walFactory.close();
     } catch (IOException e) {
       LOG.warn("Caught Exception", e);
       ex = e;

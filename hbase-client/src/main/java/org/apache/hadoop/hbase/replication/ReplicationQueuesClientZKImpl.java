@@ -51,7 +51,7 @@ public class ReplicationQueuesClientZKImpl extends ReplicationStateZKBase implem
     try {
       result = ZKUtil.listChildrenNoWatch(this.zookeeper, znode);
     } catch (KeeperException e) {
-      this.abortable.abort("Failed to get list of hlogs for queueId=" + queueId
+      this.abortable.abort("Failed to get list of wals for queueId=" + queueId
           + " and serverName=" + serverName, e);
     }
     return result;

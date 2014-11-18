@@ -34,6 +34,10 @@ import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALHeader;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.WALTrailer;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+
+import static org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader.WAL_TRAILER_WARN_SIZE;
+import static org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader.DEFAULT_WAL_TRAILER_WARN_SIZE;
 
 /**
  * Writer for protobuf-based WAL.
@@ -77,8 +81,7 @@ public class ProtobufLogWriter extends WriterBase {
     super.init(fs, path, conf, overwritable);
     assert this.output == null;
     boolean doCompress = initializeCompressionContext(conf, path);
-    this.trailerWarnSize = conf.getInt(HLog.WAL_TRAILER_WARN_SIZE,
-      HLog.DEFAULT_WAL_TRAILER_WARN_SIZE);
+    this.trailerWarnSize = conf.getInt(WAL_TRAILER_WARN_SIZE, DEFAULT_WAL_TRAILER_WARN_SIZE);
     int bufferSize = FSUtils.getDefaultBufferSize(fs);
     short replication = (short)conf.getInt(
         "hbase.regionserver.hlog.replication", FSUtils.getDefaultReplication(fs, path));
@@ -110,7 +113,7 @@ public class ProtobufLogWriter extends WriterBase {
   }
 
   @Override
-  public void append(HLog.Entry entry) throws IOException {
+  public void append(Entry entry) throws IOException {
     entry.setCompressionContext(compressionContext);
     entry.getKey().getBuilder(compressor).
       setFollowingKvCount(entry.getEdit().size()).build().writeDelimitedTo(output);
@@ -134,7 +137,7 @@ public class ProtobufLogWriter extends WriterBase {
     }
   }
 
-  protected WALTrailer buildWALTrailer(WALTrailer.Builder builder) {
+  WALTrailer buildWALTrailer(WALTrailer.Builder builder) {
     return builder.build();
   }
 
@@ -188,8 +191,7 @@ public class ProtobufLogWriter extends WriterBase {
     return this.output;
   }
 
-  @Override
-  public void setWALTrailer(WALTrailer walTrailer) {
+  void setWALTrailer(WALTrailer walTrailer) {
     this.trailer = walTrailer;
   }
 }

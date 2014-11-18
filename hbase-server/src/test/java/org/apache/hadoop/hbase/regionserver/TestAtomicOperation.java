@@ -60,7 +60,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -607,7 +607,7 @@ public class TestAtomicOperation {
 
   public static class MockHRegion extends HRegion {
 
-    public MockHRegion(Path tableDir, HLog log, FileSystem fs, Configuration conf,
+    public MockHRegion(Path tableDir, WAL log, FileSystem fs, Configuration conf,
         final HRegionInfo regionInfo, final HTableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, log, fs, conf, regionInfo, htd, rsServices);
     }

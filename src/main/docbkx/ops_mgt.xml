@@ -318,9 +318,20 @@ ${HBASE_HOME}/bin/hbase org.apache.hadoop.hbase.mapreduce.<replaceable>UtilityNa
 
         <section
           xml:id="hlog_tool.prettyprint">
-          <title><classname>HLogPrettyPrinter</classname></title>
-          <para><classname>HLogPrettyPrinter</classname> is a tool with configurable options to
-            print the contents of an HLog. </para>
+          <title>WAL Pretty Printer</title>
+          <para>The WAL Pretty Printer is a tool with configurable options to
+            print the contents of a WAL. You can invoke it via the hbase cli with the 'wal' command.
+          </para>
+          <screen langauge="bourne"> $ ./bin/hbase wal hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012</screen>
+          <note>
+            <title>WAL Printing in older versions of HBase</title>
+            <para>Prior to version 2.0, the WAL Pretty Printer was called the
+              <classname>HLogPrettyPrinter</classname>, after an internal name for HBase's write
+              ahead log. In those versions, you can pring the contents of a WAL using the same
+              configuration as above, but with the 'hlog' command.
+            </para>
+            <screen langauge="bourne"> $ ./bin/hbase hlog hdfs://example.org:8020/hbase/.logs/example.org,60020,1283516293161/10.10.21.10%3A60020.1283973724012</screen>
+          </note>
         </section>
 
       </section>
@@ -1968,7 +1979,7 @@ $ for i in `cat conf/regionservers|sort`; do ./bin/graceful_stop.sh --restart --
         <varlistentry>
           <term><code>source.logEditsRead</code></term>
           <listitem>
-            <para>number of mutations read from HLogs at the replication source</para>
+            <para>number of mutations read from WALs at the replication source</para>
           </listitem>
         </varlistentry>
         <varlistentry>

@@ -64,7 +64,7 @@ public class TestMasterFailover {
       final HTableDescriptor htd)
   throws IOException {
     HRegion r = HRegion.createHRegion(hri, rootdir, c, htd);
-    // The above call to create a region will create an hlog file.  Each
+    // The above call to create a region will create an wal file.  Each
     // log file create will also create a running thread to do syncing.  We need
     // to close out this log else we will have a running thread trying to sync
     // the file system continuously which is ugly when dfs is taken away at the

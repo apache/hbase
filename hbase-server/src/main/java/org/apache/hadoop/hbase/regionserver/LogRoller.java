@@ -19,44 +19,71 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
- * Runs periodically to determine if the HLog should be rolled.
+ * Runs periodically to determine if the WAL should be rolled.
  *
  * NOTE: This class extends Thread rather than Chore because the sleep time
  * can be interrupted when there is something to do, rather than the Chore
  * sleep time which is invariant.
+ *
+ * TODO: change to a pool of threads
  */
 @InterfaceAudience.Private
-class LogRoller extends HasThread implements WALActionsListener {
+class LogRoller extends HasThread {
   static final Log LOG = LogFactory.getLog(LogRoller.class);
   private final ReentrantLock rollLock = new ReentrantLock();
   private final AtomicBoolean rollLog = new AtomicBoolean(false);
+  private final ConcurrentHashMap<WAL, Boolean> walNeedsRoll =
+      new ConcurrentHashMap<WAL, Boolean>();
   private final Server server;
   protected final RegionServerServices services;
   private volatile long lastrolltime = System.currentTimeMillis();
   // Period to roll log.
   private final long rollperiod;
   private final int threadWakeFrequency;
+
+  public void addWAL(final WAL wal) {
+    if (null == walNeedsRoll.putIfAbsent(wal, Boolean.FALSE)) {
+      wal.registerWALActionsListener(new WALActionsListener.Base() {
+        @Override
+        public void logRollRequested() {
+          walNeedsRoll.put(wal, Boolean.TRUE);
+          // TODO logs will contend with each other here, replace with e.g. DelayedQueue
+          synchronized(rollLog) {
+            rollLog.set(true);
+            rollLog.notifyAll();
+          }
+        }
+      });
+    }
+  }
+
+  public void requestRollAll() {
+    for (WAL wal : walNeedsRoll.keySet()) {
+      walNeedsRoll.put(wal, Boolean.TRUE);
+    }
+    synchronized(rollLog) {
+      rollLog.set(true);
+      rollLog.notifyAll();
+    }
+  }
 
   /** @param server */
   public LogRoller(final Server server, final RegionServerServices services) {
@@ -88,19 +115,24 @@ class LogRoller extends HasThread implements WALActionsListener {
         }
         // Time for periodic roll
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Hlog roll period " + this.rollperiod + "ms elapsed");
+          LOG.debug("Wal roll period " + this.rollperiod + "ms elapsed");
         }
       } else if (LOG.isDebugEnabled()) {
-        LOG.debug("HLog roll requested");
+        LOG.debug("WAL roll requested");
       }
       rollLock.lock(); // FindBugs UL_UNRELEASED_LOCK_EXCEPTION_PATH
       try {
         this.lastrolltime = now;
-        // Force the roll if the logroll.period is elapsed or if a roll was requested.
-        // The returned value is an array of actual region names.
-        byte [][] regionsToFlush = getWAL().rollWriter(periodic || rollLog.get());
-        if (regionsToFlush != null) {
-          for (byte [] r: regionsToFlush) scheduleFlush(r);
+        for (Entry<WAL, Boolean> entry : walNeedsRoll.entrySet()) {
+          final WAL wal = entry.getKey();
+          // Force the roll if the logroll.period is elapsed or if a roll was requested.
+          // The returned value is an array of actual region names.
+          final byte [][] regionsToFlush = wal.rollWriter(periodic ||
+              entry.getValue().booleanValue());
+          walNeedsRoll.put(wal, Boolean.FALSE);
+          if (regionsToFlush != null) {
+            for (byte [] r: regionsToFlush) scheduleFlush(r);
+          }
         }
       } catch (FailedLogCloseException e) {
         server.abort("Failed log close in log roller", e);
@@ -145,51 +177,4 @@ class LogRoller extends HasThread implements WALActionsListener {
     }
   }
 
-  public void logRollRequested() {
-    synchronized (rollLog) {
-      rollLog.set(true);
-      rollLog.notifyAll();
-    }
-  }
-
-  protected HLog getWAL() throws IOException {
-    return this.services.getWAL(null);
-  }
-
-  @Override
-  public void preLogRoll(Path oldPath, Path newPath) throws IOException {
-    // Not interested
-  }
-
-  @Override
-  public void postLogRoll(Path oldPath, Path newPath) throws IOException {
-    // Not interested
-  }
-
-  @Override
-  public void preLogArchive(Path oldPath, Path newPath) throws IOException {
-    // Not interested
-  }
-
-  @Override
-  public void postLogArchive(Path oldPath, Path newPath) throws IOException {
-    // Not interested
-  }
-
-  @Override
-  public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey,
-      WALEdit logEdit) {
-    // Not interested.
-  }
-
-  @Override
-  public void visitLogEntryBeforeWrite(HTableDescriptor htd, HLogKey logKey,
-                                       WALEdit logEdit) {
-    //Not interested
-  }
-
-  @Override
-  public void logCloseRequested() {
-    // not interested
-  }
 }

@@ -60,7 +60,7 @@ import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -217,7 +217,7 @@ public class TestRegionObserverScannerOpenHook {
     private static volatile CountDownLatch compactionStateChangeLatch = null;
 
     @SuppressWarnings("deprecation")
-    public CompactionCompletionNotifyingRegion(Path tableDir, HLog log,
+    public CompactionCompletionNotifyingRegion(Path tableDir, WAL log,
         FileSystem fs, Configuration confParam, HRegionInfo info,
         HTableDescriptor htd, RegionServerServices rsServices) {
       super(tableDir, log, fs, confParam, info, htd, rsServices);

@@ -27,16 +27,19 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALKey;
+
 /**
  * A WAL Entry for {@link FSHLog} implementation.  Immutable.
- * A subclass of {@link HLog.Entry} that carries extra info across the ring buffer such as
+ * A subclass of {@link Entry} that carries extra info across the ring buffer such as
  * region sequence id (we want to use this later, just before we write the WAL to ensure region
  * edits maintain order).  The extra info added here is not 'serialized' as part of the WALEdit
  * hence marked 'transient' to underline this fact.  It also adds mechanism so we can wait on
  * the assign of the region sequence id.  See {@link #stampRegionSequenceId()}.
  */
 @InterfaceAudience.Private
-class FSWALEntry extends HLog.Entry {
+class FSWALEntry extends Entry {
   // The below data members are denoted 'transient' just to highlight these are not persisted;
   // they are only in memory and held here while passing over the ring buffer.
   private final transient long sequence;
@@ -46,7 +49,7 @@ class FSWALEntry extends HLog.Entry {
   private final transient HRegionInfo hri;
   private final transient List<Cell> memstoreCells;
 
-  FSWALEntry(final long sequence, final HLogKey key, final WALEdit edit,
+  FSWALEntry(final long sequence, final WALKey key, final WALEdit edit,
       final AtomicLong referenceToRegionSequenceId, final boolean inMemstore,
       final HTableDescriptor htd, final HRegionInfo hri, List<Cell> memstoreCells) {
     super(key, edit);
@@ -98,7 +101,7 @@ class FSWALEntry extends HLog.Entry {
         CellUtil.setSequenceId(cell, regionSequenceId);
       }
     }
-    HLogKey key = getKey();
+    WALKey key = getKey();
     key.setLogSeqNum(regionSequenceId);
     return regionSequenceId;
   }

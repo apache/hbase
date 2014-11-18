@@ -59,7 +59,7 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
     // rolling like this makes sure the most recent one gets added to the queue
     for (JVMClusterUtil.RegionServerThread r :
                           utility1.getHBaseCluster().getRegionServerThreads()) {
-      r.getRegionServer().getWAL().rollWriter();
+      utility1.getHBaseAdmin().rollWALWriter(r.getRegionServer().getServerName());
     }
     utility1.deleteTableData(tableName);
     // truncating the table will send one Delete per row to the slave cluster

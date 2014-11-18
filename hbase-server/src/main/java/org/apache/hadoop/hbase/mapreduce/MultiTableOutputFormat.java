@@ -51,7 +51,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * </p>
  *
  * <p>
- * Write-ahead logging (HLog) for Puts can be disabled by setting
+ * Write-ahead logging (WAL) for Puts can be disabled by setting
  * {@link #WAL_PROPERTY} to {@link #WAL_OFF}. Default value is {@link #WAL_ON}.
  * Note that disabling write-ahead logging is only appropriate for jobs where
  * loss of data due to region server failure can be tolerated (for example,
@@ -61,7 +61,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable, Mutation> {
-  /** Set this to {@link #WAL_OFF} to turn off write-ahead logging (HLog) */
+  /** Set this to {@link #WAL_OFF} to turn off write-ahead logging (WAL) */
   public static final String WAL_PROPERTY = "hbase.mapreduce.multitableoutputformat.wal";
   /** Property value to use write-ahead logging */
   public static final boolean WAL_ON = true;

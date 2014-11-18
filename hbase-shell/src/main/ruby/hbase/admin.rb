@@ -82,10 +82,12 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
-    # Requests a regionserver's HLog roll
-    def hlog_roll(server_name)
-      @admin.rollHLogWriter(server_name)
+    # Requests a regionserver's WAL roll
+    def wal_roll(server_name)
+      @admin.rollWALWriter(server_name)
     end
+    # TODO remove older hlog_roll version
+    alias :hlog_roll :wal_roll
 
     #----------------------------------------------------------------------------------------------
     # Requests a table or region split

@@ -39,8 +39,8 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
@@ -65,7 +65,7 @@ public class TestDefaultCompactSelection extends TestCase {
   protected static final long minSize = 10;
   protected static final long maxSize = 2100;
 
-  private HLog hlog;
+  private WALFactory wals;
   private HRegion region;
 
   @Override
@@ -82,9 +82,9 @@ public class TestDefaultCompactSelection extends TestCase {
     this.conf.unset("hbase.hstore.compaction.min.size");
 
     //Setting up a Store
+    final String id = TestDefaultCompactSelection.class.getName();
     Path basedir = new Path(DIR);
-    String logName = "logs";
-    Path logdir = new Path(DIR, logName);
+    final Path logdir = new Path(basedir, DefaultWALProvider.getWALDirectoryName(id));
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toBytes("family"));
     FileSystem fs = FileSystem.get(conf);
 
@@ -94,11 +94,14 @@ public class TestDefaultCompactSelection extends TestCase {
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
 
-    hlog = HLogFactory.createHLog(fs, basedir, logName, conf);
+    final Configuration walConf = new Configuration(conf);
+    FSUtils.setRootDir(walConf, basedir);
+    wals = new WALFactory(walConf, null, id);
     region = HRegion.createHRegion(info, basedir, conf, htd);
     HRegion.closeHRegion(region);
     Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
-    region = new HRegion(tableDir, hlog, fs, conf, info, htd, null);
+    region = new HRegion(tableDir, wals.getWAL(info.getEncodedNameAsBytes()), fs, conf, info, htd,
+        null);
 
     store = new HStore(region, hcd, conf);
 
@@ -116,7 +119,7 @@ public class TestDefaultCompactSelection extends TestCase {
       ex = e;
     }
     try {
-      hlog.closeAndDelete();
+      wals.close();
     } catch (IOException e) {
       LOG.warn("Caught Exception", e);
       ex = e;

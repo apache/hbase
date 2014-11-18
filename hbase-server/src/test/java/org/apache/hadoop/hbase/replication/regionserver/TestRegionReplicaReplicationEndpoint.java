@@ -46,8 +46,8 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -322,8 +322,8 @@ public class TestRegionReplicaReplicationEndpoint {
     HRegionLocation hrl = connection.locateRegion(toBeDisabledTable, HConstants.EMPTY_BYTE_ARRAY);
     byte[] encodedRegionName = hrl.getRegionInfo().getEncodedNameAsBytes();
 
-    HLog.Entry entry = new HLog.Entry(
-      new HLogKey(encodedRegionName, toBeDisabledTable, 1),
+    Entry entry = new Entry(
+      new WALKey(encodedRegionName, toBeDisabledTable, 1),
       new WALEdit());
 
     HTU.getHBaseAdmin().disableTable(toBeDisabledTable); // disable the table

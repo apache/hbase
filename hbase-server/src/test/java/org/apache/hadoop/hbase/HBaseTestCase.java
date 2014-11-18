@@ -150,7 +150,7 @@ public abstract class HBaseTestCase extends TestCase {
 
   /**
    * You must call close on the returned region and then close on the log file
-   * it created. Do {@link HRegion#close()} followed by {@link HRegion#getLog()}
+   * it created. Do {@link HRegion#close()} followed by {@link HRegion#getWAL()}
    * and on it call close.
    * @param desc
    * @param startKey

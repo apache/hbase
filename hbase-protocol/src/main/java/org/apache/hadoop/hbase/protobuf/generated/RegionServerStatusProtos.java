@@ -4496,7 +4496,7 @@ public final class RegionServerStatusProtos {
      * <code>required uint64 last_flushed_sequence_id = 1;</code>
      *
      * <pre>
-     ** the last HLog sequence id flushed from MemStore to HFile for the region 
+     * the last WAL sequence id flushed from MemStore to HFile for the region 
      * </pre>
      */
     boolean hasLastFlushedSequenceId();
@@ -4504,7 +4504,7 @@ public final class RegionServerStatusProtos {
      * <code>required uint64 last_flushed_sequence_id = 1;</code>
      *
      * <pre>
-     ** the last HLog sequence id flushed from MemStore to HFile for the region 
+     * the last WAL sequence id flushed from MemStore to HFile for the region 
      * </pre>
      */
     long getLastFlushedSequenceId();
@@ -4612,7 +4612,7 @@ public final class RegionServerStatusProtos {
      * <code>required uint64 last_flushed_sequence_id = 1;</code>
      *
      * <pre>
-     ** the last HLog sequence id flushed from MemStore to HFile for the region 
+     * the last WAL sequence id flushed from MemStore to HFile for the region 
      * </pre>
      */
     public boolean hasLastFlushedSequenceId() {
@@ -4622,7 +4622,7 @@ public final class RegionServerStatusProtos {
      * <code>required uint64 last_flushed_sequence_id = 1;</code>
      *
      * <pre>
-     ** the last HLog sequence id flushed from MemStore to HFile for the region 
+     * the last WAL sequence id flushed from MemStore to HFile for the region 
      * </pre>
      */
     public long getLastFlushedSequenceId() {
@@ -4908,7 +4908,7 @@ public final class RegionServerStatusProtos {
        * <code>required uint64 last_flushed_sequence_id = 1;</code>
        *
        * <pre>
-       ** the last HLog sequence id flushed from MemStore to HFile for the region 
+       * the last WAL sequence id flushed from MemStore to HFile for the region 
        * </pre>
        */
       public boolean hasLastFlushedSequenceId() {
@@ -4918,7 +4918,7 @@ public final class RegionServerStatusProtos {
        * <code>required uint64 last_flushed_sequence_id = 1;</code>
        *
        * <pre>
-       ** the last HLog sequence id flushed from MemStore to HFile for the region 
+       * the last WAL sequence id flushed from MemStore to HFile for the region 
        * </pre>
        */
       public long getLastFlushedSequenceId() {
@@ -4928,7 +4928,7 @@ public final class RegionServerStatusProtos {
        * <code>required uint64 last_flushed_sequence_id = 1;</code>
        *
        * <pre>
-       ** the last HLog sequence id flushed from MemStore to HFile for the region 
+       * the last WAL sequence id flushed from MemStore to HFile for the region 
        * </pre>
        */
       public Builder setLastFlushedSequenceId(long value) {
@@ -4941,7 +4941,7 @@ public final class RegionServerStatusProtos {
        * <code>required uint64 last_flushed_sequence_id = 1;</code>
        *
        * <pre>
-       ** the last HLog sequence id flushed from MemStore to HFile for the region 
+       * the last WAL sequence id flushed from MemStore to HFile for the region 
        * </pre>
        */
       public Builder clearLastFlushedSequenceId() {

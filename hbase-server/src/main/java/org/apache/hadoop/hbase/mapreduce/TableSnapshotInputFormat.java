@@ -49,7 +49,7 @@ import com.google.common.annotations.VisibleForTesting;
 /**
  * TableSnapshotInputFormat allows a MapReduce job to run over a table snapshot. The job
  * bypasses HBase servers, and directly accesses the underlying files (hfile, recovered edits,
- * hlogs, etc) directly to provide maximum performance. The snapshot is not required to be
+ * wals, etc) directly to provide maximum performance. The snapshot is not required to be
  * restored to the live cluster or cloned. This also allows to run the mapreduce job from an
  * online or offline hbase cluster. The snapshot files can be exported by using the
  * {@link ExportSnapshot} tool, to a pure-hdfs cluster, and this InputFormat can be used to

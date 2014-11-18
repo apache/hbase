@@ -26,17 +26,18 @@ import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 
 /**
- * Context that holds the various dictionaries for compression in HLog.
+ * Context that holds the various dictionaries for compression in WAL.
  */
 @InterfaceAudience.Private
-class CompressionContext {
+public class CompressionContext {
 
   static final String ENABLE_WAL_TAGS_COMPRESSION = 
       "hbase.regionserver.wal.tags.enablecompression";
 
-  final Dictionary regionDict;
-  final Dictionary tableDict;
-  final Dictionary familyDict;
+  // visible only for WALKey, until we move everything into o.a.h.h.wal
+  public final Dictionary regionDict;
+  public final Dictionary tableDict;
+  public final Dictionary familyDict;
   final Dictionary qualifierDict;
   final Dictionary rowDict;
   // Context used for compressing tags

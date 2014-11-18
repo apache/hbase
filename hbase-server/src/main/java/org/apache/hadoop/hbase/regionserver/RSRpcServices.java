@@ -149,9 +149,9 @@ import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -693,13 +693,13 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws IOException
    */
   private OperationStatus [] doReplayBatchOp(final HRegion region,
-      final List<HLogSplitter.MutationReplay> mutations, long replaySeqId) throws IOException {
+      final List<WALSplitter.MutationReplay> mutations, long replaySeqId) throws IOException {
 
     long before = EnvironmentEdgeManager.currentTime();
     boolean batchContainsPuts = false, batchContainsDelete = false;
     try {
-      for (Iterator<HLogSplitter.MutationReplay> it = mutations.iterator(); it.hasNext();) {
-        HLogSplitter.MutationReplay m = it.next();
+      for (Iterator<WALSplitter.MutationReplay> it = mutations.iterator(); it.hasNext();) {
+        WALSplitter.MutationReplay m = it.next();
 
         if (m.type == MutationType.PUT) {
           batchContainsPuts = true;
@@ -724,7 +724,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         regionServer.cacheFlusher.reclaimMemStoreMemory();
       }
       return region.batchReplay(mutations.toArray(
-        new HLogSplitter.MutationReplay[mutations.size()]), replaySeqId);
+        new WALSplitter.MutationReplay[mutations.size()]), replaySeqId);
     } finally {
       if (regionServer.metricsRegionServer != null) {
         long after = EnvironmentEdgeManager.currentTime();
@@ -1097,10 +1097,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       return builder.build();
     } catch (DroppedSnapshotException ex) {
       // Cache flush can fail in a few places. If it fails in a critical
-      // section, we get a DroppedSnapshotException and a replay of hlog
+      // section, we get a DroppedSnapshotException and a replay of wal
       // is required. Currently the only way to do this is a restart of
       // the server.
-      regionServer.abort("Replay of HLog required. Forcing server shutdown", ex);
+      regionServer.abort("Replay of WAL required. Forcing server shutdown", ex);
       throw new ServiceException(ex);
     } catch (IOException ie) {
       throw new ServiceException(ie);
@@ -1431,7 +1431,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           ServerRegionReplicaUtil.isDefaultReplica(region.getRegionInfo())
             ? region.getCoprocessorHost()
             : null; // do not invoke coprocessors if this is a secondary region replica
-      List<Pair<HLogKey, WALEdit>> walEntries = new ArrayList<Pair<HLogKey, WALEdit>>();
+      List<Pair<WALKey, WALEdit>> walEntries = new ArrayList<Pair<WALKey, WALEdit>>();
       // when tag is enabled, we need tag replay edits with log sequence number
       boolean needAddReplayTag = (HFile.getFormatVersion(regionServer.conf) >= 3);
 
@@ -1451,9 +1451,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           long nonce = entry.getKey().hasNonce() ? entry.getKey().getNonce() : HConstants.NO_NONCE;
           regionServer.nonceManager.reportOperationFromWal(nonceGroup, nonce, entry.getKey().getWriteTime());
         }
-        Pair<HLogKey, WALEdit> walEntry = (coprocessorHost == null) ? null :
-          new Pair<HLogKey, WALEdit>();
-        List<HLogSplitter.MutationReplay> edits = HLogSplitter.getMutationsFromWALEntry(entry,
+        Pair<WALKey, WALEdit> walEntry = (coprocessorHost == null) ? null :
+          new Pair<WALKey, WALEdit>();
+        List<WALSplitter.MutationReplay> edits = WALSplitter.getMutationsFromWALEntry(entry,
           cells, walEntry, needAddReplayTag, durability);
         if (coprocessorHost != null) {
           // Start coprocessor replay here. The coprocessor is for each WALEdit instead of a
@@ -1482,7 +1482,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       region.syncWal();
 
       if (coprocessorHost != null) {
-        for (Pair<HLogKey, WALEdit> wal : walEntries) {
+        for (Pair<WALKey, WALEdit> wal : walEntries) {
           coprocessorHost.postWALRestore(region.getRegionInfo(), wal.getFirst(),
             wal.getSecond());
         }
@@ -1535,14 +1535,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       checkOpen();
       requestCount.increment();
       regionServer.getRegionServerCoprocessorHost().preRollWALWriterRequest();
-      HLog wal = regionServer.getWAL();
-      byte[][] regionsToFlush = wal.rollWriter(true);
+      regionServer.walRoller.requestRollAll();
+      regionServer.getRegionServerCoprocessorHost().postRollWALWriterRequest();
       RollWALWriterResponse.Builder builder = RollWALWriterResponse.newBuilder();
-      if (regionsToFlush != null) {
-        for (byte[] region: regionsToFlush) {
-          builder.addRegionToFlush(ByteStringer.wrap(region));
-        }
-      }
       return builder.build();
     } catch (IOException ie) {
       throw new ServiceException(ie);

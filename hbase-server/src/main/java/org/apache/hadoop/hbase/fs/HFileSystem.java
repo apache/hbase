@@ -40,7 +40,7 @@ import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -54,8 +54,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 /**
  * An encapsulation for the FileSystem object that hbase uses to access
  * data. This class allows the flexibility of using  
- * separate filesystem objects for reading and writing hfiles and hlogs.
- * In future, if we want to make hlogs be in a different filesystem,
+ * separate filesystem objects for reading and writing hfiles and wals.
+ * In future, if we want to make wals be in a different filesystem,
  * this is the place to make it happen.
  */
 public class HFileSystem extends FilterFileSystem {
@@ -322,7 +322,7 @@ public class HFileSystem extends FilterFileSystem {
   }
 
   /**
-   * We're putting at lowest priority the hlog files blocks that are on the same datanode
+   * We're putting at lowest priority the wal files blocks that are on the same datanode
    * as the original regionserver which created these files. This because we fear that the
    * datanode is actually dead, so if we use it it will timeout.
    */
@@ -330,17 +330,17 @@ public class HFileSystem extends FilterFileSystem {
     public void reorderBlocks(Configuration conf, LocatedBlocks lbs, String src)
         throws IOException {
 
-      ServerName sn = HLogUtil.getServerNameFromHLogDirectoryName(conf, src);
+      ServerName sn = DefaultWALProvider.getServerNameFromWALDirectoryName(conf, src);
       if (sn == null) {
-        // It's not an HLOG
+        // It's not an WAL
         return;
       }
 
-      // Ok, so it's an HLog
+      // Ok, so it's an WAL
       String hostName = sn.getHostname();
       if (LOG.isTraceEnabled()) {
         LOG.trace(src +
-            " is an HLog file, so reordering blocks, last hostname will be:" + hostName);
+            " is an WAL file, so reordering blocks, last hostname will be:" + hostName);
       }
 
       // Just check for all blocks

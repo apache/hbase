@@ -61,17 +61,17 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
       return files;
     }
 
-    final Set<String> hlogs = loadHLogsFromQueues();
+    final Set<String> wals = loadWALsFromQueues();
     return Iterables.filter(files, new Predicate<FileStatus>() {
       @Override
       public boolean apply(FileStatus file) {
-        String hlog = file.getPath().getName();
-        boolean logInReplicationQueue = hlogs.contains(hlog);
+        String wal = file.getPath().getName();
+        boolean logInReplicationQueue = wals.contains(wal);
         if (LOG.isDebugEnabled()) {
           if (logInReplicationQueue) {
-            LOG.debug("Found log in ZK, keeping: " + hlog);
+            LOG.debug("Found log in ZK, keeping: " + wal);
           } else {
-            LOG.debug("Didn't find this log in ZK, deleting: " + hlog);
+            LOG.debug("Didn't find this log in ZK, deleting: " + wal);
           }
         }
        return !logInReplicationQueue;
@@ -79,15 +79,15 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
   }
 
   /**
-   * Load all hlogs in all replication queues from ZK
+   * Load all wals in all replication queues from ZK
    */
-  private Set<String> loadHLogsFromQueues() {
+  private Set<String> loadWALsFromQueues() {
     List<String> rss = replicationQueues.getListOfReplicators();
     if (rss == null) {
       LOG.debug("Didn't find any region server that replicates, won't prevent any deletions.");
       return ImmutableSet.of();
     }
-    Set<String> hlogs = Sets.newHashSet();
+    Set<String> wals = Sets.newHashSet();
     for (String rs: rss) {
       List<String> listOfPeers = replicationQueues.getAllQueues(rs);
       // if rs just died, this will be null
@@ -95,13 +95,13 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
         continue;
       }
       for (String id : listOfPeers) {
-        List<String> peersHlogs = replicationQueues.getLogsInQueue(rs, id);
-        if (peersHlogs != null) {
-          hlogs.addAll(peersHlogs);
+        List<String> peersWals = replicationQueues.getLogsInQueue(rs, id);
+        if (peersWals != null) {
+          wals.addAll(peersWals);
         }
       }
     }
-    return hlogs;
+    return wals;
   }
 
   @Override
@@ -109,7 +109,7 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
     // If replication is disabled, keep all members null
     if (!config.getBoolean(HConstants.REPLICATION_ENABLE_KEY,
         HConstants.REPLICATION_ENABLE_DEFAULT)) {
-      LOG.warn("Not configured - allowing all hlogs to be deleted");
+      LOG.warn("Not configured - allowing all wals to be deleted");
       return;
     }
     // Make my own Configuration.  Then I'll have my own connection to zk that

@@ -31,10 +31,9 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Entry;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
@@ -58,21 +57,21 @@ public class TestReplicationWALEntryFilters {
     SystemTableWALEntryFilter filter = new SystemTableWALEntryFilter();
 
     // meta
-    HLogKey key1 = new HLogKey( HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
+    WALKey key1 = new WALKey( HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes(),
       TableName.META_TABLE_NAME);
-    HLog.Entry metaEntry = new Entry(key1, null);
+    Entry metaEntry = new Entry(key1, null);
 
     assertNull(filter.filter(metaEntry));
 
     // ns table
-    HLogKey key2 = new HLogKey(new byte[] {}, TableName.NAMESPACE_TABLE_NAME);
-    HLog.Entry nsEntry = new Entry(key2, null);
+    WALKey key2 = new WALKey(new byte[] {}, TableName.NAMESPACE_TABLE_NAME);
+    Entry nsEntry = new Entry(key2, null);
     assertNull(filter.filter(nsEntry));
 
     // user table
 
-    HLogKey key3 = new HLogKey(new byte[] {}, TableName.valueOf("foo"));
-    HLog.Entry userEntry = new Entry(key3, null);
+    WALKey key3 = new WALKey(new byte[] {}, TableName.valueOf("foo"));
+    Entry userEntry = new Entry(key3, null);
 
     assertEquals(userEntry, filter.filter(userEntry));
   }
@@ -81,10 +80,10 @@ public class TestReplicationWALEntryFilters {
   public void testScopeWALEntryFilter() {
     ScopeWALEntryFilter filter = new ScopeWALEntryFilter();
 
-    HLog.Entry userEntry = createEntry(a, b);
-    HLog.Entry userEntryA = createEntry(a);
-    HLog.Entry userEntryB = createEntry(b);
-    HLog.Entry userEntryEmpty = createEntry();
+    Entry userEntry = createEntry(a, b);
+    Entry userEntryA = createEntry(a);
+    Entry userEntryB = createEntry(b);
+    Entry userEntryEmpty = createEntry();
 
     // no scopes
     assertEquals(null, filter.filter(userEntry));
@@ -156,7 +155,7 @@ public class TestReplicationWALEntryFilters {
 
   @Test
   public void testChainWALEntryFilter() {
-    HLog.Entry userEntry = createEntry(a, b, c);
+    Entry userEntry = createEntry(a, b, c);
 
     ChainWALEntryFilter filter = new ChainWALEntryFilter(passFilter);
     assertEquals(createEntry(a,b,c), filter.filter(userEntry));
@@ -207,7 +206,7 @@ public class TestReplicationWALEntryFilters {
     ReplicationPeer peer = mock(ReplicationPeer.class);
 
     when(peer.getTableCFs()).thenReturn(null);
-    HLog.Entry userEntry = createEntry(a, b, c);
+    Entry userEntry = createEntry(a, b, c);
     TableCfWALEntryFilter filter = new TableCfWALEntryFilter(peer);
     assertEquals(createEntry(a,b,c), filter.filter(userEntry));
 
@@ -243,24 +242,24 @@ public class TestReplicationWALEntryFilters {
     assertEquals(createEntry(a,c), filter.filter(userEntry));
   }
 
-  private HLog.Entry createEntry(byte[]... kvs) {
-    HLogKey key1 = new HLogKey(new byte[] {}, TableName.valueOf("foo"));
+  private Entry createEntry(byte[]... kvs) {
+    WALKey key1 = new WALKey(new byte[] {}, TableName.valueOf("foo"));
     WALEdit edit1 = new WALEdit();
 
     for (byte[] kv : kvs) {
       edit1.add(new KeyValue(kv, kv, kv));
     }
-    return new HLog.Entry(key1, edit1);
+    return new Entry(key1, edit1);
   }
 
 
-  private void assertEquals(HLog.Entry e1, HLog.Entry e2) {
+  private void assertEquals(Entry e1, Entry e2) {
     Assert.assertEquals(e1 == null, e2 == null);
     if (e1 == null) {
       return;
     }
 
-    // do not compare HLogKeys
+    // do not compare WALKeys
 
     // compare kvs
     Assert.assertEquals(e1.getEdit() == null, e2.getEdit() == null);

@@ -448,7 +448,7 @@ public class RegionStates {
   }
 
   /**
-   * A dead server's hlogs have been split so that all the regions
+   * A dead server's wals have been split so that all the regions
    * used to be open on it can be safely assigned now. Mark them assignable.
    */
   public synchronized void logSplit(final ServerName serverName) {
@@ -688,7 +688,7 @@ public class RegionStates {
 
   /**
    * Checking if a region was assigned to a server which is not online now.
-   * If so, we should hold re-assign this region till SSH has split its hlogs.
+   * If so, we should hold re-assign this region till SSH has split its wals.
    * Once logs are split, the last assignment of this region will be reset,
    * which means a null last assignment server is ok for re-assigning.
    *

@@ -33,8 +33,8 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.quotas.RegionServerQuotaManager;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -48,9 +48,9 @@ public interface RegionServerServices
    */
   boolean isStopping();
 
-  /** @return the HLog for a particular region. Pass null for getting the
+  /** @return the WAL for a particular region. Pass null for getting the
    * default (common) WAL */
-  HLog getWAL(HRegionInfo regionInfo) throws IOException;
+  WAL getWAL(HRegionInfo regionInfo) throws IOException;
 
   /**
    * @return Implementation of {@link CompactionRequestor} or null.

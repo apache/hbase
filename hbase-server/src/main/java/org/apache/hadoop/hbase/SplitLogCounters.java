@@ -32,7 +32,7 @@ public class SplitLogCounters {
   public final static AtomicLong tot_mgr_log_split_batch_start = new AtomicLong(0);
   public final static AtomicLong tot_mgr_log_split_batch_success = new AtomicLong(0);
   public final static AtomicLong tot_mgr_log_split_batch_err = new AtomicLong(0);
-  public final static AtomicLong tot_mgr_new_unexpected_hlogs = new AtomicLong(0);
+  public final static AtomicLong tot_mgr_new_unexpected_wals = new AtomicLong(0);
   public final static AtomicLong tot_mgr_log_split_start = new AtomicLong(0);
   public final static AtomicLong tot_mgr_log_split_success = new AtomicLong(0);
   public final static AtomicLong tot_mgr_log_split_err = new AtomicLong(0);

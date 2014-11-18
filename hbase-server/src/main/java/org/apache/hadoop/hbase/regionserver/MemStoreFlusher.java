@@ -460,11 +460,11 @@ class MemStoreFlusher implements FlushRequester {
       }
     } catch (DroppedSnapshotException ex) {
       // Cache flush can fail in a few places. If it fails in a critical
-      // section, we get a DroppedSnapshotException and a replay of hlog
+      // section, we get a DroppedSnapshotException and a replay of wal
       // is required. Currently the only way to do this is a restart of
       // the server. Abort because hdfs is probably bad (HBASE-644 is a case
       // where hdfs was bad but passed the hdfs check).
-      server.abort("Replay of HLog required. Forcing server shutdown", ex);
+      server.abort("Replay of WAL required. Forcing server shutdown", ex);
       return false;
     } catch (IOException ex) {
       ex = ex instanceof RemoteException ? ((RemoteException) ex).unwrapRemoteException() : ex;

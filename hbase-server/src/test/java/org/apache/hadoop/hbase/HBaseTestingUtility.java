@@ -90,7 +90,7 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.tool.Canary;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -573,7 +573,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return this.dfsCluster;
   }
 
-  public MiniDFSCluster startMiniDFSClusterForTestHLog(int namenodePort) throws IOException {
+  public MiniDFSCluster startMiniDFSClusterForTestWAL(int namenodePort) throws IOException {
     createDirsAndSetProperties();
     dfsCluster = new MiniDFSCluster(namenodePort, conf, 5, false, true, true, null,
         null, null, null);
@@ -1651,17 +1651,17 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
-   * Create an HRegion that writes to the local tmp dirs with specified hlog
+   * Create an HRegion that writes to the local tmp dirs with specified wal
    * @param info regioninfo
    * @param desc table descriptor
-   * @param hlog hlog for this region.
+   * @param wal wal for this region.
    * @return created hregion
    * @throws IOException
    */
-  public HRegion createLocalHRegion(HRegionInfo info, HTableDescriptor desc, HLog hlog) throws IOException {
-    return HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), desc, hlog);
+  public HRegion createLocalHRegion(HRegionInfo info, HTableDescriptor desc, WAL wal)
+      throws IOException {
+    return HRegion.createHRegion(info, getDataTestDir(), getConfiguration(), desc, wal);
   }
-
 
   /**
    * @param tableName
@@ -1677,7 +1677,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public HRegion createLocalHRegion(byte[] tableName, byte[] startKey, byte[] stopKey,
       String callingMethod, Configuration conf, boolean isReadOnly, Durability durability,
-      HLog hlog, byte[]... families) throws IOException {
+      WAL wal, byte[]... families) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     htd.setReadOnly(isReadOnly);
     for (byte[] family : families) {
@@ -1688,7 +1688,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
     htd.setDurability(durability);
     HRegionInfo info = new HRegionInfo(htd.getTableName(), startKey, stopKey, false);
-    return createLocalHRegion(info, htd, hlog);
+    return createLocalHRegion(info, htd, wal);
   }
   //
   // ==========================================================================
@@ -1919,7 +1919,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           Put put = new Put(k);
           put.setDurability(Durability.SKIP_WAL);
           put.add(f, null, k);
-          if (r.getLog() == null) put.setDurability(Durability.SKIP_WAL);
+          if (r.getWAL() == null) put.setDurability(Durability.SKIP_WAL);
 
           int preRowCount = rowCount;
           int pause = 10;
@@ -2979,7 +2979,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Set maxRecoveryErrorCount in DFSClient.  In 0.20 pre-append its hard-coded to 5 and
    * makes tests linger.  Here is the exception you'll see:
    * <pre>
-   * 2010-06-15 11:52:28,511 WARN  [DataStreamer for file /hbase/.logs/hlog.1276627923013 block blk_928005470262850423_1021] hdfs.DFSClient$DFSOutputStream(2657): Error Recovery for block blk_928005470262850423_1021 failed  because recovery from primary datanode 127.0.0.1:53683 failed 4 times.  Pipeline was 127.0.0.1:53687, 127.0.0.1:53683. Will retry...
+   * 2010-06-15 11:52:28,511 WARN  [DataStreamer for file /hbase/.logs/wal.1276627923013 block blk_928005470262850423_1021] hdfs.DFSClient$DFSOutputStream(2657): Error Recovery for block blk_928005470262850423_1021 failed  because recovery from primary datanode 127.0.0.1:53683 failed 4 times.  Pipeline was 127.0.0.1:53687, 127.0.0.1:53683. Will retry...
    * </pre>
    * @param stream A DFSClient.DFSOutputStream.
    * @param max

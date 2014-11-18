@@ -47,8 +47,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.ipc.RemoteException;
 
 /**
@@ -143,7 +142,7 @@ class HMerge {
     protected final FileSystem fs;
     protected final Path rootDir;
     protected final HTableDescriptor htd;
-    protected final HLog hlog;
+    protected final WALFactory walFactory;
     private final long maxFilesize;
 
 
@@ -160,7 +159,9 @@ class HMerge {
           .getHTableDescriptor();
       String logname = "merge_" + System.currentTimeMillis() + HConstants.HREGION_LOGDIR_NAME;
 
-      this.hlog = HLogFactory.createHLog(fs, tabledir, logname, conf);
+      final Configuration walConf = new Configuration(conf);
+      FSUtils.setRootDir(walConf, tabledir);
+      this.walFactory = new WALFactory(walConf, null, logname);
     }
 
     void process() throws IOException {
@@ -174,8 +175,7 @@ class HMerge {
         }
       } finally {
         try {
-          hlog.closeAndDelete();
-
+          walFactory.close();
         } catch(IOException e) {
           LOG.error(e);
         }
@@ -194,10 +194,12 @@ class HMerge {
       long nextSize = 0;
       for (int i = 0; i < info.length - 1; i++) {
         if (currentRegion == null) {
-          currentRegion = HRegion.openHRegion(conf, fs, this.rootDir, info[i], this.htd, hlog);
+          currentRegion = HRegion.openHRegion(conf, fs, this.rootDir, info[i], this.htd,
+              walFactory.getWAL(info[i].getEncodedNameAsBytes()));
           currentSize = currentRegion.getLargestHStoreSize();
         }
-        nextRegion = HRegion.openHRegion(conf, fs, this.rootDir, info[i + 1], this.htd, hlog);
+        nextRegion = HRegion.openHRegion(conf, fs, this.rootDir, info[i + 1], this.htd,
+            walFactory.getWAL(info[i+1].getEncodedNameAsBytes()));
         nextSize = nextRegion.getLargestHStoreSize();
 
         if ((currentSize + nextSize) <= (maxFilesize / 2)) {

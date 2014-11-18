@@ -1242,7 +1242,9 @@ public final class WALProtos {
    * Protobuf type {@code WALKey}
    *
    * <pre>
-   * Protocol buffer version of HLogKey; see HLogKey comment, not really a key but WALEdit header for some KVs
+   *
+   * Protocol buffer version of WALKey; see WALKey comment, not really a key but WALEdit header
+   * for some KVs
    * </pre>
    */
   public static final class WALKey extends
@@ -2033,7 +2035,9 @@ public final class WALProtos {
      * Protobuf type {@code WALKey}
      *
      * <pre>
-     * Protocol buffer version of HLogKey; see HLogKey comment, not really a key but WALEdit header for some KVs
+     *
+     * Protocol buffer version of WALKey; see WALKey comment, not really a key but WALEdit header
+     * for some KVs
      * </pre>
      */
     public static final class Builder extends
@@ -10021,8 +10025,10 @@ public final class WALProtos {
    *
    * <pre>
    **
-   * A trailer that is appended to the end of a properly closed HLog WAL file.
+   * A trailer that is appended to the end of a properly closed WAL file.
    * If missing, this is either a legacy or a corrupted WAL file.
+   * N.B. This trailer currently doesn't contain any information and we
+   * purposefully don't expose it in the WAL APIs. It's for future growth.
    * </pre>
    */
   public static final class WALTrailer extends
@@ -10246,8 +10252,10 @@ public final class WALProtos {
      *
      * <pre>
      **
-     * A trailer that is appended to the end of a properly closed HLog WAL file.
+     * A trailer that is appended to the end of a properly closed WAL file.
      * If missing, this is either a legacy or a corrupted WAL file.
+     * N.B. This trailer currently doesn't contain any information and we
+     * purposefully don't expose it in the WAL APIs. It's for future growth.
      * </pre>
      */
     public static final class Builder extends

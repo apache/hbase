@@ -23,7 +23,6 @@ import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -38,13 +37,11 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.regionserver.wal.HLog.Reader;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.WALPrettyPrinter;
 import org.codehaus.jackson.map.ObjectMapper;
 
 /**
@@ -59,36 +56,18 @@ import org.codehaus.jackson.map.ObjectMapper;
  * 
  * It can also toggle output of values.
  * 
+ * @deprecated use the "hbase wal" command
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class HLogPrettyPrinter {
-  private boolean outputValues;
-  private boolean outputJSON;
-  // The following enable filtering by sequence, region, and row, respectively
-  private long sequence;
-  private String region;
-  private String row;
-  // enable in order to output a single list of transactions from several files
-  private boolean persistentOutput;
-  private boolean firstTxn;
-  // useful for programatic capture of JSON output
-  private PrintStream out;
-  // for JSON encoding
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+@Deprecated
+public class HLogPrettyPrinter extends WALPrettyPrinter {
 
   /**
    * Basic constructor that simply initializes values to reasonable defaults.
    */
   public HLogPrettyPrinter() {
-    outputValues = false;
-    outputJSON = false;
-    sequence = -1;
-    region = null;
-    row = null;
-    persistentOutput = false;
-    firstTxn = true;
-    out = System.out;
+    this(false, false, -1l, null, null, false, System.out);
   }
 
   /**
@@ -119,289 +98,11 @@ public class HLogPrettyPrinter {
   public HLogPrettyPrinter(boolean outputValues, boolean outputJSON,
       long sequence, String region, String row, boolean persistentOutput,
       PrintStream out) {
-    this.outputValues = outputValues;
-    this.outputJSON = outputJSON;
-    this.sequence = sequence;
-    this.region = region;
-    this.row = row;
-    this.persistentOutput = persistentOutput;
-    if (persistentOutput) {
-      beginPersistentOutput();
-    }
-    this.out = out;
-    this.firstTxn = true;
-  }
-
-  /**
-   * turns value output on
-   */
-  public void enableValues() {
-    outputValues = true;
-  }
-
-  /**
-   * turns value output off
-   */
-  public void disableValues() {
-    outputValues = false;
-  }
-
-  /**
-   * turns JSON output on
-   */
-  public void enableJSON() {
-    outputJSON = true;
-  }
-
-  /**
-   * turns JSON output off, and turns on "pretty strings" for human consumption
-   */
-  public void disableJSON() {
-    outputJSON = false;
-  }
-
-  /**
-   * sets the region by which output will be filtered
-   * 
-   * @param sequence
-   *          when nonnegative, serves as a filter; only log entries with this
-   *          sequence id will be printed
-   */
-  public void setSequenceFilter(long sequence) {
-    this.sequence = sequence;
-  }
-
-  /**
-   * sets the region by which output will be filtered
-   * 
-   * @param region
-   *          when not null, serves as a filter; only log entries from this
-   *          region will be printed
-   */
-  public void setRegionFilter(String region) {
-    this.region = region;
-  }
-
-  /**
-   * sets the region by which output will be filtered
-   * 
-   * @param row
-   *          when not null, serves as a filter; only log entries from this row
-   *          will be printed
-   */
-  public void setRowFilter(String row) {
-    this.row = row;
-  }
-
-  /**
-   * enables output as a single, persistent list. at present, only relevant in
-   * the case of JSON output.
-   */
-  public void beginPersistentOutput() {
-    if (persistentOutput)
-      return;
-    persistentOutput = true;
-    firstTxn = true;
-    if (outputJSON)
-      out.print("[");
-  }
-
-  /**
-   * ends output of a single, persistent list. at present, only relevant in the
-   * case of JSON output.
-   */
-  public void endPersistentOutput() {
-    if (!persistentOutput)
-      return;
-    persistentOutput = false;
-    if (outputJSON)
-      out.print("]");
-  }
-
-  /**
-   * reads a log file and outputs its contents, one transaction at a time, as
-   * specified by the currently configured options
-   * 
-   * @param conf
-   *          the HBase configuration relevant to this log file
-   * @param p
-   *          the path of the log file to be read
-   * @throws IOException
-   *           may be unable to access the configured filesystem or requested
-   *           file.
-   */
-  public void processFile(final Configuration conf, final Path p)
-      throws IOException {
-    FileSystem fs = FileSystem.get(conf);
-    if (!fs.exists(p)) {
-      throw new FileNotFoundException(p.toString());
-    }
-    if (!fs.isFile(p)) {
-      throw new IOException(p + " is not a file");
-    }
-    if (outputJSON && !persistentOutput) {
-      out.print("[");
-      firstTxn = true;
-    }
-    Reader log = HLogFactory.createReader(fs, p, conf);
-    try {
-      FSHLog.Entry entry;
-      while ((entry = log.next()) != null) {
-        HLogKey key = entry.getKey();
-        WALEdit edit = entry.getEdit();
-        // begin building a transaction structure
-        Map<String, Object> txn = key.toStringMap();
-        long writeTime = key.getWriteTime();
-        // check output filters
-        if (sequence >= 0 && ((Long) txn.get("sequence")) != sequence)
-          continue;
-        if (region != null && !((String) txn.get("region")).equals(region))
-          continue;
-        // initialize list into which we will store atomic actions
-        List<Map> actions = new ArrayList<Map>();
-        for (Cell cell : edit.getCells()) {
-          // add atomic operation to txn
-          Map<String, Object> op = new HashMap<String, Object>(toStringMap(cell));
-          if (outputValues) op.put("value", Bytes.toStringBinary(cell.getValue()));
-          // check row output filter
-          if (row == null || ((String) op.get("row")).equals(row))
-            actions.add(op);
-        }
-        if (actions.size() == 0)
-          continue;
-        txn.put("actions", actions);
-        if (outputJSON) {
-          // JSON output is a straightforward "toString" on the txn object
-          if (firstTxn)
-            firstTxn = false;
-          else
-            out.print(",");
-          // encode and print JSON
-          out.print(MAPPER.writeValueAsString(txn));
-        } else {
-          // Pretty output, complete with indentation by atomic action
-          out.println("Sequence " + txn.get("sequence") + " "
-              + "from region " + txn.get("region") + " " + "in table "
-              + txn.get("table") + " at write timestamp: " + new Date(writeTime));
-          for (int i = 0; i < actions.size(); i++) {
-            Map op = actions.get(i);
-            out.println("  Action:");
-            out.println("    row: " + op.get("row"));
-            out.println("    column: " + op.get("family") + ":"
-                + op.get("qualifier"));
-            out.println("    timestamp: "
-                + (new Date((Long) op.get("timestamp"))));
-            if(op.get("tag") != null) {
-              out.println("    tag: " + op.get("tag"));
-            }
-            if (outputValues)
-              out.println("    value: " + op.get("value"));
-          }
-        }
-      }
-    } finally {
-      log.close();
-    }
-    if (outputJSON && !persistentOutput) {
-      out.print("]");
-    }
-  }
-
-  private static Map<String, Object> toStringMap(Cell cell) {
-    Map<String, Object> stringMap = new HashMap<String, Object>();
-    stringMap.put("row",
-        Bytes.toStringBinary(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
-    stringMap.put("family", Bytes.toStringBinary(cell.getFamilyArray(), cell.getFamilyOffset(),
-                cell.getFamilyLength()));
-    stringMap.put("qualifier",
-        Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
-            cell.getQualifierLength()));
-    stringMap.put("timestamp", cell.getTimestamp());
-    stringMap.put("vlen", cell.getValueLength());
-    if (cell.getTagsLength() > 0) {
-      List<String> tagsString = new ArrayList<String>();
-      Iterator<Tag> tagsIterator = CellUtil.tagsIterator(cell.getTagsArray(), cell.getTagsOffset(),
-          cell.getTagsLength());
-      while (tagsIterator.hasNext()) {
-        Tag tag = tagsIterator.next();
-        tagsString.add((tag.getType()) + ":"
-            + Bytes.toStringBinary(tag.getBuffer(), tag.getTagOffset(), tag.getTagLength()));
-      }
-      stringMap.put("tag", tagsString);
-    }
-    return stringMap;
+    super(outputValues, outputJSON, sequence, region, row, persistentOutput, out);
   }
 
   public static void main(String[] args) throws IOException {
-    run(args);
+    WALPrettyPrinter.main(args);
   }
 
-  /**
-   * Pass one or more log file names and formatting options and it will dump out
-   * a text version of the contents on <code>stdout</code>.
-   * 
-   * @param args
-   *          Command line arguments
-   * @throws IOException
-   *           Thrown upon file system errors etc.
-   * @throws ParseException
-   *           Thrown if command-line parsing fails.
-   */
-  public static void run(String[] args) throws IOException {
-    // create options
-    Options options = new Options();
-    options.addOption("h", "help", false, "Output help message");
-    options.addOption("j", "json", false, "Output JSON");
-    options.addOption("p", "printvals", false, "Print values");
-    options.addOption("r", "region", true,
-        "Region to filter by. Pass region name; e.g. 'hbase:meta,,1'");
-    options.addOption("s", "sequence", true,
-        "Sequence to filter by. Pass sequence number.");
-    options.addOption("w", "row", true, "Row to filter by. Pass row name.");
-
-    HLogPrettyPrinter printer = new HLogPrettyPrinter();
-    CommandLineParser parser = new PosixParser();
-    List files = null;
-    try {
-      CommandLine cmd = parser.parse(options, args);
-      files = cmd.getArgList();
-      if (files.size() == 0 || cmd.hasOption("h")) {
-        HelpFormatter formatter = new HelpFormatter();
-        formatter.printHelp("HLog <filename...>", options, true);
-        System.exit(-1);
-      }
-      // configure the pretty printer using command line options
-      if (cmd.hasOption("p"))
-        printer.enableValues();
-      if (cmd.hasOption("j"))
-        printer.enableJSON();
-      if (cmd.hasOption("r"))
-        printer.setRegionFilter(cmd.getOptionValue("r"));
-      if (cmd.hasOption("s"))
-        printer.setSequenceFilter(Long.parseLong(cmd.getOptionValue("s")));
-      if (cmd.hasOption("w"))
-        printer.setRowFilter(cmd.getOptionValue("w"));
-    } catch (ParseException e) {
-      e.printStackTrace();
-      HelpFormatter formatter = new HelpFormatter();
-      formatter.printHelp("HFile filename(s) ", options, true);
-      System.exit(-1);
-    }
-    // get configuration, file system, and process the given files
-    Configuration conf = HBaseConfiguration.create();
-    FSUtils.setFsDefault(conf, FSUtils.getRootDir(conf));
-
-    // begin output
-    printer.beginPersistentOutput();
-    for (Object f : files) {
-      Path file = new Path((String) f);
-      FileSystem fs = file.getFileSystem(conf);
-      if (!fs.exists(file)) {
-        System.err.println("ERROR, file doesnt exist: " + file);
-        return;
-      }
-      printer.processFile(conf, file);
-    }
-    printer.endPersistentOutput();
-  }
 }

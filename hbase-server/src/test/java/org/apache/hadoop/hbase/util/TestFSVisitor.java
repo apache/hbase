@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.*;
@@ -174,7 +174,7 @@ public class TestFSVisitor {
   private void createRecoverEdits(final Path tableDir, final Set<String> tableRegions,
       final Set<String> recoverEdits) throws IOException {
     for (String region: tableRegions) {
-      Path regionEditsDir = HLogUtil.getRegionDirRecoveredEditsDir(new Path(tableDir, region));
+      Path regionEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(new Path(tableDir, region));
       long seqId = System.currentTimeMillis();
       for (int i = 0; i < 3; ++i) {
         String editName = String.format("%019d", seqId + i);
@@ -187,12 +187,20 @@ public class TestFSVisitor {
   }
 
   /*
+   * Old style
    * |-.logs/
    * |----server5,5,1351969633508/
    * |-------server5,5,1351969633508.0
    * |----server6,6,1351969633512/
    * |-------server6,6,1351969633512.0
    * |-------server6,6,1351969633512.3
+   * New style
+   * |-.logs/
+   * |----server3,5,1351969633508/
+   * |-------server3,5,1351969633508.default.0
+   * |----server4,6,1351969633512/
+   * |-------server4,6,1351969633512.default.0
+   * |-------server4,6,1351969633512.some_provider.3
    */
   private void createLogs(final Path logDir, final Set<String> servers,
       final Set<String> logs) throws IOException {
@@ -200,6 +208,13 @@ public class TestFSVisitor {
       String server = String.format("server%d,%d,%d", s, s, System.currentTimeMillis());
       servers.add(server);
       Path serverLogDir = new Path(logDir, server);
+      if (s % 2 == 0) {
+        if (s % 3 == 0) {
+          server += ".default";
+        } else {
+          server += "." + s;
+        }
+      }
       fs.mkdirs(serverLogDir);
       for (int i = 0; i < 5; ++i) {
         String logfile = server + '.' + i;

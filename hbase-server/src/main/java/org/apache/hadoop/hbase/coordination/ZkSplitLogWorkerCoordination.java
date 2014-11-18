@@ -46,8 +46,8 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
-import org.apache.hadoop.hbase.regionserver.handler.HLogSplitterHandler;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.regionserver.handler.WALSplitterHandler;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
@@ -318,8 +318,8 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
     splitTaskDetails.setTaskNode(curTask);
     splitTaskDetails.setCurTaskZKVersion(zkVersion);
 
-    HLogSplitterHandler hsh =
-        new HLogSplitterHandler(server, this, splitTaskDetails, reporter,
+    WALSplitterHandler hsh =
+        new WALSplitterHandler(server, this, splitTaskDetails, reporter,
             this.tasksInProgress, splitTaskExecutor, mode);
     server.getExecutorService().submit(hsh);
   }
@@ -418,7 +418,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
       // pick meta wal firstly
       int offset = (int) (Math.random() * paths.size());
       for (int i = 0; i < paths.size(); i++) {
-        if (HLogUtil.isMetaFile(paths.get(i))) {
+        if (DefaultWALProvider.isMetaFile(paths.get(i))) {
           offset = i;
           break;
         }
@@ -581,7 +581,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
   }
 
   /*
-   * Next part is related to HLogSplitterHandler
+   * Next part is related to WALSplitterHandler
    */
   /**
    * endTask() can fail and the only way to recover out of it is for the {@link SplitLogManager} to

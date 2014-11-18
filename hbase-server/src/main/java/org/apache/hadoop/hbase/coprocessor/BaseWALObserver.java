@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
 /**
@@ -42,13 +43,31 @@ public class BaseWALObserver implements WALObserver {
   @Override
   public void stop(CoprocessorEnvironment e) throws IOException { }
 
+  /**
+   * Implementers should override this method and leave the deprecated version as-is.
+   */
   @Override
-  public boolean preWALWrite(ObserverContext<WALCoprocessorEnvironment> ctx, HRegionInfo info,
-      HLogKey logKey, WALEdit logEdit) throws IOException {
+  public boolean preWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
+      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
     return false;
   }
 
   @Override
+  public boolean preWALWrite(ObserverContext<WALCoprocessorEnvironment> ctx, HRegionInfo info,
+      HLogKey logKey, WALEdit logEdit) throws IOException {
+    return preWALWrite(ctx, info, (WALKey)logKey, logEdit);
+  }
+
+  /**
+   * Implementers should override this method and leave the deprecated version as-is.
+   */
+  @Override
+  public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
+      HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException { }
+
+  @Override
   public void postWALWrite(ObserverContext<WALCoprocessorEnvironment> ctx, HRegionInfo info,
-      HLogKey logKey, WALEdit logEdit) throws IOException { }
+      HLogKey logKey, WALEdit logEdit) throws IOException {
+    postWALWrite(ctx, info, (WALKey)logKey, logEdit);
+  }
 }

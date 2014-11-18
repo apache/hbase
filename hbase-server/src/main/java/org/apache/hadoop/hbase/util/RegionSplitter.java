@@ -102,7 +102,7 @@ import com.google.common.collect.Sets;
  * profiling is much easier with manual splits. It is hard to trace the logs to
  * understand region level problems if it keeps splitting and getting renamed.
  * <li>Data offlining bugs + unknown number of split regions == oh crap! If an
- * HLog or StoreFile was mistakenly unprocessed by HBase due to a weird bug and
+ * WAL or StoreFile was mistakenly unprocessed by HBase due to a weird bug and
  * you notice it a day or so later, you can be assured that the regions
  * specified in these files are the same as the current regions and you have
  * less headaches trying to restore/replay your data.

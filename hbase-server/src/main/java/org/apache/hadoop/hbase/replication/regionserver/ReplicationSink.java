@@ -58,7 +58,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
  * <p/>
  * This replication process is currently waiting for the edits to be applied
  * before the method can return. This means that the replication of edits
- * is synchronized (after reading from HLogs in ReplicationSource) and that a
+ * is synchronized (after reading from WALs in ReplicationSource) and that a
  * single region server cannot receive edits from two sources at the same time
  * <p/>
  * This class uses the native HBase client in order to replicate entries.

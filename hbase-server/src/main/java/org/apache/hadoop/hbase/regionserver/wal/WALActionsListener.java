@@ -25,8 +25,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 
+import org.apache.hadoop.hbase.wal.WALKey;
+
 /**
- * Get notification of {@link FSHLog}/WAL log events. The invocations are inline
+ * Get notification of WAL events. The invocations are inline
  * so make sure your implementation is fast else you'll slow hbase.
  */
 @InterfaceAudience.Private
@@ -35,30 +37,30 @@ public interface WALActionsListener {
   /**
    * The WAL is going to be rolled. The oldPath can be null if this is
    * the first log file from the regionserver.
-   * @param oldPath the path to the old hlog
-   * @param newPath the path to the new hlog
+   * @param oldPath the path to the old wal
+   * @param newPath the path to the new wal
    */
   void preLogRoll(Path oldPath, Path newPath) throws IOException;
 
   /**
    * The WAL has been rolled. The oldPath can be null if this is
    * the first log file from the regionserver.
-   * @param oldPath the path to the old hlog
-   * @param newPath the path to the new hlog
+   * @param oldPath the path to the old wal
+   * @param newPath the path to the new wal
    */
   void postLogRoll(Path oldPath, Path newPath) throws IOException;
 
   /**
    * The WAL is going to be archived.
-   * @param oldPath the path to the old hlog
-   * @param newPath the path to the new hlog
+   * @param oldPath the path to the old wal
+   * @param newPath the path to the new wal
    */
   void preLogArchive(Path oldPath, Path newPath) throws IOException;
 
   /**
    * The WAL has been archived.
-   * @param oldPath the path to the old hlog
-   * @param newPath the path to the new hlog
+   * @param oldPath the path to the old wal
+   * @param newPath the path to the new wal
    */
   void postLogArchive(Path oldPath, Path newPath) throws IOException;
 
@@ -79,7 +81,7 @@ public interface WALActionsListener {
   * @param logEdit
   */
   void visitLogEntryBeforeWrite(
-    HRegionInfo info, HLogKey logKey, WALEdit logEdit
+    HRegionInfo info, WALKey logKey, WALEdit logEdit
   );
 
   /**
@@ -87,11 +89,59 @@ public interface WALActionsListener {
    * @param htd
    * @param logKey
    * @param logEdit
-   * TODO: Retire this in favor of {@link #visitLogEntryBeforeWrite(HRegionInfo, HLogKey, WALEdit)}
-   * It only exists to get scope when replicating.  Scope should be in the HLogKey and not need
+   * TODO: Retire this in favor of {@link #visitLogEntryBeforeWrite(HRegionInfo, WALKey, WALEdit)}
+   * It only exists to get scope when replicating.  Scope should be in the WALKey and not need
    * us passing in a <code>htd</code>.
    */
   void visitLogEntryBeforeWrite(
-    HTableDescriptor htd, HLogKey logKey, WALEdit logEdit
+    HTableDescriptor htd, WALKey logKey, WALEdit logEdit
   );
+
+  /**
+   * For notification post append to the writer.  Used by metrics system at least.
+   * TODO: Combine this with above.
+   * @param entryLen approx length of cells in this append.
+   * @param elapsedTimeMillis elapsed time in milliseconds.
+   */
+  void postAppend(final long entryLen, final long elapsedTimeMillis);
+
+  /**
+   * For notification post writer sync.  Used by metrics system at least.
+   * @param timeInNanos How long the filesystem sync took in nanoseconds.
+   * @param handlerSyncs How many sync handler calls were released by this call to filesystem
+   * sync.
+   */
+  void postSync(final long timeInNanos, final int handlerSyncs);
+
+  static class Base implements WALActionsListener {
+    @Override
+    public void preLogRoll(Path oldPath, Path newPath) throws IOException {}
+
+    @Override
+    public void postLogRoll(Path oldPath, Path newPath) throws IOException {}
+
+    @Override
+    public void preLogArchive(Path oldPath, Path newPath) throws IOException {}
+
+    @Override
+    public void postLogArchive(Path oldPath, Path newPath) throws IOException {}
+
+    @Override
+    public void logRollRequested() {}
+
+    @Override
+    public void logCloseRequested() {}
+
+    @Override
+    public void visitLogEntryBeforeWrite(HRegionInfo info, WALKey logKey, WALEdit logEdit) {}
+
+    @Override
+    public void visitLogEntryBeforeWrite(HTableDescriptor htd, WALKey logKey, WALEdit logEdit) {}
+
+    @Override
+    public void postAppend(final long entryLen, final long elapsedTimeMillis) {}
+
+    @Override
+    public void postSync(final long timeInNanos, final int handlerSyncs) {}
+  }
 }

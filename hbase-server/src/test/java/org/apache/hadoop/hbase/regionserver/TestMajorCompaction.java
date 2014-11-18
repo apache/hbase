@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -110,9 +110,9 @@ public class TestMajorCompaction {
 
   @After
   public void tearDown() throws Exception {
-    HLog hlog = r.getLog();
+    WAL wal = r.getWAL();
     this.r.close();
-    hlog.closeAndDelete();
+    wal.close();
   }
 
   /**

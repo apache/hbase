@@ -46,8 +46,8 @@ public class TestTableMapReduceUtil {
     Job job = new Job(configuration, "tableName");
     // test 
     TableMapReduceUtil.initTableMapperJob("Table", new Scan(), Import.Importer.class, Text.class,
-        Text.class, job, false, HLogInputFormat.class);
-    assertEquals(HLogInputFormat.class, job.getInputFormatClass());
+        Text.class, job, false, WALInputFormat.class);
+    assertEquals(WALInputFormat.class, job.getInputFormatClass());
     assertEquals(Import.Importer.class, job.getMapperClass());
     assertEquals(LongWritable.class, job.getOutputKeyClass());
     assertEquals(Text.class, job.getOutputValueClass());
@@ -60,8 +60,8 @@ public class TestTableMapReduceUtil {
     Configuration configuration = new Configuration();
     Job job = new Job(configuration, "tableName");
     TableMapReduceUtil.initTableMapperJob(Bytes.toBytes("Table"), new Scan(),
-        Import.Importer.class, Text.class, Text.class, job, false, HLogInputFormat.class);
-    assertEquals(HLogInputFormat.class, job.getInputFormatClass());
+        Import.Importer.class, Text.class, Text.class, job, false, WALInputFormat.class);
+    assertEquals(WALInputFormat.class, job.getInputFormatClass());
     assertEquals(Import.Importer.class, job.getMapperClass());
     assertEquals(LongWritable.class, job.getOutputKeyClass());
     assertEquals(Text.class, job.getOutputValueClass());

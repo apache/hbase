@@ -59,7 +59,7 @@ import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -102,8 +102,7 @@ public class SplitLogManager {
   private Server server;
 
   private final Stoppable stopper;
-  private FileSystem fs;
-  private Configuration conf;
+  private final Configuration conf;
 
   public static final int DEFAULT_UNASSIGNED_TIMEOUT = (3 * 60 * 1000); // 3 min
 
@@ -161,16 +160,34 @@ public class SplitLogManager {
   }
 
   private FileStatus[] getFileList(List<Path> logDirs, PathFilter filter) throws IOException {
+    return getFileList(conf, logDirs, filter);
+  }
+
+  /**
+   * Get a list of paths that need to be split given a set of server-specific directories and
+   * optinally  a filter.
+   *
+   * See {@link DefaultWALProvider#getServerNameFromWALDirectoryName} for more info on directory
+   * layout.
+   *
+   * Should be package-private, but is needed by
+   * {@link org.apache.hadoop.hbase.wal.WALSplitter#split(Path, Path, Path, FileSystem,
+   *     Configuration, WALFactory)} for tests.
+   */
+  @VisibleForTesting
+  public static FileStatus[] getFileList(final Configuration conf, final List<Path> logDirs,
+      final PathFilter filter)
+      throws IOException {
     List<FileStatus> fileStatus = new ArrayList<FileStatus>();
-    for (Path hLogDir : logDirs) {
-      this.fs = hLogDir.getFileSystem(conf);
-      if (!fs.exists(hLogDir)) {
-        LOG.warn(hLogDir + " doesn't exist. Nothing to do!");
+    for (Path logDir : logDirs) {
+      final FileSystem fs = logDir.getFileSystem(conf);
+      if (!fs.exists(logDir)) {
+        LOG.warn(logDir + " doesn't exist. Nothing to do!");
         continue;
       }
-      FileStatus[] logfiles = FSUtils.listStatus(fs, hLogDir, filter);
+      FileStatus[] logfiles = FSUtils.listStatus(fs, logDir, filter);
       if (logfiles == null || logfiles.length == 0) {
-        LOG.info(hLogDir + " is empty dir, no logs to split");
+        LOG.info(logDir + " is empty dir, no logs to split");
       } else {
         Collections.addAll(fileStatus, logfiles);
       }
@@ -180,7 +197,7 @@ public class SplitLogManager {
   }
 
   /**
-   * @param logDir one region sever hlog dir path in .logs
+   * @param logDir one region sever wal dir path in .logs
    * @throws IOException if there was an error while splitting any log file
    * @return cumulative size of the logfiles split
    * @throws IOException
@@ -206,7 +223,7 @@ public class SplitLogManager {
     Set<ServerName> serverNames = new HashSet<ServerName>();
     for (Path logDir : logDirs) {
       try {
-        ServerName serverName = HLogUtil.getServerNameFromHLogDirectoryName(logDir);
+        ServerName serverName = DefaultWALProvider.getServerNameFromWALDirectoryName(logDir);
         if (serverName != null) {
           serverNames.add(serverName);
         }
@@ -273,6 +290,7 @@ public class SplitLogManager {
     }
     for (Path logDir : logDirs) {
       status.setStatus("Cleaning up log directory...");
+      final FileSystem fs = logDir.getFileSystem(conf);
       try {
         if (fs.exists(logDir) && !fs.delete(logDir, false)) {
           LOG.warn("Unable to delete log src dir. Ignoring. " + logDir);

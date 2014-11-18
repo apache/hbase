@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegion.Operation;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -107,6 +108,8 @@ public class RegionCoprocessorHost
     private static final int LATENCY_BUFFER_SIZE = 100;
     private final BlockingQueue<Long> coprocessorTimeNanos = new ArrayBlockingQueue<Long>(
         LATENCY_BUFFER_SIZE);
+    private final boolean useLegacyPre;
+    private final boolean useLegacyPost;
 
     /**
      * Constructor
@@ -120,6 +123,14 @@ public class RegionCoprocessorHost
       this.region = region;
       this.rsServices = services;
       this.sharedData = sharedData;
+      // Pick which version of the WAL related events we'll call.
+      // This way we avoid calling the new version on older RegionObservers so
+      // we can maintain binary compatibility.
+      // See notes in javadoc for RegionObserver
+      useLegacyPre = useLegacyMethod(impl.getClass(), "preWALRestore", ObserverContext.class,
+          HRegionInfo.class, WALKey.class, WALEdit.class);
+      useLegacyPost = useLegacyMethod(impl.getClass(), "postWALRestore", ObserverContext.class,
+          HRegionInfo.class, WALKey.class, WALEdit.class);
     }
 
     /** @return the region */
@@ -1307,15 +1318,36 @@ public class RegionCoprocessorHost
    * @return true if default behavior should be bypassed, false otherwise
    * @throws IOException
    */
-  public boolean preWALRestore(final HRegionInfo info, final HLogKey logKey,
+  public boolean preWALRestore(final HRegionInfo info, final WALKey logKey,
       final WALEdit logEdit) throws IOException {
     return execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
-        oserver.preWALRestore(ctx, info, logKey, logEdit);
+        // Once we don't need to support the legacy call, replace RegionOperation with a version
+        // that's ObserverContext<RegionEnvironment> and avoid this cast.
+        final RegionEnvironment env = (RegionEnvironment)ctx.getEnvironment();
+        if (env.useLegacyPre) {
+          if (logKey instanceof HLogKey) {
+            oserver.preWALRestore(ctx, info, (HLogKey)logKey, logEdit);
+          } else {
+            legacyWarning(oserver.getClass(), "There are wal keys present that are not HLogKey.");
+          }
+        } else {
+          oserver.preWALRestore(ctx, info, logKey, logEdit);
+        }
       }
     });
+  }
+
+  /**
+   * @return true if default behavior should be bypassed, false otherwise
+   * @deprecated use {@link #preWALRestore(HRegionInfo, WALKey, WALEdit)}
+   */
+  @Deprecated
+  public boolean preWALRestore(final HRegionInfo info, final HLogKey logKey,
+      final WALEdit logEdit) throws IOException {
+    return preWALRestore(info, (WALKey)logKey, logEdit);
   }
 
   /**
@@ -1324,15 +1356,35 @@ public class RegionCoprocessorHost
    * @param logEdit
    * @throws IOException
    */
-  public void postWALRestore(final HRegionInfo info, final HLogKey logKey, final WALEdit logEdit)
+  public void postWALRestore(final HRegionInfo info, final WALKey logKey, final WALEdit logEdit)
       throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
       @Override
       public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
           throws IOException {
-        oserver.postWALRestore(ctx, info, logKey, logEdit);
+        // Once we don't need to support the legacy call, replace RegionOperation with a version
+        // that's ObserverContext<RegionEnvironment> and avoid this cast.
+        final RegionEnvironment env = (RegionEnvironment)ctx.getEnvironment();
+        if (env.useLegacyPost) {
+          if (logKey instanceof HLogKey) {
+            oserver.postWALRestore(ctx, info, (HLogKey)logKey, logEdit);
+          } else {
+            legacyWarning(oserver.getClass(), "There are wal keys present that are not HLogKey.");
+          }
+        } else {
+          oserver.postWALRestore(ctx, info, logKey, logEdit);
+        }
       }
     });
+  }
+
+  /**
+   * @deprecated use {@link #postWALRestore(HRegionInfo, WALKey, WALEdit)}
+   */
+  @Deprecated
+  public void postWALRestore(final HRegionInfo info, final HLogKey logKey, final WALEdit logEdit)
+      throws IOException {
+    postWALRestore(info, (WALKey)logKey, logEdit);
   }
 
   /**

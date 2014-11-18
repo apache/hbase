@@ -1230,7 +1230,7 @@ public class TestHBaseFsck {
       setupTable(table);
       assertEquals(ROWKEYS.length, countRows());
 
-      // make sure data in regions, if in hlog only there is no data loss
+      // make sure data in regions, if in wal only there is no data loss
       TEST_UTIL.getHBaseAdmin().flush(table);
 
       // Mess it up by leaving a hole in the hdfs data
@@ -1336,7 +1336,7 @@ public class TestHBaseFsck {
     setupTable(table);
     assertEquals(ROWKEYS.length, countRows());
 
-    // make sure data in regions, if in hlog only there is no data loss
+    // make sure data in regions, if in wal only there is no data loss
     TEST_UTIL.getHBaseAdmin().flush(table);
 
     // Mess it up by deleting hdfs dirs
@@ -1470,14 +1470,14 @@ public class TestHBaseFsck {
         TableName.valueOf("testFixByTable2");
     try {
       setupTable(table1);
-      // make sure data in regions, if in hlog only there is no data loss
+      // make sure data in regions, if in wal only there is no data loss
       TEST_UTIL.getHBaseAdmin().flush(table1);
       // Mess them up by leaving a hole in the hdfs data
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("B"),
         Bytes.toBytes("C"), false, false, true); // don't rm meta
 
       setupTable(table2);
-      // make sure data in regions, if in hlog only there is no data loss
+      // make sure data in regions, if in wal only there is no data loss
       TEST_UTIL.getHBaseAdmin().flush(table2);
       // Mess them up by leaving a hole in the hdfs data
       deleteRegion(conf, tbl.getTableDescriptor(), Bytes.toBytes("B"),
@@ -1517,7 +1517,7 @@ public class TestHBaseFsck {
       setupTable(table);
       assertEquals(ROWKEYS.length, countRows());
 
-      // make sure data in regions, if in hlog only there is no data loss
+      // make sure data in regions, if in wal only there is no data loss
       TEST_UTIL.getHBaseAdmin().flush(table);
       HRegionLocation location = tbl.getRegionLocation("B");
 
@@ -1597,7 +1597,7 @@ public class TestHBaseFsck {
       setupTable(table);
       assertEquals(ROWKEYS.length, countRows());
 
-      // make sure data in regions, if in hlog only there is no data loss
+      // make sure data in regions, if in wal only there is no data loss
       TEST_UTIL.getHBaseAdmin().flush(table);
       HRegionLocation location = tbl.getRegionLocation("B");
 
@@ -1647,7 +1647,7 @@ public class TestHBaseFsck {
       setupTable(table);
       assertEquals(ROWKEYS.length, countRows());
 
-      // make sure data in regions, if in hlog only there is no data loss
+      // make sure data in regions, if in wal only there is no data loss
       TEST_UTIL.getHBaseAdmin().flush(table);
       HRegionLocation location = tbl.getRegionLocation("B");
 
@@ -2502,7 +2502,7 @@ public class TestHBaseFsck {
       setupTable(table);
       assertEquals(ROWKEYS.length, countRows());
 
-      // make sure data in regions, if in hlog only there is no data loss
+      // make sure data in regions, if in wal only there is no data loss
       TEST_UTIL.getHBaseAdmin().flush(table);
       HRegionInfo region1 = tbl.getRegionLocation("A").getRegionInfo();
       HRegionInfo region2 = tbl.getRegionLocation("B").getRegionInfo();

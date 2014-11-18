@@ -31,6 +31,10 @@ import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -40,7 +44,7 @@ import org.junit.experimental.categories.Category;
 import static org.junit.Assert.*;
 
 /**
- * Test that the actions are called while playing with an HLog
+ * Test that the actions are called while playing with an WAL
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestWALActionsListener {
@@ -51,9 +55,6 @@ public class TestWALActionsListener {
 
   private final static byte[] SOME_BYTES =  Bytes.toBytes("t");
   private static FileSystem fs;
-  private static Path oldLogDir;
-  private static Path logDir;
-  private static String logName;
   private static Configuration conf;
 
   @BeforeClass
@@ -61,17 +62,13 @@ public class TestWALActionsListener {
     conf = TEST_UTIL.getConfiguration();
     conf.setInt("hbase.regionserver.maxlogs", 5);
     fs = FileSystem.get(conf);
-    oldLogDir = new Path(TEST_UTIL.getDataTestDir(),
-        HConstants.HREGION_OLDLOGDIR_NAME);
-    logName = HConstants.HREGION_LOGDIR_NAME;
-    logDir = new Path(TEST_UTIL.getDataTestDir(),
-        logName);
+    FSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
   }
 
   @Before
   public void setUp() throws Exception {
-    fs.delete(logDir, true);
-    fs.delete(oldLogDir, true);
+    fs.delete(new Path(TEST_UTIL.getDataTestDir(), HConstants.HREGION_LOGDIR_NAME), true);
+    fs.delete(new Path(TEST_UTIL.getDataTestDir(), HConstants.HREGION_OLDLOGDIR_NAME), true);
   }
 
   @After
@@ -89,12 +86,12 @@ public class TestWALActionsListener {
     DummyWALActionsListener observer = new DummyWALActionsListener();
     List<WALActionsListener> list = new ArrayList<WALActionsListener>();
     list.add(observer);
+    final WALFactory wals = new WALFactory(conf, list, "testActionListener");
     DummyWALActionsListener laterobserver = new DummyWALActionsListener();
-    HLog hlog = HLogFactory.createHLog(fs, TEST_UTIL.getDataTestDir(), logName,
-                                       conf, list, null);
     final AtomicLong sequenceId = new AtomicLong(1);
     HRegionInfo hri = new HRegionInfo(TableName.valueOf(SOME_BYTES),
              SOME_BYTES, SOME_BYTES, false);
+    final WAL wal = wals.getWAL(hri.getEncodedNameAsBytes());
 
     for (int i = 0; i < 20; i++) {
       byte[] b = Bytes.toBytes(i+"");
@@ -104,17 +101,18 @@ public class TestWALActionsListener {
       HTableDescriptor htd = new HTableDescriptor();
       htd.addFamily(new HColumnDescriptor(b));
 
-      hlog.append(hri, TableName.valueOf(b), edit, 0, htd, sequenceId);
+      final long txid = wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(),
+          TableName.valueOf(b), 0), edit, sequenceId, true, null);
+      wal.sync(txid);
       if (i == 10) {
-        hlog.registerWALActionsListener(laterobserver);
+        wal.registerWALActionsListener(laterobserver);
       }
       if (i % 2 == 0) {
-        hlog.rollWriter();
+        wal.rollWriter();
       }
     }
 
-    hlog.close();
-    hlog.closeAndDelete();
+    wal.close();
 
     assertEquals(11, observer.preLogRollCounter);
     assertEquals(11, observer.postLogRollCounter);
@@ -127,7 +125,7 @@ public class TestWALActionsListener {
   /**
    * Just counts when methods are called
    */
-  static class DummyWALActionsListener implements WALActionsListener {
+  static class DummyWALActionsListener extends WALActionsListener.Base {
     public int preLogRollCounter = 0;
     public int postLogRollCounter = 0;
     public int closedCount = 0;
@@ -143,36 +141,9 @@ public class TestWALActionsListener {
     }
 
     @Override
-    public void preLogArchive(Path oldFile, Path newFile) {
-      // Not interested
-    }
-
-    @Override
-    public void postLogArchive(Path oldFile, Path newFile) {
-      // Not interested
-    }
-
-    @Override
-    public void logRollRequested() {
-      // Not interested
-    }
-
-    @Override
-    public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey,
-        WALEdit logEdit) {
-      // Not interested
-
-    }
-
-    @Override
     public void logCloseRequested() {
       closedCount++;
     }
-
-    public void visitLogEntryBeforeWrite(HTableDescriptor htd, HLogKey logKey, WALEdit logEdit) {
-      //To change body of implemented methods use File | Settings | File Templates.
-    }
-
   }
 
 }

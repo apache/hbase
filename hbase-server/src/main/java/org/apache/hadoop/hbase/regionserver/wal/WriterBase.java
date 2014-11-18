@@ -28,12 +28,14 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.util.FSUtils;
 
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+
 /**
  * Context used by our wal dictionary compressor. Null if we're not to do our
  * custom dictionary compression.
  */
 @InterfaceAudience.Private
-public abstract class WriterBase implements HLog.Writer {
+public abstract class WriterBase implements DefaultWALProvider.Writer {
 
   protected CompressionContext compressionContext;
   protected Configuration conf;

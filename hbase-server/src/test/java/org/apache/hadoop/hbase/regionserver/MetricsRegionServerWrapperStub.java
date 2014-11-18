@@ -202,12 +202,12 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
-  public long getNumHLogFiles() {
+  public long getNumWALFiles() {
     return 10;
   }
 
   @Override
-  public long getHLogFileSize() {
+  public long getWALFileSize() {
     return 1024000;
   }
 

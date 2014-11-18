@@ -28,9 +28,12 @@ import org.apache.hadoop.hbase.coprocessor.*;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALKey;
+
 /**
  * Implements the coprocessor environment and runtime support for coprocessors
- * loaded within a {@link FSHLog}.
+ * loaded within a {@link WAL}.
  */
 @InterfaceAudience.Private
 public class WALCoprocessorHost
@@ -42,10 +45,13 @@ public class WALCoprocessorHost
   static class WALEnvironment extends CoprocessorHost.Environment
     implements WALCoprocessorEnvironment {
 
-    private FSHLog wal;
+    private final WAL wal;
+
+    final boolean useLegacyPre;
+    final boolean useLegacyPost;
 
     @Override
-    public FSHLog getWAL() {
+    public WAL getWAL() {
       return wal;
     }
 
@@ -56,23 +62,32 @@ public class WALCoprocessorHost
      * @param priority chaining priority
      * @param seq load sequence
      * @param conf configuration
-     * @param hlog HLog
+     * @param wal WAL
      */
     public WALEnvironment(Class<?> implClass, final Coprocessor impl,
         final int priority, final int seq, final Configuration conf,
-        final FSHLog hlog) {
+        final WAL wal) {
       super(impl, priority, seq, conf);
-      this.wal = hlog;
+      this.wal = wal;
+      // Pick which version of the API we'll call.
+      // This way we avoid calling the new version on older WALObservers so
+      // we can maintain binary compatibility.
+      // See notes in javadoc for WALObserver
+      useLegacyPre = useLegacyMethod(impl.getClass(), "preWALWrite", ObserverContext.class,
+          HRegionInfo.class, WALKey.class, WALEdit.class);
+      useLegacyPost = useLegacyMethod(impl.getClass(), "postWALWrite", ObserverContext.class,
+          HRegionInfo.class, WALKey.class, WALEdit.class);
     }
   }
 
-  FSHLog wal;
+  private final WAL wal;
+
   /**
    * Constructor
    * @param log the write ahead log
    * @param conf the configuration
    */
-  public WALCoprocessorHost(final FSHLog log, final Configuration conf) {
+  public WALCoprocessorHost(final WAL log, final Configuration conf) {
     // We don't want to require an Abortable passed down through (FS)HLog, so
     // this means that a failure to load of a WAL coprocessor won't abort the
     // server. This isn't ideal, and means that security components that
@@ -100,21 +115,29 @@ public class WALCoprocessorHost
    * @return true if default behavior should be bypassed, false otherwise
    * @throws IOException
    */
-  public boolean preWALWrite(final HRegionInfo info, final HLogKey logKey, final WALEdit logEdit)
+  public boolean preWALWrite(final HRegionInfo info, final WALKey logKey, final WALEdit logEdit)
       throws IOException {
     boolean bypass = false;
     if (this.coprocessors == null || this.coprocessors.isEmpty()) return bypass;
     ObserverContext<WALCoprocessorEnvironment> ctx = null;
     for (WALEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof
-          org.apache.hadoop.hbase.coprocessor.WALObserver) {
+      if (env.getInstance() instanceof WALObserver) {
+        final WALObserver observer = (WALObserver)env.getInstance();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
         try {
           currentThread.setContextClassLoader(env.getClassLoader());
-          ((org.apache.hadoop.hbase.coprocessor.WALObserver)env.getInstance()).
-            preWALWrite(ctx, info, logKey, logEdit);
+          if (env.useLegacyPre) {
+            if (logKey instanceof HLogKey) {
+              observer.preWALWrite(ctx, info, (HLogKey)logKey, logEdit);
+            } else {
+              legacyWarning(observer.getClass(),
+                  "There are wal keys present that are not HLogKey.");
+            }
+          } else {
+            observer.preWALWrite(ctx, info, logKey, logEdit);
+          }
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         } finally {
@@ -135,20 +158,28 @@ public class WALCoprocessorHost
    * @param logEdit
    * @throws IOException
    */
-  public void postWALWrite(final HRegionInfo info, final HLogKey logKey, final WALEdit logEdit)
+  public void postWALWrite(final HRegionInfo info, final WALKey logKey, final WALEdit logEdit)
       throws IOException {
     if (this.coprocessors == null || this.coprocessors.isEmpty()) return;
     ObserverContext<WALCoprocessorEnvironment> ctx = null;
     for (WALEnvironment env: coprocessors) {
-      if (env.getInstance() instanceof
-          org.apache.hadoop.hbase.coprocessor.WALObserver) {
+      if (env.getInstance() instanceof WALObserver) {
+        final WALObserver observer = (WALObserver)env.getInstance();
         ctx = ObserverContext.createAndPrepare(env, ctx);
         Thread currentThread = Thread.currentThread();
         ClassLoader cl = currentThread.getContextClassLoader();
         try {
           currentThread.setContextClassLoader(env.getClassLoader());
-          ((org.apache.hadoop.hbase.coprocessor.WALObserver)env.getInstance()).
-            postWALWrite(ctx, info, logKey, logEdit);
+          if (env.useLegacyPost) {
+            if (logKey instanceof HLogKey) {
+              observer.postWALWrite(ctx, info, (HLogKey)logKey, logEdit);
+            } else {
+              legacyWarning(observer.getClass(),
+                  "There are wal keys present that are not HLogKey.");
+            }
+          } else {
+            observer.postWALWrite(ctx, info, logKey, logEdit);
+          }
         } catch (Throwable e) {
           handleCoprocessorThrowable(env, e);
         } finally {

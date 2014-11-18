@@ -25,7 +25,7 @@ import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
 /**
- * Run the same test as TestReplicationKillMasterRS but with HLog compression enabled
+ * Run the same test as TestReplicationKillMasterRS but with WAL compression enabled
  * Do not add other tests in this class.
  */
 @Category({ReplicationTests.class, LargeTests.class})

@@ -157,7 +157,7 @@ public class ZKSplitLog {
   public static long parseLastFlushedSequenceIdFrom(final byte[] bytes) {
     long lastRecordedFlushedSequenceId = -1l;
     try {
-      lastRecordedFlushedSequenceId = ZKUtil.parseHLogPositionFrom(bytes);
+      lastRecordedFlushedSequenceId = ZKUtil.parseWALPositionFrom(bytes);
     } catch (DeserializationException e) {
       lastRecordedFlushedSequenceId = -1l;
       LOG.warn("Can't parse last flushed sequence Id", e);

@@ -29,12 +29,12 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSeq
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
-import org.apache.hadoop.hbase.regionserver.handler.HLogSplitterHandler;
+import org.apache.hadoop.hbase.regionserver.handler.WALSplitterHandler;
 
 import com.google.common.annotations.VisibleForTesting;
 
 /**
- * Coordinated operations for {@link SplitLogWorker} and {@link HLogSplitterHandler} Important
+ * Coordinated operations for {@link SplitLogWorker} and {@link WALSplitterHandler} Important
  * methods for SplitLogWorker: <BR>
  * {@link #isReady()} called from {@link SplitLogWorker#run()} to check whether the coordination is
  * ready to supply the tasks <BR>
@@ -44,7 +44,7 @@ import com.google.common.annotations.VisibleForTesting;
  * for external changes in coordination (if required) <BR>
  * {@link #endTask(SplitLogTask, AtomicLong, SplitTaskDetails)} notify coordination engine that
  * <p>
- * Important methods for HLogSplitterHandler: <BR>
+ * Important methods for WALSplitterHandler: <BR>
  * splitting task has completed.
  */
 @InterfaceAudience.Private
@@ -112,7 +112,7 @@ public interface SplitLogWorkerCoordination {
    */
   void removeListener();
 
-  /* HLogSplitterHandler part */
+  /* WALSplitterHandler part */
 
   /**
    * Notify coordination engine that splitting task has completed.

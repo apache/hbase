@@ -58,10 +58,10 @@ import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.Import.KeyValueImporter;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -644,10 +644,10 @@ public class TestImportExport {
     String importTableName = "importTestDurability1";
     Table importTable = UTIL.createTable(TableName.valueOf(importTableName), FAMILYA, 3);
 
-    // Register the hlog listener for the import table
+    // Register the wal listener for the import table
     TableWALActionListener walListener = new TableWALActionListener(importTableName);
-    HLog hLog = UTIL.getMiniHBaseCluster().getRegionServer(0).getWAL();
-    hLog.registerWALActionsListener(walListener);
+    WAL wal = UTIL.getMiniHBaseCluster().getRegionServer(0).getWAL(null);
+    wal.registerWALActionsListener(walListener);
 
     // Run the import with SKIP_WAL
     args =
@@ -662,9 +662,9 @@ public class TestImportExport {
     // Run the import with the default durability option
     importTableName = "importTestDurability2";
     importTable = UTIL.createTable(TableName.valueOf(importTableName), FAMILYA, 3);
-    hLog.unregisterWALActionsListener(walListener);    
+    wal.unregisterWALActionsListener(walListener);
     walListener = new TableWALActionListener(importTableName);
-    hLog.registerWALActionsListener(walListener);
+    wal.registerWALActionsListener(walListener);
     args = new String[] { importTableName, FQ_OUTPUT_DIR };
     assertTrue(runImport(args));
     //Assert that the wal is visisted
@@ -674,10 +674,10 @@ public class TestImportExport {
   }
 
   /**
-   * This listens to the {@link #visitLogEntryBeforeWrite(HTableDescriptor, HLogKey, WALEdit)} to
+   * This listens to the {@link #visitLogEntryBeforeWrite(HTableDescriptor, WALKey, WALEdit)} to
    * identify that an entry is written to the Write Ahead Log for the given table.
    */
-  private static class TableWALActionListener implements WALActionsListener {
+  private static class TableWALActionListener extends WALActionsListener.Base {
 
     private String tableName;
     private boolean isVisited = false;
@@ -687,42 +687,7 @@ public class TestImportExport {
     }
 
     @Override
-    public void preLogRoll(Path oldPath, Path newPath) throws IOException {
-      // Not interested in this method.
-    }
-
-    @Override
-    public void postLogRoll(Path oldPath, Path newPath) throws IOException {
-      // Not interested in this method.
-    }
-
-    @Override
-    public void preLogArchive(Path oldPath, Path newPath) throws IOException {
-      // Not interested in this method.
-    }
-
-    @Override
-    public void postLogArchive(Path oldPath, Path newPath) throws IOException {
-      // Not interested in this method.
-    }
-
-    @Override
-    public void logRollRequested() {
-      // Not interested in this method.
-    }
-
-    @Override
-    public void logCloseRequested() {
-      // Not interested in this method.
-    }
-
-    @Override
-    public void visitLogEntryBeforeWrite(HRegionInfo info, HLogKey logKey, WALEdit logEdit) {
-      // Not interested in this method.
-    }
-
-    @Override
-    public void visitLogEntryBeforeWrite(HTableDescriptor htd, HLogKey logKey, WALEdit logEdit) {
+    public void visitLogEntryBeforeWrite(HTableDescriptor htd, WALKey logKey, WALEdit logEdit) {
       if (tableName.equalsIgnoreCase(htd.getNameAsString())) {
         isVisited = true;
       }

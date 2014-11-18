@@ -49,8 +49,8 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryR
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint.ReplicateContext;
@@ -141,18 +141,18 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
   public void after() throws Exception {
   }
 
-  static ConcurrentLinkedQueue<HLog.Entry> entries = new ConcurrentLinkedQueue<HLog.Entry>();
+  static ConcurrentLinkedQueue<Entry> entries = new ConcurrentLinkedQueue<Entry>();
 
   public static class WALEditCopro extends BaseWALObserver {
     public WALEditCopro() {
       entries.clear();
     }
     @Override
-    public void postWALWrite(ObserverContext<WALCoprocessorEnvironment> ctx, HRegionInfo info,
-        HLogKey logKey, WALEdit logEdit) throws IOException {
+    public void postWALWrite(ObserverContext<? extends WALCoprocessorEnvironment> ctx,
+        HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
       // only keep primary region's edits
       if (logKey.getTablename().equals(tableName) && info.getReplicaId() == 0) {
-        entries.add(new HLog.Entry(logKey, logEdit));
+        entries.add(new Entry(logKey, logEdit));
       }
     }
   }
@@ -179,9 +179,9 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     connection.close();
   }
 
-  private void replicateUsingCallable(ClusterConnection connection, Queue<HLog.Entry> entries)
+  private void replicateUsingCallable(ClusterConnection connection, Queue<Entry> entries)
       throws IOException, RuntimeException {
-    HLog.Entry entry;
+    Entry entry;
     while ((entry = entries.poll()) != null) {
       byte[] row = entry.getEdit().getCells().get(0).getRow();
       RegionLocations locations = connection.locateRegion(tableName, row, true, true);

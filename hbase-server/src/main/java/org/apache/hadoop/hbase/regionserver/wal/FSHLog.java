@@ -43,6 +43,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
@@ -55,7 +56,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.Syncable;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -64,6 +65,15 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import static org.apache.hadoop.hbase.wal.DefaultWALProvider.WAL_FILE_NAME_DELIMITER;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALPrettyPrinter;
+import org.apache.hadoop.hbase.wal.WALProvider.Writer;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.DrainBarrier;
@@ -89,8 +99,8 @@ import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
 
 /**
- * Implementation of {@link HLog} to go against {@link FileSystem}; i.e. keep WALs in HDFS.
- * Only one HLog/WAL is ever being written at a time.  When a WAL hits a configured maximum size,
+ * Implementation of {@link WAL} to go against {@link FileSystem}; i.e. keep WALs in HDFS.
+ * Only one WAL is ever being written at a time.  When a WAL hits a configured maximum size,
  * it is rolled.  This is done internal to the implementation.
  *
  * <p>As data is flushed from the MemStore to other on-disk structures (files sorted by
@@ -102,11 +112,11 @@ import com.lmax.disruptor.dsl.ProducerType;
  * <code>F</code> when all of the edits in <code>F</code> have a log-sequence-id that's older
  * (smaller) than the most-recent flush.
  *
- * <p>To read an HLog, call {@link HLogFactory#createReader(org.apache.hadoop.fs.FileSystem,
- * org.apache.hadoop.fs.Path, org.apache.hadoop.conf.Configuration)}.
+ * <p>To read an WAL, call {@link WALFactory#createReader(org.apache.hadoop.fs.FileSystem,
+ * org.apache.hadoop.fs.Path)}.
  */
 @InterfaceAudience.Private
-class FSHLog implements HLog, Syncable {
+public class FSHLog implements WAL {
   // IMPLEMENTATION NOTES:
   //
   // At the core is a ring buffer.  Our ring buffer is the LMAX Disruptor.  It tries to
@@ -176,12 +186,6 @@ class FSHLog implements HLog, Syncable {
    */
   private final Map<Thread, SyncFuture> syncFuturesByHandler;
 
-  private final FileSystem fs;
-  private final Path fullPathLogDir;
-  private final Path fullPathOldLogDir;
-  private final Configuration conf;
-  private final String logFilePrefix;
-
   /**
    * The highest known outstanding unsync'd WALEdit sequence number where sequence number is the
    * ring buffer sequence.  Maintained by the ring buffer consumer.
@@ -195,8 +199,62 @@ class FSHLog implements HLog, Syncable {
    */
   private final AtomicLong highestSyncedSequence = new AtomicLong(0);
 
-  private WALCoprocessorHost coprocessorHost;
+  /**
+   * file system instance
+   */
+  private final FileSystem fs;
+  /**
+   * WAL directory, where all WAL files would be placed.
+   */
+  private final Path fullPathLogDir;
+  /**
+   * dir path where old logs are kept.
+   */
+  private final Path fullPathArchiveDir;
 
+  /**
+   * Matches just those wal files that belong to this wal instance.
+   */
+  private final PathFilter ourFiles;
+
+  /**
+   * Prefix of a WAL file, usually the region server name it is hosted on.
+   */
+  private final String logFilePrefix;
+
+  /**
+   * Suffix included on generated wal file names 
+   */
+  private final String logFileSuffix;
+
+  /**
+   * Prefix used when checking for wal membership.
+   */
+  private final String prefixPathStr;
+
+  private final WALCoprocessorHost coprocessorHost;
+
+  /**
+   * conf object
+   */
+  private final Configuration conf;
+  /** Listeners that are called on WAL events. */
+  private final List<WALActionsListener> listeners = new CopyOnWriteArrayList<WALActionsListener>();
+
+  @Override
+  public void registerWALActionsListener(final WALActionsListener listener) {
+    this.listeners.add(listener);
+  }
+  
+  @Override
+  public boolean unregisterWALActionsListener(final WALActionsListener listener) {
+    return this.listeners.remove(listener);
+  }
+
+  @Override
+  public WALCoprocessorHost getCoprocessorHost() {
+    return coprocessorHost;
+  }
   /**
    * FSDataOutputStream associated with the current SequenceFile.writer
    */
@@ -244,36 +302,22 @@ class FSHLog implements HLog, Syncable {
    */
   private final ReentrantLock rollWriterLock = new ReentrantLock(true);
 
-  // Listeners that are called on WAL events.
-  private final List<WALActionsListener> listeners =
-    new CopyOnWriteArrayList<WALActionsListener>();
-
   private volatile boolean closed = false;
-
-  /**
-   * Set when this WAL is for meta only (we run a WAL for all regions except meta -- it has its
-   * own dedicated WAL).
-   */
-  private final boolean forMeta;
+  private final AtomicBoolean shutdown = new AtomicBoolean(false);
 
   // The timestamp (in ms) when the log file was created.
   private final AtomicLong filenum = new AtomicLong(-1);
 
-  // Number of transactions in the current Hlog.
+  // Number of transactions in the current Wal.
   private final AtomicInteger numEntries = new AtomicInteger(0);
 
   // If > than this size, roll the log.
   private final long logrollsize;
 
   /**
-   * The total size of hlog
+   * The total size of wal
    */
   private AtomicLong totalLogSize = new AtomicLong(0);
-
-  /**
-   * If WAL is enabled.
-   */
-  private final boolean enabled;
 
   /*
    * If more than this many logs, force flush of oldest region to oldest edit
@@ -286,7 +330,6 @@ class FSHLog implements HLog, Syncable {
   private final int closeErrorsTolerated;
 
   private final AtomicInteger closeErrorCount = new AtomicInteger();
-  private final MetricsWAL metrics;
 
   // Region sequence id accounting across flushes and for knowing when we can GC a WAL.  These
   // sequence id numbers are by region and unrelated to the ring buffer sequence number accounting
@@ -335,6 +378,7 @@ class FSHLog implements HLog, Syncable {
 
   /**
    * WAL Comparator; it compares the timestamp (log filenum), present in the log file name.
+   * Throws an IllegalArgumentException if used to compare paths from different wals.
    */
   public final Comparator<Path> LOG_NAME_COMPARATOR = new Comparator<Path>() {
     @Override
@@ -381,15 +425,14 @@ class FSHLog implements HLog, Syncable {
    * Constructor.
    *
    * @param fs filesystem handle
-   * @param root path for stored and archived hlogs
-   * @param logDir dir where hlogs are stored
+   * @param root path for stored and archived wals
+   * @param logDir dir where wals are stored
    * @param conf configuration to use
    * @throws IOException
    */
-  public FSHLog(final FileSystem fs, final Path root, final String logDir,
-    final Configuration conf)
-  throws IOException {
-    this(fs, root, logDir, HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null, false);
+  public FSHLog(final FileSystem fs, final Path root, final String logDir, final Configuration conf)
+      throws IOException {
+    this(fs, root, logDir, HConstants.HREGION_OLDLOGDIR_NAME, conf, null, true, null, null);
   }
 
   /**
@@ -397,34 +440,82 @@ class FSHLog implements HLog, Syncable {
    *
    * You should never have to load an existing log. If there is a log at
    * startup, it should have already been processed and deleted by the time the
-   * HLog object is started up.
+   * WAL object is started up.
    *
    * @param fs filesystem handle
    * @param rootDir path to where logs and oldlogs
-   * @param logDir dir where hlogs are stored
-   * @param oldLogDir dir where hlogs are archived
+   * @param logDir dir where wals are stored
+   * @param archiveDir dir where wals are archived
    * @param conf configuration to use
    * @param listeners Listeners on WAL events. Listeners passed here will
    * be registered before we do anything else; e.g. the
    * Constructor {@link #rollWriter()}.
-   * @param failIfLogDirExists If true IOException will be thrown if dir already exists.
+   * @param failIfWALExists If true IOException will be thrown if files related to this wal
+   *        already exist.
    * @param prefix should always be hostname and port in distributed env and
    *        it will be URL encoded before being used.
-   *        If prefix is null, "hlog" will be used
-   * @param forMeta if this hlog is meant for meta updates
+   *        If prefix is null, "wal" will be used
+   * @param suffix will be url encoded. null is treated as empty. non-empty must start with
+   *        {@link DefaultWALProvider#WAL_FILE_NAME_DELIMITER}
    * @throws IOException
    */
   public FSHLog(final FileSystem fs, final Path rootDir, final String logDir,
-      final String oldLogDir, final Configuration conf,
+      final String archiveDir, final Configuration conf,
       final List<WALActionsListener> listeners,
-      final boolean failIfLogDirExists, final String prefix, boolean forMeta)
-  throws IOException {
-    super();
+      final boolean failIfWALExists, final String prefix, final String suffix)
+      throws IOException {
     this.fs = fs;
     this.fullPathLogDir = new Path(rootDir, logDir);
-    this.fullPathOldLogDir = new Path(rootDir, oldLogDir);
-    this.forMeta = forMeta;
+    this.fullPathArchiveDir = new Path(rootDir, archiveDir);
     this.conf = conf;
+
+    if (!fs.exists(fullPathLogDir) && !fs.mkdirs(fullPathLogDir)) {
+      throw new IOException("Unable to mkdir " + fullPathLogDir);
+    }
+
+    if (!fs.exists(this.fullPathArchiveDir)) {
+      if (!fs.mkdirs(this.fullPathArchiveDir)) {
+        throw new IOException("Unable to mkdir " + this.fullPathArchiveDir);
+      }
+    }
+
+    // If prefix is null||empty then just name it wal
+    this.logFilePrefix =
+      prefix == null || prefix.isEmpty() ? "wal" : URLEncoder.encode(prefix, "UTF8");
+    // we only correctly differentiate suffices when numeric ones start with '.'
+    if (suffix != null && !(suffix.isEmpty()) && !(suffix.startsWith(WAL_FILE_NAME_DELIMITER))) {
+      throw new IllegalArgumentException("wal suffix must start with '" + WAL_FILE_NAME_DELIMITER +
+          "' but instead was '" + suffix + "'");
+    }
+    this.logFileSuffix = (suffix == null) ? "" : URLEncoder.encode(suffix, "UTF8");
+    this.prefixPathStr = new Path(fullPathLogDir,
+        logFilePrefix + WAL_FILE_NAME_DELIMITER).toString();
+
+    this.ourFiles = new PathFilter() {
+      @Override
+      public boolean accept(final Path fileName) {
+        // The path should start with dir/<prefix> and end with our suffix
+        final String fileNameString = fileName.toString();
+        if (!fileNameString.startsWith(prefixPathStr)) {
+          return false;
+        }
+        if (logFileSuffix.isEmpty()) {
+          // in the case of the null suffix, we need to ensure the filename ends with a timestamp.
+          return org.apache.commons.lang.StringUtils.isNumeric(
+              fileNameString.substring(prefixPathStr.length()));
+        } else if (!fileNameString.endsWith(logFileSuffix)) {
+          return false;
+        }
+        return true;
+      }
+    };
+
+    if (failIfWALExists) {
+      final FileStatus[] walFiles = FSUtils.listStatus(fs, fullPathLogDir, ourFiles);
+      if (null != walFiles && 0 != walFiles.length) {
+        throw new IOException("Target WAL already exists within directory " + fullPathLogDir);
+      }
+    }
 
     // Register listeners.  TODO: Should this exist anymore?  We have CPs?
     if (listeners != null) {
@@ -432,11 +523,12 @@ class FSHLog implements HLog, Syncable {
         registerWALActionsListener(i);
       }
     }
+    this.coprocessorHost = new WALCoprocessorHost(this, conf);
 
     // Get size to roll log at. Roll at 95% of HDFS block size so we avoid crossing HDFS blocks
     // (it costs a little x'ing bocks)
-    long blocksize = this.conf.getLong("hbase.regionserver.hlog.blocksize",
-      FSUtils.getDefaultBlockSize(this.fs, this.fullPathLogDir));
+    final long blocksize = this.conf.getLong("hbase.regionserver.hlog.blocksize",
+        FSUtils.getDefaultBlockSize(this.fs, this.fullPathLogDir));
     this.logrollsize =
       (long)(blocksize * conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f));
 
@@ -445,31 +537,13 @@ class FSHLog implements HLog, Syncable {
         FSUtils.getDefaultReplication(fs, this.fullPathLogDir));
     this.lowReplicationRollLimit =
       conf.getInt("hbase.regionserver.hlog.lowreplication.rolllimit", 5);
-    this.enabled = conf.getBoolean("hbase.regionserver.hlog.enabled", true);
     this.closeErrorsTolerated = conf.getInt("hbase.regionserver.logroll.errors.tolerated", 0);
-    // If prefix is null||empty then just name it hlog
-    this.logFilePrefix =
-      prefix == null || prefix.isEmpty() ? "hlog" : URLEncoder.encode(prefix, "UTF8");
     int maxHandlersCount = conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT, 200);
 
     LOG.info("WAL configuration: blocksize=" + StringUtils.byteDesc(blocksize) +
       ", rollsize=" + StringUtils.byteDesc(this.logrollsize) +
-      ", enabled=" + this.enabled + ", prefix=" + this.logFilePrefix + ", logDir=" +
-      this.fullPathLogDir + ", oldLogDir=" + this.fullPathOldLogDir);
-
-    boolean dirExists = false;
-    if (failIfLogDirExists && (dirExists = this.fs.exists(fullPathLogDir))) {
-      throw new IOException("Target HLog directory already exists: " + fullPathLogDir);
-    }
-    if (!dirExists && !fs.mkdirs(fullPathLogDir)) {
-      throw new IOException("Unable to mkdir " + fullPathLogDir);
-    }
-
-    if (!fs.exists(this.fullPathOldLogDir)) {
-      if (!fs.mkdirs(this.fullPathOldLogDir)) {
-        throw new IOException("Unable to mkdir " + this.fullPathOldLogDir);
-      }
-    }
+      ", prefix=" + this.logFilePrefix + ", suffix=" + logFileSuffix + ", logDir=" +
+      this.fullPathLogDir + ", archiveDir=" + this.fullPathArchiveDir);
 
     // rollWriter sets this.hdfs_out if it can.
     rollWriter();
@@ -481,9 +555,6 @@ class FSHLog implements HLog, Syncable {
     // HdfsDataOutputStream#getCurrentBlockReplication() and go without reflection.
     this.getNumCurrentReplicas = getGetNumCurrentReplicas(this.hdfs_out);
     this.getPipeLine = getGetPipeline(this.hdfs_out);
-
-    this.coprocessorHost = new WALCoprocessorHost(this, conf);
-    this.metrics = new MetricsWAL();
 
     // This is the 'writer' -- a single threaded executor.  This single thread 'consumes' what is
     // put on the ring buffer.
@@ -516,56 +587,22 @@ class FSHLog implements HLog, Syncable {
   }
 
   /**
-   * Find the 'getNumCurrentReplicas' on the passed <code>os</code> stream.
-   * @return Method or null.
+   * Get the backing files associated with this WAL.
+   * @return may be null if there are no files.
    */
-  private static Method getGetNumCurrentReplicas(final FSDataOutputStream os) {
-    // TODO: Remove all this and use the now publically available
-    // HdfsDataOutputStream#getCurrentBlockReplication()
-    Method m = null;
-    if (os != null) {
-      Class<? extends OutputStream> wrappedStreamClass = os.getWrappedStream().getClass();
-      try {
-        m = wrappedStreamClass.getDeclaredMethod("getNumCurrentReplicas", new Class<?>[] {});
-        m.setAccessible(true);
-      } catch (NoSuchMethodException e) {
-        LOG.info("FileSystem's output stream doesn't support getNumCurrentReplicas; " +
-         "HDFS-826 not available; fsOut=" + wrappedStreamClass.getName());
-      } catch (SecurityException e) {
-        LOG.info("No access to getNumCurrentReplicas on FileSystems's output stream; HDFS-826 " +
-          "not available; fsOut=" + wrappedStreamClass.getName(), e);
-        m = null; // could happen on setAccessible()
-      }
-    }
-    if (m != null) {
-      if (LOG.isTraceEnabled()) LOG.trace("Using getNumCurrentReplicas");
-    }
-    return m;
-  }
-
-  @Override
-  public void registerWALActionsListener(final WALActionsListener listener) {
-    this.listeners.add(listener);
-  }
-
-  @Override
-  public boolean unregisterWALActionsListener(final WALActionsListener listener) {
-    return this.listeners.remove(listener);
-  }
-
-  @Override
-  public long getFilenum() {
-    return this.filenum.get();
+  protected FileStatus[] getFiles() throws IOException {
+    return FSUtils.listStatus(fs, fullPathLogDir, ourFiles);
   }
 
   /**
-   * Method used internal to this class and for tests only.
-   * @return The wrapped stream our writer is using; its not the
-   * writer's 'out' FSDatoOutputStream but the stream that this 'out' wraps
-   * (In hdfs its an instance of DFSDataOutputStream).
-   *
-   * usage: see TestLogRolling.java
+   * Currently, we need to expose the writer's OutputStream to tests so that they can manipulate
+   * the default behavior (such as setting the maxRecoveryErrorCount value for example (see
+   * {@link TestWALReplay#testReplayEditsWrittenIntoWAL()}). This is done using reflection on the
+   * underlying HDFS OutputStream.
+   * NOTE: This could be removed once Hadoop1 support is removed.
+   * @return null if underlying stream is not ready.
    */
+  @VisibleForTesting
   OutputStream getOutputStream() {
     return this.hdfs_out.getWrappedStream();
   }
@@ -575,12 +612,16 @@ class FSHLog implements HLog, Syncable {
     return rollWriter(false);
   }
 
+  /**
+   * retrieve the next path to use for writing.
+   * Increments the internal filenum.
+   */
   private Path getNewPath() throws IOException {
     this.filenum.set(System.currentTimeMillis());
-    Path newPath = computeFilename();
+    Path newPath = getCurrentFileName();
     while (fs.exists(newPath)) {
       this.filenum.incrementAndGet();
-      newPath = computeFilename();
+      newPath = getCurrentFileName();
     }
     return newPath;
   }
@@ -589,7 +630,7 @@ class FSHLog implements HLog, Syncable {
     long currentFilenum = this.filenum.get();
     Path oldPath = null;
     if (currentFilenum > 0) {
-      // ComputeFilename  will take care of meta hlog filename
+      // ComputeFilename  will take care of meta wal filename
       oldPath = computeFilename(currentFilenum);
     } // I presume if currentFilenum is <= 0, this is first file and null for oldPath if fine?
     return oldPath;
@@ -645,11 +686,11 @@ class FSHLog implements HLog, Syncable {
       if (!force && (this.writer != null && this.numEntries.get() <= 0)) return null;
       byte [][] regionsToFlush = null;
       if (this.closed) {
-        LOG.debug("HLog closed. Skipping rolling of writer");
+        LOG.debug("WAL closed. Skipping rolling of writer");
         return regionsToFlush;
       }
       if (!closeBarrier.beginOp()) {
-        LOG.debug("HLog closing. Skipping rolling of writer");
+        LOG.debug("WAL closing. Skipping rolling of writer");
         return regionsToFlush;
       }
       TraceScope scope = Trace.startSpan("FSHLog.rollWriter");
@@ -657,7 +698,7 @@ class FSHLog implements HLog, Syncable {
         Path oldPath = getOldPath();
         Path newPath = getNewPath();
         // Any exception from here on is catastrophic, non-recoverable so we currently abort.
-        FSHLog.Writer nextWriter = this.createWriterInstance(fs, newPath, conf);
+        Writer nextWriter = this.createWriterInstance(newPath);
         FSDataOutputStream nextHdfsOut = null;
         if (nextWriter instanceof ProtobufLogWriter) {
           nextHdfsOut = ((ProtobufLogWriter)nextWriter).getStream();
@@ -689,18 +730,10 @@ class FSHLog implements HLog, Syncable {
    * This method allows subclasses to inject different writers without having to
    * extend other methods like rollWriter().
    *
-   * @param fs
-   * @param path
-   * @param conf
    * @return Writer instance
-   * @throws IOException
    */
-  protected Writer createWriterInstance(final FileSystem fs, final Path path,
-      final Configuration conf) throws IOException {
-    if (forMeta) {
-      //TODO: set a higher replication for the hlog files (HBASE-6773)
-    }
-    return HLogFactory.createWALWriter(fs, path, conf);
+  protected Writer createWriterInstance(final Path path) throws IOException {
+    return DefaultWALProvider.createWriter(conf, fs, path, false);
   }
 
   /**
@@ -748,7 +781,7 @@ class FSHLog implements HLog, Syncable {
    * {@link #oldestUnflushedRegionSequenceIds} and {@link #lowestFlushingRegionSequenceIds}. If,
    * for all regions, the value is lesser than the minimum of values present in the
    * oldestFlushing/UnflushedSeqNums, then the wal file is eligible for archiving.
-   * @param sequenceNums for a HLog, at the time when it was rolled.
+   * @param sequenceNums for a WAL, at the time when it was rolled.
    * @param oldestFlushingMap
    * @param oldestUnflushedMap
    * @return true if wal is eligible for archiving, false otherwise.
@@ -817,7 +850,7 @@ class FSHLog implements HLog, Syncable {
         if (i > 0) sb.append(", ");
         sb.append(Bytes.toStringBinary(regions[i]));
       }
-      LOG.info("Too many hlogs: logs=" + logCount + ", maxlogs=" +
+      LOG.info("Too many wals: logs=" + logCount + ", maxlogs=" +
          this.maxLogs + "; forcing flush of " + regions.length + " regions(s): " +
          sb.toString());
     }
@@ -842,7 +875,7 @@ class FSHLog implements HLog, Syncable {
    * @return the passed in <code>newPath</code>
    * @throws IOException if there is a problem flushing or closing the underlying FS
    */
-  Path replaceWriter(final Path oldPath, final Path newPath, FSHLog.Writer nextWriter,
+  Path replaceWriter(final Path oldPath, final Path newPath, Writer nextWriter,
       final FSDataOutputStream nextHdfsOut)
   throws IOException {
     // Ask the ring buffer writer to pause at a safe point.  Once we do this, the writer
@@ -912,7 +945,7 @@ class FSHLog implements HLog, Syncable {
       Thread.currentThread().interrupt();
     } catch (IOException e) {
       long count = getUnflushedEntriesCount();
-      LOG.error("Failed close of HLog writer " + oldPath + ", unflushedEntries=" + count, e);
+      LOG.error("Failed close of WAL writer " + oldPath + ", unflushedEntries=" + count, e);
       throw new FailedLogCloseException(oldPath + ", unflushedEntries=" + count, e);
     } finally {
       try {
@@ -939,8 +972,16 @@ class FSHLog implements HLog, Syncable {
     return getUnflushedEntriesCount() > 0;
   }
 
+  /*
+   * only public so WALSplitter can use.
+   * @return archived location of a WAL file with the given path p
+   */
+  public static Path getWALArchivePath(Path archiveDir, Path p) {
+    return new Path(archiveDir, p.getName());
+  }
+
   private void archiveLogFile(final Path p) throws IOException {
-    Path newPath = getHLogArchivePath(this.fullPathOldLogDir, p);
+    Path newPath = getWALArchivePath(this.fullPathArchiveDir, p);
     // Tell our listeners that a log is going to be archived.
     if (!this.listeners.isEmpty()) {
       for (WALActionsListener i : this.listeners) {
@@ -965,24 +1006,25 @@ class FSHLog implements HLog, Syncable {
    * @return Path
    */
   protected Path computeFilename(final long filenum) {
-    this.filenum.set(filenum);
-    return computeFilename();
+    if (filenum < 0) {
+      throw new RuntimeException("wal file number can't be < 0");
+    }
+    String child = logFilePrefix + WAL_FILE_NAME_DELIMITER + filenum + logFileSuffix;
+    return new Path(fullPathLogDir, child);
   }
 
   /**
    * This is a convenience method that computes a new filename with a given
-   * using the current HLog file-number
+   * using the current WAL file-number
    * @return Path
    */
-  protected Path computeFilename() {
-    if (this.filenum.get() < 0) {
-      throw new RuntimeException("hlog file number can't be < 0");
-    }
-    String child = logFilePrefix + "." + filenum;
-    if (forMeta) {
-      child += HLog.META_HLOG_FILE_EXTN;
-    }
-    return new Path(fullPathLogDir, child);
+  public Path getCurrentFileName() {
+    return computeFilename(this.filenum.get());
+  }
+
+  @Override
+  public String toString() {
+    return "FSHLog " + logFilePrefix + ":" + logFileSuffix + "(num " + filenum + ")";
   }
 
 /**
@@ -995,26 +1037,23 @@ class FSHLog implements HLog, Syncable {
  */
   protected long getFileNumFromFileName(Path fileName) {
     if (fileName == null) throw new IllegalArgumentException("file name can't be null");
-    // The path should start with dir/<prefix>.
-    String prefixPathStr = new Path(fullPathLogDir, logFilePrefix + ".").toString();
-    if (!fileName.toString().startsWith(prefixPathStr)) {
-      throw new IllegalArgumentException("The log file " + fileName + " doesn't belong to" +
-      		" this regionserver " + prefixPathStr);
+    if (!ourFiles.accept(fileName)) {
+      throw new IllegalArgumentException("The log file " + fileName +
+          " doesn't belong to this wal. (" + toString() + ")");
     }
-    String chompedPath = fileName.toString().substring(prefixPathStr.length());
-    if (forMeta) chompedPath = chompedPath.substring(0, chompedPath.indexOf(META_HLOG_FILE_EXTN));
+    final String fileNameString = fileName.toString();
+    String chompedPath = fileNameString.substring(prefixPathStr.length(),
+        (fileNameString.length() - logFileSuffix.length()));
     return Long.parseLong(chompedPath);
   }
 
   @Override
-  public void closeAndDelete() throws IOException {
-    close();
-    if (!fs.exists(this.fullPathLogDir)) return;
-    FileStatus[] files = fs.listStatus(this.fullPathLogDir);
-    if (files != null) {
-      for(FileStatus file : files) {
-
-        Path p = getHLogArchivePath(this.fullPathOldLogDir, file.getPath());
+  public void close() throws IOException {
+    shutdown();
+    final FileStatus[] files = getFiles();
+    if (null != files && 0 != files.length) {
+      for (FileStatus file : files) {
+        Path p = getWALArchivePath(this.fullPathArchiveDir, file.getPath());
         // Tell our listeners that a log is going to be archived.
         if (!this.listeners.isEmpty()) {
           for (WALActionsListener i : this.listeners) {
@@ -1033,54 +1072,53 @@ class FSHLog implements HLog, Syncable {
         }
       }
       LOG.debug("Moved " + files.length + " WAL file(s) to " +
-        FSUtils.getPath(this.fullPathOldLogDir));
+        FSUtils.getPath(this.fullPathArchiveDir));
     }
-    if (!fs.delete(fullPathLogDir, true)) {
-      LOG.info("Unable to delete " + fullPathLogDir);
-    }
+    LOG.info("Closed WAL: " + toString() );
   }
 
   @Override
-  public void close() throws IOException {
-    if (this.closed) return;
-    try {
-      // Prevent all further flushing and rolling.
-      closeBarrier.stopAndDrainOps();
-    } catch (InterruptedException e) {
-      LOG.error("Exception while waiting for cache flushes and log rolls", e);
-      Thread.currentThread().interrupt();
-    }
-
-    // Shutdown the disruptor.  Will stop after all entries have been processed.  Make sure we have
-    // stopped incoming appends before calling this else it will not shutdown.  We are
-    // conservative below waiting a long time and if not elapsed, then halting.
-    if (this.disruptor != null) {
-      long timeoutms = conf.getLong("hbase.wal.disruptor.shutdown.timeout.ms", 60000);
+  public void shutdown() throws IOException {
+    if (shutdown.compareAndSet(false, true)) {
       try {
-        this.disruptor.shutdown(timeoutms, TimeUnit.MILLISECONDS);
-      } catch (TimeoutException e) {
-        LOG.warn("Timed out bringing down disruptor after " + timeoutms + "ms; forcing halt " +
-          "(It is a problem if this is NOT an ABORT! -- DATALOSS!!!!)");
-        this.disruptor.halt();
-        this.disruptor.shutdown();
+        // Prevent all further flushing and rolling.
+        closeBarrier.stopAndDrainOps();
+      } catch (InterruptedException e) {
+        LOG.error("Exception while waiting for cache flushes and log rolls", e);
+        Thread.currentThread().interrupt();
       }
-    }
-    // With disruptor down, this is safe to let go.
-    if (this.appendExecutor !=  null) this.appendExecutor.shutdown();
 
-    // Tell our listeners that the log is closing
-    if (!this.listeners.isEmpty()) {
-      for (WALActionsListener i : this.listeners) {
-        i.logCloseRequested();
+      // Shutdown the disruptor.  Will stop after all entries have been processed.  Make sure we
+      // have stopped incoming appends before calling this else it will not shutdown.  We are
+      // conservative below waiting a long time and if not elapsed, then halting.
+      if (this.disruptor != null) {
+        long timeoutms = conf.getLong("hbase.wal.disruptor.shutdown.timeout.ms", 60000);
+        try {
+          this.disruptor.shutdown(timeoutms, TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+          LOG.warn("Timed out bringing down disruptor after " + timeoutms + "ms; forcing halt " +
+            "(It is a problem if this is NOT an ABORT! -- DATALOSS!!!!)");
+          this.disruptor.halt();
+          this.disruptor.shutdown();
+        }
       }
-    }
-    this.closed = true;
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Closing WAL writer in " + this.fullPathLogDir.toString());
-    }
-    if (this.writer != null) {
-      this.writer.close();
-      this.writer = null;
+      // With disruptor down, this is safe to let go.
+      if (this.appendExecutor !=  null) this.appendExecutor.shutdown();
+
+      // Tell our listeners that the log is closing
+      if (!this.listeners.isEmpty()) {
+        for (WALActionsListener i : this.listeners) {
+          i.logCloseRequested();
+        }
+      }
+      this.closed = true;
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Closing WAL writer in " + FSUtils.getPath(fullPathLogDir));
+      }
+      if (this.writer != null) {
+        this.writer.close();
+        this.writer = null;
+      }
     }
   }
 
@@ -1092,60 +1130,18 @@ class FSHLog implements HLog, Syncable {
    * @param clusterIds that have consumed the change
    * @return New log key.
    */
-  protected HLogKey makeKey(byte[] encodedRegionName, TableName tableName, long seqnum,
+  protected WALKey makeKey(byte[] encodedRegionName, TableName tableName, long seqnum,
       long now, List<UUID> clusterIds, long nonceGroup, long nonce) {
+    // we use HLogKey here instead of WALKey directly to support legacy coprocessors.
     return new HLogKey(encodedRegionName, tableName, seqnum, now, clusterIds, nonceGroup, nonce);
   }
   
-  @Override
-  @VisibleForTesting
-  public void append(HRegionInfo info, TableName tableName, WALEdit edits,
-    final long now, HTableDescriptor htd, AtomicLong sequenceId)
-  throws IOException {
-    HLogKey logKey = new HLogKey(info.getEncodedNameAsBytes(), tableName, now);
-    append(htd, info, logKey, edits, sequenceId, true, true, null);
-  }
-
-  @Override
-  public long appendNoSync(final HRegionInfo info, TableName tableName, WALEdit edits,
-      List<UUID> clusterIds, final long now, HTableDescriptor htd, AtomicLong sequenceId,
-      boolean inMemstore, long nonceGroup, long nonce) throws IOException {
-    HLogKey logKey =
-      new HLogKey(info.getEncodedNameAsBytes(), tableName, now, clusterIds, nonceGroup, nonce);
-    return append(htd, info, logKey, edits, sequenceId, false, inMemstore, null);
-  }
-
-  @Override
-  public long appendNoSync(final HTableDescriptor htd, final HRegionInfo info, final HLogKey key,
-      final WALEdit edits, final AtomicLong sequenceId, final boolean inMemstore, 
-      final List<Cell> memstoreCells)
-  throws IOException {
-    return append(htd, info, key, edits, sequenceId, false, inMemstore, memstoreCells);
-  }
-
-  /**
-   * Append a set of edits to the log. Log edits are keyed by (encoded) regionName, rowname, and
-   * log-sequence-id.
-   * @param key
-   * @param edits
-   * @param htd This comes in here just so it is available on a pre append for replications.  Get
-   * rid of it.  It is kinda crazy this comes in here when we have tablename and regioninfo.
-   * Replication gets its scope from the HTD.
-   * @param hri region info
-   * @param sync shall we sync after we call the append?
-   * @param inMemstore
-   * @param sequenceId The region sequence id reference.
-   * @param memstoreCells
-   * @return txid of this transaction or if nothing to do, the last txid
-   * @throws IOException
-   */
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH_EXCEPTION",
       justification="Will never be null")
-  private long append(HTableDescriptor htd, final HRegionInfo hri, final HLogKey key,
-      WALEdit edits, AtomicLong sequenceId, boolean sync, boolean inMemstore, 
-      List<Cell> memstoreCells)
-  throws IOException {
-    if (!this.enabled) return this.highestUnsyncedSequence;
+  @Override
+  public long append(final HTableDescriptor htd, final HRegionInfo hri, final WALKey key,
+      final WALEdit edits, final AtomicLong sequenceId, final boolean inMemstore, 
+      final List<Cell> memstoreCells) throws IOException {
     if (this.closed) throw new IOException("Cannot append; log is closed");
     // Make a trace scope for the append.  It is closed on other side of the ring buffer by the
     // single consuming thread.  Don't have to worry about it.
@@ -1166,9 +1162,6 @@ class FSHLog implements HLog, Syncable {
     } finally {
       this.disruptor.getRingBuffer().publish(sequence);
     }
-    // doSync is set in tests.  Usually we arrive in here via appendNoSync w/ the sync called after
-    // all edits on a handler have been added.
-    if (sync) sync(sequence);
     return sequence;
   }
 
@@ -1312,7 +1305,7 @@ class FSHLog implements HLog, Syncable {
             Trace.addTimelineAnnotation("writer synced");
             currentSequence = updateHighestSyncedSequence(currentSequence);
           } catch (IOException e) {
-            LOG.error("Error syncing, request close of hlog ", e);
+            LOG.error("Error syncing, request close of wal ", e);
             t = e;
           } catch (Exception e) {
             LOG.warn("UNEXPECTED", e);
@@ -1373,7 +1366,7 @@ class FSHLog implements HLog, Syncable {
             LOG.warn("HDFS pipeline error detected. " + "Found "
                 + numCurrentReplicas + " replicas but expecting no less than "
                 + this.minTolerableReplication + " replicas. "
-                + " Requesting close of hlog.");
+                + " Requesting close of wal.");
             logRollNeeded = true;
             // If rollWriter is requested, increase consecutiveLogRolls. Once it
             // is larger than lowReplicationRollLimit, disable the
@@ -1457,10 +1450,7 @@ class FSHLog implements HLog, Syncable {
     return syncFuture.reset(sequence, span);
   }
 
-  @Override
-  public void postSync(final long timeInNanos, final int handlerSyncs) {
-    // TODO: Add metric for handler syncs done at a time.
-    if (this.metrics != null) metrics.finishSync(timeInNanos/1000000);
+  private void postSync(final long timeInNanos, final int handlerSyncs) {
     if (timeInNanos > this.slowSyncNs) {
       String msg =
           new StringBuilder().append("Slow sync cost: ")
@@ -1469,19 +1459,57 @@ class FSHLog implements HLog, Syncable {
       Trace.addTimelineAnnotation(msg);
       LOG.info(msg);
     }
+    if (!listeners.isEmpty()) {
+      for (WALActionsListener listener : listeners) {
+        listener.postSync(timeInNanos, handlerSyncs);
+      }
+    }
   }
 
-  @Override
-  public long postAppend(final Entry e, final long elapsedTime) {
+  private long postAppend(final Entry e, final long elapsedTime) {
     long len = 0;
-    if (this.metrics == null) return len;
-    for (Cell cell : e.getEdit().getCells()) len += CellUtil.estimatedSerializedSizeOf(cell);
-    metrics.finishAppend(elapsedTime, len);
+    if (!listeners.isEmpty()) {
+      for (Cell cell : e.getEdit().getCells()) {
+        len += CellUtil.estimatedSerializedSizeOf(cell);
+      }
+      for (WALActionsListener listener : listeners) {
+        listener.postAppend(len, elapsedTime);
+      }
+    }
     return len;
   }
 
   /**
-   * This method gets the datanode replication count for the current HLog.
+   * Find the 'getNumCurrentReplicas' on the passed <code>os</code> stream.
+   * This is used for getting current replicas of a file being written.
+   * @return Method or null.
+   */
+  private Method getGetNumCurrentReplicas(final FSDataOutputStream os) {
+    // TODO: Remove all this and use the now publically available
+    // HdfsDataOutputStream#getCurrentBlockReplication()
+    Method m = null;
+    if (os != null) {
+      Class<? extends OutputStream> wrappedStreamClass = os.getWrappedStream().getClass();
+      try {
+        m = wrappedStreamClass.getDeclaredMethod("getNumCurrentReplicas", new Class<?>[] {});
+        m.setAccessible(true);
+      } catch (NoSuchMethodException e) {
+        LOG.info("FileSystem's output stream doesn't support getNumCurrentReplicas; " +
+         "HDFS-826 not available; fsOut=" + wrappedStreamClass.getName());
+      } catch (SecurityException e) {
+        LOG.info("No access to getNumCurrentReplicas on FileSystems's output stream; HDFS-826 " +
+          "not available; fsOut=" + wrappedStreamClass.getName(), e);
+        m = null; // could happen on setAccessible()
+      }
+    }
+    if (m != null) {
+      if (LOG.isTraceEnabled()) LOG.trace("Using getNumCurrentReplicas");
+    }
+    return m;
+  }
+
+  /**
+   * This method gets the datanode replication count for the current WAL.
    *
    * If the pipeline isn't started yet or is empty, you will get the default
    * replication factor.  Therefore, if this function returns 0, it means you
@@ -1492,41 +1520,17 @@ class FSHLog implements HLog, Syncable {
    *
    * @throws Exception
    */
+  @VisibleForTesting
   int getLogReplication()
   throws IllegalArgumentException, IllegalAccessException, InvocationTargetException {
-    if (this.getNumCurrentReplicas != null && this.hdfs_out != null) {
-      Object repl = this.getNumCurrentReplicas.invoke(getOutputStream(), NO_ARGS);
+    final OutputStream stream = getOutputStream();
+    if (this.getNumCurrentReplicas != null && stream != null) {
+      Object repl = this.getNumCurrentReplicas.invoke(stream, NO_ARGS);
       if (repl instanceof Integer) {
         return ((Integer)repl).intValue();
       }
     }
     return 0;
-  }
-
-  boolean canGetCurReplicas() {
-    return this.getNumCurrentReplicas != null;
-  }
-
-  @Override
-  public void hsync() throws IOException {
-    TraceScope scope = Trace.startSpan("FSHLog.hsync");
-    try {
-      scope = Trace.continueSpan(publishSyncThenBlockOnCompletion(scope.detach()));
-    } finally {
-      assert scope == NullScope.INSTANCE || !scope.isDetached();
-      scope.close();
-    }
-  }
-
-  @Override
-  public void hflush() throws IOException {
-    TraceScope scope = Trace.startSpan("FSHLog.hflush");
-    try {
-      scope = Trace.continueSpan(publishSyncThenBlockOnCompletion(scope.detach()));
-    } finally {
-      assert scope == NullScope.INSTANCE || !scope.isDetached();
-      scope.close();
-    }
   }
 
   @Override
@@ -1555,7 +1559,8 @@ class FSHLog implements HLog, Syncable {
     }
   }
 
-  void requestLogRoll() {
+  // public only until class moves to o.a.h.h.wal
+  public void requestLogRoll() {
     if (!this.listeners.isEmpty()) {
       for (WALActionsListener i: this.listeners) {
         i.logRollRequested();
@@ -1563,25 +1568,21 @@ class FSHLog implements HLog, Syncable {
     }
   }
 
-  /** @return How many items have been added to the log */
-  int getNumEntries() {
-    return numEntries.get();
-  }
-
+  // public only until class moves to o.a.h.h.wal
   /** @return the number of rolled log files */
   public int getNumRolledLogFiles() {
     return byWalRegionSequenceIds.size();
   }
 
+  // public only until class moves to o.a.h.h.wal
   /** @return the number of log files in use */
-  @Override
   public int getNumLogFiles() {
     // +1 for current use log
     return getNumRolledLogFiles() + 1;
   }
   
+  // public only until class moves to o.a.h.h.wal
   /** @return the size of log files in use */
-  @Override
   public long getLogFileSize() {
     return this.totalLogSize.get();
   }
@@ -1645,26 +1646,9 @@ class FSHLog implements HLog, Syncable {
     }
   }
 
-  @Override
-  public boolean isLowReplicationRollEnabled() {
+  @VisibleForTesting
+  boolean isLowReplicationRollEnabled() {
       return lowReplicationRollEnabled;
-  }
-
-  /**
-   * Get the directory we are making logs in.
-   *
-   * @return dir
-   */
-  protected Path getDir() {
-    return fullPathLogDir;
-  }
-
-  static Path getHLogArchivePath(Path oldLogDir, Path p) {
-    return new Path(oldLogDir, p.getName());
-  }
-
-  static String formatRecoveredEditsFileName(final long seqid) {
-    return String.format("%019d", seqid);
   }
 
   public static final long FIXED_OVERHEAD = ClassSize.align(
@@ -1682,14 +1666,10 @@ class FSHLog implements HLog, Syncable {
     }
 
     final Path baseDir = FSUtils.getRootDir(conf);
-    final Path oldLogDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    HLogSplitter.split(baseDir, p, oldLogDir, fs, conf);
+    final Path archiveDir = new Path(baseDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    WALSplitter.split(baseDir, p, archiveDir, fs, conf, WALFactory.getInstance(conf));
   }
 
-  @Override
-  public WALCoprocessorHost getCoprocessorHost() {
-    return coprocessorHost;
-  }
 
   @Override
   public long getEarliestMemstoreSeqNum(byte[] encodedRegionName) {
@@ -1941,7 +1921,7 @@ class FSHLog implements HLog, Syncable {
 
       long start = EnvironmentEdgeManager.currentTime();
       byte [] encodedRegionName = entry.getKey().getEncodedRegionName();
-      long regionSequenceId = HLog.NO_SEQUENCE_ID;
+      long regionSequenceId = WALKey.NO_SEQUENCE_ID;
       try {
         // We are about to append this edit; update the region-scoped sequence number.  Do it
         // here inside this single appending/writing thread.  Events are ordered on the ringbuffer
@@ -1984,7 +1964,7 @@ class FSHLog implements HLog, Syncable {
         // Update metrics.
         postAppend(entry, EnvironmentEdgeManager.currentTime() - start);
       } catch (Exception e) {
-        LOG.fatal("Could not append. Requesting close of hlog", e);
+        LOG.fatal("Could not append. Requesting close of wal", e);
         requestLogRoll();
         throw e;
       }
@@ -2015,7 +1995,7 @@ class FSHLog implements HLog, Syncable {
   }
 
   private static void usage() {
-    System.err.println("Usage: HLog <ARGS>");
+    System.err.println("Usage: FSHLog <ARGS>");
     System.err.println("Arguments:");
     System.err.println(" --dump  Dump textual representation of passed one or more files");
     System.err.println("         For example: " +
@@ -2023,7 +2003,6 @@ class FSHLog implements HLog, Syncable {
     System.err.println(" --split Split the passed directory of WAL logs");
     System.err.println("         For example: " +
       "FSHLog --split hdfs://example.com:9000/hbase/.logs/DIR");
-    System.err.println(" --perf  Write the same key <N> times to a WAL: e.g. FSHLog --perf 10");
   }
 
   /**
@@ -2038,30 +2017,14 @@ class FSHLog implements HLog, Syncable {
       usage();
       System.exit(-1);
     }
-    // either dump using the HLogPrettyPrinter or split, depending on args
+    // either dump using the WALPrettyPrinter or split, depending on args
     if (args[0].compareTo("--dump") == 0) {
-      HLogPrettyPrinter.run(Arrays.copyOfRange(args, 1, args.length));
+      WALPrettyPrinter.run(Arrays.copyOfRange(args, 1, args.length));
     } else if (args[0].compareTo("--perf") == 0) {
-      final int count = Integer.parseInt(args[1]);
-      // Put up a WAL and just keep adding same edit to it.  Simple perf test.
-      Configuration conf = HBaseConfiguration.create();
-      Path rootDir = FSUtils.getRootDir(conf);
-      FileSystem fs = rootDir.getFileSystem(conf);
-      FSHLog wal =
-        new FSHLog(fs, rootDir, "perflog", "oldPerflog", conf, null, false, "perf", false);
-      long start = System.nanoTime();
-      WALEdit walEdit = new WALEdit();
-      walEdit.add(new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("family"),
-        Bytes.toBytes("qualifier"), -1, new byte [1000]));
-      FSTableDescriptors fst = new FSTableDescriptors(conf);
-      for (AtomicLong i = new AtomicLong(0); i.get() < count; i.incrementAndGet()) {
-        wal.append(HRegionInfo.FIRST_META_REGIONINFO,
-            TableName.META_TABLE_NAME, walEdit, start,
-          fst.get(TableName.META_TABLE_NAME), i);
-        wal.sync();
-      }
-      wal.close();
-      LOG.info("Write " + count + " 1k edits in " + (System.nanoTime() - start) + "nanos");
+      LOG.fatal("Please use the WALPerformanceEvaluation tool instead. i.e.:");
+      LOG.fatal("\thbase org.apache.hadoop.hbase.wal.WALPerformanceEvaluation --iterations " +
+          args[1]);
+      System.exit(-1);
     } else if (args[0].compareTo("--split") == 0) {
       Configuration conf = HBaseConfiguration.create();
       for (int i = 1; i < args.length; i++) {
@@ -2109,9 +2072,9 @@ class FSHLog implements HLog, Syncable {
   }
 
   /**
-   * This method gets the pipeline for the current HLog.
-   * @return
+   * This method gets the pipeline for the current WAL.
    */
+  @VisibleForTesting
   DatanodeInfo[] getPipeLine() {
     if (this.getPipeLine != null && this.hdfs_out != null) {
       Object repl;

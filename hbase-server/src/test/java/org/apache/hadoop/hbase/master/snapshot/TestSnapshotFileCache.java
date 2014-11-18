@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
@@ -99,7 +98,7 @@ public class TestSnapshotFileCache {
         "test-snapshot-file-cache-refresh", new SnapshotFileCache.SnapshotFileInspector() {
             public Collection<String> filesUnderSnapshot(final Path snapshotDir)
                 throws IOException {
-              return SnapshotReferenceUtil.getHLogNames(fs, snapshotDir);
+              return SnapshotReferenceUtil.getWALNames(fs, snapshotDir);
             }
         });
 
@@ -111,7 +110,7 @@ public class TestSnapshotFileCache {
     fs.createNewFile(file1);
 
     // and another file in the logs directory
-    Path logs = getSnapshotHLogsDir(snapshot, "server");
+    Path logs = SnapshotReferenceUtil.getLogsDir(snapshot, "server");
     Path log = new Path(logs, "me.hbase.com%2C58939%2C1350424310315.1350424315552");
     fs.createNewFile(log);
 
@@ -121,16 +120,6 @@ public class TestSnapshotFileCache {
     assertFalse("Cache found '" + file1 + "', but it shouldn't have.",
       cache.contains(file1.getName()));
     assertTrue("Cache didn't find:" + log, cache.contains(log.getName()));
-  }
-
-  /**
-   * Get the log directory for a specific snapshot
-   * @param snapshotDir directory where the specific snapshot will be store
-   * @param serverName name of the parent regionserver for the log files
-   * @return path to the log home directory for the archive files.
-   */
-  public static Path getSnapshotHLogsDir(Path snapshotDir, String serverName) {
-    return new Path(snapshotDir, HLogUtil.getHLogDirectoryName(serverName));
   }
 
   @Test
@@ -170,7 +159,7 @@ public class TestSnapshotFileCache {
   class SnapshotFiles implements SnapshotFileCache.SnapshotFileInspector {
     public Collection<String> filesUnderSnapshot(final Path snapshotDir) throws IOException {
       Collection<String> files =  new HashSet<String>();
-      files.addAll(SnapshotReferenceUtil.getHLogNames(fs, snapshotDir));
+      files.addAll(SnapshotReferenceUtil.getWALNames(fs, snapshotDir));
       files.addAll(SnapshotReferenceUtil.getHFileNames(UTIL.getConfiguration(), fs, snapshotDir));
       return files;
     }

@@ -25,9 +25,10 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 
 
 /**
- * Class that transitions metrics from HLog's MetricsWAL into the metrics subsystem.
+ * Class that transitions metrics from MetricsWAL into the metrics subsystem.
  *
  * Implements BaseSource through BaseSourceImpl, following the pattern.
+ * @see org.apache.hadoop.hbase.regionserver.wal.MetricsWAL
  */
 @InterfaceAudience.Private
 public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSource {

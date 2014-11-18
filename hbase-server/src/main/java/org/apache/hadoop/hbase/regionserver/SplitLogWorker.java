@@ -36,7 +36,8 @@ import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.regionserver.wal.HLogSplitter;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -70,6 +71,7 @@ public class SplitLogWorker implements Runnable {
   private SplitLogWorkerCoordination coordination;
   private Configuration conf;
   private RegionServerServices server;
+
   public SplitLogWorker(Server hserver, Configuration conf, RegionServerServices server,
       TaskExecutor splitTaskExecutor) {
     this.server = server;
@@ -82,7 +84,8 @@ public class SplitLogWorker implements Runnable {
   }
 
   public SplitLogWorker(final Server hserver, final Configuration conf,
-      final RegionServerServices server, final LastSequenceId sequenceIdChecker) {
+      final RegionServerServices server, final LastSequenceId sequenceIdChecker,
+      final WALFactory factory) {
     this(server, conf, server, new TaskExecutor() {
       @Override
       public Status exec(String filename, RecoveryMode mode, CancelableProgressable p) {
@@ -99,8 +102,8 @@ public class SplitLogWorker implements Runnable {
         // interrupted or has encountered a transient error and when it has
         // encountered a bad non-retry-able persistent error.
         try {
-          if (!HLogSplitter.splitLogFile(rootdir, fs.getFileStatus(new Path(rootdir, filename)),
-            fs, conf, p, sequenceIdChecker, server.getCoordinatedStateManager(), mode)) {
+          if (!WALSplitter.splitLogFile(rootdir, fs.getFileStatus(new Path(rootdir, filename)),
+            fs, conf, p, sequenceIdChecker, server.getCoordinatedStateManager(), mode, factory)) {
             return Status.PREEMPTED;
           }
         } catch (InterruptedIOException iioe) {
@@ -153,6 +156,7 @@ public class SplitLogWorker implements Runnable {
       LOG.info("SplitLogWorker " + server.getServerName() + " exiting");
     }
   }
+
   /**
    * If the worker is doing a task i.e. splitting a log file then stop the task.
    * It doesn't exit the worker thread.

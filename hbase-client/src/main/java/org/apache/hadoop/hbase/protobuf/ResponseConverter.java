@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRespons
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetServerInfoResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
@@ -182,21 +181,6 @@ public final class ResponseConverter {
 
 // End utilities for Client
 // Start utilities for Admin
-
-  /**
-   * Get the list of regions to flush from a RollLogWriterResponse
-   *
-   * @param proto the RollLogWriterResponse
-   * @return the the list of regions to flush
-   */
-  public static byte[][] getRegions(final RollWALWriterResponse proto) {
-    if (proto == null || proto.getRegionToFlushCount() == 0) return null;
-    List<byte[]> regions = new ArrayList<byte[]>();
-    for (ByteString region: proto.getRegionToFlushList()) {
-      regions.add(region.toByteArray());
-    }
-    return (byte[][])regions.toArray();
-  }
 
   /**
    * Get the list of region info from a GetOnlineRegionResponse

@@ -31,13 +31,15 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
-import org.apache.hadoop.hbase.regionserver.wal.HLogFactory;
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -61,6 +63,7 @@ public class TestReplicationSource {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniDFSCluster(1);
     FS = TEST_UTIL.getDFSCluster().getFileSystem();
+    FSUtils.setRootDir(TEST_UTIL.getConfiguration(), FS.getHomeDirectory());
     oldLogDir = new Path(FS.getHomeDirectory(),
         HConstants.HREGION_OLDLOGDIR_NAME);
     if (FS.exists(oldLogDir)) FS.delete(oldLogDir, true);
@@ -80,23 +83,22 @@ public class TestReplicationSource {
     Path logPath = new Path(logDir, "log");
     if (!FS.exists(logDir)) FS.mkdirs(logDir);
     if (!FS.exists(oldLogDir)) FS.mkdirs(oldLogDir);
-    HLog.Writer writer = HLogFactory.createWALWriter(FS,
-      logPath, conf);
+    WALProvider.Writer writer = WALFactory.createWALWriter(FS, logPath,
+        TEST_UTIL.getConfiguration());
     for(int i = 0; i < 3; i++) {
       byte[] b = Bytes.toBytes(Integer.toString(i));
       KeyValue kv = new KeyValue(b,b,b);
       WALEdit edit = new WALEdit();
       edit.add(kv);
-      HLogKey key = new HLogKey(b, TableName.valueOf(b), 0, 0,
+      WALKey key = new WALKey(b, TableName.valueOf(b), 0, 0,
           HConstants.DEFAULT_CLUSTER_ID);
-      writer.append(new HLog.Entry(key, edit));
+      writer.append(new WAL.Entry(key, edit));
       writer.sync();
     }
     writer.close();
 
-    HLog.Reader reader = HLogFactory.createReader(FS, 
-        logPath, conf);
-    HLog.Entry entry = reader.next();
+    WAL.Reader reader = WALFactory.createReader(FS, logPath, TEST_UTIL.getConfiguration());
+    WAL.Entry entry = reader.next();
     assertNotNull(entry);
 
     Path oldLogPath = new Path(oldLogDir, "log");
@@ -109,7 +111,7 @@ public class TestReplicationSource {
     entry = reader.next();
 
     assertNull(entry);
-
+    reader.close();
   }
 
 }
