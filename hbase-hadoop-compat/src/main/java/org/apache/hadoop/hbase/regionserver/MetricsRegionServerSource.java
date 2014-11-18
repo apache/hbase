@@ -252,6 +252,10 @@ public interface MetricsRegionServerSource extends BaseSource {
   String HEDGED_READ_WINS_DESC =
       "The number of times we started a hedged read and a hedged read won";
 
+  String BLOCKED_REQUESTS_COUNT = "blockedRequestCount";
+  String BLOCKED_REQUESTS_COUNT_DESC = "The number of blocked requests because of memstore size is "
+      + "larger than blockingMemStoreSize";
+
   String SPLIT_KEY = "splitTime";
   String FLUSH_KEY = "flushTime";
 }

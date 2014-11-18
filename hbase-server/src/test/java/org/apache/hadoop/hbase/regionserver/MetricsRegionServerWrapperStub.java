@@ -250,4 +250,9 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   public long getHedgedReadWins() {
     return 10;
   }
+
+  @Override
+  public long getBlockedRequestsCount() {
+    return 0;
+  }
 }
