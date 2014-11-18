@@ -906,7 +906,6 @@ public class TestAdmin1 {
     admin.createTable(desc, splitKeys);
     HTable ht = new HTable(TEST_UTIL.getConfiguration(), tableName);
     Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
-    ht.close();
     assertEquals("Tried to create " + expectedRegions + " regions "
         + "but only found " + regions.size(), expectedRegions, regions.size());
     // Disable table.

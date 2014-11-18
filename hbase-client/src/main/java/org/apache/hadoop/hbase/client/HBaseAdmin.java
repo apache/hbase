@@ -83,7 +83,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterReque
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
@@ -172,8 +171,6 @@ public class HBaseAdmin implements Admin {
 
   private static final String ZK_IDENTIFIER_PREFIX =  "hbase-admin-on-";
 
-  // We use the implementation class rather then the interface because we
-  //  need the package protected functions to get the connection to master
   private ClusterConnection connection;
 
   private volatile Configuration conf;
@@ -1447,8 +1444,7 @@ public class HBaseAdmin implements Admin {
    * Get all the online regions on a region server.
    */
   @Override
-  public List<HRegionInfo> getOnlineRegions(
-      final ServerName sn) throws IOException {
+  public List<HRegionInfo> getOnlineRegions(final ServerName sn) throws IOException {
     AdminService.BlockingInterface admin = this.connection.getAdmin(sn);
     return ProtobufUtil.getOnlineRegions(admin);
   }
@@ -2329,12 +2325,6 @@ public class HBaseAdmin implements Admin {
     });
   }
 
-  private HRegionLocation getFirstMetaServerForTable(final TableName tableName)
-  throws IOException {
-    return connection.locateRegion(TableName.META_TABLE_NAME,
-      HRegionInfo.createRegionName(tableName, null, HConstants.NINES, false));
-  }
-
   /**
    * @return Configuration used by the instance.
    */
@@ -2491,52 +2481,40 @@ public class HBaseAdmin implements Admin {
 
   /**
    * Check to see if HBase is running. Throw an exception if not.
-   * We consider that HBase is running if ZooKeeper and Master are running.
-   *
    * @param conf system configuration
    * @throws MasterNotRunningException if the master is not running
    * @throws ZooKeeperConnectionException if unable to connect to zookeeper
    */
+  // Used by tests and by the Merge tool. Merge tool uses it to figure if HBase is up or not.
   public static void checkHBaseAvailable(Configuration conf)
-    throws MasterNotRunningException, ZooKeeperConnectionException, ServiceException, IOException {
+  throws MasterNotRunningException, ZooKeeperConnectionException, ServiceException, IOException {
     Configuration copyOfConf = HBaseConfiguration.create(conf);
-
     // We set it to make it fail as soon as possible if HBase is not available
     copyOfConf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     copyOfConf.setInt("zookeeper.recovery.retry", 0);
-
-    ConnectionManager.HConnectionImplementation connection
-      = (ConnectionManager.HConnectionImplementation)
-      HConnectionManager.getConnection(copyOfConf);
-
-    try {
-      // Check ZK first.
-      // If the connection exists, we may have a connection to ZK that does
-      //  not work anymore
-      ZooKeeperKeepAliveConnection zkw = null;
-      try {
-        zkw = connection.getKeepAliveZooKeeperWatcher();
-        zkw.getRecoverableZooKeeper().getZooKeeper().exists(
-          zkw.baseZNode, false);
-
-      } catch (IOException e) {
-        throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
-      } catch (InterruptedException e) {
-        throw (InterruptedIOException)
+    try (ClusterConnection connection =
+        (ClusterConnection)ConnectionFactory.createConnection(copyOfConf)) {
+        // Check ZK first.
+        // If the connection exists, we may have a connection to ZK that does not work anymore
+        ZooKeeperKeepAliveConnection zkw = null;
+        try {
+          // This is NASTY. FIX!!!! Dependent on internal implementation! TODO
+          zkw = ((ConnectionManager.HConnectionImplementation)connection).
+            getKeepAliveZooKeeperWatcher();
+          zkw.getRecoverableZooKeeper().getZooKeeper().exists(zkw.baseZNode, false);
+        } catch (IOException e) {
+          throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
+        } catch (InterruptedException e) {
+          throw (InterruptedIOException)
             new InterruptedIOException("Can't connect to ZooKeeper").initCause(e);
-      } catch (KeeperException e) {
-        throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
-      } finally {
-        if (zkw != null) {
-          zkw.close();
+        } catch (KeeperException e) {
+          throw new ZooKeeperConnectionException("Can't connect to ZooKeeper", e);
+        } finally {
+          if (zkw != null) {
+            zkw.close();
+          }
         }
-      }
-
-      // Check Master
       connection.isMasterRunning();
-
-    } finally {
-      connection.close();
     }
   }
 
@@ -3706,8 +3684,9 @@ public class HBaseAdmin implements Admin {
 
   @Override
   public int getMasterInfoPort() throws IOException {
+    // TODO: Fix!  Reaching into internal implementation!!!!
     ConnectionManager.HConnectionImplementation connection =
-        (ConnectionManager.HConnectionImplementation) HConnectionManager.getConnection(conf);
+        (ConnectionManager.HConnectionImplementation)this.connection;
     ZooKeeperKeepAliveConnection zkw = connection.getKeepAliveZooKeeperWatcher();
     try {
       return MasterAddressTracker.getMasterInfoPort(zkw);

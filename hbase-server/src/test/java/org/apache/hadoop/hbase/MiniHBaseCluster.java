@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
@@ -517,7 +516,6 @@ public class MiniHBaseCluster extends HBaseCluster {
     if (this.hbaseCluster != null) {
       this.hbaseCluster.shutdown();
     }
-    HConnectionManager.deleteAllConnections(false);
   }
 
   @Override
@@ -657,7 +655,8 @@ public class MiniHBaseCluster extends HBaseCluster {
   }
 
   @Override
-  public ServerName getServerHoldingRegion(byte[] regionName) throws IOException {
+  public ServerName getServerHoldingRegion(final TableName tn, byte[] regionName)
+  throws IOException {
     // Assume there is only one master thread which is the active master.
     // If there are multiple master threads, the backup master threads
     // should hold some regions. Please refer to #countServedRegions

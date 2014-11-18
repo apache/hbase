@@ -33,7 +33,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -43,12 +42,10 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.exceptions.OperationConflictException;
-import org.apache.hadoop.hbase.ipc.RpcClient;
-import org.apache.hadoop.hbase.ipc.RpcServer;
+
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.log4j.Level;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
@@ -70,6 +67,7 @@ public class TestMultiParallel {
   private static final byte [][] KEYS = makeKeys();
 
   private static final int slaves = 5; // also used for testing HTable pool size
+  private static Connection CONNECTION;
 
   @BeforeClass public static void beforeClass() throws Exception {
     // Uncomment the following lines if more verbosity is needed for
@@ -82,9 +80,11 @@ public class TestMultiParallel {
     UTIL.createMultiRegions(t, Bytes.toBytes(FAMILY));
     UTIL.waitTableEnabled(TEST_TABLE);
     t.close();
+    CONNECTION = ConnectionFactory.createConnection(UTIL.getConfiguration());
   }
 
   @AfterClass public static void afterClass() throws Exception {
+    CONNECTION.close();
     UTIL.shutdownMiniCluster();
   }
 
@@ -97,9 +97,6 @@ public class TestMultiParallel {
       // Wait until completing balance
       UTIL.waitFor(15 * 1000, UTIL.predicateNoRegionsInTransition());
     }
-    HConnection conn = HConnectionManager.getConnection(UTIL.getConfiguration());
-    conn.clearRegionCache();
-    conn.close();
     LOG.info("before done");
   }
 
@@ -328,7 +325,7 @@ public class TestMultiParallel {
   @Test (timeout=300000)
   public void testBatchWithPut() throws Exception {
     LOG.info("test=testBatchWithPut");
-    Table table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    Table table = CONNECTION.getTable(TEST_TABLE);
 
     // put multiple rows using a batch
     List<Row> puts = constructPutRequests();
@@ -347,9 +344,8 @@ public class TestMultiParallel {
         results = table.batch(puts);
       } catch (RetriesExhaustedWithDetailsException ree) {
         LOG.info(ree.getExhaustiveDescription());
-        throw ree;
-      } finally {
         table.close();
+        throw ree;
       }
       validateSizeAndEmpty(results, KEYS.length);
     }
@@ -490,7 +486,8 @@ public class TestMultiParallel {
   @Test(timeout=300000)
   public void testNonceCollision() throws Exception {
     LOG.info("test=testNonceCollision");
-    HTable table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+    final Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
+    Table table = connection.getTable(TEST_TABLE);
     Put put = new Put(ONE_ROW);
     put.add(BYTES_FAMILY, QUALIFIER, Bytes.toBytes(0L));
 
@@ -509,8 +506,9 @@ public class TestMultiParallel {
         return nonce;
       }
     };
+
     NonceGenerator oldCnm =
-        ConnectionUtils.injectNonceGeneratorForTesting(table.getConnection(), cnm);
+      ConnectionUtils.injectNonceGeneratorForTesting((ClusterConnection)connection, cnm);
 
     // First test sequential requests.
     try {
@@ -540,7 +538,7 @@ public class TestMultiParallel {
           public void run() {
             Table table = null;
             try {
-              table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
+              table = connection.getTable(TEST_TABLE);
             } catch (IOException e) {
               fail("Not expected");
             }
@@ -573,7 +571,7 @@ public class TestMultiParallel {
       validateResult(result, QUALIFIER, Bytes.toBytes((numRequests / 2) + 1L));
       table.close();
     } finally {
-      ConnectionManager.injectNonceGeneratorForTesting(table.getConnection(), oldCnm);
+      ConnectionManager.injectNonceGeneratorForTesting((ClusterConnection)connection, oldCnm);
     }
   }
 

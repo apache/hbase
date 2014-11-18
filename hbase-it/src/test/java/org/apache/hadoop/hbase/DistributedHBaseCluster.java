@@ -25,9 +25,11 @@ import java.util.List;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterManager.ServiceType;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
@@ -44,8 +46,8 @@ import com.google.common.collect.Sets;
  */
 @InterfaceAudience.Private
 public class DistributedHBaseCluster extends HBaseCluster {
-
-  private HBaseAdmin admin;
+  private Admin admin;
+  private final Connection connection;
 
   private ClusterManager clusterManager;
 
@@ -53,7 +55,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
       throws IOException {
     super(conf);
     this.clusterManager = clusterManager;
-    this.admin = new HBaseAdmin(conf);
+    this.connection = ConnectionFactory.createConnection(conf);
+    this.admin = this.connection.getAdmin();
     this.initialClusterStatus = getClusterStatus();
   }
 
@@ -84,18 +87,21 @@ public class DistributedHBaseCluster extends HBaseCluster {
     if (this.admin != null) {
       admin.close();
     }
+    if (this.connection != null && !this.connection.isClosed()) {
+      this.connection.close();
+    }
   }
 
   @Override
   public AdminProtos.AdminService.BlockingInterface getAdminProtocol(ServerName serverName)
   throws IOException {
-    return admin.getConnection().getAdmin(serverName);
+    return ((ClusterConnection)this.connection).getAdmin(serverName);
   }
 
   @Override
   public ClientProtos.ClientService.BlockingInterface getClientProtocol(ServerName serverName)
   throws IOException {
-    return admin.getConnection().getClient(serverName);
+    return ((ClusterConnection)this.connection).getClient(serverName);
   }
 
   @Override
@@ -138,8 +144,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
   @Override
   public MasterService.BlockingInterface getMasterAdminService()
   throws IOException {
-    HConnection conn = HConnectionManager.getConnection(conf);
-    return conn.getMaster();
+    return ((ClusterConnection)this.connection).getMaster();
   }
 
   @Override
@@ -183,18 +188,19 @@ public class DistributedHBaseCluster extends HBaseCluster {
   }
 
   @Override
-  public ServerName getServerHoldingRegion(byte[] regionName) throws IOException {
-    HConnection connection = admin.getConnection();
-    HRegionLocation regionLoc = connection.locateRegion(regionName);
+  public ServerName getServerHoldingRegion(TableName tn, byte[] regionName) throws IOException {
+    HRegionLocation regionLoc = null;
+    try (RegionLocator locator = connection.getRegionLocator(tn)) {
+      regionLoc = locator.getRegionLocation(regionName);
+    }
     if (regionLoc == null) {
-      LOG.warn("Cannot find region server holding region " + Bytes.toString(regionName)
-          + " for table " + HRegionInfo.getTableName(regionName) + ", start key [" +
-          Bytes.toString(HRegionInfo.getStartKey(regionName)) + "]");
+      LOG.warn("Cannot find region server holding region " + Bytes.toString(regionName) +
+        ", start key [" + Bytes.toString(HRegionInfo.getStartKey(regionName)) + "]");
       return null;
     }
 
     AdminProtos.AdminService.BlockingInterface client =
-      connection.getAdmin(regionLoc.getServerName());
+        ((ClusterConnection)this.connection).getAdmin(regionLoc.getServerName());
     ServerInfo info = ProtobufUtil.getServerInfo(client);
     return ProtobufUtil.toServerName(info.getServerName());
   }
@@ -374,7 +380,7 @@ public class DistributedHBaseCluster extends HBaseCluster {
     } catch (IOException ioe) {
       LOG.warn("While closing the old connection", ioe);
     }
-    this.admin = new HBaseAdmin(conf);
+    this.admin = this.connection.getAdmin();
     LOG.info("Added new HBaseAdmin");
     return true;
   }
