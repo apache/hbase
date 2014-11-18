@@ -227,6 +227,10 @@ public class MetricsRegionServerSourceImpl
               rsWrap.getCompactedCellsSize())
           .addCounter(MAJOR_COMPACTED_CELLS_SIZE, MAJOR_COMPACTED_CELLS_SIZE_DESC,
               rsWrap.getMajorCompactedCellsSize())
+
+          .addCounter(BLOCKED_REQUESTS_COUNT, BLOCKED_REQUESTS_COUNT_DESC,
+              rsWrap.getBlockedRequestsCount())
+
           .tag(ZOOKEEPER_QUORUM_NAME, ZOOKEEPER_QUORUM_DESC, rsWrap.getZookeeperQuorum())
           .tag(SERVER_NAME_NAME, SERVER_NAME_DESC, rsWrap.getServerName())
           .tag(CLUSTER_ID_NAME, CLUSTER_ID_DESC, rsWrap.getClusterId());

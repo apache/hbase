@@ -265,6 +265,16 @@ public class HRegion implements HeapSize { // , Writable{
   final Counter readRequestsCount = new Counter();
   final Counter writeRequestsCount = new Counter();
 
+  // Number of requests blocked by memstore size.
+  private final Counter blockedRequestsCount = new Counter();
+
+  /**
+   * @return the number of blocked requests count.
+   */
+  public long getBlockedRequestsCount() {
+    return this.blockedRequestsCount.get();
+  }
+
   // Compaction counters
   final AtomicLong compactionsFinished = new AtomicLong(0L);
   final AtomicLong compactionNumFilesCompacted = new AtomicLong(0L);
@@ -2933,6 +2943,7 @@ public class HRegion implements HeapSize { // , Writable{
     if (this.getRegionInfo().isMetaRegion()) return;
 
     if (this.memstoreSize.get() > this.blockingMemStoreSize) {
+      blockedRequestsCount.increment();
       requestFlush();
       throw new RegionTooBusyException("Above memstore limit, " +
           "regionName=" + (this.getRegionInfo() == null ? "unknown" :
@@ -5564,7 +5575,7 @@ public class HRegion implements HeapSize { // , Writable{
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      41 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      42 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (12 * Bytes.SIZEOF_LONG) +
       4 * Bytes.SIZEOF_BOOLEAN);
 
