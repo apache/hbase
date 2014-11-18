@@ -29,6 +29,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -123,12 +124,20 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     oldestUnexpiredTS = EnvironmentEdgeManager.currentTimeMillis() - ttl;
     this.minVersions = minVersions;
 
+    if (store != null && ((HStore)store).getHRegion() != null
+        && ((HStore)store).getHRegion().getBaseConf() != null) {
+      Configuration conf = ((HStore) store).getHRegion().getBaseConf();
+      this.scanUsePread = conf.getBoolean("hbase.storescanner.use.pread", scan.isSmall());
+    } else {
+      this.scanUsePread = scan.isSmall();
+    }
+
     // We look up row-column Bloom filters for multi-column queries as part of
     // the seek operation. However, we also look the row-column Bloom filter
     // for multi-row (non-"get") scans because this is not done in
     // StoreFile.passesBloomFilter(Scan, SortedSet<byte[]>).
     useRowColBloom = numCol > 1 || (!isGet && numCol == 1);
-    this.scanUsePread = scan.isSmall();
+
     // The parallel-seeking is on :
     // 1) the config value is *true*
     // 2) store has more than one store file

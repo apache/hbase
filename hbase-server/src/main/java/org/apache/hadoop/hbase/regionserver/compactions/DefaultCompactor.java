@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -50,7 +51,21 @@ public class DefaultCompactor extends Compactor {
 
     // Find the smallest read point across all the Scanners.
     long smallestReadPoint = getSmallestReadPoint();
-    List<StoreFileScanner> scanners = createFileScanners(request.getFiles(), smallestReadPoint);
+
+    List<StoreFileScanner> scanners;
+    Collection<StoreFile> readersToClose;
+    if (this.conf.getBoolean("hbase.regionserver.compaction.private.readers", false)) {
+      // clone all StoreFiles, so we'll do the compaction on a independent copy of StoreFiles,
+      // HFileFiles, and their readers
+      readersToClose = new ArrayList<StoreFile>(request.getFiles().size());
+      for (StoreFile f : request.getFiles()) {
+        readersToClose.add(new StoreFile(f));
+      }
+      scanners = createFileScanners(readersToClose, smallestReadPoint);
+    } else {
+      readersToClose = Collections.emptyList();
+      scanners = createFileScanners(request.getFiles(), smallestReadPoint);
+    }
 
     StoreFile.Writer writer = null;
     List<Path> newFiles = new ArrayList<Path>();
@@ -93,13 +108,19 @@ public class DefaultCompactor extends Compactor {
       // Throw the exception;
       throw ioe;
     } finally {
-      if (writer != null) {
-        if (e != null) {
-          writer.close();
-        } else {
-          writer.appendMetadata(fd.maxSeqId, request.isMajor());
-          writer.close();
-          newFiles.add(writer.getPath());
+      try {
+        if (writer != null) {
+          if (e != null) {
+            writer.close();
+          } else {
+            writer.appendMetadata(fd.maxSeqId, request.isMajor());
+            writer.close();
+            newFiles.add(writer.getPath());
+          }
+        }
+      } finally {
+        for (StoreFile f : readersToClose) {
+          f.closeReader(true);
         }
       }
     }
