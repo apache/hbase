@@ -595,7 +595,7 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Compact all regions on the region server
-   * @param regionserver the region server name
+   * @param sn the region server name
    * @param major if it's major compaction
    * @throws IOException
    * @throws InterruptedException
@@ -1289,7 +1289,7 @@ public interface Admin extends Abortable, Closeable {
    * @return A RegionServerCoprocessorRpcChannel instance
    */
   CoprocessorRpcChannel coprocessorService(ServerName sn);
-  
+
 
   /**
    * Update the configuration and trigger an online config change

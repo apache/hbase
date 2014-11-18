@@ -52,7 +52,7 @@ public class TestHBaseAdminNoCluster {
    * @throws ServiceException 
    */
   @Test
-  public void testMasterMonitorCollableRetries()
+  public void testMasterMonitorCallableRetries()
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException, ServiceException {
     Configuration configuration = HBaseConfiguration.create();
     // Set the pause and retry count way down.
@@ -61,20 +61,18 @@ public class TestHBaseAdminNoCluster {
     configuration.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, count);
     // Get mocked connection.   Getting the connection will register it so when HBaseAdmin is
     // constructed with same configuration, it will find this mocked connection.
-    HConnection connection = HConnectionTestingUtility.getMockedConnection(configuration);
+    ClusterConnection connection = HConnectionTestingUtility.getMockedConnection(configuration);
     // Mock so we get back the master interface.  Make it so when createTable is called, we throw
     // the PleaseHoldException.
-    MasterKeepAliveConnection masterAdmin =
-      Mockito.mock(MasterKeepAliveConnection.class);
+    MasterKeepAliveConnection masterAdmin = Mockito.mock(MasterKeepAliveConnection.class);
     Mockito.when(masterAdmin.createTable((RpcController)Mockito.any(),
       (CreateTableRequest)Mockito.any())).
         thenThrow(new ServiceException("Test fail").initCause(new PleaseHoldException("test")));
     Mockito.when(connection.getKeepAliveMasterService()).thenReturn(masterAdmin);
-    // Mock up our admin Interfaces
-    Admin admin = new HBaseAdmin(configuration);
+    Admin admin = new HBaseAdmin(connection);
     try {
       HTableDescriptor htd =
-          new HTableDescriptor(TableName.valueOf("testMasterMonitorCollableRetries"));
+        new HTableDescriptor(TableName.valueOf("testMasterMonitorCollableRetries"));
       // Pass any old htable descriptor; not important
       try {
         admin.createTable(htd, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
@@ -87,7 +85,7 @@ public class TestHBaseAdminNoCluster {
         (CreateTableRequest)Mockito.any());
     } finally {
       admin.close();
-      if (connection != null)HConnectionManager.deleteConnection(configuration);
+      if (connection != null) connection.close();
     }
   }
 }

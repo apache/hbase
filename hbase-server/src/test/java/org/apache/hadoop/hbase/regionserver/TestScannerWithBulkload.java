@@ -179,7 +179,6 @@ public class TestScannerWithBulkload {
     table.put(put1);
     table.flushCommits();
     admin.flush(tableName);
-    admin.close();
     put0 = new Put(Bytes.toBytes("row1"));
     put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
         .toBytes("version1")));
@@ -200,7 +199,7 @@ public class TestScannerWithBulkload {
   @Test
   public void testBulkLoadWithParallelScan() throws Exception {
     TableName tableName = TableName.valueOf("testBulkLoadWithParallelScan");
-    final long l = System.currentTimeMillis();
+      final long l = System.currentTimeMillis();
     HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
     createTable(admin, tableName);
     Scan scan = createScan();
