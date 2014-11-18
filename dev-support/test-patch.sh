@@ -15,7 +15,7 @@
 #set -x
 
 ### Setup some variables.  
-### SVN_REVISION and BUILD_URL are set by Hudson if it is run by patch process
+### GIT_COMMIT and BUILD_URL are set by Hudson if it is run by patch process
 ### Read variables from properties file
 bindir=$(dirname $0)
 
@@ -26,6 +26,8 @@ else
   MVN=$MAVEN_HOME/bin/mvn
 fi
 
+NEWLINE=$'\n'
+
 PROJECT_NAME=HBase
 JENKINS=false
 PATCH_DIR=/tmp
@@ -34,7 +36,6 @@ BASEDIR=$(pwd)
 PS=${PS:-ps}
 AWK=${AWK:-awk}
 WGET=${WGET:-wget}
-SVN=${SVN:-svn}
 GREP=${GREP:-grep}
 EGREP=${EGREP:-egrep}
 PATCH=${PATCH:-patch}
@@ -42,6 +43,7 @@ JIRACLI=${JIRA:-jira}
 FINDBUGS_HOME=${FINDBUGS_HOME}
 FORREST_HOME=${FORREST_HOME}
 ECLIPSE_HOME=${ECLIPSE_HOME}
+GIT=${GIT:-git}
 
 ###############################################################################
 printUsage() {
@@ -57,12 +59,12 @@ printUsage() {
   echo "--mvn-cmd=<cmd>        The 'mvn' command to use (default \$MAVEN_HOME/bin/mvn, or 'mvn')"
   echo "--ps-cmd=<cmd>         The 'ps' command to use (default 'ps')"
   echo "--awk-cmd=<cmd>        The 'awk' command to use (default 'awk')"
-  echo "--svn-cmd=<cmd>        The 'svn' command to use (default 'svn')"
   echo "--grep-cmd=<cmd>       The 'grep' command to use (default 'grep')"
   echo "--patch-cmd=<cmd>      The 'patch' command to use (default 'patch')"
   echo "--findbugs-home=<path> Findbugs home directory (default FINDBUGS_HOME environment variable)"
   echo "--forrest-home=<path>  Forrest home directory (default FORREST_HOME environment variable)"
-  echo "--dirty-workspace      Allow the local SVN workspace to have uncommitted changes"
+  echo "--dirty-workspace      Allow the local workspace to have uncommitted changes"
+  echo "--git-cmd=<cmd>        The 'git' command to use (default 'git')"
   echo
   echo "Jenkins-only options:"
   echo "--jenkins              Run by Jenkins (runs tests and posts results to JIRA)"
@@ -98,9 +100,6 @@ parseArgs() {
     --wget-cmd=*)
       WGET=${i#*=}
       ;;
-    --svn-cmd=*)
-      SVN=${i#*=}
-      ;;
     --grep-cmd=*)
       GREP=${i#*=}
       ;;
@@ -124,6 +123,9 @@ parseArgs() {
       ;;
     --dirty-workspace)
       DIRTY_WORKSPACE=true
+      ;;
+    --git-cmd=*)
+      GIT=${i#*=}
       ;;
     *)
       PATCH_OR_DEFECT=$i
@@ -175,19 +177,29 @@ checkout () {
   echo ""
   ### When run by a developer, if the workspace contains modifications, do not continue
   ### unless the --dirty-workspace option was set
-  status=`$SVN stat --ignore-externals | sed -e '/^X[ ]*/D'`
   if [[ $JENKINS == "false" ]] ; then
-    if [[ "$status" != "" && -z $DIRTY_WORKSPACE ]] ; then
-      echo "ERROR: can't run in a workspace that contains the following modifications"
-      echo "$status"
-      cleanupAndExit 1
+    if [[ -z $DIRTY_WORKSPACE ]] ; then
+      # Ref http://stackoverflow.com/a/2659808 for details on checking dirty status
+      ${GIT} diff-index --quiet HEAD
+      if [[ $? -ne 0 ]] ; then
+        uncommitted=`${GIT} diff --name-only HEAD`
+        uncommitted="You have the following files with uncommitted changes:${NEWLINE}${uncommitted}"
+      fi
+      untracked="$(${GIT} ls-files --exclude-standard --others)" && test -z "${untracked}"
+      if [[ $? -ne 0 ]] ; then
+        untracked="You have untracked and unignored files:${NEWLINE}${untracked}"
+      fi
+      if [[ $uncommitted || $untracked ]] ; then
+        echo "ERROR: can't run in a workspace that contains modifications."
+        echo "Pass the '--dirty-workspace' flag to bypass."
+        echo ""
+        echo "${uncommitted}"
+        echo ""
+        echo "${untracked}"
+        cleanupAndExit 1
+      fi
     fi
     echo
-  else   
-    cd $BASEDIR
-    $SVN revert -R .
-    rm -rf `$SVN status --no-ignore`
-    $SVN update
   fi
   return $?
 }
@@ -214,10 +226,10 @@ setup () {
     echo "$defect patch is being downloaded at `date` from"
     echo "$patchURL"
     $WGET -q -O $PATCH_DIR/patch $patchURL
-    VERSION=${SVN_REVISION}_${defect}_PATCH-${patchNum}
+    VERSION=${GIT_COMMIT}_${defect}_PATCH-${patchNum}
     JIRA_COMMENT="Here are the results of testing the latest attachment 
   $patchURL
-  against trunk revision ${SVN_REVISION}.
+  against master branch at commit ${GIT_COMMIT}.
   ATTACHMENT ID: ${ATTACHMENT_ID}"
 
   ### Copy the patch file to $PATCH_DIR
@@ -244,7 +256,7 @@ setup () {
   echo ""
   echo "======================================================================"
   echo "======================================================================"
-  echo " Pre-build trunk to verify trunk stability and javac warnings" 
+  echo " Pre-build master to verify stability and javac warnings"
   echo "======================================================================"
   echo "======================================================================"
   echo ""
@@ -482,7 +494,7 @@ checkJavacWarnings () {
       if [[ $patchJavacWarnings -gt $trunkJavacWarnings ]] ; then
         JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:red}-1 javac{color}.  The applied patch generated $patchJavacWarnings javac compiler warnings (more than the trunk's current $trunkJavacWarnings warnings)."
+    {color:red}-1 javac{color}.  The applied patch generated $patchJavacWarnings javac compiler warnings (more than the master's current $trunkJavacWarnings warnings)."
         return 1
       fi
     fi
@@ -517,7 +529,7 @@ checkCheckstyleErrors() {
 
                 JIRA_COMMENT="$JIRA_COMMENT
 
-                {color:red}-1 checkstyle{color}.  The applied patch generated $patchCheckstyleErrors checkstyle errors (more than the trunk's current $trunkCheckstyleErrors errors)."
+                {color:red}-1 checkstyle{color}.  The applied patch generated $patchCheckstyleErrors checkstyle errors (more than the master's current $trunkCheckstyleErrors errors)."
         return 1
     fi
     echo "There were $patchCheckstyleErrors checkstyle errors in this patch compared to $trunkCheckstyleErrors on master."
@@ -580,7 +592,7 @@ checkReleaseAuditWarnings () {
       if [[ $patchReleaseAuditWarnings -gt $OK_RELEASEAUDIT_WARNINGS ]] ; then
         JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:red}-1 release audit{color}.  The applied patch generated $patchReleaseAuditWarnings release audit warnings (more than the trunk's current $OK_RELEASEAUDIT_WARNINGS warnings)."
+    {color:red}-1 release audit{color}.  The applied patch generated $patchReleaseAuditWarnings release audit warnings (more than the master's current $OK_RELEASEAUDIT_WARNINGS warnings)."
         $GREP '\!?????' $PATCH_DIR/patchReleaseAuditWarnings.txt > $PATCH_DIR/patchReleaseAuditProblems.txt
         echo "Lines that start with ????? in the release audit report indicate files that do not have an Apache license header." >> $PATCH_DIR/patchReleaseAuditProblems.txt
         JIRA_COMMENT_FOOTER="Release audit warnings: $BUILD_URL/artifact/patchprocess/patchReleaseAuditWarnings.txt
