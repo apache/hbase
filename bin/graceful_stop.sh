@@ -160,7 +160,7 @@ fi
 # Restore balancer state
 if [ $HBASE_BALANCER_STATE != "false" ]; then
   log "Restoring balancer state to " $HBASE_BALANCER_STATE
-  log "balance_switch $HBASE_BALANCER_STATE" | "$bin"/hbase --config ${HBASE_CONF_DIR} shell &> /dev/null
+  echo "balance_switch $HBASE_BALANCER_STATE" | "$bin"/hbase --config ${HBASE_CONF_DIR} shell &> /dev/null
 fi
 
 # Cleanup tmp files.
