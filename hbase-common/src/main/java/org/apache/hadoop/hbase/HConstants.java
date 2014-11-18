@@ -532,7 +532,7 @@ public final class HConstants {
    * 1, 2, 3, 5, 10, 20, 40, 100, 100, 100.
    * With 100ms, a back-off of 200 means 20s
    */
-  public static int RETRY_BACKOFF[] = { 1, 2, 3, 5, 10, 20, 40, 100, 100, 100, 100, 200, 200 };
+  public static final int RETRY_BACKOFF[] = {1, 2, 3, 5, 10, 20, 40, 100, 100, 100, 100, 200, 200};
 
   public static final String REGION_IMPL = "hbase.hregion.impl";
 
@@ -568,7 +568,8 @@ public final class HConstants {
      * Parameter name for maximum number of bytes returned when calling a
      * scanner's next method.
      */
-  public static String HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY = "hbase.client.scanner.max.result.size";
+  public static final String HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY =
+      "hbase.client.scanner.max.result.size";
 
   /**
    * Maximum number of bytes returned when calling a scanner's next method.
@@ -577,18 +578,18 @@ public final class HConstants {
    *
    * The default value is unlimited.
    */
-  public static long DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE = Long.MAX_VALUE;
+  public static final long DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE = Long.MAX_VALUE;
 
   /**
    * Parameter name for client pause value, used mostly as value to wait
    * before running a retry of a failed get, region lookup, etc.
    */
-  public static String HBASE_CLIENT_PAUSE = "hbase.client.pause";
+  public static final String HBASE_CLIENT_PAUSE = "hbase.client.pause";
 
   /**
    * Default value of {@link #HBASE_CLIENT_PAUSE}.
    */
-  public static long DEFAULT_HBASE_CLIENT_PAUSE = 100;
+  public static final long DEFAULT_HBASE_CLIENT_PAUSE = 100;
 
   /**
    * The maximum number of concurrent connections the client will maintain.
@@ -626,24 +627,24 @@ public final class HConstants {
    * Parameter name for server pause value, used mostly as value to wait before
    * running a retry of a failed operation.
    */
-  public static String HBASE_SERVER_PAUSE = "hbase.server.pause";
+  public static final String HBASE_SERVER_PAUSE = "hbase.server.pause";
 
   /**
    * Default value of {@link #HBASE_SERVER_PAUSE}.
    */
-  public static int DEFAULT_HBASE_SERVER_PAUSE = 1000;
+  public static final int DEFAULT_HBASE_SERVER_PAUSE = 1000;
 
   /**
    * Parameter name for maximum retries, used as maximum for all retryable
    * operations such as fetching of the root region from root region server,
    * getting a cell's value, starting a row update, etc.
    */
-  public static String HBASE_CLIENT_RETRIES_NUMBER = "hbase.client.retries.number";
+  public static final String HBASE_CLIENT_RETRIES_NUMBER = "hbase.client.retries.number";
 
   /**
    * Default value of {@link #HBASE_CLIENT_RETRIES_NUMBER}.
    */
-  public static int DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 31;
+  public static final int DEFAULT_HBASE_CLIENT_RETRIES_NUMBER = 31;
 
   /**
    * Parameter name for client region location prefetch toggle.
@@ -669,12 +670,12 @@ public final class HConstants {
   /**
    * Parameter name to set the default scanner caching for all clients.
    */
-  public static String HBASE_CLIENT_SCANNER_CACHING = "hbase.client.scanner.caching";
+  public static final String HBASE_CLIENT_SCANNER_CACHING = "hbase.client.scanner.caching";
 
   /**
    * Default value for {@link #HBASE_CLIENT_SCANNER_CACHING}
    */
-  public static int DEFAULT_HBASE_CLIENT_SCANNER_CACHING = 100;
+  public static final int DEFAULT_HBASE_CLIENT_SCANNER_CACHING = 100;
 
   /**
    * Parameter name for number of versions, kept by meta table.
@@ -702,12 +703,12 @@ public final class HConstants {
    * enable faster scanners but will eat up more memory and some calls of next
    * may take longer and longer times when the cache is empty.
    */
-  public static String HBASE_META_SCANNER_CACHING = "hbase.meta.scanner.caching";
+  public static final String HBASE_META_SCANNER_CACHING = "hbase.meta.scanner.caching";
 
   /**
    * Default value of {@link #HBASE_META_SCANNER_CACHING}.
    */
-  public static int DEFAULT_HBASE_META_SCANNER_CACHING = 100;
+  public static final int DEFAULT_HBASE_META_SCANNER_CACHING = 100;
 
   /**
    * Parameter name for unique identifier for this {@link org.apache.hadoop.conf.Configuration}
@@ -718,45 +719,45 @@ public final class HConstants {
    * org.apache.hadoop.hbase.client.HConnection instances if some of the other connection parameters
    * differ.
    */
-  public static String HBASE_CLIENT_INSTANCE_ID = "hbase.client.instance.id";
+  public static final String HBASE_CLIENT_INSTANCE_ID = "hbase.client.instance.id";
 
   /**
    * The client scanner timeout period in milliseconds.
    */
-  public static String HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD = "hbase.client.scanner.timeout.period";
+  public static final String HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD = "hbase.client.scanner.timeout.period";
 
   /**
    * Use {@link #HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD} instead.
    * @deprecated This config option is deprecated. Will be removed at later releases after 0.96.
    */
   @Deprecated
-  public static String HBASE_REGIONSERVER_LEASE_PERIOD_KEY =
+  public static final String HBASE_REGIONSERVER_LEASE_PERIOD_KEY =
       "hbase.regionserver.lease.period";
 
   /**
    * Default value of {@link #HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD}.
    */
-  public static int DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD = 60000;
+  public static final int DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD = 60000;
 
   /**
    * timeout for each RPC
    */
-  public static String HBASE_RPC_TIMEOUT_KEY = "hbase.rpc.timeout";
+  public static final String HBASE_RPC_TIMEOUT_KEY = "hbase.rpc.timeout";
 
   /**
    * Default value of {@link #HBASE_RPC_TIMEOUT_KEY}
    */
-  public static int DEFAULT_HBASE_RPC_TIMEOUT = 60000;
+  public static final int DEFAULT_HBASE_RPC_TIMEOUT = 60000;
 
   /**
    * timeout for short operation RPC
    */
-  public static String HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY = "hbase.rpc.shortoperation.timeout";
+  public static final String HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY = "hbase.rpc.shortoperation.timeout";
 
   /**
    * Default value of {@link #HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY}
    */
-  public static int DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT = 10000;
+  public static final int DEFAULT_HBASE_RPC_SHORTOPERATION_TIMEOUT = 10000;
 
   /**
    * Value indicating the server name was saved with no sequence number.
@@ -791,7 +792,7 @@ public final class HConstants {
     "hbase.regionserver.region.split.policy";
 
   /** Whether nonces are enabled; default is true. */
-  public static String HBASE_RS_NONCES_ENABLED = "hbase.regionserver.nonces.enabled";
+  public static final String HBASE_RS_NONCES_ENABLED = "hbase.regionserver.nonces.enabled";
 
   /**
    * Configuration key for the size of the block cache
