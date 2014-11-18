@@ -226,17 +226,25 @@ public class Import {
       }
       // TODO: This is kind of ugly doing setup of ZKW just to read the clusterid.
       ZooKeeperWatcher zkw = null;
+      Exception ex = null;
       try {
         zkw = new ZooKeeperWatcher(conf, context.getTaskAttemptID().toString(), null);
         clusterIds = Collections.singletonList(ZKClusterId.getUUIDForCluster(zkw));
       } catch (ZooKeeperConnectionException e) {
+        ex = e;
         LOG.error("Problem connecting to ZooKeper during task setup", e);
       } catch (KeeperException e) {
+        ex = e;
         LOG.error("Problem reading ZooKeeper data during task setup", e);
       } catch (IOException e) {
+        ex = e;
         LOG.error("Problem setting up task", e);
       } finally {
         if (zkw != null) zkw.close();
+      }
+      if (clusterIds == null) {
+        // exit early if setup fails
+        throw new RuntimeException(ex);
       }
     }
   }
