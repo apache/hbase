@@ -769,7 +769,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
       // In distributedLogReplay mode, we don't know the last change sequence number because region
       // is opened before recovery completes. So we add a safety bumper to avoid new sequence number
       // overlaps used sequence numbers
-      nextSeqid = HLogUtil.writeRegionOpenSequenceIdFile(this.fs.getFileSystem(), 
+      nextSeqid = HLogUtil.writeRegionOpenSequenceIdFile(this.fs.getFileSystem(),
             this.fs.getRegionDir(), nextSeqid, (this.flushPerChanges + 10000000));
     }
 
@@ -3195,7 +3195,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
       Store store = getStore(family);
       int listSize = cells.size();
       for (int i=0; i < listSize; i++) {
-        Cell cell = cells.get(i);  
+        Cell cell = cells.get(i);
         CellUtil.setSequenceId(cell, mvccNum);
         Pair<Long, Cell> ret = store.add(cell);
         size += ret.getFirst();
@@ -5396,9 +5396,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
               if (idx < results.size()
                   && CellUtil.matchingQualifier(results.get(idx), cell)) {
                 oldCell = results.get(idx);
+                long ts = Math.max(now, oldCell.getTimestamp());
                 // allocate an empty kv once
                 newCell = new KeyValue(row.length, cell.getFamilyLength(),
-                    cell.getQualifierLength(), now, KeyValue.Type.Put,
+                    cell.getQualifierLength(), ts, KeyValue.Type.Put,
                     oldCell.getValueLength() + cell.getValueLength(),
                     oldCell.getTagsLength() + cell.getTagsLength());
                 // copy in the value
@@ -5609,8 +5610,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
               boolean noWriteBack = (amount == 0);
 
               Cell c = null;
+              long ts = now;
               if (idx < results.size() && CellUtil.matchingQualifier(results.get(idx), kv)) {
                 c = results.get(idx);
+                ts = Math.max(now, c.getTimestamp());
                 if(c.getValueLength() == Bytes.SIZEOF_LONG) {
                   amount += Bytes.toLong(c.getValueArray(), c.getValueOffset(), Bytes.SIZEOF_LONG);
                 } else {
@@ -5626,7 +5629,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
               byte[] val = Bytes.toBytes(amount);
               int oldCellTagsLen = (c == null) ? 0 : c.getTagsLength();
               int incCellTagsLen = kv.getTagsLength();
-              Cell newKV = new KeyValue(row.length, family.getKey().length, q.length, now,
+              Cell newKV = new KeyValue(row.length, family.getKey().length, q.length, ts,
                   KeyValue.Type.Put, val.length, oldCellTagsLen + incCellTagsLen);
               System.arraycopy(row, 0, newKV.getRowArray(), newKV.getRowOffset(), row.length);
               System.arraycopy(family.getKey(), 0, newKV.getFamilyArray(), newKV.getFamilyOffset(),
