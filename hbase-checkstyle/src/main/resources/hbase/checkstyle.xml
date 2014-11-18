@@ -34,10 +34,12 @@
   <module name="TreeWalker">
     <module name="AvoidStarImport"/>
     <module name="RedundantImport"/>
-    <module name="UnusedImports"/>
+    <module name="UnusedImports">
+      <property name="processJavadoc" value="true"/>
+    </module>
     <module name="LineLength">
       <property name="max" value="100"/>
-      <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
+      <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://|org.apache.thrift.|com.google.protobuf.|hbase.protobuf.generated"/>
     </module>
     <module name="MethodLength"/>
     <module name="MethodParamPad"/>
@@ -51,7 +53,10 @@
     <module name="FinalClass"/>
     <module name="HideUtilityClassConstructor"/>
     <module name="InterfaceIsType"/>
-    <module name="VisibilityModifier"/>
+    <module name="VisibilityModifier">
+      <property name="packageAllowed" value="true"/>
+      <property name="protectedAllowed" value="true"/>
+    </module>
     <module name="ArrayTypeStyle"/>
     <module name="UpperEll"/>
     <module name="NoFinalizer"/>
