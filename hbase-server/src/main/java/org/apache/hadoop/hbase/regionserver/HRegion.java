@@ -4569,7 +4569,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
       confForWAL.set(HConstants.HBASE_DIR, rootDir.toString());
       effectiveWAL = (new WALFactory(confForWAL,
           Collections.<WALActionsListener>singletonList(new MetricsWAL()),
-          "hregion-" + RandomStringUtils.randomAscii(8))).getWAL(info.getEncodedNameAsBytes());
+          "hregion-" + RandomStringUtils.randomNumeric(8))).
+            getWAL(info.getEncodedNameAsBytes());
     }
     HRegion region = HRegion.newHRegion(tableDir,
         effectiveWAL, fs, conf, info, hTableDescriptor, null);
