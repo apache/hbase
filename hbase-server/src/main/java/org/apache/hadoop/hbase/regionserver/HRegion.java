@@ -4563,9 +4563,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     WAL effectiveWAL = wal;
     if (wal == null && !ignoreWAL) {
       // TODO HBASE-11983 There'll be no roller for this wal?
-      effectiveWAL = (new WALFactory(conf,
+      // The WAL subsystem will use the default rootDir rather than the passed in rootDir
+      // unless I pass along via the conf.
+      Configuration confForWAL = new Configuration(conf);
+      confForWAL.set(HConstants.HBASE_DIR, rootDir.toString());
+      effectiveWAL = (new WALFactory(confForWAL,
           Collections.<WALActionsListener>singletonList(new MetricsWAL()),
-          "hregion-" + RandomStringUtils.random(8))).getWAL(info.getEncodedNameAsBytes());
+          "hregion-" + RandomStringUtils.randomAscii(8))).getWAL(info.getEncodedNameAsBytes());
     }
     HRegion region = HRegion.newHRegion(tableDir,
         effectiveWAL, fs, conf, info, hTableDescriptor, null);
