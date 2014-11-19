@@ -55,21 +55,29 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
     // The back ref can be deleted only if the referenced file doesn't exists.
     Path parentDir = filePath.getParent();
     if (HFileLink.isBackReferencesDir(parentDir)) {
+      Path hfilePath = null;
       try {
-        Path hfilePath = HFileLink.getHFileFromBackReference(getConf(), filePath);
+        hfilePath = HFileLink.getHFileFromBackReference(getConf(), filePath);
         return !fs.exists(hfilePath);
       } catch (IOException e) {
-        LOG.error("Couldn't verify if the referenced file still exists, keep it just in case");
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Couldn't verify if the referenced file still exists, keep it just in case: "
+              + hfilePath);
+        }
         return false;
       }
     }
 
     // HFile is deletable only if has no links
+    Path backRefDir = null;
     try {
-      Path backRefDir = HFileLink.getBackReferencesDir(parentDir, filePath.getName());
+      backRefDir = HFileLink.getBackReferencesDir(parentDir, filePath.getName());
       return FSUtils.listStatus(fs, backRefDir) == null;
     } catch (IOException e) {
-      LOG.error("Couldn't get the references, not deleting file, just in case");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Couldn't get the references, not deleting file, just in case. filePath="
+            + filePath + ", backRefDir=" + backRefDir);
+      }
       return false;
     }
   }
@@ -82,7 +90,11 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
     try {
       this.fs = FileSystem.get(this.getConf());
     } catch (IOException e) {
-      LOG.error("Couldn't instantiate the file system, not deleting file, just in case");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Couldn't instantiate the file system, not deleting file, just in case. "
+            + FileSystem.FS_DEFAULT_NAME_KEY + "="
+            + getConf().get(FileSystem.FS_DEFAULT_NAME_KEY, FileSystem.DEFAULT_FS));
+      }
     }
   }
 }
