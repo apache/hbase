@@ -187,7 +187,11 @@ public class WALFactory {
     if (null != metaProvider) {
       metaProvider.close();
     }
-    provider.close();
+    // close is called on a WALFactory with null provider in the case of contention handling
+    // within the getInstance method.
+    if (null != provider) {
+      provider.close();
+    }
   }
 
   /**

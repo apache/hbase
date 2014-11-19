@@ -152,6 +152,11 @@ public class TestWALFactory {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  @Test
+  public void canCloseSingleton() throws IOException {
+    WALFactory.getInstance(conf).close();
+  }
+
   /**
    * Just write multiple logs then split.  Before fix for HADOOP-2283, this
    * would fail.
