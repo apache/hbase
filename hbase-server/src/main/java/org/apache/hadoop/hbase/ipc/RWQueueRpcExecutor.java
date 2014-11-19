@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -50,7 +49,9 @@ public class RWQueueRpcExecutor extends RpcExecutor {
   private static final Log LOG = LogFactory.getLog(RWQueueRpcExecutor.class);
 
   private final List<BlockingQueue<CallRunner>> queues;
-  private final Random balancer = new Random();
+  private final QueueBalancer writeBalancer;
+  private final QueueBalancer readBalancer;
+  private final QueueBalancer scanBalancer;
   private final int writeHandlersCount;
   private final int readHandlersCount;
   private final int scanHandlersCount;
@@ -115,6 +116,9 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     this.numWriteQueues = numWriteQueues;
     this.numReadQueues = numReadQueues;
     this.numScanQueues = numScanQueues;
+    this.writeBalancer = getBalancer(numWriteQueues);
+    this.readBalancer = getBalancer(numReadQueues);
+    this.scanBalancer = getBalancer(numScanQueues);
 
     queues = new ArrayList<BlockingQueue<CallRunner>>(writeHandlersCount + readHandlersCount);
     LOG.debug(name + " writeQueues=" + numWriteQueues + " writeHandlers=" + writeHandlersCount +
@@ -146,11 +150,11 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     RpcServer.Call call = callTask.getCall();
     int queueIndex;
     if (isWriteRequest(call.getHeader(), call.param)) {
-      queueIndex = balancer.nextInt(numWriteQueues);
+      queueIndex = writeBalancer.getNextQueue();
     } else if (numScanQueues > 0 && isScanRequest(call.getHeader(), call.param)) {
-      queueIndex = numWriteQueues + numReadQueues + balancer.nextInt(numScanQueues);
+      queueIndex = numWriteQueues + numReadQueues + scanBalancer.getNextQueue();
     } else {
-      queueIndex = numWriteQueues + balancer.nextInt(numReadQueues);
+      queueIndex = numWriteQueues + readBalancer.getNextQueue();
     }
     queues.get(queueIndex).put(callTask);
   }
