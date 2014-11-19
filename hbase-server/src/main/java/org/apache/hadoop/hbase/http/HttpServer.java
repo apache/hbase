@@ -356,7 +356,7 @@ public class HttpServer implements FilterContainer {
         if ("http".equals(scheme)) {
           listener = HttpServer.createDefaultChannelConnector();
         } else if ("https".equals(scheme)) {
-          SslSocketConnector c = new SslSocketConnector();
+          SslSocketConnector c = new SslSocketConnectorSecure();
           c.setNeedClientAuth(needsClientAuth);
           c.setKeyPassword(keyPassword);
 
