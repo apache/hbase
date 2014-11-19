@@ -22,12 +22,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 
 @InterfaceAudience.Private
@@ -125,6 +127,56 @@ public abstract class RpcExecutor {
       if (interrupted) {
         Thread.currentThread().interrupt();
       }
+    }
+  }
+
+  public static abstract class QueueBalancer {
+    /**
+     * @return the index of the next queue to which a request should be inserted
+     */
+    public abstract int getNextQueue();
+  }
+
+  public static QueueBalancer getBalancer(int queueSize) {
+    Preconditions.checkArgument(queueSize > 0, "Queue size is <= 0, must be at least 1");
+    if (queueSize == 1) {
+      return ONE_QUEUE;
+    } else {
+      return new RandomQueueBalancer(queueSize);
+    }
+  }
+
+  /**
+   * All requests go to the first queue, at index 0
+   */
+  private static QueueBalancer ONE_QUEUE = new QueueBalancer() {
+
+    @Override
+    public int getNextQueue() {
+      return 0;
+    }
+  };
+
+  /**
+   * Queue balancer that just randomly selects a queue in the range [0, num queues).
+   */
+  private static class RandomQueueBalancer extends QueueBalancer {
+    private final int queueSize;
+
+    private final ThreadLocal<Random> threadRandom =
+      new ThreadLocal<Random>() {
+        @Override
+        protected Random initialValue() {
+          return new Random();
+        }
+      };
+
+    public RandomQueueBalancer(int queueSize) {
+      this.queueSize = queueSize;
+    }
+
+    public int getNextQueue() {
+      return threadRandom.get().nextInt(queueSize);
     }
   }
 }
