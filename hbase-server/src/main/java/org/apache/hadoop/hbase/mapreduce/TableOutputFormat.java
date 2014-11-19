@@ -48,6 +48,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * while the output value <u>must</u> be either a {@link Put} or a
  * {@link Delete} instance.
  *
+ * <p><KEY> is the type of the key. Ignored in this class.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

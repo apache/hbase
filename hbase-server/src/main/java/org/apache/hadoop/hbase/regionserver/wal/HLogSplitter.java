@@ -48,6 +48,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -69,12 +70,11 @@ import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagRewriteCell;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
@@ -1844,8 +1844,7 @@ public class HLogSplitter {
         synchronized (this.tableNameToHConnectionMap) {
           hconn = this.tableNameToHConnectionMap.get(tableName);
           if (hconn == null) {
-            // Gets closed over in closeRegionServerWriters
-            hconn = (HConnection)ConnectionFactory.createConnection(conf);
+            hconn = HConnectionManager.getConnection(conf);
             this.tableNameToHConnectionMap.put(tableName, hconn);
           }
         }

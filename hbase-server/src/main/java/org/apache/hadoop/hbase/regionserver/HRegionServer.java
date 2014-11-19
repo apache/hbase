@@ -74,7 +74,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
@@ -607,7 +606,7 @@ public class HRegionServer extends HasThread implements
    */
   protected HConnection createShortCircuitConnection() throws IOException {
     return ConnectionUtils.createShortCircuitHConnection(
-      ConnectionFactory.createConnection(conf), serverName, rpcServices, rpcServices);
+      HConnectionManager.getConnection(conf), serverName, rpcServices, rpcServices);
   }
 
   /**

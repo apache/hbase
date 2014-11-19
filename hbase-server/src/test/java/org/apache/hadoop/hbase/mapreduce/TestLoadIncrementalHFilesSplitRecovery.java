@@ -46,8 +46,6 @@ import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
@@ -233,10 +231,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
    * @throws IOException
    */
   void assertExpectedTable(TableName table, int count, int value) throws IOException {
-    HTableDescriptor [] htds = util.getHBaseAdmin().listTables(table.getNameAsString());
-    assertEquals(htds.length, 1);
     Table t = null;
     try {
+      assertEquals(
+          util.getHBaseAdmin().listTables(table.getNameAsString()).length, 1);
       t = new HTable(util.getConfiguration(), table);
       Scan s = new Scan();
       ResultScanner sr = t.getScanner(s);
@@ -445,33 +443,30 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   public void testGroupOrSplitWhenRegionHoleExistsInMeta() throws Exception {
     TableName tableName = TableName.valueOf("testGroupOrSplitWhenRegionHoleExistsInMeta");
     byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("row_00000100") };
-    // Share connection. We were failing to find the table with our new reverse scan because it
-    // looks for first region, not any region -- that is how it works now.  The below removes first
-    // region in test.  Was reliant on the Connection caching having first region.
-    Connection connection = ConnectionFactory.createConnection(util.getConfiguration());
-    Table table = connection.getTable(tableName);
+    HTable table = new HTable(util.getConfiguration(), tableName);
 
     setupTableWithSplitkeys(tableName, 10, SPLIT_KEYS);
     Path dir = buildBulkFiles(tableName, 2);
 
     final AtomicInteger countedLqis = new AtomicInteger();
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration()) {
+    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(
+      util.getConfiguration()) {
 
-      protected List<LoadQueueItem> groupOrSplit(
-          Multimap<ByteBuffer, LoadQueueItem> regionGroups,
-          final LoadQueueItem item, final HTable htable,
-          final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
-        List<LoadQueueItem> lqis = super.groupOrSplit(regionGroups, item, htable, startEndKeys);
-        if (lqis != null) {
-          countedLqis.addAndGet(lqis.size());
-        }
-        return lqis;
+    protected List<LoadQueueItem> groupOrSplit(
+        Multimap<ByteBuffer, LoadQueueItem> regionGroups,
+        final LoadQueueItem item, final HTable htable,
+        final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
+      List<LoadQueueItem> lqis = super.groupOrSplit(regionGroups, item, htable, startEndKeys);
+      if (lqis != null) {
+        countedLqis.addAndGet(lqis.size());
       }
-    };
+      return lqis;
+    }
+  };
 
     // do bulkload when there is no region hole in hbase:meta.
     try {
-      loader.doBulkLoad(dir, (HTable)table);
+      loader.doBulkLoad(dir, table);
     } catch (Exception e) {
       LOG.error("exeception=", e);
     }
@@ -486,13 +481,13 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       util.getZooKeeperWatcher(), hConnection, tableName);
     for (HRegionInfo regionInfo : regionInfos) {
       if (Bytes.equals(regionInfo.getStartKey(), HConstants.EMPTY_BYTE_ARRAY)) {
-        MetaTableAccessor.deleteRegion(connection, regionInfo);
+        MetaTableAccessor.deleteRegion(hConnection, regionInfo);
         break;
       }
     }
 
     try {
-      loader.doBulkLoad(dir, (HTable)table);
+      loader.doBulkLoad(dir, table);
     } catch (Exception e) {
       LOG.error("exeception=", e);
       assertTrue("IOException expected", e instanceof IOException);
@@ -500,43 +495,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
     table.close();
 
-    // Make sure at least the one region that still exists can be found.
-    regionInfos = MetaTableAccessor.getTableRegions(util.getZooKeeperWatcher(),
-        connection, tableName);
-    assertTrue(regionInfos.size() >= 1);
-
-    this.assertExpectedTable(connection, tableName, ROWCOUNT, 2);
-    connection.close();
-  }
-
-  /**
-   * Checks that all columns have the expected value and that there is the
-   * expected number of rows.
-   * @throws IOException
-   */
-  void assertExpectedTable(final Connection connection, TableName table, int count, int value)
-  throws IOException {
-    HTableDescriptor [] htds = util.getHBaseAdmin().listTables(table.getNameAsString());
-    assertEquals(htds.length, 1);
-    Table t = null;
-    try {
-      t = connection.getTable(table);
-      Scan s = new Scan();
-      ResultScanner sr = t.getScanner(s);
-      int i = 0;
-      for (Result r : sr) {
-        i++;
-        for (NavigableMap<byte[], byte[]> nm : r.getNoVersionMap().values()) {
-          for (byte[] val : nm.values()) {
-            assertTrue(Bytes.equals(val, value(value)));
-          }
-        }
-      }
-      assertEquals(count, i);
-    } catch (IOException e) {
-      fail("Failed due to exception");
-    } finally {
-      if (t != null) t.close();
-    }
+    this.assertExpectedTable(tableName, ROWCOUNT, 2);
   }
 }
+

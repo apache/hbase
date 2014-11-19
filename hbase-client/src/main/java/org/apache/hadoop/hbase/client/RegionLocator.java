@@ -30,7 +30,7 @@ import java.util.List;
 
 /**
  * Used to view region location information for a single HBase table.
- * Obtain an instance from an {@link Connection}.
+ * Obtain an instance from an {@link HConnection}.
  *
  * @see ConnectionFactory
  * @see Connection

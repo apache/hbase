@@ -245,7 +245,7 @@ class ConnectionManager {
    */
   @VisibleForTesting
   static NonceGenerator injectNonceGeneratorForTesting(
-      ClusterConnection conn, NonceGenerator cnm) {
+      HConnection conn, NonceGenerator cnm) {
     HConnectionImplementation connImpl = (HConnectionImplementation)conn;
     NonceGenerator ng = connImpl.getNonceGenerator();
     LOG.warn("Nonce generator is being replaced by test code for " + cnm.getClass().getName());

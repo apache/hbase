@@ -87,19 +87,16 @@ public class ZKConfig {
     Properties zkProperties = new Properties();
 
     // Directly map all of the hbase.zookeeper.property.KEY properties.
-    // Synchronize on conf so no loading of configs while we iterate
-    synchronized (conf) {
-      for (Entry<String, String> entry : conf) {
-        String key = entry.getKey();
-        if (key.startsWith(HConstants.ZK_CFG_PROPERTY_PREFIX)) {
-          String zkKey = key.substring(HConstants.ZK_CFG_PROPERTY_PREFIX_LEN);
-          String value = entry.getValue();
-          // If the value has variables substitutions, need to do a get.
-          if (value.contains(VARIABLE_START)) {
-            value = conf.get(key);
-          }
-          zkProperties.put(zkKey, value);
+    for (Entry<String, String> entry : new Configuration(conf)) { // copy for mt safety
+      String key = entry.getKey();
+      if (key.startsWith(HConstants.ZK_CFG_PROPERTY_PREFIX)) {
+        String zkKey = key.substring(HConstants.ZK_CFG_PROPERTY_PREFIX_LEN);
+        String value = entry.getValue();
+        // If the value has variables substitutions, need to do a get.
+        if (value.contains(VARIABLE_START)) {
+          value = conf.get(key);
         }
+        zkProperties.put(zkKey, value);
       }
     }
 
