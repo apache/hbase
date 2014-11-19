@@ -18,8 +18,8 @@
 #
 
 # HBase ruby classes.
-# Has wrapper classes for org.apache.hadoop.hbase.client.Admin
-# and for org.apache.hadoop.hbase.client.Table.  Classes take
+# Has wrapper classes for org.apache.hadoop.hbase.client.HBaseAdmin
+# and for org.apache.hadoop.hbase.client.HTable.  Classes take
 # Formatters on construction and outputs any results using
 # Formatter methods.  These classes are only really for use by
 # the hirb.rb HBase Shell script; they don't make much sense elsewhere.

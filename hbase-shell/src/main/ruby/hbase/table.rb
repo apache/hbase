@@ -19,7 +19,7 @@
 
 include Java
 
-# Wrapper for org.apache.hadoop.hbase.client.Table
+# Wrapper for org.apache.hadoop.hbase.client.HTable
 
 module Hbase
   class Table
@@ -113,12 +113,11 @@ EOF
 
     def initialize(configuration, table_name, shell)
       if @@thread_pool then
-        @connection = org.apache.hadoop.hbase.client.ConnectionFactory.createConnection(configuration, @@thread_pool)
+        @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name.to_java_bytes, @@thread_pool)
       else
-        @connection = org.apache.hadoop.hbase.client.ConnectionFactory.createConnection(configuration)
-        @@thread_pool = @connection.getBatchPool()
+        @table = org.apache.hadoop.hbase.client.HTable.new(configuration, table_name)
+        @@thread_pool = @table.getPool()
       end
-      @table = @connection.getTable(table_name)
       @name = table_name
       @shell = shell
       @converters = Hash.new()
