@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitLogWorkerCoordination;
@@ -134,6 +135,9 @@ public class SplitLogWorker implements Runnable {
     try {
       LOG.info("SplitLogWorker " + server.getServerName() + " starting");
       coordination.registerListener();
+      // pre-initialize a new connection for splitlogworker configuration
+      HConnectionManager.getConnection(conf);
+
       // wait for Coordination Engine is ready
       boolean res = false;
       while (!res && !coordination.isStop()) {
