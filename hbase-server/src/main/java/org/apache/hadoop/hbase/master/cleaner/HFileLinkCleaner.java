@@ -93,7 +93,7 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Couldn't instantiate the file system, not deleting file, just in case. "
             + FileSystem.FS_DEFAULT_NAME_KEY + "="
-            + getConf().get(FileSystem.FS_DEFAULT_NAME_KEY, FileSystem.DEFAULT_FS));
+            + getConf().get(FileSystem.FS_DEFAULT_NAME_KEY, "file:///"));
       }
     }
   }
