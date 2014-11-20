@@ -172,7 +172,7 @@ public class AssignmentManager extends ZooKeeperListener {
 
   /**
    * The sleep time for which the assignment will wait before retrying in case of hbase:meta assignment
-   * failure due to lack of availability of region plan
+   * failure due to lack of availability of region plan or bad region plan
    */
   private final long sleepTimeBeforeRetryingMetaAssignment;
 
@@ -2029,6 +2029,7 @@ public class AssignmentManager extends ZooKeeperListener {
             + ", the server is stopped/aborted");
           return;
         }
+
         if (plan == null) { // Get a server for the region at first
           try {
             plan = getRegionPlan(region, forceNewPlan);
@@ -2036,21 +2037,24 @@ public class AssignmentManager extends ZooKeeperListener {
             LOG.warn("Failed to get region plan", e);
           }
         }
+
         if (plan == null) {
           LOG.warn("Unable to determine a plan to assign " + region);
           if (tomActivated){
             this.timeoutMonitor.setAllRegionServersOffline(true);
           } else {
             if (region.isMetaRegion()) {
-              try {
-                Thread.sleep(this.sleepTimeBeforeRetryingMetaAssignment);
-                if (i == maximumAttempts) i = 1;
+                if (i == maximumAttempts) {
+                  i = 0; // re-set attempt count to 0 for at least 1 retry
+
+                  LOG.warn("Unable to determine a plan to assign a hbase:meta region " + region +
+                    " after maximumAttempts (" + this.maximumAttempts +
+                    "). Reset attempts count and continue retrying.");
+                }
+                waitForRetryingMetaAssignment();
                 continue;
-              } catch (InterruptedException e) {
-                LOG.error("Got exception while waiting for hbase:meta assignment");
-                Thread.currentThread().interrupt();
-              }
             }
+
             regionStates.updateRegionState(region, State.FAILED_OPEN);
           }
           return;
@@ -2137,7 +2141,6 @@ public class AssignmentManager extends ZooKeeperListener {
           boolean retry = !hold && (t instanceof java.net.SocketTimeoutException
               && this.serverManager.isServerOnline(plan.getDestination()));
 
-
           if (hold) {
             LOG.warn(assignMsg + ", waiting a little before trying on the same region server " +
               "try=" + i + " of " + this.maximumAttempts, t);
@@ -2186,9 +2189,19 @@ public class AssignmentManager extends ZooKeeperListener {
         }
 
         if (i == this.maximumAttempts) {
-          // Don't reset the region state or get a new plan any more.
-          // This is the last try.
-          continue;
+          // For meta region, we have to keep retrying until succeeding
+          if (region.isMetaRegion()) {
+            i = 0; // re-set attempt count to 0 for at least 1 retry
+            LOG.warn(assignMsg +
+                ", trying to assign a hbase:meta region reached to maximumAttempts (" +
+                this.maximumAttempts + ").  Reset attempt counts and continue retrying.");
+            waitForRetryingMetaAssignment();
+          }
+          else {
+            // Don't reset the region state or get a new plan any more.
+            // This is the last try.
+            continue;
+          }
         }
 
         // If region opened on destination of present plan, reassigning to new
@@ -2272,6 +2285,18 @@ public class AssignmentManager extends ZooKeeperListener {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Wait for some time before retrying meta table region assignment
+   */
+  private void waitForRetryingMetaAssignment() {
+    try {
+      Thread.sleep(this.sleepTimeBeforeRetryingMetaAssignment);
+    } catch (InterruptedException e) {
+      LOG.error("Got exception while waiting for hbase:meta assignment");
+      Thread.currentThread().interrupt();
+    }
   }
 
   /**
@@ -3583,12 +3608,21 @@ public class AssignmentManager extends ZooKeeperListener {
       // name, and failedOpenTracker is updated only in this block
       failedOpenTracker.put(encodedName, failedOpenCount);
     }
-    if (failedOpenCount.incrementAndGet() >= maximumAttempts) {
+    if (failedOpenCount.incrementAndGet() >= maximumAttempts && !hri.isMetaRegion() ) {
       regionStates.updateRegionState(hri, State.FAILED_OPEN);
       // remove the tracking info to save memory, also reset
       // the count for next open initiative
       failedOpenTracker.remove(encodedName);
-    } else {
+    }
+    else {
+      if (hri.isMetaRegion() && failedOpenCount.get() >= maximumAttempts) {
+        // Log a warning message if a meta region failedOpenCount exceeds maximumAttempts
+        // so that we are aware of potential problem if it persists for a long time.
+        LOG.warn("Failed to open the hbase:meta region " +
+            hri.getRegionNameAsString() + " after" +
+            failedOpenCount.get() + " retries. Continue retrying.");
+      }
+
       // Handle this the same as if it were opened and then closed.
       RegionState regionState = regionStates.updateRegionState(hri, State.CLOSED);
       if (regionState != null) {
