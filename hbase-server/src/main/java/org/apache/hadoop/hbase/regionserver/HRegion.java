@@ -3521,6 +3521,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
             }
           }
 
+          if (firstSeqIdInLog == -1) {
+            firstSeqIdInLog = key.getLogSeqNum();
+          }
+          currentEditSeqId = key.getLogSeqNum();
+          currentReplaySeqId = (key.getOrigLogSeqNum() > 0) ?
+            key.getOrigLogSeqNum() : currentEditSeqId;
+
           // Start coprocessor replay here. The coprocessor is for each WALEdit
           // instead of a KeyValue.
           if (coprocessorHost != null) {
@@ -3531,12 +3538,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
             }
           }
 
-          if (firstSeqIdInLog == -1) {
-            firstSeqIdInLog = key.getLogSeqNum();
-          }
-          currentEditSeqId = key.getLogSeqNum();
-          currentReplaySeqId = (key.getOrigLogSeqNum() > 0) ?
-            key.getOrigLogSeqNum() : currentEditSeqId;
           boolean flush = false;
           for (Cell cell: val.getCells()) {
             // Check this edit is for me. Also, guard against writing the special
@@ -3572,13 +3573,19 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
               continue;
             }
             CellUtil.setSequenceId(cell, currentReplaySeqId);
+
             // Once we are over the limit, restoreEdit will keep returning true to
             // flush -- but don't flush until we've played all the kvs that make up
             // the WALEdit.
-            flush = restoreEdit(store, cell);
+            if (!flush) {
+              flush = restoreEdit(store, cell);
+            }
+
             editsCount++;
           }
-          if (flush) internalFlushcache(null, currentEditSeqId, status);
+          if (flush) {
+            internalFlushcache(null, currentEditSeqId, status);
+          }
 
           if (coprocessorHost != null) {
             coprocessorHost.postWALRestore(this.getRegionInfo(), key, val);
