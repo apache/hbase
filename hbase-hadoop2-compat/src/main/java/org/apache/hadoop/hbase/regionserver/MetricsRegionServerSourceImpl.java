@@ -242,7 +242,7 @@ public class MetricsRegionServerSourceImpl
           .addCounter(Interns.info(MOB_FILE_CACHE_ACCESS_COUNT, MOB_FILE_CACHE_ACCESS_COUNT_DESC),
               rsWrap.getMobFileCacheAccessCount())
           .addCounter(Interns.info(MOB_FILE_CACHE_MISS_COUNT, MOB_FILE_CACHE_MISS_COUNT_DESC),
-              rsWrap.getMobFileCacheAccessCount())
+              rsWrap.getMobFileCacheMissCount())
           .addCounter(
               Interns.info(MOB_FILE_CACHE_EVICTED_COUNT, MOB_FILE_CACHE_EVICTED_COUNT_DESC),
               rsWrap.getMobFileCacheEvictedCount())
