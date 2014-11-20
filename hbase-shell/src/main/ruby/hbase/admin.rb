@@ -768,6 +768,12 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Deletes the snapshots matching the given regex
+    def delete_all_snapshot(regex)
+      @admin.deleteSnapshots(regex).to_a
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Returns a list of snapshots
     def list_snapshot(regex = ".*")
       @admin.listSnapshots(regex).to_a

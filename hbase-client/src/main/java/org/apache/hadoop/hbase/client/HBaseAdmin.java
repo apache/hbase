@@ -3332,16 +3332,25 @@ public class HBaseAdmin implements Abortable, Closeable {
   public void deleteSnapshots(final Pattern pattern) throws IOException {
     List<SnapshotDescription> snapshots = listSnapshots(pattern);
     for (final SnapshotDescription snapshot : snapshots) {
-      // do the delete
-      executeCallable(new MasterCallable<Void>(getConnection()) {
-        @Override
-        public Void call() throws ServiceException {
-          this.master.deleteSnapshot(null,
-            DeleteSnapshotRequest.newBuilder().setSnapshot(snapshot).build());
-          return null;
-        }
-      });
+       try {
+         internalDeleteSnapshot(snapshot);
+       } catch (IOException ex) {
+         LOG.info(
+           "Failed to delete snapshot " + snapshot.getName() + " for table " + snapshot.getTable(),
+           ex);
+       }
     }
+  }
+
+  private void internalDeleteSnapshot(final SnapshotDescription snapshot) throws IOException {
+    executeCallable(new MasterCallable<Void>(getConnection()) {
+      @Override
+      public Void call() throws ServiceException {
+        this.master.deleteSnapshot(null, DeleteSnapshotRequest.newBuilder().setSnapshot(snapshot)
+            .build());
+        return null;
+      }
+    });
   }
 
   /**
