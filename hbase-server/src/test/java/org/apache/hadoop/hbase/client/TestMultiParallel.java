@@ -331,7 +331,6 @@ public class TestMultiParallel {
   public void testBatchWithPut() throws Exception {
     LOG.info("test=testBatchWithPut");
     Table table = new HTable(UTIL.getConfiguration(), TEST_TABLE);
-
     // put multiple rows using a batch
     List<Row> puts = constructPutRequests();
 
@@ -677,6 +676,7 @@ public class TestMultiParallel {
 
   private void validateLoadedData(Table table) throws IOException {
     // get the data back and validate that it is correct
+    LOG.info("Validating data on " + table);
     for (byte[] k : KEYS) {
       Get get = new Get(k);
       get.addColumn(BYTES_FAMILY, QUALIFIER);

@@ -115,7 +115,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
    *
    * @throws Exception
    */
-  @Test
+  @Test (timeout=30000)
   public void testImmediateAssignment() throws Exception {
     List<ServerName> tmp = getListOfServerNames(randomServers(1, 0));
     tmp.add(master);
@@ -161,7 +161,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
    *
    * @throws Exception
    */
-  @Test
+  @Test (timeout=180000)
   public void testBulkAssignment() throws Exception {
     List<ServerName> tmp = getListOfServerNames(randomServers(5, 0));
     List<HRegionInfo> hris = randomRegions(20);
@@ -200,7 +200,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
    * assignment info.
    * @throws Exception
    */
-  @Test
+  @Test (timeout=180000)
   public void testRetainAssignment() throws Exception {
     // Test simple case where all same servers are there
     List<ServerAndLoad> servers = randomServers(10, 10);
@@ -236,7 +236,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     assertRetainedAssignment(existing, listOfServerNames, assignment);
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testRegionAvailability() throws Exception {
     // Create a cluster with a few servers, assign them to specific racks
     // then assign some regions. The tests should check whether moving a
@@ -310,7 +310,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     assertTrue(!cluster.wouldLowerAvailability(hri1, servers[6]));
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testRegionAvailabilityWithRegionMoves() throws Exception {
     List<HRegionInfo> list0 = new ArrayList<HRegionInfo>();
     List<HRegionInfo> list1 = new ArrayList<HRegionInfo>();
@@ -422,7 +422,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     }
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testClusterServersWithSameHostPort() {
     // tests whether the BaseLoadBalancer.Cluster can be constructed with servers
     // sharing same host and port
@@ -462,7 +462,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     }
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testClusterRegionLocations() {
     // tests whether region locations are handled correctly in Cluster
     List<ServerName> servers = getListOfServerNames(randomServers(10, 10));

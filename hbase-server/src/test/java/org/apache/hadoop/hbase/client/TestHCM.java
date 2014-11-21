@@ -1007,7 +1007,7 @@ public class TestHCM {
     return prevNumRetriesVal;
   }
 
-  @Test
+  @Test (timeout=30000)
   public void testMulti() throws Exception {
     HTable table = TEST_UTIL.createTable(TABLE_NAME3, FAM_NAM);
     TEST_UTIL.createMultiRegions(table, FAM_NAM);
@@ -1024,9 +1024,7 @@ public class TestHCM {
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
 
     // We can wait for all regions to be online, that makes log reading easier when debugging
-    while (master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
-      Thread.sleep(1);
-    }
+    TEST_UTIL.waitUntilNoRegionsInTransition(20000);
 
     Put put = new Put(ROW_X);
     put.add(FAM_NAM, ROW_X, ROW_X);
@@ -1034,6 +1032,12 @@ public class TestHCM {
 
     // Now moving the region to the second server
     HRegionLocation toMove = conn.getCachedLocation(TABLE_NAME3, ROW_X).getRegionLocation();
+    if (toMove == null) {
+      String msg = "Failed to find location for " + Bytes.toString(ROW_X) + " in " + TABLE_NAME3;
+      // Log so easier to see in output where error occurred.
+      LOG.error(msg);
+      throw new NullPointerException(msg);
+    }
     byte[] regionName = toMove.getRegionInfo().getRegionName();
     byte[] encodedRegionNameBytes = toMove.getRegionInfo().getEncodedNameAsBytes();
 
