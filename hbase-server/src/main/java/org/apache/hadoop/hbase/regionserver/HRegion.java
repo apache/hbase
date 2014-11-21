@@ -4805,11 +4805,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
   /**
    * Create a daughter region from given a temp directory with the region data.
    * @param hri Spec. for daughter region to open.
+   * @param expectedReferenceFileCount
    * @throws IOException
    */
-  HRegion createDaughterRegionFromSplits(final HRegionInfo hri) throws IOException {
+  HRegion createDaughterRegionFromSplits(final HRegionInfo hri, int expectedReferenceFileCount) throws IOException {
     // Move the files from the temporary .splits to the final /table/region directory
-    fs.commitDaughterRegion(hri);
+    fs.commitDaughterRegion(hri, expectedReferenceFileCount);
 
     // Create the daughter HRegion instance
     HRegion r = HRegion.newHRegion(this.fs.getTableDir(), this.getWAL(), fs.getFileSystem(),

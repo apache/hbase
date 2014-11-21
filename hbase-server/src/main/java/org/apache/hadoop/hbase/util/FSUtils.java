@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionPlacementMaintainer;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FSProtos;
@@ -1409,13 +1410,20 @@ public abstract class FSUtils {
     return familyDirs;
   }
 
+  public static List<Path> getReferenceFilePaths(final FileSystem fs, final Path familyDir) throws IOException {
+    FileStatus[] fds = fs.listStatus(familyDir, new ReferenceFileFilter(fs));
+    List<Path> referenceFiles = new ArrayList<Path>(fds.length);
+    for (FileStatus fdfs: fds) {
+      Path fdPath = fdfs.getPath();
+      referenceFiles.add(fdPath);
+    }
+    return referenceFiles;
+  }
+
   /**
    * Filter for HFiles that excludes reference files.
    */
   public static class HFileFilter implements PathFilter {
-    // This pattern will accept 0.90+ style hex hfies files but reject reference files
-    final public static Pattern hfilePattern = Pattern.compile("^([0-9a-f]+)$");
-
     final FileSystem fs;
 
     public HFileFilter(FileSystem fs) {
@@ -1424,13 +1432,9 @@ public abstract class FSUtils {
 
     @Override
     public boolean accept(Path rd) {
-      if (!hfilePattern.matcher(rd.getName()).matches()) {
-        return false;
-      }
-
       try {
         // only files
-        return !fs.getFileStatus(rd).isDirectory();
+        return !fs.getFileStatus(rd).isDirectory() && StoreFileInfo.isHFile(rd);
       } catch (IOException ioe) {
         // Maybe the file was moved or the fs was disconnected.
         LOG.warn("Skipping file " + rd +" due to IOException", ioe);
@@ -1438,6 +1442,28 @@ public abstract class FSUtils {
       }
     }
   }
+
+  public static class ReferenceFileFilter implements PathFilter {
+
+    private final FileSystem fs;
+
+    public ReferenceFileFilter(FileSystem fs) {
+      this.fs = fs;
+    }
+
+    @Override
+    public boolean accept(Path rd) {
+      try {
+        // only files can be references.
+        return !fs.getFileStatus(rd).isDirectory() && StoreFileInfo.isReference(rd);
+      } catch (IOException ioe) {
+        // Maybe the file was moved or the fs was disconnected.
+        LOG.warn("Skipping file " + rd +" due to IOException", ioe);
+        return false;
+      }
+    }
+  }
+
 
   /**
    * @param conf
@@ -1494,6 +1520,18 @@ public abstract class FSUtils {
       }
     }
     return map;
+  }
+
+  public static int getRegionReferenceFileCount(final FileSystem fs, final Path p) {
+    int result = 0;
+    try {
+      for (Path familyDir:getFamilyDirs(fs, p)){
+        result += getReferenceFilePaths(fs, familyDir).size();
+      }
+    } catch (IOException e) {
+      LOG.warn("Error Counting reference files.", e);
+    }
+    return result;
   }
 
 

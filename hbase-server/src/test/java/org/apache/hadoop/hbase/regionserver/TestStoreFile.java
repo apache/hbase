@@ -959,7 +959,7 @@ public class TestStoreFile extends HBaseTestCase {
     if (null == path) {
       return null;
     }
-    Path regionDir = regionFs.commitDaughterRegion(hri);
+    Path regionDir = regionFs.commitDaughterRegion(hri, 1);
     return new Path(new Path(regionDir, family), path.getName());
   }
 
