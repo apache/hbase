@@ -322,6 +322,7 @@ public class SweepJob {
       for (String fileName : fileNames) {
         writer.append(fileName, MobConstants.EMPTY_STRING);
       }
+      writer.hflush();
     } finally {
       if (writer != null) {
         IOUtils.closeStream(writer);

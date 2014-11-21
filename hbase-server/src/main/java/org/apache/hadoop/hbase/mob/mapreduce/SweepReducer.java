@@ -188,6 +188,7 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
       if (null != partition) {
         partition.close();
       }
+      writer.hflush();
     } catch (KeeperException e) {
       throw new IOException(e);
     } finally {
