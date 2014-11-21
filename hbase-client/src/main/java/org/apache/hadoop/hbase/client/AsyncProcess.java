@@ -39,6 +39,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -90,6 +91,7 @@ import com.google.common.annotations.VisibleForTesting;
  * gets as well.
  * </p>
  */
+@InterfaceAudience.Private
 class AsyncProcess {
   protected static final Log LOG = LogFactory.getLog(AsyncProcess.class);
   protected static final AtomicLong COUNTER = new AtomicLong();

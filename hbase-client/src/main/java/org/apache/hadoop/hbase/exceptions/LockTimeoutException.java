@@ -19,8 +19,15 @@
  */
 package org.apache.hadoop.hbase.exceptions;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 
+/**
+ * Thrown when there is a timeout when trying to acquire a lock
+ */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class LockTimeoutException extends DoNotRetryIOException {
 
   private static final long serialVersionUID = -1770764924258999825L;

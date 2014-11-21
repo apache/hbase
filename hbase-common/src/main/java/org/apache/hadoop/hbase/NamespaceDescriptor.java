@@ -161,6 +161,8 @@ public class NamespaceDescriptor {
     return new Builder(ns);
   }
 
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static class Builder {
     private String bName;
     private Map<String, String> bConfiguration = new TreeMap<String, String>();
@@ -173,7 +175,7 @@ public class NamespaceDescriptor {
     private Builder(String name) {
       this.bName = name;
     }
-    
+
     public Builder addConfiguration(Map<String, String> configuration) {
       this.bConfiguration.putAll(configuration);
       return this;
@@ -193,7 +195,7 @@ public class NamespaceDescriptor {
       if (this.bName == null){
          throw new IllegalArgumentException("A name has to be specified in a namespace.");
       }
-      
+
       NamespaceDescriptor desc = new NamespaceDescriptor(this.bName);
       desc.configuration = this.bConfiguration;
       return desc;

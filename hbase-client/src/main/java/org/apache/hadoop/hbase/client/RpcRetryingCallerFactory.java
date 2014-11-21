@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -24,6 +25,7 @@ import org.apache.hadoop.hbase.util.ReflectionUtils;
 /**
  * Factory to create an {@link RpcRetryingCaller}
  */
+@InterfaceAudience.Private
 public class RpcRetryingCallerFactory {
 
   /** Configuration key for a custom {@link RpcRetryingCaller} */

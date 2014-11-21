@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.client;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Keeps track of repeated failures to any region server. Multiple threads manipulate the contents

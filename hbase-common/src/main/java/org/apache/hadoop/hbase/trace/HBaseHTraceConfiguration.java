@@ -19,8 +19,10 @@
 package org.apache.hadoop.hbase.trace;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.htrace.HTraceConfiguration;
 
+@InterfaceAudience.Private
 public class HBaseHTraceConfiguration extends HTraceConfiguration {
 
   public static final String KEY_PREFIX = "hbase.";

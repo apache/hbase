@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.classification.tools;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import com.sun.javadoc.DocErrorReporter;
 import com.sun.javadoc.LanguageVersion;
 import com.sun.javadoc.RootDoc;
@@ -29,6 +30,7 @@ import com.sun.tools.doclets.standard.Standard;
  * {@link org.apache.hadoop.hbase.classification.InterfaceAudience.LimitedPrivate}.
  * It delegates to the Standard Doclet, and takes the same options.
  */
+@InterfaceAudience.Private
 public class ExcludePrivateAnnotationsStandardDoclet {
 
   public static LanguageVersion languageVersion() {

@@ -23,6 +23,8 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Describe the throttling result.
@@ -31,11 +33,15 @@ import org.apache.commons.logging.LogFactory;
  * operation to go on the server if the waitInterval is grater than the one got
  * as result of this exception.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class ThrottlingException extends QuotaExceededException {
   private static final long serialVersionUID = 1406576492085155743L;
 
   private static final Log LOG = LogFactory.getLog(ThrottlingException.class);
 
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public enum Type {
     NumRequestsExceeded,
     NumReadRequestsExceeded,

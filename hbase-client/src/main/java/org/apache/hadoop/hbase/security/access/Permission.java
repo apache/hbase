@@ -43,6 +43,9 @@ import com.google.common.collect.Maps;
 @InterfaceStability.Evolving
 public class Permission extends VersionedWritable {
   protected static final byte VERSION = 0;
+
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public enum Action {
     READ('R'), WRITE('W'), EXEC('X'), CREATE('C'), ADMIN('A');
 
@@ -148,6 +151,7 @@ public class Permission extends VersionedWritable {
     return result;
   }
 
+  @Override
   public String toString() {
     StringBuilder str = new StringBuilder("[Permission: ")
         .append("actions=");
@@ -167,6 +171,7 @@ public class Permission extends VersionedWritable {
   }
 
   /** @return the object version number */
+  @Override
   public byte getVersion() {
     return VERSION;
   }

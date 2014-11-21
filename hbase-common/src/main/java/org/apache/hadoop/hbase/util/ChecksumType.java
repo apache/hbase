@@ -24,13 +24,15 @@ import java.util.zip.Checksum;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Checksum types. The Checksum type is a one byte number
  * that stores a representation of the checksum algorithm
- * used to encode a hfile. The ordinal of these cannot 
+ * used to encode a hfile. The ordinal of these cannot
  * change or else you risk breaking all existing HFiles out there.
  */
+@InterfaceAudience.Private
 public enum ChecksumType {
 
   NULL((byte)0) {
@@ -70,7 +72,7 @@ public enum ChecksumType {
         LOG.trace(PURECRC32 + " not available.");
       }
       try {
-        // The default checksum class name is java.util.zip.CRC32. 
+        // The default checksum class name is java.util.zip.CRC32.
         // This is available on all JVMs.
         if (ctor == null) {
           ctor = ChecksumFactory.newConstructor(JDKCRC);

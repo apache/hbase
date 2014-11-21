@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.io.hadoopbackport;
 import java.io.IOException;
 import java.io.InputStream;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
 /**
  * The ThrottleInputStream provides bandwidth throttling on a specified
  * InputStream. It is implemented as a wrapper on top of another InputStream
@@ -31,6 +33,7 @@ import java.io.InputStream;
  * (Thus, while the read-rate might exceed the maximum for a given short interval,
  * the average tends towards the specified maximum, overall.)
  */
+@InterfaceAudience.Private
 public class ThrottledInputStream extends InputStream {
 
   private final InputStream rawStream;
@@ -47,7 +50,7 @@ public class ThrottledInputStream extends InputStream {
   }
 
   public ThrottledInputStream(InputStream rawStream, long maxBytesPerSec) {
-    assert maxBytesPerSec > 0 : "Bandwidth " + maxBytesPerSec + " is invalid"; 
+    assert maxBytesPerSec > 0 : "Bandwidth " + maxBytesPerSec + " is invalid";
     this.rawStream = rawStream;
     this.maxBytesPerSec = maxBytesPerSec;
   }

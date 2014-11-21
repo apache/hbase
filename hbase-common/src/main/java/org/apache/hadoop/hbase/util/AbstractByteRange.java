@@ -17,9 +17,14 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+
 /**
  * An abstract implementation of the ByteRange API
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public abstract class AbstractByteRange implements ByteRange {
 
   public static final int UNSET_HASH_VALUE = -1;

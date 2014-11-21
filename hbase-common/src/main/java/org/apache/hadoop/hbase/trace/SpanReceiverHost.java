@@ -24,6 +24,7 @@ import java.util.HashSet;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.htrace.SpanReceiver;
 import org.htrace.Trace;
 
@@ -32,6 +33,7 @@ import org.htrace.Trace;
  * hbase-site.xml, adding those SpanReceivers to the Tracer, and closing those
  * SpanReceivers when appropriate.
  */
+@InterfaceAudience.Private
 public class SpanReceiverHost {
   public static final String SPAN_RECEIVERS_CONF_KEY = "hbase.trace.spanreceiver.classes";
   private static final Log LOG = LogFactory.getLog(SpanReceiverHost.class);

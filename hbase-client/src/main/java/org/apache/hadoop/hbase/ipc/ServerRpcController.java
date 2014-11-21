@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.ipc;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.protobuf.Descriptors;
@@ -51,6 +52,7 @@ import com.google.protobuf.Service;
  * </code>
  * </p>
  */
+@InterfaceAudience.Private
 public class ServerRpcController implements RpcController {
   /**
    * The exception thrown within

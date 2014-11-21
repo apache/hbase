@@ -19,11 +19,15 @@
 package org.apache.hadoop.hbase.ipc;
 
 
+
 import java.util.concurrent.atomic.AtomicReference;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 
+@InterfaceAudience.Private
 public class TimeLimitedRpcController implements RpcController {
 
   /**

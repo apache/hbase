@@ -41,6 +41,7 @@ public class RetriesExhaustedException extends IOException {
   /**
    * Datastructure that allows adding more info around Throwable incident.
    */
+  @InterfaceAudience.Private
   public static class ThrowableWithExtraContext {
     private final Throwable t;
     private final long when;
@@ -52,7 +53,7 @@ public class RetriesExhaustedException extends IOException {
       this.when = when;
       this.extras = extras;
     }
- 
+
     @Override
     public String toString() {
       return new Date(this.when).toString() + ", " + extras + ", " + t.toString();
@@ -76,6 +77,7 @@ public class RetriesExhaustedException extends IOException {
    * @param numTries
    * @param exceptions List of exceptions that failed before giving up
    */
+  @InterfaceAudience.Private
   public RetriesExhaustedException(final int numTries,
                                    final List<ThrowableWithExtraContext> exceptions) {
     super(getMessage(numTries, exceptions),

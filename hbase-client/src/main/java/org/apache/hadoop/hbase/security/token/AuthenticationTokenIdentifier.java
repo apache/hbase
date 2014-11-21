@@ -42,7 +42,7 @@ public class AuthenticationTokenIdentifier extends TokenIdentifier {
   protected long issueDate;
   protected long expirationDate;
   protected long sequenceNumber;
-  
+
   public AuthenticationTokenIdentifier() {
   }
 

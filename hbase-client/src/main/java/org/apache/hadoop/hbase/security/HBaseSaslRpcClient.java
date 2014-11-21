@@ -61,7 +61,7 @@ public class HBaseSaslRpcClient {
   private final boolean fallbackAllowed;
   /**
    * Create a HBaseSaslRpcClient for an authentication method
-   * 
+   *
    * @param method
    *          the requested authentication method
    * @param token
@@ -75,11 +75,11 @@ public class HBaseSaslRpcClient {
   public HBaseSaslRpcClient(AuthMethod method,
       Token<? extends TokenIdentifier> token, String serverPrincipal, boolean fallbackAllowed)
       throws IOException {
-    this(method, token, serverPrincipal, fallbackAllowed, "authentication"); 
+    this(method, token, serverPrincipal, fallbackAllowed, "authentication");
   }
   /**
    * Create a HBaseSaslRpcClient for an authentication method
-   * 
+   *
    * @param method
    *          the requested authentication method
    * @param token
@@ -134,8 +134,8 @@ public class HBaseSaslRpcClient {
       throw new IOException("Unable to find SASL client implementation");
   }
 
-  protected SaslClient createDigestSaslClient(String[] mechanismNames, 
-      String saslDefaultRealm, CallbackHandler saslClientCallbackHandler) 
+  protected SaslClient createDigestSaslClient(String[] mechanismNames,
+      String saslDefaultRealm, CallbackHandler saslClientCallbackHandler)
       throws IOException {
     return Sasl.createSaslClient(mechanismNames, null, null, saslDefaultRealm,
         SaslUtil.SASL_PROPS, saslClientCallbackHandler);
@@ -143,7 +143,7 @@ public class HBaseSaslRpcClient {
 
   protected SaslClient createKerberosSaslClient(String[] mechanismNames,
       String userFirstPart, String userSecondPart) throws IOException {
-    return Sasl.createSaslClient(mechanismNames, null, userFirstPart, 
+    return Sasl.createSaslClient(mechanismNames, null, userFirstPart,
         userSecondPart, SaslUtil.SASL_PROPS, null);
   }
 
@@ -154,16 +154,16 @@ public class HBaseSaslRpcClient {
           WritableUtils.readString(inStream));
     }
   }
-  
+
   /**
    * Do client side SASL authentication with server via the given InputStream
    * and OutputStream
-   * 
+   *
    * @param inS
    *          InputStream to use
    * @param outS
    *          OutputStream to use
-   * @return true if connection is set up, or false if needs to switch 
+   * @return true if connection is set up, or false if needs to switch
    *             to simple Auth.
    * @throws IOException
    */
@@ -243,7 +243,7 @@ public class HBaseSaslRpcClient {
   /**
    * Get a SASL wrapped InputStream. Can be called only after saslConnect() has
    * been called.
-   * 
+   *
    * @param in
    *          the InputStream to wrap
    * @return a SASL wrapped InputStream
@@ -259,7 +259,7 @@ public class HBaseSaslRpcClient {
   /**
    * Get a SASL wrapped OutputStream. Can be called only after saslConnect() has
    * been called.
-   * 
+   *
    * @param out
    *          the OutputStream to wrap
    * @return a SASL wrapped OutputStream
@@ -287,6 +287,7 @@ public class HBaseSaslRpcClient {
       this.userPassword = SaslUtil.encodePassword(token.getPassword());
     }
 
+    @Override
     public void handle(Callback[] callbacks)
         throws UnsupportedCallbackException {
       NameCallback nc = null;

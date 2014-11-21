@@ -30,12 +30,15 @@ import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
 /**
  * A completion service, close to the one available in the JDK 1.7
  * However, this ones keeps the list of the future, and allows to cancel them all.
  * This means as well that it can be used for a small set of tasks only.
  * <br>Implementation is not Thread safe.
  */
+@InterfaceAudience.Private
 public class BoundedCompletionService<V> {
   private final Executor executor;
   private final List<Future<V>> tasks; // alls the tasks

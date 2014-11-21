@@ -18,6 +18,9 @@
  */
 package org.apache.hadoop.hbase;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+
 /**
  * Ways to keep cells marked for delete around.
  */
@@ -25,6 +28,8 @@ package org.apache.hadoop.hbase;
  * Don't change the TRUE/FALSE labels below, these have to be called
  * this way for backwards compatibility.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public enum KeepDeletedCells {
   /** Deleted Cells are not retained. */
   FALSE,

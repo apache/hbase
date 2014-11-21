@@ -56,6 +56,8 @@ public final class Encryption {
   /**
    * Crypto context
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static class Context extends org.apache.hadoop.hbase.io.crypto.Context {
 
     /** The null crypto context */

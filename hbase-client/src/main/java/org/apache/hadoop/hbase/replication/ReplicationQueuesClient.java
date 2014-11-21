@@ -20,11 +20,14 @@ package org.apache.hadoop.hbase.replication;
 
 import java.util.List;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
 
 /**
  * This provides an interface for clients of replication to view replication queues. These queues
  * keep track of the WALs that still need to be replicated to remote clusters.
  */
+@InterfaceAudience.Private
 public interface ReplicationQueuesClient {
 
   /**

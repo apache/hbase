@@ -17,9 +17,14 @@
  */
 package org.apache.hadoop.hbase.exceptions;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+
 /**
  * Exception thrown if a mutation fails sanity checks.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Stable
 public class FailedSanityCheckException extends org.apache.hadoop.hbase.DoNotRetryIOException {
 
   private static final long serialVersionUID = 1788783640409186240L;

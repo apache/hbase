@@ -27,6 +27,7 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
@@ -60,6 +61,7 @@ import org.apache.zookeeper.KeeperException;
  *
  * /hbase/replication/rs/hostname.example.org,6020,1234/1/23522342.23422 [VALUE: 254]
  */
+@InterfaceAudience.Private
 public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements ReplicationQueues {
 
   /** Znode containing all replication queues for this region server. */
@@ -69,7 +71,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
 
   private static final Log LOG = LogFactory.getLog(ReplicationQueuesZKImpl.class);
 
-  public ReplicationQueuesZKImpl(final ZooKeeperWatcher zk, Configuration conf, 
+  public ReplicationQueuesZKImpl(final ZooKeeperWatcher zk, Configuration conf,
       Abortable abortable) {
     super(zk, conf, abortable);
   }

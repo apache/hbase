@@ -20,12 +20,14 @@ package org.apache.hadoop.hbase.replication;
 
 import java.util.List;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
+@InterfaceAudience.Private
 public class ReplicationQueuesClientZKImpl extends ReplicationStateZKBase implements
     ReplicationQueuesClient {
 

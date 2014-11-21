@@ -38,8 +38,8 @@ package org.apache.hadoop.hbase.exceptions;
 
 import java.io.IOException;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
 * Thrown when the client believes that we are trying to communicate to has
