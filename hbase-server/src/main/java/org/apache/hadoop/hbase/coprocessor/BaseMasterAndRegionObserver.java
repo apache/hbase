@@ -373,6 +373,16 @@ public abstract class BaseMasterAndRegionObserver extends BaseRegionObserver
   }
 
   @Override
+  public void preListSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot) throws IOException {
+  }
+
+  @Override
+  public void postListSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot) throws IOException {
+  }
+
+  @Override
   public void preCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
       throws IOException {

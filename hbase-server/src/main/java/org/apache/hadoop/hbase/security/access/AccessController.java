@@ -1104,6 +1104,16 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   @Override
+  public void preListSnapshot(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot) throws IOException {
+    if (SnapshotDescriptionUtils.isSnapshotOwner(snapshot, getActiveUser())) {
+      // list it, if user is the owner of snapshot
+    } else {
+      requirePermission("listSnapshot", Action.ADMIN);
+    }
+  }
+
+  @Override
   public void preCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
       throws IOException {

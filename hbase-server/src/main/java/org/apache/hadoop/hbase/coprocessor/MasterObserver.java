@@ -598,6 +598,26 @@ public interface MasterObserver extends Coprocessor {
       throws IOException;
 
   /**
+   * Called before listSnapshots request has been processed.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param snapshot the SnapshotDescriptor of the snapshot to list
+   * @throws IOException
+   */
+  void preListSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot) throws IOException;
+
+  /**
+   * Called after listSnapshots request has been processed.
+   * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
+   * @param ctx the environment to interact with the framework and master
+   * @param snapshot the SnapshotDescriptor of the snapshot to list
+   * @throws IOException
+   */
+  void postListSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot) throws IOException;
+
+  /**
    * Called before a snapshot is cloned.
    * Called as part of restoreSnapshot RPC call.
    * It can't bypass the default action, e.g., ctx.bypass() won't have effect.

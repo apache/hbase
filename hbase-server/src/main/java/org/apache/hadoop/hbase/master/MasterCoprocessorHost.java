@@ -727,6 +727,26 @@ public class MasterCoprocessorHost
     });
   }
 
+  public void preListSnapshot(final SnapshotDescription snapshot) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.preListSnapshot(ctx, snapshot);
+      }
+    });
+  }
+
+  public void postListSnapshot(final SnapshotDescription snapshot) throws IOException {
+    execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {
+      @Override
+      public void call(MasterObserver observer, ObserverContext<MasterCoprocessorEnvironment> ctx)
+          throws IOException {
+        observer.postListSnapshot(ctx, snapshot);
+      }
+    });
+  }
+
   public void preCloneSnapshot(final SnapshotDescription snapshot,
       final HTableDescriptor hTableDescriptor) throws IOException {
     execOperation(coprocessors.isEmpty() ? null : new CoprocessorOperation() {

@@ -31,19 +31,19 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.executor.ExecutorService;
@@ -65,7 +65,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
@@ -214,6 +214,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     // ignore all the snapshots in progress
     FileStatus[] snapshots = fs.listStatus(snapshotDir,
       new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
+    MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
     // loop through all the completed snapshots
     for (FileStatus snapshot : snapshots) {
       Path info = new Path(snapshot.getPath(), SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
@@ -226,7 +227,22 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       try {
         in = fs.open(info);
         SnapshotDescription desc = SnapshotDescription.parseFrom(in);
+        if (cpHost != null) {
+          try {
+            cpHost.preListSnapshot(desc);
+          } catch (AccessDeniedException e) {
+            LOG.warn("Current user does not have access to " + desc.getName() + " snapshot. "
+                + "Either you should be owner of this snapshot or admin user.");
+            // Skip this and try for next snapshot
+            continue;
+          }
+        }
         snapshotDescs.add(desc);
+
+        // call coproc post hook
+        if (cpHost != null) {
+          cpHost.postListSnapshot(desc);
+        }
       } catch (IOException e) {
         LOG.warn("Found a corrupted snapshot " + snapshot.getPath(), e);
       } finally {
