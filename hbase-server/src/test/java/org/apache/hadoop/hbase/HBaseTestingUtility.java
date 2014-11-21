@@ -3506,4 +3506,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
     return supportedAlgos.toArray(new Algorithm[supportedAlgos.size()]);
   }
+
+  /**
+   * Wait until no regions in transition.
+   * @param timeout How long to wait.
+   * @throws Exception
+   */
+  public void waitUntilNoRegionsInTransition(final long timeout) throws Exception {
+    waitFor(timeout, predicateNoRegionsInTransition());
+  }
 }
