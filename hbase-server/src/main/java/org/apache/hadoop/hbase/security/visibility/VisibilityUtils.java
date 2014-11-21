@@ -188,10 +188,17 @@ public class VisibilityUtils {
         }
       }
     }
-    // If the conf is not configured by default we need to have one SLG to be used
-    // ie. DefaultScanLabelGenerator
+    // If no SLG is specified in conf, by default we'll add two SLGs
+    // 1. FeedUserAuthScanLabelGenerator
+    // 2. DefinedSetFilterScanLabelGenerator
+    // This stacking will achieve the following default behavior:
+    // 1. If there is no Auths in the scan, we will obtain the global defined set for the user
+    //    from the labels table.
+    // 2. If there is Auths in the scan, we will examine the passed in Auths and filter out the
+    //    labels that the user is not entitled to. Then use the resulting label set.
     if (slgs.isEmpty()) {
-      slgs.add(ReflectionUtils.newInstance(DefaultScanLabelGenerator.class, conf));
+      slgs.add(ReflectionUtils.newInstance(FeedUserAuthScanLabelGenerator.class, conf));
+      slgs.add(ReflectionUtils.newInstance(DefinedSetFilterScanLabelGenerator.class, conf));
     }
     return slgs;
   }
