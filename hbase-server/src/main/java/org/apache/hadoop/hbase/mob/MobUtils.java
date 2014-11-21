@@ -407,14 +407,14 @@ public class MobUtils {
     List<Tag> tags = new ArrayList<Tag>();
     // Add the ref tag as the 1st one.
     tags.add(MobConstants.MOB_REF_TAG);
-    // Add the existing tags.
-    tags.addAll(Tag.asList(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength()));
     // Add the tag of the source table name, this table is where this mob file is flushed
     // from.
     // It's very useful in cloning the snapshot. When reading from the cloning table, we need to
     // find the original mob files by this table name. For details please see cloning
     // snapshot for mob files.
     tags.add(tableNameTag);
+    // Add the existing tags.
+    tags.addAll(Tag.asList(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength()));
     int valueLength = cell.getValueLength();
     byte[] refValue = Bytes.add(Bytes.toBytes(valueLength), fileName);
     KeyValue reference = new KeyValue(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
