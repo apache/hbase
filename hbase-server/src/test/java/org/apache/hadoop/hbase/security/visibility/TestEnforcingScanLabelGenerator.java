@@ -67,7 +67,7 @@ public class TestEnforcingScanLabelGenerator {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
     VisibilityTestUtil.enableVisiblityLabels(conf);
-    String classes = DefaultScanLabelGenerator.class.getCanonicalName() + " , "
+    String classes = DefinedSetFilterScanLabelGenerator.class.getCanonicalName() + " , "
         + EnforcingScanLabelGenerator.class.getCanonicalName();
     conf.setStrings(VisibilityUtils.VISIBILITY_LABEL_GENERATOR_CLASS, classes);
     conf.set("hbase.superuser", "admin");
