@@ -21,6 +21,12 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -246,6 +252,35 @@ public class TestSplitTransaction {
     assertTrue(!this.parent.lock.writeLock().isHeldByCurrentThread());
   }
 
+  @Test
+  public void testCountReferencesFailsSplit() throws IOException {
+    final int rowcount = TEST_UTIL.loadRegion(this.parent, CF);
+    assertTrue(rowcount > 0);
+    int parentRowCount = countRows(this.parent);
+    assertEquals(rowcount, parentRowCount);
+
+    // Start transaction.
+    HRegion spiedRegion = spy(this.parent);
+    SplitTransaction st = prepareGOOD_SPLIT_ROW(spiedRegion);
+    SplitTransaction spiedUponSt = spy(st);
+    doThrow(new IOException("Failing split. Expected reference file count isn't equal."))
+        .when(spiedUponSt).assertReferenceFileCount(anyInt(),
+        eq(new Path(this.parent.getRegionFileSystem().getTableDir(),
+            st.getSecondDaughter().getEncodedName())));
+
+    // Run the execute.  Look at what it returns.
+    boolean expectedException = false;
+    Server mockServer = Mockito.mock(Server.class);
+    when(mockServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
+    try {
+      spiedUponSt.execute(mockServer, null);
+    } catch (IOException e) {
+      expectedException = true;
+    }
+    assertTrue(expectedException);
+  }
+
+
   @Test public void testRollback() throws IOException {
     final int rowcount = TEST_UTIL.loadRegion(this.parent, CF);
     assertTrue(rowcount > 0);
@@ -256,8 +291,10 @@ public class TestSplitTransaction {
     HRegion spiedRegion = spy(this.parent);
     SplitTransaction st = prepareGOOD_SPLIT_ROW(spiedRegion);
     SplitTransaction spiedUponSt = spy(st);
-    when(spiedRegion.createDaughterRegionFromSplits(spiedUponSt.getSecondDaughter())).
-      thenThrow(new MockedFailedDaughterCreation());
+    doNothing().when(spiedUponSt).assertReferenceFileCount(anyInt(),
+        eq(parent.getRegionFileSystem().getSplitsDir(st.getFirstDaughter())));
+    when(spiedRegion.createDaughterRegionFromSplits(spiedUponSt.getSecondDaughter(), 1)).
+        thenThrow(new MockedFailedDaughterCreation());
     // Run the execute.  Look at what it returns.
     boolean expectedException = false;
     Server mockServer = Mockito.mock(Server.class);
