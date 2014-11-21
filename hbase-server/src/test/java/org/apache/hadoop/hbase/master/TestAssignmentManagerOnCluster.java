@@ -257,6 +257,12 @@ public class TestAssignmentManagerOnCluster {
       }
 
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
+
+      // reset the value for other tests
+      TEST_UTIL.getMiniHBaseCluster().getConf().setInt("hbase.assignment.maximum.attempts", 3);
+      ServerName masterServerName = TEST_UTIL.getMiniHBaseCluster().getMaster().getServerName();
+      TEST_UTIL.getMiniHBaseCluster().stopMaster(masterServerName);
+      TEST_UTIL.getMiniHBaseCluster().startMaster();
     }
   }
 
