@@ -597,6 +597,7 @@ public class HBaseFsck extends Configured {
     public byte [] metaLastKey;
     public byte [] storesFirstKey;
     public byte [] storesLastKey;
+    @Override
     public String toString () {
       return "regionName=" + Bytes.toStringBinary(regionName) +
              "\nmetaFirstKey=" + Bytes.toStringBinary(metaFirstKey) +
@@ -1943,7 +1944,7 @@ public class HBaseFsck extends Configured {
       // these problems from META.
       if (shouldFixAssignments()) {
         errors.print("Trying to fix unassigned region...");
-        closeRegion(hbi);// Close region will cause RS to abort.
+        undeployRegions(hbi);
       }
       if (shouldFixMeta()) {
         // wait for it to complete
@@ -2100,13 +2101,13 @@ public class HBaseFsck extends Configured {
     // rename the contained into the container.
     FileSystem fs = targetRegionDir.getFileSystem(getConf());
     FileStatus[] dirs = null;
-    try { 
+    try {
       dirs = fs.listStatus(contained.getHdfsRegionDir());
     } catch (FileNotFoundException fnfe) {
       // region we are attempting to merge in is not present!  Since this is a merge, there is
       // no harm skipping this region if it does not exist.
       if (!fs.exists(contained.getHdfsRegionDir())) {
-        LOG.warn("[" + thread + "] HDFS region dir " + contained.getHdfsRegionDir() 
+        LOG.warn("[" + thread + "] HDFS region dir " + contained.getHdfsRegionDir()
             + " is missing. Assuming already sidelined or moved.");
       } else {
         sidelineRegionDir(fs, contained);
@@ -2116,7 +2117,7 @@ public class HBaseFsck extends Configured {
 
     if (dirs == null) {
       if (!fs.exists(contained.getHdfsRegionDir())) {
-        LOG.warn("[" + thread + "] HDFS region dir " + contained.getHdfsRegionDir() 
+        LOG.warn("[" + thread + "] HDFS region dir " + contained.getHdfsRegionDir()
             + " already sidelined.");
       } else {
         sidelineRegionDir(fs, contained);
@@ -2166,20 +2167,20 @@ public class HBaseFsck extends Configured {
   static class WorkItemOverlapMerge implements Callable<Void> {
     private TableIntegrityErrorHandler handler;
     Collection<HbckInfo> overlapgroup;
-    
+
     WorkItemOverlapMerge(Collection<HbckInfo> overlapgroup, TableIntegrityErrorHandler handler) {
       this.handler = handler;
       this.overlapgroup = overlapgroup;
     }
-    
+
     @Override
     public Void call() throws Exception {
       handler.handleOverlapGroup(overlapgroup);
       return null;
     }
   };
-  
-  
+
+
   /**
    * Maintain information about a particular table.
    */
@@ -2396,7 +2397,7 @@ public class HBaseFsck extends Configured {
         HTableDescriptor htd = getTableInfo().getHTD();
         HRegionInfo newRegion = new HRegionInfo(htd.getTableName(), holeStartKey, holeStopKey);
         HRegion region = HBaseFsckRepair.createHDFSRegionDir(conf, newRegion, htd);
-        LOG.info("Plugged hold by creating new empty region: "+ newRegion + " " +region);
+        LOG.info("Plugged hole by creating new empty region: "+ newRegion + " " +region);
         fixes++;
       }
 
@@ -2408,7 +2409,7 @@ public class HBaseFsck extends Configured {
        * Cases:
        * - Clean regions that overlap
        * - Only .oldlogs regions (can't find start/stop range, or figure out)
-       * 
+       *
        * This is basically threadsafe, except for the fixer increment in mergeOverlaps.
        */
       @Override
@@ -2689,11 +2690,11 @@ public class HBaseFsck extends Configured {
     private boolean handleOverlapsParallel(TableIntegrityErrorHandler handler, byte[] prevKey)
         throws IOException {
       // we parallelize overlap handler for the case we have lots of groups to fix.  We can
-      // safely assume each group is independent. 
+      // safely assume each group is independent.
       List<WorkItemOverlapMerge> merges = new ArrayList<WorkItemOverlapMerge>(overlapGroups.size());
       List<Future<Void>> rets;
       for (Collection<HbckInfo> overlap : overlapGroups.asMap().values()) {
-        // 
+        //
         merges.add(new WorkItemOverlapMerge(overlap, handler));
       }
       try {
@@ -3934,7 +3935,7 @@ public class HBaseFsck extends Configured {
       return hbck.getRetCode();
     }
   };
-  
+
 
   public HBaseFsck exec(ExecutorService exec, String[] args) throws KeeperException, IOException,
     ServiceException, InterruptedException {

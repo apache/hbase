@@ -1533,6 +1533,34 @@ public class TestHBaseFsck {
   }
 
   /**
+   * This creates and fixes a bad table with a missing region which is the 1st region -- hole in
+   * meta and data missing in the fs.
+   */
+  @Test(timeout=120000)
+  public void testRegionDeployedNotInHdfs() throws Exception {
+    TableName table =
+        TableName.valueOf("testSingleRegionDeployedNotInHdfs");
+    try {
+      setupTable(table);
+      TEST_UTIL.getHBaseAdmin().flush(table.getName());
+
+      // Mess it up by deleting region dir
+      deleteRegion(conf, tbl.getTableDescriptor(),
+        HConstants.EMPTY_START_ROW, Bytes.toBytes("A"), false,
+        false, true);
+
+      HBaseFsck hbck = doFsck(conf, false);
+      assertErrors(hbck, new ERROR_CODE[] { ERROR_CODE.NOT_IN_HDFS });
+      // fix hole
+      doFsck(conf, true);
+      // check that hole fixed
+      assertNoErrors(doFsck(conf, false));
+    } finally {
+      deleteTable(table);
+    }
+  }
+
+  /**
    * This creates and fixes a bad table with missing last region -- hole in meta and data missing in
    * the fs.
    */
