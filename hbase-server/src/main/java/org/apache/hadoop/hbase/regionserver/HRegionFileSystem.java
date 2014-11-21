@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -240,12 +239,7 @@ public class HRegionFileSystem {
    */
   public boolean hasReferences(final String familyName) throws IOException {
     FileStatus[] files = FSUtils.listStatus(fs, getStoreDir(familyName),
-      new PathFilter () {
-        public boolean accept(Path path) {
-          return StoreFileInfo.isReference(path);
-        }
-      }
-    );
+        new FSUtils.ReferenceFileFilter(fs));
     return files != null && files.length > 0;
   }
 
@@ -515,13 +509,19 @@ public class HRegionFileSystem {
   /**
    * Commit a daughter region, moving it from the split temporary directory
    * to the proper location in the filesystem.
-   * @param regionInfo daughter {@link HRegionInfo}
+   *
+   * @param regionInfo                 daughter {@link org.apache.hadoop.hbase.HRegionInfo}
+   * @param expectedReferenceFileCount number of expected reference files to have created and to
+   *                                   move into the new location.
    * @throws IOException
    */
-  Path commitDaughterRegion(final HRegionInfo regionInfo) throws IOException {
+  Path commitDaughterRegion(final HRegionInfo regionInfo, int expectedReferenceFileCount)
+      throws IOException {
     Path regionDir = new Path(this.tableDir, regionInfo.getEncodedName());
     Path daughterTmpDir = this.getSplitsDir(regionInfo);
+
     if (fs.exists(daughterTmpDir)) {
+
       // Write HRI to a file in case we need to recover hbase:meta
       Path regionInfoFile = new Path(daughterTmpDir, REGION_INFO_FILE);
       byte[] regionInfoContent = getRegionInfoFileContent(regionInfo);
@@ -532,6 +532,7 @@ public class HRegionFileSystem {
         throw new IOException("Unable to rename " + daughterTmpDir + " to " + regionDir);
       }
     }
+
     return regionDir;
   }
 
