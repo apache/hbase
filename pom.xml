@@ -64,15 +64,16 @@
     <module>hbase-annotations</module>
     <module>hbase-rest</module>
     <module>hbase-checkstyle</module>
+    <module>hbase-consensus</module>
   </modules>
   <!--Add apache snapshots in case we want to use unreleased versions of plugins:
-      e.g. surefire 2.18-SNAPSHOT-->
   <pluginRepositories>
     <pluginRepository>
       <id>apache.snapshots</id>
       <url>http://repository.apache.org/snapshots/</url>
     </pluginRepository>
   </pluginRepositories>
+      e.g. surefire 2.18-SNAPSHOT-->
   <scm>
     <connection>scm:git:git://git.apache.org/hbase.git</connection>
     <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/hbase.git</developerConnection>
@@ -418,6 +419,76 @@
       <organizationUrl>http://www.taobao.com</organizationUrl>
     </developer>
   </developers>
+  <repositories>
+    <repository>
+      <id>apache release</id>
+      <url>https://repository.apache.org/content/repositories/releases/</url>
+    </repository>
+    <repository>
+      <id>mirror.facebook.net</id>
+      <name>facebook mirror</name>
+      <url>http://mirror.facebook.net/maven/repository/</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+    <repository>
+      <id>java.net</id>
+      <name>Java.Net</name>
+      <url>http://download.java.net/maven/2/</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+    <repository>
+      <id>codehaus</id>
+      <name>Codehaus Public</name>
+      <url>http://repository.codehaus.org/</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+    <repository>
+      <id>repository.jboss.org</id>
+      <url>http://repository.jboss.org/nexus/content/groups/public-jboss/</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>ghelmling.testing</id>
+      <name>Gary Helmling test repo</name>
+      <url>http://people.apache.org/~garyh/mvn/</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </repository>
+  </repositories>
+  <pluginRepositories>
+    <pluginRepository>
+      <id>ghelmling.testing</id>
+      <name>Gary Helmling test repo</name>
+      <url>http://people.apache.org/~garyh/mvn/</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+    </pluginRepository>
+  </pluginRepositories>
   <build>
     <pluginManagement>
       <plugins>
@@ -1025,6 +1096,10 @@
     <joni.version>2.1.2</joni.version>
     <!-- Plugin Dependencies -->
     <maven.assembly.version>2.4</maven.assembly.version>
+    <airlift.version>0.91</airlift.version>
+    <jmxutils.version>1.16</jmxutils.version>
+    <swift.version>0.13.1</swift.version>
+    <disruptor.version>3.3.0</disruptor.version>
     <maven.antrun.version>1.6</maven.antrun.version>
     <jamon.plugin.version>2.3.4</jamon.plugin.version>
     <findbugs-annotations>1.3.9-1</findbugs-annotations>
@@ -1203,6 +1278,16 @@
         <artifactId>jettison</artifactId>
         <version>${jettison.version}</version>
       </dependency>
+    <dependency>
+      <groupId>com.facebook.swift</groupId>
+      <artifactId>swift-root</artifactId>
+      <version>${swift.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.facebook.swift</groupId>
+      <artifactId>swift-codec</artifactId>
+      <version>${swift.version}</version>
+    </dependency>
       <dependency>
         <groupId>log4j</groupId>
         <artifactId>log4j</artifactId>

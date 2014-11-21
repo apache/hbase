@@ -1,0 +1,35 @@
+package org.apache.hadoop.hbase.consensus.raft.states;
+
+import org.apache.hadoop.hbase.consensus.fsm.StateType;
+
+public enum RaftStateType implements StateType {
+  NONE,
+
+  START,
+  BECOME_FOLLOWER,
+  FOLLOWER,
+
+  CANDIDATE,
+
+  BECOME_LEADER,
+  LEADER,
+  CHANGE_QUORUM_MEMBERSHIP,
+
+  SEND_VOTE_REQUEST,
+  HANDLE_VOTE_REQUEST,
+  HANDLE_VOTE_RESPONSE,
+  HANDLE_QUORUM_MEMBERSHIP_CHANGE_REQUEST,
+
+  SEND_APPEND_REQUEST,
+  RESEND_APPEND_REQUEST,
+  HANDLE_APPEND_REQUEST,
+  HANDLE_APPEND_RESPONSE,
+
+  HANDLE_RESEED_REQUEST,
+
+  PROGRESS_TIMEOUT,
+
+  ACK_CLIENT,
+
+  HALT
+}

@@ -1,0 +1,1228 @@
+{"tables": {
+    "-ROOT-": {
+        "IS_META": "true",
+        "IS_ROOT": "true",
+        "families": {"info": {
+            "BLOCKCACHE": "true",
+            "BLOCKSIZE": "8192",
+            "BLOOMFILTER": "NONE",
+            "BLOOMFILTER_ERRORRATE": "0.01",
+            "COMPRESSION": "NONE",
+            "DATA_BLOCK_ENCODING": "NONE",
+            "ENCODE_ON_DISK": "true",
+            "IN_MEMORY": "true",
+            "REPLICATION_SCOPE": "0",
+            "TTL": "2147483647",
+            "VERSIONS": "10"
+        }},
+        "regions": [{
+            "encoded": "70236052",
+            "end_key": "",
+            "favored_nodes": {"DUMMYCLUSTER1": []},
+            "id": 0,
+            "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+            "start_key": ""
+        }]
+    },
+    ".META.": {
+        "IS_META": "true",
+        "IS_ROOT": "false",
+        "families": {
+            "historian": {
+                "BLOCKCACHE": "true",
+                "BLOCKSIZE": "8192",
+                "BLOOMFILTER": "NONE",
+                "BLOOMFILTER_ERRORRATE": "0.01",
+                "COMPRESSION": "NONE",
+                "DATA_BLOCK_ENCODING": "NONE",
+                "ENCODE_ON_DISK": "true",
+                "IN_MEMORY": "false",
+                "REPLICATION_SCOPE": "0",
+                "TTL": "604800",
+                "VERSIONS": "2147483647"
+            },
+            "info": {
+                "BLOCKCACHE": "true",
+                "BLOCKSIZE": "8192",
+                "BLOOMFILTER": "NONE",
+                "BLOOMFILTER_ERRORRATE": "0.01",
+                "COMPRESSION": "NONE",
+                "DATA_BLOCK_ENCODING": "NONE",
+                "ENCODE_ON_DISK": "true",
+                "IN_MEMORY": "true",
+                "REPLICATION_SCOPE": "0",
+                "TTL": "2147483647",
+                "VERSIONS": "10"
+            }
+        },
+        "regions": [{
+            "encoded": "1028785192",
+            "end_key": "",
+            "favored_nodes": {"DUMMYCLUSTER1": []},
+            "id": 1,
+            "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+            "start_key": ""
+        }]
+    },
+    "RPCBenchmarkingTable": {
+        "IS_META": "false",
+        "IS_ROOT": "false",
+        "families": {"cf": {
+            "BLOCKCACHE": "true",
+            "BLOCKSIZE": "65536",
+            "BLOOMFILTER": "NONE",
+            "BLOOMFILTER_ERRORRATE": "0.01",
+            "COMPRESSION": "NONE",
+            "DATA_BLOCK_ENCODING": "NONE",
+            "ENCODE_ON_DISK": "true",
+            "IN_MEMORY": "false",
+            "REPLICATION_SCOPE": "0",
+            "TTL": "2147483647",
+            "VERSIONS": "2147483647"
+        }},
+        "regions": [
+            {
+                "encoded": "aeeb54dc6fbca609443bd35796b59da5",
+                "end_key": "2aaaaaaa",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1373324048180,
+                "peers": {"DUMMYCLUSTER1": [
+                    "10.159.9.41:60020:1",
+                    "10.159.9.45:60020:2",
+                    "10.159.9.47:60020:3"
+                ]},
+                "start_key": ""
+            },
+            {
+                "encoded": "15a13ba77b809e76a4e27d30e67c1969",
+                "end_key": "55555554",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1373324048180,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1", "10.159.9.47:60020:2"],
+                    "DUMMYCLUSTER2": ["10.159.9.42:60020:3", "10.159.9.43:60020:4"],
+                    "DUMMYCLUSTER3": ["10.159.9.49:60020:5"]},
+                "start_key": "2aaaaaaa"
+            },
+            {
+                "encoded": "ad811cadfcbb0d756d71350aac27b83d",
+                "end_key": "",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1373324048180,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "55555554"
+            }
+        ]
+    },
+    "VerificationTest_DummyTable": {
+        "IS_META": "false",
+        "IS_ROOT": "false",
+        "families": {
+            "ActionLog": {
+                "BLOCKCACHE": "true",
+                "BLOCKSIZE": "65536",
+                "BLOOMFILTER": "ROW",
+                "BLOOMFILTER_ERRORRATE": "0.01",
+                "COMPRESSION": "NONE",
+                "DATA_BLOCK_ENCODING": "NONE",
+                "ENCODE_ON_DISK": "true",
+                "IN_MEMORY": "false",
+                "REPLICATION_SCOPE": "0",
+                "TTL": "2147483647",
+                "VERSIONS": "2147483647"
+            },
+            "IndexSnapshot": {
+                "BLOCKCACHE": "true",
+                "BLOCKSIZE": "65536",
+                "BLOOMFILTER": "ROWCOL",
+                "BLOOMFILTER_ERRORRATE": "0.01",
+                "COMPRESSION": "GZ",
+                "DATA_BLOCK_ENCODING": "NONE",
+                "ENCODE_ON_DISK": "true",
+                "IN_MEMORY": "false",
+                "REPLICATION_SCOPE": "0",
+                "TTL": "2147483647",
+                "VERSIONS": "1"
+            },
+            "Snapshot": {
+                "BLOCKCACHE": "true",
+                "BLOCKSIZE": "65536",
+                "BLOOMFILTER": "NONE",
+                "BLOOMFILTER_ERRORRATE": "0.01",
+                "COMPRESSION": "LZO",
+                "DATA_BLOCK_ENCODING": "NONE",
+                "ENCODE_ON_DISK": "true",
+                "IN_MEMORY": "false",
+                "REPLICATION_SCOPE": "0",
+                "TTL": "2147483647",
+                "VERSIONS": "1"
+            }
+        },
+        "regions": [
+            {
+                "encoded": "bc878af16710f710372057e8432c0a10",
+                "end_key": "06666666",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509227,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": ""
+            },
+            {
+                "encoded": "a5cf8ffbd2ba3841694568e5f193c89d",
+                "end_key": "0ccccccc",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509232,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "06666666"
+            },
+            {
+                "encoded": "4334848cde16d1dc4e31f7bef82f134d",
+                "end_key": "11111110",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60021",
+                    "10.159.9.47:60021",
+                    "10.159.9.45:60021"
+                ]},
+                "id": 1378513686287,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "08888888"
+            },
+            {
+                "encoded": "30fa9e953780cce299a0aa8c28862188",
+                "end_key": "13333332",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509232,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "0ccccccc"
+            },
+            {
+                "encoded": "34dc2ca9659fe7b004c64ed67a8d508e",
+                "end_key": "19999998",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60021",
+                    "10.159.9.45:60021",
+                    "10.159.9.49:60021"
+                ]},
+                "id": 1378513686287,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "11111110"
+            },
+            {
+                "encoded": "27e06426ad2c17ee1d30e24e0d99dbbd",
+                "end_key": "19999998",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509232,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "13333332"
+            },
+            {
+                "encoded": "a56cd0af1570fa7e4342066bc53e3c16",
+                "end_key": "1ffffffe",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509232,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "19999998"
+            },
+            {
+                "encoded": "e89172200b7c13ee0ddf5dd3d77e0b10",
+                "end_key": "26666664",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509232,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "1ffffffe"
+            },
+            {
+                "encoded": "8bc393423bd0ade41a21e302733071a4",
+                "end_key": "2aaaaaa8",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60021",
+                    "10.159.9.47:60021",
+                    "10.159.9.45:60021"
+                ]},
+                "id": 1378513686287,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "22222220"
+            },
+            {
+                "encoded": "a417333fff7b3b8eb4f21ef342366987",
+                "end_key": "2cccccca",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509233,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "26666664"
+            },
+            {
+                "encoded": "71f12b479a151a9125d2b65be6e05583",
+                "end_key": "33333330",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509233,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "2cccccca"
+            },
+            {
+                "encoded": "af28c78d0e444281b1bdb66346bca4d2",
+                "end_key": "39999996",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509233,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "33333330"
+            },
+            {
+                "encoded": "900cceec5f403669c5454104d71dc349",
+                "end_key": "3ffffffc",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509233,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "39999996"
+            },
+            {
+                "encoded": "c233cd158d7d1155accd4dc3c5ca8569",
+                "end_key": "44444440",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60021",
+                    "10.159.9.45:60021",
+                    "10.159.9.47:60021"
+                ]},
+                "id": 1378513686287,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "3bbbbbb8"
+            },
+            {
+                "encoded": "74814b1ab76d66fd498ab05a67834f2b",
+                "end_key": "46666662",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509233,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "3ffffffc"
+            },
+            {
+                "encoded": "04320c73cf436388f587eaf80cbb5a0f",
+                "end_key": "4cccccc8",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509233,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "46666662"
+            },
+            {
+                "encoded": "2b1c4b896cd6bcb73305f1cd7070b691",
+                "end_key": "5333332e",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509233,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "4cccccc8"
+            },
+            {
+                "encoded": "060adf717d5f2e484307243292144b62",
+                "end_key": "55555550",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60021",
+                    "10.159.9.47:60021",
+                    "10.159.9.49:60021"
+                ]},
+                "id": 1378513686287,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "4cccccc8"
+            },
+            {
+                "encoded": "8f7bfa2957fd885e13a10e1653604cf7",
+                "end_key": "59999994",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509233,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "5333332e"
+            },
+            {
+                "encoded": "ee4ae3dfea198e19607cef988593aaa6",
+                "end_key": "5dddddd8",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60021",
+                    "10.159.9.47:60021",
+                    "10.159.9.45:60021"
+                ]},
+                "id": 1378513686287,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "55555550"
+            },
+            {
+                "encoded": "149c3b21f88c7c966387f70129958e2a",
+                "end_key": "5ffffffa",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509233,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "59999994"
+            },
+            {
+                "encoded": "6da67b4a75ab96c3daedf06eb8b2d0f8",
+                "end_key": "66666660",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509233,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "5ffffffa"
+            },
+            {
+                "encoded": "1d8abb6d0e17ae817855f37baae97301",
+                "end_key": "6cccccc6",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509233,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "66666660"
+            },
+            {
+                "encoded": "0d370153e98f42edb877df4fd9b30a13",
+                "end_key": "6eeeeee8",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60021",
+                    "10.159.9.49:60021",
+                    "10.159.9.47:60021"
+                ]},
+                "id": 1378513686287,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "66666660"
+            },
+            {
+                "encoded": "7fc3f2e96163150764391524d78faabe",
+                "end_key": "7333332c",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509233,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "6cccccc6"
+            },
+            {
+                "encoded": "556fd79f7050054341b0334dd6737283",
+                "end_key": "77777770",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1378513686287,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "6eeeeee8"
+            },
+            {
+                "encoded": "2ff4557b7612ef3458e6ab66fa4ba863",
+                "end_key": "79999992",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509234,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "7333332c"
+            },
+            {
+                "encoded": "6f5d500b9c145dec4c6d10fc6a4dfac2",
+                "end_key": "",
+                "favored_nodes": {"DUMMYCLUSTER1": []},
+                "id": 1377570509234,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "79999992"
+            }
+        ]
+    },
+    "bench.GetFromMemory": {
+        "IS_META": "false",
+        "IS_ROOT": "false",
+        "families": {"cf1": {
+            "BLOCKCACHE": "true",
+            "BLOCKSIZE": "65536",
+            "BLOOMFILTER": "NONE",
+            "BLOOMFILTER_ERRORRATE": "0.01",
+            "COMPRESSION": "NONE",
+            "DATA_BLOCK_ENCODING": "NONE",
+            "ENCODE_ON_DISK": "true",
+            "IN_MEMORY": "false",
+            "REPLICATION_SCOPE": "0",
+            "TTL": "2147483647",
+            "VERSIONS": "1"
+        }},
+        "regions": [
+            {
+                "encoded": "752dc66912cb39f5eb7b92e451da18c2",
+                "end_key": "               33333",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1359146985980,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": ""
+            },
+            {
+                "encoded": "bf8d5882d8d973664c9591270dbe00d2",
+                "end_key": "               66666",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "               33333"
+            },
+            {
+                "encoded": "de98e2f7e2113cc77dcd0a89bfa60386",
+                "end_key": "               99999",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "               66666"
+            },
+            {
+                "encoded": "2fc3cc5b061cfcf6bff6055c1952f262",
+                "end_key": "              133332",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "               99999"
+            },
+            {
+                "encoded": "025bc86eb8e79864051b1902b1c23e29",
+                "end_key": "              166665",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "              133332"
+            },
+            {
+                "encoded": "8deaf56223f5e7fda030aa1519fc3fe8",
+                "end_key": "              199998",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "              166665"
+            },
+            {
+                "encoded": "61fa640797f6544e6bb7ba3055df6188",
+                "end_key": "              233331",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "              199998"
+            },
+            {
+                "encoded": "2e59595ca667b499f6ddca7a92413d68",
+                "end_key": "              266664",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.45:60020",
+                    "10.159.9.49:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "              233331"
+            },
+            {
+                "encoded": "ed80a537f8e07b7cf11f7601d8ba4bc0",
+                "end_key": "              299997",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "              266664"
+            },
+            {
+                "encoded": "99c56d734d7705a0f84a846cd0460023",
+                "end_key": "              333330",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "              299997"
+            },
+            {
+                "encoded": "025af7c469e493d0f4d2e201445a7fa6",
+                "end_key": "              366663",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "              333330"
+            },
+            {
+                "encoded": "fb88e2beda1b4190170b6010ec0f9269",
+                "end_key": "              399996",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "              366663"
+            },
+            {
+                "encoded": "714b8f200f89bf1b4cd09a249d5b5cc5",
+                "end_key": "              433329",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.47:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "              399996"
+            },
+            {
+                "encoded": "935a1096f947c835b23dfe7e61d23f02",
+                "end_key": "              466662",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "              433329"
+            },
+            {
+                "encoded": "f1a67a99e5ea9e1a20c67b0b89b65e25",
+                "end_key": "              499995",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "              466662"
+            },
+            {
+                "encoded": "263a7b72b53cf31b61b13b26d3f5b53f",
+                "end_key": "              533328",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.47:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "              499995"
+            },
+            {
+                "encoded": "bfdea63d2057dacf67f317be21a12a2e",
+                "end_key": "              566661",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "              533328"
+            },
+            {
+                "encoded": "8b19b5178def407317fa730dbf9c71ad",
+                "end_key": "              599994",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "              566661"
+            },
+            {
+                "encoded": "11b8638a9d8bcc2e63a2d46d87e6cbce",
+                "end_key": "              633327",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "              599994"
+            },
+            {
+                "encoded": "9f05e9792db879d4dad20b9801c77b15",
+                "end_key": "              666660",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "              633327"
+            },
+            {
+                "encoded": "f8c8ad4bda7ea52e186163c9e7304002",
+                "end_key": "              699993",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1359146985981,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "              666660"
+            },
+            {
+                "encoded": "903380d234c5b63e41ac304bcd98a282",
+                "end_key": "              733326",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1359146985982,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "              699993"
+            },
+            {
+                "encoded": "1a9a6228a63c1dc7b906c8007a02030a",
+                "end_key": "              766659",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1359146985982,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "              733326"
+            },
+            {
+                "encoded": "8ba67ecc37405b87fa25f4df994db676",
+                "end_key": "              799992",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020"
+                ]},
+                "id": 1359146985982,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "              766659"
+            },
+            {
+                "encoded": "3d5f4c998f4575408b7c886cfb140726",
+                "end_key": "              833325",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1359146985982,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "              799992"
+            },
+            {
+                "encoded": "418567521b700188c29da48ec2f16595",
+                "end_key": "              866658",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.45:60020",
+                    "10.159.9.49:60020"
+                ]},
+                "id": 1359146985982,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "              833325"
+            },
+            {
+                "encoded": "47613d1d1b61b3213274a252560caf66",
+                "end_key": "              899991",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020"
+                ]},
+                "id": 1359146985982,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "              866658"
+            },
+            {
+                "encoded": "c722a4fb626a2c97ed12cf79d0c28db5",
+                "end_key": "              933324",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.47:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1359146985982,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "              899991"
+            },
+            {
+                "encoded": "83d117cff870bcb726555d2a74da2883",
+                "end_key": "              966657",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.45:60020",
+                    "10.159.9.49:60020"
+                ]},
+                "id": 1359146985982,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "              933324"
+            },
+            {
+                "encoded": "01341957c6cab305fb9849939b80f1cc",
+                "end_key": "              999990",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020"
+                ]},
+                "id": 1359146985982,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "              966657"
+            },
+            {
+                "encoded": "aeb74d8be75abed243fc44316773b4b8",
+                "end_key": "",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.47:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1359146985982,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "              999990"
+            }
+        ]
+    },
+    "bench.ScanFromMemoryPerf": {
+        "IS_META": "false",
+        "IS_ROOT": "false",
+        "families": {"cf1": {
+            "BLOCKCACHE": "true",
+            "BLOCKSIZE": "65536",
+            "BLOOMFILTER": "NONE",
+            "BLOOMFILTER_ERRORRATE": "0.01",
+            "COMPRESSION": "NONE",
+            "DATA_BLOCK_ENCODING": "NONE",
+            "ENCODE_ON_DISK": "true",
+            "IN_MEMORY": "false",
+            "REPLICATION_SCOPE": "0",
+            "TTL": "2147483647",
+            "VERSIONS": "1"
+        }},
+        "regions": [
+            {
+                "encoded": "b3f1bebd2e3ecc09c7bdb814df11ddec",
+                "end_key": "              333333",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.45:60020",
+                    "10.159.9.49:60020"
+                ]},
+                "id": 1359106312755,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": ""
+            },
+            {
+                "encoded": "9a9a1365e0275602b5f6d31fd6868666",
+                "end_key": "              666666",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1359106312755,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "              333333"
+            },
+            {
+                "encoded": "6cfd11340ab440f01d06fd7a12542d18",
+                "end_key": "              999999",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1359106312755,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "              666666"
+            },
+            {
+                "encoded": "c0608b0c4a8203fce212cf682d66260e",
+                "end_key": "",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1359106312755,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "              999999"
+            }
+        ]
+    },
+    "gt": {
+        "IS_META": "false",
+        "IS_ROOT": "false",
+        "families": {"f1": {
+            "BLOCKCACHE": "true",
+            "BLOCKSIZE": "65536",
+            "BLOOMFILTER": "NONE",
+            "BLOOMFILTER_ERRORRATE": "0.01",
+            "COMPRESSION": "NONE",
+            "DATA_BLOCK_ENCODING": "NONE",
+            "ENCODE_ON_DISK": "true",
+            "IN_MEMORY": "false",
+            "REPLICATION_SCOPE": "0",
+            "TTL": "2147483647",
+            "VERSIONS": "3"
+        }},
+        "regions": [{
+            "encoded": "1fbfc42f2ba0f38050dc621ea0fb91f9",
+            "end_key": "",
+            "favored_nodes": {"DUMMYCLUSTER1": []},
+            "id": 1370992737275,
+            "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+            "start_key": ""
+        }]
+    },
+    "loadtest": {
+        "IS_META": "false",
+        "IS_ROOT": "false",
+        "families": {"test_cf": {
+            "BLOCKCACHE": "true",
+            "BLOCKSIZE": "65536",
+            "BLOOMFILTER": "NONE",
+            "BLOOMFILTER_ERRORRATE": "0.01",
+            "COMPRESSION": "NONE",
+            "DATA_BLOCK_ENCODING": "NONE",
+            "ENCODE_ON_DISK": "true",
+            "IN_MEMORY": "false",
+            "REPLICATION_SCOPE": "0",
+            "TTL": "2147483647",
+            "VERSIONS": "3"
+        }},
+        "regions": [
+            {
+                "encoded": "381ace1cb168fa561386392433633209",
+                "end_key": "11111111",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.45:60020",
+                    "10.159.9.49:60020"
+                ]},
+                "id": 1373318348662,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": ""
+            },
+            {
+                "encoded": "a19df6afa13b268f5248b9f2fc959144",
+                "end_key": "22222222",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.47:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1373318348662,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "11111111"
+            },
+            {
+                "encoded": "5dd62a32fb74d57048e244cba2dcf543",
+                "end_key": "33333333",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020"
+                ]},
+                "id": 1373318348662,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "22222222"
+            },
+            {
+                "encoded": "e5bf1a0ff241c51eeb624b2579c10663",
+                "end_key": "44444444",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1373318348662,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "33333333"
+            },
+            {
+                "encoded": "3d315a9174c31c69f695e87374985f70",
+                "end_key": "55555555",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1373318348662,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "44444444"
+            },
+            {
+                "encoded": "4bf2f50d674aa9453a5f50e1671aec08",
+                "end_key": "66666666",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1373318348662,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "55555555"
+            },
+            {
+                "encoded": "1be6d637db0ff13542ace772aee370d9",
+                "end_key": "77777777",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1373318348662,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "66666666"
+            },
+            {
+                "encoded": "982b616d487cb61189bb200c8804a43c",
+                "end_key": "88888888",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.47:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1373318348662,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "77777777"
+            },
+            {
+                "encoded": "e8bd9c7f504c1ecc75b95712fd35e72f",
+                "end_key": "99999999",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020"
+                ]},
+                "id": 1373318348662,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "88888888"
+            },
+            {
+                "encoded": "f803f103c5077f2599872974d5e12f9c",
+                "end_key": "aaaaaaaa",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1373318348662,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "99999999"
+            },
+            {
+                "encoded": "76ecef40ce061a3c89ea75f4a0fcc473",
+                "end_key": "bbbbbbbb",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1373318348662,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "aaaaaaaa"
+            },
+            {
+                "encoded": "d392640f9d0d211f24c46e72ced124b1",
+                "end_key": "cccccccc",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60020",
+                    "10.159.9.49:60020",
+                    "10.159.9.47:60020"
+                ]},
+                "id": 1373318348662,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "bbbbbbbb"
+            },
+            {
+                "encoded": "251e2f558469317bf341e09377534e20",
+                "end_key": "dddddddd",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.47:60020",
+                    "10.159.9.45:60020",
+                    "10.159.9.49:60020"
+                ]},
+                "id": 1373318348662,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+                "start_key": "cccccccc"
+            },
+            {
+                "encoded": "74eeb4a9b5a3a6e9a7ce998bec08244f",
+                "end_key": "eeeeeeee",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.49:60020",
+                    "10.159.9.47:60020",
+                    "10.159.9.45:60020"
+                ]},
+                "id": 1373318348662,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.49:60020:1"]},
+                "start_key": "dddddddd"
+            },
+            {
+                "encoded": "1a8ba16929bdb03b5ddacc7a2d433b15",
+                "end_key": "",
+                "favored_nodes": {"DUMMYCLUSTER1": [
+                    "10.159.9.45:60020",
+                    "10.159.9.47:60020",
+                    "10.159.9.49:60020"
+                ]},
+                "id": 1373318348662,
+                "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+                "start_key": "eeeeeeee"
+            }
+        ]
+    },
+    "t1": {
+        "IS_META": "false",
+        "IS_ROOT": "false",
+        "families": {
+            "f1": {
+                "BLOCKCACHE": "true",
+                "BLOCKSIZE": "65536",
+                "BLOOMFILTER": "NONE",
+                "BLOOMFILTER_ERRORRATE": "0.01",
+                "COMPRESSION": "NONE",
+                "DATA_BLOCK_ENCODING": "NONE",
+                "ENCODE_ON_DISK": "true",
+                "IN_MEMORY": "false",
+                "REPLICATION_SCOPE": "0",
+                "TTL": "2147483647",
+                "VERSIONS": "2"
+            },
+            "f2": {
+                "BLOCKCACHE": "true",
+                "BLOCKSIZE": "65536",
+                "BLOOMFILTER": "NONE",
+                "BLOOMFILTER_ERRORRATE": "0.01",
+                "COMPRESSION": "NONE",
+                "DATA_BLOCK_ENCODING": "NONE",
+                "ENCODE_ON_DISK": "true",
+                "IN_MEMORY": "false",
+                "REPLICATION_SCOPE": "0",
+                "TTL": "5",
+                "VERSIONS": "3"
+            }
+        },
+        "regions": [{
+            "encoded": "c08c6360d57fd0d3aacac33955e2be7e",
+            "end_key": "",
+            "favored_nodes": {"DUMMYCLUSTER1": []},
+            "id": 1370366235604,
+            "peers": {"DUMMYCLUSTER1": ["10.159.9.47:60020:1"]},
+            "start_key": ""
+        }]
+    },
+    "wutang": {
+        "IS_META": "false",
+        "IS_ROOT": "false",
+        "families": {
+            "wtang1": {
+                "BLOCKCACHE": "true",
+                "BLOCKSIZE": "65536",
+                "BLOOMFILTER": "NONE",
+                "BLOOMFILTER_ERRORRATE": "0.01",
+                "COMPRESSION": "NONE",
+                "DATA_BLOCK_ENCODING": "NONE",
+                "ENCODE_ON_DISK": "true",
+                "IN_MEMORY": "false",
+                "REPLICATION_SCOPE": "0",
+                "TTL": "2147483647",
+                "VERSIONS": "3"
+            },
+            "wtang2": {
+                "BLOCKCACHE": "true",
+                "BLOCKSIZE": "65536",
+                "BLOOMFILTER": "NONE",
+                "BLOOMFILTER_ERRORRATE": "0.01",
+                "COMPRESSION": "NONE",
+                "DATA_BLOCK_ENCODING": "NONE",
+                "ENCODE_ON_DISK": "true",
+                "IN_MEMORY": "false",
+                "REPLICATION_SCOPE": "0",
+                "TTL": "2147483647",
+                "VERSIONS": "3"
+            },
+            "wtang3": {
+                "BLOCKCACHE": "true",
+                "BLOCKSIZE": "65536",
+                "BLOOMFILTER": "NONE",
+                "BLOOMFILTER_ERRORRATE": "0.01",
+                "COMPRESSION": "NONE",
+                "DATA_BLOCK_ENCODING": "NONE",
+                "ENCODE_ON_DISK": "true",
+                "IN_MEMORY": "false",
+                "REPLICATION_SCOPE": "0",
+                "TTL": "2147483647",
+                "VERSIONS": "3"
+            },
+            "wtang4": {
+                "BLOCKCACHE": "true",
+                "BLOCKSIZE": "65536",
+                "BLOOMFILTER": "NONE",
+                "BLOOMFILTER_ERRORRATE": "0.01",
+                "COMPRESSION": "NONE",
+                "DATA_BLOCK_ENCODING": "NONE",
+                "ENCODE_ON_DISK": "true",
+                "IN_MEMORY": "false",
+                "REPLICATION_SCOPE": "0",
+                "TTL": "2147483647",
+                "VERSIONS": "3"
+            },
+            "wtang5": {
+                "BLOCKCACHE": "true",
+                "BLOCKSIZE": "65536",
+                "BLOOMFILTER": "NONE",
+                "BLOOMFILTER_ERRORRATE": "0.01",
+                "COMPRESSION": "NONE",
+                "DATA_BLOCK_ENCODING": "NONE",
+                "ENCODE_ON_DISK": "true",
+                "IN_MEMORY": "false",
+                "REPLICATION_SCOPE": "0",
+                "TTL": "2147483647",
+                "VERSIONS": "3"
+            }
+        },
+        "regions": [{
+            "encoded": "b2696f3faa4bd5767f2800bbcc2687c0",
+            "end_key": "",
+            "favored_nodes": {"DUMMYCLUSTER1": []},
+            "id": 1370994021138,
+            "peers": {"DUMMYCLUSTER1": ["10.159.9.45:60020:1"]},
+            "start_key": ""
+        }]
+    }
+}}
